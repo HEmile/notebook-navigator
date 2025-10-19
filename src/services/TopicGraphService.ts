@@ -17,7 +17,7 @@
  */
 
 import { TopicNode } from '../types/storage';
-import { findTopicNode, collectAllTopicPaths } from '../utils/topicGraph';
+import { findTopicNode, collectTopicDescendants } from '../utils/topicGraph';
 import { ITopicGraphProvider } from '../interfaces/ITagTreeProvider';
 
 /**
@@ -55,7 +55,8 @@ export class TopicService implements ITopicGraphProvider {
     getAllTopicNames(): string[] {
         const allNames: string[] = [];
         for (const rootNode of this.topicGraph.values()) {
-            const names = collectAllTopicPaths(rootNode);
+            // TODO: Check this change isn't destructive
+            const names = Array.from(collectTopicDescendants(rootNode)).map(node => node.name);
             allNames.push(...names);
         }
         return allNames;
@@ -65,6 +66,6 @@ export class TopicService implements ITopicGraphProvider {
      * Collects all topic names from a specific node and its descendants
      */
     collectTopicNames(node: TopicNode): Set<string> {
-        return collectAllTopicPaths(node);
+        return new Set(Array.from(collectTopicDescendants(node)).map(node => node.name));
     }
 }

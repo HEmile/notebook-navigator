@@ -48,7 +48,8 @@ export type FocusedPane = 'navigation' | 'files';
 export const ItemType = {
     FILE: 'file',
     FOLDER: 'folder',
-    TAG: 'tag'
+    TAG: 'tag',
+    TOPIC: 'topic'
 } as const;
 
 /**
@@ -192,10 +193,10 @@ export type ItemType = (typeof ItemType)[keyof typeof ItemType];
 
 /**
  * Types of items that can be selected in the navigation pane
- * Either a folder from the file tree or a tag from the tag tree
+ * Either a folder from the file tree, a tag from the tag tree, or a topic from the topic graph
  * This is a subset of ItemType that excludes 'file'
  */
-export type NavigationItemType = typeof ItemType.FOLDER | typeof ItemType.TAG;
+export type NavigationItemType = typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.TOPIC;
 
 /**
  * Keys used for persisting state in browser localStorage

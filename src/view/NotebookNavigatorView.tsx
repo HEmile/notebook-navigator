@@ -115,6 +115,7 @@ export class NotebookNavigatorView extends ItemView {
                                             app={this.plugin.app}
                                             api={this.plugin.api}
                                             tagTreeService={this.plugin.tagTreeService}
+                                            topicService={this.plugin.topicService}
                                             onFileRename={this.plugin.registerFileRenameListener.bind(this.plugin)}
                                             onFileRenameUnsubscribe={this.plugin.unregisterFileRenameListener.bind(this.plugin)}
                                             isMobile={isMobile}

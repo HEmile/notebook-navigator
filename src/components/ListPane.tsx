@@ -199,7 +199,7 @@ export const ListPane = React.memo(
         // Track render count
         const renderCountRef = useRef(0);
 
-        const { selectionType, selectedFolder, selectedTag, selectedFile } = selectionState;
+        const { selectionType, selectedFolder, selectedTag, selectedTopic, selectedFile } = selectionState;
 
         // Determine if list pane is visible early to optimize
         const isVisible = !uiState.singlePane || uiState.currentSinglePaneView === 'files';
@@ -209,6 +209,7 @@ export const ListPane = React.memo(
             selectionType,
             selectedFolder,
             selectedTag,
+            selectedTopic,
             settings,
             // Use debounced value for filtering
             searchQuery: isSearchActive ? debouncedSearchQuery : undefined

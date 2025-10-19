@@ -932,6 +932,55 @@ export const NavigationPane = React.memo(
             ]
         );
 
+        // Handle topic click
+        const handleTopicClick = useCallback(
+            (topicName: string) => {
+                const topicNode = topicService?.findTopicNode(topicName);
+                console.log('topicNode clicked', topicNode);
+                if (!topicNode) {
+                    return;
+                }
+
+                const isSameTopic = selectionState.selectionType === 'topic' && selectionState.selectedTopic === topicName;
+
+                if (isSameTopic) {
+                    if (uiState.singlePane) {
+                        uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'files' });
+                        uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
+                    } else {
+                        uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+                    }
+                    return;
+                }
+
+                setActiveShortcut(null);
+
+                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicName });
+
+                if (settings.autoExpandFoldersTags && topicNode && topicNode.children.size > 0) {
+                    expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicNode.name });
+                }
+
+                if (uiState.singlePane) {
+                    uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'files' });
+                    uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
+                } else {
+                    uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+                }
+            },
+            [
+                selectionDispatch,
+                uiDispatch,
+                uiState.singlePane,
+                settings.autoExpandFoldersTags,
+                topicService,
+                expansionDispatch,
+                selectionState.selectedTopic,
+                selectionState.selectionType,
+                setActiveShortcut
+            ]
+        );
+
         // Toggles shortcuts between pinned (always visible) and inline (in main list) display
         const handleShortcutSplitToggle = useCallback(() => {
             uiDispatch({ type: 'SET_PIN_SHORTCUTS', value: !uiState.pinShortcuts });
@@ -1737,10 +1786,9 @@ export const NavigationPane = React.memo(
                     }
 
                     case NavigationPaneItemType.TAG:
-                    case NavigationPaneItemType.UNTAGGED: 
-                    case NavigationPaneItemType.TOPIC: {
+                    case NavigationPaneItemType.UNTAGGED: {
                         const tagNode = item.data;
-                        const name = 'path' in tagNode ? tagNode.path : tagNode.name as string;
+                        const name = 'path' in tagNode ? tagNode.path : (tagNode as { name: string }).name;
                         return (
                             <TagTreeItem
                                 tagNode={tagNode}
@@ -1750,6 +1798,46 @@ export const NavigationPane = React.memo(
                                 isHidden={'isHidden' in item ? item.isHidden : false}
                                 onToggle={() => handleTagToggle(name)}
                                 onClick={() => handleTagClick(name)}
+                                color={item.color}
+                                backgroundColor={item.backgroundColor}
+                                icon={item.icon}
+                                onToggleAllSiblings={() => {
+                                    const isCurrentlyExpanded = expansionState.expandedTags.has(name);
+
+                                    if (isCurrentlyExpanded) {
+                                        // If expanded, collapse everything (parent and all descendants)
+                                        handleTagToggle(name);
+                                        const descendantPaths = getAllDescendantTags(name);
+                                        if (descendantPaths.length > 0) {
+                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TAGS', descendantPaths, expand: false });
+                                        }
+                                    } else {
+                                        // If collapsed, expand parent and all descendants
+                                        handleTagToggle(name);
+                                        const descendantPaths = getAllDescendantTags(name);
+                                        if (descendantPaths.length > 0) {
+                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TAGS', descendantPaths, expand: true });
+                                        }
+                                    }
+                                }}
+                                countInfo={tagCounts.get(name)}
+                                showFileCount={settings.showNoteCount}
+                            />
+                        );
+                    }
+
+                    case NavigationPaneItemType.TOPIC: {
+                        const topicNode = item.data;
+                        const name = topicNode.name;
+                        return (
+                            <TagTreeItem
+                                tagNode={topicNode}
+                                level={item.level ?? 0}
+                                isExpanded={expansionState.expandedTags.has(name)}
+                                isSelected={selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic === name}
+                                isHidden={'isHidden' in item ? item.isHidden : false}
+                                onToggle={() => handleTagToggle(name)}
+                                onClick={() => handleTopicClick(name)}
                                 color={item.color}
                                 backgroundColor={item.backgroundColor}
                                 icon={item.icon}
@@ -1810,6 +1898,7 @@ export const NavigationPane = React.memo(
                 handleFolderNameClick,
                 handleTagToggle,
                 handleTagClick,
+                handleTopicClick,
                 handleVirtualFolderToggle,
                 recentNotes.length,
                 getAllDescendantFolders,
