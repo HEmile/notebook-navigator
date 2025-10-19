@@ -73,6 +73,7 @@ import { NavigationPaneItemType, ItemType } from '../types';
 import { getSelectedPath } from '../utils/selectionUtils';
 import { TagTreeNode } from '../types/storage';
 import { getFolderNote, type FolderNoteDetectionSettings } from '../utils/folderNotes';
+import { getTopicNote } from '../utils/topicNotes';
 import { findTagNode, getTotalNoteCount } from '../utils/tagTree';
 import { getExtensionSuffix, shouldShowExtensionSuffix } from '../utils/fileTypeUtils';
 import { resolveCanonicalTagPath } from '../utils/tagUtils';
@@ -1102,7 +1103,18 @@ export const NavigationPane = React.memo(
 
                 setActiveShortcut(null);
 
-                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicName });
+                // Get the topic note file
+                const topicNote = getTopicNote(topicName, app);
+
+                // Set topic as selected without auto-selecting first file to prevent interference
+                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicName, autoSelectedFile: null });
+
+                // Open the topic note if it exists
+                if (topicNote) {
+                    commandQueue.executeOpenTopicNote(topicName, async () => {
+                        await app.workspace.getLeaf().openFile(topicNote);
+                    });
+                }
 
                 if (settings.autoExpandFoldersTags && topicNode && topicNode.children.size > 0) {
                     expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicNode.name });
@@ -1124,7 +1136,9 @@ export const NavigationPane = React.memo(
                 expansionDispatch,
                 selectionState.selectedTopic,
                 selectionState.selectionType,
-                setActiveShortcut
+                setActiveShortcut,
+                app,
+                commandQueue
             ]
         );
 
