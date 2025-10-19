@@ -25,6 +25,7 @@ export enum OperationType {
     MOVE_FILE = 'move-file',
     DELETE_FILES = 'delete-files',
     OPEN_FOLDER_NOTE = 'open-folder-note',
+    OPEN_TOPIC_NOTE = 'open-topic-note',
     OPEN_VERSION_HISTORY = 'open-version-history',
     OPEN_IN_NEW_CONTEXT = 'open-in-new-context',
     OPEN_ACTIVE_FILE = 'open-active-file',
@@ -66,6 +67,14 @@ interface OpenFolderNoteOperation extends BaseOperation {
 }
 
 /**
+ * Operation for tracking topic note opening
+ */
+interface OpenTopicNoteOperation extends BaseOperation {
+    type: OperationType.OPEN_TOPIC_NOTE;
+    topicName: string;
+}
+
+/**
  * Operation for tracking version history opening
  */
 interface OpenVersionHistoryOperation extends BaseOperation {
@@ -101,6 +110,7 @@ type Operation =
     | MoveFileOperation
     | DeleteFilesOperation
     | OpenFolderNoteOperation
+    | OpenTopicNoteOperation
     | OpenVersionHistoryOperation
     | OpenInNewContextOperation
     | OpenActiveFileOperation
@@ -357,6 +367,35 @@ export class CommandQueueService {
             type: OperationType.OPEN_FOLDER_NOTE,
             timestamp: Date.now(),
             folderPath
+        };
+
+        this.activeOperations.set(operationId, operation);
+
+        try {
+            await openFile();
+            // Clean up immediately after the file is opened
+            this.activeOperations.delete(operationId);
+            return { success: true };
+        } catch (error) {
+            // Clean up on error as well
+            this.activeOperations.delete(operationId);
+            return {
+                success: false,
+                error: error as Error
+            };
+        }
+    }
+
+    /**
+     * Execute opening a topic note with context tracking
+     */
+    async executeOpenTopicNote(topicName: string, openFile: () => Promise<void>): Promise<CommandResult> {
+        const operationId = this.generateOperationId();
+        const operation: OpenTopicNoteOperation = {
+            id: operationId,
+            type: OperationType.OPEN_TOPIC_NOTE,
+            timestamp: Date.now(),
+            topicName
         };
 
         this.activeOperations.set(operationId, operation);
