@@ -352,6 +352,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.fileSystemOps = new FileSystemOperations(
             this.app,
             () => this.tagTreeService,
+            () => this.topicService,
             () => this.commandQueue
         );
         this.omnisearchService = new OmnisearchService(this.app);

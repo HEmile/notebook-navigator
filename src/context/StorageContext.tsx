@@ -56,7 +56,7 @@ import { getFilteredMarkdownFiles } from '../utils/fileFilters';
 import { getFileDisplayName as getDisplayName } from '../utils/fileNameUtils';
 import { clearNoteCountCache } from '../utils/tagTree';
 import { buildTagTreeFromDatabase, findTagNode, collectAllTagPaths } from '../utils/tagTree';
-import { buildTopicGraphFromDatabase, findTopicNode, collectAllTopicPaths } from '../utils/topicGraph';
+import { buildTopicGraphFromDatabase, findTopicNode } from '../utils/topicGraph';
 import { useServices } from './ServicesContext';
 import { useSettingsState } from './SettingsContext';
 import { NotebookNavigatorSettings } from '../settings';

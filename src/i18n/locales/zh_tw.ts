@@ -49,7 +49,8 @@ export const STRINGS_ZH_TW = {
     tagList: {
         untaggedLabel: '無標籤', // 顯示無標籤筆記的特殊項目標籤 (英文: Untagged)
         hiddenTags: '隱藏標籤', // 隱藏標籤虛擬資料夾的標籤 (英文: Hidden tags)
-        tags: '標籤' // 標籤虛擬資料夾的標籤 (英文: Tags)
+        tags: '標籤', // 標籤虛擬資料夾的標籤 (英文: Tags)
+        topics: '主題', // Label for the topics virtual folder (English: Topics)
     },
 
     // 導覽窗格
@@ -186,6 +187,10 @@ export const STRINGS_ZH_TW = {
             changeBackground: '變更背景',
             showTag: '顯示標籤',
             hideTag: '隱藏標籤'
+        },
+        topic: {
+            showTopic: '顯示主題',
+            hideTopic: '隱藏主題'
         }
     },
 

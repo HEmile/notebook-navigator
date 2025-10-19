@@ -33,7 +33,7 @@ export interface TopicMenuBuilderParams {
  */
 export function buildTopicMenu(params: TopicMenuBuilderParams): void {
     const { topicName, menu, services, settings } = params;
-    const { isMobile } = services;
+    const { isMobile, plugin } = services;
 
     // Show topic name on mobile
     if (isMobile) {
@@ -65,7 +65,27 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
         menu.addSeparator();
     }
 
-    // Additional topic-specific menu items can be added here in the future
-    // For example: changing icon, color, or other topic properties
+    // Hide/Show topic functionality
+    const isHidden = settings.hiddenTopics.includes(topicName);
+
+    if (!isHidden) {
+        menu.addItem((item: MenuItem) => {
+            item.setTitle(strings.contextMenu.topic.hideTopic)
+                .setIcon('lucide-eye-off')
+                .onClick(async () => {
+                    plugin.settings.hiddenTopics = [...settings.hiddenTopics, topicName];
+                    await plugin.saveSettingsAndUpdate();
+                });
+        });
+    } else {
+        menu.addItem((item: MenuItem) => {
+            item.setTitle(strings.contextMenu.topic.showTopic)
+                .setIcon('lucide-eye')
+                .onClick(async () => {
+                    plugin.settings.hiddenTopics = settings.hiddenTopics.filter(t => t !== topicName);
+                    await plugin.saveSettingsAndUpdate();
+                });
+        });
+    }
 }
 

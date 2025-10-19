@@ -86,6 +86,7 @@ export function ServicesProvider({ children, plugin }: { children: React.ReactNo
             fileSystemOps: new FileSystemOperations(
                 plugin.app,
                 () => plugin.tagTreeService,
+                () => plugin.topicService,
                 () => plugin.commandQueue
             ),
             metadataService: plugin.metadataService, // Use the single instance from plugin

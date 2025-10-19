@@ -49,7 +49,8 @@ export const STRINGS_FR = {
     tagList: {
         untaggedLabel: 'Sans étiquette', // Label for the special item showing notes without tags (English: Untagged)
         hiddenTags: 'Étiquettes cachées', // Label for the hidden tags virtual folder (English: Hidden tags)
-        tags: 'Étiquettes' // Label for the tags virtual folder (English: Tags)
+        tags: 'Étiquettes', // Label for the tags virtual folder (English: Tags)
+        topics: 'Sujets', // Label for the topics virtual folder (English: Topics)
     },
 
     navigationPane: {
@@ -183,9 +184,13 @@ export const STRINGS_FR = {
         tag: {
             changeIcon: "Changer l'icône",
             changeColor: 'Changer la couleur',
-            changeBackground: 'Changer l’arrière-plan',
-            showTag: 'Afficher l’étiquette',
-            hideTag: 'Masquer l’étiquette'
+            changeBackground: "Changer l'arrière-plan",
+            showTag: "Afficher l'étiquette",
+            hideTag: "Masquer l'étiquette"
+        },
+        topic: {
+            showTopic: 'Afficher le sujet',
+            hideTopic: 'Masquer le sujet'
         }
     },
 

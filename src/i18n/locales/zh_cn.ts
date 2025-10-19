@@ -49,7 +49,8 @@ export const STRINGS_ZH_CN = {
     tagList: {
         untaggedLabel: '无标签', // Label for the special item showing notes without tags (English: Untagged)
         hiddenTags: '隐藏标签', // Label for the hidden tags virtual folder (English: Hidden tags)
-        tags: '标签' // Label for the tags virtual folder (English: Tags)
+        tags: '标签', // Label for the tags virtual folder (English: Tags)
+        topics: '主题', // Label for the topics virtual folder (English: Topics)
     },
 
     navigationPane: {
@@ -186,6 +187,10 @@ export const STRINGS_ZH_CN = {
             changeBackground: '更改背景',
             showTag: '显示标签',
             hideTag: '隐藏标签'
+        },
+        topic: {
+            showTopic: '显示主题',
+            hideTopic: '隐藏主题'
         }
     },
 
