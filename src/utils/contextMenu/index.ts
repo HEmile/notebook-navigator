@@ -19,5 +19,6 @@
 export * from './menuTypes';
 export { buildFolderMenu } from './folderMenuBuilder';
 export { buildTagMenu } from './tagMenuBuilder';
+export { buildTopicMenu } from './topicMenuBuilder';
 export { buildFileMenu } from './fileMenuBuilder';
 export { buildEmptyListMenu } from './emptyListMenuBuilder';

@@ -70,6 +70,7 @@ export const STRINGS_ZH_TW = {
         folderExists: '資料夾已在捷徑中',
         noteExists: '筆記已在捷徑中',
         tagExists: '標籤已在捷徑中',
+        topicExists: '主題已在捷徑中',
         searchExists: '搜尋捷徑已存在',
         emptySearchQuery: '儲存前請輸入搜尋查詢',
         emptySearchName: '儲存搜尋前請輸入名稱',

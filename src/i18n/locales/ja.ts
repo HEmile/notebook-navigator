@@ -69,6 +69,7 @@ export const STRINGS_JA = {
         folderExists: 'フォルダは既にショートカットにあります',
         noteExists: 'ノートは既にショートカットにあります',
         tagExists: 'タグは既にショートカットにあります',
+        topicExists: 'トピックは既にショートカットにあります',
         searchExists: '検索ショートカットは既に存在します',
         emptySearchQuery: '保存前に検索クエリを入力してください',
         emptySearchName: '検索を保存する前に名前を入力してください',

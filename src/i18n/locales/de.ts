@@ -69,6 +69,7 @@ export const STRINGS_DE = {
         folderExists: 'Ordner bereits in Lesezeichen vorhanden',
         noteExists: 'Notiz bereits in Lesezeichen vorhanden',
         tagExists: 'Tag bereits in Lesezeichen vorhanden',
+        topicExists: 'Thema bereits in Lesezeichen vorhanden',
         searchExists: 'Such-Lesezeichen existiert bereits',
         emptySearchQuery: 'Geben Sie eine Suchanfrage ein, bevor Sie sie speichern',
         emptySearchName: 'Geben Sie einen Namen ein, bevor Sie die Suche speichern',

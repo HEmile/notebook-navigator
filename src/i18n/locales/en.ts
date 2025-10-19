@@ -71,6 +71,7 @@ export const STRINGS_EN = {
         folderExists: 'Folder already in shortcuts',
         noteExists: 'Note already in shortcuts',
         tagExists: 'Tag already in shortcuts',
+        topicExists: 'Topic already in shortcuts',
         searchExists: 'Search shortcut already exists',
         emptySearchQuery: 'Enter a search query before saving it',
         emptySearchName: 'Enter a name before saving the search',

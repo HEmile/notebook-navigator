@@ -51,6 +51,10 @@ export type MenuConfig =
           item: string; // Tag path
       }
     | {
+          type: typeof ItemType.TOPIC;
+          item: string; // Topic name
+      }
+    | {
           type: typeof EMPTY_LIST_MENU_TYPE;
           item: TFolder | null;
       };

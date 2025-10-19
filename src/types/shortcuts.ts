@@ -25,7 +25,8 @@ export const ShortcutType = {
     FOLDER: 'folder',
     NOTE: 'note',
     SEARCH: 'search',
-    TAG: 'tag'
+    TAG: 'tag',
+    TOPIC: 'topic'
 } as const;
 
 export type ShortcutType = (typeof ShortcutType)[keyof typeof ShortcutType];
@@ -70,9 +71,17 @@ export interface TagShortcut {
 }
 
 /**
+ * Shortcut pointing to a topic
+ */
+export interface TopicShortcut {
+    type: typeof ShortcutType.TOPIC;
+    topicName: string;
+}
+
+/**
  * Union type of all possible shortcut types
  */
-export type ShortcutEntry = FolderShortcut | NoteShortcut | SearchShortcut | TagShortcut;
+export type ShortcutEntry = FolderShortcut | NoteShortcut | SearchShortcut | TagShortcut | TopicShortcut;
 
 /**
  * Type guard to check if a shortcut is a folder shortcut
@@ -103,6 +112,13 @@ export function isTagShortcut(shortcut: ShortcutEntry): shortcut is TagShortcut 
 }
 
 /**
+ * Type guard to check if a shortcut is a topic shortcut
+ */
+export function isTopicShortcut(shortcut: ShortcutEntry): shortcut is TopicShortcut {
+    return shortcut.type === ShortcutType.TOPIC;
+}
+
+/**
  * Returns a deterministic key for the provided shortcut.
  * Keys are used to identify shortcuts without storing separate IDs.
  */
@@ -117,6 +133,10 @@ export function getShortcutKey(shortcut: ShortcutEntry): string {
 
     if (isTagShortcut(shortcut)) {
         return `${ShortcutType.TAG}:${shortcut.tagPath}`;
+    }
+
+    if (isTopicShortcut(shortcut)) {
+        return `${ShortcutType.TOPIC}:${shortcut.topicName}`;
     }
 
     if (isSearchShortcut(shortcut)) {

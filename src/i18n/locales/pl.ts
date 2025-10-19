@@ -69,6 +69,7 @@ export const STRINGS_PL = {
         folderExists: 'Folder już jest w skrótach',
         noteExists: 'Notatka już jest w skrótach',
         tagExists: 'Tag już jest w skrótach',
+        topicExists: 'Temat już jest w skrótach',
         searchExists: 'Skrót wyszukiwania już istnieje',
         emptySearchQuery: 'Wprowadź zapytanie wyszukiwania przed zapisaniem',
         emptySearchName: 'Wprowadź nazwę przed zapisaniem wyszukiwania',

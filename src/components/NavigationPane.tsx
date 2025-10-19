@@ -96,6 +96,7 @@ import {
     buildFolderMenu,
     buildFileMenu,
     buildTagMenu,
+    buildTopicMenu,
     type MenuServices,
     type MenuState,
     type MenuDispatchers
@@ -1329,12 +1330,26 @@ export const NavigationPane = React.memo(
             ]
         );
 
+        // Handles topic shortcut activation - navigates to topic and shows its files
+        const handleShortcutTopicActivate = useCallback(
+            (topicName: string, shortcutKey: string) => {
+                setActiveShortcut(shortcutKey);
+                
+                // Re-use handleTopicClick logic
+                handleTopicClick(topicName);
+
+                scheduleShortcutRelease();
+            },
+            [setActiveShortcut, handleTopicClick, scheduleShortcutRelease]
+        );
+
         type ShortcutContextMenuTarget =
             | { type: 'folder'; key: string; folder: TFolder }
             | { type: 'note'; key: string; file: TFile }
             | { type: 'tag'; key: string; tagPath: string }
+            | { type: 'topic'; key: string; topicName: string }
             | { type: 'search'; key: string }
-            | { type: 'missing'; key: string; kind: 'folder' | 'note' | 'tag' };
+            | { type: 'missing'; key: string; kind: 'folder' | 'note' | 'tag' | 'topic' };
 
         const handleShortcutContextMenu = useCallback(
             (event: React.MouseEvent<HTMLDivElement>, target: ShortcutContextMenuTarget) => {
@@ -1420,6 +1435,13 @@ export const NavigationPane = React.memo(
                         settings,
                         state,
                         dispatchers
+                    });
+                } else if (target.type === 'topic') {
+                    buildTopicMenu({
+                        topicName: target.topicName,
+                        menu,
+                        services: menuServices,
+                        settings
                     });
                 }
 
@@ -1635,6 +1657,14 @@ export const NavigationPane = React.memo(
                 if (!selectedTag || selectedTag !== shortcut.tagPath) {
                     setActiveShortcut(null);
                 }
+                return;
+            }
+
+            if (shortcut.type === ShortcutType.TOPIC) {
+                const selectedTopic = selectionState.selectedTopic;
+                if (!selectedTopic || selectedTopic !== shortcut.topicName) {
+                    setActiveShortcut(null);
+                }
             }
         }, [
             activeShortcutKey,
@@ -1642,6 +1672,7 @@ export const NavigationPane = React.memo(
             selectionState.selectedFolder,
             selectionState.selectedFile,
             selectionState.selectedTag,
+            selectionState.selectedTopic,
             setActiveShortcut
         ]);
 
@@ -1858,6 +1889,49 @@ export const NavigationPane = React.memo(
                         );
                     }
 
+                    case NavigationPaneItemType.SHORTCUT_TOPIC: {
+                        const isMissing = Boolean(item.isMissing);
+                        const topicName = item.topicName;
+
+                        const { showBefore, showAfter, isDragSource } = getShortcutVisualState(item.key);
+                        const dragHandlers = buildShortcutDragHandlers(item.key, {
+                            itemType: ItemType.TOPIC,
+                            path: topicName,
+                            icon: item.icon ?? 'lucide-trending-up',
+                            iconColor: item.color
+                        });
+
+                        const contextTarget: ShortcutContextMenuTarget = !isMissing
+                            ? { type: 'topic', key: item.key, topicName }
+                            : { type: 'missing', key: item.key, kind: 'topic' };
+
+                        return (
+                            <ShortcutItem
+                                icon={isMissing ? 'lucide-alert-triangle' : (item.icon ?? 'lucide-trending-up')}
+                                color={isMissing ? undefined : item.color}
+                                label={item.displayName}
+                                description={undefined}
+                                level={item.level}
+                                type="topic"
+                                countInfo={undefined}
+                                isDisabled={isMissing}
+                                isMissing={isMissing}
+                                onClick={() => {
+                                    if (isMissing) {
+                                        return;
+                                    }
+                                    handleShortcutTopicActivate(topicName, item.key);
+                                }}
+                                onContextMenu={event => handleShortcutContextMenu(event, contextTarget)}
+                                dragHandlers={dragHandlers}
+                                showDropIndicatorBefore={showBefore}
+                                showDropIndicatorAfter={showAfter}
+                                isDragSource={isDragSource}
+                                dragHandleConfig={shortcutDragHandleConfig}
+                            />
+                        );
+                    }
+
                     case NavigationPaneItemType.FOLDER: {
                         const folderPath = item.data.path;
                         const countInfo = folderCounts.get(folderPath);
@@ -2010,6 +2084,7 @@ export const NavigationPane = React.memo(
                                 color={item.color}
                                 backgroundColor={item.backgroundColor}
                                 icon={item.icon}
+                                itemType="topic"
                                 onToggleAllSiblings={() => {
                                     const isCurrentlyExpanded = expansionState.expandedTags.has(name);
 
@@ -2083,6 +2158,7 @@ export const NavigationPane = React.memo(
                 handleShortcutNoteMouseDown,
                 handleShortcutSearchActivate,
                 handleShortcutTagActivate,
+                handleShortcutTopicActivate,
                 handleRecentNoteActivate,
                 handleRecentFileContextMenu,
                 handleShortcutContextMenu,

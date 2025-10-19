@@ -145,6 +145,12 @@ export interface ShortcutTagNavItem extends ShortcutNavigationBase {
     displayName: string;
 }
 
+export interface ShortcutTopicNavItem extends ShortcutNavigationBase {
+    type: typeof NavigationPaneItemType.SHORTCUT_TOPIC;
+    topicName: string;
+    displayName: string;
+}
+
 export interface NavigationBannerItem {
     type: typeof NavigationPaneItemType.BANNER;
     key: string;
@@ -162,6 +168,7 @@ export type CombinedNavigationItem =
     | RecentNoteNavItem
     | ShortcutSearchNavItem
     | ShortcutTagNavItem
+    | ShortcutTopicNavItem
     | NavigationBannerItem
     | TopicItem
     | { type: typeof NavigationPaneItemType.TOP_SPACER; key: string }
