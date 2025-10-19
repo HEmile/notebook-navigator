@@ -177,10 +177,17 @@ export function buildTopicGraphFromDatabase(
 
         // Assign the file to the topics
         for (const topic of topics) {
-            const topicNode = allTopics.get(topic);
+            // Use Obsidian API to resolve the parentTopic as a file path
+            const topicFile = app.metadataCache.getFirstLinkpathDest(topic.slice(2, -2), "");
+            if (!topicFile) {
+                continue;
+            }
+            const topicName = getTopicNameFromPath(topicFile.path);
+            const topicNode = allTopics.get(topicName);
             if (topicNode) {
                 topicNode.notesWithTopic.add(path);
-            }
+            } 
+            // It's possible it cannot be find when a user uses hasTopic or isA for a note that is not a topic
         }
     }
 
