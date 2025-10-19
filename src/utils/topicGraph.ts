@@ -21,7 +21,7 @@ import { TopicNode as TopicNode } from '../types/storage';
 import { isPathInExcludedFolder } from './fileFilters';
 import { HiddenTagMatcher, matchesHiddenTagPattern, normalizeTagPathValue } from './tagPrefixMatcher';
 import { naturalCompare } from './sortUtils';
-import {App} from 'obsidian';
+import {App, TFile} from 'obsidian';
 
 /**
  * Tag Tree Utilities
@@ -157,6 +157,51 @@ export function buildTopicGraphFromDatabase(
         traverseTopicsUp(allTopics, path, app);
     }
 
+    function collectParentTopics(file: TFile, path: string) {
+        const metadata = app.metadataCache.getFileCache(file);
+        if (!metadata) {
+            return 
+        }
+        const hasTopics = metadata.frontmatter?.['hasTopic'] as string[] | undefined;
+        const isAs = metadata.frontmatter?.['isA'] as string[] | undefined;
+        const subsets = metadata.frontmatter?.['subset'] as string[] | undefined;
+
+        // Merge hasTopics and isAs arrays into a single list of topics
+        let topics: string[] = [];
+        if (Array.isArray(hasTopics)) {
+            topics = topics.concat(hasTopics);
+        }
+        if (Array.isArray(isAs)) {
+            topics = topics.concat(isAs);
+        }
+        if (Array.isArray(subsets)) {
+            topics = topics.concat(subsets);
+        }
+        // Remove duplicates, if any
+        topics = Array.from(new Set(topics));
+
+        // Assign the file to the topics
+        for (const topic of topics) {
+            // Use Obsidian API to resolve the parentTopic as a file path
+            const topicFile = app.metadataCache.getFirstLinkpathDest(topic.slice(2, -2).split("|")[0], "");
+            if (!topicFile) {
+                continue;
+            }
+            const metadataTopic = app.metadataCache.getFileCache(topicFile);
+            if (!metadataTopic?.tags?.some(tag => tag.tag.contains('topic'))) {
+                // Handle isA / hasTopics up recursively until first topic found
+                collectParentTopics(topicFile, path);
+            } else {
+                const topicName = getTopicNameFromPath(topicFile.path);
+                const topicNode = allTopics.get(topicName);
+                if (topicNode) {
+                    topicNode.notesWithTag.add(path);
+                } 
+            }
+            // It's possible it cannot be find when a user uses hasTopic or isA for a note that is not a topic
+        }
+    }
+
     // Second pass: collect all notes with each topic
     for (const { path, data: fileData } of allFiles) {
         if (includedPaths && !includedPaths.has(path)) {
@@ -170,37 +215,13 @@ export function buildTopicGraphFromDatabase(
         if (!file) {
             continue;
         }
-        const metadata = app.metadataCache.getFileCache(file);
-        if (!metadata) {
+        try {
+            collectParentTopics(file, path);
+        } catch (RangeError) {
+            console.error('RangeError', RangeError);
+            console.error("You likely have a circular dependency in your hierarchy. This breaks the plugin! Fix it :). Hint: it's caused by");
+            console.error(path)
             continue;
-        }
-        const hasTopics = metadata.frontmatter?.['hasTopic'] as string[] | undefined;
-        const isAs = metadata.frontmatter?.['isA'] as string[] | undefined;
-
-        // Merge hasTopics and isAs arrays into a single list of topics
-        let topics: string[] = [];
-        if (Array.isArray(hasTopics)) {
-            topics = topics.concat(hasTopics);
-        }
-        if (Array.isArray(isAs)) {
-            topics = topics.concat(isAs);
-        }
-        // Remove duplicates, if any
-        topics = Array.from(new Set(topics));
-
-        // Assign the file to the topics
-        for (const topic of topics) {
-            // Use Obsidian API to resolve the parentTopic as a file path
-            const topicFile = app.metadataCache.getFirstLinkpathDest(topic.slice(2, -2).split("|")[0], "");
-            if (!topicFile) {
-                continue;
-            }
-            const topicName = getTopicNameFromPath(topicFile.path);
-            const topicNode = allTopics.get(topicName);
-            if (topicNode) {
-                topicNode.notesWithTag.add(path);
-            } 
-            // It's possible it cannot be find when a user uses hasTopic or isA for a note that is not a topic
         }
     }
 
