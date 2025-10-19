@@ -246,10 +246,10 @@ export function getTotalNoteCount(node: TopicNode): number {
  * Collect all topic names from a node and its descendants
  * Returns lowercase paths for logic operations
  */
-export function collectAllTopicPaths(node: TopicNode, paths: Set<string> = new Set()): Set<string> {
-    paths.add(node.name);
+export function collectTopicDescendants(node: TopicNode, paths: Set<TopicNode> = new Set()): Set<TopicNode> {
+    paths.add(node);
     for (const child of node.children.values()) {
-        collectAllTopicPaths(child, paths);
+        collectTopicDescendants(child, paths);
     }
     return paths;
 }

@@ -259,7 +259,7 @@ export function useNavigationPaneData({
         addVirtualFolder(folderId, strings.tagList.topics, 'lucide-tags');
 
         if (expansionState.expandedVirtualFolders.has(folderId)) {
-            const topicEntries = flattenTopicTree(rootNodes, expandedTopicPaths, 0, {
+            const topicEntries = flattenTopicTree(rootNodes, expandedTopicPaths, 1, {
                 comparator: undefined
             });
             items.push(...topicEntries);
@@ -270,7 +270,8 @@ export function useNavigationPaneData({
     }, [
         settings.showTopics,
         topicService,
-        expansionState.expandedTags
+        expansionState.expandedTags,
+        expansionState.expandedVirtualFolders
     ]);
 
     // Get ordered root folders and notify on file changes
@@ -832,6 +833,9 @@ export function useNavigationPaneData({
             } else if (item.type === NavigationPaneItemType.TAG || item.type === NavigationPaneItemType.UNTAGGED) {
                 const tagNode = item.data;
                 setNavigationIndex(indexMap, ItemType.TAG, tagNode.path, index);
+            } else if (item.type === NavigationPaneItemType.TOPIC) {
+                const topicNode = item.data;
+                setNavigationIndex(indexMap, ItemType.TOPIC, topicNode.name, index);
             }
         });
 

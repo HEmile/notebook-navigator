@@ -30,14 +30,14 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { TFile, TFolder, debounce } from 'obsidian';
-import { useServices } from '../context/ServicesContext';
+import { useServices, useTopicService } from '../context/ServicesContext';
 import { OperationType } from '../services/CommandQueueService';
 import { useFileCache } from '../context/StorageContext';
 import { ListPaneItemType, ItemType } from '../types';
 import type { ListPaneItem } from '../types/virtualization';
 import { TIMEOUTS } from '../types/obsidian-extended';
 import { DateUtils } from '../utils/dateUtils';
-import { getFilesForFolder, getFilesForTag, collectPinnedPaths } from '../utils/fileFinder';
+import { getFilesForFolder, getFilesForTag, getFilesForTopic, collectPinnedPaths } from '../utils/fileFinder';
 import { getDateField, getEffectiveSortOption } from '../utils/sortUtils';
 import { strings } from '../i18n';
 import { FILE_VISIBILITY } from '../utils/fileTypeUtils';
@@ -52,12 +52,14 @@ const EMPTY_SEARCH_META = new Map<string, SearchResultMeta>();
  * Parameters for the useListPaneData hook
  */
 interface UseListPaneDataParams {
-    /** The type of selection (folder or tag) */
+    /** The type of selection (folder, tag, or topic) */
     selectionType: ItemType | null;
     /** The currently selected folder, if any */
     selectedFolder: TFolder | null;
     /** The currently selected tag, if any */
     selectedTag: string | null;
+    /** The currently selected topic, if any */
+    selectedTopic: string | null;
     /** Plugin settings */
     settings: NotebookNavigatorSettings;
     /** Optional search query to filter files */
@@ -93,10 +95,12 @@ export function useListPaneData({
     selectionType,
     selectedFolder,
     selectedTag,
+    selectedTopic,
     settings,
     searchQuery
 }: UseListPaneDataParams): UseListPaneDataResult {
     const { app, tagTreeService, commandQueue, omnisearchService } = useServices();
+    const topicService = useTopicService();
     const { getFileCreatedTime, getFileModifiedTime, getDB, getFileDisplayName } = useFileCache();
 
     // State to force updates when vault changes (incremented on create/delete/rename)
@@ -118,8 +122,11 @@ export function useListPaneData({
         if (selectionType === ItemType.TAG && selectedTag) {
             return getEffectiveSortOption(settings, ItemType.TAG, null, selectedTag);
         }
+        if (selectionType === ItemType.TOPIC && selectedTopic) {
+            return getEffectiveSortOption(settings, ItemType.TAG, null, selectedTopic); // Use TAG sort for topics
+        }
         return getEffectiveSortOption(settings, ItemType.FOLDER, selectedFolder, selectedTag);
-    }, [selectionType, selectedFolder, selectedTag, settings]);
+    }, [selectionType, selectedFolder, selectedTag, selectedTopic, settings]);
 
     /**
      * Calculate the base list of files based on current selection without search filtering.
@@ -132,13 +139,15 @@ export function useListPaneData({
             allFiles = getFilesForFolder(selectedFolder, settings, app);
         } else if (selectionType === ItemType.TAG && selectedTag) {
             allFiles = getFilesForTag(selectedTag, settings, app, tagTreeService);
+        } else if (selectionType === ItemType.TOPIC && selectedTopic) {
+            allFiles = getFilesForTopic(selectedTopic, settings, app, topicService);
         }
 
         return allFiles;
-        // NOTE: Excluding getFilesForFolder/getFilesForTag - static imports
+        // NOTE: Excluding getFilesForFolder/getFilesForTag/getFilesForTopic - static imports
         // updateKey triggers re-computation on storage updates
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectionType, selectedFolder, selectedTag, settings, app, tagTreeService, updateKey]);
+    }, [selectionType, selectedFolder, selectedTag, selectedTopic, settings, app, tagTreeService, topicService, updateKey]);
 
     // Set of file paths for the current view scope
     const basePathSet = useMemo(() => new Set(baseFiles.map(file => file.path)), [baseFiles]);

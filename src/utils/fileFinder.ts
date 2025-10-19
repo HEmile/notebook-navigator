@@ -24,12 +24,15 @@ import { shouldExcludeFile, shouldExcludeFolder, getFilteredDocumentFiles, getFi
 import { shouldDisplayFile, FILE_VISIBILITY } from './fileTypeUtils';
 import { getEffectiveSortOption, sortFiles } from './sortUtils';
 import { TagTreeService } from '../services/TagTreeService';
+import { TopicService } from '../services/TopicGraphService';
 import { getDBInstance } from '../storage/fileOperations';
 import { extractMetadata } from '../utils/metadataExtractor';
 import { METADATA_SENTINEL } from '../storage/IndexedDBStorage';
 import { getFileDisplayName as getDisplayName } from './fileNameUtils';
 import { isFolderNote } from './folderNotes';
 import { createHiddenTagVisibility, normalizeTagPathValue } from './tagPrefixMatcher';
+import {  collectTopicDescendants } from './topicGraph';
+import { TopicNode } from 'src/types/storage';
 
 /**
  * Collects all pinned note paths from settings
@@ -307,6 +310,124 @@ export function getFilesForTag(tag: string, settings: NotebookNavigatorSettings,
     }
 
     // Handle pinned notes for tag context
+    const pinnedPaths = collectPinnedPaths(settings.pinnedNotes, 'tag');
+    // Separate pinned and unpinned files
+    if (pinnedPaths.size === 0) {
+        return filteredFiles;
+    }
+    const pinnedFiles: TFile[] = [];
+    const unpinnedFiles: TFile[] = [];
+
+    for (const file of filteredFiles) {
+        if (pinnedPaths.has(file.path)) {
+            pinnedFiles.push(file);
+        } else {
+            unpinnedFiles.push(file);
+        }
+    }
+
+    return [...pinnedFiles, ...unpinnedFiles];
+}
+
+/**
+ * Gets a sorted list of files for a given topic, respecting all plugin settings.
+ */
+// TODO: This could be a major source of errors. Check.
+export function getFilesForTopic(topicName: string, settings: NotebookNavigatorSettings, app: App, topicService: TopicService | null): TFile[] {
+    // Get all files based on visibility setting, with proper filtering
+    let allFiles: TFile[] = [];
+
+    if (settings.fileVisibility === FILE_VISIBILITY.DOCUMENTS) {
+        // Only document files (markdown, canvas, base)
+        allFiles = getFilteredDocumentFiles(app, settings);
+    } else {
+        // Get all files with filtering
+        allFiles = getFilteredFiles(app, settings);
+    }
+
+    const excludedFolderPatterns = settings.excludedFolders;
+    // For topic views, exclude files in excluded folders only when hidden items are not shown
+    const baseFiles = settings.showHiddenItems
+        ? allFiles
+        : allFiles.filter(
+              (file: TFile) => excludedFolderPatterns.length === 0 || !isPathInExcludedFolder(file.path, excludedFolderPatterns)
+          );
+
+    let filteredFiles: TFile[] = [];
+    const db = getDBInstance();
+
+    const markdownFiles = baseFiles.filter((file: TFile) => file.extension === 'md');
+    const selectedNode = topicService?.findTopicNode(topicName);
+
+    if (selectedNode) {
+        // Collect topics to include based on setting:
+        // - When showing notes from descendants: include selected topic and all descendants
+        // - Otherwise: include only the exact selected topic
+        const topicsToInclude = settings.includeDescendantNotes
+            ? collectTopicDescendants(selectedNode)
+            : new Set<TopicNode>([selectedNode]);
+
+        if (topicsToInclude.size === 0) {
+            return [];
+        }
+
+        // Collect all files from the selected topic and its descendants
+        let filesToInclude = new Set<string>();
+        for (const topic of topicsToInclude) {
+            filesToInclude = new Set([...filesToInclude, ...topic.notesWithTag]);
+        }
+    } else {
+        // Fallback to empty if topic not found
+        filteredFiles = [];
+    }
+
+    // Sort files
+    const sortOption = getEffectiveSortOption(settings, 'tag', null, topicName); // Use 'tag' sort for topics
+
+    if (settings.useFrontmatterMetadata) {
+        const metadataCache = new Map<string, ReturnType<typeof extractMetadata>>();
+        const getCached = (file: TFile) => {
+            let v = metadataCache.get(file.path);
+            if (!v) {
+                v = extractMetadata(app, file, settings);
+                metadataCache.set(file.path, v);
+            }
+            return v;
+        };
+
+        sortFiles(
+            filteredFiles,
+            sortOption,
+            (file: TFile) => {
+                const md = getCached(file);
+                if (md.fc === undefined || md.fc === METADATA_SENTINEL.FIELD_NOT_CONFIGURED || md.fc === METADATA_SENTINEL.PARSE_FAILED) {
+                    return file.stat.ctime;
+                }
+                return md.fc;
+            },
+            (file: TFile) => {
+                const md = getCached(file);
+                if (md.fm === undefined || md.fm === METADATA_SENTINEL.FIELD_NOT_CONFIGURED || md.fm === METADATA_SENTINEL.PARSE_FAILED) {
+                    return file.stat.mtime;
+                }
+                return md.fm;
+            },
+            (file: TFile) => {
+                const md = getCached(file);
+                return getDisplayName(file, { fn: md.fn }, settings);
+            }
+        );
+    } else {
+        sortFiles(
+            filteredFiles,
+            sortOption,
+            (file: TFile) => file.stat.ctime,
+            (file: TFile) => file.stat.mtime,
+            (file: TFile) => file.basename
+        );
+    }
+
+    // Handle pinned notes for tag context (topics share pinning with tags)
     const pinnedPaths = collectPinnedPaths(settings.pinnedNotes, 'tag');
     // Separate pinned and unpinned files
     if (pinnedPaths.size === 0) {
