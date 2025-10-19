@@ -188,6 +188,14 @@ export class NotebookNavigatorView extends ItemView {
     }
 
     /**
+     * Reveals a topic in the navigation pane
+     * Expands parent topics and scrolls to make the topic visible
+     */
+    revealTopic(topicName: string) {
+        this.componentRef.current?.revealTopic(topicName);
+    }
+
+    /**
      * Moves focus to the visible pane without forcing a view switch
      */
     focusVisiblePane() {

@@ -17,6 +17,7 @@
  */
 
 import { App, TFile } from 'obsidian';
+import { getTopicNameFromPath } from './topicGraph';
 
 /**
  * Gets the topic note file for a given topic name.
@@ -35,5 +36,32 @@ export function getTopicNote(topicName: string, app: App): TFile | null {
     }
     
     return topicFile;
+}
+
+/**
+ * Checks if a file is a topic note by checking for #topic tag in its metadata.
+ * 
+ * @param file - The file to check
+ * @param app - The Obsidian App instance
+ * @returns True if the file has the #topic tag, false otherwise
+ */
+export function isTopicNote(file: TFile, app: App): boolean {
+    const metadata = app.metadataCache.getFileCache(file);
+    if (!metadata) {
+        return false;
+    }
+    
+    // Check if file has #topic tag
+    return metadata.tags?.some(tag => tag.tag.contains('topic')) ?? false;
+}
+
+/**
+ * Gets the topic name from a topic note file.
+ * 
+ * @param file - The topic note file
+ * @returns The topic name (basename without extension)
+ */
+export function getTopicNameFromFile(file: TFile): string {
+    return getTopicNameFromPath(file.path);
 }
 

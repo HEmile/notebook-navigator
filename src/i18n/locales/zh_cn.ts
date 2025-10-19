@@ -445,6 +445,7 @@ export const STRINGS_ZH_CN = {
         open: '打开', // Command palette: Opens the Notebook Navigator view (English: Open)
         openHomepage: '打开主页', // Command palette: Opens the Notebook Navigator view and loads the homepage file (English: Open homepage)
         revealFile: '显示文件', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
+        revealActiveTopic: '显示活动主题', // Command palette: Reveals the active topic note in the navigator (English: Reveal active topic)
         search: '搜索', // Command palette: Toggle search in the file list (English: Search)
         toggleDualPane: '切换双窗格布局', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
         deleteFile: '删除文件', // Command palette: Deletes the currently active file (English: Delete file)

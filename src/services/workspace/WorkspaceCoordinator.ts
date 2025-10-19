@@ -90,4 +90,17 @@ export default class WorkspaceCoordinator {
             }
         });
     }
+
+    /**
+     * Reveals a topic in the navigation pane
+     * Expands parent topics and scrolls to make the topic visible
+     */
+    revealTopic(topicName: string): void {
+        this.getNavigatorLeaves().forEach(leaf => {
+            const { view } = leaf;
+            if (view instanceof NotebookNavigatorView) {
+                view.revealTopic(topicName);
+            }
+        });
+    }
 }

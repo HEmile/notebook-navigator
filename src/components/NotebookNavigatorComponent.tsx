@@ -56,6 +56,8 @@ export interface NotebookNavigatorHandle {
     navigateToFile: (file: TFile, options?: RevealFileOptions) => void;
     // Reveals a file while preserving the current navigation context when possible
     revealFileInNearestFolder: (file: TFile, options?: RevealFileOptions) => void;
+    // Reveals a topic in the navigation pane
+    revealTopic: (topicName: string) => void;
     focusVisiblePane: () => void;
     refresh: () => void;
     deleteActiveFile: () => void;
@@ -132,7 +134,7 @@ export const NotebookNavigatorComponent = React.memo(
         });
 
         // Use navigator reveal logic
-        const { revealFileInActualFolder, revealFileInNearestFolder, navigateToFolder, revealTag } = useNavigatorReveal({
+        const { revealFileInActualFolder, revealFileInNearestFolder, navigateToFolder, revealTag, revealTopic } = useNavigatorReveal({
             app,
             navigationPaneRef,
             listPaneRef
@@ -335,6 +337,10 @@ export const NotebookNavigatorComponent = React.memo(
                 // Forward to the auto reveal implementation
                 revealFileInNearestFolder: (file: TFile, options?: RevealFileOptions) => {
                     revealFileInNearestFolder(file, options);
+                },
+                // Forward to reveal topic implementation
+                revealTopic: (topicName: string) => {
+                    revealTopic(topicName);
                 },
                 focusVisiblePane: () => {
                     const isOpeningVersionHistory = commandQueue?.isOpeningVersionHistory() || false;

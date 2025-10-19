@@ -95,6 +95,34 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
         }
     });
 
+    // Command to reveal the active topic note in the navigator
+    plugin.addCommand({
+        id: 'reveal-active-topic',
+        name: strings.commands.revealActiveTopic,
+        checkCallback: (checking: boolean) => {
+            const activeFile = plugin.app.workspace.getActiveFile();
+            if (!activeFile) {
+                return false;
+            }
+
+            // Check if the active file is a topic note
+            const { isTopicNote, getTopicNameFromFile } = require('../../utils/topicNotes');
+            if (!isTopicNote(activeFile, plugin.app)) {
+                return false;
+            }
+
+            if (!checking) {
+                const topicName = getTopicNameFromFile(activeFile);
+                void (async () => {
+                    await plugin.activateView();
+                    await plugin.revealTopic(topicName);
+                })();
+            }
+
+            return true;
+        }
+    });
+
     // Command to toggle showing descendant files in folders
     plugin.addCommand({
         id: 'toggle-descendants',

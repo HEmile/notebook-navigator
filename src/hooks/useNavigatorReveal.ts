@@ -27,7 +27,7 @@ import type { SelectionRevealSource } from '../context/SelectionContext';
 import { useSettingsState } from '../context/SettingsContext';
 import { useUIState, useUIDispatch } from '../context/UIStateContext';
 import { useFileCache } from '../context/StorageContext';
-import { useCommandQueue } from '../context/ServicesContext';
+import { useCommandQueue, useTopicService } from '../context/ServicesContext';
 import { determineTagToReveal, findNearestVisibleTagAncestor, resolveCanonicalTagPath } from '../utils/tagUtils';
 import { ItemType, UNTAGGED_TAG_ID } from '../types';
 import { TIMEOUTS } from '../types/obsidian-extended';
@@ -69,6 +69,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
     const uiDispatch = useUIDispatch();
     const { getDB, findTagInTree } = useFileCache();
     const commandQueue = useCommandQueue();
+    const topicService = useTopicService();
 
     // Auto-reveal state
     const [fileToReveal, setFileToReveal] = useState<TFile | null>(null);
@@ -672,10 +673,52 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
         uiState.currentSinglePaneView
     ]);
 
+    /**
+     * Reveals a topic in the navigation pane by expanding ancestors and selecting it
+     */
+    const revealTopic = useCallback(
+        (topicName: string) => {
+            if (!topicService) {
+                return;
+            }
+
+            const topicNode = topicService.findTopicNode(topicName);
+            if (!topicNode) {
+                return;
+            }
+
+            // Get ancestor topics (if any)
+            const { getTopicAncestors } = require('../utils/topicGraph');
+            const ancestors = getTopicAncestors(topicNode);
+
+            // Expand the Topics virtual folder
+            const currentExpanded = new Set(expansionState.expandedVirtualFolders);
+            currentExpanded.add('topics');
+            expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: currentExpanded });
+
+            // Expand all ancestor topics
+            if (ancestors.length > 0) {
+                expansionDispatch({ type: 'EXPAND_TAGS', tagPaths: ancestors });
+            }
+
+            // Select the topic
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicName });
+
+            // Request scroll to the topic in navigation pane
+            setTimeout(() => {
+                navigationPaneRef.current?.requestScroll(topicName, {
+                    itemType: ItemType.TOPIC
+                });
+            }, 50);
+        },
+        [topicService, expansionState.expandedVirtualFolders, expansionDispatch, selectionDispatch, navigationPaneRef]
+    );
+
     return {
         revealFileInActualFolder,
         revealFileInNearestFolder,
         navigateToFolder,
-        revealTag
+        revealTag,
+        revealTopic
     };
 }
