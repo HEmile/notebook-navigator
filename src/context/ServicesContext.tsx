@@ -91,6 +91,7 @@ export function ServicesProvider({ children, plugin }: { children: React.ReactNo
             metadataService: plugin.metadataService, // Use the single instance from plugin
             tagOperations: plugin.tagOperations, // Use the single instance from plugin
             tagTreeService: plugin.tagTreeService, // Use the single instance from plugin
+            topicService: plugin.topicService, // Use the single instance from plugin
             commandQueue: plugin.commandQueue, // Use the single instance from plugin
             omnisearchService: plugin.omnisearchService, // Use the single instance from plugin
             releaseCheckService: plugin.releaseCheckService
@@ -153,6 +154,14 @@ export function useTagOperations() {
         throw new Error('TagOperations not initialized');
     }
     return tagOperations;
+}
+
+export function useTopicService() {
+    const { topicService } = useServices();
+    if (!topicService) {
+        throw new Error('TopicService not initialized');
+    }
+    return topicService;
 }
 
 /**

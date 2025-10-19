@@ -17,7 +17,7 @@
  */
 
 import { IndexedDBStorage } from '../storage/IndexedDBStorage';
-import { TagTreeNode } from '../types/storage';
+import { TagTreeNode, NNNode } from '../types/storage';
 import { isPathInExcludedFolder } from './fileFilters';
 import { HiddenTagMatcher, matchesHiddenTagPattern, normalizeTagPathValue } from './tagPrefixMatcher';
 import { naturalCompare } from './sortUtils';
@@ -42,7 +42,7 @@ export function clearNoteCountCache(): void {
 /**
  * Get or create the note count cache
  */
-function getNoteCountCache(): WeakMap<TagTreeNode, number> {
+function getNoteCountCache(): WeakMap<NNNode, number> {
     if (!noteCountCache) {
         noteCountCache = new WeakMap();
     }
@@ -197,7 +197,7 @@ export function buildTagTreeFromDatabase(
  * Get the total number of notes for a tag (including all descendants)
  * Results are memoized for performance
  */
-export function getTotalNoteCount(node: TagTreeNode): number {
+export function getTotalNoteCount(node: NNNode): number {
     const cache = getNoteCountCache();
 
     // Check cache first
@@ -213,7 +213,7 @@ export function getTotalNoteCount(node: TagTreeNode): number {
     const allFiles = new Set(node.notesWithTag);
 
     // Helper to collect files from children
-    function collectFromChildren(n: TagTreeNode): void {
+    function collectFromChildren(n: NNNode): void {
         for (const child of n.children.values()) {
             child.notesWithTag.forEach(file => allFiles.add(file));
             collectFromChildren(child);

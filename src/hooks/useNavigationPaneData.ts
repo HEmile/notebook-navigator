@@ -32,7 +32,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { TFile, TFolder, debounce } from 'obsidian';
 import type { MetadataCache } from 'obsidian';
-import { useServices, useMetadataService } from '../context/ServicesContext';
+import { useServices, useMetadataService, useTopicService } from '../context/ServicesContext';
 import { useRecentData } from '../context/RecentDataContext';
 import { useExpansionState } from '../context/ExpansionContext';
 import { useFileCache } from '../context/StorageContext';
@@ -54,7 +54,7 @@ import { isFolderInExcludedFolder } from '../utils/fileFilters';
 import { shouldDisplayFile, FILE_VISIBILITY, isImageFile } from '../utils/fileTypeUtils';
 // Use Obsidian's trailing debounce for vault-driven updates
 import { getTotalNoteCount, excludeFromTagTree, findTagNode } from '../utils/tagTree';
-import { flattenFolderTree, flattenTagTree } from '../utils/treeFlattener';
+import { flattenFolderTree, flattenTagTree, flattenTopicTree } from '../utils/treeFlattener';
 import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
 import { setNavigationIndex } from '../utils/navigationIndex';
 import { resolveCanonicalTagPath } from '../utils/tagUtils';
@@ -215,6 +215,7 @@ export function useNavigationPaneData({
     const { app } = useServices();
     const { recentNotes } = useRecentData();
     const metadataService = useMetadataService();
+    const topicService = useTopicService();
     const expansionState = useExpansionState();
     const { fileData } = useFileCache();
     const { hydratedShortcuts } = useShortcuts();
@@ -225,11 +226,54 @@ export function useNavigationPaneData({
     const handleRootFileChange = useCallback(() => {
         setFileChangeVersion(value => value + 1);
     }, []);
+
+
+
+     /**
+     * Build topic items with a single topic graph
+     */
+     const { topicItems, hasTopicContent } = useMemo(() => {
+        if (!settings.showTopics) {
+            return { topicItems: [] as CombinedNavigationItem[], hasTopicContent: false };
+        }
+
+        const items: CombinedNavigationItem[] = [];
+
+        // Get topic graph from the topic service
+        const topicGraph = topicService.getTopicGraph();
+        const rootNodes = Array.from(topicGraph.values());
+        
+        // Use expandedTags as a placeholder for expandedTopics until we add proper topic expansion
+        const expandedTopicPaths = expansionState.expandedTags;
+        
+        const topicEntries = flattenTopicTree(rootNodes, expandedTopicPaths, 0, {
+            comparator: undefined
+        });
+        items.push(...topicEntries);
+
+        const hasContent = rootNodes.length > 0;
+        return { topicItems: items, hasTopicContent: hasContent };
+    }, [
+        settings.showTopics,
+        topicService,
+        expansionState.expandedTags
+    ]);
+
     // Get ordered root folders and notify on file changes
     const { rootFolders, rootLevelFolders, rootFolderOrderMap, missingRootFolderPaths } = useRootFolderOrder({
         settings,
         onFileChange: handleRootFileChange
     });
+
+    /**
+     * Build folder items from vault structure
+     */
+    const folderItems = useMemo(() => {
+        return flattenFolderTree(rootFolders, expansionState.expandedFolders, settings.excludedFolders, 0, new Set(), {
+            rootOrderMap: rootFolderOrderMap
+        });
+    }, [rootFolders, expansionState.expandedFolders, settings.excludedFolders, rootFolderOrderMap]);
+
 
     // Extract tag tree data from file cache
     const tagTree = fileData.tagTree;
@@ -248,16 +292,7 @@ export function useNavigationPaneData({
         () => createTagComparator(settings.tagSortOrder, settings.includeDescendantNotes),
         [settings.tagSortOrder, settings.includeDescendantNotes]
     );
-
-    /**
-     * Build folder items from vault structure
-     */
-    const folderItems = useMemo(() => {
-        return flattenFolderTree(rootFolders, expansionState.expandedFolders, settings.excludedFolders, 0, new Set(), {
-            rootOrderMap: rootFolderOrderMap
-        });
-    }, [rootFolders, expansionState.expandedFolders, settings.excludedFolders, rootFolderOrderMap]);
-
+        
     /**
      * Build tag items with a single tag tree
      */
@@ -581,6 +616,10 @@ export function useNavigationPaneData({
         }
 
         const mainSection: CombinedNavigationItem[] = [];
+
+        if (settings.showTopics) {
+            mainSection.push(...topicItems);
+        }
 
         if (settings.showTags && settings.showTagsAboveFolders) {
             mainSection.push(...tagItems);

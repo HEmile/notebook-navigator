@@ -19,7 +19,7 @@
 import { TFile, TFolder } from 'obsidian';
 import { ListPaneItemType, NavigationPaneItemType, VirtualFolder } from '../types';
 import type { SearchResultMeta } from './search';
-import { TagTreeNode } from '../types/storage';
+import { TagTreeNode, TopicNode } from '../types/storage';
 import type { SearchShortcut, ShortcutEntry } from '../types/shortcuts';
 
 export interface VirtualItem<T> {
@@ -66,6 +66,18 @@ export interface TagTreeItem {
     backgroundColor?: string;
     icon?: string;
     isHidden?: boolean; // Marks tags that are normally hidden but being shown
+}
+
+export interface TopicItem {
+    type: typeof NavigationPaneItemType.TOPIC;
+    data: TopicNode;
+    level: number;
+    path?: string;
+    key: string;
+    color?: string;
+    backgroundColor?: string;
+    icon?: string;
+    isHidden?: boolean; // Marks topics that are normally hidden but being shown
 }
 
 export interface UntaggedItem {
@@ -151,6 +163,7 @@ export type CombinedNavigationItem =
     | ShortcutSearchNavItem
     | ShortcutTagNavItem
     | NavigationBannerItem
+    | TopicItem
     | { type: typeof NavigationPaneItemType.TOP_SPACER; key: string }
     | { type: typeof NavigationPaneItemType.BOTTOM_SPACER; key: string }
     | { type: typeof NavigationPaneItemType.LIST_SPACER; key: string };

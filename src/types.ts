@@ -88,6 +88,7 @@ export const NavigationPaneItemType = {
     VIRTUAL_FOLDER: 'virtual-folder',
     TAG: 'tag',
     UNTAGGED: 'untagged',
+    TOPIC: 'topic',
     SHORTCUT_HEADER: 'shortcut-header',
     SHORTCUT_FOLDER: 'shortcut-folder',
     SHORTCUT_NOTE: 'shortcut-note',

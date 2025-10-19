@@ -45,6 +45,7 @@ import HomepageController from './services/workspace/HomepageController';
 import registerNavigatorCommands from './services/commands/registerNavigatorCommands';
 import registerWorkspaceEvents from './services/workspace/registerWorkspaceEvents';
 import type { RevealFileOptions } from './hooks/useNavigatorReveal';
+import { TopicService } from './services/TopicGraphService';
 
 /**
  * Main plugin class for Notebook Navigator
@@ -57,6 +58,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     metadataService: MetadataService | null = null;
     tagOperations: TagOperations | null = null;
     tagTreeService: TagTreeService | null = null;
+    topicService: TopicService | null = null;
     commandQueue: CommandQueueService | null = null;
     fileSystemOps: FileSystemOperations | null = null;
     omnisearchService: OmnisearchService | null = null;
@@ -341,6 +343,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.metadataService = new MetadataService(this.app, this, () => this.tagTreeService);
         this.tagOperations = new TagOperations(this.app);
         this.tagTreeService = new TagTreeService();
+        this.topicService = new TopicService();
         this.commandQueue = new CommandQueueService(this.app);
         this.fileSystemOps = new FileSystemOperations(
             this.app,

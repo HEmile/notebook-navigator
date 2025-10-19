@@ -81,6 +81,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showUntagged: false,
     tagSortOrder: 'alpha-asc',
     hiddenTags: [],
+    showTopics: true,
 
     // List pane tab
     defaultFolderSort: 'modified-desc',
