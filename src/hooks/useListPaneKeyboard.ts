@@ -70,7 +70,7 @@ interface UseListPaneKeyboardProps {
  * Handles file-specific keyboard interactions and multi-selection.
  */
 export function useListPaneKeyboard({ items, virtualizer, containerRef, pathToIndex, files, fileIndexMap }: UseListPaneKeyboardProps) {
-    const { app, isMobile, tagTreeService, commandQueue } = useServices();
+    const { app, isMobile, tagTreeService, commandQueue, topicService } = useServices();
     const fileSystemOps = useFileSystemOps();
     const settings = useSettingsState();
     const selectionState = useSelectionState();
@@ -326,7 +326,8 @@ export function useListPaneKeyboard({ items, virtualizer, containerRef, pathToIn
                         settings,
                         selectionState,
                         selectionDispatch,
-                        tagTreeService
+                        tagTreeService,
+                        topicService
                     });
                 }
             } else if (matchesShortcut(e, shortcuts, KeyboardShortcutAction.LIST_SELECT_ALL)) {

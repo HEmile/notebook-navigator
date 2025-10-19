@@ -28,7 +28,7 @@ import { ItemType, UNTAGGED_TAG_ID } from '../types';
 import { SHORTCUT_DRAG_MIME } from '../types/shortcuts';
 import { DragManagerPayload, hasDragManager, TIMEOUTS } from '../types/obsidian-extended';
 import { getPathFromDataAttribute } from '../utils/domUtils';
-import { getFilesForFolder, getFilesForTag } from '../utils/fileFinder';
+import { getFilesForFolder, getFilesForTag, getFilesForTopic } from '../utils/fileFinder';
 import { generateUniqueFilename } from '../utils/fileCreationUtils';
 import { createDragGhostManager } from '../utils/dragGhost';
 
@@ -54,7 +54,7 @@ interface AutoExpandConfig {
 }
 
 export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>) {
-    const { app, isMobile, tagTreeService } = useServices();
+    const { app, isMobile, tagTreeService, topicService } = useServices();
     const fileSystemOps = useFileSystemOps();
     const tagOperations = useTagOperations();
     const selectionState = useSelectionState();
@@ -113,6 +113,8 @@ export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>
             return getFilesForFolder(selectionState.selectedFolder, settings, app);
         } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
             return getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
+        } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
+            return getFilesForTopic(selectionState.selectedTopic, settings, app, topicService);
         }
         return [];
     }, [selectionState, settings, app, tagTreeService]);

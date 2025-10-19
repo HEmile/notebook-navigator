@@ -334,6 +334,7 @@ export function getFilesForTag(tag: string, settings: NotebookNavigatorSettings,
  */
 // TODO: This could be a major source of errors. Check.
 export function getFilesForTopic(topicName: string, settings: NotebookNavigatorSettings, app: App, topicService: TopicService | null): TFile[] {
+    console.log('getFilesForTopic', topicName);
     // Get all files based on visibility setting, with proper filtering
     let allFiles: TFile[] = [];
 
@@ -345,18 +346,7 @@ export function getFilesForTopic(topicName: string, settings: NotebookNavigatorS
         allFiles = getFilteredFiles(app, settings);
     }
 
-    const excludedFolderPatterns = settings.excludedFolders;
-    // For topic views, exclude files in excluded folders only when hidden items are not shown
-    const baseFiles = settings.showHiddenItems
-        ? allFiles
-        : allFiles.filter(
-              (file: TFile) => excludedFolderPatterns.length === 0 || !isPathInExcludedFolder(file.path, excludedFolderPatterns)
-          );
-
     let filteredFiles: TFile[] = [];
-    const db = getDBInstance();
-
-    const markdownFiles = baseFiles.filter((file: TFile) => file.extension === 'md');
     const selectedNode = topicService?.findTopicNode(topicName);
 
     if (selectedNode) {
@@ -375,6 +365,14 @@ export function getFilesForTopic(topicName: string, settings: NotebookNavigatorS
         let filesToInclude = new Set<string>();
         for (const topic of topicsToInclude) {
             filesToInclude = new Set([...filesToInclude, ...topic.notesWithTag]);
+        }
+        for (const filePath of filesToInclude) {
+            const file = app.vault.getFileByPath(filePath);
+            if (file) {
+                filteredFiles.push(file);
+            } else {
+                console.error(`File not found: ${filePath}`);
+            }
         }
     } else {
         // Fallback to empty if topic not found
@@ -443,6 +441,10 @@ export function getFilesForTopic(topicName: string, settings: NotebookNavigatorS
             unpinnedFiles.push(file);
         }
     }
+
+    console.log('filteredFiles', filteredFiles);
+    console.log('pinnedFiles', pinnedFiles);
+    console.log('unpinnedFiles', unpinnedFiles);
 
     return [...pinnedFiles, ...unpinnedFiles];
 }

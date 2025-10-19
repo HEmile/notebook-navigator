@@ -55,7 +55,7 @@ import { TFolder } from 'obsidian';
  * ```
  */
 export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, config: MenuConfig | null) {
-    const { app, plugin, isMobile, tagTreeService } = useServices();
+    const { app, plugin, isMobile, tagTreeService, topicService } = useServices();
     const settings = useSettingsState();
     const fileSystemOps = useFileSystemOps();
     const metadataService = useMetadataService();
@@ -188,6 +188,7 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
                 metadataService,
                 tagOperations,
                 tagTreeService,
+                topicService,
                 commandQueue,
                 shortcuts
             };

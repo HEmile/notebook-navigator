@@ -21,7 +21,8 @@ import { SelectionDispatch, SelectionState } from '../context/SelectionContext';
 import { ItemType } from '../types';
 import { NotebookNavigatorSettings } from '../settings';
 import { TagTreeService } from '../services/TagTreeService';
-import { getFilesForFolder, getFilesForTag } from './fileFinder';
+import { getFilesForFolder, getFilesForTag, getFilesForTopic } from './fileFinder';
+import { TopicService } from 'src/services/TopicGraphService';
 
 /**
  * Utilities for managing file selection operations
@@ -54,13 +55,17 @@ export function getFilesForSelection(
     selectionState: SelectionState,
     settings: NotebookNavigatorSettings,
     app: App,
-    tagTreeService: TagTreeService | null
+    tagTreeService: TagTreeService | null,
+    topicService: TopicService | null
 ): TFile[] {
     if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
         return getFilesForFolder(selectionState.selectedFolder, settings, app);
     }
     if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
         return getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
+    }
+    if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
+        return getFilesForTopic(selectionState.selectedTopic, settings, app, topicService);
     }
     return [];
 }

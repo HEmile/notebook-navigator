@@ -31,6 +31,7 @@ import { updateSelectionAfterFileOperation, findNextFileAfterRemoval } from '../
 import { executeCommand } from '../utils/typeGuards';
 import { TagTreeService } from './TagTreeService';
 import { CommandQueueService } from './CommandQueueService';
+import { TopicService } from './TopicGraphService';
 
 /**
  * Selection context for file operations
@@ -40,6 +41,7 @@ interface SelectionContext {
     selectionType: NavigationItemType;
     selectedFolder?: TFolder;
     selectedTag?: string;
+    selectedTopic?: string;
 }
 
 /**
@@ -94,11 +96,13 @@ export class FileSystemOperations {
      * Creates a new FileSystemOperations instance
      * @param app - The Obsidian app instance for vault operations
      * @param getTagTreeService - Function to get the TagTreeService instance
+     * @param getTopicService - Function to get the TopicService instance
      * @param getCommandQueue - Function to get the CommandQueueService instance
      */
     constructor(
         private app: App,
         private getTagTreeService: () => TagTreeService | null,
+        private getTopicService: () => TopicService | null,
         private getCommandQueue: () => CommandQueueService | null
     ) {}
 
@@ -356,8 +360,10 @@ export class FileSystemOperations {
         } else if (selectionContext.selectionType === ItemType.TAG && selectionContext.selectedTag) {
             const { getFilesForTag } = await import('../utils/fileFinder');
             currentFiles = getFilesForTag(selectionContext.selectedTag, settings, this.app, this.getTagTreeService());
+        } else if (selectionContext.selectionType === ItemType.TOPIC && selectionContext.selectedTopic) {
+            const { getFilesForTopic } = await import('../utils/fileFinder');
+            currentFiles = getFilesForTopic(selectionContext.selectedTopic, settings, this.app, this.getTopicService());
         }
-
         // Find next file to select
         let nextFileToSelect: TFile | null = null;
         const currentIndex = currentFiles.findIndex(f => f.path === file.path);
