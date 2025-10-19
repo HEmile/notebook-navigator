@@ -881,7 +881,7 @@ export const FileItem = React.memo(function FileItem({
     const handlePinClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        const context = selectionType === ItemType.TAG ? ItemType.TAG : ItemType.FOLDER;
+        const context = selectionType === ItemType.TAG || selectionType === ItemType.TOPIC ? ItemType.TAG : ItemType.FOLDER;
         await metadataService.togglePin(file.path, context);
     };
 
