@@ -824,6 +824,14 @@ export function useNavigationPaneData({
                     backgroundColor: metadataService.getTagBackgroundColor(tagNode.path),
                     icon: metadataService.getTagIcon(tagNode.path)
                 };
+            } else if (item.type === NavigationPaneItemType.TOPIC) {
+                const topicNode = item.data;
+                return {
+                    ...item,
+                    color: metadataService.getTagColor(topicNode.name),
+                    backgroundColor: metadataService.getTagBackgroundColor(topicNode.name),
+                    icon: metadataService.getTagIcon(topicNode.name)
+                };
             } else if (item.type === NavigationPaneItemType.SHORTCUT_FOLDER) {
                 // Apply custom folder icon to shortcut if available
                 const folderPath = item.folder?.path;
@@ -842,11 +850,13 @@ export function useNavigationPaneData({
                     color: tagColor
                 };
             } else if (item.type === NavigationPaneItemType.SHORTCUT_TOPIC) {
-                // Topics use default icon for now
+                // Apply custom topic icon to shortcut if available
+                const topicName = item.topicName;
+                const topicColor = metadataService.getTagColor(topicName);
                 return {
                     ...item,
-                    icon: 'lucide-trending-up',
-                    color: undefined
+                    icon: metadataService.getTagIcon(topicName) || 'lucide-trending-up',
+                    color: topicColor
                 };
             } else if (item.type === NavigationPaneItemType.SHORTCUT_NOTE) {
                 const note = item.note;

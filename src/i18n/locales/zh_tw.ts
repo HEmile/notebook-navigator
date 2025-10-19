@@ -188,6 +188,9 @@ export const STRINGS_ZH_TW = {
             hideTag: '隱藏標籤'
         },
         topic: {
+            changeIcon: '更改圖示',
+            changeColor: '更改顏色',
+            changeBackground: '更改背景',
             showTopic: '顯示主題',
             hideTopic: '隱藏主題'
         }

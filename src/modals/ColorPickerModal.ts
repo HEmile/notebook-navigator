@@ -89,7 +89,7 @@ interface ColorMetadataService {
  */
 export class ColorPickerModal extends Modal {
     private itemPath: string;
-    private itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.FILE;
+    private itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.TOPIC | typeof ItemType.FILE;
     private metadataService: ColorMetadataService;
     private settingsProvider: ISettingsProvider;
     private currentColor: string | null = null;
@@ -129,7 +129,7 @@ export class ColorPickerModal extends Modal {
         app: App,
         metadataService: ColorMetadataService,
         itemPath: string,
-        itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.FILE = ItemType.FOLDER,
+        itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.TOPIC | typeof ItemType.FILE = ItemType.FOLDER,
         colorMode: ColorPickerMode = 'foreground'
     ) {
         super(app);
@@ -714,10 +714,10 @@ export class ColorPickerModal extends Modal {
     }
 
     /**
-     * Helper to check if this is for a tag
+     * Helper to check if this is for a tag or topic
      */
     private isTag(): boolean {
-        return this.itemType === ItemType.TAG;
+        return this.itemType === ItemType.TAG || this.itemType === ItemType.TOPIC;
     }
 
     private isFile(): boolean {
