@@ -1335,12 +1335,48 @@ export const NavigationPane = React.memo(
             (topicName: string, shortcutKey: string) => {
                 setActiveShortcut(shortcutKey);
                 
-                // Re-use handleTopicClick logic
+                const topicNode = topicService?.findTopicNode(topicName);
+                if (!topicNode) {
+                    return;
+                }
+
+                // Expand the Topics virtual folder
+                const currentExpanded = new Set(expansionState.expandedVirtualFolders);
+                currentExpanded.add('topics');
+                expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: currentExpanded });
+
+                // Get and expand ancestor topics (if any)
+                const { getTopicAncestors } = require('../utils/topicGraph');
+                const ancestors = getTopicAncestors(topicNode);
+                if (ancestors.length > 0) {
+                    expansionDispatch({ type: 'EXPAND_TAGS', tagPaths: ancestors });
+                }
+
+                // Expand this topic if it has children
+                if (topicNode.children.size > 0) {
+                    expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicName });
+                }
+
+                // Select the topic and handle UI transitions
                 handleTopicClick(topicName);
+
+                // Scroll to the topic in the navigation pane
+                setTimeout(() => {
+                    const normalizedPath = topicName;
+                    requestScroll(normalizedPath, { itemType: ItemType.TOPIC });
+                }, 100);
 
                 scheduleShortcutRelease();
             },
-            [setActiveShortcut, handleTopicClick, scheduleShortcutRelease]
+            [
+                setActiveShortcut,
+                topicService,
+                expansionState.expandedVirtualFolders,
+                expansionDispatch,
+                handleTopicClick,
+                requestScroll,
+                scheduleShortcutRelease
+            ]
         );
 
         type ShortcutContextMenuTarget =
@@ -1589,6 +1625,43 @@ export const NavigationPane = React.memo(
                 };
             },
             [settings.showNoteCount, settings.includeDescendantNotes, tagCounts, tagTree]
+        );
+
+        // Calculates the note count for a topic shortcut
+        const getTopicShortcutCount = useCallback(
+            (topicName: string): NoteCountInfo => {
+                if (!settings.showNoteCount) {
+                    return ZERO_NOTE_COUNT;
+                }
+
+                const topicNode = topicService?.findTopicNode(topicName);
+                if (!topicNode) {
+                    return ZERO_NOTE_COUNT;
+                }
+
+                // Calculate note counts for the topic and its descendants
+                const current = topicNode.notesWithTag.size;
+                if (!settings.includeDescendantNotes) {
+                    // Return only current topic's note count when descendants are disabled
+                    return {
+                        current,
+                        descendants: 0,
+                        total: current
+                    };
+                }
+
+                // Calculate total notes including all descendant topics
+                const { getTotalNoteCount: getTopicTotalNoteCount } = require('../utils/topicGraph');
+                const total = getTopicTotalNoteCount(topicNode);
+                // Descendant count is the difference between total and current
+                const descendants = Math.max(total - current, 0);
+                return {
+                    current,
+                    descendants,
+                    total
+                };
+            },
+            [settings.showNoteCount, settings.includeDescendantNotes, topicService]
         );
 
         // Extracts the base file/folder name from a full path
@@ -1892,6 +1965,7 @@ export const NavigationPane = React.memo(
                     case NavigationPaneItemType.SHORTCUT_TOPIC: {
                         const isMissing = Boolean(item.isMissing);
                         const topicName = item.topicName;
+                        const topicCountInfo = !isMissing ? getTopicShortcutCount(topicName) : ZERO_NOTE_COUNT;
 
                         const { showBefore, showAfter, isDragSource } = getShortcutVisualState(item.key);
                         const dragHandlers = buildShortcutDragHandlers(item.key, {
@@ -1913,7 +1987,7 @@ export const NavigationPane = React.memo(
                                 description={undefined}
                                 level={item.level}
                                 type="topic"
-                                countInfo={undefined}
+                                countInfo={!isMissing ? topicCountInfo : undefined}
                                 isDisabled={isMissing}
                                 isMissing={isMissing}
                                 onClick={() => {
@@ -2153,6 +2227,7 @@ export const NavigationPane = React.memo(
                 tagCounts,
                 getFolderShortcutCount,
                 getTagShortcutCount,
+                getTopicShortcutCount,
                 handleShortcutFolderActivate,
                 handleShortcutNoteActivate,
                 handleShortcutNoteMouseDown,

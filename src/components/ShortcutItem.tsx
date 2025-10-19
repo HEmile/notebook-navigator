@@ -83,9 +83,9 @@ export const ShortcutItem = React.memo(function ShortcutItem({
         settings.includeDescendantNotes && settings.separateNoteCounts
     );
     // Check if this item type supports displaying note counts
-    const supportsCount = type === 'folder' || type === 'tag';
+    const supportsCount = type === 'folder' || type === 'tag' || type === 'topic';
     // Determines whether to display count based on settings and item type
-    // Only shows counts for folder and tag types when showNoteCount is enabled
+    // Only shows counts for folder, tag, and topic types when showNoteCount is enabled
     const shouldShowCount = settings.showNoteCount && supportsCount && countDisplay.shouldDisplay;
     // Row is disabled when item exists but is disabled (missing items are handled separately)
     const shouldDisableRow = Boolean(isDisabled) && !isMissing;
