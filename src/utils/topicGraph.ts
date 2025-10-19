@@ -56,10 +56,12 @@ export function getTopicNameFromPath(topicPath: string): string {
 
 function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, app: App): TopicNode | undefined {
     const topicName = getTopicNameFromPath(topicPath);
+
     // If topic is already in allTopics, return immediately
     if (allTopics.has(topicName)) {
         return allTopics.get(topicName);
     }
+
     // Otherwise, add topic and traverse up if possible
     const topicNode = {
         name: topicName,
@@ -71,16 +73,18 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
 
     const file = app.vault.getFileByPath(topicPath);
     if (!file) {
-        return undefined;
+        return topicNode;
     }
+    
     const metadata = app.metadataCache.getFileCache(file);
     if (!metadata) {
-        return undefined;
+        return topicNode;
     }
     const topics = metadata.frontmatter?.['subset'] as string[] | undefined;
     if (!topics) {
-        return undefined;
+        return topicNode;
     }
+    
     for (const parentTopic of topics) {
         // Use Obsidian API to resolve the parentTopic as a file path
         const parentFile = app.metadataCache.getFirstLinkpathDest(parentTopic.slice(2, -2).split("|")[0], "");
@@ -92,8 +96,15 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
         if (!metadata?.tags?.some(tag => tag.tag.contains('topic'))) {
             continue;
         }
-        const parentName = getTopicNameFromPath(parentFilePath);
+        
         const parent = traverseTopicsUp(allTopics, parentFilePath, app);
+        const parentName = getTopicNameFromPath(parentFilePath);
+        // if (topicName === "topology") {
+        //     console.log('metadata', metadata);
+        //     console.log('parentName', parentName);
+        //     console.log('parentFilePath', parentFilePath);
+        //     console.log('parentFile', parent);
+        // }
         if (parent) {
             parent.children.set(topicName, topicNode);
             topicNode.parents.set(parentName, parent);
@@ -142,7 +153,6 @@ export function buildTopicGraphFromDatabase(
         if (allTopics.has(path)) {
             continue;
         }
-
         // Traverse the topic hierarchy up
         traverseTopicsUp(allTopics, path, app);
     }
