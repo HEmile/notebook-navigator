@@ -159,7 +159,7 @@ export function buildTopicGraphFromDatabase(
 
     function collectParentTopics(file: TFile, path: string) {
         const metadata = app.metadataCache.getFileCache(file);
-        if (!metadata) {
+        if (!metadata || metadata.tags?.some(tag => tag.tag.contains('topic'))) {
             return 
         }
         const hasTopics = metadata.frontmatter?.['hasTopic'] as string[] | undefined;
