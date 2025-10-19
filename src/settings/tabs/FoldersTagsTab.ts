@@ -224,4 +224,59 @@ export function renderFoldersTagsTab(context: SettingsTabContext): void {
     registerShowTagsListener(updateTagSection);
     updateTagSection(plugin.settings.showTags);
     folderNotesSettingsEl.toggle(plugin.settings.enableFolderNotes);
+
+    // Topics Section
+    new Setting(containerEl).setName(strings.settings.sections.topics).setHeading();
+
+    new Setting(containerEl)
+        .setName(strings.settings.items.showTopics.name)
+        .setDesc(strings.settings.items.showTopics.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.showTopics).onChange(async value => {
+                plugin.settings.showTopics = value;
+                await plugin.saveSettingsAndUpdate();
+                topicSubSettingsEl.toggle(value);
+            })
+        );
+
+    const topicSubSettingsEl = containerEl.createDiv('nn-sub-settings');
+
+    /** Setting for choosing topic sort order in the navigation pane */
+    new Setting(topicSubSettingsEl)
+        .setName(strings.settings.items.topicSortOrder.name)
+        .setDesc(strings.settings.items.topicSortOrder.desc)
+        .addDropdown(dropdown => {
+            dropdown
+                .addOption('alpha-asc', strings.settings.items.topicSortOrder.options.alphaAsc)
+                .addOption('alpha-desc', strings.settings.items.topicSortOrder.options.alphaDesc)
+                .addOption('frequency-asc', strings.settings.items.topicSortOrder.options.frequencyAsc)
+                .addOption('frequency-desc', strings.settings.items.topicSortOrder.options.frequencyDesc)
+                .setValue(plugin.settings.topicSortOrder)
+                .onChange(async value => {
+                    if (!isTagSortOrder(value)) {
+                        return;
+                    }
+                    plugin.settings.topicSortOrder = value;
+                    await plugin.saveSettingsAndUpdate();
+                });
+        });
+
+    const hiddenTopicsSetting = createDebouncedTextSetting(
+        topicSubSettingsEl,
+        strings.settings.items.hiddenTopics.name,
+        strings.settings.items.hiddenTopics.desc,
+        strings.settings.items.hiddenTopics.placeholder,
+        () => plugin.settings.hiddenTopics.join(', '),
+        value => {
+            const hiddenTopics = value
+                .split(',')
+                .map(entry => entry.trim())
+                .filter(entry => entry.length > 0);
+
+            plugin.settings.hiddenTopics = Array.from(new Set(hiddenTopics));
+        }
+    );
+    hiddenTopicsSetting.controlEl.addClass('nn-setting-wide-input');
+
+    topicSubSettingsEl.toggle(plugin.settings.showTopics);
 }

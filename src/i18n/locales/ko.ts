@@ -486,6 +486,7 @@ export const STRINGS_KO = {
             icons: '아이콘 팩',
             folders: '폴더',
             tags: '태그',
+            topics: '주제',
             search: '검색',
             listPane: '목록 창',
             notes: '노트',
@@ -854,6 +855,25 @@ export const STRINGS_KO = {
                 name: '숨겨진 태그',
                 desc: '숨길 태그 접두사 또는 이름 와일드카드의 쉼표로 구분된 목록입니다. `tag*` 또는 `*tag` 로 태그 이름을 일치시킵니다. 태그를 숨기면 모든 하위 태그도 숨겨집니다 (예: "archive"는 "archive/2024/docs" 숨김).',
                 placeholder: 'internal, temp/drafts, archive/2024'
+            },
+            showTopics: {
+                name: '주제 표시',
+                desc: '탐색 창에 주제를 표시합니다.'
+            },
+            topicSortOrder: {
+                name: '주제 정렬 순서',
+                desc: '탐색 창에서 주제를 정렬하는 방법을 선택합니다.',
+                options: {
+                    alphaAsc: 'A부터 Z까지',
+                    alphaDesc: 'Z부터 A까지',
+                    frequencyAsc: '빈도 (낮음에서 높음)',
+                    frequencyDesc: '빈도 (높음에서 낮음)'
+                }
+            },
+            hiddenTopics: {
+                name: '숨겨진 주제',
+                desc: '탐색 창에서 숨길 주제의 쉼표로 구분된 목록.',
+                placeholder: '보관, 비공개, 초안'
             },
             enableFolderNotes: {
                 name: '폴더 노트 활성화',

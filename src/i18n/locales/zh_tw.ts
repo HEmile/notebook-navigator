@@ -486,6 +486,7 @@ export const STRINGS_ZH_TW = {
             icons: '圖示包',
             folders: '資料夾',
             tags: '標籤',
+            topics: '主題',
             search: '搜尋',
             listPane: '列表窗格',
             notes: '筆記',
@@ -853,6 +854,25 @@ export const STRINGS_ZH_TW = {
                 name: '隱藏標籤',
                 desc: '以逗號分隔的標籤前綴或名稱萬用字元清單。使用 tag* 或 *tag 來匹配標籤名稱。隱藏一個標籤也會隱藏其所有子標籤 (例如 "archive" 隱藏 "archive/2024/docs")。',
                 placeholder: 'internal, temp/drafts, archive/2024'
+            },
+            showTopics: {
+                name: '顯示主題',
+                desc: '在導覽窗格中顯示主題。'
+            },
+            topicSortOrder: {
+                name: '主題排序順序',
+                desc: '選擇在導覽窗格中如何排序主題。',
+                options: {
+                    alphaAsc: 'A 到 Z',
+                    alphaDesc: 'Z 到 A',
+                    frequencyAsc: '頻率（從低到高）',
+                    frequencyDesc: '頻率（從高到低）'
+                }
+            },
+            hiddenTopics: {
+                name: '隱藏主題',
+                desc: '要從導覽窗格隱藏的主題清單，以逗號分隔。',
+                placeholder: '封存, 私密, 草稿'
             },
             enableFolderNotes: {
                 name: '啟用資料夾筆記',
