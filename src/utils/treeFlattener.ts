@@ -19,8 +19,8 @@
 import { TFolder } from 'obsidian';
 import { naturalCompare } from './sortUtils';
 import { NavigationPaneItemType } from '../types';
-import { TagTreeNode } from '../types/storage';
-import type { FolderTreeItem, TagTreeItem } from '../types/virtualization';
+import { NNNode, TagTreeNode, TopicNode } from '../types/storage';
+import type { FolderTreeItem, TagTreeItem, TopicItem } from '../types/virtualization';
 import { isFolderInExcludedFolder } from './fileFilters';
 import { matchesHiddenTagPattern, HiddenTagMatcher } from './tagPrefixMatcher';
 
@@ -35,7 +35,7 @@ interface FlattenTagTreeOptions {
     /** Matcher for determining hidden tags */
     hiddenMatcher?: HiddenTagMatcher;
     /** Custom comparator for sorting tag nodes */
-    comparator?: (a: TagTreeNode, b: TagTreeNode) => number;
+    comparator?: (a: NNNode, b: NNNode) => number;
 }
 
 /**
@@ -208,6 +208,63 @@ export function flattenTagTree(
 
         // Add children if expanded and has children
         if (expandedTags.has(node.path) && node.children && node.children.size > 0) {
+            const sortedChildren = Array.from(node.children.values()).sort(sortFn);
+
+            sortedChildren.forEach(child => addNode(child, currentLevel + 1, isHidden));
+        }
+    }
+
+    sortedNodes.forEach(node => addNode(node, level));
+    return items;
+}
+
+/**
+ * Flattens a topic graph into a sort-of linear array for virtualization.
+ * Only includes topics that are visible based on the expanded state.
+ *
+ * @param topicNodes - Array of root topic nodes to flatten
+ * @param expandedTopics - Set of expanded topic paths
+ * @param level - Current nesting level (for indentation)
+ * @param options - Configuration options for flattening behavior
+ * @returns Array of flattened topic items
+ */
+export function flattenTopicTree(
+    topicNodes: TopicNode[],
+    expandedTopics: Set<string>,
+    level: number = 0,
+    options: FlattenTagTreeOptions = {}
+): TopicItem[] {
+    const items: TopicItem[] = [];
+    const { hiddenMatcher, comparator } = options;
+    /** Use custom comparator or default to alphabetical sorting */
+    const sortFn = comparator ?? ((a: TopicNode, b: TopicNode) => naturalCompare(a.name, b.name));
+
+    /** Sort tags using the selected comparator */
+    const sortedNodes = topicNodes.slice().sort(sortFn);
+
+    /** Recursively adds a tag node and its children to the items array */
+    function addNode(node: TopicNode, currentLevel: number, parentHidden: boolean = false) {
+        const matchesRule = hiddenMatcher ? matchesHiddenTagPattern(node.name, node.name, hiddenMatcher) : false;
+        const isHidden = parentHidden || matchesRule;
+
+        const item: TopicItem = {
+            type: NavigationPaneItemType.TOPIC,
+            data: node,
+            level: currentLevel,
+            // TODO: Better use of paths for topics
+            path: node.name,
+            key: node.name
+        };
+
+        // Mark tags that match hidden patterns (shows eye icon when visible)
+        if (isHidden) {
+            item.isHidden = true;
+        }
+
+        items.push(item);
+
+        // Add children if expanded and has children
+        if (expandedTopics.has(node.name) && node.children && node.children.size > 0) {
             const sortedChildren = Array.from(node.children.values()).sort(sortFn);
 
             sortedChildren.forEach(child => addNode(child, currentLevel + 1, isHidden));

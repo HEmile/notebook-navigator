@@ -59,7 +59,7 @@ import { TFolder, TFile, Platform, Menu } from 'obsidian';
 import { Virtualizer } from '@tanstack/react-virtual';
 import { useExpansionState, useExpansionDispatch } from '../context/ExpansionContext';
 import { useSelectionState, useSelectionDispatch } from '../context/SelectionContext';
-import { useServices, useCommandQueue, useFileSystemOps, useMetadataService, useTagOperations } from '../context/ServicesContext';
+import { useServices, useCommandQueue, useFileSystemOps, useMetadataService, useTagOperations, useTopicService } from '../context/ServicesContext';
 import { useRecentData } from '../context/RecentDataContext';
 import { useSettingsState, useSettingsUpdate } from '../context/SettingsContext';
 import { useFileCache } from '../context/StorageContext';
@@ -141,6 +141,7 @@ export const NavigationPane = React.memo(
         const fileSystemOps = useFileSystemOps();
         const metadataService = useMetadataService();
         const tagOperations = useTagOperations();
+        const topicService = useTopicService();
         const expansionState = useExpansionState();
         const expansionDispatch = useExpansionDispatch();
         const selectionState = useSelectionState();
@@ -163,6 +164,7 @@ export const NavigationPane = React.memo(
                 metadataService,
                 tagOperations,
                 tagTreeService,
+                topicService,
                 commandQueue,
                 shortcuts
             }),
@@ -1735,40 +1737,42 @@ export const NavigationPane = React.memo(
                     }
 
                     case NavigationPaneItemType.TAG:
-                    case NavigationPaneItemType.UNTAGGED: {
+                    case NavigationPaneItemType.UNTAGGED: 
+                    case NavigationPaneItemType.TOPIC: {
                         const tagNode = item.data;
+                        const name = 'path' in tagNode ? tagNode.path : tagNode.name as string;
                         return (
                             <TagTreeItem
                                 tagNode={tagNode}
                                 level={item.level ?? 0}
-                                isExpanded={expansionState.expandedTags.has(tagNode.path)}
-                                isSelected={selectionState.selectionType === ItemType.TAG && selectionState.selectedTag === tagNode.path}
+                                isExpanded={expansionState.expandedTags.has(name)}
+                                isSelected={selectionState.selectionType === ItemType.TAG && selectionState.selectedTag === name}
                                 isHidden={'isHidden' in item ? item.isHidden : false}
-                                onToggle={() => handleTagToggle(tagNode.path)}
-                                onClick={() => handleTagClick(tagNode.path)}
+                                onToggle={() => handleTagToggle(name)}
+                                onClick={() => handleTagClick(name)}
                                 color={item.color}
                                 backgroundColor={item.backgroundColor}
                                 icon={item.icon}
                                 onToggleAllSiblings={() => {
-                                    const isCurrentlyExpanded = expansionState.expandedTags.has(tagNode.path);
+                                    const isCurrentlyExpanded = expansionState.expandedTags.has(name);
 
                                     if (isCurrentlyExpanded) {
                                         // If expanded, collapse everything (parent and all descendants)
-                                        handleTagToggle(tagNode.path);
-                                        const descendantPaths = getAllDescendantTags(tagNode.path);
+                                        handleTagToggle(name);
+                                        const descendantPaths = getAllDescendantTags(name);
                                         if (descendantPaths.length > 0) {
                                             expansionDispatch({ type: 'TOGGLE_DESCENDANT_TAGS', descendantPaths, expand: false });
                                         }
                                     } else {
                                         // If collapsed, expand parent and all descendants
-                                        handleTagToggle(tagNode.path);
-                                        const descendantPaths = getAllDescendantTags(tagNode.path);
+                                        handleTagToggle(name);
+                                        const descendantPaths = getAllDescendantTags(name);
                                         if (descendantPaths.length > 0) {
                                             expansionDispatch({ type: 'TOGGLE_DESCENDANT_TAGS', descendantPaths, expand: true });
                                         }
                                     }
                                 }}
-                                countInfo={tagCounts.get(tagNode.path)}
+                                countInfo={tagCounts.get(name)}
                                 showFileCount={settings.showNoteCount}
                             />
                         );

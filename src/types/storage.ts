@@ -24,7 +24,16 @@
  * Represents a node in the hierarchical tag tree.
  * Each node contains information about a tag and its nested children.
  */
-export interface TagTreeNode {
+
+export interface NNNode {
+    name: string;
+
+    children: Map<string, NNNode>;
+
+    notesWithTag: Set<string>;
+}
+
+export interface TagTreeNode extends NNNode {
     /** The name of this part of the tag (e.g., "processing" for "inbox/processing") */
     name: string;
     /** The full path of the tag without # prefix - ALWAYS LOWERCASE for logic (e.g., "inbox/processing") */
@@ -37,7 +46,7 @@ export interface TagTreeNode {
     notesWithTag: Set<string>;
 }
 
-export interface TopicNode {
+export interface TopicNode extends NNNode {
     /** The name of this part of the topic (e.g., "artificial intelligence"). Does not include the extension. Currently no support for directory structures  */
     name: string;
     /** Map of parent topic nodes */
@@ -45,5 +54,5 @@ export interface TopicNode {
     /** Map of child topic nodes */
     children: Map<string, TopicNode>;
     /** Set of file paths that have this exact topic */
-    notesWithTopic: Set<string>;
+    notesWithTag: Set<string>;
 }

@@ -65,7 +65,7 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
         name: topicName,
         parents: new Map(),
         children: new Map(),
-        notesWithTopic: new Set()
+        notesWithTag: new Set()
     } as TopicNode;
     allTopics.set(topicName, topicNode);
 
@@ -185,7 +185,7 @@ export function buildTopicGraphFromDatabase(
             const topicName = getTopicNameFromPath(topicFile.path);
             const topicNode = allTopics.get(topicName);
             if (topicNode) {
-                topicNode.notesWithTopic.add(path);
+                topicNode.notesWithTag.add(path);
             } 
             // It's possible it cannot be find when a user uses hasTopic or isA for a note that is not a topic
         }
@@ -220,15 +220,15 @@ export function getTotalNoteCount(node: TopicNode): number {
     }
 
     // Calculate count
-    let count = node.notesWithTopic.size;
+    let count = node.notesWithTag.size;
 
     // Collect all unique files from this node and all descendants
-    const allFiles = new Set(node.notesWithTopic);
+    const allFiles = new Set(node.notesWithTag);
 
     // Helper to collect files from children
     function collectFromChildren(n: TopicNode): void {
         for (const child of n.children.values()) {
-            child.notesWithTopic.forEach(file => allFiles.add(file));
+            child.notesWithTag.forEach(file => allFiles.add(file));
             collectFromChildren(child);
         }
     }

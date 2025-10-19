@@ -55,7 +55,7 @@ import { useSettingsState } from '../context/SettingsContext';
 import { useContextMenu } from '../hooks/useContextMenu';
 import { getIconService, useIconServiceVersion } from '../services/icons';
 import { ItemType } from '../types';
-import { TagTreeNode } from '../types/storage';
+import { NNNode } from '../types/storage';
 import type { NoteCountInfo } from '../types/noteCounts';
 import { buildNoteCountDisplay } from '../utils/noteCountFormatting';
 import { getTotalNoteCount } from '../utils/tagTree';
@@ -65,7 +65,7 @@ import { getTotalNoteCount } from '../utils/tagTree';
  */
 interface TagTreeItemProps {
     /** The tag node to render */
-    tagNode: TagTreeNode;
+    tagNode: NNNode;
     /** Nesting level for indentation */
     level: number;
     /** Whether this tag is expanded to show children */
@@ -219,16 +219,16 @@ export const TagTreeItem = React.memo(
         // Add context menu
         useContextMenu(itemRef, {
             type: ItemType.TAG,
-            item: tagNode.path
+            item: ('path' in tagNode ? tagNode.path : tagNode.name) as string
         });
 
         return (
             <div
                 ref={itemRef}
                 className={className}
-                data-tag={tagNode.path}
+                data-tag={('path' in tagNode ? tagNode.path : tagNode.name) as string}
                 data-drop-zone="tag"
-                data-drop-path={tagNode.displayPath}
+                data-drop-path={('path' in tagNode ? tagNode.path : tagNode.name) as string}
                 data-level={level}
                 style={
                     {
