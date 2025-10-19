@@ -38,7 +38,7 @@ export interface TagTreeNode {
 }
 
 export interface TopicNode {
-    /** The name of this part of the topic (e.g., "artificial intelligence") */
+    /** The name of this part of the topic (e.g., "artificial intelligence"). Does not include the extension. Currently no support for directory structures  */
     name: string;
     /** Map of parent topic nodes */
     parents: Map<string, TopicNode>;

@@ -50,7 +50,12 @@ function getNoteCountCache(): WeakMap<TopicNode, number> {
     return noteCountCache;
 }
 
-function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicName: string, app: App): TopicNode | undefined {
+export function getTopicNameFromPath(topicPath: string): string {
+    return topicPath.split('/').pop()?.split('.').slice(0, -1).join('') || '';
+}
+
+function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, app: App): TopicNode | undefined {
+    const topicName = getTopicNameFromPath(topicPath);
     // If topic is already in allTopics, return immediately
     if (allTopics.has(topicName)) {
         return allTopics.get(topicName);
@@ -64,7 +69,7 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicName: string, 
     } as TopicNode;
     allTopics.set(topicName, topicNode);
 
-    const file = app.vault.getFileByPath(topicName);
+    const file = app.vault.getFileByPath(topicPath);
     if (!file) {
         return undefined;
     }
@@ -72,15 +77,22 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicName: string, 
     if (!metadata) {
         return undefined;
     }
-    const topics = metadata.frontmatter?.['subsets'] as string[] | undefined;
+    const topics = metadata.frontmatter?.['subset'] as string[] | undefined;
     if (!topics) {
         return undefined;
     }
     for (const parentTopic of topics) {
-        const parent = traverseTopicsUp(allTopics, parentTopic, app);
+        // Use Obsidian API to resolve the parentTopic as a file path
+        const parentFile = app.metadataCache.getFirstLinkpathDest(parentTopic.slice(2, -2), "");
+        if (!parentFile) {
+            continue;
+        }
+        const parentFilePath = parentFile.path;
+        const parentName = getTopicNameFromPath(parentFilePath);
+        const parent = traverseTopicsUp(allTopics, parentFilePath, app);
         if (parent) {
             parent.children.set(topicName, topicNode);
-            topicNode.parents.set(parentTopic, parent);
+            topicNode.parents.set(parentName, parent);
         }
     }
     return topicNode;
@@ -105,6 +117,7 @@ export function buildTopicGraphFromDatabase(
     const allFiles = db.getAllFiles();
 
     // First pass: collect all topics and their parents
+    console.log("First pass: collecting all topics and their parents");
     for (const { path, data: fileData } of allFiles) {
         // Defense-in-depth: skip files not in the included set (e.g., frontmatter-excluded)
         if (includedPaths && !includedPaths.has(path)) {
@@ -118,7 +131,7 @@ export function buildTopicGraphFromDatabase(
         const tags = fileData.tags;
 
         // Skip files that do not have the topics tag
-        if (!tags || !tags.includes('topics')) {
+        if (!tags || !tags.includes('topic')) {
             continue;
         }
 
