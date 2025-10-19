@@ -105,14 +105,15 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
                 return false;
             }
 
-            // Check if the active file is a topic note
-            const { isTopicNote, getTopicNameFromFile } = require('../../utils/topicNotes');
-            if (!isTopicNote(activeFile, plugin.app)) {
+            // Find the first topic in the hierarchy (either the file itself or via isA/subset/hasTopic links)
+            const { findFirstTopicInHierarchy } = require('../../utils/topicNotes');
+            const topicName = findFirstTopicInHierarchy(activeFile, plugin.app);
+            
+            if (!topicName) {
                 return false;
             }
 
             if (!checking) {
-                const topicName = getTopicNameFromFile(activeFile);
                 void (async () => {
                     await plugin.activateView();
                     await plugin.revealTopic(topicName);

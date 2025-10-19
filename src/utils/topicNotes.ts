@@ -65,3 +65,70 @@ export function getTopicNameFromFile(file: TFile): string {
     return getTopicNameFromPath(file.path);
 }
 
+/**
+ * Finds the first topic in the hierarchy by traversing isA, subset, and hasTopic links.
+ * Similar to collectParentTopics in topicGraph.ts but returns the first topic found.
+ * 
+ * @param file - The file to start searching from
+ * @param app - The Obsidian App instance
+ * @param visited - Set of visited file paths to prevent infinite loops
+ * @returns The topic name if found, null otherwise
+ */
+export function findFirstTopicInHierarchy(file: TFile, app: App, visited: Set<string> = new Set()): string | null {
+    // Prevent infinite loops
+    if (visited.has(file.path)) {
+        return null;
+    }
+    visited.add(file.path);
+
+    const metadata = app.metadataCache.getFileCache(file);
+    if (!metadata) {
+        return null;
+    }
+
+    // Check if this file itself is a topic
+    if (isTopicNote(file, app)) {
+        return getTopicNameFromFile(file);
+    }
+
+    // Get all parent links from frontmatter
+    const hasTopics = metadata.frontmatter?.['hasTopic'] as string[] | undefined;
+    const isAs = metadata.frontmatter?.['isA'] as string[] | undefined;
+    const subsets = metadata.frontmatter?.['subset'] as string[] | undefined;
+
+    // Merge all links into a single list
+    let parentLinks: string[] = [];
+    if (Array.isArray(hasTopics)) {
+        parentLinks = parentLinks.concat(hasTopics);
+    }
+    if (Array.isArray(isAs)) {
+        parentLinks = parentLinks.concat(isAs);
+    }
+    if (Array.isArray(subsets)) {
+        parentLinks = parentLinks.concat(subsets);
+    }
+
+    // Remove duplicates
+    parentLinks = Array.from(new Set(parentLinks));
+
+    // Traverse each parent link
+    for (const parentLink of parentLinks) {
+        // Parse the link (remove [[ ]], handle aliases)
+        const linkPath = parentLink.slice(2, -2).split('|')[0];
+        
+        // Resolve the link to a file
+        const parentFile = app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
+        if (!parentFile) {
+            continue;
+        }
+
+        // Recursively search for a topic
+        const topicName = findFirstTopicInHierarchy(parentFile, app, visited);
+        if (topicName) {
+            return topicName;
+        }
+    }
+
+    return null;
+}
+
