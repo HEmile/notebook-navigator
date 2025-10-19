@@ -27,3 +27,11 @@ export interface ITagTreeProvider {
      */
     getAllTagPaths(): string[];
 }
+
+export interface ITopicGraphProvider {
+    /**
+     * Gets all topic names from the topic graph
+     * @returns Array of all topic names
+     */
+    getAllTopicNames(): string[];
+}

@@ -17,7 +17,7 @@
  */
 
 import { FileData, IndexedDBStorage } from '../storage/IndexedDBStorage';
-import { TopicTreeNode as TopicNode } from '../types/storage';
+import { TopicNode as TopicNode } from '../types/storage';
 import { isPathInExcludedFolder } from './fileFilters';
 import { HiddenTagMatcher, matchesHiddenTagPattern, normalizeTagPathValue } from './tagPrefixMatcher';
 import { naturalCompare } from './sortUtils';

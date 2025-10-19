@@ -56,6 +56,7 @@ import { getFilteredMarkdownFiles } from '../utils/fileFilters';
 import { getFileDisplayName as getDisplayName } from '../utils/fileNameUtils';
 import { clearNoteCountCache } from '../utils/tagTree';
 import { buildTagTreeFromDatabase, findTagNode, collectAllTagPaths } from '../utils/tagTree';
+import { buildTopicGraphFromDatabase, findTopicNode, collectAllTopicPaths } from '../utils/topicGraph';
 import { useServices } from './ServicesContext';
 import { useSettingsState } from './SettingsContext';
 import { NotebookNavigatorSettings } from '../settings';
@@ -107,7 +108,7 @@ interface StorageProviderProps {
 
 export function StorageProvider({ app, api, children }: StorageProviderProps) {
     const settings = useSettingsState();
-    const { tagTreeService } = useServices();
+    const { tagTreeService, topicService } = useServices();
     const [fileData, setFileData] = useState<FileData>({ tagTree: new Map(), untagged: 0 });
 
     // Registry managing all content providers for generating preview text, feature images, metadata, and tags
@@ -163,6 +164,24 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         return tagTree;
     }, [settings.excludedFolders, settings.showHiddenItems, tagTreeService, getFilteredMarkdownFilesCallback]);
 
+    // Rebuilds the complete topic graph from database contents
+    const rebuildTopicTree = useCallback(() => {
+        const db = getDBInstance();
+        // Hidden items override: when enabled, include all folders in tag tree regardless of exclusions
+        const excludedFolderPatterns = settings.showHiddenItems ? [] : settings.excludedFolders;
+        // Filter database results to only include files matching current visibility settings
+        const includedPaths = new Set(getFilteredMarkdownFilesCallback().map(f => f.path));
+        const topicGraph = buildTopicGraphFromDatabase(db, app, excludedFolderPatterns, includedPaths);
+        clearNoteCountCache();
+
+        // Propagate updated topic graph to the global TopicService for cross-component access
+        if (topicService) {
+            topicService.updateTopicGraph(topicGraph);
+        }
+
+        return topicGraph;
+    }, [settings.excludedFolders, settings.showHiddenItems, tagTreeService, getFilteredMarkdownFilesCallback]);
+
     /**
      * Effect: Rebuild tag tree when hidden items visibility changes
      *
@@ -177,7 +196,10 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         if (settings.showTags) {
             rebuildTagTree();
         }
-    }, [settings.showHiddenItems, settings.showTags, isStorageReady, rebuildTagTree]);
+        if (settings.showTopics) {
+            rebuildTopicTree();
+        }
+    }, [settings.showHiddenItems, settings.showTags, settings.showTopics, isStorageReady, rebuildTagTree, rebuildTopicTree]);
 
     /**
      * Effect: Keep a ref with the latest settings for use in callbacks
@@ -877,6 +899,8 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         return unsubscribe;
     }, [isStorageReady, settings.showTags, rebuildTagTree]);
 
+    // TODO: Do the above for topics. Not super important, just reload the window. 
+
     /**
      * Main Effect: Initialize storage system and monitor vault changes
      *
@@ -936,9 +960,10 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
                         await recordFileChanges([...toAdd, ...toUpdate], cachedFiles, pendingRenameDataRef.current);
                     }
 
-                    // Step 3: Build tag tree from the now-synced database
-                    // This ensures the tag tree accurately reflects the current vault state
+                    // Step 3: Build tag tree and topic graph from the now-synced database
+                    // This ensures the tag tree and topic graph accurately reflect the current vault state
                     rebuildTagTree();
+                    rebuildTopicTree();
 
                     // Step 4: Mark storage as ready
                     setIsStorageReady(true);
@@ -1017,6 +1042,9 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
                                     await removeFilesFromCache(toRemove);
                                     if (settings.showTags) {
                                         rebuildTagTree();
+                                    }
+                                    if (settings.showTopics) {
+                                        rebuildTopicTree();
                                     }
                                 }
                             } catch (error) {
@@ -1302,6 +1330,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         isIndexedDBReady,
         getFilteredMarkdownFilesCallback,
         rebuildTagTree,
+        rebuildTopicTree,
         settings,
         waitForMetadataCache,
         queueTagsWhenMetadataReady
@@ -1351,6 +1380,9 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
                     // Always rebuild tag tree so folder exclusion rule changes take effect immediately
                     if (settings.showTags) {
                         rebuildTagTree();
+                    }
+                    if (settings.showTopics) {
+                        rebuildTopicTree();
                     }
 
                     // Queue content generation for newly added/updated items if needed
@@ -1419,7 +1451,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         }
 
         prevSettings.current = settings;
-    }, [settings, handleSettingsChanges, rebuildTagTree, getFilteredMarkdownFilesCallback, queueTagsWhenMetadataReady]);
+    }, [settings, handleSettingsChanges, rebuildTagTree, rebuildTopicTree, getFilteredMarkdownFilesCallback, queueTagsWhenMetadataReady]);
 
     /**
      * Augment context with control methods

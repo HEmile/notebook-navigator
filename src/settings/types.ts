@@ -88,7 +88,7 @@ export interface NotebookNavigatorSettings {
     navItemHeightScaleText: boolean;
     showHiddenItems: boolean;
 
-    // Folders & tags tab
+    // Folders, tags & topics tab
     showRootFolder: boolean;
     inheritFolderColors: boolean;
     enableFolderNotes: boolean;
@@ -103,6 +103,8 @@ export interface NotebookNavigatorSettings {
     showUntagged: boolean;
     tagSortOrder: TagSortOrder;
     hiddenTags: string[];
+    showTopics: boolean;
+    hiddenTopics: string[];
 
     // List pane tab
     defaultFolderSort: SortOption;
