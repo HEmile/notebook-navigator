@@ -70,6 +70,7 @@ export const STRINGS_ZH_CN = {
         folderExists: '文件夹已在快捷方式中',
         noteExists: '笔记已在快捷方式中',
         tagExists: '标签已在快捷方式中',
+        topicExists: '主题已在快捷方式中',
         searchExists: '搜索快捷方式已存在',
         emptySearchQuery: '保存前请输入搜索查询',
         emptySearchName: '保存搜索前请输入名称',

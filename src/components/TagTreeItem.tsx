@@ -90,6 +90,8 @@ interface TagTreeItemProps {
     icon?: string;
     /** Whether this tag is normally hidden but being shown */
     isHidden?: boolean;
+    /** Item type for context menu (defaults to TAG) */
+    itemType?: 'tag' | 'topic';
 }
 
 /**
@@ -112,7 +114,8 @@ export const TagTreeItem = React.memo(
             showFileCount,
             color,
             backgroundColor,
-            icon
+            icon,
+            itemType = 'tag'
         },
         ref
     ) {
@@ -218,7 +221,7 @@ export const TagTreeItem = React.memo(
 
         // Add context menu
         useContextMenu(itemRef, {
-            type: ItemType.TAG,
+            type: itemType === 'topic' ? ItemType.TOPIC : ItemType.TAG,
             item: ('path' in tagNode ? tagNode.path : tagNode.name) as string
         });
 

@@ -34,7 +34,7 @@ interface ShortcutItemProps {
     level: number;
     isDisabled?: boolean;
     isMissing?: boolean;
-    type: 'folder' | 'note' | 'search' | 'tag';
+    type: 'folder' | 'note' | 'search' | 'tag' | 'topic';
     countInfo?: NoteCountInfo;
     isExcluded?: boolean;
     onClick: (event: React.MouseEvent<HTMLDivElement>) => void;

@@ -70,6 +70,7 @@ export const STRINGS_KO = {
         folderExists: '폴더가 이미 바로가기에 있습니다',
         noteExists: '노트가 이미 바로가기에 있습니다',
         tagExists: '태그가 이미 바로가기에 있습니다',
+        topicExists: '주제가 이미 바로가기에 있습니다',
         searchExists: '검색 바로가기가 이미 존재합니다',
         emptySearchQuery: '저장하기 전에 검색 쿼리를 입력하세요',
         emptySearchName: '검색을 저장하기 전에 이름을 입력하세요',

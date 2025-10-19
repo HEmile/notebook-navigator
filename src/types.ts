@@ -95,6 +95,7 @@ export const NavigationPaneItemType = {
     SHORTCUT_NOTE: 'shortcut-note',
     SHORTCUT_SEARCH: 'shortcut-search',
     SHORTCUT_TAG: 'shortcut-tag',
+    SHORTCUT_TOPIC: 'shortcut-topic',
     RECENT_NOTE: 'recent-note',
     BANNER: 'banner',
     TOP_SPACER: 'top-spacer',

@@ -59,7 +59,7 @@ import { flattenFolderTree, flattenTagTree, compareTagOrderWithFallback, flatten
 import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
 import { setNavigationIndex } from '../utils/navigationIndex';
 import { resolveCanonicalTagPath } from '../utils/tagUtils';
-import { isFolderShortcut, isNoteShortcut, isSearchShortcut, isTagShortcut } from '../types/shortcuts';
+import { isFolderShortcut, isNoteShortcut, isSearchShortcut, isTagShortcut, isTopicShortcut } from '../types/shortcuts';
 import { useRootFolderOrder } from './useRootFolderOrder';
 import { useRootTagOrder } from './useRootTagOrder';
 import type { FolderNoteDetectionSettings } from '../utils/folderNotes';
@@ -80,6 +80,7 @@ const isShortcutNavigationItem = (item: CombinedNavigationItem): boolean => {
         item.type === NavigationPaneItemType.SHORTCUT_NOTE ||
         item.type === NavigationPaneItemType.SHORTCUT_SEARCH ||
         item.type === NavigationPaneItemType.SHORTCUT_TAG ||
+        item.type === NavigationPaneItemType.SHORTCUT_TOPIC ||
         item.type === NavigationPaneItemType.SHORTCUT_HEADER
     );
 };
@@ -574,7 +575,7 @@ export function useNavigationPaneData({
 
         // Add individual shortcut items based on their type
         hydratedShortcuts.forEach(entry => {
-            const { key, shortcut, folder, note, search, tagPath } = entry;
+            const { key, shortcut, folder, note, search, tagPath, topicName } = entry;
 
             // Handle folder shortcuts
             if (isFolderShortcut(shortcut)) {
@@ -672,11 +673,35 @@ export function useNavigationPaneData({
                     isMissing,
                     missingLabel: isMissing ? resolvedPath : undefined
                 });
+                return;
+            }
+
+            // Handle topic shortcuts
+            if (isTopicShortcut(shortcut)) {
+                const name = topicName ?? shortcut.topicName;
+                if (!name) {
+                    return;
+                }
+
+                const topicNode = topicService?.findTopicNode(name);
+                const displayName = topicNode?.name ?? name;
+                const isMissing = !topicNode;
+
+                items.push({
+                    type: NavigationPaneItemType.SHORTCUT_TOPIC,
+                    key,
+                    level: itemLevel,
+                    shortcut,
+                    topicName: name,
+                    displayName,
+                    isMissing,
+                    missingLabel: isMissing ? name : undefined
+                });
             }
         });
 
         return items;
-    }, [app, hydratedShortcuts, tagTree, settings.excludedFolders, settings.showHiddenItems, settings.showShortcuts, shortcutsExpanded]);
+    }, [app, hydratedShortcuts, tagTree, topicService, settings.excludedFolders, settings.showHiddenItems, settings.showShortcuts, shortcutsExpanded]);
 
     // Build list of recent notes items with proper hierarchy
     const recentNotesItems = useMemo(() => {
@@ -914,6 +939,13 @@ export function useNavigationPaneData({
                     icon: metadataService.getTagIcon(item.tagPath) || 'lucide-tags',
                     color: tagColor
                 };
+            } else if (item.type === NavigationPaneItemType.SHORTCUT_TOPIC) {
+                // Topics use default icon for now
+                return {
+                    ...item,
+                    icon: 'lucide-trending-up',
+                    color: undefined
+                };
             } else if (item.type === NavigationPaneItemType.SHORTCUT_NOTE) {
                 const note = item.note;
                 if (!note) {
@@ -1004,7 +1036,8 @@ export function useNavigationPaneData({
                 item.type === NavigationPaneItemType.SHORTCUT_FOLDER ||
                 item.type === NavigationPaneItemType.SHORTCUT_NOTE ||
                 item.type === NavigationPaneItemType.SHORTCUT_SEARCH ||
-                item.type === NavigationPaneItemType.SHORTCUT_TAG
+                item.type === NavigationPaneItemType.SHORTCUT_TAG ||
+                item.type === NavigationPaneItemType.SHORTCUT_TOPIC
             ) {
                 indexMap.set(item.key, index);
             }

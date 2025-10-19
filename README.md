@@ -8,6 +8,10 @@ Read in your language: [English](https://notebooknavigator.com/docs.html) • [D
 
 Notebook Navigator is a plugin for [Obsidian](https://obsidian.md) that replaces the default file explorer with a Notes-style interface with a dual-pane layout.
 
+**This fork adds support for navigating topics using typed links.** 
+It is functional, but it is also vibe-coded in a day, so no idea how production ready it is. 
+If you are interested on how to structure your notes to make use of this feature, please read [this tutorial](https://www.emilevankrieken.com/blog/2025/academic-obsidian/). 
+
 If you love using Notebook Navigator, please consider [buying me a coffee](https://buymeacoffee.com/johansan) or [Sponsor on GitHub ❤️](https://github.com/sponsors/johansan).
 
 <a href="https://www.buymeacoffee.com/johansan" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>

@@ -70,6 +70,7 @@ export const STRINGS_ES = {
         folderExists: 'La carpeta ya está en los atajos',
         noteExists: 'La nota ya está en los atajos',
         tagExists: 'La etiqueta ya está en los atajos',
+        topicExists: 'El tema ya está en los atajos',
         searchExists: 'El atajo de búsqueda ya existe',
         emptySearchQuery: 'Ingresa una consulta de búsqueda antes de guardarla',
         emptySearchName: 'Ingresa un nombre antes de guardar la búsqueda',

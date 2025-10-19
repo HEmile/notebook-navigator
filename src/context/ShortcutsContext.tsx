@@ -28,7 +28,8 @@ import {
     isFolderShortcut,
     isNoteShortcut,
     isSearchShortcut,
-    isTagShortcut
+    isTagShortcut,
+    isTopicShortcut
 } from '../types/shortcuts';
 import type { SearchProvider } from '../types/search';
 import { strings } from '../i18n';
@@ -45,6 +46,7 @@ interface HydratedShortcut {
     note: TFile | null;
     search: SearchShortcut | null;
     tagPath: string | null;
+    topicName: string | null;
     isMissing: boolean;
 }
 
@@ -58,10 +60,12 @@ export interface ShortcutsContextValue {
     folderShortcutKeysByPath: Map<string, string>;
     noteShortcutKeysByPath: Map<string, string>;
     tagShortcutKeysByPath: Map<string, string>;
+    topicShortcutKeysByName: Map<string, string>;
     searchShortcutsByName: Map<string, SearchShortcut>;
     addFolderShortcut: (path: string, options?: { index?: number }) => Promise<boolean>;
     addNoteShortcut: (path: string, options?: { index?: number }) => Promise<boolean>;
     addTagShortcut: (tagPath: string, options?: { index?: number }) => Promise<boolean>;
+    addTopicShortcut: (topicName: string, options?: { index?: number }) => Promise<boolean>;
     addSearchShortcut: (input: { name: string; query: string; provider: SearchProvider }, options?: { index?: number }) => Promise<boolean>;
     removeShortcut: (key: string) => Promise<boolean>;
     removeSearchShortcut: (name: string) => Promise<boolean>;
@@ -69,6 +73,7 @@ export interface ShortcutsContextValue {
     hasFolderShortcut: (path: string) => boolean;
     hasNoteShortcut: (path: string) => boolean;
     hasTagShortcut: (tagPath: string) => boolean;
+    hasTopicShortcut: (topicName: string) => boolean;
     findSearchShortcut: (name: string) => SearchShortcut | undefined;
 }
 
@@ -181,6 +186,17 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
         return map;
     }, [rawShortcuts]);
 
+    // Maps topic names to their shortcut keys for duplicate detection
+    const topicShortcutKeysByName = useMemo(() => {
+        const map = new Map<string, string>();
+        rawShortcuts.forEach(shortcut => {
+            if (isTopicShortcut(shortcut)) {
+                map.set(shortcut.topicName, getShortcutKey(shortcut));
+            }
+        });
+        return map;
+    }, [rawShortcuts]);
+
     // Maps search shortcut names (lowercase) to shortcuts for fast lookup
     const searchShortcutsByName = useMemo(() => {
         const map = new Map<string, SearchShortcut>();
@@ -261,6 +277,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                         note: null,
                         search: null,
                         tagPath: null,
+                        topicName: null,
                         isMissing: false
                     };
                 }
@@ -271,6 +288,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                     note: null,
                     search: null,
                     tagPath: null,
+                    topicName: null,
                     isMissing: true
                 };
             }
@@ -285,6 +303,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                         note: target,
                         search: null,
                         tagPath: null,
+                        topicName: null,
                         isMissing: false
                     };
                 }
@@ -295,6 +314,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                     note: null,
                     search: null,
                     tagPath: null,
+                    topicName: null,
                     isMissing: true
                 };
             }
@@ -308,7 +328,21 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                     note: null,
                     search: null,
                     tagPath: normalizedTagPath ?? shortcut.tagPath,
+                    topicName: null,
                     isMissing: !normalizedTagPath
+                };
+            }
+
+            if (isTopicShortcut(shortcut)) {
+                return {
+                    key,
+                    shortcut,
+                    folder: null,
+                    note: null,
+                    search: null,
+                    tagPath: null,
+                    topicName: shortcut.topicName,
+                    isMissing: false
                 };
             }
 
@@ -320,6 +354,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                 note: null,
                 search: shortcut,
                 tagPath: null,
+                topicName: null,
                 isMissing: false
             };
         });
@@ -378,6 +413,18 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             return insertShortcut({ type: ShortcutType.TAG, tagPath: normalizedPath }, options?.index);
         },
         [insertShortcut, tagShortcutKeysByPath]
+    );
+
+    // Adds a topic shortcut if it doesn't already exist
+    const addTopicShortcut = useCallback(
+        async (topicName: string, options?: { index?: number }) => {
+            if (topicShortcutKeysByName.has(topicName)) {
+                new Notice(strings.shortcuts.topicExists || 'Topic shortcut already exists');
+                return false;
+            }
+            return insertShortcut({ type: ShortcutType.TOPIC, topicName }, options?.index);
+        },
+        [insertShortcut, topicShortcutKeysByName]
     );
 
     // Adds a search shortcut with validation for name and query uniqueness
@@ -482,6 +529,8 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
         },
         [tagShortcutKeysByPath]
     );
+    // Checks if a topic shortcut exists for the given topic name
+    const hasTopicShortcut = useCallback((topicName: string) => topicShortcutKeysByName.has(topicName), [topicShortcutKeysByName]);
 
     // Finds a search shortcut by name (case-insensitive)
     const findSearchShortcut = useCallback((name: string) => searchShortcutsByName.get(name.trim().toLowerCase()), [searchShortcutsByName]);
@@ -494,10 +543,12 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             folderShortcutKeysByPath,
             noteShortcutKeysByPath,
             tagShortcutKeysByPath,
+            topicShortcutKeysByName,
             searchShortcutsByName,
             addFolderShortcut,
             addNoteShortcut,
             addTagShortcut,
+            addTopicShortcut,
             addSearchShortcut,
             removeShortcut,
             removeSearchShortcut,
@@ -505,6 +556,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             hasFolderShortcut,
             hasNoteShortcut,
             hasTagShortcut,
+            hasTopicShortcut,
             findSearchShortcut
         }),
         [
@@ -514,10 +566,12 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             folderShortcutKeysByPath,
             noteShortcutKeysByPath,
             tagShortcutKeysByPath,
+            topicShortcutKeysByName,
             searchShortcutsByName,
             addFolderShortcut,
             addNoteShortcut,
             addTagShortcut,
+            addTopicShortcut,
             addSearchShortcut,
             removeShortcut,
             removeSearchShortcut,
@@ -525,6 +579,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             hasFolderShortcut,
             hasNoteShortcut,
             hasTagShortcut,
+            hasTopicShortcut,
             findSearchShortcut
         ]
     );

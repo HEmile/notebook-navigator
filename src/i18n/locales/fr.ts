@@ -70,6 +70,7 @@ export const STRINGS_FR = {
         folderExists: 'Le dossier est déjà dans les raccourcis',
         noteExists: 'La note est déjà dans les raccourcis',
         tagExists: "L'étiquette est déjà dans les raccourcis",
+        topicExists: "Le sujet est déjà dans les raccourcis",
         searchExists: 'Le raccourci de recherche existe déjà',
         emptySearchQuery: "Entrez une requête de recherche avant de l'enregistrer",
         emptySearchName: "Entrez un nom avant d'enregistrer la recherche",
