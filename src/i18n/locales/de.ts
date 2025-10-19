@@ -445,6 +445,7 @@ export const STRINGS_DE = {
         open: 'Öffnen', // Command palette: Opens the Notebook Navigator view (English: Open)
         openHomepage: 'Startseite öffnen', // Command palette: Opens the Notebook Navigator view and loads the homepage file (English: Open homepage)
         revealFile: 'Datei anzeigen', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
+        revealActiveTopic: 'Aktives Thema anzeigen', // Command palette: Reveals the active topic note in the navigator (English: Reveal active topic)
         search: 'Suchen', // Command palette: Toggle search in the file list (English: Search)
         toggleDualPane: 'Doppelbereichslayout umschalten', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
         deleteFile: 'Dateien löschen', // Command palette: Deletes the currently active file (English: Delete file)

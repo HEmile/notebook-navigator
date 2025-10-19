@@ -312,6 +312,39 @@ export function findTopicNode(tree: Map<string, TopicNode>, topicName: string): 
 }
 
 /**
+ * Gets all ancestor topic names for a given topic, choosing the first path when multiple paths exist.
+ * Returns the names in order from root to the immediate parent (not including the topic itself).
+ * 
+ * @param topicNode - The topic node to get ancestors for
+ * @returns Array of ancestor topic names from root to immediate parent
+ */
+export function getTopicAncestors(topicNode: TopicNode): string[] {
+    const ancestors: string[] = [];
+    
+    // If no parents, return empty array
+    if (topicNode.parents.size === 0) {
+        return ancestors;
+    }
+    
+    // Choose the first parent (arbitrary choice when multiple paths exist)
+    const firstParent = Array.from(topicNode.parents.values())[0];
+    
+    // Recursively collect ancestors
+    function collectAncestors(node: TopicNode) {
+        if (node.parents.size > 0) {
+            // Choose first parent
+            const parent = Array.from(node.parents.values())[0];
+            collectAncestors(parent);
+        }
+        ancestors.push(node.name);
+    }
+    
+    collectAncestors(firstParent);
+    
+    return ancestors;
+}
+
+/**
  * Exclude topics from tree based on exclusion patterns
  *
  * Removes topics that match the patterns and all their descendants.

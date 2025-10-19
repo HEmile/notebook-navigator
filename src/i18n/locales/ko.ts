@@ -442,6 +442,7 @@ export const STRINGS_KO = {
         open: '열기', // Command palette: Opens the Notebook Navigator view (English: Open)
         openHomepage: '홈페이지 열기', // Command palette: Opens the Notebook Navigator view and loads the homepage file (English: Open homepage)
         revealFile: '파일 표시', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
+        revealActiveTopic: '활성 주제 표시', // Command palette: Reveals the active topic note in the navigator (English: Reveal active topic)
         search: '검색', // Command palette: Toggle search in the file list (English: Search)
         toggleDualPane: '이중 창 레이아웃 전환', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
         deleteFile: '파일 삭제', // Command palette: Deletes the currently active file (English: Delete file)

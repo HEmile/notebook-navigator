@@ -442,6 +442,7 @@ export const STRINGS_ZH_TW = {
         open: '開啟', // 指令面板：開啟 Notebook Navigator 檢視 (英文: Open)
         openHomepage: '開啟首頁', // 指令面板：開啟 Notebook Navigator 檢視並載入首頁檔案 (英文: Open homepage)
         revealFile: '顯示檔案', // 指令面板：在導覽器中顯示並選取目前活動的檔案 (英文: Reveal file)
+        revealActiveTopic: '顯示活動主題', // 指令面板：在導覽器中顯示活動主題筆記 (英文: Reveal active topic)
         search: '搜尋', // 指令面板：在檔案清單中切換搜尋 (英文: Search)
         toggleDualPane: '切換雙窗格佈局', // 指令面板：在單一窗格和雙窗格佈局之間切換 (英文: Toggle dual pane layout)
         deleteFile: '刪除檔案', // 指令面板：刪除目前活動的檔案 (英文: Delete file)

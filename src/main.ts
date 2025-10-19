@@ -790,6 +790,15 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.workspaceCoordinator?.revealFileInNearestFolder(file, options);
     }
 
+    /**
+     * Reveals a topic in the navigation pane
+     * Expands parent topics and scrolls to make the topic visible
+     * @param topicName - The name of the topic to reveal
+     */
+    async revealTopic(topicName: string) {
+        this.workspaceCoordinator?.revealTopic(topicName);
+    }
+
     public resolveHomepageFile(): TFile | null {
         return this.homepageController?.resolveHomepageFile() ?? null;
     }
