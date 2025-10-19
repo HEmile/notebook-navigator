@@ -88,6 +88,10 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
             continue;
         }
         const parentFilePath = parentFile.path;
+        const metadata = app.metadataCache.getFileCache(parentFile);
+        if (!metadata?.tags?.some(tag => tag.tag.contains('topic'))) {
+            continue;
+        }
         const parentName = getTopicNameFromPath(parentFilePath);
         const parent = traverseTopicsUp(allTopics, parentFilePath, app);
         if (parent) {
