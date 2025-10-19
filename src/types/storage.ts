@@ -36,3 +36,14 @@ export interface TagTreeNode {
     /** Set of file paths that have this exact tag */
     notesWithTag: Set<string>;
 }
+
+export interface TopicTreeNode {
+    /** The name of this part of the topic (e.g., "artificial intelligence") */
+    name: string;
+    /** Map of parent topic nodes */
+    parents: Map<string, TopicTreeNode>;
+    /** Map of child topic nodes */
+    children: Map<string, TopicTreeNode>;
+    /** Set of file paths that have this exact topic */
+    notesWithTopic: Set<string>;
+}
