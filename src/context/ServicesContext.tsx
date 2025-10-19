@@ -27,6 +27,7 @@ import { TagTreeService } from '../services/TagTreeService';
 import { CommandQueueService } from '../services/CommandQueueService';
 import { OmnisearchService } from '../services/OmnisearchService';
 import ReleaseCheckService from '../services/ReleaseCheckService';
+import { TopicService } from 'src/services/TopicGraphService';
 
 /**
  * Interface defining all services and stable dependencies available through the context.
@@ -47,6 +48,7 @@ interface Services {
     tagOperations: TagOperations | null;
     /** Tag tree service for accessing the current tag tree */
     tagTreeService: TagTreeService | null;
+    topicService: TopicService | null;
     /** Command queue service for managing operations and their context */
     commandQueue: CommandQueueService | null;
     /** Omnisearch integration service */
