@@ -83,7 +83,7 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
     }
     for (const parentTopic of topics) {
         // Use Obsidian API to resolve the parentTopic as a file path
-        const parentFile = app.metadataCache.getFirstLinkpathDest(parentTopic.slice(2, -2), "");
+        const parentFile = app.metadataCache.getFirstLinkpathDest(parentTopic.slice(2, -2).split("|")[0], "");
         if (!parentFile) {
             continue;
         }
@@ -117,7 +117,6 @@ export function buildTopicGraphFromDatabase(
     const allFiles = db.getAllFiles();
 
     // First pass: collect all topics and their parents
-    console.log("First pass: collecting all topics and their parents");
     for (const { path, data: fileData } of allFiles) {
         // Defense-in-depth: skip files not in the included set (e.g., frontmatter-excluded)
         if (includedPaths && !includedPaths.has(path)) {
@@ -178,7 +177,7 @@ export function buildTopicGraphFromDatabase(
         // Assign the file to the topics
         for (const topic of topics) {
             // Use Obsidian API to resolve the parentTopic as a file path
-            const topicFile = app.metadataCache.getFirstLinkpathDest(topic.slice(2, -2), "");
+            const topicFile = app.metadataCache.getFirstLinkpathDest(topic.slice(2, -2).split("|")[0], "");
             if (!topicFile) {
                 continue;
             }
@@ -203,6 +202,7 @@ export function buildTopicGraphFromDatabase(
     // Clear note count cache since tree structure has changed
     clearNoteCountCache();
 
+    console.log('rootTopics', rootTopics);
     return rootTopics;
 }
 
