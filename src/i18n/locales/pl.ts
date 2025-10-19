@@ -490,6 +490,7 @@ export const STRINGS_PL = {
             icons: 'Pakiety ikon',
             folders: 'Foldery',
             tags: 'Tagi',
+            topics: 'Tematy',
             search: 'Wyszukiwanie',
             listPane: 'Panel listy',
             notes: 'Notatki',
@@ -858,6 +859,25 @@ export const STRINGS_PL = {
                 name: 'Ukryte tagi',
                 desc: 'Lista prefiksów tagów lub symboli wieloznacznych nazw oddzielonych przecinkami. Użyj `tag*` lub `*tag`, aby dopasować nazwy tagów. Ukrycie tagu ukrywa też wszystkie jego pod-tagi (np. "archive" ukrywa "archive/2024/docs").',
                 placeholder: 'internal, temp/drafts, archive/2024'
+            },
+            showTopics: {
+                name: 'Pokaż tematy',
+                desc: 'Wyświetl tematy w panelu nawigacji.'
+            },
+            topicSortOrder: {
+                name: 'Kolejność sortowania tematów',
+                desc: 'Wybierz, jak tematy są sortowane w panelu nawigacji.',
+                options: {
+                    alphaAsc: 'Od A do Z',
+                    alphaDesc: 'Od Z do A',
+                    frequencyAsc: 'Częstotliwość (od niskiej do wysokiej)',
+                    frequencyDesc: 'Częstotliwość (od wysokiej do niskiej)'
+                }
+            },
+            hiddenTopics: {
+                name: 'Ukryte tematy',
+                desc: 'Lista tematów oddzielonych przecinkami do ukrycia w panelu nawigacji.',
+                placeholder: 'archiwum, prywatne, wersja robocza'
             },
             enableFolderNotes: {
                 name: 'Włącz notatki folderów',

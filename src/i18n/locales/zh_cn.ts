@@ -489,6 +489,7 @@ export const STRINGS_ZH_CN = {
             navigationPane: '文件夹显示',
             icons: '图标包',
             tags: '标签显示',
+            topics: '主题',
             folders: '文件夹笔记',
             search: '搜索',
             listPane: '列表窗格',
@@ -857,6 +858,25 @@ export const STRINGS_ZH_CN = {
                 name: '隐藏标签',
                 desc: '要隐藏的标签前缀或名称通配符的逗号分隔列表。使用 `tag*` 或 `*tag` 匹配标签名称。隐藏标签也会隐藏所有子标签（例如："归档"隐藏"归档/2024/docs"）。',
                 placeholder: '内部, 临时/草稿, 归档/2024'
+            },
+            showTopics: {
+                name: '显示主题',
+                desc: '在导航窗格中显示主题。'
+            },
+            topicSortOrder: {
+                name: '主题排序顺序',
+                desc: '选择在导航窗格中如何排序主题。',
+                options: {
+                    alphaAsc: 'A 到 Z',
+                    alphaDesc: 'Z 到 A',
+                    frequencyAsc: '频率（从低到高）',
+                    frequencyDesc: '频率（从高到低）'
+                }
+            },
+            hiddenTopics: {
+                name: '隐藏主题',
+                desc: '要从导航窗格隐藏的主题列表，用逗号分隔。',
+                placeholder: '归档, 私密, 草稿'
             },
             enableFolderNotes: {
                 name: '启用文件夹笔记',

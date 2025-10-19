@@ -83,6 +83,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     tagSortOrder: 'alpha-asc',
     hiddenTags: [],
     showTopics: true,
+    topicSortOrder: 'alpha-asc',
     hiddenTopics: [],
 
     // List pane tab

@@ -489,6 +489,7 @@ export const STRINGS_JA = {
             navigationPane: 'フォルダ表示',
             icons: 'アイコンパック',
             tags: 'タグ表示',
+            topics: 'トピック',
             folders: 'フォルダノート',
             search: '検索',
             listPane: 'リストペイン',
@@ -858,6 +859,25 @@ export const STRINGS_JA = {
                 name: '非表示タグ',
                 desc: '非表示にするタグの接頭辞または名前ワイルドカードのカンマ区切りリスト。`tag*` や `*tag` でタグ名に一致します。タグを非表示にすると、すべてのサブタグも非表示になります（例："アーカイブ"で"アーカイブ/2024/docs"も非表示）。',
                 placeholder: '内部, temp/下書き, アーカイブ/2024'
+            },
+            showTopics: {
+                name: 'トピックを表示',
+                desc: 'ナビゲーションペインにトピックを表示します。'
+            },
+            topicSortOrder: {
+                name: 'トピックの並び順',
+                desc: 'ナビゲーションペインでトピックを並べる方法を選択します。',
+                options: {
+                    alphaAsc: 'A から Z',
+                    alphaDesc: 'Z から A',
+                    frequencyAsc: '頻度（低から高）',
+                    frequencyDesc: '頻度（高から低）'
+                }
+            },
+            hiddenTopics: {
+                name: '非表示トピック',
+                desc: 'ナビゲーションペインから非表示にするトピックのカンマ区切りリスト。',
+                placeholder: 'アーカイブ, プライベート, 下書き'
             },
             enableFolderNotes: {
                 name: 'フォルダノートを有効化',

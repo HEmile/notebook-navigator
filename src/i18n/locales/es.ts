@@ -489,6 +489,7 @@ export const STRINGS_ES = {
             navigationPane: 'Visualización de carpetas',
             icons: 'Paquetes de iconos',
             tags: 'Visualización de etiquetas',
+            topics: 'Temas',
             folders: 'Notas de carpeta',
             search: 'Buscar',
             listPane: 'Panel de lista',
@@ -857,6 +858,25 @@ export const STRINGS_ES = {
                 name: 'Etiquetas ocultas',
                 desc: 'Lista separada por comas de prefijos de etiquetas o comodines de nombre. Usa `tag*` o `*tag` para coincidir con nombres de etiquetas. Ocultar una etiqueta también oculta todas sus sub-etiquetas (ej. "archivo" oculta "archivo/2024/docs").',
                 placeholder: 'interno, temp/borradores, archivo/2024'
+            },
+            showTopics: {
+                name: 'Mostrar temas',
+                desc: 'Mostrar temas en el panel de navegación.'
+            },
+            topicSortOrder: {
+                name: 'Orden de temas',
+                desc: 'Elegir cómo se ordenan los temas en el panel de navegación.',
+                options: {
+                    alphaAsc: 'A a Z',
+                    alphaDesc: 'Z a A',
+                    frequencyAsc: 'Frecuencia (baja a alta)',
+                    frequencyDesc: 'Frecuencia (alta a baja)'
+                }
+            },
+            hiddenTopics: {
+                name: 'Temas ocultos',
+                desc: 'Lista separada por comas de temas a ocultar del panel de navegación.',
+                placeholder: 'archivo, privado, borrador'
             },
             enableFolderNotes: {
                 name: 'Habilitar notas de carpeta',

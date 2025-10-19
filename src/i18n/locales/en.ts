@@ -488,6 +488,7 @@ export const STRINGS_EN = {
             icons: 'Icon packs',
             folders: 'Folders',
             tags: 'Tags',
+            topics: 'Topics',
             search: 'Search',
             listPane: 'List pane',
             notes: 'Notes',
@@ -856,6 +857,25 @@ export const STRINGS_EN = {
                 name: 'Hidden tags',
                 desc: 'Comma-separated list of tag prefixes or name wildcards. Use tag* or *tag to match tag names. Hiding a tag also hides all its sub-tags (e.g., "archive" hides "archive/2024/docs").',
                 placeholder: 'internal, temp/drafts, archive/2024'
+            },
+            showTopics: {
+                name: 'Show topics',
+                desc: 'Display topics in the navigation pane.'
+            },
+            topicSortOrder: {
+                name: 'Topic sort order',
+                desc: 'Choose how topics are ordered in the navigation pane.',
+                options: {
+                    alphaAsc: 'A to Z',
+                    alphaDesc: 'Z to A',
+                    frequencyAsc: 'Frequency (low to high)',
+                    frequencyDesc: 'Frequency (high to low)'
+                }
+            },
+            hiddenTopics: {
+                name: 'Hidden topics',
+                desc: 'Comma-separated list of topics to hide from the navigation pane.',
+                placeholder: 'archive, private, draft'
             },
             enableFolderNotes: {
                 name: 'Enable folder notes',

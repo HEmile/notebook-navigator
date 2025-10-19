@@ -105,6 +105,7 @@ export interface NotebookNavigatorSettings {
     tagSortOrder: TagSortOrder;
     hiddenTags: string[];
     showTopics: boolean;
+    topicSortOrder: TagSortOrder;
     hiddenTopics: string[];
 
     // List pane tab

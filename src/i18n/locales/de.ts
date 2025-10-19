@@ -491,6 +491,7 @@ export const STRINGS_DE = {
             navigationPane: 'Ordneranzeige',
             icons: 'Icon-Pakete',
             tags: 'Tag-Anzeige',
+            topics: 'Themen',
             folders: 'Ordnernotizen',
             search: 'Suchen',
             listPane: 'Listenbereich',
@@ -860,6 +861,25 @@ export const STRINGS_DE = {
                 name: 'Versteckte Tags',
                 desc: 'Kommagetrennte Liste von Tag-Präfixen oder Namensplatzhaltern zum Ausblenden. Verwende `tag*` oder `*tag`, um Tagnamen abzugleichen. Ein versteckter Tag blendet auch alle Unter-Tags aus (z.B. "archiv" blendet "archiv/2024/docs" aus).',
                 placeholder: 'intern, temp/entwürfe, archiv/2024'
+            },
+            showTopics: {
+                name: 'Themen anzeigen',
+                desc: 'Themen im Navigationsbereich anzeigen.'
+            },
+            topicSortOrder: {
+                name: 'Themen-Sortierung',
+                desc: 'Wählen Sie, wie Themen im Navigationsbereich sortiert werden.',
+                options: {
+                    alphaAsc: 'A bis Z',
+                    alphaDesc: 'Z bis A',
+                    frequencyAsc: 'Häufigkeit (niedrig bis hoch)',
+                    frequencyDesc: 'Häufigkeit (hoch bis niedrig)'
+                }
+            },
+            hiddenTopics: {
+                name: 'Versteckte Themen',
+                desc: 'Kommagetrennte Liste von Themen, die im Navigationsbereich ausgeblendet werden sollen.',
+                placeholder: 'archiv, privat, entwurf'
             },
             enableFolderNotes: {
                 name: 'Ordnernotizen aktivieren',

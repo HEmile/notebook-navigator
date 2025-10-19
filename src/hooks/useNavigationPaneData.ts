@@ -48,13 +48,14 @@ import {
     NavigationSectionId
 } from '../types';
 import { TIMEOUTS } from '../types/obsidian-extended';
-import { TagTreeNode } from '../types/storage';
+import { TagTreeNode, TopicNode } from '../types/storage';
 import type { CombinedNavigationItem } from '../types/virtualization';
 import type { NotebookNavigatorSettings, TagSortOrder } from '../settings/types';
 import { isFolderInExcludedFolder } from '../utils/fileFilters';
 import { shouldDisplayFile, FILE_VISIBILITY, isImageFile } from '../utils/fileTypeUtils';
 // Use Obsidian's trailing debounce for vault-driven updates
 import { getTotalNoteCount, excludeFromTagTree, findTagNode } from '../utils/tagTree';
+import { getTotalNoteCount as getTopicTotalNoteCount } from '../utils/topicGraph';
 import { flattenFolderTree, flattenTagTree, compareTagOrderWithFallback, flattenTopicTree } from '../utils/treeFlattener';
 import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
 import { setNavigationIndex } from '../utils/navigationIndex';
@@ -162,6 +163,45 @@ const createTagComparator = (order: TagSortOrder, includeDescendantNotes: boolea
     return (a, b) => -compareByFrequency(a, b);
 };
 
+/** Comparator function type for sorting topic nodes */
+type TopicComparator = (a: TopicNode, b: TopicNode) => number;
+
+/** Compares topics alphabetically by name */
+const compareTopicAlphabetically: TopicComparator = (a, b) => {
+    return naturalCompare(a.name, b.name);
+};
+
+// Creates comparator for topic sorting modes. Returns undefined for default alphabetical ascending order.
+const createTopicComparator = (order: TagSortOrder, includeDescendantNotes: boolean): TopicComparator | undefined => {
+    if (order === 'alpha-asc') {
+        return undefined;
+    }
+
+    if (order === 'alpha-desc') {
+        return (a, b) => -compareTopicAlphabetically(a, b);
+    }
+
+    /** Gets note count for a topic based on descendant inclusion setting */
+    const getCount = includeDescendantNotes
+        ? (node: TopicNode) => getTopicTotalNoteCount(node)
+        : (node: TopicNode) => node.notesWithTag.size;
+
+    /** Compares topics by frequency (note count) with alphabetical fallback */
+    const compareByFrequency: TopicComparator = (a, b) => {
+        const diff = getCount(a) - getCount(b);
+        if (diff !== 0) {
+            return diff;
+        }
+        return compareTopicAlphabetically(a, b);
+    };
+
+    if (order === 'frequency-asc') {
+        return compareByFrequency;
+    }
+
+    return (a, b) => -compareByFrequency(a, b);
+};
+
 /**
  * Parameters for the useNavigationPaneData hook
  */
@@ -242,7 +282,11 @@ export function useNavigationPaneData({
         setFileChangeVersion(value => value + 1);
     }, []);
 
-
+    /** Create topic comparator based on current sort order and descendant note settings */
+    const topicComparator = useMemo(
+        () => createTopicComparator(settings.topicSortOrder, settings.includeDescendantNotes),
+        [settings.topicSortOrder, settings.includeDescendantNotes]
+    );
 
      /**
      * Build topic items with a single topic graph
@@ -281,7 +325,7 @@ export function useNavigationPaneData({
 
         if (expansionState.expandedVirtualFolders.has(folderId)) {
             const topicEntries = flattenTopicTree(rootNodes, expandedTopicPaths, 1, {
-                comparator: undefined
+                comparator: topicComparator
             });
             items.push(...topicEntries);
         }
@@ -294,7 +338,8 @@ export function useNavigationPaneData({
         settings.hiddenTopics,
         topicService,
         expansionState.expandedTags,
-        expansionState.expandedVirtualFolders
+        expansionState.expandedVirtualFolders,
+        topicComparator
     ]);
 
     // Get ordered root folders and notify on file changes

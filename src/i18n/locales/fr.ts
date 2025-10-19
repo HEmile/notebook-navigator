@@ -489,6 +489,7 @@ export const STRINGS_FR = {
             navigationPane: 'Affichage des dossiers',
             icons: "Packs d'icônes",
             tags: 'Affichage des étiquettes',
+            topics: 'Sujets',
             folders: 'Notes de dossier',
             search: 'Rechercher',
             listPane: 'Panneau de liste',
@@ -859,6 +860,25 @@ export const STRINGS_FR = {
                 name: 'Étiquettes cachées',
                 desc: 'Liste séparée par des virgules de préfixes ou de jokers de nom d\'étiquettes à masquer. Utilisez `tag*` ou `*tag` pour faire correspondre les noms d\'étiquette. Masquer une étiquette masque aussi toutes ses sous-étiquettes (par ex. "archive" masque "archive/2024/docs").',
                 placeholder: 'interne, temp/brouillons, archive/2024'
+            },
+            showTopics: {
+                name: 'Afficher les sujets',
+                desc: 'Afficher les sujets dans le panneau de navigation.'
+            },
+            topicSortOrder: {
+                name: 'Ordre de tri des sujets',
+                desc: 'Choisir comment les sujets sont ordonnés dans le panneau de navigation.',
+                options: {
+                    alphaAsc: 'A à Z',
+                    alphaDesc: 'Z à A',
+                    frequencyAsc: 'Fréquence (faible à élevée)',
+                    frequencyDesc: 'Fréquence (élevée à faible)'
+                }
+            },
+            hiddenTopics: {
+                name: 'Sujets cachés',
+                desc: 'Liste séparée par des virgules de sujets à masquer du panneau de navigation.',
+                placeholder: 'archive, privé, brouillon'
             },
             enableFolderNotes: {
                 name: 'Activer les notes de dossier',
