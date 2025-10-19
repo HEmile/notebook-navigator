@@ -56,8 +56,8 @@ export function useListActions() {
     }, [selectionState.selectedFolder, fileSystemOps]);
 
     const getCurrentSortOption = useCallback((): SortOption => {
-        return getEffectiveSortOption(settings, selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag);
-    }, [settings, selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag]);
+        return getEffectiveSortOption(settings, selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag, selectionState.selectedTopic);
+    }, [settings, selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag, selectionState.selectedTopic]);
 
     const getSortIcon = useCallback(() => {
         return getSortIconName(getCurrentSortOption());
@@ -75,6 +75,7 @@ export function useListActions() {
                 settings,
                 selectedFolder: selectionState.selectedFolder,
                 selectedTag: selectionState.selectedTag,
+                selectedTopic: selectionState.selectedTopic,
                 selectionType: selectionState.selectionType,
                 updateSettings
             });
@@ -84,6 +85,7 @@ export function useListActions() {
             settings,
             selectionState.selectedFolder,
             selectionState.selectedTag,
+            selectionState.selectedTopic,
             selectionState.selectionType,
             updateSettings
         ]
@@ -99,7 +101,10 @@ export function useListActions() {
                     metadataService.getFolderSortOverride(selectionState.selectedFolder.path)) ||
                 (selectionState.selectionType === ItemType.TAG &&
                     selectionState.selectedTag &&
-                    metadataService.getTagSortOverride(selectionState.selectedTag));
+                    metadataService.getTagSortOverride(selectionState.selectedTag)) ||
+                (selectionState.selectionType === ItemType.TOPIC &&
+                    selectionState.selectedTopic &&
+                    metadataService.getTagSortOverride(selectionState.selectedTopic));
 
             menu.addItem(item => {
                 item.setTitle(
@@ -111,6 +116,8 @@ export function useListActions() {
                             await metadataService.removeFolderSortOverride(selectionState.selectedFolder.path);
                         } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
                             await metadataService.removeTagSortOverride(selectionState.selectedTag);
+                        } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
+                            await metadataService.removeTagSortOverride(selectionState.selectedTopic);
                         }
                         app.workspace.requestSaveLayout();
                     });
@@ -134,6 +141,8 @@ export function useListActions() {
                                 await metadataService.setFolderSortOverride(selectionState.selectedFolder.path, option);
                             } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
                                 await metadataService.setTagSortOverride(selectionState.selectedTag, option);
+                            } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
+                                await metadataService.setTagSortOverride(selectionState.selectedTopic, option);
                             } else {
                                 await updateSettings(s => {
                                     s.defaultFolderSort = option;
@@ -150,6 +159,7 @@ export function useListActions() {
             selectionState.selectionType,
             selectionState.selectedFolder,
             selectionState.selectedTag,
+            selectionState.selectedTopic,
             app,
             getCurrentSortOption,
             updateSettings,
@@ -160,7 +170,7 @@ export function useListActions() {
 
     /**
      * Toggles the display of notes from descendants.
-     * When enabling descendants, automatically selects the active file if it's within the current folder/tag hierarchy.
+     * When enabling descendants, automatically selects the active file if it's within the current folder/tag/topic hierarchy.
      */
     const handleToggleDescendants = useCallback(async () => {
         const wasShowingDescendants = settings.includeDescendantNotes;
@@ -189,9 +199,12 @@ export function useListActions() {
             metadataService.getFolderSortOverride(selectionState.selectedFolder.path)) ||
         (selectionState.selectionType === ItemType.TAG &&
             selectionState.selectedTag &&
-            metadataService.getTagSortOverride(selectionState.selectedTag));
+            metadataService.getTagSortOverride(selectionState.selectedTag)) ||
+        (selectionState.selectionType === ItemType.TOPIC &&
+            selectionState.selectedTopic &&
+            metadataService.getTagSortOverride(selectionState.selectedTopic));
 
-    // Check if folder or tag has custom appearance settings
+    // Check if folder, tag, or topic has custom appearance settings
     const hasCustomAppearance =
         (selectionState.selectedFolder &&
             settings.folderAppearances &&
@@ -200,7 +213,11 @@ export function useListActions() {
         (selectionState.selectedTag &&
             settings.tagAppearances &&
             settings.tagAppearances[selectionState.selectedTag] &&
-            Object.keys(settings.tagAppearances[selectionState.selectedTag]).length > 0);
+            Object.keys(settings.tagAppearances[selectionState.selectedTag]).length > 0) ||
+        (selectionState.selectedTopic &&
+            settings.tagAppearances &&
+            settings.tagAppearances[selectionState.selectedTopic] &&
+            Object.keys(settings.tagAppearances[selectionState.selectedTopic]).length > 0);
 
     return {
         handleNewFile,

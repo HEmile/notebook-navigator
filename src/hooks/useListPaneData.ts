@@ -123,7 +123,7 @@ export function useListPaneData({
             return getEffectiveSortOption(settings, ItemType.TAG, null, selectedTag);
         }
         if (selectionType === ItemType.TOPIC && selectedTopic) {
-            return getEffectiveSortOption(settings, ItemType.TAG, null, selectedTopic); // Use TAG sort for topics
+            return getEffectiveSortOption(settings, ItemType.TOPIC, null, null, selectedTopic);
         }
         return getEffectiveSortOption(settings, ItemType.FOLDER, selectedFolder, selectedTag);
     }, [selectionType, selectedFolder, selectedTag, selectedTopic, settings]);
