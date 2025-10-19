@@ -378,7 +378,7 @@ export function getFilesForTopic(topicName: string, settings: NotebookNavigatorS
     }
 
     // Sort files
-    const sortOption = getEffectiveSortOption(settings, 'tag', null, topicName); // Use 'tag' sort for topics
+    const sortOption = getEffectiveSortOption(settings, 'topic', null, null, topicName);
 
     if (settings.useFrontmatterMetadata) {
         const metadataCache = new Map<string, ReturnType<typeof extractMetadata>>();

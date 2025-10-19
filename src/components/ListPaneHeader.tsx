@@ -200,7 +200,7 @@ export function ListPaneHeader({ onHeaderClick, isSearchActive, onSearchToggle }
                         className={`nn-icon-button ${isSearchActive ? 'nn-icon-button-active' : ''}`}
                         aria-label={strings.paneHeader.search}
                         onClick={onSearchToggle}
-                        disabled={!selectionState.selectedFolder && !selectionState.selectedTag}
+                        disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopic}
                         tabIndex={-1}
                     >
                         <ObsidianIcon name="lucide-search" />
@@ -209,7 +209,7 @@ export function ListPaneHeader({ onHeaderClick, isSearchActive, onSearchToggle }
                         className={`nn-icon-button ${settings.includeDescendantNotes ? 'nn-icon-button-active' : ''}`}
                         aria-label={strings.paneHeader.toggleDescendantNotes}
                         onClick={handleToggleDescendants}
-                        disabled={!selectionState.selectedFolder && !selectionState.selectedTag}
+                        disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopic}
                         tabIndex={-1}
                     >
                         <ObsidianIcon name="lucide-layers" />
@@ -218,7 +218,7 @@ export function ListPaneHeader({ onHeaderClick, isSearchActive, onSearchToggle }
                         className={`nn-icon-button ${isCustomSort ? 'nn-icon-button-active' : ''}`}
                         aria-label={strings.paneHeader.changeSortOrder}
                         onClick={handleSortMenu}
-                        disabled={!selectionState.selectedFolder && !selectionState.selectedTag}
+                        disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopic}
                         tabIndex={-1}
                     >
                         <ObsidianIcon name={getSortIcon()} />
@@ -227,7 +227,7 @@ export function ListPaneHeader({ onHeaderClick, isSearchActive, onSearchToggle }
                         className={`nn-icon-button ${hasCustomAppearance ? 'nn-icon-button-active' : ''}`}
                         aria-label={strings.paneHeader.changeAppearance}
                         onClick={handleAppearanceMenu}
-                        disabled={!selectionState.selectedFolder && !selectionState.selectedTag}
+                        disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopic}
                         tabIndex={-1}
                     >
                         <ObsidianIcon name="lucide-palette" />

@@ -14,6 +14,7 @@ interface AppearanceMenuProps {
     settings: NotebookNavigatorSettings;
     selectedFolder: TFolder | null;
     selectedTag?: string | null;
+    selectedTopic?: string | null;
     selectionType?: ItemType;
     updateSettings: (updater: (settings: NotebookNavigatorSettings) => void) => Promise<void>;
 }
@@ -28,6 +29,7 @@ export function showListPaneAppearanceMenu({
     settings,
     selectedFolder,
     selectedTag,
+    selectedTopic,
     selectionType,
     updateSettings
 }: AppearanceMenuProps) {
@@ -45,6 +47,23 @@ export function showListPaneAppearanceMenu({
                 const hasDefinedValues = Object.values(newAppearances[selectedTag]).some(value => value !== undefined);
                 if (!hasDefinedValues) {
                     delete newAppearances[selectedTag];
+                }
+
+                s.tagAppearances = newAppearances;
+            });
+        } else if (selectionType === ItemType.TOPIC && selectedTopic) {
+            // Update topic appearance (topics share tag appearance storage)
+            updateSettings(s => {
+                const newAppearances = { ...s.tagAppearances };
+                const currentAppearance = newAppearances[selectedTopic] || {};
+
+                // Merge updates
+                newAppearances[selectedTopic] = { ...currentAppearance, ...updates };
+
+                // Remove topic entry if all settings are cleared (back to defaults)
+                const hasDefinedValues = Object.values(newAppearances[selectedTopic]).some(value => value !== undefined);
+                if (!hasDefinedValues) {
+                    delete newAppearances[selectedTopic];
                 }
 
                 s.tagAppearances = newAppearances;
@@ -72,11 +91,13 @@ export function showListPaneAppearanceMenu({
 
     const menu = new Menu();
 
-    // Get custom appearance settings for the selected folder/tag
+    // Get custom appearance settings for the selected folder/tag/topic
     // Will be undefined if no custom appearance has been set
     let appearance: FolderAppearance | TagAppearance | undefined;
     if (selectionType === ItemType.TAG && selectedTag) {
         appearance = settings.tagAppearances?.[selectedTag];
+    } else if (selectionType === ItemType.TOPIC && selectedTopic) {
+        appearance = settings.tagAppearances?.[selectedTopic];
     } else if (selectionType === ItemType.FOLDER && selectedFolder) {
         appearance = settings.folderAppearances?.[selectedFolder.path];
     }

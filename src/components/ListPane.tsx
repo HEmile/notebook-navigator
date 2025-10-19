@@ -484,7 +484,7 @@ export const ListPane = React.memo(
 
         // Scroll to top handler for mobile header click
         // Get effective sort option for the current view
-        const effectiveSortOption = getEffectiveSortOption(settings, selectionType, selectedFolder, selectedTag);
+        const effectiveSortOption = getEffectiveSortOption(settings, selectionType, selectedFolder, selectedTag, selectedTopic);
 
         // Create a stable onClick handler for FileItem that uses pre-calculated fileIndex
         const handleFileItemClick = useCallback(

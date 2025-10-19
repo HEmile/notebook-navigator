@@ -56,13 +56,17 @@ export function getEffectiveSortOption(
     settings: NotebookNavigatorSettings,
     selectionType: NavigationItemType,
     selectedFolder: TFolder | null,
-    selectedTag?: string | null
+    selectedTag?: string | null,
+    selectedTopic?: string | null
 ): SortOption {
     if (selectionType === ItemType.FOLDER && selectedFolder && settings.folderSortOverrides?.[selectedFolder.path]) {
         return settings.folderSortOverrides[selectedFolder.path];
     }
     if (selectionType === ItemType.TAG && selectedTag && settings.tagSortOverrides?.[selectedTag]) {
         return settings.tagSortOverrides[selectedTag];
+    }
+    if (selectionType === ItemType.TOPIC && selectedTopic && settings.tagSortOverrides?.[selectedTopic]) {
+        return settings.tagSortOverrides[selectedTopic];
     }
     return settings.defaultFolderSort;
 }
