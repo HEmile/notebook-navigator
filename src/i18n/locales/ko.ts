@@ -49,7 +49,8 @@ export const STRINGS_KO = {
     tagList: {
         untaggedLabel: '태그 없음', // Label for the special item showing notes without tags (English: Untagged)
         hiddenTags: '숨겨진 태그', // Label for the hidden tags virtual folder (English: Hidden tags)
-        tags: '태그' // Label for the tags virtual folder (English: Tags)
+        tags: '태그', // Label for the tags virtual folder (English: Tags)
+        topics: '주제', // Label for the topics virtual folder (English: Topics)
     },
 
     navigationPane: {
@@ -184,6 +185,10 @@ export const STRINGS_KO = {
             changeBackground: '배경색 변경',
             showTag: '태그 표시',
             hideTag: '태그 숨기기'
+        },
+        topic: {
+            showTopic: '주제 표시',
+            hideTopic: '주제 숨기기'
         }
     },
 

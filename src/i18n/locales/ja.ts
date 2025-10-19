@@ -49,7 +49,8 @@ export const STRINGS_JA = {
     tagList: {
         untaggedLabel: 'タグなし', // Label for the special item showing notes without tags (English: Untagged)
         hiddenTags: '非表示タグ', // Label for the hidden tags virtual folder (English: Hidden tags)
-        tags: 'タグ' // Label for the tags virtual folder (English: Tags)
+        tags: 'タグ', // Label for the tags virtual folder (English: Tags)
+        topics: 'トピック', // Label for the topics virtual folder (English: Topics)
     },
 
     navigationPane: {
@@ -185,6 +186,10 @@ export const STRINGS_JA = {
             changeBackground: '背景色を変更',
             showTag: 'タグを表示',
             hideTag: 'タグを非表示'
+        },
+        topic: {
+            showTopic: 'トピックを表示',
+            hideTopic: 'トピックを非表示'
         }
     },
 

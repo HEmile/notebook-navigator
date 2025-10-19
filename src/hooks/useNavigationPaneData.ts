@@ -251,7 +251,13 @@ export function useNavigationPaneData({
         };
         // Get topic graph from the topic service
         const topicGraph = topicService.getTopicGraph();
-        const rootNodes = Array.from(topicGraph.values());
+        let rootNodes = Array.from(topicGraph.values());
+        
+        // Filter out hidden topics unless showHiddenItems is enabled
+        if (!settings.showHiddenItems && settings.hiddenTopics && settings.hiddenTopics.length > 0) {
+            const hiddenTopicsSet = new Set(settings.hiddenTopics);
+            rootNodes = rootNodes.filter(node => !hiddenTopicsSet.has(node.name));
+        }
         
         // Use expandedTags as a placeholder for expandedTopics until we add proper topic expansion
         const expandedTopicPaths = expansionState.expandedTags;
@@ -270,6 +276,8 @@ export function useNavigationPaneData({
         return { topicItems: items, hasTopicContent: hasContent };
     }, [
         settings.showTopics,
+        settings.showHiddenItems,
+        settings.hiddenTopics,
         topicService,
         expansionState.expandedTags,
         expansionState.expandedVirtualFolders

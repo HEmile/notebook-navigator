@@ -49,7 +49,8 @@ export const STRINGS_DE = {
     tagList: {
         untaggedLabel: 'Ohne Tag', // Label for the special item showing notes without tags (English: Untagged)
         hiddenTags: 'Versteckte Tags', // Label for the hidden tags virtual folder (English: Hidden tags)
-        tags: 'Tags' // Label for the tags virtual folder (English: Tags)
+        tags: 'Tags', // Label for the tags virtual folder (English: Tags)
+        topics: 'Themen', // Label for the topics virtual folder (English: Topics)
     },
 
     navigationPane: {
@@ -187,6 +188,10 @@ export const STRINGS_DE = {
             changeBackground: 'Hintergrund ändern',
             showTag: 'Tag anzeigen',
             hideTag: 'Tag ausblenden'
+        },
+        topic: {
+            showTopic: 'Thema anzeigen',
+            hideTopic: 'Thema ausblenden'
         }
     },
 

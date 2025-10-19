@@ -186,6 +186,10 @@ export const STRINGS_EN = {
             changeBackground: 'Change background',
             showTag: 'Show tag',
             hideTag: 'Hide tag'
+        },
+        topic: {
+            showTopic: 'Show topic',
+            hideTopic: 'Hide topic'
         }
     },
 
