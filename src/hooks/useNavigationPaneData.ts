@@ -253,6 +253,15 @@ export function useNavigationPaneData({
 
         const items: CombinedNavigationItem[] = [];
 
+        const addVirtualFolder = (id: string, name: string, icon?: string) => {
+            const folder: VirtualFolder = { id, name, icon };
+            items.push({
+                type: NavigationPaneItemType.VIRTUAL_FOLDER,
+                data: folder,
+                level: 0,
+                key: id
+            });
+        };
         // Get topic graph from the topic service
         const topicGraph = topicService.getTopicGraph();
         const rootNodes = Array.from(topicGraph.values());
@@ -260,10 +269,15 @@ export function useNavigationPaneData({
         // Use expandedTags as a placeholder for expandedTopics until we add proper topic expansion
         const expandedTopicPaths = expansionState.expandedTags;
         
-        const topicEntries = flattenTopicTree(rootNodes, expandedTopicPaths, 0, {
-            comparator: undefined
-        });
-        items.push(...topicEntries);
+        const folderId = 'topics-root';
+        addVirtualFolder(folderId, strings.tagList.topics, 'lucide-tags');
+
+        if (expansionState.expandedVirtualFolders.has(folderId)) {
+            const topicEntries = flattenTopicTree(rootNodes, expandedTopicPaths, 0, {
+                comparator: undefined
+            });
+            items.push(...topicEntries);
+        }
 
         const hasContent = rootNodes.length > 0;
         return { topicItems: items, hasTopicContent: hasContent };

@@ -49,7 +49,8 @@ export const STRINGS_EN = {
     tagList: {
         untaggedLabel: 'Untagged', // Label for the special item showing notes without tags (English: Untagged)
         hiddenTags: 'Hidden tags', // Label for the hidden tags virtual folder (English: Hidden tags)
-        tags: 'Tags' // Label for the tags virtual folder (English: Tags)
+        tags: 'Tags', // Label for the tags virtual folder (English: Tags)
+        topics: 'Topics', // Label for the topics virtual folder (English: Topics)
     },
 
     // Navigation pane
