@@ -23,7 +23,8 @@ import { FileSystemOperations } from '../services/FileSystemService';
 import { TagTreeService } from '../services/TagTreeService';
 import { NotebookNavigatorSettings } from '../settings';
 import { ItemType } from '../types';
-import { getFilesForFolder, getFilesForTag } from './fileFinder';
+import { getFilesForFolder, getFilesForTag, getFilesForTopic } from './fileFinder';
+import { TopicService } from 'src/services/TopicGraphService';
 
 interface BaseDeleteOperationsContext {
     app: App;
@@ -35,6 +36,7 @@ interface BaseDeleteOperationsContext {
 
 interface DeleteFilesContext extends BaseDeleteOperationsContext {
     tagTreeService: TagTreeService | null;
+    topicService: TopicService | null;
 }
 
 /**
@@ -47,7 +49,8 @@ export async function deleteSelectedFiles({
     settings,
     selectionState,
     selectionDispatch,
-    tagTreeService
+    tagTreeService,
+    topicService
 }: DeleteFilesContext): Promise<void> {
     // Check if multiple files are selected
     if (selectionState.selectedFiles.size > 1) {
@@ -57,6 +60,8 @@ export async function deleteSelectedFiles({
             allFiles = getFilesForFolder(selectionState.selectedFolder, settings, app);
         } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
             allFiles = getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
+        } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
+            allFiles = getFilesForTopic(selectionState.selectedTopic, settings, app, topicService);
         }
 
         // Use centralized delete method with smart selection

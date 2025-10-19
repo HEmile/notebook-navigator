@@ -29,6 +29,7 @@ import type NotebookNavigatorPlugin from '../../main';
 import { ExpansionAction } from '../../context/ExpansionContext';
 import { UIAction } from '../../context/UIStateContext';
 import type { ShortcutsContextValue } from '../../context/ShortcutsContext';
+import { TopicService } from 'src/services/TopicGraphService';
 
 /**
  * Configuration for the context menu
@@ -65,6 +66,7 @@ export interface MenuServices {
     metadataService: MetadataService;
     tagOperations: TagOperations;
     tagTreeService: TagTreeService | null;
+    topicService: TopicService | null;
     commandQueue: CommandQueueService | null;
     shortcuts: ShortcutsContextValue | null;
 }

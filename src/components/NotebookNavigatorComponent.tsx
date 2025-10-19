@@ -86,7 +86,7 @@ export interface NotebookNavigatorHandle {
  */
 export const NotebookNavigatorComponent = React.memo(
     forwardRef<NotebookNavigatorHandle>(function NotebookNavigatorComponent(_, ref) {
-        const { app, isMobile, fileSystemOps, plugin, tagTreeService, commandQueue, tagOperations } = useServices();
+        const { app, isMobile, fileSystemOps, plugin, tagTreeService, commandQueue, tagOperations, topicService } = useServices();
         const settings = useSettingsState();
         const selectionState = useSelectionState();
         const selectionDispatch = useSelectionDispatch();
@@ -331,7 +331,8 @@ export const NotebookNavigatorComponent = React.memo(
                             settings,
                             selectionState,
                             selectionDispatch,
-                            tagTreeService
+                            tagTreeService,
+                            topicService
                         });
                     } else if (
                         uiState.focusedPane === 'navigation' &&
@@ -366,7 +367,7 @@ export const NotebookNavigatorComponent = React.memo(
                     }
 
                     // Get all files in the current view for smart selection
-                    const allFiles = getFilesForSelection(selectionState, settings, app, tagTreeService);
+                    const allFiles = getFilesForSelection(selectionState, settings, app, tagTreeService, topicService);
 
                     // Move files with modal
                     await fileSystemOps.moveFilesWithModal(selectedFiles, {

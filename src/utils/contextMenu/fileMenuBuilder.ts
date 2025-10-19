@@ -20,7 +20,7 @@ import { MenuItem, TFile, Notice, Menu, App, Platform, FileSystemAdapter } from 
 import { FileMenuBuilderParams } from './menuTypes';
 import { strings } from '../../i18n';
 import { getInternalPlugin } from '../../utils/typeGuards';
-import { getFilesForFolder, getFilesForTag } from '../../utils/fileFinder';
+import { getFilesForFolder, getFilesForTag, getFilesForTopic } from '../../utils/fileFinder';
 import { ItemType, NavigatorContext } from '../../types';
 import { MetadataService } from '../../services/MetadataService';
 import { FileSystemOperations } from '../../services/FileSystemService';
@@ -36,7 +36,7 @@ import { CommandQueueService } from '../../services/CommandQueueService';
  */
 export function buildFileMenu(params: FileMenuBuilderParams): void {
     const { file, menu, services, settings, state, dispatchers } = params;
-    const { app, isMobile, fileSystemOps, metadataService, tagTreeService, commandQueue } = services;
+    const { app, isMobile, fileSystemOps, metadataService, tagTreeService, commandQueue, topicService } = services;
     const { selectionState } = state;
     const { selectionDispatch } = dispatchers;
 
@@ -65,6 +65,8 @@ export function buildFileMenu(params: FileMenuBuilderParams): void {
             return getFilesForFolder(selectionState.selectedFolder, settings, app);
         } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
             return getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
+        } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
+            return getFilesForTopic(selectionState.selectedTopic, settings, app, topicService);
         }
         return [];
     })();
