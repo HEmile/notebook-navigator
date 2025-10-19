@@ -178,6 +178,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         if (topicService) {
             topicService.updateTopicGraph(topicGraph);
         }
+        console.log('topicGraph', topicGraph);
 
         return topicGraph;
     }, [settings.excludedFolders, settings.showHiddenItems, tagTreeService, getFilteredMarkdownFilesCallback]);
