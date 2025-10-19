@@ -8,7 +8,7 @@ import { strings } from '../i18n';
 import { ItemType, UNTAGGED_TAG_ID } from '../types';
 import { hasSubfolders } from '../utils/fileFilters';
 
-export type BreadcrumbTargetType = 'folder' | 'tag' | 'none';
+export type BreadcrumbTargetType = 'folder' | 'tag' | 'topic' | 'none';
 
 export interface BreadcrumbSegment {
     label: string;
@@ -56,12 +56,17 @@ export function useListPaneTitle(): UseListPaneTitleResult {
             return metadataService.getTagIcon(selectionState.selectedTag) || 'lucide-tags';
         }
 
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
+            return 'lucide-tags'; // TODO: Topics use tags icon for now
+        }
+
         return '';
     }, [
         expansionState.expandedFolders,
         metadataService,
         selectionState.selectedFolder,
         selectionState.selectedTag,
+        selectionState.selectedTopic,
         selectionState.selectionType,
         settings.excludedFolders,
         settings.showHiddenItems,
@@ -139,6 +144,23 @@ export function useListPaneTitle(): UseListPaneTitleResult {
             };
         }
 
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
+            const topicName = selectionState.selectedTopic;
+            
+            const topicBreadcrumb: BreadcrumbSegment[] = [
+                {
+                    label: topicName,
+                    targetType: 'none',
+                    isLast: true
+                }
+            ];
+
+            return {
+                desktopTitle: topicName,
+                breadcrumbSegments: topicBreadcrumb
+            };
+        }
+
         const noSelectionBreadcrumb: BreadcrumbSegment[] = [
             {
                 label: strings.common.noSelection,
@@ -156,6 +178,7 @@ export function useListPaneTitle(): UseListPaneTitleResult {
         getTagDisplayPath,
         selectionState.selectedFolder,
         selectionState.selectedTag,
+        selectionState.selectedTopic,
         selectionState.selectionType,
         settings.customVaultName
     ]);

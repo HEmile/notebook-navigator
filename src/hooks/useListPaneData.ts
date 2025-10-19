@@ -371,9 +371,11 @@ export function useListPaneData({
         });
 
         // Determine context filter based on selection type
-        // selectionType can be FOLDER, TAG, FILE, or null - we only use FOLDER and TAG for pinned context
+        // selectionType can be FOLDER, TAG, TOPIC, FILE, or null - we only use FOLDER and TAG for pinned context
+        // Topics use TAG context for pinning since they're conceptually similar
         const contextFilter =
-            selectionType === ItemType.TAG ? ItemType.TAG : selectionType === ItemType.FOLDER ? ItemType.FOLDER : undefined;
+            selectionType === ItemType.TAG || selectionType === ItemType.TOPIC ? ItemType.TAG : 
+            selectionType === ItemType.FOLDER ? ItemType.FOLDER : undefined;
         const pinnedPaths = collectPinnedPaths(settings.pinnedNotes, contextFilter);
 
         // Separate pinned and unpinned files
@@ -628,8 +630,8 @@ export function useListPaneData({
                         return;
                     }
                 }
-            } else if (selectionType === ItemType.TAG && selectedTag) {
-                // For tag view, schedule a trailing refresh and extend if more changes arrive
+            } else if ((selectionType === ItemType.TAG && selectedTag) || (selectionType === ItemType.TOPIC && selectedTopic)) {
+                // For tag/topic view, schedule a trailing refresh and extend if more changes arrive
                 if (operationActiveRef.current) {
                     pendingRefreshRef.current = true;
                 } else {
@@ -653,12 +655,13 @@ export function useListPaneData({
             }
 
             const isTagView = selectionType === ItemType.TAG && selectedTag;
+            const isTopicView = selectionType === ItemType.TOPIC && selectedTopic;
             const isFolderView = selectionType === ItemType.FOLDER && selectedFolder;
 
             let shouldRefresh = false;
 
-            // In tag view, always refresh since files may enter or leave the view
-            if (isTagView) {
+            // In tag/topic view, always refresh since files may enter or leave the view
+            if (isTagView || isTopicView) {
                 shouldRefresh = true;
             } else if (isFolderView) {
                 // In folder view, only refresh if changed files are in current folder
@@ -685,7 +688,7 @@ export function useListPaneData({
             // Cancel any pending scheduled refresh to avoid stray updates
             scheduleRefresh.cancel();
         };
-    }, [app, selectionType, selectedTag, selectedFolder, settings.includeDescendantNotes, getDB, commandQueue, basePathSet, sortOption]);
+    }, [app, selectionType, selectedTag, selectedTopic, selectedFolder, settings.includeDescendantNotes, getDB, commandQueue, basePathSet, sortOption]);
 
     return {
         listItems,
