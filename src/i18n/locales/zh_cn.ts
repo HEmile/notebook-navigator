@@ -189,6 +189,9 @@ export const STRINGS_ZH_CN = {
             hideTag: '隐藏标签'
         },
         topic: {
+            changeIcon: '更改图标',
+            changeColor: '更改颜色',
+            changeBackground: '更改背景',
             showTopic: '显示主题',
             hideTopic: '隐藏主题'
         }

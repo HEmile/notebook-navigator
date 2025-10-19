@@ -189,6 +189,9 @@ export const STRINGS_FR = {
             hideTag: "Masquer l'étiquette"
         },
         topic: {
+            changeIcon: 'Changer l\'icône',
+            changeColor: 'Changer la couleur',
+            changeBackground: 'Changer l\'arrière-plan',
             showTopic: 'Afficher le sujet',
             hideTopic: 'Masquer le sujet'
         }

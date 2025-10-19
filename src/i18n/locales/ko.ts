@@ -188,6 +188,9 @@ export const STRINGS_KO = {
             hideTag: '태그 숨기기'
         },
         topic: {
+            changeIcon: '아이콘 변경',
+            changeColor: '색상 변경',
+            changeBackground: '배경 변경',
             showTopic: '주제 표시',
             hideTopic: '주제 숨기기'
         }

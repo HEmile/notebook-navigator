@@ -38,7 +38,7 @@ export class IconPickerModal extends Modal {
     private static lastUsedProvider: string | null = null; // Shared session default
     private iconService = getIconService();
     private itemPath: string;
-    private itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.FILE;
+    private itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.TOPIC | typeof ItemType.FILE;
     private metadataService: MetadataService;
     private settingsProvider: ISettingsProvider;
     /** Callback function invoked when an icon is selected */
@@ -75,7 +75,7 @@ export class IconPickerModal extends Modal {
         app: App,
         metadataService: MetadataService,
         itemPath: string,
-        itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.FILE = ItemType.FOLDER
+        itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.TOPIC | typeof ItemType.FILE = ItemType.FOLDER
     ) {
         super(app);
         this.metadataService = metadataService;
@@ -425,7 +425,7 @@ export class IconPickerModal extends Modal {
         this.saveToRecentIcons(iconId);
 
         // Set the icon based on item type
-        if (this.itemType === ItemType.TAG) {
+        if (this.itemType === ItemType.TAG || this.itemType === ItemType.TOPIC) {
             await this.metadataService.setTagIcon(this.itemPath, iconId);
         } else if (this.itemType === ItemType.FILE) {
             await this.metadataService.setFileIcon(this.itemPath, iconId);
@@ -440,7 +440,7 @@ export class IconPickerModal extends Modal {
     }
 
     private getCurrentIconForItem(): string | undefined {
-        if (this.itemType === ItemType.TAG) {
+        if (this.itemType === ItemType.TAG || this.itemType === ItemType.TOPIC) {
             return this.metadataService.getTagIcon(this.itemPath);
         }
         if (this.itemType === ItemType.FILE) {
@@ -456,7 +456,7 @@ export class IconPickerModal extends Modal {
             return;
         }
 
-        if (this.itemType === ItemType.TAG) {
+        if (this.itemType === ItemType.TAG || this.itemType === ItemType.TOPIC) {
             await this.metadataService.removeTagIcon(this.itemPath);
         } else if (this.itemType === ItemType.FILE) {
             await this.metadataService.removeFileIcon(this.itemPath);

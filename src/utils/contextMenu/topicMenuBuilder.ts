@@ -20,6 +20,7 @@ import { Menu, MenuItem } from 'obsidian';
 import { strings } from '../../i18n';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { MenuServices } from './menuTypes';
+import { ItemType } from '../../types';
 
 export interface TopicMenuBuilderParams {
     topicName: string;
@@ -64,6 +65,41 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
 
         menu.addSeparator();
     }
+
+    // Change icon
+    menu.addItem((item: MenuItem) => {
+        item.setTitle(strings.contextMenu.topic.changeIcon)
+            .setIcon('lucide-image')
+            .onClick(async () => {
+                const { IconPickerModal } = await import('../../modals/IconPickerModal');
+                const modal = new IconPickerModal(services.app, services.metadataService, topicName, ItemType.TOPIC);
+                modal.open();
+            });
+    });
+
+    // Change color
+    menu.addItem((item: MenuItem) => {
+        item.setTitle(strings.contextMenu.topic.changeColor)
+            .setIcon('lucide-palette')
+            .onClick(async () => {
+                const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
+                const modal = new ColorPickerModal(services.app, services.metadataService, topicName, ItemType.TOPIC, 'foreground');
+                modal.open();
+            });
+    });
+
+    // Change background color
+    menu.addItem((item: MenuItem) => {
+        item.setTitle(strings.contextMenu.topic.changeBackground)
+            .setIcon('lucide-paint-bucket')
+            .onClick(async () => {
+                const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
+                const modal = new ColorPickerModal(services.app, services.metadataService, topicName, ItemType.TOPIC, 'background');
+                modal.open();
+            });
+    });
+
+    menu.addSeparator();
 
     // Hide/Show topic functionality
     const isHidden = settings.hiddenTopics.includes(topicName);

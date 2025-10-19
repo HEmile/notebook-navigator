@@ -189,6 +189,9 @@ export const STRINGS_JA = {
             hideTag: 'タグを非表示'
         },
         topic: {
+            changeIcon: 'アイコンを変更',
+            changeColor: '色を変更',
+            changeBackground: '背景を変更',
             showTopic: 'トピックを表示',
             hideTopic: 'トピックを非表示'
         }

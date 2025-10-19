@@ -191,6 +191,9 @@ export const STRINGS_DE = {
             hideTag: 'Tag ausblenden'
         },
         topic: {
+            changeIcon: 'Symbol ändern',
+            changeColor: 'Farbe ändern',
+            changeBackground: 'Hintergrund ändern',
             showTopic: 'Thema anzeigen',
             hideTopic: 'Thema ausblenden'
         }
