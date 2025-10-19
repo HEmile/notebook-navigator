@@ -657,7 +657,7 @@ export const ListPane = React.memo(
         });
 
         // Determine if we're showing empty state
-        const isEmptySelection = !selectedFolder && !selectedTag;
+        const isEmptySelection = !selectedFolder && !selectedTag && !selectedTopic;
         const hasNoFiles = files.length === 0;
 
         // Single return with conditional content

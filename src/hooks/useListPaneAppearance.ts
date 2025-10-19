@@ -12,14 +12,15 @@ export interface FolderAppearance {
 }
 
 export type TagAppearance = FolderAppearance;
+export type TopicAppearance = FolderAppearance;
 
 /**
- * Hook to get effective appearance settings for the current selection (folder or tag)
- * Merges folder/tag-specific settings with defaults
+ * Hook to get effective appearance settings for the current selection (folder, tag, or topic)
+ * Merges folder/tag/topic-specific settings with defaults
  */
 export function useListPaneAppearance() {
     const settings = useSettingsState();
-    const { selectedFolder, selectedTag, selectionType } = useSelectionState();
+    const { selectedFolder, selectedTag, selectedTopic, selectionType } = useSelectionState();
 
     return useMemo(() => {
         // For folders
@@ -49,6 +50,19 @@ export function useListPaneAppearance() {
             };
         }
 
+        // For topics (use tag appearances for now since topics are similar to tags)
+        if (selectionType === ItemType.TOPIC && selectedTopic) {
+            const topicAppearance = settings.tagAppearances?.[selectedTopic] || {};
+
+            return {
+                titleRows: topicAppearance.titleRows ?? settings.fileNameRows,
+                previewRows: topicAppearance.previewRows ?? settings.previewRows,
+                showDate: topicAppearance.showDate ?? settings.showFileDate,
+                showPreview: topicAppearance.showPreview ?? settings.showFilePreview,
+                showImage: topicAppearance.showImage ?? settings.showFeatureImage
+            };
+        }
+
         // Default (no selection or other selection types)
         return {
             titleRows: settings.fileNameRows,
@@ -57,5 +71,5 @@ export function useListPaneAppearance() {
             showPreview: settings.showFilePreview,
             showImage: settings.showFeatureImage
         };
-    }, [settings, selectedFolder, selectedTag, selectionType]);
+    }, [settings, selectedFolder, selectedTag, selectedTopic, selectionType]);
 }

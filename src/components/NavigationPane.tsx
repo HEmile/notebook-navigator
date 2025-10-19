@@ -1084,7 +1084,6 @@ export const NavigationPane = React.memo(
         const handleTopicClick = useCallback(
             (topicName: string) => {
                 const topicNode = topicService?.findTopicNode(topicName);
-                console.log('topicNode clicked', topicNode);
                 if (!topicNode) {
                     return;
                 }

@@ -332,9 +332,7 @@ export function getFilesForTag(tag: string, settings: NotebookNavigatorSettings,
 /**
  * Gets a sorted list of files for a given topic, respecting all plugin settings.
  */
-// TODO: This could be a major source of errors. Check.
 export function getFilesForTopic(topicName: string, settings: NotebookNavigatorSettings, app: App, topicService: TopicService | null): TFile[] {
-    console.log('getFilesForTopic', topicName);
     // Get all files based on visibility setting, with proper filtering
     let allFiles: TFile[] = [];
 
@@ -441,10 +439,6 @@ export function getFilesForTopic(topicName: string, settings: NotebookNavigatorS
             unpinnedFiles.push(file);
         }
     }
-
-    console.log('filteredFiles', filteredFiles);
-    console.log('pinnedFiles', pinnedFiles);
-    console.log('unpinnedFiles', unpinnedFiles);
 
     return [...pinnedFiles, ...unpinnedFiles];
 }
