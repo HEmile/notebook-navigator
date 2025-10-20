@@ -237,7 +237,7 @@ export function buildTopicGraphFromDatabase(
     // Clear note count cache since tree structure has changed
     clearNoteCountCache();
 
-    console.log('rootTopics', rootTopics);
+    // console.log('rootTopics', rootTopics);
     return rootTopics;
 }
 

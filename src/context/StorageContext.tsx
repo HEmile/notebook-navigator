@@ -900,7 +900,32 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         return unsubscribe;
     }, [isStorageReady, settings.showTags, rebuildTagTree]);
 
-    // TODO: Do the above for topics. Not super important, just reload the window. 
+    /**
+     * Effect: Listen for topic changes in the database to rebuild topic tree
+     *
+     * This subscribes to database content changes specifically for topic updates.
+     * When any file's topics are modified (added, removed, or changed), we need to:
+     * - Rebuild the entire topic tree structure to reflect the new topic hierarchy
+     *
+     * The subscription is only active when storage is ready and topics are enabled.
+     */
+    useEffect(() => {
+        if (!isStorageReady) return;
+
+        const db = getDBInstance();
+        const unsubscribe = db.onContentChange(changes => {
+            if (stoppedRef.current) return;
+            // Check if any changes include tags
+            const hasStructureChanges = changes.some(change => change.changes.tags !== undefined || change.changes.metadata !== undefined);
+
+            if (hasStructureChanges) {
+                // Rebuild topic tree when topics change
+                rebuildTopicTree();
+            }
+        });
+
+        return unsubscribe;
+    }, [isStorageReady, rebuildTopicTree]);
 
     /**
      * Main Effect: Initialize storage system and monitor vault changes
