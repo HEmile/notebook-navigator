@@ -50,7 +50,8 @@ const isSelectableNavigationItem = (item: CombinedNavigationItem): boolean => {
     return (
         item.type === NavigationPaneItemType.FOLDER ||
         item.type === NavigationPaneItemType.TAG ||
-        item.type === NavigationPaneItemType.UNTAGGED
+        item.type === NavigationPaneItemType.UNTAGGED ||
+        item.type === NavigationPaneItemType.TOPIC
     );
 };
 
@@ -103,6 +104,11 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                 return tagIndex;
             }
 
+            const topicIndex = getNavigationIndex(pathToIndex, ItemType.TOPIC, path);
+            if (topicIndex !== undefined) {
+                return topicIndex;
+            }
+
             return -1;
         },
         [pathToIndex]
@@ -118,6 +124,10 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
 
         if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
             return resolveIndex(selectionState.selectedTag, ItemType.TAG);
+        }
+
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
+            return resolveIndex(selectionState.selectedTopic, ItemType.TOPIC);
         }
 
         return -1;
@@ -152,13 +162,25 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                         expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: tagNode.path });
                     }
                 }
+            } else if (item.type === NavigationPaneItemType.TOPIC) {
+                const topicNode = item.data;
+                const topicName = topicNode.name;
+                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicName });
+
+                // Auto-expand if enabled and topic has children
+                if (settings.autoExpandFoldersTags && topicNode.children.size > 0) {
+                    // Only expand if not already expanded
+                    if (!expansionState.expandedTags.has(topicName)) {
+                        expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicName });
+                    }
+                }
             }
         },
         [selectionDispatch, settings, expansionState, expansionDispatch]
     );
 
     /**
-     * Handle expand/collapse for folders and tags
+     * Handle expand/collapse for folders, tags, and topics
      */
     const handleExpandCollapse = useCallback(
         (item: CombinedNavigationItem, expand: boolean) => {
@@ -178,6 +200,15 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                     expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: tag.path });
                 } else if (!expand && isExpanded) {
                     expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: tag.path });
+                }
+            } else if (item.type === NavigationPaneItemType.TOPIC) {
+                const topic = item.data;
+                const topicName = topic.name;
+                const isExpanded = expansionState.expandedTags.has(topicName);
+                if (expand && !isExpanded && topic.children.size > 0) {
+                    expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicName });
+                } else if (!expand && isExpanded) {
+                    expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicName });
                 }
             }
         },
@@ -307,6 +338,17 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                         } else {
                             shouldSwitchPane = true;
                         }
+                    } else if (item.type === NavigationPaneItemType.TOPIC) {
+                        const topic = item.data;
+                        const topicName = topic.name;
+                        const isExpanded = expansionState.expandedTags.has(topicName);
+                        const hasChildren = topic.children.size > 0;
+
+                        if (hasChildren && !isExpanded) {
+                            handleExpandCollapse(item, true);
+                        } else {
+                            shouldSwitchPane = true;
+                        }
                     } else {
                         shouldSwitchPane = true;
                     }
@@ -369,6 +411,24 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                                         selectItemAtIndex(parentItem);
                                         helpers.scrollToIndex(parentIndex);
                                     }
+                                }
+                            }
+                        }
+                    } else if (item.type === NavigationPaneItemType.TOPIC) {
+                        const topic = item.data;
+                        const topicName = topic.name;
+                        const isExpanded = expansionState.expandedTags.has(topicName);
+                        if (isExpanded) {
+                            handleExpandCollapse(item, false);
+                        } else if (topic.parents.size > 0) {
+                            // Navigate to the first parent topic
+                            const parentName = Array.from(topic.parents.keys())[0];
+                            const parentIndex = resolveIndex(parentName, ItemType.TOPIC);
+                            if (parentIndex >= 0) {
+                                const parentItem = helpers.getItemAt(parentIndex);
+                                if (parentItem) {
+                                    selectItemAtIndex(parentItem);
+                                    helpers.scrollToIndex(parentIndex);
                                 }
                             }
                         }
