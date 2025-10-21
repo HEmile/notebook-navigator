@@ -88,7 +88,7 @@ import { STORAGE_KEYS, SHORTCUTS_VIRTUAL_FOLDER_ID, RECENT_NOTES_VIRTUAL_FOLDER_
 import { localStorage } from '../utils/localStorage';
 import { useShortcuts } from '../context/ShortcutsContext';
 import { ShortcutItem } from './ShortcutItem';
-import { ShortcutType, SearchShortcut, SHORTCUT_DRAG_MIME, isFolderShortcut, isNoteShortcut, isTagShortcut } from '../types/shortcuts';
+import { ShortcutType, SearchShortcut, isFolderShortcut, isNoteShortcut, isTagShortcut } from '../types/shortcuts';
 import { strings } from '../i18n';
 import { createDragGhostManager, type DragGhostOptions } from '../utils/dragGhost';
 import { NavigationBanner } from './NavigationBanner';
@@ -106,6 +106,7 @@ import type { NoteCountInfo } from '../types/noteCounts';
 import { calculateFolderNoteCounts } from '../utils/noteCountUtils';
 import { normalizeNavigationSectionOrderInput } from '../utils/navigationSections';
 import { getPathBaseName } from '../utils/pathUtils';
+import { beginInternalDrag, endInternalDrag, isInternalDragActive } from '../utils/internalDragState';
 
 export interface NavigationPaneHandle {
     getIndexOfPath: (itemType: ItemType, path: string) => number;
@@ -382,12 +383,14 @@ export const NavigationPane = React.memo(
                     return false;
                 }
 
-                const types = Array.from(dataTransfer.types ?? []);
-                if (types.includes(SHORTCUT_DRAG_MIME)) {
+                // Check if this is an internal shortcut drag using module-level state
+                // instead of custom MIME types (Chrome 128+ Android bug workaround)
+                if (isInternalDragActive('shortcut')) {
                     setExternalShortcutDropIndex(null);
                     return false;
                 }
 
+                const types = Array.from(dataTransfer.types ?? []);
                 const hasObsidianFiles = types.includes('obsidian/file') || types.includes('obsidian/files');
                 if (!hasObsidianFiles) {
                     setExternalShortcutDropIndex(null);
@@ -415,8 +418,9 @@ export const NavigationPane = React.memo(
                     return false;
                 }
 
-                const types = Array.from(dataTransfer.types ?? []);
-                if (types.includes(SHORTCUT_DRAG_MIME)) {
+                // Check if this is an internal shortcut drag using module-level state
+                // instead of custom MIME types (Chrome 128+ Android bug workaround)
+                if (isInternalDragActive('shortcut')) {
                     setExternalShortcutDropIndex(null);
                     return false;
                 }
@@ -552,15 +556,30 @@ export const NavigationPane = React.memo(
         const buildShortcutDragHandlers = useCallback(
             (key: string, options: DragGhostOptions): ListReorderHandlers => {
                 const handlers = getDragHandlers(key);
+                if (!handlers.draggable) {
+                    return handlers;
+                }
+
                 const handlersWithGhost = withDragGhost(handlers, options);
 
                 return {
                     ...handlersWithGhost,
                     onDragStart: event => {
+                        // Track drag state in module variable instead of custom MIME type
+                        beginInternalDrag('shortcut');
                         draggedShortcutKeyRef.current = key;
                         draggedShortcutDropCompletedRef.current = false;
                         setExternalShortcutDropIndex(null);
-                        handlersWithGhost.onDragStart(event);
+                        try {
+                            handlersWithGhost.onDragStart(event);
+                        } catch (error) {
+                            // Ensure drag state clears when drag start fails
+                            endInternalDrag('shortcut');
+                            draggedShortcutKeyRef.current = null;
+                            draggedShortcutDropCompletedRef.current = false;
+                            setExternalShortcutDropIndex(null);
+                            throw error;
+                        }
                     },
                     onDragOver: event => {
                         if (handleShortcutDragOver(event, key)) {
@@ -569,23 +588,32 @@ export const NavigationPane = React.memo(
                         handlersWithGhost.onDragOver(event);
                     },
                     onDrop: event => {
-                        if (handleShortcutDrop(event, key)) {
+                        try {
+                            if (handleShortcutDrop(event, key)) {
+                                draggedShortcutDropCompletedRef.current = true;
+                                return;
+                            }
+                            handlersWithGhost.onDrop(event);
                             draggedShortcutDropCompletedRef.current = true;
-                            return;
+                        } finally {
+                            // Clear internal drag state after drop
+                            endInternalDrag('shortcut');
                         }
-                        handlersWithGhost.onDrop(event);
-                        draggedShortcutDropCompletedRef.current = true;
                     },
                     onDragLeave: event => {
                         handleShortcutDragLeave();
                         handlersWithGhost.onDragLeave(event);
                     },
                     onDragEnd: event => {
-                        handlersWithGhost.onDragEnd(event);
-                        draggedShortcutKeyRef.current = null;
-                        setExternalShortcutDropIndex(null);
-
-                        draggedShortcutDropCompletedRef.current = false;
+                        try {
+                            handlersWithGhost.onDragEnd(event);
+                        } finally {
+                            draggedShortcutKeyRef.current = null;
+                            setExternalShortcutDropIndex(null);
+                            draggedShortcutDropCompletedRef.current = false;
+                            // Always clear internal drag state when drag ends
+                            endInternalDrag('shortcut');
+                        }
                     }
                 };
             },

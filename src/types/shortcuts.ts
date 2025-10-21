@@ -32,11 +32,6 @@ export const ShortcutType = {
 export type ShortcutType = (typeof ShortcutType)[keyof typeof ShortcutType];
 
 /**
- * MIME type for drag-and-drop operations with shortcuts
- */
-export const SHORTCUT_DRAG_MIME = 'application/x-notebook-shortcut';
-
-/**
  * Shortcut pointing to a folder in the vault
  */
 export interface FolderShortcut {
