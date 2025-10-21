@@ -165,8 +165,9 @@ export function buildTopicGraphFromDatabase(
         const hasTopics = metadata.frontmatter?.['hasTopic'] as string[] | undefined;
         const isAs = metadata.frontmatter?.['isA'] as string[] | undefined;
         const subsets = metadata.frontmatter?.['subset'] as string[] | undefined;
+        const fors = metadata.frontmatter?.['for'] as string[] | undefined;
 
-        // Merge hasTopics and isAs arrays into a single list of topics
+        // Merge hasTopics, isAs, subsets, and fors arrays into a single list of topics
         let topics: string[] = [];
         if (Array.isArray(hasTopics)) {
             topics = topics.concat(hasTopics);
@@ -176,6 +177,9 @@ export function buildTopicGraphFromDatabase(
         }
         if (Array.isArray(subsets)) {
             topics = topics.concat(subsets);
+        }
+        if (Array.isArray(fors)) {
+            topics = topics.concat(fors);
         }
         // Remove duplicates, if any
         topics = Array.from(new Set(topics));
@@ -189,7 +193,7 @@ export function buildTopicGraphFromDatabase(
             }
             const metadataTopic = app.metadataCache.getFileCache(topicFile);
             if (!metadataTopic?.tags?.some(tag => tag.tag.contains('topic'))) {
-                // Handle isA / hasTopics up recursively until first topic found
+                // Handle isA / hasTopics / subsets / fors up recursively until first topic found
                 collectParentTopics(topicFile, path);
             } else {
                 const topicName = getTopicNameFromPath(topicFile.path);
@@ -198,7 +202,7 @@ export function buildTopicGraphFromDatabase(
                     topicNode.notesWithTag.add(path);
                 } 
             }
-            // It's possible it cannot be find when a user uses hasTopic or isA for a note that is not a topic
+            // It's possible it cannot be found when a user uses hasTopic, isA, subset, or for for a note that is not a topic
         }
     }
 

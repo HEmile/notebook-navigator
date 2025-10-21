@@ -105,7 +105,7 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
                 return false;
             }
 
-            // Find the first topic in the hierarchy (either the file itself or via isA/subset/hasTopic links)
+            // Find the first topic in the hierarchy (either the file itself or via isA/subset/hasTopic/for links)
             const { findFirstTopicInHierarchy } = require('../../utils/topicNotes');
             const topicName = findFirstTopicInHierarchy(activeFile, plugin.app);
             

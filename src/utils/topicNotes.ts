@@ -66,7 +66,7 @@ export function getTopicNameFromFile(file: TFile): string {
 }
 
 /**
- * Finds the first topic in the hierarchy by traversing isA, subset, and hasTopic links.
+ * Finds the first topic in the hierarchy by traversing isA, subset, hasTopic, and for links.
  * Similar to collectParentTopics in topicGraph.ts but returns the first topic found.
  * 
  * @param file - The file to start searching from
@@ -95,6 +95,7 @@ export function findFirstTopicInHierarchy(file: TFile, app: App, visited: Set<st
     const hasTopics = metadata.frontmatter?.['hasTopic'] as string[] | undefined;
     const isAs = metadata.frontmatter?.['isA'] as string[] | undefined;
     const subsets = metadata.frontmatter?.['subset'] as string[] | undefined;
+    const fors = metadata.frontmatter?.['for'] as string[] | undefined;
 
     // Merge all links into a single list
     let parentLinks: string[] = [];
@@ -106,6 +107,9 @@ export function findFirstTopicInHierarchy(file: TFile, app: App, visited: Set<st
     }
     if (Array.isArray(subsets)) {
         parentLinks = parentLinks.concat(subsets);
+    }
+    if (Array.isArray(fors)) {
+        parentLinks = parentLinks.concat(fors);
     }
 
     // Remove duplicates

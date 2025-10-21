@@ -908,6 +908,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
      * When any file's topics are modified (added, removed, or changed), we need to:
      * - Rebuild the entire topic tree structure to reflect the new topic hierarchy
      *
+     * TODO: This isn't really perfectly working, it only updates on tag changes. 
      * The subscription is only active when storage is ready and topics are enabled.
      */
     useEffect(() => {
