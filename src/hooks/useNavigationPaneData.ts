@@ -1088,8 +1088,8 @@ export function useNavigationPaneData({
                 const tagNode = item.data;
                 setNavigationIndex(indexMap, ItemType.TAG, tagNode.path, index);
             } else if (item.type === NavigationPaneItemType.TOPIC) {
-                const topicNode = item.data;
-                setNavigationIndex(indexMap, ItemType.TOPIC, topicNode.name, index);
+                const topicPath = item.path ?? item.data.name; // Use the full path for this topic instance
+                setNavigationIndex(indexMap, ItemType.TOPIC, topicPath, index);
             }
         });
 

@@ -242,18 +242,28 @@ export function flattenTopicTree(
     /** Sort tags using the selected comparator */
     const sortedNodes = topicNodes.slice().sort(sortFn);
 
-    /** Recursively adds a tag node and its children to the items array */
-    function addNode(node: TopicNode, currentLevel: number, parentHidden: boolean = false) {
+    /** 
+     * Recursively adds a topic node and its children to the items array.
+     * @param node - The topic node to add
+     * @param currentLevel - The depth level for indentation
+     * @param parentHidden - Whether a parent is hidden (affects visibility)
+     * @param pathFromRoot - The path from root to this node (e.g., "logic/reasoning")
+     */
+    function addNode(node: TopicNode, currentLevel: number, parentHidden: boolean = false, pathFromRoot: string = '') {
         const matchesRule = hiddenMatcher ? matchesHiddenTagPattern(node.name, node.name, hiddenMatcher) : false;
         const isHidden = parentHidden || matchesRule;
+
+        // Build unique path for this instance of the topic
+        // For root nodes, use just the name; for children, append to parent path
+        const topicPath = pathFromRoot ? `${pathFromRoot}/${node.name}` : node.name;
 
         const item: TopicItem = {
             type: NavigationPaneItemType.TOPIC,
             data: node,
             level: currentLevel,
-            // TODO: Better use of paths for topics
-            path: node.name,
-            key: node.name
+            // Use the full path as the unique identifier for this topic instance
+            path: topicPath,
+            key: topicPath
         };
 
         // Mark tags that match hidden patterns (shows eye icon when visible)
@@ -264,10 +274,11 @@ export function flattenTopicTree(
         items.push(item);
 
         // Add children if expanded and has children
-        if (expandedTopics.has(node.name) && node.children && node.children.size > 0) {
+        // Check expansion using the full path, not just the name
+        if (expandedTopics.has(topicPath) && node.children && node.children.size > 0) {
             const sortedChildren = Array.from(node.children.values()).sort(sortFn);
 
-            sortedChildren.forEach(child => addNode(child, currentLevel + 1, isHidden));
+            sortedChildren.forEach(child => addNode(child, currentLevel + 1, isHidden, topicPath));
         }
     }
 

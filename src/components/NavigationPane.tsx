@@ -817,8 +817,8 @@ export const NavigationPane = React.memo(
 
         // Handle topic toggle
         const handleTopicToggle = useCallback(
-            (name: string) => {
-                expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: name });
+            (topicPath: string) => {
+                expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
             },
             [expansionDispatch]
         );
@@ -887,24 +887,27 @@ export const NavigationPane = React.memo(
             [tagTree]
         );
 
-        // Recursively collects all descendant topic names from a given topic
+        // Recursively collects all descendant topic paths from a given topic path
         const getAllDescendantTopics = useCallback(
-            (topicName: string): string[] => {
+            (topicPath: string): string[] => {
                 const descendants: string[] = [];
+                // Extract the topic name from the path (last part after /)
+                const topicName = topicPath.includes('/') ? topicPath.split('/').pop() || topicPath : topicPath;
                 const topicNode = topicService?.findTopicNode(topicName);
 
                 if (!topicNode) {
                     return descendants;
                 }
 
-                const collectDescendants = (node: TopicNode) => {
+                const collectDescendants = (node: TopicNode, currentPath: string) => {
                     node.children.forEach(child => {
-                        descendants.push(child.name);
-                        collectDescendants(child);
+                        const childPath = `${currentPath}/${child.name}`;
+                        descendants.push(childPath);
+                        collectDescendants(child, childPath);
                     });
                 };
 
-                collectDescendants(topicNode);
+                collectDescendants(topicNode, topicPath);
                 return descendants;
             },
             [topicService]
@@ -2041,40 +2044,41 @@ export const NavigationPane = React.memo(
 
                     case NavigationPaneItemType.TOPIC: {
                         const topicNode = item.data;
-                        const name = topicNode.name;
+                        const topicPath = item.path ?? topicNode.name; // Use the unique path for this topic instance, fallback to name
+                        const topicName = topicNode.name;
                         return (
                             <TagTreeItem
                                 tagNode={topicNode}
                                 level={item.level ?? 0}
-                                isExpanded={expansionState.expandedTopics.has(name)}
-                                isSelected={selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic === name}
+                                isExpanded={expansionState.expandedTopics.has(topicPath)}
+                                isSelected={selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic === topicPath}
                                 isHidden={'isHidden' in item ? item.isHidden : false}
-                                onToggle={() => handleTopicToggle(name)}
-                                onClick={() => handleTopicClick(name)}
+                                onToggle={() => handleTopicToggle(topicPath)}
+                                onClick={() => handleTopicClick(topicName)}
                                 color={item.color}
                                 backgroundColor={item.backgroundColor}
                                 icon={item.icon}
                                 itemType="topic"
                                 onToggleAllSiblings={() => {
-                                    const isCurrentlyExpanded = expansionState.expandedTopics.has(name);
+                                    const isCurrentlyExpanded = expansionState.expandedTopics.has(topicPath);
 
                                     if (isCurrentlyExpanded) {
                                         // If expanded, collapse everything (parent and all descendants)
-                                        handleTopicToggle(name);
-                                        const descendantNames = getAllDescendantTopics(name);
-                                        if (descendantNames.length > 0) {
-                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TOPICS', descendantNames, expand: false });
+                                        handleTopicToggle(topicPath);
+                                        const descendantPaths = getAllDescendantTopics(topicPath);
+                                        if (descendantPaths.length > 0) {
+                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TOPICS', descendantNames: descendantPaths, expand: false });
                                         }
                                     } else {
                                         // If collapsed, expand parent and all descendants
-                                        handleTopicToggle(name);
-                                        const descendantNames = getAllDescendantTopics(name);
-                                        if (descendantNames.length > 0) {
-                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TOPICS', descendantNames, expand: true });
+                                        handleTopicToggle(topicPath);
+                                        const descendantPaths = getAllDescendantTopics(topicPath);
+                                        if (descendantPaths.length > 0) {
+                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TOPICS', descendantNames: descendantPaths, expand: true });
                                         }
                                     }
                                 }}
-                                countInfo={tagCounts.get(name)}
+                                countInfo={tagCounts.get(topicName)}
                                 showFileCount={settings.showNoteCount}
                             />
                         );

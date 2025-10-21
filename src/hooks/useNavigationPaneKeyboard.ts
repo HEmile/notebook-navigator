@@ -164,14 +164,14 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                 }
             } else if (item.type === NavigationPaneItemType.TOPIC) {
                 const topicNode = item.data;
-                const topicName = topicNode.name;
-                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicName });
+                const topicPath = item.path ?? topicNode.name; // Use the unique path for this instance, fallback to name
+                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicPath });
 
                 // Auto-expand if enabled and topic has children
                 if (settings.autoExpandFoldersTags && topicNode.children.size > 0) {
                     // Only expand if not already expanded
-                    if (!expansionState.expandedTopics.has(topicName)) {
-                        expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicName });
+                    if (!expansionState.expandedTopics.has(topicPath)) {
+                        expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
                     }
                 }
             }
@@ -203,12 +203,12 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                 }
             } else if (item.type === NavigationPaneItemType.TOPIC) {
                 const topic = item.data;
-                const topicName = topic.name;
-                const isExpanded = expansionState.expandedTopics.has(topicName);
+                const topicPath = item.path ?? topic.name; // Use the unique path for this instance, fallback to name
+                const isExpanded = expansionState.expandedTopics.has(topicPath);
                 if (expand && !isExpanded && topic.children.size > 0) {
-                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicName });
+                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
                 } else if (!expand && isExpanded) {
-                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicName });
+                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
                 }
             }
         },
@@ -340,8 +340,8 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                         }
                     } else if (item.type === NavigationPaneItemType.TOPIC) {
                         const topic = item.data;
-                        const topicName = topic.name;
-                        const isExpanded = expansionState.expandedTopics.has(topicName);
+                        const topicPath = item.path ?? topic.name; // Use the unique path for this instance, fallback to name
+                        const isExpanded = expansionState.expandedTopics.has(topicPath);
                         const hasChildren = topic.children.size > 0;
 
                         if (hasChildren && !isExpanded) {
@@ -416,19 +416,22 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                         }
                     } else if (item.type === NavigationPaneItemType.TOPIC) {
                         const topic = item.data;
-                        const topicName = topic.name;
-                        const isExpanded = expansionState.expandedTopics.has(topicName);
+                        const topicPath = item.path ?? topic.name; // Use the unique path for this instance, fallback to name
+                        const isExpanded = expansionState.expandedTopics.has(topicPath);
                         if (isExpanded) {
                             handleExpandCollapse(item, false);
-                        } else if (topic.parents.size > 0) {
-                            // Navigate to the first parent topic
-                            const parentName = Array.from(topic.parents.keys())[0];
-                            const parentIndex = resolveIndex(parentName, ItemType.TOPIC);
-                            if (parentIndex >= 0) {
-                                const parentItem = helpers.getItemAt(parentIndex);
-                                if (parentItem) {
-                                    selectItemAtIndex(parentItem);
-                                    helpers.scrollToIndex(parentIndex);
+                        } else {
+                            // Navigate to parent by removing the last part of the path
+                            const lastSlashIndex = topicPath.lastIndexOf('/');
+                            if (lastSlashIndex > 0) {
+                                const parentPath = topicPath.substring(0, lastSlashIndex);
+                                const parentIndex = resolveIndex(parentPath, ItemType.TOPIC);
+                                if (parentIndex >= 0) {
+                                    const parentItem = helpers.getItemAt(parentIndex);
+                                    if (parentItem) {
+                                        selectItemAtIndex(parentItem);
+                                        helpers.scrollToIndex(parentIndex);
+                                    }
                                 }
                             }
                         }
