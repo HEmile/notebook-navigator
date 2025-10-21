@@ -284,13 +284,13 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - **Default startup view:** Choose which pane displays when opening Notebook Navigator - Navigation pane (shortcuts, recent notes, folders) or List pane (note list)
 - **Dual pane layout (desktop only, not synced):** Show navigation and list panes side by side
 - **Homepage:** Set a file that opens automatically when Notebook Navigator starts
-- **Separate mobile homepage:** Use a different homepage for mobile devices
+  - **Separate mobile homepage:** Use a different homepage for mobile devices
 - **Show tooltips (desktop only):** Display hover tooltips with additional information for notes and folders
-- **Show tooltips path (desktop only):** Display full file path in tooltips
+  - **Show tooltips path (desktop only):** Display full file path in tooltips
 - **Show icons:** Display icons next to folders, tags, and files
-- **Apply color to icons only:** Limit custom colors to icons only, not text labels
+  - **Apply color to icons only:** Limit custom colors to icons only, not text labels
 - **Auto-reveal active note:** Automatically reveal notes when opened from Quick Switcher, links, or search
-- **Ignore events from right sidebar:** Disable auto-reveal from right sidebar
+  - **Ignore events from right sidebar:** Disable auto-reveal from right sidebar
 - **Show file types:** Filter which file types are shown. `Documents (.md, .canvas, .base)`, `Supported (opens in Obsidian)`, `All (may open externally)`
 - **Hide folders:** Comma-separated list of folders to hide. Name patterns: `assets*` (folders starting with assets), `*_temp` (ending with \_temp). Path patterns: `/archive` (root archive only), `/res*` (root folders starting with res), `/*/temp` (temp folders one level deep), `/projects/*` (all folders inside projects)
 - **Hide notes:** Comma-separated frontmatter properties. Notes containing any of these properties will be hidden (e.g., draft, private, archived)
@@ -306,42 +306,28 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - **Navigation banner:** Display an image above the navigation pane
 - **Show shortcuts:** Display the shortcuts section for quick access to pinned items
 - **Show recent notes:** Display recently opened notes in the navigation pane
-- **Recent notes count:** Number of recent notes to display (1-10)
+  - **Recent notes count:** Number of recent notes to display (1-10)
 - **Show note count:** Display the number of notes next to each folder and tag
-- **Separate note counts:** Show folder contents separately from descendant counts (e.g., "2 + 5")
+  - **Separate note counts:** Show folder contents separately from descendant counts (e.g., "2 + 5")
 - **Tree indentation:** Adjust the indentation width for nested folders and tags
 - **Item height:** Adjust the height of folders and tags in the navigation pane
-- **Scale text with item height:** Reduce navigation text when item height is decreased
-
-### Icon packs
-
-- **External icon providers:** Optional feature to download additional icon packs to expand available icons
-  - **Bootstrap Icons:** Over 2,000 icons - [icons.getbootstrap.com](https://icons.getbootstrap.com/)
-  - **Font Awesome (Regular):** Classic icon set - [fontawesome.com](https://fontawesome.com/)
-  - **Material Icons:** Google's Material Design icons - [fonts.google.com/icons](https://fonts.google.com/icons)
-  - **Phosphor:** Flexible icon family - [phosphoricons.com](https://phosphoricons.com/)
-  - **RPG Awesome:** Fantasy and RPG-themed icons - [nagoshiashumari.github.io/Rpg-Awesome](https://nagoshiashumari.github.io/Rpg-Awesome/)
-  - **Simple Icons:** 3,364 brand icons - [simpleicons.org](https://simpleicons.org/)
-
-**How it works:** Icon packs are downloaded on-demand when you enable them in settings. Downloads occur from GitHub (`github.com/johansan/notebook-navigator`) and are cached locally for offline use. No automatic downloads or updates occur - you have full control over when icon packs are installed or removed.
-
-**Note:** Downloaded icon packs sync installation state across devices. Icons stay in the local database on each device; sync only tracks whether to download or remove them.
+  - **Scale text with item height:** Reduce navigation text when item height is decreased
 
 ### Folders & Tags
 
 - **Show root folder:** Display the vault name as the root folder in the tree
 - **Inherit folder colors:** Child folders inherit color from parent folders
 - **Enable folder notes:** When enabled, folders with associated notes are displayed as clickable links
-- **Default folder note type:** Type created from context menu. `Markdown`, `Canvas`, `Base`
-- **Folder note name:** Name of the folder note without extension. Leave empty to use the same name as the folder
-- **Folder note properties:** Frontmatter properties to add to newly created folder notes (comma-separated)
-- **Hide folder notes in list:** Hide the folder note from appearing in the folder's note list
-- **Pin created folder notes:** Adds folder notes created from the context menu into pinned folders when folder notes are visible
+  - **Default folder note type:** Type created from context menu. `Markdown`, `Canvas`, `Base`
+  - **Folder note name:** Name of the folder note without extension. Leave empty to use the same name as the folder
+  - **Folder note properties:** Frontmatter properties to add to newly created folder notes (comma-separated)
+  - **Hide folder notes in list:** Hide the folder note from appearing in the folder's note list
+  - **Pin created folder notes:** Adds folder notes created from the context menu into pinned folders when folder notes are visible
 - **Show tags:** Display tags section below folders in the navigator
-- **Tag sort order:** Choose how tags are ordered in the navigation pane. `A to Z`, `Z to A`, `Frequency (low to high)`, `Frequency (high to low)`
-- **Show tags folder:** Display "Tags" as collapsible folder
-- **Show untagged notes:** Display "Untagged" item for notes without any tags
-- **Hidden tags:** Comma-separated list of tag prefixes or name wildcards. Use `tag*` or `*tag` to match tag names. Hiding a tag also hides all its sub-tags (e.g., "archive" hides "archive/2024/docs")
+  - **Tag sort order:** Choose how tags are ordered in the navigation pane. `A to Z`, `Z to A`, `Frequency (low to high)`, `Frequency (high to low)`
+  - **Show tags folder:** Display "Tags" as collapsible folder
+  - **Show untagged notes:** Display "Untagged" item for notes without any tags
+  - **Hidden tags:** Comma-separated list of tag prefixes or name wildcards. Use `tag*` or `*tag` to match tag names. Hiding a tag also hides all its sub-tags (e.g., "archive" hides "archive/2024/docs")
 
 ### List pane
 
@@ -352,40 +338,55 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - **Group notes by date:** When sorted by date, group notes under date headers
 - **Optimize note height:** Reduce height for pinned notes and notes without preview text
 - **Show quick actions (desktop only):** Show hover actions on file items
-- **Reveal in folder:** Quick action: Reveal note in its parent folder. Only visible when viewing notes from subfolders or in tags (not shown in the note's actual folder)
-- **Pin note:** Quick action: Pin or unpin note at top of list
-- **Open in new tab:** Quick action: Open note in new tab
+  - **Reveal in folder:** Quick action: Reveal note in its parent folder. Only visible when viewing notes from subfolders or in tags (not shown in the note's actual folder)
+  - **Pin note:** Quick action: Pin or unpin note at top of list
+  - **Open in new tab:** Quick action: Open note in new tab
 
 ### Notes
 
 - **Read metadata from frontmatter:** Read note names, timestamps, icons, and colors from frontmatter when available, falling back to file system values or settings
-- **Icon field:** Frontmatter field for file icons. Leave empty to use icons stored in settings
-- **Color field:** Frontmatter field for file colors. Leave empty to use colors stored in settings
-- **Save icons and colors to frontmatter:** Automatically write file icons and colors to frontmatter using the configured fields above
-- **Save in Iconize format:** Save icons using Iconize format (e.g. LiHome, FasUser, SiGithub) instead of plugin format (e.g. home, fontawesome-solid:user, simple-icons:github)
-- **Migrate icons and colors from settings:** Migration tool to move all file icons and colors from plugin settings to frontmatter
-- **Name field:** Frontmatter field to use as the note display name. Leave empty to use the file name
-- **Created timestamp field:** Frontmatter field name for the created timestamp. Leave empty to only use file system date
-- **Modified timestamp field:** Frontmatter field name for the modified timestamp. Leave empty to only use file system date
-- **Timestamp format:** Format used to parse timestamps in frontmatter. Leave empty to use ISO 8601 format
+  - **Icon field:** Frontmatter field for file icons. Leave empty to use icons stored in settings
+  - **Color field:** Frontmatter field for file colors. Leave empty to use colors stored in settings
+  - **Save icons and colors to frontmatter:** Automatically write file icons and colors to frontmatter using the configured fields above
+  - **Save in Iconize format:** Save icons using Iconize format (e.g. LiHome, FasUser, SiGithub) instead of plugin format (e.g. home, fontawesome-solid:user, simple-icons:github)
+  - **Migrate icons and colors from settings:** Migration tool to move all file icons and colors from plugin settings to frontmatter
+  - **Name field:** Frontmatter field to use as the note display name. Leave empty to use the file name
+  - **Created timestamp field:** Frontmatter field name for the created timestamp. Leave empty to only use file system date
+  - **Modified timestamp field:** Frontmatter field name for the modified timestamp. Leave empty to only use file system date
+  - **Timestamp format:** Format used to parse timestamps in frontmatter. Leave empty to use ISO 8601 format
 - **Title rows:** Number of rows to display for note titles. `1 row` or `2 rows`
 - **Show date:** Display the date below note names
 - **Show file tags:** Display clickable tags in file items
-- **Show parent tags:** Display parent segments before the tag name
-- **Color file tags:** Apply tag colors to tag badges on file items
-- **Show file tags in slim mode:** Display tags when date, preview, and image are hidden
+  - **Show parent tags:** Display parent segments before the tag name
+  - **Color file tags:** Apply tag colors to tag badges on file items
+  - **Show file tags in slim mode:** Display tags when date, preview, and image are hidden
 - **Show parent folder names:** Display the parent folder name for notes in subfolders or tags
 - **Show note preview:** Display preview text beneath note names
-- **Skip headings in preview:** Skip heading lines when generating preview text
-- **Skip code blocks in preview:** Skip code blocks when generating preview text
-- **Preview rows:** Number of rows to display for preview text. `1-5 rows`
-- **Preview properties:** Comma-separated list of frontmatter properties to check for preview text. The first property with text will be used
+  - **Skip headings in preview:** Skip heading lines when generating preview text
+  - **Skip code blocks in preview:** Skip code blocks when generating preview text
+  - **Preview rows:** Number of rows to display for preview text. `1-5 rows`
+  - **Preview properties:** Comma-separated list of frontmatter properties to check for preview text. The first property with text will be used
 - **Show feature image:** Display thumbnail images from frontmatter. Tip: Use the Featured Image plugin to automatically set feature images
-- **Image properties:** Comma-separated list of frontmatter properties to check for thumbnail images. The first property with an image will be used. If empty and the fallback setting is enabled, the first embedded image will be used
-- **Force square feature image:** Render feature images as square thumbnails
-- **Use embedded image fallback:** Use the first embedded image in the document as a fallback when no thumbnail is found in frontmatter properties (requires Obsidian 1.9.4+). Disable this to verify that thumbnails are properly configured
+  - **Image properties:** Comma-separated list of frontmatter properties to check for thumbnail images. The first property with an image will be used. If empty and the fallback setting is enabled, the first embedded image will be used
+  - **Force square feature image:** Render feature images as square thumbnails
+  - **Use embedded image fallback:** Use the first embedded image in the document as a fallback when no thumbnail is found in frontmatter properties (requires Obsidian 1.9.4+). Disable this to verify that thumbnails are properly configured
 
 **Note:** When date, preview, and feature image are disabled, list pane displays in compact "slim mode" with only note names.
+
+### Icon packs
+
+Optional icon packs to expand available icons beyond the default Lucide icons:
+
+- **Bootstrap Icons:** Over 2,000 icons - [icons.getbootstrap.com](https://icons.getbootstrap.com/)
+- **Font Awesome (Solid):** Classic icon set - [fontawesome.com](https://fontawesome.com/)
+- **Material Icons:** Google's Material Design icons - [fonts.google.com/icons](https://fonts.google.com/icons)
+- **Phosphor:** Flexible icon family - [phosphoricons.com](https://phosphoricons.com/)
+- **RPG Awesome:** Fantasy and RPG-themed icons - [nagoshiashumari.github.io/Rpg-Awesome](https://nagoshiashumari.github.io/Rpg-Awesome/)
+- **Simple Icons:** 3,364 brand icons - [simpleicons.org](https://simpleicons.org/)
+
+**How it works:** Icon packs are downloaded on-demand when you enable them in settings. Downloads occur from GitHub (`github.com/johansan/notebook-navigator`) and are cached locally for offline use. No automatic downloads or updates occur - you have full control over when icon packs are installed or removed.
+
+**Note:** Downloaded icon packs sync installation state across devices. Icons stay in the local database on each device; sync only tracks whether to download or remove them.
 
 ### Search & Hotkeys
 
