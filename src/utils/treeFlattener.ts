@@ -63,6 +63,35 @@ export function compareFolderOrderWithFallback(a: TFolder, b: TFolder, orderMap?
 }
 
 /**
+ * Compares tags using custom order map with fallback to provided comparator or natural order.
+ * Returns negative if a comes before b, positive if b comes before a, 0 if equal.
+ */
+export function compareTagOrderWithFallback(
+    a: TagTreeNode,
+    b: TagTreeNode,
+    orderMap?: Map<string, number>,
+    fallback?: (first: TagTreeNode, second: TagTreeNode) => number
+): number {
+    if (!orderMap || orderMap.size === 0) {
+        return fallback ? fallback(a, b) : naturalCompare(a.name, b.name);
+    }
+
+    const orderA = orderMap.get(a.path);
+    const orderB = orderMap.get(b.path);
+
+    if (orderA !== undefined && orderB !== undefined) {
+        return orderA - orderB;
+    }
+    if (orderA !== undefined) {
+        return -1;
+    }
+    if (orderB !== undefined) {
+        return 1;
+    }
+    return fallback ? fallback(a, b) : naturalCompare(a.name, b.name);
+}
+
+/**
  * Flattens a folder tree into a linear array for virtualization.
  * Only includes folders that are visible based on the expanded state.
  *

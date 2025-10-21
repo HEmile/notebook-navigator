@@ -170,16 +170,6 @@ export function renderFoldersTagsTab(context: SettingsTabContext): void {
         });
 
     new Setting(tagSubSettingsEl)
-        .setName(strings.settings.items.showTagsAboveFolders.name)
-        .setDesc(strings.settings.items.showTagsAboveFolders.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showTagsAboveFolders).onChange(async value => {
-                plugin.settings.showTagsAboveFolders = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(tagSubSettingsEl)
         .setName(strings.settings.items.showAllTagsFolder.name)
         .setDesc(strings.settings.items.showAllTagsFolder.desc)
         .addToggle(toggle =>

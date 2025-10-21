@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     // General tab - Startup & layout
     startView: 'files',
     showTooltips: false,
+    showTooltipPath: true,
 
     // General tab - Homepage
     homepage: null,
@@ -39,7 +40,6 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     // General tab - Behavior
     autoRevealActiveFile: true,
     autoRevealIgnoreRightSidebar: true,
-    autoSelectFirstFileOnFocusChange: false,
 
     // General tab - Filtering
     fileVisibility: FILE_VISIBILITY.DOCUMENTS,
@@ -51,6 +51,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     timeFormat: 'h:mm a',
 
     // Navigation pane tab
+    autoSelectFirstFileOnFocusChange: false,
     navigationBanner: null,
     showShortcuts: true,
     showRecentNotes: true,
@@ -61,6 +62,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showIcons: true,
     colorIconOnly: false,
     showNoteCount: true,
+    separateNoteCounts: true,
     navIndent: NAVPANE_MEASUREMENTS.defaultIndent,
     navItemHeight: NAVPANE_MEASUREMENTS.defaultItemHeight,
     navItemHeightScaleText: true,
@@ -76,7 +78,6 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     hideFolderNoteInList: true,
     pinCreatedFolderNote: false,
     showTags: true,
-    showTagsAboveFolders: false,
     showAllTagsFolder: true,
     showUntagged: false,
     tagSortOrder: 'alpha-asc',
@@ -90,7 +91,6 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     listPaneTitle: 'header',
     multiSelectModifier: 'cmdCtrl',
     includeDescendantNotes: true,
-    separateNoteCounts: true,
     groupByDate: true,
     optimizeNoteHeight: true,
     showQuickActions: true,
@@ -158,5 +158,6 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     latestKnownRelease: '',
     lastAnnouncedRelease: '',
     lastReleaseCheckAt: null,
-    rootFolderOrder: []
+    rootFolderOrder: [],
+    rootTagOrder: []
 };

@@ -57,13 +57,14 @@ export const STRINGS_KO = {
         shortcutsHeader: '바로가기',
         recentNotesHeader: '최근 노트',
         recentFilesHeader: '최근 파일',
-        reorderRootFoldersTitle: '루트 폴더 순서 변경',
-        reorderRootFoldersHint: '폴더를 드래그하여 순서 변경',
+        reorderRootFoldersTitle: '내비게이션 섹션 재정렬',
+        reorderRootFoldersHint: '헤더나 항목을 드래그하여 순서를 변경합니다',
         vaultRootLabel: '보관함',
-        resetRootFolderOrder: '알파벳 순서로 리셋',
+        resetRootToAlpha: '알파벳 순서로 리셋',
+        resetRootToFrequency: '빈도 순으로 리셋',
         dragHandleLabel: '드래그하여 순서 변경',
-        pinShortcuts: 'Pin shortcuts',
-        unpinShortcuts: 'Unpin shortcuts'
+        pinShortcuts: '바로가기를 고정',
+        unpinShortcuts: '바로가기 고정을 해제'
     },
 
     shortcuts: {
@@ -93,8 +94,8 @@ export const STRINGS_KO = {
         customSort: '사용자 정의', // Label for custom sorting mode (English: Custom)
         showFolders: '탐색 표시', // Tooltip for button to show the navigation pane (English: Show navigation)
         hideFolders: '탐색 숨기기', // Tooltip for button to hide the navigation pane (English: Hide navigation)
-        reorderRootFolders: '루트 폴더 순서 변경',
-        finishRootFolderReorder: '루트 폴더 순서 변경 완료',
+        reorderRootFolders: '루트 폴더와 태그 재정렬',
+        finishRootFolderReorder: '재정렬 완료',
         toggleDescendantNotes: '하위 폴더 / 하위 항목 노트 표시', // Tooltip: include descendants for folders and tags
         autoExpandFoldersTags: '폴더 및 태그 자동 펼치기', // Tooltip for button to toggle auto-expanding folders and tags when selected (English: Auto-expand folders and tags)
         showExcludedItems: '숨겨진 항목 표시', // Tooltip for button to show hidden items (English: Show hidden items)
@@ -383,6 +384,7 @@ export const STRINGS_KO = {
             tagOperationsNotAvailable: '태그 작업을 사용할 수 없음',
             tagsRequireMarkdown: '태그는 마크다운 노트에서만 지원됩니다',
             iconPackDownloaded: '{provider} 다운로드됨',
+            iconPackUpdated: '{provider} 업데이트됨 ({version})',
             iconPackRemoved: '{provider} 제거됨',
             iconPackLoadFailed: '{provider} 로드에 실패했습니다'
         },
@@ -657,6 +659,10 @@ export const STRINGS_KO = {
                 name: '도구 설명 표시 (데스크톱 전용)',
                 desc: '노트와 폴더에 대한 추가 정보가 있는 호버 도구 설명을 표시합니다.'
             },
+            showTooltipPath: {
+                name: '경로 표시',
+                desc: '도구 설명에서 노트 이름 아래에 폴더 경로를 표시합니다.'
+            },
             multiSelectModifier: {
                 name: '다중 선택 수정자',
                 desc: '다중 선택을 전환하는 수정자 키를 선택하세요. Option/Alt를 선택하면 Cmd/Ctrl 클릭이 새 탭에서 노트를 엽니다.',
@@ -843,10 +849,6 @@ export const STRINGS_KO = {
                     frequencyDesc: '빈도 (높음 → 낮음)'
                 }
             },
-            showTagsAboveFolders: {
-                name: '폴더 위에 태그 표시',
-                desc: '네비게이터에서 폴더 앞에 태그 섹션을 표시합니다.'
-            },
             showAllTagsFolder: {
                 name: '태그 폴더 표시',
                 desc: '"태그"를 접을 수 있는 폴더로 표시합니다.'
@@ -955,7 +957,7 @@ export const STRINGS_KO = {
                     '다운로드된 아이콘 팩은 기기 간 설치 상태를 동기화합니다. 아이콘 팩은 각 기기의 로컬 데이터베이스에 남아 있습니다. 동기화는 다운로드 또는 제거 여부만 추적합니다. 아이콘 팩은 Notebook Navigator 저장소에서 다운로드됩니다 (https://github.com/johansan/notebook-navigator/tree/main/icon-assets).',
                 providers: {
                     bootstrapIconsDesc: 'https://icons.getbootstrap.com/',
-                    fontAwesomeDesc: 'https://fontawesome.com/v6/search?f=classic&s=solid&ic=free&o=r',
+                    fontAwesomeDesc: 'https://fontawesome.com/',
                     materialIconsDesc: 'https://fonts.google.com/icons',
                     phosphorDesc: 'https://phosphoricons.com/',
                     rpgAwesomeDesc: 'https://nagoshiashumari.github.io/Rpg-Awesome/',

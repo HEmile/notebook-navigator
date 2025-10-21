@@ -65,6 +65,7 @@ import { getDateField } from '../utils/sortUtils';
 import { getIconService, useIconServiceVersion } from '../services/icons';
 import type { SearchResultMeta } from '../types/search';
 import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
+import { areStringArraysEqual } from '../utils/arrayUtils';
 
 const FEATURE_IMAGE_MAX_ASPECT_RATIO = 16 / 9;
 
@@ -168,24 +169,6 @@ function renderHighlightedText(text: string, query?: string, searchMeta?: Search
         parts.push(text.slice(cursor));
     }
     return <>{parts}</>;
-}
-
-/**
- * Compares two string arrays for equality
- */
-function areStringArraysEqual(a: string[], b: string[]): boolean {
-    if (a === b) {
-        return true;
-    }
-    if (a.length !== b.length) {
-        return false;
-    }
-    for (let i = 0; i < a.length; i += 1) {
-        if (a[i] !== b[i]) {
-            return false;
-        }
-    }
-    return true;
 }
 
 interface ParentFolderLabelProps {
@@ -844,7 +827,19 @@ export const FileItem = React.memo(function FileItem({
 
         // Always include a name at the top. When showing suffix, prefer the true filename (with extension)
         const topLine = shouldShowExtensionSuffix(file) ? file.name : displayName;
-        const tooltip = `${topLine}\n\n${datesTooltip}`;
+
+        // Build tooltip content with multiple lines
+        const tooltipLines = [topLine];
+
+        // Include folder path in tooltip when enabled
+        if (settings.showTooltipPath) {
+            const parentPath = file.parent?.path ?? '/';
+            tooltipLines.push(parentPath);
+        }
+
+        // Add empty line separator and date information
+        tooltipLines.push('', datesTooltip);
+        const tooltip = tooltipLines.join('\n');
 
         // Check if RTL mode is active
         const isRTL = document.body.classList.contains('mod-rtl');

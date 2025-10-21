@@ -57,13 +57,14 @@ export const STRINGS_DE = {
         shortcutsHeader: 'Lesezeichen',
         recentNotesHeader: 'Neueste Notizen',
         recentFilesHeader: 'Neueste Dateien',
-        reorderRootFoldersTitle: 'Hauptordner neu anordnen',
-        reorderRootFoldersHint: 'Ordner ziehen, um die Reihenfolge zu ändern',
+        reorderRootFoldersTitle: 'Navigationsbereiche neu anordnen',
+        reorderRootFoldersHint: 'Überschriften oder Elemente ziehen, um die Reihenfolge zu ändern',
         vaultRootLabel: 'Tresor',
-        resetRootFolderOrder: 'Auf alphabetische Reihenfolge zurücksetzen',
+        resetRootToAlpha: 'Auf alphabetische Reihenfolge zurücksetzen',
+        resetRootToFrequency: 'Auf Häufigkeitsreihenfolge zurücksetzen',
         dragHandleLabel: 'Ziehen zum Neuanordnen',
-        pinShortcuts: 'Pin shortcuts',
-        unpinShortcuts: 'Unpin shortcuts'
+        pinShortcuts: 'Lesezeichen anheften',
+        unpinShortcuts: 'Lesezeichen lösen'
     },
 
     shortcuts: {
@@ -93,8 +94,8 @@ export const STRINGS_DE = {
         customSort: 'Benutzerdefiniert', // Label for custom sorting mode (English: Custom)
         showFolders: 'Navigation anzeigen', // Tooltip for button to show the navigation pane (English: Show navigation)
         hideFolders: 'Navigation ausblenden', // Tooltip for button to hide the navigation pane (English: Hide navigation)
-        reorderRootFolders: 'Hauptordner neu anordnen',
-        finishRootFolderReorder: 'Neuanordnung der Hauptordner abschließen',
+        reorderRootFolders: 'Hauptordner und Tags neu anordnen',
+        finishRootFolderReorder: 'Neuordnung beenden',
         toggleDescendantNotes: 'Notizen aus Unterordnern / Nachkommen anzeigen', // Tooltip for button to toggle showing notes from descendants (English: Show notes from subfolders / descendants)
         autoExpandFoldersTags: 'Ordner und Tags automatisch erweitern', // Tooltip for button to toggle auto-expanding folders and tags when selected (English: Auto-expand folders and tags)
         showExcludedItems: 'Versteckte Elemente anzeigen', // Tooltip for button to show hidden items (English: Show hidden items)
@@ -386,6 +387,7 @@ export const STRINGS_DE = {
             tagOperationsNotAvailable: 'Tag-Operationen nicht verfügbar',
             tagsRequireMarkdown: 'Tags werden nur in Markdown-Notizen unterstützt',
             iconPackDownloaded: '{provider} heruntergeladen',
+            iconPackUpdated: '{provider} aktualisiert ({version})',
             iconPackRemoved: '{provider} entfernt',
             iconPackLoadFailed: '{provider} konnte nicht geladen werden'
         },
@@ -661,6 +663,10 @@ export const STRINGS_DE = {
                 name: 'Tooltips anzeigen (nur Desktop)',
                 desc: 'Zeige Hover-Tooltips mit zusätzlichen Informationen für Notizen und Ordner an.'
             },
+            showTooltipPath: {
+                name: 'Pfad anzeigen',
+                desc: 'Zeigt den Ordnerpfad unter den Notiznamen in Tooltips an.'
+            },
             multiSelectModifier: {
                 name: 'Mehrfachauswahl-Modifikator',
                 desc: 'Wählen Sie, welche Modifikatortaste die Mehrfachauswahl umschaltet. Wenn Option/Alt ausgewählt ist, öffnet Cmd/Strg-Klick Notizen in einem neuen Tab.',
@@ -847,10 +853,6 @@ export const STRINGS_DE = {
                     frequencyDesc: 'Häufigkeit (hoch bis niedrig)'
                 }
             },
-            showTagsAboveFolders: {
-                name: 'Tags über Ordnern anzeigen',
-                desc: 'Tag-Bereich vor den Ordnern im Navigator anzeigen.'
-            },
             showAllTagsFolder: {
                 name: 'Tags-Ordner anzeigen',
                 desc: '"Tags" als einklappbaren Ordner anzeigen.'
@@ -959,7 +961,7 @@ export const STRINGS_DE = {
                     'Heruntergeladene Icon-Pakete synchronisieren den Installationsstatus über Geräte hinweg. Icon-Pakete bleiben in der lokalen Datenbank auf jedem Gerät; die Synchronisierung verfolgt nur, ob sie heruntergeladen oder entfernt werden sollen. Icon-Pakete werden aus dem Notebook Navigator Repository heruntergeladen (https://github.com/johansan/notebook-navigator/tree/main/icon-assets).',
                 providers: {
                     bootstrapIconsDesc: 'https://icons.getbootstrap.com/',
-                    fontAwesomeDesc: 'https://fontawesome.com/v6/search?f=classic&s=solid&ic=free&o=r',
+                    fontAwesomeDesc: 'https://fontawesome.com/',
                     materialIconsDesc: 'https://fonts.google.com/icons',
                     phosphorDesc: 'https://phosphoricons.com/',
                     rpgAwesomeDesc: 'https://nagoshiashumari.github.io/Rpg-Awesome/',

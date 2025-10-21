@@ -157,9 +157,26 @@ export function useListReorder<T extends ReorderItemDescriptor>({
                 return null;
             }
 
+            // Check for explicit insertion position from data attributes
+            const targetElement = event.currentTarget as HTMLElement;
+            const insertMode = targetElement.dataset.reorderInsert;
+            if (insertMode === 'before') {
+                return targetIndex;
+            }
+            if (insertMode === 'after') {
+                return targetIndex + 1;
+            }
+            // Check for explicit fixed index position
+            const fixedIndex = targetElement.dataset.reorderIndex;
+            if (fixedIndex) {
+                const parsedIndex = Number(fixedIndex);
+                if (!Number.isNaN(parsedIndex)) {
+                    return Math.max(0, Math.min(parsedIndex, itemOrder.length));
+                }
+            }
+
             // Determine if drop is in top or bottom half of target element
-            const element = event.currentTarget;
-            const bounds = element.getBoundingClientRect();
+            const bounds = targetElement.getBoundingClientRect();
             const offset = event.clientY - bounds.top;
             const shouldInsertBefore = offset < bounds.height / 2;
 
@@ -308,6 +325,11 @@ export function useListReorder<T extends ReorderItemDescriptor>({
             }
 
             if (relatedTarget.closest('[data-reorder-draggable="true"]')) {
+                return;
+            }
+
+            // Prevent clearing drop index when hovering over spacer gaps
+            if (relatedTarget.closest('[data-reorder-gap="true"]')) {
                 return;
             }
 

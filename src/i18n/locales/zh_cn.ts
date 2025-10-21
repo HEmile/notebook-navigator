@@ -57,13 +57,14 @@ export const STRINGS_ZH_CN = {
         shortcutsHeader: '快捷方式',
         recentNotesHeader: '最近笔记',
         recentFilesHeader: '最近文件',
-        reorderRootFoldersTitle: '重新排列根文件夹',
-        reorderRootFoldersHint: '拖拽文件夹来更改顺序',
+        reorderRootFoldersTitle: '重新排列导航分区',
+        reorderRootFoldersHint: '拖动标题或项目以调整顺序',
         vaultRootLabel: '仓库',
-        resetRootFolderOrder: '重置为字母顺序',
+        resetRootToAlpha: '重置为字母顺序',
+        resetRootToFrequency: '重置为频率排序',
         dragHandleLabel: '拖拽重新排列',
-        pinShortcuts: 'Pin shortcuts',
-        unpinShortcuts: 'Unpin shortcuts'
+        pinShortcuts: '固定快捷方式',
+        unpinShortcuts: '取消固定快捷方式'
     },
 
     shortcuts: {
@@ -93,8 +94,8 @@ export const STRINGS_ZH_CN = {
         customSort: '自定义', // Label for custom sorting mode (English: Custom)
         showFolders: '显示导航', // Tooltip for button to show the navigation pane (English: Show navigation)
         hideFolders: '隐藏导航', // Tooltip for button to hide the navigation pane (English: Hide navigation)
-        reorderRootFolders: '重新排列根文件夹',
-        finishRootFolderReorder: '完成根文件夹重新排列',
+        reorderRootFolders: '重新排列根文件夹和标签',
+        finishRootFolderReorder: '完成重新排列',
         toggleDescendantNotes: '显示子文件夹/后代的笔记', // Tooltip for button to toggle showing notes from descendants (English: Show notes from subfolders / descendants)
         autoExpandFoldersTags: '自动展开文件夹和标签', // Tooltip for button to toggle auto-expanding folders and tags when selected (English: Auto-expand folders and tags)
         showExcludedItems: '显示隐藏项', // Tooltip for button to show hidden items (English: Show hidden items)
@@ -384,6 +385,7 @@ export const STRINGS_ZH_CN = {
             tagOperationsNotAvailable: '标签操作不可用',
             tagsRequireMarkdown: '标签仅支持Markdown笔记',
             iconPackDownloaded: '{provider} 已下载',
+            iconPackUpdated: '{provider} 已更新 ({version})',
             iconPackRemoved: '{provider} 已移除',
             iconPackLoadFailed: '{provider} 加载失败'
         },
@@ -657,6 +659,10 @@ export const STRINGS_ZH_CN = {
                 name: '显示工具提示（仅桌面端）',
                 desc: '悬停时显示笔记和文件夹的额外信息工具提示。'
             },
+            showTooltipPath: {
+                name: '显示路径',
+                desc: '在工具提示中的笔记名称下方显示文件夹路径。'
+            },
             multiSelectModifier: {
                 name: '多选修饰键',
                 desc: '选择哪个修饰键切换多选模式。选择 Option/Alt 时，Cmd/Ctrl 点击会在新标签页中打开笔记。',
@@ -844,10 +850,6 @@ export const STRINGS_ZH_CN = {
                     frequencyDesc: '频率（从高到低）'
                 }
             },
-            showTagsAboveFolders: {
-                name: '在文件夹上方显示标签',
-                desc: '在导航器中的文件夹之前显示标签部分。'
-            },
             showAllTagsFolder: {
                 name: '显示标签文件夹',
                 desc: '将"标签"显示为可折叠文件夹。'
@@ -956,7 +958,7 @@ export const STRINGS_ZH_CN = {
                     '下载的图标包会在设备之间同步安装状态。图标包保存在每个设备的本地数据库中；同步仅跟踪它们是否应该被下载或移除。图标包从Notebook Navigator仓库下载 (https://github.com/johansan/notebook-navigator/tree/main/icon-assets)。',
                 providers: {
                     bootstrapIconsDesc: 'https://icons.getbootstrap.com/',
-                    fontAwesomeDesc: 'https://fontawesome.com/v6/search?f=classic&s=solid&ic=free&o=r',
+                    fontAwesomeDesc: 'https://fontawesome.com/',
                     materialIconsDesc: 'https://fonts.google.com/icons',
                     phosphorDesc: 'https://phosphoricons.com/',
                     rpgAwesomeDesc: 'https://nagoshiashumari.github.io/Rpg-Awesome/',

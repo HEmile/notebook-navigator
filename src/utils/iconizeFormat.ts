@@ -31,8 +31,8 @@ interface IconizeMapping {
  */
 const ICONIZE_MAPPINGS: IconizeMapping[] = [
     // Font Awesome variants
-    { providerId: 'fontawesome-regular', packName: 'font-awesome-solid', prefix: generateIconizePrefix('font-awesome-solid') },
-    { providerId: 'fontawesome-regular', packName: 'font-awesome-regular', prefix: generateIconizePrefix('font-awesome-regular') },
+    { providerId: 'fontawesome-solid', packName: 'font-awesome-solid', prefix: generateIconizePrefix('font-awesome-solid') },
+    { providerId: 'fontawesome-solid', packName: 'font-awesome-regular', prefix: generateIconizePrefix('font-awesome-regular') },
     { providerId: 'fontawesome-brands', packName: 'font-awesome-brands', prefix: generateIconizePrefix('font-awesome-brands') },
     // Iconize built-in packs
     { providerId: 'lucide', packName: 'lucide-icons', prefix: generateIconizePrefix('lucide-icons'), isDefaultProvider: true },
@@ -179,7 +179,7 @@ function kebabToPascal(value: string): string {
  *
  * Examples:
  * - "LiHome" -> "home" (lucide is default)
- * - "FasUser" -> "fontawesome-regular:user"
+ * - "FasUser" -> "fontawesome-solid:user"
  * - "SiGithub" -> "simple-icons:github"
  * - "invalid" -> null (no matching prefix)
  */
@@ -220,7 +220,7 @@ export function convertIconizeToIconId(value: string): string | null {
  *
  * Examples:
  * - "home" -> "LiHome" (assumes lucide as default)
- * - "fontawesome-regular:user" -> "FasUser"
+ * - "fontawesome-solid:user" -> "FasUser"
  * - "simple-icons:github" -> "SiGithub"
  * - "unknown-provider:icon" -> null (no mapping for provider)
  */

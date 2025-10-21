@@ -67,6 +67,7 @@ import { useUIState, useUIDispatch } from '../context/UIStateContext';
 import { useNavigationPaneKeyboard } from '../hooks/useNavigationPaneKeyboard';
 import { useNavigationPaneData } from '../hooks/useNavigationPaneData';
 import { useNavigationPaneScroll } from '../hooks/useNavigationPaneScroll';
+import { useNavigationRootReorder } from '../hooks/useNavigationRootReorder';
 import { useListReorder, type ListReorderHandlers } from '../hooks/useListReorder';
 import type { CombinedNavigationItem } from '../types/virtualization';
 import { NavigationPaneItemType, ItemType } from '../types';
@@ -83,15 +84,15 @@ import { NavigationToolbar } from './NavigationToolbar';
 import { TagTreeItem } from './TagTreeItem';
 import { VirtualFolderComponent } from './VirtualFolderItem';
 import { getNavigationIndex, normalizeNavigationPath } from '../utils/navigationIndex';
-import { STORAGE_KEYS, SHORTCUTS_VIRTUAL_FOLDER_ID, RECENT_NOTES_VIRTUAL_FOLDER_ID } from '../types';
+import { STORAGE_KEYS, SHORTCUTS_VIRTUAL_FOLDER_ID, RECENT_NOTES_VIRTUAL_FOLDER_ID, NavigationSectionId } from '../types';
 import { localStorage } from '../utils/localStorage';
 import { useShortcuts } from '../context/ShortcutsContext';
 import { ShortcutItem } from './ShortcutItem';
-import { RootFolderReorderItem } from './RootFolderReorderItem';
 import { ShortcutType, SearchShortcut, SHORTCUT_DRAG_MIME, isFolderShortcut, isNoteShortcut, isTagShortcut } from '../types/shortcuts';
 import { strings } from '../i18n';
 import { createDragGhostManager, type DragGhostOptions } from '../utils/dragGhost';
 import { NavigationBanner } from './NavigationBanner';
+import { NavigationRootReorderPanel } from './NavigationRootReorderPanel';
 import {
     buildFolderMenu,
     buildFileMenu,
@@ -103,6 +104,8 @@ import {
 } from '../utils/contextMenu';
 import type { NoteCountInfo } from '../types/noteCounts';
 import { calculateFolderNoteCounts } from '../utils/noteCountUtils';
+import { normalizeNavigationSectionOrderInput } from '../utils/navigationSections';
+import { getPathBaseName } from '../utils/pathUtils';
 
 export interface NavigationPaneHandle {
     getIndexOfPath: (itemType: ItemType, path: string) => number;
@@ -127,13 +130,6 @@ interface NavigationPaneProps {
     onRevealFile: (file: TFile) => void;
     onRevealShortcutFile?: (file: TFile) => void;
 }
-
-type RootFolderDescriptor = {
-    key: string;
-    folder: TFolder | null;
-    isVault?: boolean;
-    isMissing?: boolean;
-};
 
 // Default note count object used when counts are disabled or unavailable
 const ZERO_NOTE_COUNT: NoteCountInfo = { current: 0, descendants: 0, total: 0 };
@@ -200,6 +196,24 @@ export const NavigationPane = React.memo(
             }
             return false;
         });
+        // Manages the display order of navigation sections (folders vs tags)
+        const [sectionOrder, setSectionOrder] = useState<NavigationSectionId[]>(() => {
+            const stored = localStorage.get<unknown>(STORAGE_KEYS.navigationSectionOrderKey);
+            return normalizeNavigationSectionOrderInput(stored);
+        });
+        // Tracks whether the notes/folders section is expanded or collapsed
+        const [notesSectionExpanded, setNotesSectionExpanded] = useState(true);
+        // Tracks whether the tags section is expanded or collapsed
+        const [tagsSectionExpanded, setTagsSectionExpanded] = useState(true);
+        // Toggles the expanded state of the notes/folders section
+        const handleToggleNotesSection = useCallback(() => {
+            setNotesSectionExpanded(prev => !prev);
+        }, []);
+
+        // Toggles the expanded state of the tags section
+        const handleToggleTagsSection = useCallback(() => {
+            setTagsSectionExpanded(prev => !prev);
+        }, []);
         // Tracks the measured height of the navigation banner for virtualization
         const [bannerHeight, setBannerHeight] = useState<number>(0);
         // Trigger for forcing a re-render when shortcut note metadata changes in frontmatter
@@ -562,18 +576,14 @@ export const NavigationPane = React.memo(
                     },
                     onDragEnd: event => {
                         handlersWithGhost.onDragEnd(event);
-                        const draggedKey = draggedShortcutKeyRef.current;
                         draggedShortcutKeyRef.current = null;
                         setExternalShortcutDropIndex(null);
 
-                        if (!draggedShortcutDropCompletedRef.current && draggedKey === key) {
-                            void removeShortcut(key);
-                        }
                         draggedShortcutDropCompletedRef.current = false;
                     }
                 };
             },
-            [getDragHandlers, removeShortcut, handleShortcutDragLeave, handleShortcutDragOver, handleShortcutDrop, withDragGhost]
+            [getDragHandlers, handleShortcutDragLeave, handleShortcutDragOver, handleShortcutDrop, withDragGhost]
         );
 
         /**
@@ -622,13 +632,17 @@ export const NavigationPane = React.memo(
             tagCounts,
             folderCounts,
             rootLevelFolders,
-            missingRootFolderPaths
+            missingRootFolderPaths,
+            resolvedRootTagKeys,
+            rootOrderingTagTree,
+            missingRootTagPaths
         } = useNavigationPaneData({
             settings,
             isVisible,
             shortcutsExpanded,
             recentNotesExpanded,
-            pinShortcuts: shouldPinShortcuts
+            pinShortcuts: shouldPinShortcuts,
+            sectionOrder
         });
 
         // Extract shortcut items to display in pinned area when pinning is enabled
@@ -638,221 +652,52 @@ export const NavigationPane = React.memo(
         // Banner should be shown in pinned area only when shortcuts are pinned and banner is configured
         const shouldShowPinnedBanner = Boolean(navigationBannerPath && pinnedShortcutItems.length > 0);
 
-        // Get the vault root folder reference
-        const vaultRootFolder = useMemo(() => app.vault.getRoot(), [app]);
-
-        // Build descriptors for root-level folders including optional vault root
-        const rootFolderDescriptors = useMemo<RootFolderDescriptor[]>(() => {
-            const descriptors: RootFolderDescriptor[] = [];
-            if (settings.showRootFolder) {
-                descriptors.push({ key: vaultRootFolder.path, folder: vaultRootFolder, isVault: true });
-            }
-
-            // Build a map of existing folders for quick lookup
-            const folderMap = new Map<string, TFolder>();
-            rootLevelFolders.forEach(folder => {
-                folderMap.set(folder.path, folder);
-            });
-
-            // Track missing folders from settings that no longer exist in vault
-            const missingSet = new Set(missingRootFolderPaths);
-            const orderedPaths =
-                settings.rootFolderOrder.length > 0 ? settings.rootFolderOrder : rootLevelFolders.map(folder => folder.path);
-            const seen = new Set<string>();
-
-            // Process folders in the order specified by settings, including missing ones
-            orderedPaths.forEach(path => {
-                if (seen.has(path)) {
-                    return;
-                }
-                seen.add(path);
-                const existing = folderMap.get(path);
-                if (existing) {
-                    descriptors.push({ key: path, folder: existing });
-                } else if (missingSet.has(path)) {
-                    // Include missing folders so user can remove them from settings
-                    descriptors.push({ key: path, folder: null, isMissing: true });
-                }
-            });
-
-            // Append any new folders not in the ordered list
-            rootLevelFolders.forEach(folder => {
-                if (!seen.has(folder.path)) {
-                    descriptors.push({ key: folder.path, folder });
-                }
-            });
-
-            return descriptors;
-        }, [missingRootFolderPaths, rootLevelFolders, settings.rootFolderOrder, settings.showRootFolder, vaultRootFolder]);
-
-        // Filter out vault root to get only reorderable folders
-        const reorderableRootFolders = useMemo<RootFolderDescriptor[]>(() => {
-            return rootFolderDescriptors.filter(entry => !entry.isVault);
-        }, [rootFolderDescriptors]);
-
-        // Map folder keys to their position for efficient reorder tracking
-        const rootFolderPositionMap = useMemo(() => {
-            const map = new Map<string, number>();
-            reorderableRootFolders.forEach((entry, index) => {
-                map.set(entry.key, index);
-            });
-            return map;
-        }, [reorderableRootFolders]);
-
-        // Check if there are enough folders to enable reordering
-        const canReorderRootFolders = reorderableRootFolders.length > 1;
-
-        // Build icon map for root folders for quick access during rendering
-        const rootFolderIconMap = useMemo(() => {
-            const map = new Map<string, string | undefined>();
-            items.forEach(item => {
-                if (item.type === NavigationPaneItemType.FOLDER) {
-                    map.set(item.data.path, item.icon);
-                }
-            });
-            return map;
-        }, [items]);
-
-        // Build color map for root folders for quick access during rendering
-        const rootFolderColorMap = useMemo(() => {
-            const map = new Map<string, string | undefined>();
-            items.forEach(item => {
-                if (item.type === NavigationPaneItemType.FOLDER) {
-                    map.set(item.data.path, item.color);
-                }
-            });
-            return map;
-        }, [items]);
-
-        // Determine if root folder reordering drag and drop is currently enabled
-        const isRootReorderDnDEnabled = isRootReorderMode && canReorderRootFolders;
-
-        // Exit root reorder mode if there are not enough folders to reorder
-        useEffect(() => {
-            if (isRootReorderMode && !canReorderRootFolders) {
-                setRootReorderMode(false);
-            }
-        }, [isRootReorderMode, canReorderRootFolders]);
-
-        // Compares two path arrays for equality (order and content)
-        const arePathArraysEqual = useCallback((first: string[], second: string[]) => {
-            if (first.length !== second.length) {
-                return false;
-            }
-            for (let index = 0; index < first.length; index += 1) {
-                if (first[index] !== second[index]) {
-                    return false;
-                }
-            }
-            return true;
-        }, []);
-
-        // Updates the custom ordering of root-level folders in settings
-        const handleRootOrderChange = useCallback(
-            async (orderedPaths: string[]) => {
-                const normalizedOrder = orderedPaths.slice();
-                if (arePathArraysEqual(normalizedOrder, settings.rootFolderOrder)) {
-                    return;
-                }
-                await updateSettings(current => {
-                    current.rootFolderOrder = normalizedOrder;
-                });
-            },
-            [arePathArraysEqual, settings.rootFolderOrder, updateSettings]
-        );
-
-        /**
-         * Removes a missing folder path from the root folder order settings.
-         * Used when a folder that was previously in custom order no longer exists in the vault.
-         */
-        const handleRemoveMissingRootFolder = useCallback(
-            async (path: string) => {
-                if (!path) {
-                    return;
-                }
-                await updateSettings(current => {
-                    if (!Array.isArray(current.rootFolderOrder)) {
-                        current.rootFolderOrder = [];
-                        return;
-                    }
-                    if (!current.rootFolderOrder.includes(path)) {
-                        return;
-                    }
-                    current.rootFolderOrder = current.rootFolderOrder.filter(entry => entry !== path);
-                });
-            },
-            [updateSettings]
-        );
-
         const {
-            getDragHandlers: getRootDragHandlers,
-            dropIndex: rootReorderDropIndex,
-            draggingKey: rootReorderDraggingKey
-        } = useListReorder({
-            items: reorderableRootFolders,
-            isEnabled: isRootReorderDnDEnabled,
-            reorderItems: async orderedKeys => {
-                await handleRootOrderChange(orderedKeys);
-                return true;
-            }
+            reorderableRootFolders,
+            reorderableRootTags,
+            sectionReorderItems,
+            folderReorderItems,
+            tagReorderItems,
+            canReorderRootItems,
+            showRootFolderSection,
+            showRootTagSection,
+            resetRootTagOrderLabel,
+            handleResetRootFolderOrder,
+            handleResetRootTagOrder
+        } = useNavigationRootReorder({
+            app,
+            items,
+            settings,
+            updateSettings,
+            sectionOrder,
+            setSectionOrder,
+            rootLevelFolders,
+            missingRootFolderPaths,
+            resolvedRootTagKeys,
+            rootOrderingTagTree,
+            missingRootTagPaths,
+            metadataService,
+            withDragGhost,
+            isRootReorderMode,
+            notesSectionExpanded,
+            tagsSectionExpanded,
+            handleToggleNotesSection,
+            handleToggleTagsSection
         });
 
-        // Builds drag state and visual indicators for root folder reordering
-        const getRootReorderVisualState = useCallback(
-            (descriptor: RootFolderDescriptor) => {
-                const key = descriptor.key;
-                const index = rootFolderPositionMap.get(key);
-
-                if (index === undefined) {
-                    return {
-                        dragHandlers: undefined,
-                        showBefore: false,
-                        showAfter: false,
-                        isDragSource: false
-                    };
-                }
-
-                const baseHandlers = getRootDragHandlers(key);
-                const resolvedIcon =
-                    rootFolderIconMap.get(key) ??
-                    (descriptor.isVault ? 'vault' : descriptor.isMissing ? 'lucide-folder-off' : 'lucide-folder');
-                const iconColor = rootFolderColorMap.get(key);
-                const dragHandlers = withDragGhost(baseHandlers, {
-                    itemType: ItemType.FOLDER,
-                    path: descriptor.folder ? descriptor.folder.path : descriptor.key,
-                    icon: resolvedIcon,
-                    iconColor
-                });
-                const isDragSource = rootReorderDraggingKey === key;
-                const isFirst = index === 0;
-                const showBefore = isFirst && rootReorderDropIndex !== null && rootReorderDropIndex === 0 && rootReorderDraggingKey !== key;
-                const showAfter = rootReorderDropIndex !== null && rootReorderDropIndex === index + 1 && rootReorderDraggingKey !== key;
-
-                return {
-                    dragHandlers,
-                    showBefore,
-                    showAfter,
-                    isDragSource
-                };
-            },
-            [
-                getRootDragHandlers,
-                rootFolderIconMap,
-                rootFolderColorMap,
-                rootFolderPositionMap,
-                rootReorderDropIndex,
-                rootReorderDraggingKey,
-                withDragGhost
-            ]
-        );
+        useEffect(() => {
+            if (isRootReorderMode && !canReorderRootItems) {
+                setRootReorderMode(false);
+            }
+        }, [isRootReorderMode, canReorderRootItems]);
 
         // Toggle root folder reorder mode on/off
         const handleToggleRootReorder = useCallback(() => {
-            if (!canReorderRootFolders) {
+            if (!canReorderRootItems) {
                 return;
             }
             setRootReorderMode(prev => !prev);
-        }, [canReorderRootFolders]);
+        }, [canReorderRootItems]);
 
         // Use the new scroll hook
         const { rowVirtualizer, scrollContainerRef, scrollContainerRefCallback, requestScroll } = useNavigationPaneScroll({
@@ -862,6 +707,13 @@ export const NavigationPane = React.memo(
             activeShortcutKey,
             bannerHeight
         });
+
+        useEffect(() => {
+            if (isRootReorderMode) {
+                return;
+            }
+            rowVirtualizer.measure();
+        }, [isRootReorderMode, rowVirtualizer, sectionOrder, reorderableRootFolders, reorderableRootTags]);
 
         // Scroll to top when entering root reorder mode for better UX
         useEffect(() => {
@@ -1393,6 +1245,14 @@ export const NavigationPane = React.memo(
                     return;
                 }
 
+                // Prevent context menu on drag handle elements
+                const targetElement = event.target;
+                if (targetElement instanceof HTMLElement && targetElement.closest('.nn-drag-handle')) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
+
                 event.preventDefault();
                 event.stopPropagation();
 
@@ -1678,25 +1538,22 @@ export const NavigationPane = React.memo(
         }, []);
 
         // Generates display label for missing note shortcuts, stripping .md extension
-        const getMissingNoteLabel = useCallback(
-            (path: string): string => {
-                const baseName = getPathBaseName(path);
-                if (!baseName) {
-                    return '';
-                }
-                const dotIndex = baseName.lastIndexOf('.');
-                if (dotIndex <= 0) {
-                    return baseName;
-                }
-                const namePart = baseName.substring(0, dotIndex);
-                const extension = baseName.substring(dotIndex + 1);
-                if (extension.toLowerCase() === 'md') {
-                    return namePart;
-                }
+        const getMissingNoteLabel = useCallback((path: string): string => {
+            const baseName = getPathBaseName(path);
+            if (!baseName) {
+                return '';
+            }
+            const dotIndex = baseName.lastIndexOf('.');
+            if (dotIndex <= 0) {
                 return baseName;
-            },
-            [getPathBaseName]
-        );
+            }
+            const namePart = baseName.substring(0, dotIndex);
+            const extension = baseName.substring(dotIndex + 1);
+            if (extension.toLowerCase() === 'md') {
+                return namePart;
+            }
+            return baseName;
+        }, []);
 
         useEffect(() => {
             if (!activeShortcutKey) {
@@ -2249,7 +2106,6 @@ export const NavigationPane = React.memo(
                 handleShortcutRootDrop,
                 handleShortcutRootDragLeave,
                 allowEmptyShortcutDrop,
-                getPathBaseName,
                 getMissingNoteLabel,
                 handleShortcutFolderNoteClick,
                 tagsVirtualFolderHasChildren
@@ -2304,7 +2160,7 @@ export const NavigationPane = React.memo(
                     onTogglePinnedShortcuts={settings.showShortcuts ? handleShortcutSplitToggle : undefined}
                     onToggleRootFolderReorder={handleToggleRootReorder}
                     rootReorderActive={isRootReorderMode}
-                    rootReorderDisabled={!canReorderRootFolders}
+                    rootReorderDisabled={!canReorderRootItems}
                 />
                 {/* Android - toolbar at top */}
                 {isMobile && isAndroid && (
@@ -2313,7 +2169,7 @@ export const NavigationPane = React.memo(
                         onTogglePinnedShortcuts={settings.showShortcuts ? handleShortcutSplitToggle : undefined}
                         onToggleRootFolderReorder={handleToggleRootReorder}
                         rootReorderActive={isRootReorderMode}
-                        rootReorderDisabled={!canReorderRootFolders}
+                        rootReorderDisabled={!canReorderRootItems}
                     />
                 )}
                 {pinnedShortcutItems.length > 0 && !isRootReorderMode ? (
@@ -2343,96 +2199,20 @@ export const NavigationPane = React.memo(
                     tabIndex={-1}
                 >
                     {isRootReorderMode ? (
-                        <div className="nn-root-reorder-panel">
-                            <div className="nn-root-reorder-header">
-                                <span className="nn-root-reorder-title">{strings.navigationPane.reorderRootFoldersTitle}</span>
-                                <span className="nn-root-reorder-hint">{strings.navigationPane.reorderRootFoldersHint}</span>
-                            </div>
-                            <div className="nn-root-reorder-list" role="presentation">
-                                {rootFolderDescriptors.map(entry => {
-                                    const { dragHandlers, showBefore, showAfter, isDragSource } = getRootReorderVisualState(entry);
-                                    const iconName = rootFolderIconMap.get(entry.key);
-                                    const displayLabel = entry.isVault
-                                        ? settings.customVaultName || app.vault.getName()
-                                        : entry.folder
-                                          ? entry.folder.name
-                                          : getPathBaseName(entry.key);
-                                    const isMissing = entry.isMissing === true;
-                                    let displayIcon = 'lucide-folder';
-                                    if (entry.isVault) {
-                                        displayIcon = iconName ?? 'open-vault';
-                                    } else if (isMissing) {
-                                        displayIcon = 'lucide-folder-off';
-                                    } else if (iconName) {
-                                        displayIcon = iconName;
-                                    }
-                                    const chevronIcon = entry.isVault ? 'lucide-chevron-down' : undefined;
-                                    const actions =
-                                        !entry.isVault && isMissing ? (
-                                            <span
-                                                role="button"
-                                                tabIndex={0}
-                                                className="nn-root-reorder-remove"
-                                                onClick={event => {
-                                                    event.preventDefault();
-                                                    event.stopPropagation();
-                                                    void handleRemoveMissingRootFolder(entry.key);
-                                                }}
-                                                onKeyDown={event => {
-                                                    if (event.key === 'Enter' || event.key === ' ') {
-                                                        event.preventDefault();
-                                                        event.stopPropagation();
-                                                        void handleRemoveMissingRootFolder(entry.key);
-                                                    }
-                                                }}
-                                            >
-                                                {strings.common.remove}
-                                            </span>
-                                        ) : undefined;
-                                    const dragHandlersForEntry = entry.isVault ? undefined : dragHandlers;
-                                    const dragSourceActive = entry.isVault ? false : isDragSource;
-
-                                    return (
-                                        <RootFolderReorderItem
-                                            key={`root-reorder-${entry.key}`}
-                                            icon={displayIcon}
-                                            label={displayLabel}
-                                            level={entry.isVault ? 0 : 1}
-                                            dragHandlers={dragHandlersForEntry}
-                                            showDropIndicatorBefore={showBefore}
-                                            showDropIndicatorAfter={showAfter}
-                                            isDragSource={dragSourceActive}
-                                            dragHandleLabel={strings.navigationPane.dragHandleLabel}
-                                            chevronIcon={chevronIcon}
-                                            isMissing={isMissing}
-                                            actions={actions}
-                                        />
-                                    );
-                                })}
-                                {settings.rootFolderOrder.length > 0 ? (
-                                    // Display reset button when custom folder ordering is active
-                                    <div className="nn-root-reorder-actions">
-                                        <button
-                                            type="button"
-                                            className="nn-root-reorder-reset nn-support-button"
-                                            onClick={event => {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                // Clear custom folder order to restore alphabetical sorting
-                                                void updateSettings(current => {
-                                                    current.rootFolderOrder = [];
-                                                });
-                                            }}
-                                        >
-                                            <span className="nn-root-reorder-reset-icon" aria-hidden="true">
-                                                Aa
-                                            </span>
-                                            <span>{strings.navigationPane.resetRootFolderOrder}</span>
-                                        </button>
-                                    </div>
-                                ) : null}
-                            </div>
-                        </div>
+                        <NavigationRootReorderPanel
+                            sectionItems={sectionReorderItems}
+                            folderItems={folderReorderItems}
+                            tagItems={tagReorderItems}
+                            showRootFolderSection={showRootFolderSection}
+                            showRootTagSection={showRootTagSection}
+                            notesSectionExpanded={notesSectionExpanded}
+                            tagsSectionExpanded={tagsSectionExpanded}
+                            showRootFolderReset={settings.rootFolderOrder.length > 0}
+                            showRootTagReset={settings.rootTagOrder.length > 0}
+                            resetRootTagOrderLabel={resetRootTagOrderLabel}
+                            onResetRootFolderOrder={handleResetRootFolderOrder}
+                            onResetRootTagOrder={handleResetRootTagOrder}
+                        />
                     ) : (
                         items.length > 0 && (
                             <div
@@ -2482,7 +2262,7 @@ export const NavigationPane = React.memo(
                         onTogglePinnedShortcuts={settings.showShortcuts ? handleShortcutSplitToggle : undefined}
                         onToggleRootFolderReorder={handleToggleRootReorder}
                         rootReorderActive={isRootReorderMode}
-                        rootReorderDisabled={!canReorderRootFolders}
+                        rootReorderDisabled={!canReorderRootItems}
                     />
                 )}
             </div>

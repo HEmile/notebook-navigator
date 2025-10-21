@@ -57,10 +57,11 @@ export const STRINGS_FR = {
         shortcutsHeader: 'Raccourcis',
         recentNotesHeader: 'Notes récentes',
         recentFilesHeader: 'Fichiers récents',
-        reorderRootFoldersTitle: 'Réorganiser les dossiers racine',
-        reorderRootFoldersHint: "Faites glisser les dossiers pour modifier l'ordre",
+        reorderRootFoldersTitle: 'Réorganiser les sections de navigation',
+        reorderRootFoldersHint: "Faites glisser les en-têtes ou les éléments pour changer l'ordre",
         vaultRootLabel: 'Coffre',
-        resetRootFolderOrder: "Réinitialiser l'ordre alphabétique",
+        resetRootToAlpha: "Réinitialiser l'ordre alphabétique",
+        resetRootToFrequency: 'Réinitialiser selon la fréquence',
         dragHandleLabel: 'Faire glisser pour réorganiser',
         pinShortcuts: 'Épingler les raccourcis',
         unpinShortcuts: 'Détacher les raccourcis'
@@ -93,8 +94,8 @@ export const STRINGS_FR = {
         customSort: 'Personnalisé', // Label for custom sorting mode (English: Custom)
         showFolders: 'Afficher la navigation', // Tooltip for button to show the navigation pane (English: Show navigation)
         hideFolders: 'Masquer la navigation', // Tooltip for button to hide the navigation pane (English: Hide navigation)
-        reorderRootFolders: 'Réorganiser les dossiers racine',
-        finishRootFolderReorder: 'Terminer la réorganisation des dossiers racine',
+        reorderRootFolders: 'Réorganiser les dossiers racine et les étiquettes',
+        finishRootFolderReorder: 'Terminer la réorganisation',
         toggleDescendantNotes: 'Afficher les notes des sous-dossiers / descendants', // Tooltip for button to toggle showing notes from descendants (English: Show notes from subfolders / descendants)
         autoExpandFoldersTags: 'Développer automatiquement les dossiers et les étiquettes', // Tooltip for button to toggle auto-expanding folders and tags when selected (English: Auto-expand folders and tags)
         showExcludedItems: 'Afficher les éléments masqués', // Tooltip for button to show hidden items (English: Show hidden items)
@@ -384,6 +385,7 @@ export const STRINGS_FR = {
             tagOperationsNotAvailable: "Opérations d'étiquettes non disponibles",
             tagsRequireMarkdown: 'Les étiquettes ne sont prises en charge que sur les notes Markdown',
             iconPackDownloaded: '{provider} téléchargé',
+            iconPackUpdated: '{provider} mis à jour ({version})',
             iconPackRemoved: '{provider} supprimé',
             iconPackLoadFailed: 'Échec du chargement de {provider}'
         },
@@ -659,6 +661,10 @@ export const STRINGS_FR = {
                 name: 'Afficher les infobulles (ordinateur uniquement)',
                 desc: 'Affiche des infobulles avec des informations supplémentaires pour les notes et dossiers au survol.'
             },
+            showTooltipPath: {
+                name: 'Afficher le chemin',
+                desc: 'Affiche le chemin du dossier sous le nom des notes dans les infobulles.'
+            },
             multiSelectModifier: {
                 name: 'Modificateur de sélection multiple',
                 desc: 'Choisissez quelle touche modificatrice active la sélection multiple. Quand Option/Alt est sélectionné, Cmd/Ctrl clic ouvre les notes dans un nouvel onglet.',
@@ -846,10 +852,6 @@ export const STRINGS_FR = {
                     frequencyDesc: 'Fréquence (élevée vers faible)'
                 }
             },
-            showTagsAboveFolders: {
-                name: 'Afficher les étiquettes au-dessus des dossiers',
-                desc: 'Afficher la section des étiquettes avant les dossiers dans le navigateur.'
-            },
             showAllTagsFolder: {
                 name: 'Afficher le dossier des étiquettes',
                 desc: 'Afficher "Étiquettes" comme un dossier repliable.'
@@ -958,7 +960,7 @@ export const STRINGS_FR = {
                     "Les packs d'icônes téléchargés synchronisent l'état d'installation entre les appareils. Les packs d'icônes restent dans la base de données locale sur chaque appareil ; la synchronisation ne fait que suivre s'ils doivent être téléchargés ou supprimés. Les packs d'icônes sont téléchargés depuis le dépôt Notebook Navigator (https://github.com/johansan/notebook-navigator/tree/main/icon-assets).",
                 providers: {
                     bootstrapIconsDesc: 'https://icons.getbootstrap.com/',
-                    fontAwesomeDesc: 'https://fontawesome.com/v6/search?f=classic&s=solid&ic=free&o=r',
+                    fontAwesomeDesc: 'https://fontawesome.com/',
                     materialIconsDesc: 'https://fonts.google.com/icons',
                     phosphorDesc: 'https://phosphoricons.com/',
                     rpgAwesomeDesc: 'https://nagoshiashumari.github.io/Rpg-Awesome/',

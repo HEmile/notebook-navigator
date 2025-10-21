@@ -4,10 +4,16 @@ import { BaseFontIconProvider, BaseFontIconProviderOptions } from './BaseFontIco
 /**
  * Structure of each icon entry in the Simple Icons metadata JSON
  */
+type SimpleIconsSearchPrimitive = string | number | boolean | null;
+type SimpleIconsSearchEntry =
+    | SimpleIconsSearchPrimitive
+    | SimpleIconsSearchPrimitive[]
+    | Record<string, SimpleIconsSearchPrimitive | SimpleIconsSearchPrimitive[]>;
+
 interface SimpleIconsMetadataItem {
-    unicode: string; // Unicode character code for the icon
-    label?: string; // Display label for the icon
-    search?: string[]; // Additional search terms
+    unicode?: string; // Unicode character code for the icon
+    label?: string | null; // Display label for the icon
+    search?: SimpleIconsSearchEntry; // Additional search terms
 }
 
 /**
@@ -35,23 +41,25 @@ export class SimpleIconsProvider extends BaseFontIconProvider {
             const lookup = new Map<string, { unicode: string; keywords: string[] }>();
 
             Object.entries(parsed).forEach(([iconId, data]) => {
-                if (!data || !data.unicode) {
+                if (!this.isValidRecord(data)) {
+                    return;
+                }
+
+                const unicode = data.unicode.trim();
+                if (!unicode) {
                     return;
                 }
 
                 const keywords = new Set<string>();
                 keywords.add(iconId);
 
-                const label = data.label?.trim();
+                const label = this.normalizeLabel(data.label);
                 if (label) {
                     keywords.add(label.toLowerCase());
                 }
 
-                data.search?.forEach(term => {
-                    const normalized = term?.trim().toLowerCase();
-                    if (normalized) {
-                        keywords.add(normalized);
-                    }
+                this.normalizeSearchTerms(data.search).forEach(term => {
+                    keywords.add(term.toLowerCase());
                 });
 
                 iconId.split('-').forEach(part => {
@@ -71,7 +79,7 @@ export class SimpleIconsProvider extends BaseFontIconProvider {
                 });
 
                 lookup.set(iconId, {
-                    unicode: data.unicode,
+                    unicode,
                     keywords: keywordList
                 });
             });
@@ -92,5 +100,104 @@ export class SimpleIconsProvider extends BaseFontIconProvider {
             .split('-')
             .map(part => part.charAt(0).toUpperCase() + part.slice(1))
             .join(' ');
+    }
+
+    private isValidRecord(value: SimpleIconsMetadataItem | undefined): value is SimpleIconsMetadataItem & { unicode: string } {
+        if (!value) {
+            return false;
+        }
+
+        return typeof value.unicode === 'string';
+    }
+
+    private normalizeLabel(label: string | null | undefined): string | null {
+        if (label === null || label === undefined) {
+            return null;
+        }
+
+        if (typeof label !== 'string') {
+            return null;
+        }
+
+        const trimmed = label.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        return trimmed;
+    }
+
+    private normalizeSearchTerms(search: SimpleIconsSearchEntry | undefined): string[] {
+        if (search === null || search === undefined) {
+            return [];
+        }
+
+        if (typeof search === 'string' || typeof search === 'number' || typeof search === 'boolean') {
+            const normalized = String(search).trim();
+            return normalized ? [normalized] : [];
+        }
+
+        if (Array.isArray(search)) {
+            return this.collectKeywordsFromArray(search);
+        }
+
+        if (typeof search === 'object') {
+            return this.collectKeywordsFromObject(search);
+        }
+
+        return [];
+    }
+
+    private collectKeywordsFromArray(entries: (SimpleIconsSearchPrimitive | SimpleIconsSearchPrimitive[])[]): string[] {
+        const keywords: string[] = [];
+        entries.forEach(entry => {
+            if (Array.isArray(entry)) {
+                entry.forEach(value => {
+                    const normalized = this.normalizePrimitiveValue(value);
+                    if (normalized) {
+                        keywords.push(normalized);
+                    }
+                });
+                return;
+            }
+
+            const normalized = this.normalizePrimitiveValue(entry);
+            if (normalized) {
+                keywords.push(normalized);
+            }
+        });
+
+        return keywords;
+    }
+
+    private collectKeywordsFromObject(entries: Record<string, SimpleIconsSearchPrimitive | SimpleIconsSearchPrimitive[]>): string[] {
+        const keywords: string[] = [];
+        Object.values(entries).forEach(entry => {
+            if (Array.isArray(entry)) {
+                entry.forEach(value => {
+                    const normalized = this.normalizePrimitiveValue(value);
+                    if (normalized) {
+                        keywords.push(normalized);
+                    }
+                });
+                return;
+            }
+
+            const normalized = this.normalizePrimitiveValue(entry);
+            if (normalized) {
+                keywords.push(normalized);
+            }
+        });
+
+        return keywords;
+    }
+
+    private normalizePrimitiveValue(value: SimpleIconsSearchPrimitive): string | null {
+        if (value === null) {
+            return null;
+        }
+
+        const normalized = String(value).trim();
+        return normalized || null;
     }
 }

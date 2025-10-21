@@ -17,7 +17,7 @@ interface FontAwesomeMetadataItem {
  * Icon provider for Font Awesome solid icons loaded from external assets.
  */
 export class FontAwesomeIconProvider extends BaseFontIconProvider {
-    readonly id = 'fontawesome-regular';
+    readonly id = 'fontawesome-solid';
     readonly name = 'Font Awesome';
 
     constructor(options: BaseFontIconProviderOptions) {

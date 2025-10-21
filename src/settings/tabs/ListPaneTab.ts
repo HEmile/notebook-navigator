@@ -76,8 +76,6 @@ export function renderListPaneTab(context: SettingsTabContext): void {
 
     new Setting(containerEl).setName(strings.settings.groups.list.display).setHeading();
 
-    let descendantCountsEl: HTMLDivElement | null = null;
-
     new Setting(containerEl)
         .setName(strings.settings.items.includeDescendantNotes.name)
         .setDesc(strings.settings.items.includeDescendantNotes.desc)
@@ -85,27 +83,8 @@ export function renderListPaneTab(context: SettingsTabContext): void {
             toggle.setValue(plugin.settings.includeDescendantNotes).onChange(async value => {
                 plugin.settings.includeDescendantNotes = value;
                 await plugin.saveSettingsAndUpdate();
-                if (descendantCountsEl) {
-                    descendantCountsEl.toggle(value);
-                }
             })
         );
-
-    // Create container for sub-settings that are only shown when includeDescendantNotes is enabled
-    descendantCountsEl = containerEl.createDiv('nn-sub-settings');
-
-    new Setting(descendantCountsEl)
-        .setName(strings.settings.items.separateNoteCounts.name)
-        .setDesc(strings.settings.items.separateNoteCounts.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.separateNoteCounts).onChange(async value => {
-                plugin.settings.separateNoteCounts = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    // Show/hide sub-settings based on the parent setting
-    descendantCountsEl.toggle(plugin.settings.includeDescendantNotes);
 
     new Setting(containerEl)
         .setName(strings.settings.items.groupByDate.name)

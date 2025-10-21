@@ -1,3 +1,21 @@
+/*
+ * Notebook Navigator - Plugin for Obsidian
+ * Copyright (c) 2025 Johan Sanneblad
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import { App, Notice, requestUrl } from 'obsidian';
 import { IconProvider } from '../types';
 import { IconService } from '../IconService';
@@ -12,9 +30,13 @@ import { MaterialIconProvider } from '../providers/MaterialIconProvider';
 import { PhosphorIconProvider } from '../providers/PhosphorIconProvider';
 import { SimpleIconsProvider } from '../providers/SimpleIconsProvider';
 import { strings } from '../../../i18n';
+import { compareVersions } from '../../../releaseNotes';
+import { BUNDLED_ICON_MANIFESTS } from './bundledManifests';
 
 interface InstallOptions {
     persistSetting?: boolean;
+    manifest?: ExternalIconManifest;
+    suppressDownloadNotice?: boolean;
 }
 
 interface RemoveOptions {
@@ -43,6 +65,7 @@ export class ExternalIconProviderController {
     private readonly recoveryTasks = new Map<ExternalIconProviderId, Promise<void>>();
     // Track recovery attempts to prevent infinite retry loops
     private readonly recoveryAttempts = new Map<ExternalIconProviderId, number>();
+    private readonly updateNoticeProviders = new Set<ExternalIconProviderId>();
     private isInitialized = false;
 
     constructor(app: App, iconService: IconService, settingsProvider: ISettingsProvider & { settings: NotebookNavigatorSettings }) {
@@ -72,6 +95,8 @@ export class ExternalIconProviderController {
         await this.removeDisabledProviders();
 
         this.isInitialized = true;
+
+        await this.applyBundledUpdates();
     }
 
     /**
@@ -112,7 +137,7 @@ export class ExternalIconProviderController {
         const task = this.enqueue(async () => {
             const config = this.requireProviderConfig(id);
 
-            const manifest = await this.fetchManifest(config);
+            const manifest = options.manifest ?? (await this.fetchManifest(config));
             const record = await this.downloadAssets(config, manifest);
 
             await this.database.put(record);
@@ -126,7 +151,7 @@ export class ExternalIconProviderController {
 
             const activated = await this.activateIfEnabled(config, record);
             // Show success notification if provider activated successfully
-            if (activated) {
+            if (activated && !options.suppressDownloadNotice) {
                 this.showDownloadNotice(config);
             }
 
@@ -143,6 +168,58 @@ export class ExternalIconProviderController {
         } finally {
             this.downloadTasks.delete(id);
         }
+    }
+
+    private async applyBundledUpdates(): Promise<void> {
+        const tasks: Promise<void>[] = [];
+
+        (Object.entries(BUNDLED_ICON_MANIFESTS) as [ExternalIconProviderId, ExternalIconManifest][]).forEach(([id, manifest]) => {
+            if (!this.installedProviders.has(id)) {
+                return;
+            }
+
+            const previousVersion = this.providerVersions.get(id);
+            if (!previousVersion) {
+                return;
+            }
+
+            if (compareVersions(manifest.version, previousVersion) <= 0) {
+                return;
+            }
+
+            console.log(`[IconProviders] Updating ${id} from version ${previousVersion} to ${manifest.version} using bundled manifest`);
+
+            const config = this.requireProviderConfig(id);
+
+            tasks.push(
+                this.installProvider(id, {
+                    persistSetting: false,
+                    manifest,
+                    suppressDownloadNotice: true
+                })
+                    .then(async () => {
+                        const updatedVersion = this.providerVersions.get(id);
+                        if (!updatedVersion || compareVersions(updatedVersion, previousVersion) <= 0) {
+                            return;
+                        }
+
+                        if (this.updateNoticeProviders.has(id)) {
+                            return;
+                        }
+                        this.updateNoticeProviders.add(id);
+                        this.showUpdateNotice(config, updatedVersion);
+                    })
+                    .catch(error => {
+                        console.error(`[IconProviders] Failed to update ${id} to version ${manifest.version}:`, error);
+                    })
+            );
+        });
+
+        if (tasks.length === 0) {
+            return;
+        }
+
+        await Promise.all(tasks);
     }
 
     /**
@@ -168,6 +245,7 @@ export class ExternalIconProviderController {
             await this.database.delete(config.id);
             this.installedProviders.delete(config.id);
             this.providerVersions.delete(config.id);
+            this.updateNoticeProviders.delete(config.id);
             this.showRemovalNotice(config);
 
             if (options.persistSetting !== false) {
@@ -331,7 +409,7 @@ export class ExternalIconProviderController {
                     record,
                     fontFamily: config.fontFamily
                 });
-            case 'fontawesome-regular':
+            case 'fontawesome-solid':
                 return new FontAwesomeIconProvider({
                     record,
                     fontFamily: config.fontFamily
@@ -472,6 +550,7 @@ export class ExternalIconProviderController {
                 this.deactivateProvider(id);
                 this.installedProviders.delete(id);
                 this.providerVersions.delete(id);
+                this.updateNoticeProviders.delete(id);
                 try {
                     await this.database.delete(id);
                 } catch (error) {
@@ -577,6 +656,11 @@ export class ExternalIconProviderController {
         }
         this.removalNoticeProviders.add(config.id);
         const message = strings.fileSystem.notifications.iconPackRemoved.replace('{provider}', config.name);
+        new Notice(message);
+    }
+
+    private showUpdateNotice(config: ExternalIconProviderConfig, version: string): void {
+        const message = strings.fileSystem.notifications.iconPackUpdated.replace('{provider}', config.name).replace('{version}', version);
         new Notice(message);
     }
 }

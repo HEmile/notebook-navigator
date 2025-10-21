@@ -28,7 +28,7 @@ export function renderIconPacksTab(context: SettingsTabContext): void {
 
     const providerLinks: Record<ExternalIconProviderId, string> = {
         'bootstrap-icons': strings.settings.items.externalIcons.providers.bootstrapIconsDesc,
-        'fontawesome-regular': strings.settings.items.externalIcons.providers.fontAwesomeDesc,
+        'fontawesome-solid': strings.settings.items.externalIcons.providers.fontAwesomeDesc,
         'material-icons': strings.settings.items.externalIcons.providers.materialIconsDesc,
         phosphor: strings.settings.items.externalIcons.providers.phosphorDesc,
         'rpg-awesome': strings.settings.items.externalIcons.providers.rpgAwesomeDesc,

@@ -18,6 +18,9 @@ interface RootFolderReorderItemProps {
     chevronIcon?: string;
     isMissing?: boolean;
     actions?: ReactNode;
+    color?: string;
+    itemType?: 'folder' | 'tag' | 'section'; // Type of navigation item (folder, tag, or section header)
+    className?: string; // Additional CSS classes to apply to the item
 }
 
 /**
@@ -36,7 +39,10 @@ export function RootFolderReorderItem({
     onClick,
     chevronIcon,
     isMissing,
-    actions
+    actions,
+    color,
+    itemType = 'folder',
+    className
 }: RootFolderReorderItemProps) {
     // Prevents event bubbling for reorder item clicks to avoid triggering parent handlers
     const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -57,15 +63,32 @@ export function RootFolderReorderItem({
           }
         : undefined;
 
-    // Apply a special class for missing folders to visually indicate they no longer exist
-    const rowClassName = isMissing ? 'nn-root-reorder-item nn-root-reorder-item--missing' : 'nn-root-reorder-item';
+    // Builds the CSS class names for the reorder item, combining base class with optional modifiers
+    const rowClassName = (() => {
+        const classes = ['nn-root-reorder-item'];
+        if (itemType === 'folder') {
+            classes.push('nn-folder');
+        } else if (itemType === 'tag') {
+            classes.push('nn-tag');
+        } else if (itemType === 'section') {
+            classes.push('nn-section');
+        }
+        if (isMissing) {
+            classes.push('nn-root-reorder-item--missing');
+        }
+        if (className) {
+            classes.push(className);
+        }
+        return classes.join(' ');
+    })();
 
     return (
         <NavigationListRow
             icon={icon}
+            color={color}
             label={label}
             level={level}
-            itemType="folder"
+            itemType={itemType}
             role="listitem"
             onClick={handleClick}
             dragHandlers={dragHandlers}

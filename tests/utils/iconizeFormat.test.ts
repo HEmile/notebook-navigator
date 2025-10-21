@@ -6,12 +6,12 @@ describe('convertIconizeToIconId', () => {
         expect(convertIconizeToIconId('LiHome')).toBe('home');
     });
 
-    it('converts Font Awesome solid identifiers to fontawesome-regular provider', () => {
-        expect(convertIconizeToIconId('FasUser')).toBe('fontawesome-regular:user');
+    it('converts Font Awesome solid identifiers to fontawesome-solid provider', () => {
+        expect(convertIconizeToIconId('FasUser')).toBe('fontawesome-solid:user');
     });
 
     it('converts Font Awesome regular identifiers to canonical provider', () => {
-        expect(convertIconizeToIconId('FarUser')).toBe('fontawesome-regular:user');
+        expect(convertIconizeToIconId('FarUser')).toBe('fontawesome-solid:user');
     });
 
     it('converts Simple Icons identifiers with numeric prefixes', () => {
@@ -30,8 +30,8 @@ describe('convertIconIdToIconize', () => {
         expect(convertIconIdToIconize('home')).toBe('LiHome');
     });
 
-    it('converts fontawesome-regular identifiers using Fas prefix', () => {
-        expect(convertIconIdToIconize('fontawesome-regular:user')).toBe('FasUser');
+    it('converts fontawesome-solid identifiers using Fas prefix', () => {
+        expect(convertIconIdToIconize('fontawesome-solid:user')).toBe('FasUser');
     });
 
     it('converts Simple Icons identifiers that start with numbers', () => {

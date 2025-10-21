@@ -58,10 +58,11 @@ export const STRINGS_EN = {
         shortcutsHeader: 'Shortcuts', // Header label for shortcuts section in navigation pane (English: Shortcuts)
         recentNotesHeader: 'Recent notes', // Header label for recent notes section in navigation pane (English: Recent notes)
         recentFilesHeader: 'Recent files', // Header label when showing recent non-note files in navigation pane (English: Recent files)
-        reorderRootFoldersTitle: 'Reorder root folders',
-        reorderRootFoldersHint: 'Drag folders to change order',
+        reorderRootFoldersTitle: 'Reorder navigation sections',
+        reorderRootFoldersHint: 'Drag headers or items to change order',
         vaultRootLabel: 'Vault',
-        resetRootFolderOrder: 'Reset to alphabetical order',
+        resetRootToAlpha: 'Reset to alphabetical order',
+        resetRootToFrequency: 'Reset to frequency order',
         dragHandleLabel: 'Drag to reorder',
         pinShortcuts: 'Pin shortcuts',
         unpinShortcuts: 'Unpin shortcuts'
@@ -94,8 +95,8 @@ export const STRINGS_EN = {
         customSort: 'Custom', // Label for custom sorting mode (English: Custom)
         showFolders: 'Show navigation', // Tooltip for button to show the navigation pane (English: Show navigation)
         hideFolders: 'Hide navigation', // Tooltip for button to hide the navigation pane (English: Hide navigation)
-        reorderRootFolders: 'Reorder root folders',
-        finishRootFolderReorder: 'Finish root folder reorder',
+        reorderRootFolders: 'Reorder root folders and tags',
+        finishRootFolderReorder: 'Finish root reorder',
         toggleDescendantNotes: 'Show notes from subfolders / descendants', // Tooltip: include descendants for folders and tags
         autoExpandFoldersTags: 'Auto-expand folders and tags', // Tooltip for button to toggle auto-expanding folders and tags when selected (English: Auto-expand folders and tags)
         showExcludedItems: 'Show hidden items', // Tooltip for button to show hidden items (English: Show hidden items)
@@ -383,6 +384,7 @@ export const STRINGS_EN = {
             tagOperationsNotAvailable: 'Tag operations not available',
             tagsRequireMarkdown: 'Tags are only supported on Markdown notes',
             iconPackDownloaded: '{provider} downloaded',
+            iconPackUpdated: '{provider} updated ({version})',
             iconPackRemoved: '{provider} removed',
             iconPackLoadFailed: 'Failed to load {provider}'
         },
@@ -657,6 +659,10 @@ export const STRINGS_EN = {
                 name: 'Show tooltips (desktop only)',
                 desc: 'Display hover tooltips with additional information for notes and folders.'
             },
+            showTooltipPath: {
+                name: 'Show path',
+                desc: 'Display the folder path below note names in tooltips.'
+            },
             multiSelectModifier: {
                 name: 'Multi-select modifier',
                 desc: 'Choose which modifier key toggles multi-selection. When Option/Alt is selected, Cmd/Ctrl click opens notes in a new tab.',
@@ -843,10 +849,6 @@ export const STRINGS_EN = {
                     frequencyDesc: 'Frequency (high to low)'
                 }
             },
-            showTagsAboveFolders: {
-                name: 'Show tags above folders',
-                desc: 'Display tags section before folders in the navigator.'
-            },
             showAllTagsFolder: {
                 name: 'Show tags folder',
                 desc: 'Display "Tags" as a collapsible folder.'
@@ -955,7 +957,7 @@ export const STRINGS_EN = {
                     'Downloaded icon packs sync installation state across devices. Icon packs stay in the local database on each device; sync only tracks whether to download or remove them. Icon packs download from the Notebook Navigator repository (https://github.com/johansan/notebook-navigator/tree/main/icon-assets).',
                 providers: {
                     bootstrapIconsDesc: 'https://icons.getbootstrap.com/',
-                    fontAwesomeDesc: 'https://fontawesome.com/v6/search?f=classic&s=solid&ic=free&o=r',
+                    fontAwesomeDesc: 'https://fontawesome.com/',
                     materialIconsDesc: 'https://fonts.google.com/icons',
                     phosphorDesc: 'https://phosphoricons.com/',
                     rpgAwesomeDesc: 'https://nagoshiashumari.github.io/Rpg-Awesome/',

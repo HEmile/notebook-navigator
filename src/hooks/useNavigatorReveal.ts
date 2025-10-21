@@ -216,7 +216,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
      * @param tagPath - The tag path to reveal (without # prefix)
      */
     const revealTag = useCallback(
-        (tagPath: string) => {
+        (tagPath: string, options?: { skipSinglePaneSwitch?: boolean }) => {
             if (!tagPath) {
                 return;
             }
@@ -267,12 +267,17 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
             selectionDispatch({ type: 'SET_SELECTED_TAG', tag: canonicalPath });
 
             // In single pane mode, switch to list pane view (same as revealFileInActualFolder)
-            if (uiState.singlePane && uiState.currentSinglePaneView === 'navigation') {
+            const shouldSkipSinglePaneSwitch = options?.skipSinglePaneSwitch ?? false;
+            if (uiState.singlePane && uiState.currentSinglePaneView === 'navigation' && !shouldSkipSinglePaneSwitch) {
                 uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'files' });
             }
 
-            // Always shift focus to list pane (same as revealFileInActualFolder)
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
+            if (shouldSkipSinglePaneSwitch) {
+                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+            } else {
+                // Always shift focus to list pane (same as revealFileInActualFolder)
+                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
+            }
 
             if (navigationPaneRef.current) {
                 navigationPaneRef.current.requestScroll(canonicalPath, { align: 'auto', itemType: ItemType.TAG });
@@ -587,7 +592,8 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
                     selectionState.selectedTag &&
                     selectionState.selectedFile?.path === fileToReveal.path
                 ) {
-                    revealTag(selectionState.selectedTag);
+                    const skipSinglePaneSwitch = uiState.singlePane && settings.startView === 'navigation';
+                    revealTag(selectionState.selectedTag, { skipSinglePaneSwitch });
 
                     // After expanding the tag, trigger the file reveal
                     // This ensures proper visibility in the list pane
@@ -617,7 +623,8 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
         selectionState.selectedFile,
         revealTag,
         selectionDispatch,
-        settings.startView
+        settings.startView,
+        uiState.singlePane
     ]);
 
     /**

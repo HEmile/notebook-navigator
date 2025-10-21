@@ -264,6 +264,49 @@ export const NotebookNavigatorComponent = React.memo(
             setIsNavigatorFocused
         });
 
+        // Handle auxiliary mouse buttons for desktop single-pane switching
+        useEffect(() => {
+            if (isMobile) {
+                return;
+            }
+
+            const container = containerRef.current;
+            if (!container) {
+                return;
+            }
+
+            const handleAuxClick = (event: MouseEvent) => {
+                if (event.button !== 3 && event.button !== 4) {
+                    return;
+                }
+
+                if (!uiState.singlePane) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                if (uiState.focusedPane === 'search') {
+                    return;
+                }
+
+                const targetView = event.button === 3 ? 'navigation' : 'files';
+
+                if (uiState.currentSinglePaneView === targetView) {
+                    return;
+                }
+
+                uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: targetView });
+                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: targetView });
+            };
+
+            container.addEventListener('auxclick', handleAuxClick);
+
+            return () => {
+                container.removeEventListener('auxclick', handleAuxClick);
+            };
+        }, [containerRef, isMobile, uiDispatch, uiState.currentSinglePaneView, uiState.focusedPane, uiState.singlePane]);
+
         // Get navigation actions
         const { handleExpandCollapseAll } = useNavigationActions();
 

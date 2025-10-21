@@ -147,6 +147,10 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             this.settings.rootFolderOrder = [];
         }
 
+        if (!Array.isArray(this.settings.rootTagOrder)) {
+            this.settings.rootTagOrder = [];
+        }
+
         // Initialize update check setting with default value for existing users
         if (typeof this.settings.checkForUpdatesOnStart !== 'boolean') {
             this.settings.checkForUpdatesOnStart = true;

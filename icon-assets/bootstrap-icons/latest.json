@@ -1,7 +1,7 @@
 {
   "version": "1.13.1",
-  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/bootstrap-icons/1.13.1/bootstrap-icons.woff2",
-  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/bootstrap-icons/1.13.1/bootstrap-icons.json",
+  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/bootstrap-icons/bootstrap-icons.woff2",
+  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/bootstrap-icons/bootstrap-icons.json",
   "fontMimeType": "font/woff2",
   "metadataFormat": "json"
 }

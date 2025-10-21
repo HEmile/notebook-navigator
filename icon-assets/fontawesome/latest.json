@@ -1,7 +1,7 @@
 {
-  "version": "6.6.0",
-  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/fontawesome/6.6.0/fa-solid-900.woff2",
-  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/fontawesome/6.6.0/icons-solid.json",
+  "version": "7.1.0",
+  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/fontawesome/fa-solid-900.woff2",
+  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/fontawesome/icons-solid.json",
   "fontMimeType": "font/woff2",
   "metadataFormat": "json"
 }

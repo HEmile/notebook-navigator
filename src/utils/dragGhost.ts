@@ -48,14 +48,18 @@ export function createDragGhostManager(app: App): DragGhostManager {
         dragGhostElement.style.left = `${event.clientX + 10}px`;
         dragGhostElement.style.top = `${event.clientY + 10}px`;
     };
+    // Options for mousemove event listener to mark as passive for better performance
+    const mouseMoveListenerOptions: AddEventListenerOptions = { passive: true };
+    // Capture phase flag for dragover event listener to intercept events early
+    const dragOverListenerCapture = true;
 
     /**
      * Removes the ghost element and cleans up event listeners
      */
     const hideGhost = () => {
         if (dragGhostElement) {
-            document.removeEventListener('mousemove', updateDragGhostPosition);
-            document.removeEventListener('dragover', updateDragGhostPosition);
+            document.removeEventListener('mousemove', updateDragGhostPosition, mouseMoveListenerOptions);
+            document.removeEventListener('dragover', updateDragGhostPosition, dragOverListenerCapture);
             dragGhostElement.remove();
             dragGhostElement = null;
         }
@@ -237,8 +241,8 @@ export function createDragGhostManager(app: App): DragGhostManager {
         document.body.appendChild(ghost);
         dragGhostElement = ghost;
 
-        document.addEventListener('mousemove', updateDragGhostPosition, { passive: true });
-        document.addEventListener('dragover', updateDragGhostPosition);
+        document.addEventListener('mousemove', updateDragGhostPosition, mouseMoveListenerOptions);
+        document.addEventListener('dragover', updateDragGhostPosition, dragOverListenerCapture);
 
         const onGlobalEnd = () => hideGhost();
         windowDragEndHandler = onGlobalEnd;

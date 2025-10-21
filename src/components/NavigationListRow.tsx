@@ -123,8 +123,11 @@ export function NavigationListRow({
         if (labelClassName) {
             classList.push(labelClassName);
         }
+        if (applyColorToLabel && color) {
+            classList.push('nn-has-custom-color');
+        }
         return classList.join(' ');
-    }, [labelClassName]);
+    }, [applyColorToLabel, color, labelClassName]);
 
     // Renders chevron icon when provided, clearing it for rows without chevrons
     useEffect(() => {

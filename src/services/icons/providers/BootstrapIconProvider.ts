@@ -21,12 +21,13 @@ export class BootstrapIconProvider extends BaseFontIconProvider {
      */
     protected parseMetadata(raw: string): void {
         try {
-            const parsed = JSON.parse(raw) as Record<string, string>;
+            const parsed = JSON.parse(raw) as Record<string, string | number>;
             const definitions: IconDefinition[] = [];
             const lookup = new Map<string, { unicode: string; keywords: string[] }>();
 
-            Object.entries(parsed).forEach(([iconId, unicode]) => {
-                if (!unicode) {
+            Object.entries(parsed).forEach(([iconId, unicodeValue]) => {
+                const normalizedUnicode = this.normalizeUnicodeValue(unicodeValue);
+                if (!normalizedUnicode) {
                     return;
                 }
 
@@ -45,9 +46,8 @@ export class BootstrapIconProvider extends BaseFontIconProvider {
                     displayName,
                     keywords: Array.from(keywords)
                 });
-
                 lookup.set(iconId, {
-                    unicode,
+                    unicode: normalizedUnicode,
                     keywords: Array.from(keywords)
                 });
             });
@@ -57,6 +57,41 @@ export class BootstrapIconProvider extends BaseFontIconProvider {
             this.logParseError('Failed to parse metadata', error);
             this.clearIconData();
         }
+    }
+
+    /**
+     * Normalizes unicode values from JSON metadata to hex strings.
+     */
+    private normalizeUnicodeValue(value: string | number): string | null {
+        if (typeof value === 'number') {
+            if (!Number.isFinite(value) || value <= 0) {
+                return null;
+            }
+            return value.toString(16);
+        }
+
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        if (/^[0-9]+$/.test(trimmed)) {
+            const parsed = parseInt(trimmed, 10);
+            if (Number.isNaN(parsed) || parsed <= 0) {
+                return null;
+            }
+            return parsed.toString(16);
+        }
+
+        if (/^0x[0-9a-f]+$/i.test(trimmed)) {
+            return trimmed.slice(2).toLowerCase();
+        }
+
+        if (/^[0-9a-f]+$/i.test(trimmed)) {
+            return trimmed.toLowerCase();
+        }
+
+        return null;
     }
 
     /**

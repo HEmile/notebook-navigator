@@ -59,7 +59,7 @@ export function buildTagTreeFromDatabase(
     db: IndexedDBStorage,
     excludedFolderPatterns?: string[],
     includedPaths?: Set<string>
-): { tagTree: Map<string, TagTreeNode>; untagged: number } {
+): { tagTree: Map<string, TagTreeNode>; untagged: number; hiddenRootTags: Map<string, TagTreeNode> } {
     // Track all unique tags that exist in the vault
     const allTagsSet = new Set<string>();
     let untaggedCount = 0;
@@ -68,18 +68,62 @@ export function buildTagTreeFromDatabase(
 
     // Map to store file associations for each tag
     const tagFiles = new Map<string, Set<string>>();
+    const hiddenRootTags = new Map<string, TagTreeNode>();
+    const hasExcludedFolders = Array.isArray(excludedFolderPatterns) && excludedFolderPatterns.length > 0;
+    const excludedPatterns: string[] | null = hasExcludedFolders && excludedFolderPatterns ? excludedFolderPatterns : null;
+
+    // Records root tags from files in excluded folders for reordering purposes
+    const recordHiddenRootTag = (tagValue: string, filePath: string) => {
+        const canonical = (tagValue.startsWith('#') ? tagValue.substring(1) : tagValue).replace(/^\/+|\/+$/g, '');
+        if (canonical.length === 0) {
+            return;
+        }
+        const [rootCanonical] = canonical.split('/');
+        if (!rootCanonical) {
+            return;
+        }
+        const normalizedRoot = normalizeTagPathValue(rootCanonical);
+        if (normalizedRoot.length === 0) {
+            return;
+        }
+
+        // Create or update hidden root tag node
+        let node = hiddenRootTags.get(normalizedRoot);
+        if (!node) {
+            node = {
+                name: rootCanonical,
+                path: normalizedRoot,
+                displayPath: rootCanonical,
+                children: new Map(),
+                notesWithTag: new Set()
+            };
+            hiddenRootTags.set(normalizedRoot, node);
+        }
+        node.notesWithTag.add(filePath);
+    };
 
     // Get all files from cache
     const allFiles = db.getAllFiles();
 
     // First pass: collect all tags and their file associations
     for (const { path, data: fileData } of allFiles) {
+        const isExcluded = excludedPatterns ? isPathInExcludedFolder(path, excludedPatterns) : false;
+
         // Defense-in-depth: skip files not in the included set (e.g., frontmatter-excluded)
         if (includedPaths && !includedPaths.has(path)) {
             continue;
         }
-        // Skip files in excluded folders if patterns provided
-        if (excludedFolderPatterns && isPathInExcludedFolder(path, excludedFolderPatterns)) {
+
+        // Process tags from excluded files for hidden root tag tracking
+        if (isExcluded) {
+            const tags = fileData.tags;
+            if (!hasExcludedFolders || !tags || tags.length === 0) {
+                continue;
+            }
+            // Record root tags from excluded files for reordering
+            for (const tag of tags) {
+                recordHiddenRootTag(tag, path);
+            }
             continue;
         }
 
@@ -190,7 +234,7 @@ export function buildTagTreeFromDatabase(
     // Clear note count cache since tree structure has changed
     clearNoteCountCache();
 
-    return { tagTree, untagged: untaggedCount };
+    return { tagTree, untagged: untaggedCount, hiddenRootTags };
 }
 
 /**

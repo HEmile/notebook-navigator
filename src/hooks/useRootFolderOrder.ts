@@ -22,8 +22,10 @@ import { useServices } from '../context/ServicesContext';
 import { useSettingsUpdate } from '../context/SettingsContext';
 import type { NotebookNavigatorSettings } from '../settings';
 import { naturalCompare } from '../utils/sortUtils';
+import { areStringArraysEqual, createIndexMap } from '../utils/arrayUtils';
 import { compareFolderOrderWithFallback } from '../utils/treeFlattener';
 import { TIMEOUTS } from '../types/obsidian-extended';
+import { stripTrailingSlash } from '../utils/pathUtils';
 
 const ROOT_PATH = '/';
 
@@ -52,16 +54,6 @@ export interface RootFolderOrderState {
     rootLevelFolders: TFolder[]; // All top-level folders in custom order
     rootFolderOrderMap: Map<string, number>; // Maps folder paths to their order index
     missingRootFolderPaths: string[]; // Stored paths that are not currently present in the vault
-}
-
-/**
- * Removes trailing slash from path, except for root path
- */
-function stripTrailingSlash(path: string): string {
-    if (path === ROOT_PATH) {
-        return path;
-    }
-    return path.endsWith('/') ? path.slice(0, -1) : path;
 }
 
 /**
@@ -139,31 +131,10 @@ function normalizeRootFolderOrder(existingOrder: string[], folders: TFolder[]): 
 }
 
 /**
- * Creates a map from folder paths to their order index for efficient sorting
- */
-function createRootOrderMap(order: string[]): Map<string, number> {
-    const map = new Map<string, number>();
-    order.forEach((path, index) => {
-        map.set(path, index);
-    });
-    return map;
-}
-
-/**
  * Sorts folders according to the custom order map with fallback to natural sorting
  */
 function sortFoldersByOrder(folders: TFolder[], orderMap: Map<string, number>): TFolder[] {
     return folders.slice().sort((a, b) => compareFolderOrderWithFallback(a, b, orderMap));
-}
-
-/**
- * Checks if two string arrays are equal in both content and order
- */
-function arraysEqual(first: string[], second: string[]): boolean {
-    if (first.length !== second.length) {
-        return false;
-    }
-    return first.every((value, index) => value === second[index]);
 }
 
 /**
@@ -243,17 +214,17 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
             }
 
             const { normalizedOrder, missingPaths } = normalizeRootFolderOrder(workingOrder, rootChildren);
-            const orderMap = createRootOrderMap(normalizedOrder);
+            const orderMap = createIndexMap(normalizedOrder);
             const orderedChildren = sortFoldersByOrder(rootChildren, orderMap);
 
-            if (!arraysEqual(normalizedOrder, rootFolderOrderRef.current)) {
+            if (!areStringArraysEqual(normalizedOrder, rootFolderOrderRef.current)) {
                 rootFolderOrderRef.current = normalizedOrder;
                 void updateSettings(current => {
                     current.rootFolderOrder = normalizedOrder;
                 });
             }
 
-            setMissingRootFolderPaths(prev => (arraysEqual(prev, missingPaths) ? prev : missingPaths));
+            setMissingRootFolderPaths(prev => (areStringArraysEqual(prev, missingPaths) ? prev : missingPaths));
             setRootLevelFolders(orderedChildren);
 
             if (settings.showRootFolder) {

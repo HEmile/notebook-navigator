@@ -196,6 +196,14 @@ export function renderGeneralTab(context: SettingsTabContext): void {
         );
 
     if (!Platform.isMobile) {
+        let showTooltipsSubSettings: HTMLDivElement | null = null;
+
+        const updateShowTooltipsSubSettings = (visible: boolean) => {
+            if (showTooltipsSubSettings) {
+                showTooltipsSubSettings.toggleClass('nn-setting-hidden', !visible);
+            }
+        };
+
         new Setting(containerEl)
             .setName(strings.settings.items.showTooltips.name)
             .setDesc(strings.settings.items.showTooltips.desc)
@@ -203,8 +211,23 @@ export function renderGeneralTab(context: SettingsTabContext): void {
                 toggle.setValue(plugin.settings.showTooltips).onChange(async value => {
                     plugin.settings.showTooltips = value;
                     await plugin.saveSettingsAndUpdate();
+                    updateShowTooltipsSubSettings(value);
                 })
             );
+
+        showTooltipsSubSettings = containerEl.createDiv('nn-sub-settings');
+
+        new Setting(showTooltipsSubSettings)
+            .setName(strings.settings.items.showTooltipPath.name)
+            .setDesc(strings.settings.items.showTooltipPath.desc)
+            .addToggle(toggle =>
+                toggle.setValue(plugin.settings.showTooltipPath).onChange(async value => {
+                    plugin.settings.showTooltipPath = value;
+                    await plugin.saveSettingsAndUpdate();
+                })
+            );
+
+        updateShowTooltipsSubSettings(plugin.settings.showTooltips);
     }
 
     let showIconsSubSettings: HTMLDivElement | null = null;
@@ -267,18 +290,6 @@ export function renderGeneralTab(context: SettingsTabContext): void {
             })
         );
     autoRevealSettingsEl.toggle(plugin.settings.autoRevealActiveFile);
-
-    if (!Platform.isMobile) {
-        new Setting(containerEl)
-            .setName(strings.settings.items.autoSelectFirstFileOnFocusChange.name)
-            .setDesc(strings.settings.items.autoSelectFirstFileOnFocusChange.desc)
-            .addToggle(toggle =>
-                toggle.setValue(plugin.settings.autoSelectFirstFileOnFocusChange).onChange(async value => {
-                    plugin.settings.autoSelectFirstFileOnFocusChange = value;
-                    await plugin.saveSettingsAndUpdate();
-                })
-            );
-    }
 
     new Setting(containerEl).setName(strings.settings.groups.general.filtering).setHeading();
 

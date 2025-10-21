@@ -1,7 +1,7 @@
 {
-  "version": "15.16.0",
-  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/simple-icons/15.16.0/SimpleIcons.woff2",
-  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/simple-icons/15.16.0/simple-icons.json",
+  "version": "15.17.0",
+  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/simple-icons/SimpleIcons.woff2",
+  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/simple-icons/simple-icons.json",
   "fontMimeType": "font/woff2",
   "metadataFormat": "json"
 }

@@ -109,6 +109,31 @@ export const NavigationPaneItemType = {
 export type NavigationPaneItemType = (typeof NavigationPaneItemType)[keyof typeof NavigationPaneItemType];
 
 /**
+ * Identifiers for navigation pane sections used in ordering
+ */
+export const NavigationSectionId = {
+    SHORTCUTS: 'shortcuts',
+    RECENT: 'recent',
+    NOTES: 'notes',
+    TAGS: 'tags'
+} as const;
+
+/**
+ * Type alias for navigation pane section identifiers
+ */
+export type NavigationSectionId = (typeof NavigationSectionId)[keyof typeof NavigationSectionId];
+
+/**
+ * Default ordering for navigation sections
+ */
+export const DEFAULT_NAVIGATION_SECTION_ORDER: NavigationSectionId[] = [
+    NavigationSectionId.SHORTCUTS,
+    NavigationSectionId.RECENT,
+    NavigationSectionId.NOTES,
+    NavigationSectionId.TAGS
+];
+
+/**
  * Navigation pane measurements for accurate virtualization
  * Used by NavigationPane component
  * Note: Folder and tag heights are now dynamically calculated from settings
@@ -193,6 +218,7 @@ export interface LocalStorageKeys {
     shortcutsPinnedKey: string;
     recentNotesKey: string;
     recentIconsKey: string;
+    navigationSectionOrderKey: string;
     fileCacheKey: string;
     databaseSchemaVersionKey: string;
     databaseContentVersionKey: string;
@@ -218,6 +244,7 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     shortcutsPinnedKey: 'notebook-navigator-shortcuts-pinned',
     recentNotesKey: 'notebook-navigator-recent-notes',
     recentIconsKey: 'notebook-navigator-recent-icons',
+    navigationSectionOrderKey: 'notebook-navigator-section-order',
     fileCacheKey: 'notebook-navigator-file-cache',
     databaseSchemaVersionKey: 'notebook-navigator-db-schema-version',
     databaseContentVersionKey: 'notebook-navigator-db-content-version',

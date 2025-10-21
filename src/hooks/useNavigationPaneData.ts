@@ -44,7 +44,8 @@ import {
     VirtualFolder,
     ItemType,
     SHORTCUTS_VIRTUAL_FOLDER_ID,
-    RECENT_NOTES_VIRTUAL_FOLDER_ID
+    RECENT_NOTES_VIRTUAL_FOLDER_ID,
+    NavigationSectionId
 } from '../types';
 import { TIMEOUTS } from '../types/obsidian-extended';
 import { TagTreeNode, TopicNode } from '../types/storage';
@@ -55,17 +56,19 @@ import { shouldDisplayFile, FILE_VISIBILITY, isImageFile } from '../utils/fileTy
 // Use Obsidian's trailing debounce for vault-driven updates
 import { getTotalNoteCount, excludeFromTagTree, findTagNode } from '../utils/tagTree';
 import { getTotalNoteCount as getTopicTotalNoteCount } from '../utils/topicGraph';
-import { flattenFolderTree, flattenTagTree, flattenTopicTree } from '../utils/treeFlattener';
+import { flattenFolderTree, flattenTagTree, compareTagOrderWithFallback, flattenTopicTree } from '../utils/treeFlattener';
 import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
 import { setNavigationIndex } from '../utils/navigationIndex';
 import { resolveCanonicalTagPath } from '../utils/tagUtils';
 import { isFolderShortcut, isNoteShortcut, isSearchShortcut, isTagShortcut, isTopicShortcut } from '../types/shortcuts';
 import { useRootFolderOrder } from './useRootFolderOrder';
+import { useRootTagOrder } from './useRootTagOrder';
 import type { FolderNoteDetectionSettings } from '../utils/folderNotes';
 import { getDBInstance } from '../storage/fileOperations';
 import { naturalCompare } from '../utils/sortUtils';
 import type { NoteCountInfo } from '../types/noteCounts';
 import { calculateFolderNoteCounts } from '../utils/noteCountUtils';
+import { sanitizeNavigationSectionOrder } from '../utils/navigationSections';
 
 // Checks if a navigation item is a shortcut-related item (virtual folder, shortcut, or header)
 const isShortcutNavigationItem = (item: CombinedNavigationItem): boolean => {
@@ -213,6 +216,8 @@ interface UseNavigationPaneDataParams {
     recentNotesExpanded: boolean;
     /** Whether shortcuts should be pinned at the top of the pane */
     pinShortcuts: boolean;
+    /** Preferred ordering of navigation sections */
+    sectionOrder: NavigationSectionId[];
 }
 
 /**
@@ -237,6 +242,14 @@ interface UseNavigationPaneDataResult {
     rootLevelFolders: TFolder[];
     /** Paths from settings that are not currently present in the vault */
     missingRootFolderPaths: string[];
+    /** Final ordered keys used for rendering root-level tags in navigation */
+    resolvedRootTagKeys: string[];
+    /** Combined tag tree used for ordering (includes hidden roots) */
+    rootOrderingTagTree: Map<string, TagTreeNode>;
+    /** Map from tag path to custom order index */
+    rootTagOrderMap: Map<string, number>;
+    /** Paths for tags in custom order that are not currently present */
+    missingRootTagPaths: string[];
 }
 
 /**
@@ -251,7 +264,8 @@ export function useNavigationPaneData({
     isVisible,
     shortcutsExpanded,
     recentNotesExpanded,
-    pinShortcuts
+    pinShortcuts,
+    sectionOrder
 }: UseNavigationPaneDataParams): UseNavigationPaneDataResult {
     const { app } = useServices();
     const { recentNotes } = useRecentData();
@@ -345,7 +359,7 @@ export function useNavigationPaneData({
 
 
     // Extract tag tree data from file cache
-    const tagTree = fileData.tagTree;
+    const tagTree = useMemo(() => fileData.tagTree ?? new Map<string, TagTreeNode>(), [fileData.tagTree]);
     const untaggedCount = fileData.untagged;
 
     // Create matcher for hidden tag patterns (supports "archive", "temp*", "*draft")
@@ -361,13 +375,42 @@ export function useNavigationPaneData({
         () => createTagComparator(settings.tagSortOrder, settings.includeDescendantNotes),
         [settings.tagSortOrder, settings.includeDescendantNotes]
     );
+
+    // Retrieves hidden root tag nodes when tags are visible but hidden items are not shown
+    const hiddenRootTagNodes = useMemo(() => {
+        if (!settings.showTags || settings.showHiddenItems) {
+            return new Map<string, TagTreeNode>();
+        }
+        return fileData.hiddenRootTags ?? new Map<string, TagTreeNode>();
+    }, [fileData.hiddenRootTags, settings.showHiddenItems, settings.showTags]);
+
+    // Combines visible and hidden tag trees for root tag ordering calculations
+    const tagTreeForOrdering = useMemo(() => {
+        if (hiddenRootTagNodes.size === 0) {
+            return tagTree;
+        }
+        const combined = new Map<string, TagTreeNode>(tagTree);
+        hiddenRootTagNodes.forEach((node, path) => {
+            if (!combined.has(path)) {
+                combined.set(path, node);
+            }
+        });
+        return combined;
+    }, [hiddenRootTagNodes, tagTree]);
+
+    // Manages custom ordering for root-level tags
+    const { rootTagOrderMap, missingRootTagPaths } = useRootTagOrder({
+        settings,
+        tagTree: tagTreeForOrdering,
+        comparator: tagComparator ?? compareTagAlphabetically
+    });
         
     /**
      * Build tag items with a single tag tree
      */
-    const { tagItems, hasTagContent } = useMemo(() => {
+    const { tagItems, hasTagContent, resolvedRootTagKeys } = useMemo(() => {
         if (!settings.showTags) {
-            return { tagItems: [] as CombinedNavigationItem[], hasTagContent: false };
+            return { tagItems: [] as CombinedNavigationItem[], hasTagContent: false, resolvedRootTagKeys: [] };
         }
 
         const items: CombinedNavigationItem[] = [];
@@ -375,25 +418,28 @@ export function useNavigationPaneData({
         const shouldHideTags = !settings.showHiddenItems;
         const hasHiddenPatterns = hiddenMatcherHasRules;
         const visibleTagTree = hasHiddenPatterns && shouldHideTags ? excludeFromTagTree(tagTree, hiddenTagMatcher) : tagTree;
+        const shouldIncludeUntagged = settings.showUntagged && untaggedCount > 0;
         const matcherForMarking = !shouldHideTags && hasHiddenPatterns ? hiddenTagMatcher : undefined;
 
-        const addUntaggedNode = (level: number) => {
-            if (settings.showUntagged && untaggedCount > 0) {
-                const untaggedNode: TagTreeNode = {
-                    path: UNTAGGED_TAG_ID,
-                    displayPath: UNTAGGED_TAG_ID,
-                    name: strings.tagList.untaggedLabel,
-                    children: new Map(),
-                    notesWithTag: new Set()
-                };
-
-                items.push({
-                    type: NavigationPaneItemType.UNTAGGED,
-                    data: untaggedNode,
-                    key: UNTAGGED_TAG_ID,
-                    level
-                });
+        // Adds the untagged node to the items list at the specified level
+        const pushUntaggedNode = (level: number) => {
+            if (!shouldIncludeUntagged) {
+                return;
             }
+            const untaggedNode: TagTreeNode = {
+                path: UNTAGGED_TAG_ID,
+                displayPath: UNTAGGED_TAG_ID,
+                name: strings.tagList.untaggedLabel,
+                children: new Map(),
+                notesWithTag: new Set()
+            };
+
+            items.push({
+                type: NavigationPaneItemType.UNTAGGED,
+                data: untaggedNode,
+                key: UNTAGGED_TAG_ID,
+                level
+            });
         };
 
         const addVirtualFolder = (id: string, name: string, icon?: string) => {
@@ -406,10 +452,89 @@ export function useNavigationPaneData({
             });
         };
 
-        const rootNodes = Array.from(visibleTagTree.values());
-        const includeUntagged = settings.showUntagged && untaggedCount > 0;
-        const hasVisibleTags = rootNodes.length > 0;
-        const hasContent = hasVisibleTags || includeUntagged;
+        if (!visibleTagTree) {
+            if (!shouldIncludeUntagged) {
+                return { tagItems: items, hasTagContent: false, resolvedRootTagKeys: [] };
+            }
+
+            if (settings.showAllTagsFolder) {
+                const folderId = 'tags-root';
+                addVirtualFolder(folderId, strings.tagList.tags, 'lucide-tags');
+
+                if (expansionState.expandedVirtualFolders.has(folderId)) {
+                    pushUntaggedNode(1);
+                }
+
+                return { tagItems: items, hasTagContent: true, resolvedRootTagKeys: [UNTAGGED_TAG_ID] };
+            }
+
+            pushUntaggedNode(0);
+            return { tagItems: items, hasTagContent: true, resolvedRootTagKeys: [UNTAGGED_TAG_ID] };
+        }
+
+        // Extract root nodes and determine effective comparator based on custom ordering
+        const visibleRootNodes = Array.from(visibleTagTree.values());
+        const baseComparator = tagComparator ?? compareTagAlphabetically;
+        const effectiveComparator: TagComparator =
+            rootTagOrderMap.size > 0 ? (a, b) => compareTagOrderWithFallback(a, b, rootTagOrderMap, baseComparator) : baseComparator;
+        const sortedRootNodes = visibleRootNodes.length > 0 ? visibleRootNodes.slice().sort(effectiveComparator) : visibleRootNodes;
+        const hasVisibleTags = sortedRootNodes.length > 0;
+        const hasContent = hasVisibleTags || shouldIncludeUntagged;
+
+        // Build map of all root nodes including visible and hidden ones
+        const rootNodeMap = new Map<string, TagTreeNode>();
+        sortedRootNodes.forEach(node => {
+            rootNodeMap.set(node.path, node);
+        });
+        hiddenRootTagNodes.forEach((node, path) => {
+            rootNodeMap.set(path, node);
+        });
+
+        // Determine default ordering and allowed keys for final tag list
+        const defaultKeyOrder = sortedRootNodes.map(node => node.path);
+        const allowedKeys = new Set(defaultKeyOrder);
+        if (shouldIncludeUntagged) {
+            allowedKeys.add(UNTAGGED_TAG_ID);
+        }
+        hiddenRootTagNodes.forEach((_, path) => {
+            allowedKeys.add(path);
+            if (!defaultKeyOrder.includes(path)) {
+                defaultKeyOrder.push(path);
+            }
+        });
+
+        // Build final ordered list of root tag keys, respecting custom order first
+        const resolvedRootTagKeys: string[] = [];
+        settings.rootTagOrder.forEach(entry => {
+            if (!allowedKeys.has(entry)) {
+                return;
+            }
+            if (resolvedRootTagKeys.includes(entry)) {
+                return;
+            }
+            resolvedRootTagKeys.push(entry);
+        });
+
+        // Add remaining keys not in custom order
+        defaultKeyOrder.forEach(key => {
+            if (!resolvedRootTagKeys.includes(key)) {
+                resolvedRootTagKeys.push(key);
+            }
+        });
+
+        // Ensure untagged is included if enabled
+        if (shouldIncludeUntagged && !resolvedRootTagKeys.includes(UNTAGGED_TAG_ID)) {
+            resolvedRootTagKeys.push(UNTAGGED_TAG_ID);
+        }
+
+        // Helper function to flatten and append a tag node with its children
+        const appendTagNode = (node: TagTreeNode, level: number) => {
+            const tagEntries = flattenTagTree([node], expansionState.expandedTags, level, {
+                hiddenMatcher: matcherForMarking,
+                comparator: effectiveComparator
+            });
+            items.push(...tagEntries);
+        };
 
         if (settings.showAllTagsFolder) {
             if (hasContent) {
@@ -417,24 +542,40 @@ export function useNavigationPaneData({
                 addVirtualFolder(folderId, strings.tagList.tags, 'lucide-tags');
 
                 if (expansionState.expandedVirtualFolders.has(folderId)) {
-                    const tagEntries = flattenTagTree(rootNodes, expansionState.expandedTags, 1, {
-                        hiddenMatcher: matcherForMarking,
-                        comparator: tagComparator
+                    resolvedRootTagKeys.forEach(key => {
+                        if (hiddenRootTagNodes.has(key) && !settings.showHiddenItems) {
+                            return;
+                        }
+                        if (key === UNTAGGED_TAG_ID) {
+                            pushUntaggedNode(1);
+                            return;
+                        }
+                        const node = rootNodeMap.get(key);
+                        if (!node) {
+                            return;
+                        }
+                        appendTagNode(node, 1);
                     });
-                    items.push(...tagEntries);
-                    addUntaggedNode(1);
                 }
             }
         } else {
-            const tagEntries = flattenTagTree(rootNodes, expansionState.expandedTags, 0, {
-                hiddenMatcher: matcherForMarking,
-                comparator: tagComparator
+            resolvedRootTagKeys.forEach(key => {
+                if (hiddenRootTagNodes.has(key) && !settings.showHiddenItems) {
+                    return;
+                }
+                if (key === UNTAGGED_TAG_ID) {
+                    pushUntaggedNode(0);
+                    return;
+                }
+                const node = rootNodeMap.get(key);
+                if (!node) {
+                    return;
+                }
+                appendTagNode(node, 0);
             });
-            items.push(...tagEntries);
-            addUntaggedNode(0);
         }
 
-        return { tagItems: items, hasTagContent: hasContent };
+        return { tagItems: items, hasTagContent: hasContent, resolvedRootTagKeys };
     }, [
         settings.showTags,
         settings.showAllTagsFolder,
@@ -444,9 +585,12 @@ export function useNavigationPaneData({
         hiddenMatcherHasRules,
         tagTree,
         untaggedCount,
+        settings.rootTagOrder,
         expansionState.expandedTags,
         expansionState.expandedVirtualFolders,
-        tagComparator
+        tagComparator,
+        rootTagOrderMap,
+        hiddenRootTagNodes
     ]);
 
     /**
@@ -668,6 +812,9 @@ export function useNavigationPaneData({
         return items;
     }, [app, settings.showRecentNotes, recentNotes, settings.recentNotesCount, settings.fileVisibility, recentNotesExpanded]);
 
+    // Sanitize section order from local storage and ensure defaults are present
+    const normalizedSectionOrder = useMemo(() => sanitizeNavigationSectionOrder(sectionOrder), [sectionOrder]);
+
     /**
      * Combine shortcut, folder, and tag items based on display order settings
      */
@@ -697,50 +844,52 @@ export function useNavigationPaneData({
             type: NavigationPaneItemType.TOP_SPACER,
             key: 'top-spacer'
         });
+        
+        // TODO: Include topics section
+        // Determines which sections should be displayed based on settings and available items
+        const shouldIncludeShortcutsSection = settings.showShortcuts && shortcutItems.length > 0;
+        const shouldIncludeRecentSection = settings.showRecentNotes && recentNotesItems.length > 0;
+        const shouldIncludeNotesSection = folderItems.length > 0;
+        const shouldIncludeTagsSection = settings.showTags && tagItems.length > 0;
 
-        const sections: CombinedNavigationItem[][] = [];
+        // Builds sections in the user-specified order
+        const orderedSections: CombinedNavigationItem[][] = [];
 
-        if (shortcutItems.length > 0) {
-            sections.push(shortcutItems);
-        }
-
-        if (recentNotesItems.length > 0) {
-            sections.push(recentNotesItems);
-        }
-
-        const mainSection: CombinedNavigationItem[] = [];
-
-        if (settings.showTopics) {
-            mainSection.push(...topicItems);
-        }
-
-        if (settings.showTags && settings.showTagsAboveFolders) {
-            mainSection.push(...tagItems);
-            if (folderItems.length > 0 && tagItems.length > 0) {
-                mainSection.push({
-                    type: NavigationPaneItemType.LIST_SPACER,
-                    key: 'tags-folders-spacer'
-                });
+        // Adds sections to the display based on user-specified order and visibility conditions
+        normalizedSectionOrder.forEach(identifier => {
+            switch (identifier) {
+                case NavigationSectionId.SHORTCUTS:
+                    if (shouldIncludeShortcutsSection) {
+                        orderedSections.push(shortcutItems);
+                    }
+                    break;
+                case NavigationSectionId.RECENT:
+                    if (shouldIncludeRecentSection) {
+                        orderedSections.push(recentNotesItems);
+                    }
+                    break;
+                case NavigationSectionId.NOTES:
+                    if (shouldIncludeNotesSection) {
+                        orderedSections.push(folderItems);
+                    }
+                    break;
+                case NavigationSectionId.TAGS:
+                    if (shouldIncludeTagsSection) {
+                        orderedSections.push(tagItems);
+                    }
+                    break;
+                default:
+                    break;
             }
-            mainSection.push(...folderItems);
-        } else {
-            mainSection.push(...folderItems);
-            if (settings.showTags && tagItems.length > 0) {
-                mainSection.push({
-                    type: NavigationPaneItemType.LIST_SPACER,
-                    key: 'folders-tags-spacer'
-                });
-                mainSection.push(...tagItems);
-            }
-        }
+        });
 
-        if (mainSection.length > 0) {
-            sections.push(mainSection);
-        }
+        // Filters out empty sections that have no items to display
+        const visibleSections = orderedSections.filter(section => section.length > 0);
 
-        sections.forEach((section, index) => {
+        // Assembles final item list with spacers between sections
+        visibleSections.forEach((section, index) => {
             allItems.push(...section);
-            if (index < sections.length - 1) {
+            if (index < visibleSections.length - 1) {
                 allItems.push({
                     type: NavigationPaneItemType.LIST_SPACER,
                     key: `section-spacer-${index}`
@@ -759,8 +908,10 @@ export function useNavigationPaneData({
         tagItems,
         shortcutItems,
         recentNotesItems,
+        normalizedSectionOrder,
+        settings.showShortcuts,
+        settings.showRecentNotes,
         settings.showTags,
-        settings.showTagsAboveFolders,
         settings.navigationBanner,
         pinShortcuts
     ]);
@@ -1086,6 +1237,10 @@ export function useNavigationPaneData({
         tagCounts,
         folderCounts,
         rootLevelFolders,
-        missingRootFolderPaths
+        missingRootFolderPaths,
+        resolvedRootTagKeys,
+        rootOrderingTagTree: tagTreeForOrdering,
+        rootTagOrderMap,
+        missingRootTagPaths
     };
 }
