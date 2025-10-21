@@ -72,7 +72,7 @@ import { useListReorder, type ListReorderHandlers } from '../hooks/useListReorde
 import type { CombinedNavigationItem } from '../types/virtualization';
 import { NavigationPaneItemType, ItemType } from '../types';
 import { getSelectedPath } from '../utils/selectionUtils';
-import { TagTreeNode } from '../types/storage';
+import { TagTreeNode, TopicNode } from '../types/storage';
 import { getFolderNote, type FolderNoteDetectionSettings } from '../utils/folderNotes';
 import { getTopicNote } from '../utils/topicNotes';
 import { findTagNode, getTotalNoteCount } from '../utils/tagTree';
@@ -815,6 +815,14 @@ export const NavigationPane = React.memo(
             [expansionDispatch]
         );
 
+        // Handle topic toggle
+        const handleTopicToggle = useCallback(
+            (name: string) => {
+                expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: name });
+            },
+            [expansionDispatch]
+        );
+
         // Handle virtual folder toggle
         const handleVirtualFolderToggle = useCallback(
             (folderId: string) => {
@@ -877,6 +885,29 @@ export const NavigationPane = React.memo(
                 return descendants;
             },
             [tagTree]
+        );
+
+        // Recursively collects all descendant topic names from a given topic
+        const getAllDescendantTopics = useCallback(
+            (topicName: string): string[] => {
+                const descendants: string[] = [];
+                const topicNode = topicService?.findTopicNode(topicName);
+
+                if (!topicNode) {
+                    return descendants;
+                }
+
+                const collectDescendants = (node: TopicNode) => {
+                    node.children.forEach(child => {
+                        descendants.push(child.name);
+                        collectDescendants(child);
+                    });
+                };
+
+                collectDescendants(topicNode);
+                return descendants;
+            },
+            [topicService]
         );
 
         // Handle tag click
@@ -978,7 +1009,7 @@ export const NavigationPane = React.memo(
                 }
 
                 if (settings.autoExpandFoldersTags && topicNode && topicNode.children.size > 0) {
-                    expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicNode.name });
+                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicNode.name });
                 }
 
                 if (uiState.singlePane) {
@@ -1209,12 +1240,12 @@ export const NavigationPane = React.memo(
                 const { getTopicAncestors } = require('../utils/topicGraph');
                 const ancestors = getTopicAncestors(topicNode);
                 if (ancestors.length > 0) {
-                    expansionDispatch({ type: 'EXPAND_TAGS', tagPaths: ancestors });
+                    expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: ancestors });
                 }
 
                 // Expand this topic if it has children
                 if (topicNode.children.size > 0) {
-                    expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicName });
+                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicName });
                 }
 
                 // Select the topic and handle UI transitions
@@ -2015,31 +2046,31 @@ export const NavigationPane = React.memo(
                             <TagTreeItem
                                 tagNode={topicNode}
                                 level={item.level ?? 0}
-                                isExpanded={expansionState.expandedTags.has(name)}
+                                isExpanded={expansionState.expandedTopics.has(name)}
                                 isSelected={selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic === name}
                                 isHidden={'isHidden' in item ? item.isHidden : false}
-                                onToggle={() => handleTagToggle(name)}
+                                onToggle={() => handleTopicToggle(name)}
                                 onClick={() => handleTopicClick(name)}
                                 color={item.color}
                                 backgroundColor={item.backgroundColor}
                                 icon={item.icon}
                                 itemType="topic"
                                 onToggleAllSiblings={() => {
-                                    const isCurrentlyExpanded = expansionState.expandedTags.has(name);
+                                    const isCurrentlyExpanded = expansionState.expandedTopics.has(name);
 
                                     if (isCurrentlyExpanded) {
                                         // If expanded, collapse everything (parent and all descendants)
-                                        handleTagToggle(name);
-                                        const descendantPaths = getAllDescendantTags(name);
-                                        if (descendantPaths.length > 0) {
-                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TAGS', descendantPaths, expand: false });
+                                        handleTopicToggle(name);
+                                        const descendantNames = getAllDescendantTopics(name);
+                                        if (descendantNames.length > 0) {
+                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TOPICS', descendantNames, expand: false });
                                         }
                                     } else {
                                         // If collapsed, expand parent and all descendants
-                                        handleTagToggle(name);
-                                        const descendantPaths = getAllDescendantTags(name);
-                                        if (descendantPaths.length > 0) {
-                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TAGS', descendantPaths, expand: true });
+                                        handleTopicToggle(name);
+                                        const descendantNames = getAllDescendantTopics(name);
+                                        if (descendantNames.length > 0) {
+                                            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TOPICS', descendantNames, expand: true });
                                         }
                                     }
                                 }}
@@ -2072,6 +2103,7 @@ export const NavigationPane = React.memo(
             [
                 expansionState.expandedFolders,
                 expansionState.expandedTags,
+                expansionState.expandedTopics,
                 expansionState.expandedVirtualFolders,
                 selectionState.selectionType,
                 selectionState.selectedFolder?.path,
@@ -2080,12 +2112,14 @@ export const NavigationPane = React.memo(
                 handleFolderClick,
                 handleFolderNameClick,
                 handleTagToggle,
+                handleTopicToggle,
                 handleTagClick,
                 handleTopicClick,
                 handleVirtualFolderToggle,
                 recentNotes.length,
                 getAllDescendantFolders,
                 getAllDescendantTags,
+                getAllDescendantTopics,
                 expansionDispatch,
                 settings,
                 folderCounts,

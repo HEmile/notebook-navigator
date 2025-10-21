@@ -153,11 +153,17 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     tagBackgroundColors: {},
     tagSortOverrides: {},
     tagAppearances: {} as Record<string, TagAppearance>,
+    topicIcons: {},
+    topicColors: {},
+    topicBackgroundColors: {},
+    topicSortOverrides: {},
+    topicAppearances: {} as Record<string, TagAppearance>,
     recentColors: [],
     lastShownVersion: '',
     latestKnownRelease: '',
     lastAnnouncedRelease: '',
     lastReleaseCheckAt: null,
     rootFolderOrder: [],
-    rootTagOrder: []
+    rootTagOrder: [],
+    rootTopicOrder: []
 };

@@ -208,6 +208,7 @@ export type NavigationItemType = typeof ItemType.FOLDER | typeof ItemType.TAG | 
 export interface LocalStorageKeys {
     expandedFoldersKey: string;
     expandedTagsKey: string;
+    expandedTopicsKey: string;
     expandedVirtualFoldersKey: string;
     selectedFolderKey: string;
     selectedFileKey: string;
@@ -234,6 +235,7 @@ export interface LocalStorageKeys {
 export const STORAGE_KEYS: LocalStorageKeys = {
     expandedFoldersKey: 'notebook-navigator-expanded-folders',
     expandedTagsKey: 'notebook-navigator-expanded-tags',
+    expandedTopicsKey: 'notebook-navigator-expanded-topics',
     expandedVirtualFoldersKey: 'notebook-navigator-expanded-virtual-folders',
     selectedFolderKey: 'notebook-navigator-selected-folder',
     selectedFileKey: 'notebook-navigator-selected-file',

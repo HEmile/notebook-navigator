@@ -175,6 +175,11 @@ export interface NotebookNavigatorSettings {
     tagBackgroundColors: Record<string, string>;
     tagSortOverrides: Record<string, SortOption>;
     tagAppearances: Record<string, TagAppearance>;
+    topicIcons: Record<string, string>;
+    topicColors: Record<string, string>;
+    topicBackgroundColors: Record<string, string>;
+    topicSortOverrides: Record<string, SortOption>;
+    topicAppearances: Record<string, TagAppearance>;
     recentColors: string[];
     lastShownVersion: string;
     latestKnownRelease: string;
@@ -182,4 +187,5 @@ export interface NotebookNavigatorSettings {
     lastReleaseCheckAt: number | null;
     rootFolderOrder: string[];
     rootTagOrder: string[];
+    rootTopicOrder: string[];
 }

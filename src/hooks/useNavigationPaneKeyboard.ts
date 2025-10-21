@@ -170,8 +170,8 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                 // Auto-expand if enabled and topic has children
                 if (settings.autoExpandFoldersTags && topicNode.children.size > 0) {
                     // Only expand if not already expanded
-                    if (!expansionState.expandedTags.has(topicName)) {
-                        expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicName });
+                    if (!expansionState.expandedTopics.has(topicName)) {
+                        expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicName });
                     }
                 }
             }
@@ -204,11 +204,11 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
             } else if (item.type === NavigationPaneItemType.TOPIC) {
                 const topic = item.data;
                 const topicName = topic.name;
-                const isExpanded = expansionState.expandedTags.has(topicName);
+                const isExpanded = expansionState.expandedTopics.has(topicName);
                 if (expand && !isExpanded && topic.children.size > 0) {
-                    expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicName });
+                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicName });
                 } else if (!expand && isExpanded) {
-                    expansionDispatch({ type: 'TOGGLE_TAG_EXPANDED', tagPath: topicName });
+                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicName });
                 }
             }
         },
@@ -341,7 +341,7 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                     } else if (item.type === NavigationPaneItemType.TOPIC) {
                         const topic = item.data;
                         const topicName = topic.name;
-                        const isExpanded = expansionState.expandedTags.has(topicName);
+                        const isExpanded = expansionState.expandedTopics.has(topicName);
                         const hasChildren = topic.children.size > 0;
 
                         if (hasChildren && !isExpanded) {
@@ -417,7 +417,7 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                     } else if (item.type === NavigationPaneItemType.TOPIC) {
                         const topic = item.data;
                         const topicName = topic.name;
-                        const isExpanded = expansionState.expandedTags.has(topicName);
+                        const isExpanded = expansionState.expandedTopics.has(topicName);
                         if (isExpanded) {
                             handleExpandCollapse(item, false);
                         } else if (topic.parents.size > 0) {

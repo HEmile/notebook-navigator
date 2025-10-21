@@ -24,6 +24,7 @@ import { localStorage } from '../utils/localStorage';
 interface ExpansionState {
     expandedFolders: Set<string>;
     expandedTags: Set<string>;
+    expandedTopics: Set<string>;
     expandedVirtualFolders: Set<string>;
 }
 
@@ -31,16 +32,21 @@ interface ExpansionState {
 export type ExpansionAction =
     | { type: 'SET_EXPANDED_FOLDERS'; folders: Set<string> }
     | { type: 'SET_EXPANDED_TAGS'; tags: Set<string> }
+    | { type: 'SET_EXPANDED_TOPICS'; topics: Set<string> }
     | { type: 'SET_EXPANDED_VIRTUAL_FOLDERS'; folders: Set<string> }
     | { type: 'TOGGLE_FOLDER_EXPANDED'; folderPath: string }
     | { type: 'TOGGLE_TAG_EXPANDED'; tagPath: string }
+    | { type: 'TOGGLE_TOPIC_EXPANDED'; topicName: string }
     | { type: 'TOGGLE_VIRTUAL_FOLDER_EXPANDED'; folderId: string }
     | { type: 'EXPAND_FOLDERS'; folderPaths: string[] }
     | { type: 'EXPAND_TAGS'; tagPaths: string[] }
+    | { type: 'EXPAND_TOPICS'; topicNames: string[] }
     | { type: 'TOGGLE_DESCENDANT_FOLDERS'; descendantPaths: string[]; expand: boolean }
     | { type: 'TOGGLE_DESCENDANT_TAGS'; descendantPaths: string[]; expand: boolean }
+    | { type: 'TOGGLE_DESCENDANT_TOPICS'; descendantNames: string[]; expand: boolean }
     | { type: 'CLEANUP_DELETED_FOLDERS'; existingPaths: Set<string> }
-    | { type: 'CLEANUP_DELETED_TAGS'; existingTags: Set<string> };
+    | { type: 'CLEANUP_DELETED_TAGS'; existingTags: Set<string> }
+    | { type: 'CLEANUP_DELETED_TOPICS'; existingTopics: Set<string> };
 
 // Create contexts
 const ExpansionContext = createContext<ExpansionState | null>(null);
@@ -54,6 +60,9 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
 
         case 'SET_EXPANDED_TAGS':
             return { ...state, expandedTags: action.tags };
+
+        case 'SET_EXPANDED_TOPICS':
+            return { ...state, expandedTopics: action.topics };
 
         case 'SET_EXPANDED_VIRTUAL_FOLDERS':
             return { ...state, expandedVirtualFolders: action.folders };
@@ -78,6 +87,16 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
             return { ...state, expandedTags: newExpanded };
         }
 
+        case 'TOGGLE_TOPIC_EXPANDED': {
+            const newExpanded = new Set(state.expandedTopics);
+            if (newExpanded.has(action.topicName)) {
+                newExpanded.delete(action.topicName);
+            } else {
+                newExpanded.add(action.topicName);
+            }
+            return { ...state, expandedTopics: newExpanded };
+        }
+
         case 'TOGGLE_VIRTUAL_FOLDER_EXPANDED': {
             const newExpanded = new Set(state.expandedVirtualFolders);
             if (newExpanded.has(action.folderId)) {
@@ -98,6 +117,12 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
             const newExpanded = new Set(state.expandedTags);
             action.tagPaths.forEach(path => newExpanded.add(path));
             return { ...state, expandedTags: newExpanded };
+        }
+
+        case 'EXPAND_TOPICS': {
+            const newExpanded = new Set(state.expandedTopics);
+            action.topicNames.forEach(name => newExpanded.add(name));
+            return { ...state, expandedTopics: newExpanded };
         }
 
         case 'TOGGLE_DESCENDANT_FOLDERS': {
@@ -124,6 +149,18 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
             return { ...state, expandedTags: newExpanded };
         }
 
+        case 'TOGGLE_DESCENDANT_TOPICS': {
+            const newExpanded = new Set(state.expandedTopics);
+            action.descendantNames.forEach(name => {
+                if (action.expand) {
+                    newExpanded.add(name);
+                } else {
+                    newExpanded.delete(name);
+                }
+            });
+            return { ...state, expandedTopics: newExpanded };
+        }
+
         case 'CLEANUP_DELETED_FOLDERS': {
             const cleaned = new Set(Array.from(state.expandedFolders).filter(path => action.existingPaths.has(path)));
             return { ...state, expandedFolders: cleaned };
@@ -132,6 +169,11 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
         case 'CLEANUP_DELETED_TAGS': {
             const cleaned = new Set(Array.from(state.expandedTags).filter(tag => action.existingTags.has(tag)));
             return { ...state, expandedTags: cleaned };
+        }
+
+        case 'CLEANUP_DELETED_TOPICS': {
+            const cleaned = new Set(Array.from(state.expandedTopics).filter(topic => action.existingTopics.has(topic)));
+            return { ...state, expandedTopics: cleaned };
         }
 
         default:
@@ -149,13 +191,15 @@ export function ExpansionProvider({ children }: ExpansionProviderProps) {
     const loadInitialState = (): ExpansionState => {
         const savedExpandedFolders = localStorage.get<string[]>(STORAGE_KEYS.expandedFoldersKey);
         const savedExpandedTags = localStorage.get<string[]>(STORAGE_KEYS.expandedTagsKey);
+        const savedExpandedTopics = localStorage.get<string[]>(STORAGE_KEYS.expandedTopicsKey);
         const savedExpandedVirtualFolders = localStorage.get<string[]>(STORAGE_KEYS.expandedVirtualFoldersKey);
 
         const expandedFolders = new Set<string>(savedExpandedFolders || []);
         const expandedTags = new Set<string>(savedExpandedTags || []);
+        const expandedTopics = new Set<string>(savedExpandedTopics || []);
         const expandedVirtualFolders = new Set<string>(savedExpandedVirtualFolders || ['tags-root']); // Default expand tags-root
 
-        return { expandedFolders, expandedTags, expandedVirtualFolders };
+        return { expandedFolders, expandedTags, expandedTopics, expandedVirtualFolders };
     };
 
     const [state, dispatch] = useReducer(expansionReducer, undefined, loadInitialState);
@@ -168,6 +212,10 @@ export function ExpansionProvider({ children }: ExpansionProviderProps) {
     useEffect(() => {
         localStorage.set(STORAGE_KEYS.expandedTagsKey, Array.from(state.expandedTags));
     }, [state.expandedTags]);
+
+    useEffect(() => {
+        localStorage.set(STORAGE_KEYS.expandedTopicsKey, Array.from(state.expandedTopics));
+    }, [state.expandedTopics]);
 
     useEffect(() => {
         localStorage.set(STORAGE_KEYS.expandedVirtualFoldersKey, Array.from(state.expandedVirtualFolders));

@@ -290,6 +290,9 @@ export function useNavigationPaneData({
         [settings.topicSortOrder, settings.includeDescendantNotes]
     );
 
+    // Get topic graph - cache it separately so changes to the graph trigger re-renders
+    const topicGraph = topicService.getTopicGraph();
+
      /**
      * Build topic items with a single topic graph
      */
@@ -309,8 +312,7 @@ export function useNavigationPaneData({
                 key: id
             });
         };
-        // Get topic graph from the topic service
-        const topicGraph = topicService.getTopicGraph();
+        // Get root nodes from the topic graph
         let rootNodes = Array.from(topicGraph.values());
         
         // Filter out hidden topics unless showHiddenItems is enabled
@@ -319,14 +321,11 @@ export function useNavigationPaneData({
             rootNodes = rootNodes.filter(node => !hiddenTopicsSet.has(node.name));
         }
         
-        // Use expandedTags as a placeholder for expandedTopics until we add proper topic expansion
-        const expandedTopicPaths = expansionState.expandedTags;
-        
         const folderId = 'topics-root';
         addVirtualFolder(folderId, strings.tagList.topics, 'lucide-tags');
 
         if (expansionState.expandedVirtualFolders.has(folderId)) {
-            const topicEntries = flattenTopicTree(rootNodes, expandedTopicPaths, 1, {
+            const topicEntries = flattenTopicTree(rootNodes, expansionState.expandedTopics, 1, {
                 comparator: topicComparator
             });
             items.push(...topicEntries);
@@ -337,8 +336,8 @@ export function useNavigationPaneData({
         settings.showTopics,
         settings.showHiddenItems,
         settings.hiddenTopics,
-        topicService,
-        expansionState.expandedTags,
+        topicGraph,
+        expansionState.expandedTopics,
         expansionState.expandedVirtualFolders,
         topicComparator
     ]);
@@ -913,12 +912,14 @@ export function useNavigationPaneData({
     }, [
         folderItems,
         tagItems,
+        topicItems,
         shortcutItems,
         recentNotesItems,
         normalizedSectionOrder,
         settings.showShortcuts,
         settings.showRecentNotes,
         settings.showTags,
+        settings.showTopics,
         settings.navigationBanner,
         pinShortcuts
     ]);
