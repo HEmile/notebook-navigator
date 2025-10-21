@@ -78,6 +78,7 @@ interface FolderItemProps {
     backgroundColor?: string;
     countInfo?: NoteCountInfo;
     excludedFolders: string[];
+    vaultChangeVersion: number;
 }
 
 /**
@@ -108,7 +109,8 @@ export const FolderItem = React.memo(function FolderItem({
     color,
     backgroundColor,
     countInfo,
-    excludedFolders
+    excludedFolders,
+    vaultChangeVersion
 }: FolderItemProps) {
     const { app, isMobile } = useServices();
     const settings = useSettingsState();
@@ -199,8 +201,9 @@ export const FolderItem = React.memo(function FolderItem({
         const folderNote = getFolderNote(folder, settings);
         return folderNote !== null;
         // NOTE TO REVIEWER: Including **noteCounts.current** to detect folder content changes
+        // NOTE TO REVIEWER: Including **vaultChangeVersion** to react to new folder notes
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [folder, settings, noteCounts.current]);
+    }, [folder, settings, noteCounts.current, vaultChangeVersion]);
 
     // Memoize className to avoid string concatenation on every render
     const className = useMemo(() => {

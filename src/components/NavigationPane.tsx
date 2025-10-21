@@ -641,7 +641,8 @@ export const NavigationPane = React.memo(
             missingRootFolderPaths,
             resolvedRootTagKeys,
             rootOrderingTagTree,
-            missingRootTagPaths
+            missingRootTagPaths,
+            vaultChangeVersion
         } = useNavigationPaneData({
             settings,
             isVisible,
@@ -1946,6 +1947,7 @@ export const NavigationPane = React.memo(
                                 backgroundColor={item.backgroundColor}
                                 countInfo={countInfo}
                                 excludedFolders={item.parsedExcludedFolders || []}
+                                vaultChangeVersion={vaultChangeVersion}
                             />
                         );
                     }
@@ -2155,7 +2157,8 @@ export const NavigationPane = React.memo(
                 allowEmptyShortcutDrop,
                 getMissingNoteLabel,
                 handleShortcutFolderNoteClick,
-                tagsVirtualFolderHasChildren
+                tagsVirtualFolderHasChildren,
+                vaultChangeVersion
             ]
         );
 

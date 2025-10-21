@@ -252,6 +252,8 @@ interface UseNavigationPaneDataResult {
     rootTagOrderMap: Map<string, number>;
     /** Paths for tags in custom order that are not currently present */
     missingRootTagPaths: string[];
+    /** Version marker that bumps when vault files or metadata change */
+    vaultChangeVersion: number;
 }
 
 /**
@@ -1281,6 +1283,7 @@ export function useNavigationPaneData({
         resolvedRootTagKeys,
         rootOrderingTagTree: tagTreeForOrdering,
         rootTagOrderMap,
-        missingRootTagPaths
+        missingRootTagPaths,
+        vaultChangeVersion: fileChangeVersion
     };
 }
