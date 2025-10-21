@@ -740,7 +740,7 @@ export const STRINGS_PL = {
                 helpTooltip: 'Kliknij po informacje o formatowaniu'
             },
             showFilePreview: {
-                name: 'Pokaż podgląd notatki (*)',
+                name: 'Pokaż podgląd notatki',
                 desc: 'Wyświetl tekst podglądu pod nazwami notatek.'
             },
             skipHeadingsInPreview: {
@@ -777,7 +777,7 @@ export const STRINGS_PL = {
                 }
             },
             showFeatureImage: {
-                name: 'Pokaż obraz wyróżniający (*)',
+                name: 'Pokaż obraz wyróżniający',
                 desc: 'Wyświetl miniaturki obrazów z frontmatter. Wskazówka: Użyj pluginu "Featured Image" aby automatycznie ustawić obrazy wyróżniające dla wszystkich dokumentów.'
             },
             forceSquareFeatureImage: {
@@ -839,7 +839,7 @@ export const STRINGS_PL = {
                 desc: 'Zmniejsza tekst nawigacji, gdy wysokość elementu jest obniżona.'
             },
             showTags: {
-                name: 'Pokaż tagi (*)',
+                name: 'Pokaż tagi',
                 desc: 'Wyświetl sekcję tagów poniżej folderów w nawigatorze.'
             },
             tagSortOrder: {
@@ -968,7 +968,7 @@ export const STRINGS_PL = {
                 }
             },
             useFrontmatterDates: {
-                name: 'Czytaj metadane z frontmatter (*)',
+                name: 'Czytaj metadane z frontmatter',
                 desc: 'Czytaj nazwy notatek, znaczniki czasu, ikony i kolory z frontmatter gdy dostępne, w przeciwnym razie używaj wartości systemu plików lub ustawień'
             },
             frontmatterNameField: {
@@ -1037,7 +1037,7 @@ export const STRINGS_PL = {
                 buttonText: 'Zobacz ostatnie aktualizacje'
             },
             cacheStatistics: {
-                localCache: '(*) Lokalna pamięć podręczna',
+                localCache: 'Lokalna pamięć podręczna',
                 items: 'elementów',
                 withTags: 'z tagami',
                 withPreviewText: 'z tekstem podglądu',

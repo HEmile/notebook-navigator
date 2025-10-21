@@ -740,7 +740,7 @@ export const STRINGS_JA = {
                 helpTooltip: 'クリックして形式リファレンスを表示'
             },
             showFilePreview: {
-                name: 'ノートプレビューを表示 (*)',
+                name: 'ノートプレビューを表示',
                 desc: 'ノート名の下にプレビューテキストを表示します。'
             },
             skipHeadingsInPreview: {
@@ -777,7 +777,7 @@ export const STRINGS_JA = {
                 }
             },
             showFeatureImage: {
-                name: 'アイキャッチ画像を表示 (*)',
+                name: 'アイキャッチ画像を表示',
                 desc: 'フロントマターからサムネイル画像を表示します。ヒント：「Featured Image」プラグインを使用して、すべてのドキュメントに自動的にアイキャッチ画像を設定できます。'
             },
             forceSquareFeatureImage: {
@@ -839,7 +839,7 @@ export const STRINGS_JA = {
                 desc: '行高を下げたときにナビゲーションの文字サイズを小さくします。'
             },
             showTags: {
-                name: 'タグを表示 (*)',
+                name: 'タグを表示',
                 desc: 'ナビゲーターのフォルダの下にタグセクションを表示します。'
             },
             tagSortOrder: {
@@ -968,7 +968,7 @@ export const STRINGS_JA = {
                 }
             },
             useFrontmatterDates: {
-                name: 'フロントマターからメタデータを読み込む (*)',
+                name: 'フロントマターからメタデータを読み込む',
                 desc: '利用可能な場合、フロントマターからノート名、タイムスタンプ、アイコン、色を読み取り、それ以外はファイルシステムの値または設定を使用'
             },
             frontmatterNameField: {
@@ -1037,7 +1037,7 @@ export const STRINGS_JA = {
                 buttonText: '最近の更新を表示'
             },
             cacheStatistics: {
-                localCache: '(*) ローカルキャッシュ',
+                localCache: 'ローカルキャッシュ',
                 items: '項目',
                 withTags: 'タグ付き',
                 withPreviewText: 'プレビューテキスト付き',

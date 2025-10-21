@@ -738,7 +738,7 @@ export const STRINGS_KO = {
                 helpTooltip: '형식 참조를 보려면 클릭'
             },
             showFilePreview: {
-                name: '노트 미리보기 표시 (*)',
+                name: '노트 미리보기 표시',
                 desc: '노트 이름 아래에 미리보기 텍스트를 표시합니다.'
             },
             skipHeadingsInPreview: {
@@ -775,7 +775,7 @@ export const STRINGS_KO = {
                 }
             },
             showFeatureImage: {
-                name: '대표 이미지 표시 (*)',
+                name: '대표 이미지 표시',
                 desc: 'frontmatter에서 썸네일 이미지를 표시합니다. 팁: "Featured Image" 플러그인을 사용하여 모든 문서에 대표 이미지를 자동으로 설정하세요.'
             },
             forceSquareFeatureImage: {
@@ -837,7 +837,7 @@ export const STRINGS_KO = {
                 desc: '항목 높이를 줄이면 탐색 글자 크기를 작게 합니다.'
             },
             showTags: {
-                name: '태그 표시 (*)',
+                name: '태그 표시',
                 desc: '네비게이터에서 폴더 아래에 태그 섹션을 표시합니다.'
             },
             tagSortOrder: {
@@ -966,7 +966,7 @@ export const STRINGS_KO = {
                 }
             },
             useFrontmatterDates: {
-                name: 'frontmatter에서 메타데이터 읽기 (*)',
+                name: 'frontmatter에서 메타데이터 읽기',
                 desc: '사용 가능한 경우 frontmatter에서 노트 이름, 타임스탬프, 아이콘, 색상을 읽고, 파일 시스템 값 또는 설정으로 대체'
             },
             frontmatterNameField: {
@@ -1035,7 +1035,7 @@ export const STRINGS_KO = {
                 buttonText: '최근 업데이트 보기'
             },
             cacheStatistics: {
-                localCache: '(*) 로컬 캐시',
+                localCache: '로컬 캐시',
                 items: '항목',
                 withTags: '태그 포함',
                 withPreviewText: '미리보기 텍스트 포함',

@@ -737,7 +737,7 @@ export const STRINGS_ZH_TW = {
                 helpTooltip: '點擊查看格式參考'
             },
             showFilePreview: {
-                name: '顯示筆記預覽 (*)',
+                name: '顯示筆記預覽',
                 desc: '在筆記名稱下方顯示預覽文字。'
             },
             skipHeadingsInPreview: {
@@ -774,7 +774,7 @@ export const STRINGS_ZH_TW = {
                 }
             },
             showFeatureImage: {
-                name: '顯示特色圖片 (*)',
+                name: '顯示特色圖片',
                 desc: '從 frontmatter 顯示縮圖。提示：使用 "Featured Image" 外掛為您的所有文件自動設定特色圖片。'
             },
             forceSquareFeatureImage: {
@@ -836,7 +836,7 @@ export const STRINGS_ZH_TW = {
                 desc: '減少項目高度時，縮小導覽文字大小。'
             },
             showTags: {
-                name: '顯示標籤 (*)',
+                name: '顯示標籤',
                 desc: '在導覽器中資料夾下方顯示標籤區段。'
             },
             tagSortOrder: {
@@ -965,7 +965,7 @@ export const STRINGS_ZH_TW = {
                 }
             },
             useFrontmatterDates: {
-                name: '從 frontmatter 讀取中繼資料 (*)',
+                name: '從 frontmatter 讀取中繼資料',
                 desc: '可用時從 frontmatter 讀取筆記名稱、時間戳、圖示和顏色，否則退回至檔案系統值或設定'
             },
             frontmatterNameField: {
@@ -1034,7 +1034,7 @@ export const STRINGS_ZH_TW = {
                 buttonText: '查看最近更新'
             },
             cacheStatistics: {
-                localCache: '(*) 本地快取',
+                localCache: '本地快取',
                 items: '項目',
                 withTags: '帶有標籤',
                 withPreviewText: '帶有預覽文字',

@@ -739,7 +739,7 @@ export const STRINGS_ZH_CN = {
                 helpTooltip: '点击查看格式参考'
             },
             showFilePreview: {
-                name: '显示笔记预览 (*)',
+                name: '显示笔记预览',
                 desc: '在笔记名称下方显示预览文本。'
             },
             skipHeadingsInPreview: {
@@ -776,7 +776,7 @@ export const STRINGS_ZH_CN = {
                 }
             },
             showFeatureImage: {
-                name: '显示特色图片 (*)',
+                name: '显示特色图片',
                 desc: '从前置元数据显示缩略图。提示：使用"Featured Image"插件自动为所有文档设置特色图片。'
             },
             forceSquareFeatureImage: {
@@ -838,7 +838,7 @@ export const STRINGS_ZH_CN = {
                 desc: '降低行高时减小导航文字大小。'
             },
             showTags: {
-                name: '显示标签 (*)',
+                name: '显示标签',
                 desc: '在导航器中的文件夹下方显示标签部分。'
             },
             tagSortOrder: {
@@ -967,7 +967,7 @@ export const STRINGS_ZH_CN = {
                 }
             },
             useFrontmatterDates: {
-                name: '从前言读取元数据 (*)',
+                name: '从前言读取元数据',
                 desc: '如果可用，从前言读取笔记名称、时间戳、图标和颜色，否则使用文件系统值或设置'
             },
             frontmatterNameField: {
@@ -1036,7 +1036,7 @@ export const STRINGS_ZH_CN = {
                 buttonText: '查看最近更新'
             },
             cacheStatistics: {
-                localCache: '(*) 本地缓存',
+                localCache: '本地缓存',
                 items: '项',
                 withTags: '包含标签',
                 withPreviewText: '包含预览文本',

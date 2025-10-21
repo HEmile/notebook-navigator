@@ -742,7 +742,7 @@ export const STRINGS_DE = {
                 helpTooltip: 'Klicken für Formatreferenz'
             },
             showFilePreview: {
-                name: 'Notizenvorschau anzeigen (*)',
+                name: 'Notizenvorschau anzeigen',
                 desc: 'Vorschautext unter Notizennamen anzeigen.'
             },
             skipHeadingsInPreview: {
@@ -779,7 +779,7 @@ export const STRINGS_DE = {
                 }
             },
             showFeatureImage: {
-                name: 'Vorschaubild anzeigen (*)',
+                name: 'Vorschaubild anzeigen',
                 desc: 'Miniaturbilder aus Frontmatter anzeigen. Tipp: Verwenden Sie das "Featured Image" Plugin, um automatisch Vorschaubilder für alle Ihre Dokumente festzulegen.'
             },
             forceSquareFeatureImage: {
@@ -841,7 +841,7 @@ export const STRINGS_DE = {
                 desc: 'Verkleinert die Navigationsschrift, wenn die Zeilenhöhe reduziert wird.'
             },
             showTags: {
-                name: 'Tags anzeigen (*)',
+                name: 'Tags anzeigen',
                 desc: 'Tag-Bereich unterhalb der Ordner im Navigator anzeigen.'
             },
             tagSortOrder: {
@@ -970,7 +970,7 @@ export const STRINGS_DE = {
                 }
             },
             useFrontmatterDates: {
-                name: 'Metadaten aus Frontmatter lesen (*)',
+                name: 'Metadaten aus Frontmatter lesen',
                 desc: 'Notiznamen, Zeitstempel, Icons und Farben aus dem Frontmatter lesen, falls vorhanden, ansonsten Dateisystemwerte oder Einstellungen verwenden'
             },
             frontmatterNameField: {
@@ -1039,7 +1039,7 @@ export const STRINGS_DE = {
                 buttonText: 'Letzte Updates anzeigen'
             },
             cacheStatistics: {
-                localCache: '(*) Lokaler Cache',
+                localCache: 'Lokaler Cache',
                 items: 'Einträge',
                 withTags: 'mit Tags',
                 withPreviewText: 'mit Vorschautext',
