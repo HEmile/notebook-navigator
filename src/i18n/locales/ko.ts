@@ -33,7 +33,8 @@ export const STRINGS_KO = {
         featureImageAlt: '대표 이미지', // Alt text for thumbnail/preview images (English: Feature image)
         unknownError: '알 수 없는 오류', // Generic fallback when an error has no message (English: Unknown error)
         updateBannerTitle: 'Notebook Navigator 업데이트 사용 가능',
-        updateBannerInstruction: '설정 -> 커뮤니티 플러그인에서 업데이트'
+        updateBannerInstruction: '설정 -> 커뮤니티 플러그인에서 업데이트',
+        updateIndicatorLabel: '새 버전이 있습니다'
     },
 
     // List pane

@@ -16,9 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReleaseUpdateNotice } from '../services/ReleaseCheckService';
 import { strings } from '../i18n';
+import { useAutoDismissFade } from '../hooks/useAutoDismissFade';
 
 /** Props for the UpdateNoticeBanner component */
 interface UpdateNoticeBannerProps {
@@ -26,17 +27,11 @@ interface UpdateNoticeBannerProps {
     onDismiss: (version: string) => Promise<void>;
 }
 
-/** Duration to display the banner before starting fade-out (7 seconds) */
-const DISPLAY_DURATION_MS = 7000;
-/** Duration of the fade-out animation (0.5 seconds) */
-const FADE_DURATION_MS = 500;
-
 /**
  * Displays a temporary banner when a newer plugin release is available.
  */
 export function UpdateNoticeBanner({ notice, onDismiss }: UpdateNoticeBannerProps) {
     const [visibleNotice, setVisibleNotice] = useState<ReleaseUpdateNotice | null>(null);
-    const [isFading, setIsFading] = useState(false);
 
     // Update visible notice when a new notice arrives
     useEffect(() => {
@@ -45,41 +40,26 @@ export function UpdateNoticeBanner({ notice, onDismiss }: UpdateNoticeBannerProp
         }
 
         setVisibleNotice(notice);
-        setIsFading(false);
     }, [notice]);
 
-    // Start fade-out animation after display duration
-    useEffect(() => {
+    // Callback to dismiss the banner and clear the visible notice
+    const handleDismiss = useCallback(() => {
         if (!visibleNotice) {
             return;
         }
 
-        const displayTimer = window.setTimeout(() => {
-            setIsFading(true);
-        }, DISPLAY_DURATION_MS);
+        void onDismiss(visibleNotice.version);
+        setVisibleNotice(null);
+    }, [visibleNotice, onDismiss]);
 
-        return () => {
-            window.clearTimeout(displayTimer);
-        };
-    }, [visibleNotice]);
+    // Manages automatic fade-out animation and dismissal timing
+    const { isVisible, isFading } = useAutoDismissFade({
+        isActive: visibleNotice !== null,
+        resetKey: visibleNotice?.version ?? null,
+        onDismiss: handleDismiss
+    });
 
-    // Dismiss banner after fade-out completes
-    useEffect(() => {
-        if (!isFading || !visibleNotice) {
-            return;
-        }
-
-        const dismissTimer = window.setTimeout(() => {
-            void onDismiss(visibleNotice.version);
-            setVisibleNotice(null);
-        }, FADE_DURATION_MS);
-
-        return () => {
-            window.clearTimeout(dismissTimer);
-        };
-    }, [isFading, visibleNotice, onDismiss]);
-
-    if (!visibleNotice) {
+    if (!isVisible || !visibleNotice) {
         return null;
     }
 

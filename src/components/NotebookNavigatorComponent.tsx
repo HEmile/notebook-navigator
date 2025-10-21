@@ -50,6 +50,7 @@ import { NavigationPane } from './NavigationPane';
 import type { NavigationPaneHandle } from './NavigationPane';
 import type { SearchShortcut } from '../types/shortcuts';
 import { UpdateNoticeBanner } from './UpdateNoticeBanner';
+import { UpdateNoticeIndicator } from './UpdateNoticeIndicator';
 
 export interface NotebookNavigatorHandle {
     // Navigates to a file by revealing it in its actual parent folder
@@ -739,6 +740,8 @@ export const NotebookNavigatorComponent = React.memo(
                 }}
             >
                 <UpdateNoticeBanner notice={updateNotice} onDismiss={markAsDisplayed} />
+                {/* Floating indicator button that appears when a new version is available */}
+                <UpdateNoticeIndicator notice={updateNotice} isEnabled={settings.checkForUpdatesOnStart} />
                 {/* KEYBOARD EVENT FLOW:
                 1. Both NavigationPane and ListPane receive the same containerRef
                 2. Each pane sets up keyboard listeners on this shared container

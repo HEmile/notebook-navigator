@@ -33,7 +33,8 @@ export const STRINGS_EN = {
         featureImageAlt: 'Feature image', // Alt text for thumbnail/preview images (English: Feature image)
         unknownError: 'Unknown error', // Generic fallback when an error has no message (English: Unknown error)
         updateBannerTitle: 'Notebook Navigator update available',
-        updateBannerInstruction: 'Update in Settings -> Community plugins'
+        updateBannerInstruction: 'Update in Settings -> Community plugins',
+        updateIndicatorLabel: 'New version available'
     },
 
     // List pane

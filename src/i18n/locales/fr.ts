@@ -33,7 +33,8 @@ export const STRINGS_FR = {
         featureImageAlt: 'Image vedette', // Alt text for thumbnail/preview images (English: Feature image)
         unknownError: 'Erreur inconnue', // Generic fallback when an error has no message (English: Unknown error)
         updateBannerTitle: 'Mise à jour Notebook Navigator disponible',
-        updateBannerInstruction: 'Mettre à jour dans Paramètres -> Extensions communautaires'
+        updateBannerInstruction: 'Mettre à jour dans Paramètres -> Extensions communautaires',
+        updateIndicatorLabel: 'Nouvelle version disponible'
     },
 
     // List pane

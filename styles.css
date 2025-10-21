@@ -277,6 +277,84 @@ body {
     opacity: 0.9;
 }
 
+/* Floating circular button that shows when updates are available */
+.nn-update-indicator {
+    position: absolute;
+    bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    left: calc(4px + env(safe-area-inset-left, 0px));
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--interactive-accent) !important;
+    color: var(--text-on-accent);
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+    appearance: none;
+    line-height: 0;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        opacity 0.2s ease,
+        box-shadow 0.2s ease;
+    z-index: 11;
+}
+
+/* Hover state for update indicator */
+.nn-update-indicator:hover {
+    transform: scale(1.02);
+    opacity: 1;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.24);
+}
+
+/* Focus state for keyboard navigation */
+.nn-update-indicator:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px var(--background-primary),
+        0 0 0 4px var(--interactive-accent);
+    transform: scale(1.02);
+}
+
+/* Icon container within the update indicator button */
+.nn-update-indicator__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-on-accent);
+}
+
+/* Icon SVG sizing and styling */
+.nn-update-indicator__icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+}
+
+/* Mobile adjustments for update indicator positioning and size */
+.nn-mobile .nn-update-indicator {
+    bottom: calc(56px + var(--nn-mobile-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+    left: calc(8px + env(safe-area-inset-left, 0px));
+    width: 28px;
+    height: 28px;
+}
+
+/* Mobile icon size adjustments */
+.nn-mobile .nn-update-indicator__icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* Fade-out animation state for update indicator */
+.nn-update-indicator.fade-out {
+    opacity: 0;
+    transform: scale(0.88);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
 .nn-update-status {
     margin-top: 6px;
     font-weight: 600;
@@ -305,6 +383,16 @@ body {
 
     .nn-update-banner.fade-out {
         transform: translateY(-12px);
+    }
+
+    .nn-update-indicator {
+        width: 24px;
+        height: 24px;
+    }
+
+    .nn-update-indicator__icon svg {
+        width: 20px;
+        height: 20px;
     }
 }
 
@@ -2801,6 +2889,8 @@ body.nn-resizing {
     display: flex;
     flex-wrap: wrap;
     gap: var(--size-2-3);
+    padding-bottom: var(--size-2-2);
+    border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .nn-settings-tab-button {

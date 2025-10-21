@@ -33,7 +33,8 @@ export const STRINGS_JA = {
         featureImageAlt: 'アイキャッチ画像', // Alt text for thumbnail/preview images (English: Feature image)
         unknownError: '不明なエラー', // Generic fallback when an error has no message (English: Unknown error)
         updateBannerTitle: 'Notebook Navigator の更新があります',
-        updateBannerInstruction: '設定 -> コミュニティプラグイン で更新'
+        updateBannerInstruction: '設定 -> コミュニティプラグイン で更新',
+        updateIndicatorLabel: '新しいバージョンがあります'
     },
 
     // List pane

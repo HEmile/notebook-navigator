@@ -33,7 +33,8 @@ export const STRINGS_ZH_TW = {
         featureImageAlt: '特色圖片', // 縮圖/預覽圖片的替代文字 (英文: Feature image)
         unknownError: '未知錯誤', // 當錯誤沒有訊息時的通用備用文字 (英文: Unknown error)
         updateBannerTitle: 'Notebook Navigator 有可用更新',
-        updateBannerInstruction: '在設定 → 社群外掛中更新'
+        updateBannerInstruction: '在設定 → 社群外掛中更新',
+        updateIndicatorLabel: '有新版本可用'
     },
 
     // 列表窗格
