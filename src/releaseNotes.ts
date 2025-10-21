@@ -73,6 +73,12 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '1.6.3',
+        date: '2025-10-22',
+        showOnUpdate: true,
+        fixed: ['Tags from hidden folders no longer hide matching tags from visible notes.']
+    },
+    {
         version: '1.6.2',
         date: '2025-10-21',
         showOnUpdate: false,

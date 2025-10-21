@@ -231,6 +231,15 @@ export function buildTagTreeFromDatabase(
 
     const tagTree = buildTreeFromList(tagList);
 
+    if (hiddenRootTags.size > 0) {
+        // Remove hidden roots that also exist in the visible tag tree
+        for (const path of Array.from(hiddenRootTags.keys())) {
+            if (tagTree.has(path)) {
+                hiddenRootTags.delete(path);
+            }
+        }
+    }
+
     // Clear note count cache since tree structure has changed
     clearNoteCountCache();
 
