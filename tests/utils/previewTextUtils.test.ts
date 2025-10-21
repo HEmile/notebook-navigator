@@ -31,24 +31,29 @@ describe('PreviewTextUtils.extractPreviewText', () => {
         expect(preview).toBe('Example inline snippet');
     });
 
-    it('omits inline code when code blocks are skipped', () => {
+    it('keeps inline code when code blocks are skipped', () => {
         const preview = PreviewTextUtils.extractPreviewText('Example `inline` snippet', skipCodeSettings);
-        expect(preview).toBe('Example snippet');
+        expect(preview).toBe('Example inline snippet');
     });
 
-    it('omits blockquote lines without trailing space', () => {
+    it('keeps blockquote text without trailing space', () => {
         const preview = PreviewTextUtils.extractPreviewText('>Quote without space', skipCodeSettings);
-        expect(preview).toBe('');
+        expect(preview).toBe('Quote without space');
     });
 
-    it('omits blockquote lines with trailing space', () => {
+    it('keeps blockquote text with trailing space', () => {
         const preview = PreviewTextUtils.extractPreviewText('> Johan', skipCodeSettings);
-        expect(preview).toBe('');
+        expect(preview).toBe('Johan');
     });
 
     it('strips checkbox syntax while keeping list text', () => {
         const preview = PreviewTextUtils.extractPreviewText('- [ ] Draft task\n- Note item', skipCodeSettings);
         expect(preview).toBe('Draft task Note item');
+    });
+
+    it('strips checkbox syntax from indented tasks', () => {
+        const preview = PreviewTextUtils.extractPreviewText('    - [ ] Nested task', skipCodeSettings);
+        expect(preview).toBe('Nested task');
     });
 
     it('strips alternate task states while keeping text', () => {

@@ -75,10 +75,11 @@ const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '1.6.3',
         date: '2025-10-22',
-        showOnUpdate: true,
+        showOnUpdate: false,
         fixed: [
             'Tags from hidden folders no longer hide matching tags from visible notes.',
-            'Folder notes are now shown after being created from the context menu without having to collapse or expand the parent folder.'
+            'Folder notes are now shown after being created from the context menu without having to collapse or expand the parent folder.',
+            'Preview text now strips empty task markers, keeps blockquote text, and always keeps inline code.'
         ]
     },
     {

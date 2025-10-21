@@ -188,9 +188,6 @@ export class PreviewTextUtils {
 
             // Inline code
             if (match.startsWith('`') && match.endsWith('`')) {
-                if (skipCodeBlocks) {
-                    return '';
-                }
                 return match.slice(1, -1);
             }
 
@@ -212,7 +209,7 @@ export class PreviewTextUtils {
 
             // Blockquotes (entire line already matched)
             if (match.startsWith('>')) {
-                return '';
+                return match.replace(/^>(?:\s?>)*\s?/, '').trimStart();
             }
 
             // Italic with stars - preserve prefix and content
@@ -308,7 +305,7 @@ export class PreviewTextUtils {
         );
 
         // Remove leading task checkbox markers while keeping task text
-        const withoutTaskCheckboxes = stripped.replace(/^\s*\[(?: |x|X|\/|-)?\]\]?\s*/gm, '');
+        const withoutTaskCheckboxes = stripped.replace(/^\s*(?:[-*+]\s+|\d+\.\s+)?\[(?: |x|X|\/|-)?\]\]?\s*/gm, '');
 
         // Remove lines that only contain dashes (like -, ---, ----- etc.)
         const withoutDashLines = withoutTaskCheckboxes.replace(/^-+$/gm, '');
