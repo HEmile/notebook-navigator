@@ -71,7 +71,7 @@ interface FolderItemProps {
     isExcluded?: boolean;
     onToggle: () => void;
     onClick: () => void;
-    onNameClick?: () => void;
+    onNameClick?: (event: React.MouseEvent<HTMLSpanElement>) => void;
     onToggleAllSiblings?: () => void;
     icon?: string;
     color?: string;
@@ -248,10 +248,10 @@ export const FolderItem = React.memo(function FolderItem({
     }, []);
 
     const handleNameClick = useCallback(
-        (e: React.MouseEvent) => {
+        (e: React.MouseEvent<HTMLSpanElement>) => {
             if (onNameClick) {
                 e.stopPropagation();
-                onNameClick();
+                onNameClick(e);
             }
         },
         [onNameClick]

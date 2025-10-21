@@ -76,6 +76,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '1.6.3',
         date: '2025-10-22',
         showOnUpdate: false,
+        new: [
+            'If "Multi-select modifier" in List Pane Settings is set to Alt/Option, you can now use Ctrl/Cmd + click to open folder notes in a new tab.'
+        ],
         fixed: [
             'Fixed **drag and drop issues** on Android devices caused by a bug in Chromium 128+, see https://issues.chromium.org/issues/40820174',
             '**Tags from notes in hidden folders** no longer hide matching tags if the tags exist in visible notes.',

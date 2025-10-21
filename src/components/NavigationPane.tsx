@@ -813,7 +813,7 @@ export const NavigationPane = React.memo(
 
         // Handle folder name click (for folder notes)
         const handleFolderNameClick = useCallback(
-            (folder: TFolder) => {
+            (folder: TFolder, event?: React.MouseEvent) => {
                 // Check if we should open a folder note instead
                 if (settings.enableFolderNotes) {
                     const folderNote = getFolderNote(folder, settings);
@@ -822,7 +822,14 @@ export const NavigationPane = React.memo(
                         // Set folder as selected without auto-selecting first file
                         selectionDispatch({ type: 'SET_SELECTED_FOLDER', folder, autoSelectedFile: null });
 
+                        const isCmdCtrlClick = Boolean(event && (event.metaKey || event.ctrlKey));
+                        const shouldOpenInNewTab = !isMobile && settings.multiSelectModifier === 'optionAlt' && isCmdCtrlClick;
+
                         commandQueue.executeOpenFolderNote(folder.path, async () => {
+                            if (shouldOpenInNewTab) {
+                                await app.workspace.getLeaf('tab').openFile(folderNote);
+                                return;
+                            }
                             await app.workspace.getLeaf().openFile(folderNote);
                         });
 
@@ -833,7 +840,7 @@ export const NavigationPane = React.memo(
                 // If no folder note, fall back to normal folder click behavior
                 handleFolderClick(folder);
             },
-            [settings, app, selectionDispatch, handleFolderClick, commandQueue]
+            [settings, app, isMobile, selectionDispatch, handleFolderClick, commandQueue]
         );
 
         // Handle tag toggle
@@ -1950,7 +1957,7 @@ export const NavigationPane = React.memo(
                                 isExcluded={item.isExcluded}
                                 onToggle={() => handleFolderToggle(item.data.path)}
                                 onClick={() => handleFolderClick(item.data)}
-                                onNameClick={() => handleFolderNameClick(item.data)}
+                                onNameClick={event => handleFolderNameClick(item.data, event)}
                                 onToggleAllSiblings={() => {
                                     const isCurrentlyExpanded = expansionState.expandedFolders.has(item.data.path);
 
