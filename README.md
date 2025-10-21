@@ -222,6 +222,7 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - `Notebook Navigator: Reveal file` Reveals current file in navigator. Expands parent folders and scrolls to file. This command is useful if you have the setting `Auto-reveal active note` switched off and want to reveal notes manually
 - `Notebook Navigator: Navigate to folder` Search dialog to jump to any folder
 - `Notebook Navigator: Navigate to tag` Search dialog to jump to any tag
+- `Notebook Navigator: Add to shortcuts` Adds the current file, folder, or tag to shortcuts
 - `Notebook Navigator: Search` Opens quick search field or focuses it if already open. Search persists between sessions. **Suggestion:** Bind to a shortcut key like `Cmd/Ctrl+Shift+F` for quick file filtering
 
 **Layout & display**
@@ -259,6 +260,7 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 | `notebook-navigator:reveal-file`            | Notebook Navigator: Reveal file                         |
 | `notebook-navigator:navigate-to-folder`     | Notebook Navigator: Navigate to folder                  |
 | `notebook-navigator:navigate-to-tag`        | Notebook Navigator: Navigate to tag                     |
+| `notebook-navigator:add-shortcut`           | Notebook Navigator: Add to shortcuts                    |
 | `notebook-navigator:search`                 | Notebook Navigator: Search                              |
 | `notebook-navigator:toggle-dual-pane`       | Notebook Navigator: Toggle dual pane layout             |
 | `notebook-navigator:toggle-descendants`     | Notebook Navigator: Toggle descendants                  |
