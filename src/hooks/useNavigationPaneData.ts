@@ -236,6 +236,8 @@ interface UseNavigationPaneDataResult {
     shortcutIndex: Map<string, number>;
     /** Map from tag path to current/descendant note counts */
     tagCounts: Map<string, NoteCountInfo>;
+    /** Map from topic name to current/descendant note counts */
+    topicCounts: Map<string, NoteCountInfo>;
     /** Map from folder path to current/descendant note counts */
     folderCounts: Map<string, NoteCountInfo>;
     /** Ordered list of root-level folders */
@@ -291,9 +293,9 @@ export function useNavigationPaneData({
      /**
      * Build topic items with a single topic graph
      */
-     const { topicItems, hasTopicContent } = useMemo(() => {
+     const topicItems = useMemo(() => {
         if (!settings.showTopics) {
-            return { topicItems: [] as CombinedNavigationItem[], hasTopicContent: false };
+            return [] as CombinedNavigationItem[];
         }
 
         const items: CombinedNavigationItem[] = [];
@@ -330,8 +332,7 @@ export function useNavigationPaneData({
             items.push(...topicEntries);
         }
 
-        const hasContent = rootNodes.length > 0;
-        return { topicItems: items, hasTopicContent: hasContent };
+        return items;
     }, [
         settings.showTopics,
         settings.showHiddenItems,
@@ -851,6 +852,7 @@ export function useNavigationPaneData({
         const shouldIncludeRecentSection = settings.showRecentNotes && recentNotesItems.length > 0;
         const shouldIncludeNotesSection = folderItems.length > 0;
         const shouldIncludeTagsSection = settings.showTags && tagItems.length > 0;
+        const shouldIncludeTopicsSection = settings.showTopics && topicItems.length > 0;
 
         // Builds sections in the user-specified order
         const orderedSections: CombinedNavigationItem[][] = [];
@@ -876,6 +878,11 @@ export function useNavigationPaneData({
                 case NavigationSectionId.TAGS:
                     if (shouldIncludeTagsSection) {
                         orderedSections.push(tagItems);
+                    }
+                    break;
+                case NavigationSectionId.TOPICS:
+                    if (shouldIncludeTopicsSection) {
+                        orderedSections.push(topicItems);
                     }
                     break;
                 default:
@@ -1150,6 +1157,37 @@ export function useNavigationPaneData({
     }, [itemsWithMetadata, settings.showTags, settings.showUntagged, settings.includeDescendantNotes, untaggedCount, isVisible]);
 
     /**
+     * Pre-compute tag counts to avoid expensive calculations during render
+     */
+    const topicCounts = useMemo(() => {
+        const counts = new Map<string, NoteCountInfo>();
+
+        // Skip computation if pane is not visible or not showing tags
+        if (!isVisible || !settings.showTopics) return counts;
+
+        // Compute counts for all tag items
+        itemsWithMetadata.forEach(item => {
+            if (item.type === NavigationPaneItemType.TOPIC) {
+                const topicNode = item.data;
+                const current = topicNode.notesWithTag.size;
+                if (settings.includeDescendantNotes) {
+                    const total = getTotalNoteCount(topicNode);
+                    const descendants = Math.max(total - current, 0);
+                    counts.set(topicNode.name, { current, descendants, total });
+                } else {
+                    counts.set(topicNode.name, {
+                        current,
+                        descendants: 0,
+                        total: current
+                    });
+                }
+            }
+        });
+
+        return counts;
+    }, [itemsWithMetadata, settings.showTopics, settings.includeDescendantNotes, isVisible]);
+
+    /**
      * Pre-compute folder file counts to avoid recursive counting during render
      */
     const folderCounts = useMemo(() => {
@@ -1235,6 +1273,7 @@ export function useNavigationPaneData({
         pathToIndex,
         shortcutIndex,
         tagCounts,
+        topicCounts,
         folderCounts,
         rootLevelFolders,
         missingRootFolderPaths,

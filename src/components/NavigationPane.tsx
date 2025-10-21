@@ -205,6 +205,8 @@ export const NavigationPane = React.memo(
         const [notesSectionExpanded, setNotesSectionExpanded] = useState(true);
         // Tracks whether the tags section is expanded or collapsed
         const [tagsSectionExpanded, setTagsSectionExpanded] = useState(true);
+        // Tracks whether the topics section is expanded or collapsed
+        const [topicsSectionExpanded, setTopicsSectionExpanded] = useState(true);
         // Toggles the expanded state of the notes/folders section
         const handleToggleNotesSection = useCallback(() => {
             setNotesSectionExpanded(prev => !prev);
@@ -213,6 +215,10 @@ export const NavigationPane = React.memo(
         // Toggles the expanded state of the tags section
         const handleToggleTagsSection = useCallback(() => {
             setTagsSectionExpanded(prev => !prev);
+        }, []);
+        // Toggles the expanded state of the topics section
+        const handleToggleTopicsSection = useCallback(() => {
+            setTopicsSectionExpanded(prev => !prev);
         }, []);
         // Tracks the measured height of the navigation banner for virtualization
         const [bannerHeight, setBannerHeight] = useState<number>(0);
@@ -681,8 +687,10 @@ export const NavigationPane = React.memo(
             isRootReorderMode,
             notesSectionExpanded,
             tagsSectionExpanded,
+            topicsSectionExpanded,
             handleToggleNotesSection,
-            handleToggleTagsSection
+            handleToggleTagsSection,
+            handleToggleTopicsSection
         });
 
         useEffect(() => {

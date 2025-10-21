@@ -19,7 +19,7 @@
 import React, { useCallback, useMemo } from 'react';
 import type { App, TFolder } from 'obsidian';
 import type { NotebookNavigatorSettings } from '../settings';
-import type { TagTreeNode } from '../types/storage';
+import type { TagTreeNode, TopicNode } from '../types/storage';
 import type { CombinedNavigationItem } from '../types/virtualization';
 import {
     NavigationPaneItemType,
@@ -53,6 +53,13 @@ export interface RootTagDescriptor {
     isMissing?: boolean;
     isVirtualRoot?: boolean;
     isUntagged?: boolean;
+}
+
+export interface RootTopicDescriptor {
+    key: string;
+    topic: TopicNode | null;
+    isMissing?: boolean;
+    isVirtualRoot?: boolean;
 }
 
 export type RootReorderRenderItem = {
@@ -118,22 +125,28 @@ export interface UseNavigationRootReorderOptions {
     isRootReorderMode: boolean;
     notesSectionExpanded: boolean;
     tagsSectionExpanded: boolean;
+    topicsSectionExpanded: boolean;
     handleToggleNotesSection: (event: React.MouseEvent<HTMLDivElement>) => void;
     handleToggleTagsSection: (event: React.MouseEvent<HTMLDivElement>) => void;
+    handleToggleTopicsSection: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export interface NavigationRootReorderState {
     reorderableRootFolders: RootFolderDescriptor[];
     reorderableRootTags: RootTagDescriptor[];
+    reorderableRootTopics: RootTopicDescriptor[];
     sectionReorderItems: SectionReorderRenderItem[];
     folderReorderItems: RootReorderRenderItem[];
     tagReorderItems: RootReorderRenderItem[];
+    topicReorderItems: RootReorderRenderItem[];
     canReorderSections: boolean;
     canReorderRootFolders: boolean;
     canReorderRootTags: boolean;
+    canReorderRootTopics: boolean;
     canReorderRootItems: boolean;
     showRootFolderSection: boolean;
     showRootTagSection: boolean;
+    showRootTopicSection: boolean;
     resetRootTagOrderLabel: string;
     vaultRootDescriptor: RootFolderDescriptor | undefined;
     handleResetRootFolderOrder: () => Promise<void>;
@@ -158,8 +171,10 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         isRootReorderMode,
         notesSectionExpanded,
         tagsSectionExpanded,
+        topicsSectionExpanded,
         handleToggleNotesSection,
-        handleToggleTagsSection
+        handleToggleTagsSection,
+        handleToggleTopicsSection
     } = options;
 
     const {
@@ -171,6 +186,7 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         showShortcuts,
         showRecentNotes,
         showTags,
+        showTopics,
         fileVisibility,
         customVaultName
     } = settings;
@@ -289,8 +305,9 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         const includeMap = new Map<NavigationSectionId, boolean>([
             [NavigationSectionId.SHORTCUTS, showShortcuts],
             [NavigationSectionId.RECENT, showRecentNotes],
-            [NavigationSectionId.NOTES, rootFolderDescriptors.length > 0],
-            [NavigationSectionId.TAGS, showTags && reorderableRootTags.length > 0]
+            [NavigationSectionId.TOPICS, showTopics],
+            [NavigationSectionId.TAGS, showTags && reorderableRootTags.length > 0],
+            [NavigationSectionId.NOTES, rootFolderDescriptors.length > 0]
         ]);
 
         const ordered: NavigationSectionId[] = [];
@@ -741,6 +758,11 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                 label = strings.settings.sections.tags;
                 chevronIcon = tagsSectionExpanded ? 'lucide-chevron-down' : 'lucide-chevron-right';
                 onClick = handleToggleTagsSection;
+            } else if (identifier === NavigationSectionId.TOPICS) {
+                icon = 'lucide-tags';
+                label = strings.settings.sections.topics;
+                chevronIcon = topicsSectionExpanded ? 'lucide-chevron-down' : 'lucide-chevron-right';
+                onClick = handleToggleTopicsSection;
             }
 
             const { dragHandlers, showBefore, showAfter, isDragSource } = getSectionReorderVisualState(identifier, handlers =>
