@@ -21,7 +21,7 @@ import { TopicNode as TopicNode } from '../types/storage';
 import { isPathInExcludedFolder } from './fileFilters';
 import { HiddenTagMatcher, matchesHiddenTagPattern, normalizeTagPathValue } from './tagPrefixMatcher';
 import { naturalCompare } from './sortUtils';
-import {App, TFile} from 'obsidian';
+import {App, CachedMetadata, MetadataCache, TFile} from 'obsidian';
 
 /**
  * Tag Tree Utilities
@@ -32,6 +32,10 @@ import {App, TFile} from 'obsidian';
 
 // Cache for note counts to avoid recalculation
 let noteCountCache: WeakMap<TopicNode, number> | null = null;
+
+export const SUBSET_RELATIONS = ["subset"]
+export const HAS_TOPIC_RELATIONS = ["hasTopic", "isA", "for", "subset"]
+export const TOPIC_TAGS = ["topic"]
 
 /**
  * Clear the note count cache
@@ -52,6 +56,27 @@ function getNoteCountCache(): WeakMap<TopicNode, number> {
 
 export function getTopicNameFromPath(topicPath: string): string {
     return topicPath.split('/').pop()?.split('.').slice(0, -1).join('') || '';
+}
+
+export function getTopicTags(metadata: CachedMetadata): string[] {
+    if (!metadata || !metadata.tags) {
+        return [];
+    }
+    return metadata.tags?.map(tag => tag.tag) || [];
+}
+
+export function getTopicRelations(metadata: CachedMetadata): string[] {
+    let topics: string[] = [];
+    for (const relation of HAS_TOPIC_RELATIONS) {
+        if (metadata.frontmatter?.[relation]) {
+            topics = topics.concat(metadata.frontmatter?.[relation] as string[]);
+        }
+    }
+    return Array.from(new Set(topics));
+}
+
+export function hasTopicTag(tags: string[]): boolean {
+    return tags?.some(tag => TOPIC_TAGS.some(topicTag => tag.contains(topicTag)));
 }
 
 function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, app: App): TopicNode | undefined {
@@ -80,7 +105,12 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
     if (!metadata) {
         return topicNode;
     }
-    const topics = metadata.frontmatter?.['subset'] as string[] | undefined;
+    let topics: string[] = [];
+    for (const relation of SUBSET_RELATIONS) {
+        if (metadata.frontmatter?.[relation]) {
+            topics = topics.concat(metadata.frontmatter?.[relation] as string[]);
+        }
+    }
     if (!topics) {
         return topicNode;
     }
@@ -93,7 +123,7 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
         }
         const parentFilePath = parentFile.path;
         const metadata = app.metadataCache.getFileCache(parentFile);
-        if (!metadata?.tags?.some(tag => tag.tag.contains('topic'))) {
+        if (metadata && !hasTopicTag(getTopicTags(metadata))) {
             continue;
         }
         
@@ -145,7 +175,7 @@ export function buildTopicGraphFromDatabase(
         const tags = fileData.tags;
 
         // Skip files that do not have the topics tag
-        if (!tags || !tags.includes('topic')) {
+        if (!tags || !hasTopicTag(tags)) {
             continue;
         }
 
@@ -159,30 +189,13 @@ export function buildTopicGraphFromDatabase(
 
     function collectParentTopics(file: TFile, path: string) {
         const metadata = app.metadataCache.getFileCache(file);
-        if (!metadata || metadata.tags?.some(tag => tag.tag.contains('topic'))) {
+        if (!metadata || hasTopicTag(getTopicTags(metadata))) {
             return 
         }
-        const hasTopics = metadata.frontmatter?.['hasTopic'] as string[] | undefined;
-        const isAs = metadata.frontmatter?.['isA'] as string[] | undefined;
-        const subsets = metadata.frontmatter?.['subset'] as string[] | undefined;
-        const fors = metadata.frontmatter?.['for'] as string[] | undefined;
-
-        // Merge hasTopics, isAs, subsets, and fors arrays into a single list of topics
-        let topics: string[] = [];
-        if (Array.isArray(hasTopics)) {
-            topics = topics.concat(hasTopics);
+        const topics = getTopicRelations(metadata);
+        if (!topics.length) {
+            return;
         }
-        if (Array.isArray(isAs)) {
-            topics = topics.concat(isAs);
-        }
-        if (Array.isArray(subsets)) {
-            topics = topics.concat(subsets);
-        }
-        if (Array.isArray(fors)) {
-            topics = topics.concat(fors);
-        }
-        // Remove duplicates, if any
-        topics = Array.from(new Set(topics));
 
         // Assign the file to the topics
         for (const topic of topics) {
@@ -192,7 +205,7 @@ export function buildTopicGraphFromDatabase(
                 continue;
             }
             const metadataTopic = app.metadataCache.getFileCache(topicFile);
-            if (!metadataTopic?.tags?.some(tag => tag.tag.contains('topic'))) {
+            if (metadataTopic && !hasTopicTag(getTopicTags(metadataTopic))) {
                 // Handle isA / hasTopics / subsets / fors up recursively until first topic found
                 collectParentTopics(topicFile, path);
             } else {

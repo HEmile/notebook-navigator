@@ -17,7 +17,7 @@
  */
 
 import { App, TFile } from 'obsidian';
-import { getTopicNameFromPath } from './topicGraph';
+import { getTopicNameFromPath, getTopicRelations, getTopicTags, hasTopicTag } from './topicGraph';
 
 /**
  * Gets the topic note file for a given topic name.
@@ -52,7 +52,7 @@ export function isTopicNote(file: TFile, app: App): boolean {
     }
     
     // Check if file has #topic tag
-    return metadata.tags?.some(tag => tag.tag.contains('topic')) ?? false;
+    return hasTopicTag(getTopicTags(metadata));
 }
 
 /**
@@ -92,28 +92,7 @@ export function findFirstTopicInHierarchy(file: TFile, app: App, visited: Set<st
     }
 
     // Get all parent links from frontmatter
-    const hasTopics = metadata.frontmatter?.['hasTopic'] as string[] | undefined;
-    const isAs = metadata.frontmatter?.['isA'] as string[] | undefined;
-    const subsets = metadata.frontmatter?.['subset'] as string[] | undefined;
-    const fors = metadata.frontmatter?.['for'] as string[] | undefined;
-
-    // Merge all links into a single list
-    let parentLinks: string[] = [];
-    if (Array.isArray(hasTopics)) {
-        parentLinks = parentLinks.concat(hasTopics);
-    }
-    if (Array.isArray(isAs)) {
-        parentLinks = parentLinks.concat(isAs);
-    }
-    if (Array.isArray(subsets)) {
-        parentLinks = parentLinks.concat(subsets);
-    }
-    if (Array.isArray(fors)) {
-        parentLinks = parentLinks.concat(fors);
-    }
-
-    // Remove duplicates
-    parentLinks = Array.from(new Set(parentLinks));
+    const parentLinks = getTopicRelations(metadata);
 
     // Traverse each parent link
     for (const parentLink of parentLinks) {
