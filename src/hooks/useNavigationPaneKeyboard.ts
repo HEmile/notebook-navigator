@@ -51,7 +51,8 @@ const isSelectableNavigationItem = (item: CombinedNavigationItem): boolean => {
         item.type === NavigationPaneItemType.FOLDER ||
         item.type === NavigationPaneItemType.TAG ||
         item.type === NavigationPaneItemType.UNTAGGED ||
-        item.type === NavigationPaneItemType.TOPIC
+        item.type === NavigationPaneItemType.TOPIC ||
+        item.type === NavigationPaneItemType.VIRTUAL_FOLDER
     );
 };
 
@@ -174,13 +175,17 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                         expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
                     }
                 }
+            } else if (item.type === NavigationPaneItemType.VIRTUAL_FOLDER) {
+                // Virtual folders don't have a selection action, but we allow focusing them
+                // This is mainly for keyboard navigation consistency
+                return;
             }
         },
         [selectionDispatch, settings, expansionState, expansionDispatch]
     );
 
     /**
-     * Handle expand/collapse for folders, tags, and topics
+     * Handle expand/collapse for folders, tags, topics, and virtual folders
      */
     const handleExpandCollapse = useCallback(
         (item: CombinedNavigationItem, expand: boolean) => {
@@ -209,6 +214,14 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                     expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
                 } else if (!expand && isExpanded) {
                     expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
+                }
+            } else if (item.type === NavigationPaneItemType.VIRTUAL_FOLDER) {
+                const virtualFolder = item.data;
+                const isExpanded = expansionState.expandedVirtualFolders.has(virtualFolder.id);
+                if (expand && !isExpanded) {
+                    expansionDispatch({ type: 'TOGGLE_VIRTUAL_FOLDER_EXPANDED', folderId: virtualFolder.id });
+                } else if (!expand && isExpanded) {
+                    expansionDispatch({ type: 'TOGGLE_VIRTUAL_FOLDER_EXPANDED', folderId: virtualFolder.id });
                 }
             }
         },
