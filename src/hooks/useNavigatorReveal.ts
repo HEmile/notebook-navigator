@@ -687,26 +687,41 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
                 return;
             }
 
-            // Get ancestor topics (if any)
+            // Get ancestor topic names (if any)
             const { getTopicAncestors } = require('../utils/topicGraph');
-            const ancestors = getTopicAncestors(topicNode);
+            const ancestorNames = getTopicAncestors(topicNode);
+
+            // Build the full path for this topic from its ancestors
+            // If ancestors = ["AI", "Machine Learning"], topicName = "Neural Networks"
+            // Then topicPath = "AI/Machine Learning/Neural Networks"
+            const topicPath = ancestorNames.length > 0 
+                ? `${ancestorNames.join('/')}/${topicName}` 
+                : topicName;
+
+            // Build ancestor paths for expansion
+            // For ancestors ["AI", "Machine Learning"], we need paths ["AI", "AI/Machine Learning"]
+            const ancestorPaths: string[] = [];
+            for (let i = 0; i < ancestorNames.length; i++) {
+                const path = ancestorNames.slice(0, i + 1).join('/');
+                ancestorPaths.push(path);
+            }
 
             // Expand the Topics virtual folder
             const currentExpanded = new Set(expansionState.expandedVirtualFolders);
             currentExpanded.add('topics');
             expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: currentExpanded });
 
-            // Expand all ancestor topics
-            if (ancestors.length > 0) {
-                expansionDispatch({ type: 'EXPAND_TAGS', tagPaths: ancestors });
+            // Expand all ancestor topics using paths
+            if (ancestorPaths.length > 0) {
+                expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: ancestorPaths });
             }
 
-            // Select the topic
-            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicName });
+            // Select the topic using its full path
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicPath });
 
-            // Request scroll to the topic in navigation pane
+            // Request scroll to the topic in navigation pane using its path
             setTimeout(() => {
-                navigationPaneRef.current?.requestScroll(topicName, {
+                navigationPaneRef.current?.requestScroll(topicPath, {
                     itemType: ItemType.TOPIC
                 });
             }, 50);

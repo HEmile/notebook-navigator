@@ -977,6 +977,7 @@ export const NavigationPane = React.memo(
         );
 
         // Handle topic click
+        // Parameter can be either a topic name (from shortcuts) or a topic path (from navigation tree)
         const handleTopicClick = useCallback(
             (topicName: string) => {
                 const topicNode = topicService?.findTopicNode(topicName);
@@ -998,7 +999,7 @@ export const NavigationPane = React.memo(
 
                 setActiveShortcut(null);
 
-                // Get the topic note file
+                // Get the topic note file using the topic name
                 const topicNote = getTopicNote(topicName, app);
 
                 // Set topic as selected without auto-selecting first file to prevent interference
