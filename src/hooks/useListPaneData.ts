@@ -488,9 +488,16 @@ export function useListPaneData({
             });
         }
 
-        // Add unpinned files with date grouping if enabled
-        if (!settings.groupByDate || sortOption.startsWith('title')) {
-            // No date grouping
+        // Add unpinned files using the configured grouping mode
+        const groupingMode = settings.noteGrouping ?? 'none';
+        const isTitleSort = sortOption.startsWith('title');
+        // Date grouping is only applied when sorting by date
+        const shouldGroupByDate =
+            (groupingMode === 'date' || (groupingMode === 'folder' && selectionType === ItemType.TAG)) && !isTitleSort;
+        const shouldGroupByFolder = groupingMode === 'folder' && selectionType === ItemType.FOLDER;
+
+        if (!shouldGroupByDate && !shouldGroupByFolder) {
+            // No grouping
             // If we showed a pinned section and have regular items, insert a split header
             if (pinnedFiles.length > 0 && unpinnedFiles.length > 0) {
                 const label =
@@ -513,7 +520,7 @@ export function useListPaneData({
                     hasTags: fileHasTags(file)
                 });
             });
-        } else {
+        } else if (shouldGroupByDate) {
             // Group by date
             let currentGroup: string | null = null;
             unpinnedFiles.forEach(file => {
@@ -541,9 +548,116 @@ export function useListPaneData({
                     hasTags: fileHasTags(file)
                 });
             });
+        } else {
+            // Group by folder (first level relative to current selection or vault root)
+            const baseFolderPath = selectedFolder?.path ?? null;
+            const baseFolderName = selectedFolder?.name ?? null;
+            const basePrefix = baseFolderPath ? `${baseFolderPath}/` : null;
+            const vaultRootLabel = strings.navigationPane.vaultRootLabel;
+            const vaultRootSortKey = `0-${vaultRootLabel.toLowerCase()}`;
+            // Map of folder key to group metadata and files
+            const folderGroups = new Map<
+                string,
+                {
+                    label: string;
+                    sortKey: string;
+                    files: TFile[];
+                    isCurrentFolder: boolean;
+                }
+            >();
+
+            // Determines which folder group a file belongs to based on its parent path
+            const resolveFolderGroup = (file: TFile): { key: string; label: string; sortKey: string; isCurrentFolder: boolean } => {
+                const parent = file.parent;
+                // Files at vault root
+                if (!(parent instanceof TFolder)) {
+                    return { key: 'folder:/', label: vaultRootLabel, sortKey: vaultRootSortKey, isCurrentFolder: false };
+                }
+
+                // When viewing a folder, group by immediate parent folder
+                if (selectionType === ItemType.FOLDER && baseFolderPath) {
+                    // Files directly in the selected folder
+                    if (parent.path === baseFolderPath) {
+                        const label = baseFolderName ?? parent.name;
+                        return { key: `folder:${baseFolderPath}`, label, sortKey: `0-${label.toLowerCase()}`, isCurrentFolder: true };
+                    }
+                    // Files in subfolders - group by first level subfolder name
+                    if (basePrefix && parent.path.startsWith(basePrefix)) {
+                        const relativePath = parent.path.slice(basePrefix.length);
+                        const [firstSegment] = relativePath.split('/');
+                        if (firstSegment && firstSegment.length > 0) {
+                            const label = firstSegment;
+                            return {
+                                key: `folder:${baseFolderPath}/${label}`,
+                                label,
+                                sortKey: `1-${label.toLowerCase()}`,
+                                isCurrentFolder: false
+                            };
+                        }
+                    }
+                }
+
+                // When viewing tags or all files, group by top level folder
+                const parentPath = parent.path === '/' ? '' : parent.path;
+                const [topLevel] = parentPath.split('/');
+                if (topLevel && topLevel.length > 0) {
+                    const label = topLevel;
+                    return { key: `folder:/${label}`, label, sortKey: `1-${label.toLowerCase()}`, isCurrentFolder: false };
+                }
+
+                // Fallback to vault root
+                return { key: 'folder:/', label: vaultRootLabel, sortKey: vaultRootSortKey, isCurrentFolder: false };
+            };
+
+            // Collect files into folder groups
+            unpinnedFiles.forEach(file => {
+                const { key, label, sortKey, isCurrentFolder } = resolveFolderGroup(file);
+                let group = folderGroups.get(key);
+                if (!group) {
+                    group = { label, sortKey, files: [], isCurrentFolder };
+                    folderGroups.set(key, group);
+                }
+                group.files.push(file);
+            });
+
+            // Sort groups by sort key, then alphabetically by label
+            const orderedGroups = Array.from(folderGroups.entries())
+                .map(([key, group]) => ({ key, ...group }))
+                .sort((a, b) => {
+                    if (a.sortKey === b.sortKey) {
+                        return a.label.localeCompare(b.label, undefined, { sensitivity: 'base' });
+                    }
+                    return a.sortKey.localeCompare(b.sortKey, undefined, { sensitivity: 'base' });
+                });
+
+            // Add groups and their files to the items list
+            orderedGroups.forEach(group => {
+                // Skip header for current folder if there are no pinned notes
+                const shouldSkipHeader = group.isCurrentFolder && pinnedFiles.length === 0;
+                if (!shouldSkipHeader) {
+                    items.push({
+                        type: ListPaneItemType.HEADER,
+                        data: group.label,
+                        key: `header-${group.key}`
+                    });
+                }
+
+                group.files.forEach(file => {
+                    items.push({
+                        type: ListPaneItemType.FILE,
+                        data: file,
+                        parentFolder: selectedFolder?.path,
+                        key: file.path,
+                        fileIndex: fileIndexCounter++,
+                        searchMeta: searchMetaMap.get(file.path),
+                        hasTags: fileHasTags(file)
+                    });
+                });
+            });
         }
 
-        // Add spacer at the end so jumping to last position works properly with the virtualizer\n        // Without this, scrolling to the last item may not position it correctly
+        // Add spacer at the end so jumping to last position works properly with the virtualizer.
+        // Without this, scrolling to the last item may not position it correctly.
         items.push({
             type: ListPaneItemType.BOTTOM_SPACER,
             data: '',

@@ -120,6 +120,21 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         delete mutableSettings.recentNotes;
         delete mutableSettings.recentIcons;
 
+        const storedData = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
+        const storedNoteGrouping = storedData ? storedData['noteGrouping'] : undefined;
+
+        // Migrate legacy groupByDate boolean to noteGrouping dropdown
+        const legacyGroupByDate = mutableSettings.groupByDate;
+        if (typeof legacyGroupByDate === 'boolean' && typeof storedNoteGrouping === 'undefined') {
+            this.settings.noteGrouping = legacyGroupByDate ? 'date' : 'none';
+        }
+        delete mutableSettings.groupByDate;
+
+        // Validate noteGrouping value and reset to default if invalid
+        if (this.settings.noteGrouping !== 'none' && this.settings.noteGrouping !== 'date' && this.settings.noteGrouping !== 'folder') {
+            this.settings.noteGrouping = DEFAULT_SETTINGS.noteGrouping;
+        }
+
         const legacyColorFileTags = mutableSettings['applyTagColorsToFileTags'];
         if (typeof legacyColorFileTags === 'boolean') {
             this.settings.colorFileTags = legacyColorFileTags;
@@ -127,7 +142,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         delete mutableSettings['applyTagColorsToFileTags'];
 
         // Migrate legacy navigationBannerPath field to navigationBanner
-        const legacyBanner = data && typeof data === 'object' ? (data as Record<string, unknown>).navigationBannerPath : undefined;
+        const legacyBanner = storedData ? storedData['navigationBannerPath'] : undefined;
         if (!this.settings.navigationBanner && typeof legacyBanner === 'string' && legacyBanner.length > 0) {
             this.settings.navigationBanner = legacyBanner;
         }

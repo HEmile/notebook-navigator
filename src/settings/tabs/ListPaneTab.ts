@@ -18,7 +18,7 @@
 
 import { Platform, Setting } from 'obsidian';
 import { strings } from '../../i18n';
-import type { ListPaneTitleOption, MultiSelectModifier, SortOption } from '../types';
+import type { ListNoteGroupingOption, ListPaneTitleOption, MultiSelectModifier, SortOption } from '../types';
 import type { SettingsTabContext } from './SettingsTabContext';
 
 /** Renders the list pane settings tab */
@@ -87,13 +87,18 @@ export function renderListPaneTab(context: SettingsTabContext): void {
         );
 
     new Setting(containerEl)
-        .setName(strings.settings.items.groupByDate.name)
-        .setDesc(strings.settings.items.groupByDate.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.groupByDate).onChange(async value => {
-                plugin.settings.groupByDate = value;
-                await plugin.saveSettingsAndUpdate();
-            })
+        .setName(strings.settings.items.groupNotes.name)
+        .setDesc(strings.settings.items.groupNotes.desc)
+        .addDropdown(dropdown =>
+            dropdown
+                .addOption('none', strings.settings.items.groupNotes.options.none)
+                .addOption('date', strings.settings.items.groupNotes.options.date)
+                .addOption('folder', strings.settings.items.groupNotes.options.folder)
+                .setValue(plugin.settings.noteGrouping)
+                .onChange(async (value: ListNoteGroupingOption) => {
+                    plugin.settings.noteGrouping = value;
+                    await plugin.saveSettingsAndUpdate();
+                })
         );
 
     new Setting(containerEl)

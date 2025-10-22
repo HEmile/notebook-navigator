@@ -704,7 +704,7 @@ export function useListPaneScroll({
         }
 
         // Build a key from the config values that should trigger scroll preservation
-        const configKey = `${settings.includeDescendantNotes}-${settings.optimizeNoteHeight}-${settings.groupByDate}-${effectiveSort}-${JSON.stringify(
+        const configKey = `${settings.includeDescendantNotes}-${settings.optimizeNoteHeight}-${settings.noteGrouping}-${effectiveSort}-${JSON.stringify(
             folderSettings
         )}`;
 
@@ -742,7 +742,7 @@ export function useListPaneScroll({
         selectedFile,
         settings.includeDescendantNotes,
         settings.optimizeNoteHeight,
-        settings.groupByDate,
+        settings.noteGrouping,
         folderSettings,
         effectiveSort,
         setPending

@@ -44,6 +44,9 @@ export type MultiSelectModifier = 'cmdCtrl' | 'optionAlt';
 /** Display options for list pane title */
 export type ListPaneTitleOption = 'header' | 'list' | 'hidden';
 
+/** Grouping options for list pane notes */
+export type ListNoteGroupingOption = 'none' | 'date' | 'folder';
+
 /**
  * Plugin settings interface defining all configurable options
  * Settings are organized by tab for easier maintenance
@@ -114,7 +117,7 @@ export interface NotebookNavigatorSettings {
     listPaneTitle: ListPaneTitleOption;
     multiSelectModifier: MultiSelectModifier;
     includeDescendantNotes: boolean;
-    groupByDate: boolean;
+    noteGrouping: ListNoteGroupingOption;
     optimizeNoteHeight: boolean;
     showQuickActions: boolean;
     quickActionRevealInFolder: boolean;

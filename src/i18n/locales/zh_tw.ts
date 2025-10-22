@@ -581,9 +581,14 @@ export const STRINGS_ZH_TW = {
                 name: '分別顯示當前和後代計數',
                 desc: '在資料夾和標籤中以「當前 ▾ 後代」格式顯示筆記計數。'
             },
-            groupByDate: {
-                name: '依日期分組筆記',
-                desc: '依日期排序時，將筆記分組在日期標頭下。'
+            groupNotes: {
+                name: '分組筆記',
+                desc: '在依日期或資料夾分組的筆記之間顯示標題。啟用資料夾分組時，標籤檢視使用日期分組。',
+                options: {
+                    none: '不分組',
+                    date: '依日期分組',
+                    folder: '依資料夾分組'
+                }
             },
             optimizeNoteHeight: {
                 name: '最佳化筆記高度',

@@ -584,9 +584,14 @@ export const STRINGS_PL = {
                 name: 'Pokaż bieżące i potomne liczniki osobno',
                 desc: 'Wyświetla liczbę notatek w formacie "bieżące ▾ potomne" w folderach i tagach.'
             },
-            groupByDate: {
-                name: 'Grupuj notatki według daty',
-                desc: 'Podczas sortowania według daty, grupuj notatki pod nagłówkami dat.'
+            groupNotes: {
+                name: 'Grupuj notatki',
+                desc: 'Wyświetla nagłówki między notatkami zgrupowanymi według daty lub folderu. Widoki tagów używają grup dat, gdy grupowanie po folderach jest włączone.',
+                options: {
+                    none: 'Bez grupowania',
+                    date: 'Grupuj według daty',
+                    folder: 'Grupuj według folderu'
+                }
             },
             optimizeNoteHeight: {
                 name: 'Optymalizuj wysokość notatek',

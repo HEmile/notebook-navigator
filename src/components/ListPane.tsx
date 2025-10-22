@@ -73,10 +73,10 @@ import { EMPTY_LIST_MENU_TYPE } from '../utils/contextMenu';
 
 /**
  * Renders the list pane displaying files from the selected folder.
- * Handles file sorting, grouping by date, pinned notes, and auto-selection.
+ * Handles file sorting, grouping by date or folder, pinned notes, and auto-selection.
  * Integrates with the app context to manage file selection and navigation.
  *
- * @returns A scrollable list of files grouped by date (if enabled) with empty state handling
+ * @returns A scrollable list of files grouped by date or folder with empty state handling
  */
 interface ExecuteSearchShortcutParams {
     searchShortcut: SearchShortcut;

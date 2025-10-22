@@ -92,7 +92,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     listPaneTitle: 'header',
     multiSelectModifier: 'cmdCtrl',
     includeDescendantNotes: true,
-    groupByDate: true,
+    noteGrouping: 'date',
     optimizeNoteHeight: true,
     showQuickActions: true,
     quickActionRevealInFolder: true,

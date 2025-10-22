@@ -582,9 +582,14 @@ export const STRINGS_ZH_CN = {
                 name: '分别显示当前和后代计数',
                 desc: '在文件夹和标签中以"当前 ▾ 后代"格式显示笔记计数。'
             },
-            groupByDate: {
-                name: '按日期分组笔记',
-                desc: '按日期排序时，在日期标题下分组笔记。'
+            groupNotes: {
+                name: '分组笔记',
+                desc: '在按日期或文件夹分组的笔记之间显示标题。启用文件夹分组时，标签视图使用日期分组。',
+                options: {
+                    none: '不分组',
+                    date: '按日期分组',
+                    folder: '按文件夹分组'
+                }
             },
             optimizeNoteHeight: {
                 name: '优化笔记高度',

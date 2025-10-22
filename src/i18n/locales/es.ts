@@ -583,9 +583,14 @@ export const STRINGS_ES = {
                 name: 'Mostrar conteos actuales y descendientes por separado',
                 desc: 'Muestra el conteo de notas como formato "actual ▾ descendientes" en carpetas y etiquetas.'
             },
-            groupByDate: {
-                name: 'Agrupar notas por fecha',
-                desc: 'Cuando se ordena por fecha, agrupa las notas bajo encabezados de fecha.'
+            groupNotes: {
+                name: 'Agrupar notas',
+                desc: 'Muestra encabezados entre notas agrupadas por fecha o carpeta. Las vistas de etiquetas usan grupos por fecha cuando la agrupación por carpeta está activada.',
+                options: {
+                    none: 'No agrupar',
+                    date: 'Agrupar por fecha',
+                    folder: 'Agrupar por carpeta'
+                }
             },
             optimizeNoteHeight: {
                 name: 'Optimizar altura de notas',

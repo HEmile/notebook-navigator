@@ -335,7 +335,7 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - **Sort notes by:** Choose how notes are sorted in the note list. `Date edited (newest first)`, `Date edited (oldest first)`, `Date created (newest first)`, `Date created (oldest first)`, `Title (A on top)`, `Title (Z on top)`
 - **Multi-select modifier:** Choose which modifier key toggles multi-selection. When Option/Alt is selected, Cmd/Ctrl click opens notes in a new tab. `Cmd/Ctrl click`, `Option/Alt click`
 - **Show notes from descendants:** Include notes from nested subfolders and tag descendants when viewing a folder or tag
-- **Group notes by date:** When sorted by date, group notes under date headers
+- **Group notes:** Add headers in the note list. `Don't group`, `Group by date`, `Group by folder (tags use date)`
 - **Optimize note height:** Reduce height for pinned notes and notes without preview text
 - **Show quick actions (desktop only):** Show hover actions on file items
   - **Reveal in folder:** Quick action: Reveal note in its parent folder. Only visible when viewing notes from subfolders or in tags (not shown in the note's actual folder)

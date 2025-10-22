@@ -582,9 +582,14 @@ export const STRINGS_KO = {
                 name: '현재와 하위 항목 수를 별도로 표시',
                 desc: '폴더와 태그의 노트 수를 "현재 ▾ 하위" 형식으로 표시합니다.'
             },
-            groupByDate: {
-                name: '날짜별로 노트 그룹화',
-                desc: '날짜별로 정렬할 때 날짜 헤더 아래에 노트를 그룹화합니다.'
+            groupNotes: {
+                name: '노트 그룹화',
+                desc: '날짜 또는 폴더별로 그룹화된 노트 사이에 머리글을 표시합니다. 폴더 그룹화가 활성화되면 태그 보기는 날짜 그룹을 사용합니다.',
+                options: {
+                    none: '그룹화 안 함',
+                    date: '날짜별 그룹',
+                    folder: '폴더별 그룹'
+                }
             },
             optimizeNoteHeight: {
                 name: '노트 높이 최적화',

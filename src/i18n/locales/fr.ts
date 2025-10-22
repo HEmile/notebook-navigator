@@ -584,9 +584,14 @@ export const STRINGS_FR = {
                 name: 'Afficher les comptes actuels et descendants séparément',
                 desc: 'Affiche le nombre de notes au format "actuel ▾ descendants" dans les dossiers et étiquettes.'
             },
-            groupByDate: {
-                name: 'Grouper les notes par date',
-                desc: 'Lorsque triées par date, grouper les notes sous des en-têtes de date.'
+            groupNotes: {
+                name: 'Grouper les notes',
+                desc: 'Affiche des en-têtes entre les notes groupées par date ou par dossier. Les vues de tags utilisent des groupes de dates lorsque le regroupement par dossier est activé.',
+                options: {
+                    none: 'Ne pas grouper',
+                    date: 'Grouper par date',
+                    folder: 'Grouper par dossier'
+                }
             },
             optimizeNoteHeight: {
                 name: 'Optimiser la hauteur des notes',
