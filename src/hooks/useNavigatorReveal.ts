@@ -717,7 +717,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
             }
 
             // Select the topic using its full path
-            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicPath });
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicNode.name });
 
             // Request scroll to the topic in navigation pane using its path
             setTimeout(() => {
