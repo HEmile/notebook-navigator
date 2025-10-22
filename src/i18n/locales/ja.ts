@@ -623,6 +623,15 @@ export const STRINGS_JA = {
                     vertical: '垂直分割'
                 }
             },
+            dualPaneBackground: {
+                name: '背景色（デスクトップのみ）',
+                desc: 'デスクトップでナビゲーションペインとリストペインの背景色を選択します。',
+                options: {
+                    separate: '背景を分ける',
+                    primary: 'リストの背景を使用',
+                    secondary: 'ナビゲーションの背景を使用'
+                }
+            },
             startView: {
                 name: 'デフォルト起動ビュー',
                 desc: 'Notebook Navigator を開いたときに表示するペインを選択します。ナビゲーションペインはショートカット、最近のノート、フォルダ構造を表示します。リストペインはノート一覧を表示します。',

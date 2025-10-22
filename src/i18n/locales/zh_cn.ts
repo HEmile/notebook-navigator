@@ -622,6 +622,15 @@ export const STRINGS_ZH_CN = {
                     vertical: '垂直分割'
                 }
             },
+            dualPaneBackground: {
+                name: '背景色（仅桌面）',
+                desc: '在桌面上为导航窗格和列表窗格选择背景色。',
+                options: {
+                    separate: '分开背景',
+                    primary: '使用列表背景',
+                    secondary: '使用导航背景'
+                }
+            },
             startView: {
                 name: '默认启动视图',
                 desc: '选择打开 Notebook Navigator 时显示的窗格。导航窗格显示快捷方式、最近笔记和文件夹结构。列表窗格显示笔记列表。',

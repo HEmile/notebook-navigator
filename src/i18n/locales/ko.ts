@@ -622,6 +622,15 @@ export const STRINGS_KO = {
                     vertical: '세로 분할'
                 }
             },
+            dualPaneBackground: {
+                name: '배경색(데스크톱 전용)',
+                desc: '데스크톱에서 탐색 및 목록 패널의 배경색을 선택합니다.',
+                options: {
+                    separate: '분리된 배경',
+                    primary: '목록 배경 사용',
+                    secondary: '탐색 배경 사용'
+                }
+            },
             startView: {
                 name: '기본 시작 보기',
                 desc: 'Notebook Navigator를 열 때 표시할 창을 선택하세요. 탐색 창은 바로가기, 최근 노트, 폴더 구조를 표시합니다. 목록 창은 노트 목록을 표시합니다.',

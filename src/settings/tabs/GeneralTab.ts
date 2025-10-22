@@ -107,7 +107,7 @@ export function renderGeneralTab(context: SettingsTabContext): void {
     let orientationDropdown: DropdownComponent | null = null;
     let orientationContainerEl: HTMLDivElement | null = null;
 
-    // Show/hide orientation setting based on dual-pane toggle
+    // Hide orientation controls when dual pane is disabled; background mode stays visible
     const updateOrientationVisibility = (enabled: boolean) => {
         orientationDropdown?.setDisabled(!enabled);
         orientationContainerEl?.toggleClass('nn-setting-hidden', !enabled);
@@ -147,6 +147,29 @@ export function renderGeneralTab(context: SettingsTabContext): void {
                 // Initialize visibility based on current dual-pane state
                 updateOrientationVisibility(plugin.useDualPane());
             });
+    }
+
+    // Desktop-only setting for dual pane background color mode
+    if (!Platform.isMobile) {
+        new Setting(containerEl)
+            .setName(strings.settings.items.dualPaneBackground.name)
+            .setDesc(strings.settings.items.dualPaneBackground.desc)
+            .addDropdown(dropdown =>
+                dropdown
+                    .addOptions({
+                        separate: strings.settings.items.dualPaneBackground.options.separate,
+                        primary: strings.settings.items.dualPaneBackground.options.primary,
+                        secondary: strings.settings.items.dualPaneBackground.options.secondary
+                    })
+                    .setValue(plugin.settings.dualPaneBackground ?? 'separate')
+                    .onChange(async value => {
+                        // Validate and constrain value to allowed options
+                        const nextValue: 'separate' | 'primary' | 'secondary' =
+                            value === 'primary' || value === 'secondary' ? value : 'separate';
+                        plugin.settings.dualPaneBackground = nextValue;
+                        await plugin.saveSettingsAndUpdate();
+                    })
+            );
     }
 
     const homepageSetting = new Setting(containerEl).setName(strings.settings.items.homepage.name);

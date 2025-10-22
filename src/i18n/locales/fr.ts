@@ -624,6 +624,15 @@ export const STRINGS_FR = {
                     vertical: 'Séparation verticale'
                 }
             },
+            dualPaneBackground: {
+                name: 'Couleur de fond (bureau uniquement)',
+                desc: 'Choisissez les couleurs de fond pour les volets de navigation et de liste sur bureau.',
+                options: {
+                    separate: 'Arrière-plans séparés',
+                    primary: 'Utiliser le fond de la liste',
+                    secondary: 'Utiliser le fond de navigation'
+                }
+            },
             startView: {
                 name: 'Vue de démarrage par défaut',
                 desc: "Choisissez le panneau affiché lors de l'ouverture de Notebook Navigator. Le panneau de navigation montre les raccourcis, les notes récentes et la structure des dossiers. Le panneau de liste affiche immédiatement la liste des notes.",

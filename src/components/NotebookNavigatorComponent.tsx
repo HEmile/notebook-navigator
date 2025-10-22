@@ -39,12 +39,13 @@ import { FolderSuggestModal } from '../modals/FolderSuggestModal';
 import { TagSuggestModal } from '../modals/TagSuggestModal';
 import { RemoveTagModal } from '../modals/RemoveTagModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
-import { FILE_PANE_DIMENSIONS, ItemType, NAVPANE_MEASUREMENTS, type DualPaneOrientation } from '../types';
+import { FILE_PANE_DIMENSIONS, ItemType, NAVPANE_MEASUREMENTS, type DualPaneBackgroundMode, type DualPaneOrientation } from '../types';
 import { getSelectedPath, getFilesForSelection } from '../utils/selectionUtils';
 import { normalizeNavigationPath } from '../utils/navigationIndex';
 import { deleteSelectedFiles, deleteSelectedFolder } from '../utils/deleteOperations';
 import { localStorage } from '../utils/localStorage';
 import { getNavigationPaneSizing } from '../utils/paneSizing';
+import { getDualPaneBackgroundClasses } from '../utils/paneLayout';
 import { ListPane } from './ListPane';
 import type { ListPaneHandle } from './ListPane';
 import { NavigationPane } from './NavigationPane';
@@ -96,6 +97,8 @@ export const NotebookNavigatorComponent = React.memo(
         const settings = useSettingsState();
         // Get active orientation from settings
         const orientation: DualPaneOrientation = settings.dualPaneOrientation;
+        // Get background mode for dual pane layout (separate, primary, or secondary)
+        const dualPaneBackground: DualPaneBackgroundMode = settings.dualPaneBackground ?? 'separate';
         // Retrieve sizing config based on current orientation
         const {
             minSize: navigationPaneMinSize,
@@ -682,6 +685,7 @@ export const NotebookNavigatorComponent = React.memo(
             containerClasses.push('nn-mobile');
         } else {
             containerClasses.push('nn-desktop');
+            containerClasses.push(...getDualPaneBackgroundClasses(dualPaneBackground));
         }
 
         // Add layout mode class

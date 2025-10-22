@@ -624,6 +624,15 @@ export const STRINGS_PL = {
                     vertical: 'Podział pionowy'
                 }
             },
+            dualPaneBackground: {
+                name: 'Kolor tła (tylko komputer)',
+                desc: 'Wybierz kolory tła dla panelu nawigacji i panelu listy na komputerze.',
+                options: {
+                    separate: 'Oddzielne tła',
+                    primary: 'Użyj tła listy',
+                    secondary: 'Użyj tła nawigacji'
+                }
+            },
             startView: {
                 name: 'Domyślny widok startowy',
                 desc: 'Wybierz panel wyświetlany przy otwieraniu Notebook Navigator. Panel nawigacji pokazuje skróty, ostatnie notatki oraz strukturę folderów. Panel listy pokazuje listę notatek.',

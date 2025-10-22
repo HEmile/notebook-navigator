@@ -623,6 +623,15 @@ export const STRINGS_ES = {
                     vertical: 'División vertical'
                 }
             },
+            dualPaneBackground: {
+                name: 'Color de fondo (solo escritorio)',
+                desc: 'Elige colores de fondo para los paneles de navegación y lista en escritorio.',
+                options: {
+                    separate: 'Fondos separados',
+                    primary: 'Usar fondo de lista',
+                    secondary: 'Usar fondo de navegación'
+                }
+            },
             startView: {
                 name: 'Vista de inicio predeterminada',
                 desc: 'Elige qué panel mostrar al abrir Notebook Navigator. El panel de navegación muestra los accesos directos, las notas recientes y la estructura de carpetas. El panel de lista muestra la lista de notas en pantalla.',

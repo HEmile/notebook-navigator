@@ -25,6 +25,7 @@ import type { NotebookNavigatorHandle } from './NotebookNavigatorComponent';
 import { SkeletonView } from './SkeletonView';
 import { localStorage } from '../utils/localStorage';
 import { getNavigationPaneSizing } from '../utils/paneSizing';
+import { getDualPaneBackgroundClasses } from '../utils/paneLayout';
 
 /**
  * Container component that handles storage initialization.
@@ -36,6 +37,8 @@ export const NotebookNavigatorContainer = React.memo(
         const uiState = useUIState();
         const settings = useSettingsState();
         const orientation = settings.dualPaneOrientation;
+        // Get background mode for dual pane layout (separate, primary, or secondary)
+        const dualPaneBackground = settings.dualPaneBackground ?? 'separate';
         // Get sizing config for current orientation
         const { defaultSize, minSize, storageKey } = getNavigationPaneSizing(orientation);
         const [paneSize, setPaneSize] = useState(defaultSize);
@@ -61,6 +64,7 @@ export const NotebookNavigatorContainer = React.memo(
         if (!isStorageReady) {
             // Build CSS classes for skeleton view
             const containerClasses = ['nn-split-container', 'nn-desktop'];
+            containerClasses.push(...getDualPaneBackgroundClasses(dualPaneBackground));
             if (!uiState.singlePane) {
                 containerClasses.push(`nn-orientation-${orientation}`);
             }

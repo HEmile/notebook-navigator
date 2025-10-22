@@ -53,10 +53,14 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
     // Create a stable settings object that changes reference when version changes
     // This ensures components using SettingsStateContext re-render when settings change
     // NOTE: settings are mutated in place; the version counter forces object recreation
-    const settingsValue = React.useMemo<SettingsStateValue>(
-        () => ({ ...plugin.settings, dualPaneOrientation: plugin.getDualPaneOrientation() }),
-        [plugin, version]
-    );
+    const settingsValue = React.useMemo<SettingsStateValue>(() => {
+        const nextSettings: SettingsStateValue = {
+            ...plugin.settings,
+            dualPaneOrientation: plugin.getDualPaneOrientation()
+        };
+        void version; // Keep dependency so settings snapshot recreates when updates are published
+        return nextSettings;
+    }, [plugin, version]);
 
     // Listen for settings updates from the plugin (e.g., from settings tab)
     useEffect(() => {

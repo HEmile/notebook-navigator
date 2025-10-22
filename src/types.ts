@@ -262,6 +262,9 @@ export const STORAGE_KEYS: LocalStorageKeys = {
 /** Orientation options for dual-pane layout */
 export type DualPaneOrientation = 'horizontal' | 'vertical';
 
+/** Background color mode for dual-pane layout on desktop */
+export type DualPaneBackgroundMode = 'separate' | 'primary' | 'secondary';
+
 /**
  * Default dimensions for the navigation pane (folder/tag tree)
  * These values are used when no saved state exists

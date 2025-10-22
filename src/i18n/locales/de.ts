@@ -626,6 +626,15 @@ export const STRINGS_DE = {
                     vertical: 'Vertikale Aufteilung'
                 }
             },
+            dualPaneBackground: {
+                name: 'Hintergrundfarbe (nur Desktop)',
+                desc: 'Wählen Sie Hintergrundfarben für Navigations- und Listenbereich auf dem Desktop.',
+                options: {
+                    separate: 'Separate Hintergründe',
+                    primary: 'Listenhintergrund verwenden',
+                    secondary: 'Navigationshintergrund verwenden'
+                }
+            },
             startView: {
                 name: 'Standard-Startansicht',
                 desc: 'Wählen Sie den Bereich, der beim Öffnen von Notebook Navigator angezeigt wird. Der Navigationsbereich zeigt Verknüpfungen, aktuelle Notizen und die Ordnerstruktur. Der Listenbereich zeigt die Notizliste.',

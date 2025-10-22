@@ -429,6 +429,17 @@ body {
     contain: layout style;
 }
 
+/* Override backgrounds when desktop background mode is set to primary or secondary */
+/* Primary mode: use list background for navigation pane */
+.nn-split-container.nn-desktop.nn-bg-primary {
+    --nn-theme-nav-bg: var(--nn-theme-list-bg);
+}
+
+/* Secondary mode: use navigation background for list pane */
+.nn-split-container.nn-desktop.nn-bg-secondary {
+    --nn-theme-list-bg: var(--nn-theme-nav-bg);
+}
+
 .nn-split-container.nn-orientation-vertical {
     flex-direction: column;
 }

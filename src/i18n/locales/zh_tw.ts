@@ -621,6 +621,15 @@ export const STRINGS_ZH_TW = {
                     vertical: '垂直分割'
                 }
             },
+            dualPaneBackground: {
+                name: '背景色（僅限桌面）',
+                desc: '在桌面上為導覽窗格和列表窗格選擇背景色。',
+                options: {
+                    separate: '分開背景',
+                    primary: '使用列表背景',
+                    secondary: '使用導覽背景'
+                }
+            },
             startView: {
                 name: '預設啟動檢視',
                 desc: '選擇開啟 Notebook Navigator 時顯示哪個窗格。導覽窗格顯示捷徑、最近筆記和資料夾樹。列表窗格立即顯示筆記清單。',

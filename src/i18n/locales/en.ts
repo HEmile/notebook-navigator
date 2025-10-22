@@ -622,6 +622,15 @@ export const STRINGS_EN = {
                     vertical: 'Vertical split'
                 }
             },
+            dualPaneBackground: {
+                name: 'Background color (desktop only)',
+                desc: 'Choose background colors for navigation and list panes on desktop.',
+                options: {
+                    separate: 'Separate backgrounds',
+                    primary: 'Use list background',
+                    secondary: 'Use navigation background'
+                }
+            },
             startView: {
                 name: 'Default startup view',
                 desc: 'Choose which pane to display when opening Notebook Navigator. Navigation pane shows shortcuts, recent notes, and folder tree. List pane shows note list immediately.',

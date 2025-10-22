@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     startView: 'files',
     showTooltips: false,
     showTooltipPath: true,
+    dualPaneBackground: 'separate',
 
     // General tab - Homepage
     homepage: null,
