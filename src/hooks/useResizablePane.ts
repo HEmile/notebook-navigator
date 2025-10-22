@@ -18,17 +18,19 @@
 
 // src/hooks/useResizablePane.ts
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { NAVIGATION_PANE_DIMENSIONS } from '../types';
+import { type DualPaneOrientation } from '../types';
 import { localStorage } from '../utils/localStorage';
+import { getNavigationPaneSizing } from '../utils/paneSizing';
 
 interface UseResizablePaneConfig {
-    initialWidth?: number;
+    orientation?: DualPaneOrientation;
+    initialSize?: number;
     min?: number;
     storageKey?: string;
 }
 
 interface UseResizablePaneResult {
-    paneWidth: number;
+    paneSize: number;
     isResizing: boolean;
     resizeHandleProps: {
         onMouseDown: (e: React.MouseEvent) => void;
@@ -44,22 +46,31 @@ interface UseResizablePaneResult {
  * @returns Current pane width and props to spread on the resize handle element
  */
 export function useResizablePane({
-    initialWidth = NAVIGATION_PANE_DIMENSIONS.defaultWidth,
-    min = NAVIGATION_PANE_DIMENSIONS.minWidth,
+    orientation = 'horizontal',
+    initialSize,
+    min,
     storageKey
 }: UseResizablePaneConfig = {}): UseResizablePaneResult {
+    // Get default sizing parameters for orientation
+    const sizing = getNavigationPaneSizing(orientation);
+
+    // Use provided values or fall back to defaults
+    const resolvedInitialSize = typeof initialSize === 'number' ? initialSize : sizing.defaultSize;
+
+    const resolvedMin = typeof min === 'number' ? min : sizing.minSize;
+
     // Track cleanup function for current resize operation
     const cleanupRef = useRef<(() => void) | null>(null);
 
     // Load initial width from localStorage if storage key is provided
-    const [paneWidth, setPaneWidth] = useState(() => {
+    const [paneSize, setPaneSize] = useState(() => {
         if (storageKey) {
-            const savedWidth = localStorage.get<number>(storageKey);
-            if (savedWidth) {
-                return Math.max(min, savedWidth);
+            const savedSize = localStorage.get<number>(storageKey);
+            if (typeof savedSize === 'number') {
+                return Math.max(resolvedMin, savedSize);
             }
         }
-        return initialWidth;
+        return resolvedInitialSize;
     });
 
     // Track resizing state
@@ -67,24 +78,27 @@ export function useResizablePane({
 
     const handleResizeMouseDown = useCallback(
         (e: React.MouseEvent) => {
-            const startX = e.clientX;
-            const startWidth = paneWidth;
-            let currentWidth = startWidth;
+            // Capture starting position based on orientation
+            const startPosition = orientation === 'horizontal' ? e.clientX : e.clientY;
+            const startSize = paneSize;
+            let currentSize = startSize;
 
-            // Check if RTL mode is active
-            const isRTL = document.body.classList.contains('mod-rtl');
+            // Check if RTL mode is active for horizontal dragging
+            const isRTL = orientation === 'horizontal' && document.body.classList.contains('mod-rtl');
 
             // Set resizing state
             setIsResizing(true);
 
             const handleMouseMove = (moveEvent: MouseEvent) => {
-                let deltaX = moveEvent.clientX - startX;
+                // Calculate position delta based on orientation
+                const currentPosition = orientation === 'horizontal' ? moveEvent.clientX : moveEvent.clientY;
+                let delta = currentPosition - startPosition;
                 // In RTL mode, reverse the delta to make dragging feel natural
                 if (isRTL) {
-                    deltaX = -deltaX;
+                    delta = -delta;
                 }
-                currentWidth = Math.max(min, startWidth + deltaX);
-                setPaneWidth(currentWidth);
+                currentSize = Math.max(resolvedMin, startSize + delta);
+                setPaneSize(currentSize);
             };
 
             const handleMouseUp = () => {
@@ -92,7 +106,7 @@ export function useResizablePane({
                 document.removeEventListener('mouseup', handleMouseUp);
                 // Save final width to localStorage on mouseup
                 if (storageKey) {
-                    localStorage.set(storageKey, currentWidth);
+                    localStorage.set(storageKey, currentSize);
                 }
                 // Clear resizing state
                 setIsResizing(false);
@@ -110,8 +124,24 @@ export function useResizablePane({
                 setIsResizing(false);
             };
         },
-        [paneWidth, min, storageKey]
+        [orientation, paneSize, resolvedMin, storageKey]
     );
+
+    // Reload pane size when orientation changes
+    useEffect(() => {
+        if (!storageKey) {
+            setPaneSize(resolvedInitialSize);
+            return;
+        }
+
+        const savedSize = localStorage.get<number>(storageKey);
+        if (typeof savedSize === 'number') {
+            setPaneSize(Math.max(resolvedMin, savedSize));
+            return;
+        }
+
+        setPaneSize(resolvedInitialSize);
+    }, [orientation, resolvedInitialSize, resolvedMin, storageKey]);
 
     // Cleanup on unmount if resize is in progress
     useEffect(() => {
@@ -124,7 +154,7 @@ export function useResizablePane({
     }, []);
 
     return {
-        paneWidth,
+        paneSize,
         isResizing,
         resizeHandleProps: {
             onMouseDown: handleResizeMouseDown

@@ -615,6 +615,14 @@ export const STRINGS_ES = {
                 name: 'Diseño de doble panel (solo escritorio, no sincronizado)',
                 desc: 'Mostrar panel de navegación y panel de lista lado a lado en escritorio.'
             },
+            dualPaneOrientation: {
+                name: 'Orientación del panel dual',
+                desc: 'Selecciona una distribución horizontal o vertical cuando el panel dual está activo.',
+                options: {
+                    horizontal: 'División horizontal',
+                    vertical: 'División vertical'
+                }
+            },
             startView: {
                 name: 'Vista de inicio predeterminada',
                 desc: 'Elige qué panel mostrar al abrir Notebook Navigator. El panel de navegación muestra los accesos directos, las notas recientes y la estructura de carpetas. El panel de lista muestra la lista de notas en pantalla.',

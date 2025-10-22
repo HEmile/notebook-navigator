@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ButtonComponent, Notice, Platform, Setting } from 'obsidian';
+import { ButtonComponent, DropdownComponent, Notice, Platform, Setting } from 'obsidian';
 import { HomepageModal } from '../../modals/HomepageModal';
 import { strings } from '../../i18n';
 import { FILE_VISIBILITY, type FileVisibility } from '../../utils/fileTypeUtils';
@@ -103,6 +103,16 @@ export function renderGeneralTab(context: SettingsTabContext): void {
                 });
         });
 
+    // Track orientation dropdown and container for visibility toggling
+    let orientationDropdown: DropdownComponent | null = null;
+    let orientationContainerEl: HTMLDivElement | null = null;
+
+    // Show/hide orientation setting based on dual-pane toggle
+    const updateOrientationVisibility = (enabled: boolean) => {
+        orientationDropdown?.setDisabled(!enabled);
+        orientationContainerEl?.toggleClass('nn-setting-hidden', !enabled);
+    };
+
     if (!Platform.isMobile) {
         new Setting(containerEl)
             .setName(strings.settings.items.dualPane.name)
@@ -110,8 +120,33 @@ export function renderGeneralTab(context: SettingsTabContext): void {
             .addToggle(toggle =>
                 toggle.setValue(plugin.useDualPane()).onChange(value => {
                     plugin.setDualPanePreference(value);
+                    updateOrientationVisibility(value);
                 })
             );
+
+        // Create indented sub-setting for orientation
+        orientationContainerEl = containerEl.createDiv('nn-sub-settings');
+
+        new Setting(orientationContainerEl)
+            .setName(strings.settings.items.dualPaneOrientation.name)
+            .setDesc(strings.settings.items.dualPaneOrientation.desc)
+            .addDropdown(dropdown => {
+                orientationDropdown = dropdown;
+                dropdown
+                    .addOptions({
+                        horizontal: strings.settings.items.dualPaneOrientation.options.horizontal,
+                        vertical: strings.settings.items.dualPaneOrientation.options.vertical
+                    })
+                    .setValue(plugin.getDualPaneOrientation())
+                    .onChange(async value => {
+                        // Normalize and persist orientation change
+                        const nextOrientation = value === 'vertical' ? 'vertical' : 'horizontal';
+                        await plugin.setDualPaneOrientation(nextOrientation);
+                    });
+
+                // Initialize visibility based on current dual-pane state
+                updateOrientationVisibility(plugin.useDualPane());
+            });
     }
 
     const homepageSetting = new Setting(containerEl).setName(strings.settings.items.homepage.name);

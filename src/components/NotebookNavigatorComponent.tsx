@@ -39,11 +39,12 @@ import { FolderSuggestModal } from '../modals/FolderSuggestModal';
 import { TagSuggestModal } from '../modals/TagSuggestModal';
 import { RemoveTagModal } from '../modals/RemoveTagModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
-import { STORAGE_KEYS, NAVIGATION_PANE_DIMENSIONS, FILE_PANE_DIMENSIONS, ItemType, NAVPANE_MEASUREMENTS } from '../types';
+import { FILE_PANE_DIMENSIONS, ItemType, NAVPANE_MEASUREMENTS, type DualPaneOrientation } from '../types';
 import { getSelectedPath, getFilesForSelection } from '../utils/selectionUtils';
 import { normalizeNavigationPath } from '../utils/navigationIndex';
 import { deleteSelectedFiles, deleteSelectedFolder } from '../utils/deleteOperations';
 import { localStorage } from '../utils/localStorage';
+import { getNavigationPaneSizing } from '../utils/paneSizing';
 import { ListPane } from './ListPane';
 import type { ListPaneHandle } from './ListPane';
 import { NavigationPane } from './NavigationPane';
@@ -93,6 +94,14 @@ export const NotebookNavigatorComponent = React.memo(
     forwardRef<NotebookNavigatorHandle>(function NotebookNavigatorComponent(_, ref) {
         const { app, isMobile, fileSystemOps, plugin, tagTreeService, commandQueue, tagOperations, topicService } = useServices();
         const settings = useSettingsState();
+        // Get active orientation from settings
+        const orientation: DualPaneOrientation = settings.dualPaneOrientation;
+        // Retrieve sizing config based on current orientation
+        const {
+            minSize: navigationPaneMinSize,
+            defaultSize: navigationPaneDefaultSize,
+            storageKey: navigationPaneStorageKey
+        } = getNavigationPaneSizing(orientation);
         const selectionState = useSelectionState();
         const selectionDispatch = useSelectionDispatch();
         const uiState = useUIState();
@@ -130,10 +139,11 @@ export const NotebookNavigatorComponent = React.memo(
         }, []);
 
         // Enable resizable pane
-        const { paneWidth, isResizing, resizeHandleProps } = useResizablePane({
-            initialWidth: NAVIGATION_PANE_DIMENSIONS.defaultWidth,
-            min: NAVIGATION_PANE_DIMENSIONS.minWidth,
-            storageKey: STORAGE_KEYS.navigationPaneWidthKey
+        const { paneSize, isResizing, resizeHandleProps } = useResizablePane({
+            orientation,
+            initialSize: navigationPaneDefaultSize,
+            min: navigationPaneMinSize,
+            storageKey: navigationPaneStorageKey
         });
 
         // Use navigator reveal logic
@@ -167,7 +177,7 @@ export const NotebookNavigatorComponent = React.memo(
 
         // Checks container width on first render to determine dual/single pane layout
         useLayoutEffect(() => {
-            if (isMobile) {
+            if (isMobile || orientation === 'vertical') {
                 return;
             }
 
@@ -175,7 +185,7 @@ export const NotebookNavigatorComponent = React.memo(
                 return;
             }
 
-            const savedWidth = localStorage.get<number>(STORAGE_KEYS.navigationPaneWidthKey);
+            const savedWidth = localStorage.get<number>(navigationPaneStorageKey);
             if (savedWidth) {
                 hasCheckedInitialVisibility.current = true;
                 return;
@@ -189,10 +199,10 @@ export const NotebookNavigatorComponent = React.memo(
             hasCheckedInitialVisibility.current = true;
 
             const containerWidth = node.getBoundingClientRect().width;
-            if (containerWidth < paneWidth + FILE_PANE_DIMENSIONS.minWidth) {
+            if (containerWidth < paneSize + FILE_PANE_DIMENSIONS.minWidth) {
                 plugin.setDualPanePreference(false);
             }
-        }, [isMobile, paneWidth, plugin]);
+        }, [isMobile, orientation, paneSize, plugin, navigationPaneStorageKey]);
 
         // Determine CSS classes
         const containerClasses = ['nn-split-container'];
@@ -680,6 +690,7 @@ export const NotebookNavigatorComponent = React.memo(
             containerClasses.push(uiState.currentSinglePaneView === 'navigation' ? 'show-navigation' : 'show-files');
         } else {
             containerClasses.push('nn-dual-pane');
+            containerClasses.push(`nn-orientation-${orientation}`);
         }
         if (isResizing) {
             containerClasses.push('nn-resizing');
@@ -725,6 +736,13 @@ export const NotebookNavigatorComponent = React.memo(
             }
         }, [settings.navItemHeight, settings.navItemHeightScaleText, settings.navIndent]);
 
+        // Compute navigation pane style based on orientation and single pane mode
+        const navigationPaneStyle = uiState.singlePane
+            ? { width: '100%', height: '100%' }
+            : orientation === 'vertical'
+              ? { width: '100%', flexBasis: `${paneSize}px`, minHeight: `${navigationPaneMinSize}px` }
+              : { width: `${paneSize}px`, height: '100%' };
+
         return (
             <div
                 ref={containerCallbackRef}
@@ -751,7 +769,7 @@ export const NotebookNavigatorComponent = React.memo(
             */}
                 <NavigationPane
                     ref={navigationPaneRef}
-                    style={{ width: uiState.singlePane ? '100%' : `${paneWidth}px` }}
+                    style={navigationPaneStyle}
                     rootContainerRef={containerRef}
                     onExecuteSearchShortcut={handleSearchShortcutExecution}
                     onNavigateToFolder={navigateToFolder}
@@ -762,6 +780,7 @@ export const NotebookNavigatorComponent = React.memo(
                 <ListPane
                     ref={listPaneRef}
                     rootContainerRef={containerRef}
+                    orientation={orientation}
                     resizeHandleProps={!uiState.singlePane ? resizeHandleProps : undefined}
                 />
             </div>

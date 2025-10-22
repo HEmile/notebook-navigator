@@ -614,6 +614,14 @@ export const STRINGS_ZH_CN = {
                 name: '双窗格布局（仅桌面端，不同步）',
                 desc: '在桌面端并排显示导航窗格和列表窗格。'
             },
+            dualPaneOrientation: {
+                name: '双栏布局方向',
+                desc: '双栏启用时选择水平或垂直布局。',
+                options: {
+                    horizontal: '水平分割',
+                    vertical: '垂直分割'
+                }
+            },
             startView: {
                 name: '默认启动视图',
                 desc: '选择打开 Notebook Navigator 时显示的窗格。导航窗格显示快捷方式、最近笔记和文件夹结构。列表窗格显示笔记列表。',

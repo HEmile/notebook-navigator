@@ -618,6 +618,14 @@ export const STRINGS_DE = {
                 name: 'Doppelbereichslayout (nur Desktop, nicht synchronisiert)',
                 desc: 'Navigationsbereich und Listenbereich nebeneinander auf dem Desktop anzeigen.'
             },
+            dualPaneOrientation: {
+                name: 'Ausrichtung des Doppelbereichs',
+                desc: 'Horizontalen oder vertikalen Aufbau wählen, wenn der Doppelbereich aktiv ist.',
+                options: {
+                    horizontal: 'Horizontale Aufteilung',
+                    vertical: 'Vertikale Aufteilung'
+                }
+            },
             startView: {
                 name: 'Standard-Startansicht',
                 desc: 'Wählen Sie den Bereich, der beim Öffnen von Notebook Navigator angezeigt wird. Der Navigationsbereich zeigt Verknüpfungen, aktuelle Notizen und die Ordnerstruktur. Der Listenbereich zeigt die Notizliste.',

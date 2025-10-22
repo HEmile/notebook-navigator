@@ -59,7 +59,7 @@ import { useListPaneAppearance } from '../hooks/useListPaneAppearance';
 import { useContextMenu } from '../hooks/useContextMenu';
 import { strings } from '../i18n';
 import { TIMEOUTS } from '../types/obsidian-extended';
-import { ListPaneItemType, LISTPANE_MEASUREMENTS } from '../types';
+import { ListPaneItemType, LISTPANE_MEASUREMENTS, type DualPaneOrientation } from '../types';
 import { getEffectiveSortOption } from '../utils/sortUtils';
 import { FileItem } from './FileItem';
 import { ListPaneHeader } from './ListPaneHeader';
@@ -99,9 +99,10 @@ interface ListPaneProps {
      * other Obsidian views.
      */
     rootContainerRef: React.RefObject<HTMLDivElement | null>;
+    orientation: DualPaneOrientation;
     /**
      * Optional resize handle props for dual-pane mode.
-     * When provided, renders a resize handle overlay on the left edge of the list pane.
+     * When provided, renders a resize handle overlay on the list pane boundary aligned with the active orientation.
      */
     resizeHandleProps?: {
         onMouseDown: (e: React.MouseEvent) => void;
@@ -663,7 +664,9 @@ export const ListPane = React.memo(
         // Single return with conditional content
         return (
             <div className={`nn-list-pane ${isSearchActive ? 'nn-search-active' : ''}`}>
-                {props.resizeHandleProps && <div className="nn-resize-handle" {...props.resizeHandleProps} />}
+                {props.resizeHandleProps && (
+                    <div className="nn-resize-handle" data-orientation={props.orientation} {...props.resizeHandleProps} />
+                )}
                 <ListPaneHeader
                     onHeaderClick={handleScrollToTop}
                     isSearchActive={isSearchActive}

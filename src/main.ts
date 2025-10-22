@@ -18,7 +18,7 @@
 
 import { Plugin, TFile, FileView } from 'obsidian';
 import { NotebookNavigatorSettings, DEFAULT_SETTINGS, NotebookNavigatorSettingTab } from './settings';
-import { LocalStorageKeys, NOTEBOOK_NAVIGATOR_VIEW, STORAGE_KEYS } from './types';
+import { LocalStorageKeys, NOTEBOOK_NAVIGATOR_VIEW, STORAGE_KEYS, type DualPaneOrientation } from './types';
 import { ISettingsProvider } from './interfaces/ISettingsProvider';
 import { MetadataService, type MetadataCleanupSummary } from './services/MetadataService';
 import { TagOperations } from './services/TagOperations';
@@ -76,6 +76,8 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     private isUnloading = false;
     // User preference for dual-pane mode (persisted in localStorage, not settings)
     private dualPanePreference = true;
+    // User preference for dual-pane orientation (persisted in localStorage)
+    private dualPaneOrientationPreference: DualPaneOrientation = 'horizontal';
     // Manages recent notes and icons data persistence
     private recentDataManager: RecentDataManager | null = null;
     // Coordinates workspace interactions with the navigator view
@@ -155,6 +157,11 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         if (typeof this.settings.checkForUpdatesOnStart !== 'boolean') {
             this.settings.checkForUpdatesOnStart = true;
         }
+
+        // Load saved orientation preference for this device
+        const storedOrientation = localStorage.get<unknown>(this.keys.dualPaneOrientationKey);
+        const parsedOrientation = this.parseDualPaneOrientation(storedOrientation);
+        this.dualPaneOrientationPreference = parsedOrientation ?? 'horizontal';
 
         return isFirstLaunch;
     }
@@ -302,7 +309,6 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         const storedDualPane = localStorage.get<unknown>(this.keys.dualPaneKey);
         const parsedDualPane = this.parseDualPanePreference(storedDualPane);
         this.dualPanePreference = parsedDualPane ?? true;
-
         const storedLocalStorageVersion = localStorage.get<number>(STORAGE_KEYS.localStorageVersionKey);
 
         // Handle first launch initialization
@@ -315,6 +321,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
 
             // Reset dual-pane preference to default on fresh install
             this.dualPanePreference = true;
+            this.dualPaneOrientationPreference = 'horizontal';
 
             // Ensure root folder is expanded on first launch (default is enabled)
             if (this.settings.showRootFolder) {
@@ -446,6 +453,29 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     }
 
     /**
+     * Returns the active dual-pane orientation for this device
+     */
+    public getDualPaneOrientation(): DualPaneOrientation {
+        return this.dualPaneOrientationPreference;
+    }
+
+    /**
+     * Updates the dual-pane orientation and persists to vault-scoped local storage.
+     */
+    public async setDualPaneOrientation(orientation: DualPaneOrientation): Promise<void> {
+        // Normalize value to valid orientation
+        const normalized: DualPaneOrientation = orientation === 'vertical' ? 'vertical' : 'horizontal';
+        if (this.dualPaneOrientationPreference === normalized) {
+            return;
+        }
+
+        // Update in-memory preference and persist
+        this.dualPaneOrientationPreference = normalized;
+        localStorage.set(this.keys.dualPaneOrientationKey, normalized);
+        this.notifySettingsUpdate();
+    }
+
+    /**
      * Parses dual-pane preference from local storage string value
      */
     private parseDualPanePreference(raw: unknown): boolean | null {
@@ -454,6 +484,19 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         }
 
         return false;
+    }
+
+    /**
+     * Parses dual-pane orientation from local storage
+     */
+    private parseDualPaneOrientation(raw: unknown): DualPaneOrientation | null {
+        if (raw === 'vertical') {
+            return 'vertical';
+        }
+        if (raw === 'horizontal') {
+            return 'horizontal';
+        }
+        return null;
     }
 
     /**

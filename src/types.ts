@@ -215,6 +215,8 @@ export interface LocalStorageKeys {
     selectedFilesKey: string;
     selectedTagKey: string;
     navigationPaneWidthKey: string;
+    navigationPaneHeightKey: string;
+    dualPaneOrientationKey: string;
     dualPaneKey: string;
     shortcutsExpandedKey: string;
     recentNotesExpandedKey: string;
@@ -242,6 +244,8 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     selectedFilesKey: 'notebook-navigator-selected-files',
     selectedTagKey: 'notebook-navigator-selected-tag',
     navigationPaneWidthKey: 'notebook-navigator-navigation-pane-width',
+    navigationPaneHeightKey: 'notebook-navigator-navigation-pane-height',
+    dualPaneOrientationKey: 'notebook-navigator-dual-pane-orientation',
     dualPaneKey: 'notebook-navigator-dual-pane',
     shortcutsExpandedKey: 'notebook-navigator-shortcuts-expanded',
     recentNotesExpandedKey: 'notebook-navigator-recent-notes-expanded',
@@ -255,13 +259,18 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     localStorageVersionKey: 'notebook-navigator-localstorage-version'
 };
 
+/** Orientation options for dual-pane layout */
+export type DualPaneOrientation = 'horizontal' | 'vertical';
+
 /**
  * Default dimensions for the navigation pane (folder/tag tree)
  * These values are used when no saved state exists
  */
 export const NAVIGATION_PANE_DIMENSIONS = {
     defaultWidth: 300,
-    minWidth: 150
+    minWidth: 150,
+    defaultHeight: 260,
+    minHeight: 160
 };
 
 /**

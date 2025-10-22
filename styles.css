@@ -75,6 +75,8 @@ body {
     /* Minimum widths for panes */
     --nn-navigation-pane-min-width: 150px; /* Minimum width for navigation pane */
     --nn-list-pane-min-width: 250px; /* Minimum width for list pane */
+    --nn-navigation-pane-min-height: 160px; /* Minimum height for navigation pane (vertical split) */
+    --nn-list-pane-min-height: 250px; /* Minimum height for list pane (vertical split) */
 
     /* ========================================================================
        Notebook Navigator Theme Variables
@@ -427,6 +429,41 @@ body {
     contain: layout style;
 }
 
+.nn-split-container.nn-orientation-vertical {
+    flex-direction: column;
+}
+
+.nn-split-container.nn-orientation-vertical .nn-navigation-pane {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--nn-navigation-pane-min-height);
+    flex: 0 1 auto;
+}
+
+.nn-split-container.nn-orientation-vertical .nn-list-pane {
+    min-width: 0;
+    width: 100%;
+    min-height: var(--nn-list-pane-min-height);
+}
+
+.nn-split-container.nn-orientation-vertical .nn-navigation-pane .nn-pane-header {
+    border-right: none;
+}
+
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-navigation-pane .nn-pane-header {
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
+}
+
+.nn-split-container.nn-orientation-vertical .nn-navigation-pane-scroller,
+.nn-split-container.nn-orientation-vertical .nn-shortcut-pinned {
+    border-right: none;
+}
+
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-navigation-pane-scroller,
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-shortcut-pinned {
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
+}
+
 /* Pane divider resize handle - overlay on the left edge of list pane */
 .nn-resize-handle {
     width: 3px;
@@ -437,6 +474,14 @@ body {
     top: 0;
     bottom: 0;
     z-index: 10;
+}
+
+.nn-resize-handle[data-orientation='vertical'] {
+    width: 100%;
+    height: 3px;
+    cursor: row-resize;
+    bottom: auto;
+    right: 0;
 }
 
 /* Pane divider resize handle hover state - provides visual feedback */
@@ -476,8 +521,8 @@ body {
     background-color: var(--nn-theme-nav-bg);
 }
 
-/* Add right border to nav header in dual pane mode */
-:not(.nn-single-pane) .nn-navigation-pane .nn-pane-header {
+/* Add divider to nav header in dual pane mode */
+.nn-split-container.nn-orientation-horizontal:not(.nn-single-pane) .nn-navigation-pane .nn-pane-header {
     border-right: 1px solid var(--nn-theme-divider-border-color);
 }
 
@@ -2068,6 +2113,16 @@ body {
     flex-direction: column;
 }
 
+.nn-skeleton-navigation-pane-vertical {
+    width: 100%;
+    min-height: var(--nn-navigation-pane-min-height);
+    flex: 0 1 auto;
+}
+
+.nn-skeleton-list-pane-vertical {
+    min-height: var(--nn-list-pane-min-height);
+}
+
 .nn-skeleton-nav-header {
     height: 32px;
     background-color: var(--nn-theme-nav-bg);
@@ -2075,8 +2130,13 @@ body {
 }
 
 /* Add right border to nav header in dual pane mode */
-:not(.nn-single-pane) .nn-skeleton-nav-header {
+.nn-split-container.nn-orientation-horizontal:not(.nn-single-pane) .nn-skeleton-nav-header {
     border-right: 1px solid var(--nn-theme-divider-border-color);
+}
+
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-skeleton-nav-header {
+    border-right: none;
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
 }
 
 .nn-skeleton-list-header {
@@ -2098,8 +2158,13 @@ body {
 }
 
 /* Add right border only to nav content area in dual pane mode */
-:not(.nn-single-pane) .nn-skeleton-navigation-pane .nn-skeleton-content {
+.nn-split-container.nn-orientation-horizontal:not(.nn-single-pane) .nn-skeleton-navigation-pane .nn-skeleton-content {
     border-right: 1px solid var(--nn-theme-divider-border-color);
+}
+
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-skeleton-navigation-pane .nn-skeleton-content {
+    border-right: none;
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
 }
 
 /* ========================================================================

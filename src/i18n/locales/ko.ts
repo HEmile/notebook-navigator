@@ -614,6 +614,14 @@ export const STRINGS_KO = {
                 name: '이중 창 레이아웃 (데스크톱 전용, 동기화되지 않음)',
                 desc: '데스크톱에서 탐색 창과 목록 창을 나란히 표시합니다.'
             },
+            dualPaneOrientation: {
+                name: '듀얼 창 방향',
+                desc: '듀얼 창이 활성화된 경우 가로 또는 세로 레이아웃을 선택합니다.',
+                options: {
+                    horizontal: '가로 분할',
+                    vertical: '세로 분할'
+                }
+            },
             startView: {
                 name: '기본 시작 보기',
                 desc: 'Notebook Navigator를 열 때 표시할 창을 선택하세요. 탐색 창은 바로가기, 최근 노트, 폴더 구조를 표시합니다. 목록 창은 노트 목록을 표시합니다.',

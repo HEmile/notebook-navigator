@@ -613,6 +613,14 @@ export const STRINGS_ZH_TW = {
                 name: '雙窗格佈局 (僅限桌面版，不同步)',
                 desc: '在桌面版並排顯示導覽窗格和列表窗格。'
             },
+            dualPaneOrientation: {
+                name: '雙欄版面方向',
+                desc: '啟用雙欄時選擇水平或垂直版面。',
+                options: {
+                    horizontal: '水平分割',
+                    vertical: '垂直分割'
+                }
+            },
             startView: {
                 name: '預設啟動檢視',
                 desc: '選擇開啟 Notebook Navigator 時顯示哪個窗格。導覽窗格顯示捷徑、最近筆記和資料夾樹。列表窗格立即顯示筆記清單。',

@@ -19,9 +19,12 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import NotebookNavigatorPlugin from '../main';
 import { NotebookNavigatorSettings } from '../settings';
+import type { DualPaneOrientation } from '../types';
 
 // Separate contexts for state and update function
-const SettingsStateContext = createContext<NotebookNavigatorSettings | null>(null);
+type SettingsStateValue = NotebookNavigatorSettings & { dualPaneOrientation: DualPaneOrientation };
+
+const SettingsStateContext = createContext<SettingsStateValue | null>(null);
 const SettingsUpdateContext = createContext<((updater: (settings: NotebookNavigatorSettings) => void) => Promise<void>) | null>(null);
 
 interface SettingsProviderProps {
@@ -50,8 +53,10 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
     // Create a stable settings object that changes reference when version changes
     // This ensures components using SettingsStateContext re-render when settings change
     // NOTE: settings are mutated in place; the version counter forces object recreation
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const settingsValue = React.useMemo(() => ({ ...plugin.settings }), [version]);
+    const settingsValue = React.useMemo<SettingsStateValue>(
+        () => ({ ...plugin.settings, dualPaneOrientation: plugin.getDualPaneOrientation() }),
+        [plugin, version]
+    );
 
     // Listen for settings updates from the plugin (e.g., from settings tab)
     useEffect(() => {
@@ -77,7 +82,7 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
 }
 
 // Hook to get only settings state (use this when you only need to read settings)
-export function useSettingsState(): NotebookNavigatorSettings {
+export function useSettingsState(): SettingsStateValue {
     const context = useContext(SettingsStateContext);
     if (context === null) {
         throw new Error('useSettingsState must be used within a SettingsProvider');

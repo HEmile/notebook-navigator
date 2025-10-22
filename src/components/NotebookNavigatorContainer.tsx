@@ -20,11 +20,11 @@ import React, { useState, useEffect, forwardRef } from 'react';
 import { useFileCache } from '../context/StorageContext';
 import { useUIState } from '../context/UIStateContext';
 import { useSettingsState } from '../context/SettingsContext';
-import { STORAGE_KEYS, NAVIGATION_PANE_DIMENSIONS } from '../types';
 import { NotebookNavigatorComponent } from './NotebookNavigatorComponent';
 import type { NotebookNavigatorHandle } from './NotebookNavigatorComponent';
 import { SkeletonView } from './SkeletonView';
 import { localStorage } from '../utils/localStorage';
+import { getNavigationPaneSizing } from '../utils/paneSizing';
 
 /**
  * Container component that handles storage initialization.
@@ -35,20 +35,44 @@ export const NotebookNavigatorContainer = React.memo(
         const { isStorageReady } = useFileCache();
         const uiState = useUIState();
         const settings = useSettingsState();
-        const [paneWidth, setPaneWidth] = useState(NAVIGATION_PANE_DIMENSIONS.defaultWidth);
+        const orientation = settings.dualPaneOrientation;
+        // Get sizing config for current orientation
+        const { defaultSize, minSize, storageKey } = getNavigationPaneSizing(orientation);
+        const [paneSize, setPaneSize] = useState(defaultSize);
 
-        // Load saved pane width
+        // Load saved pane size for current orientation
         useEffect(() => {
-            const savedWidth = localStorage.get<number>(STORAGE_KEYS.navigationPaneWidthKey);
-            if (savedWidth) {
-                setPaneWidth(savedWidth);
+            const savedValue = localStorage.get<unknown>(storageKey);
+            if (typeof savedValue === 'number' && Number.isFinite(savedValue)) {
+                setPaneSize(Math.max(minSize, savedValue));
+                return;
             }
-        }, []);
+            if (typeof savedValue === 'string') {
+                const parsed = Number(savedValue);
+                if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+                    setPaneSize(Math.max(minSize, parsed));
+                    return;
+                }
+            }
+
+            setPaneSize(defaultSize);
+        }, [defaultSize, minSize, storageKey]);
 
         if (!isStorageReady) {
+            // Build CSS classes for skeleton view
+            const containerClasses = ['nn-split-container', 'nn-desktop'];
+            if (!uiState.singlePane) {
+                containerClasses.push(`nn-orientation-${orientation}`);
+            }
+
             return (
-                <div className="nn-split-container nn-desktop">
-                    <SkeletonView paneWidth={paneWidth} singlePane={uiState.singlePane} searchActive={settings.searchActive} />
+                <div className={containerClasses.join(' ')}>
+                    <SkeletonView
+                        paneSize={paneSize}
+                        singlePane={uiState.singlePane}
+                        searchActive={settings.searchActive}
+                        orientation={orientation}
+                    />
                 </div>
             );
         }
