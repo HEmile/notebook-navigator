@@ -39,7 +39,6 @@ import { useListReorder, type ListReorderHandlers } from './useListReorder';
 import { RootFolderReorderItem } from '../components/RootFolderReorderItem';
 import { mergeNavigationSectionOrder } from '../utils/navigationSections';
 import { getPathBaseName } from '../utils/pathUtils';
-import { beginInternalDrag, endInternalDrag } from '../utils/internalDragState';
 
 export interface RootFolderDescriptor {
     key: string;
@@ -97,44 +96,7 @@ function buildReorderVisualState(
     }
 
     const baseHandlers = context.getHandlers(key);
-    let dragHandlers = createDragHandlers ? createDragHandlers(baseHandlers) : baseHandlers;
-
-    // Wrap drag handlers to track navigation root drag state globally
-    // This prevents interference with file/folder drag operations
-    if (dragHandlers.draggable) {
-        const originalHandlers = dragHandlers;
-        dragHandlers = {
-            ...originalHandlers,
-            onDragStart: event => {
-                // Mark start of navigation root drag
-                beginInternalDrag('navigation-root');
-                try {
-                    originalHandlers.onDragStart(event);
-                } catch (error) {
-                    endInternalDrag('navigation-root');
-                    throw error;
-                }
-            },
-            onDragOver: originalHandlers.onDragOver,
-            onDragLeave: originalHandlers.onDragLeave,
-            onDrop: event => {
-                try {
-                    originalHandlers.onDrop(event);
-                } finally {
-                    // Clear drag state after drop
-                    endInternalDrag('navigation-root');
-                }
-            },
-            onDragEnd: event => {
-                try {
-                    originalHandlers.onDragEnd(event);
-                } finally {
-                    // Always clear drag state when drag ends
-                    endInternalDrag('navigation-root');
-                }
-            }
-        };
-    }
+    const dragHandlers = createDragHandlers ? createDragHandlers(baseHandlers) : baseHandlers;
     const isDragSource = context.draggingKey === key;
     const isDifferentKey = context.draggingKey !== key;
     const showBefore = Boolean(isDifferentKey && context.dropIndex !== null && context.dropIndex === 0 && index === 0);

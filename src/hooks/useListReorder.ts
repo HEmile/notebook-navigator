@@ -18,6 +18,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
+import { SHORTCUT_DRAG_MIME } from '../types/shortcuts';
+
 /**
  * Base interface for items that can be reordered.
  * Items must have a unique key for identification.
@@ -249,8 +251,7 @@ export function useListReorder<T extends ReorderItemDescriptor>({
             }
 
             try {
-                // Only set standard MIME type to enable drag on Chrome 128+ Android
-                // Custom MIME types break drag and drop on Android Chrome 128+
+                event.dataTransfer.setData(SHORTCUT_DRAG_MIME, key);
                 event.dataTransfer.setData('text/plain', key);
             } catch (error) {
                 console.error('Drag dataTransfer setData failed', error);

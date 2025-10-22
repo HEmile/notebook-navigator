@@ -25,12 +25,12 @@ import { useSettingsState } from '../context/SettingsContext';
 import { useExpansionState, useExpansionDispatch } from '../context/ExpansionContext';
 import { strings } from '../i18n';
 import { ItemType, UNTAGGED_TAG_ID } from '../types';
+import { SHORTCUT_DRAG_MIME } from '../types/shortcuts';
 import { DragManagerPayload, hasDragManager, TIMEOUTS } from '../types/obsidian-extended';
 import { getPathFromDataAttribute } from '../utils/domUtils';
 import { getFilesForFolder, getFilesForTag, getFilesForTopic } from '../utils/fileFinder';
 import { generateUniqueFilename } from '../utils/fileCreationUtils';
 import { createDragGhostManager } from '../utils/dragGhost';
-import { isInternalDragActive } from '../utils/internalDragState';
 
 /**
  * Enables drag and drop for files and folders using event delegation.
@@ -380,8 +380,7 @@ export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>
         (e: DragEvent) => {
             if (!isHTMLElement(e.target)) return;
             const dropZone = e.target.closest<HTMLElement>('[data-drop-zone="folder"],[data-drop-zone="tag"]');
-            // Check for internal navigation drag using module-level state instead of MIME types
-            const isInternalNavigationDrag = isInternalDragActive();
+            const isShortcutDrag = Boolean(e.dataTransfer?.types?.includes(SHORTCUT_DRAG_MIME));
 
             if (dragOverElement.current && dragOverElement.current !== dropZone) {
                 dragOverElement.current.classList.remove('nn-drag-over');
@@ -390,16 +389,14 @@ export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>
             }
 
             if (!dropZone) {
-                // Block internal navigation drags on non-drop zones
-                if (isInternalNavigationDrag && e.dataTransfer) {
+                if (isShortcutDrag && e.dataTransfer) {
                     e.dataTransfer.dropEffect = 'none';
                 }
                 clearAutoExpandTimer();
                 return;
             }
 
-            // Skip drop zone highlighting for internal navigation drags
-            if (isInternalNavigationDrag) {
+            if (isShortcutDrag) {
                 dropZone.classList.remove('nn-drag-over');
                 dragOverElement.current = null;
                 clearAutoExpandTimer();
@@ -643,9 +640,8 @@ export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>
                     dropZone = candidate instanceof HTMLElement ? candidate : null;
                 }
 
-                // Ignore drops from internal navigation drags (shortcuts, root folders)
-                const isInternalNavigationDrag = isInternalDragActive();
-                if (isInternalNavigationDrag) {
+                const isShortcutDrag = Boolean(e.dataTransfer?.types?.includes(SHORTCUT_DRAG_MIME));
+                if (isShortcutDrag) {
                     clearAutoExpandTimer();
                     return;
                 }
