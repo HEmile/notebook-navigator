@@ -27,6 +27,8 @@ export interface FilterSearchTokens {
     excludeNameTokens: string[];
     excludeTagTokens: string[];
     excludeTagged: boolean;
+    topicTokens: string[];
+    excludeTopicTokens: string[];
 }
 
 const CONNECTOR_WORDS = new Set(['and']);
@@ -37,11 +39,13 @@ const CONNECTOR_WORDS = new Set(['and']);
  * Inclusion patterns (must match):
  * - #tag - Include notes with tags containing "tag"
  * - # - Include only notes that have at least one tag
+ * - topic: "name" - Include notes belonging to the specified topic
  * - word - Include notes with "word" in their name
  *
  * Exclusion patterns (must NOT match):
  * - !#tag - Exclude notes with tags containing "tag"
  * - !# - Exclude all tagged notes (show only untagged)
+ * - -topic: "name" - Exclude notes belonging to the specified topic
  * - !word - Exclude notes with "word" in their name
  *
  * Special handling:
@@ -52,15 +56,39 @@ const CONNECTOR_WORDS = new Set(['and']);
  * @returns Parsed tokens with include/exclude criteria for filtering
  */
 export function parseFilterSearchTokens(query: string): FilterSearchTokens {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) {
+    // First, extract topic patterns before tokenizing
+    // Match patterns like: topic: "name" or -topic: "name"
+    const topicPattern = /(!)?topic:\s*"([^"]+)"/gi;
+    const topicTokens: string[] = [];
+    const excludeTopicTokens: string[] = [];
+    
+    let cleanedQuery = query;
+    let match;
+    while ((match = topicPattern.exec(query)) !== null) {
+        const isExclude = match[1] === '-';
+        const topicName = match[2].trim().toLowerCase();
+        
+        if (isExclude) {
+            excludeTopicTokens.push(topicName);
+        } else {
+            topicTokens.push(topicName);
+        }
+        
+        // Remove this pattern from the query
+        cleanedQuery = cleanedQuery.replace(match[0], ' ');
+    }
+    
+    const normalized = cleanedQuery.trim().toLowerCase();
+    if (!normalized && topicTokens.length === 0 && excludeTopicTokens.length === 0) {
         return {
             nameTokens: [],
             tagTokens: [],
             requireTagged: false,
             excludeNameTokens: [],
             excludeTagTokens: [],
-            excludeTagged: false
+            excludeTagged: false,
+            topicTokens: [],
+            excludeTopicTokens: []
         };
     }
 
@@ -72,7 +100,9 @@ export function parseFilterSearchTokens(query: string): FilterSearchTokens {
             requireTagged: false,
             excludeNameTokens: [],
             excludeTagTokens: [],
-            excludeTagged: false
+            excludeTagged: false,
+            topicTokens,
+            excludeTopicTokens
         };
     }
 
@@ -143,7 +173,9 @@ export function parseFilterSearchTokens(query: string): FilterSearchTokens {
         requireTagged,
         excludeNameTokens,
         excludeTagTokens,
-        excludeTagged
+        excludeTagged,
+        topicTokens,
+        excludeTopicTokens
     };
 }
 

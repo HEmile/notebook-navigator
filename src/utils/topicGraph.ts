@@ -307,6 +307,26 @@ export function collectTopicDescendants(node: TopicNode, paths: Set<TopicNode> =
 }
 
 /**
+ * Collect all file paths from a topic node and its descendants
+ * @param node - The topic node to collect files from
+ * @returns Set of file paths associated with the topic and its descendants
+ */
+export function collectTopicFilePaths(node: TopicNode): Set<string> {
+    const filePaths = new Set<string>();
+    
+    // Add files from the current node
+    node.notesWithTag.forEach(path => filePaths.add(path));
+    
+    // Recursively add files from all descendants
+    for (const child of node.children.values()) {
+        const childPaths = collectTopicFilePaths(child);
+        childPaths.forEach(path => filePaths.add(path));
+    }
+    
+    return filePaths;
+}
+
+/**
  * Find a topic node by its name
  */
 export function findTopicNode(tree: Map<string, TopicNode>, topicName: string): TopicNode | null {

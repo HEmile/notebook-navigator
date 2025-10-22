@@ -45,6 +45,7 @@ import { parseFilterSearchTokens, fileMatchesFilterTokens } from '../utils/filte
 import type { NotebookNavigatorSettings } from '../settings';
 import type { SearchResultMeta } from '../types/search';
 import { createHiddenTagVisibility, normalizeTagPathValue } from '../utils/tagPrefixMatcher';
+import { findTopicNode, collectTopicFilePaths } from '../utils/topicGraph';
 
 const EMPTY_SEARCH_META = new Map<string, SearchResultMeta>();
 
@@ -175,13 +176,18 @@ export function useListPaneData({
             return;
         }
 
+        // Remove topic patterns from the query before passing to Omnisearch
+        // This allows topic filtering to work as post-processing
+        const topicPattern = /(!)?topic:\s*"([^"]+)"/gi;
+        const cleanedQuery = trimmedQuery.replace(topicPattern, ' ').trim();
+
         // Track request to handle race conditions
         const token = ++searchTokenRef.current;
         let disposed = false;
 
         (async () => {
             try {
-                const hits = await omnisearchService.search(trimmedQuery);
+                const hits = await omnisearchService.search(cleanedQuery);
                 // Ignore stale results
                 if (disposed || searchTokenRef.current !== token) {
                     return;
@@ -268,6 +274,43 @@ export function useListPaneData({
             return baseFiles;
         }
 
+        // Parse the search query to extract topic filters (needed for both Omnisearch and regular search)
+        const tokens = parseFilterSearchTokens(trimmedQuery);
+        
+        // Build topic file path sets for filtering
+        let topicIncludePaths: Set<string> | null = null;
+        let topicExcludePaths: Set<string> | null = null;
+        
+        if (tokens.topicTokens.length > 0 || tokens.excludeTopicTokens.length > 0) {
+            const topicGraph = topicService?.getTopicGraph();
+            
+            if (topicGraph) {
+                // Build set of paths to include based on topic filters
+                if (tokens.topicTokens.length > 0) {
+                    topicIncludePaths = new Set<string>();
+                    for (const topicName of tokens.topicTokens) {
+                        const topicNode = findTopicNode(topicGraph, topicName);
+                        if (topicNode) {
+                            const filePaths = collectTopicFilePaths(topicNode);
+                            filePaths.forEach(path => topicIncludePaths!.add(path));
+                        }
+                    }
+                }
+                
+                // Build set of paths to exclude based on topic filters
+                if (tokens.excludeTopicTokens.length > 0) {
+                    topicExcludePaths = new Set<string>();
+                    for (const topicName of tokens.excludeTopicTokens) {
+                        const topicNode = findTopicNode(topicGraph, topicName);
+                        if (topicNode) {
+                            const filePaths = collectTopicFilePaths(topicNode);
+                            filePaths.forEach(path => topicExcludePaths!.add(path));
+                        }
+                    }
+                }
+            }
+        }
+
         // Use Omnisearch for full-text search when enabled
         if (useOmnisearch) {
             // Return empty while waiting for search results or if query doesn't match
@@ -281,12 +324,23 @@ export function useListPaneData({
                 return [];
             }
 
-            // Filter baseFiles to only include those found by Omnisearch
-            return baseFiles.filter(file => omnisearchPaths.has(file.path));
+            // Filter baseFiles to only include those found by Omnisearch, plus topic filtering
+            return baseFiles.filter(file => {
+                if (!omnisearchPaths.has(file.path)) {
+                    return false;
+                }
+                
+                // Apply topic filtering as post-processing
+                if (topicIncludePaths && !topicIncludePaths.has(file.path)) {
+                    return false;
+                }
+                if (topicExcludePaths && topicExcludePaths.has(file.path)) {
+                    return false;
+                }
+                
+                return true;
+            });
         }
-
-        // Parse the search query into filter tokens
-        const tokens = parseFilterSearchTokens(trimmedQuery);
 
         // Check if any meaningful tokens exist (inclusions or exclusions)
         const hasTokens =
@@ -295,7 +349,9 @@ export function useListPaneData({
             tokens.requireTagged ||
             tokens.excludeNameTokens.length > 0 ||
             tokens.excludeTagTokens.length > 0 ||
-            tokens.excludeTagged;
+            tokens.excludeTagged ||
+            tokens.topicTokens.length > 0 ||
+            tokens.excludeTopicTokens.length > 0;
 
         // Skip filtering if no tokens (e.g., query was only connector words)
         if (!hasTokens) {
@@ -309,6 +365,14 @@ export function useListPaneData({
         const lowercaseTagCache = new Map<string, string[]>();
 
         const filteredByFilterSearch = baseFiles.filter(file => {
+            // Apply topic filtering first (early exit for better performance)
+            if (topicIncludePaths && !topicIncludePaths.has(file.path)) {
+                return false;
+            }
+            if (topicExcludePaths && topicExcludePaths.has(file.path)) {
+                return false;
+            }
+            
             const name = searchableNames.get(file.path) || '';
 
             // Performance optimization: Only access the tag cache when the query actually
@@ -344,7 +408,7 @@ export function useListPaneData({
 
         // Return the filtered results from the internal filter search
         return filteredByFilterSearch;
-    }, [useOmnisearch, trimmedQuery, baseFiles, searchableNames, omnisearchResult, getDB]);
+    }, [useOmnisearch, trimmedQuery, baseFiles, searchableNames, omnisearchResult, getDB, topicService]);
 
     /**
      * Build the complete list of items for rendering, including:
