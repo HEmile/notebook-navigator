@@ -268,7 +268,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             const key = getShortcutKey(shortcut);
 
             if (isFolderShortcut(shortcut)) {
-                const target = app.vault.getAbstractFileByPath(shortcut.path);
+                const target = shortcut.path === '/' ? app.vault.getRoot() : app.vault.getAbstractFileByPath(shortcut.path);
                 if (isFolder(target)) {
                     return {
                         key,

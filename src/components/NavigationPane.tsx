@@ -1673,7 +1673,16 @@ export const NavigationPane = React.memo(
                         }
 
                         const folderPath = isFolderShortcut(item.shortcut) ? item.shortcut.path : '';
-                        const folderName = canInteract && folder ? folder.name : getPathBaseName(folderPath);
+                        const isRootShortcut = folderPath === '/';
+                        const folderName = (() => {
+                            if (isRootShortcut) {
+                                return settings.customVaultName || app.vault.getName();
+                            }
+                            if (canInteract && folder) {
+                                return folder.name;
+                            }
+                            return getPathBaseName(folderPath);
+                        })();
                         const folderCountInfo = canInteract && folder ? getFolderShortcutCount(folder) : ZERO_NOTE_COUNT;
                         const folderNote = canInteract && folder && settings.enableFolderNotes ? getFolderNote(folder, settings) : null;
 
@@ -2128,6 +2137,7 @@ export const NavigationPane = React.memo(
                 getAllDescendantTags,
                 getAllDescendantTopics,
                 expansionDispatch,
+                app.vault,
                 settings,
                 folderCounts,
                 tagCounts,

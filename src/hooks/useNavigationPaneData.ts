@@ -997,9 +997,11 @@ export function useNavigationPaneData({
                 // Apply custom folder icon to shortcut if available
                 const folderPath = item.folder?.path;
                 const folderColor = folderPath ? metadataService.getFolderColor(folderPath) : undefined;
+                const customIcon = folderPath ? metadataService.getFolderIcon(folderPath) : undefined;
+                const defaultIcon = folderPath === '/' ? 'vault' : 'lucide-folder';
                 return {
                     ...item,
-                    icon: (folderPath && metadataService.getFolderIcon(folderPath)) || 'lucide-folder',
+                    icon: customIcon || defaultIcon,
                     color: folderColor
                 };
             } else if (item.type === NavigationPaneItemType.SHORTCUT_TAG) {
