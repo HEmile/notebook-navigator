@@ -204,9 +204,15 @@ export function buildTopicGraphFromDatabase(
         }
 
         // Assign the file to the topics
-        for (const topic of topics) {
+        for (let topic of topics) {
+            if (typeof topic !== "string" || topic.length === 0) {
+                continue;
+            }
+            if (topic.startsWith('[[') && topic.endsWith(']]')) {
+                topic = topic.slice(2, -2).split("|")[0];
+            }
             // Use Obsidian API to resolve the parentTopic as a file path
-            const topicFile = app.metadataCache.getFirstLinkpathDest(topic.slice(2, -2).split("|")[0], "");
+            const topicFile = app.metadataCache.getFirstLinkpathDest(topic, "");
             if (!topicFile) {
                 continue;
             }
@@ -231,7 +237,7 @@ export function buildTopicGraphFromDatabase(
             continue;
         }
         if (excludedFolderPatterns && isPathInExcludedFolder(path, excludedFolderPatterns)) {
-            continue;
+            continue
         }
 
         const file = app.vault.getFileByPath(path);
@@ -241,7 +247,7 @@ export function buildTopicGraphFromDatabase(
         try {
             collectParentTopics(file, path);
         } catch (RangeError) {
-            console.error('RangeError', RangeError);
+            console.error(RangeError);
             console.error("You likely have a circular dependency in your hierarchy. This breaks the plugin! Fix it :). Hint: it's caused by");
             console.error(path)
             continue;
