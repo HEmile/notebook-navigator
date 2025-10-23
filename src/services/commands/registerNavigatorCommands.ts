@@ -105,18 +105,24 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
                 return false;
             }
 
+            // Get the topic graph
+            const topicGraph = plugin.topicService?.getTopicGraph();
+            if (!topicGraph) {
+                return false;
+            }
+
             // Find the first topic in the hierarchy (either the file itself or via isA/subset/hasTopic/for links)
-            const { findFirstTopicInHierarchy } = require('../../utils/topicNotes');
-            const topicName = findFirstTopicInHierarchy(activeFile, plugin.app);
+            const { findFirstTopicPathInHierarchy } = require('../../utils/topicNotes');
+            const topicPath = findFirstTopicPathInHierarchy(activeFile, plugin.app, topicGraph);
             
-            if (!topicName) {
+            if (!topicPath) {
                 return false;
             }
 
             if (!checking) {
                 void (async () => {
                     await plugin.activateView();
-                    await plugin.revealTopic(topicName);
+                    await plugin.revealTopic(topicPath);
                 })();
             }
 
@@ -134,18 +140,24 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
                 return false;
             }
 
+            // Get the topic graph
+            const topicGraph = plugin.topicService?.getTopicGraph();
+            if (!topicGraph) {
+                return false;
+            }
+
             // Find the first topic in the hierarchy (either the file itself or via isA/subset/hasTopic/for links)
-            const { findFirstTopicInHierarchy } = require('../../utils/topicNotes');
-            const topicName = findFirstTopicInHierarchy(activeFile, plugin.app);
+            const { findFirstTopicPathInHierarchy } = require('../../utils/topicNotes');
+            const topicPath = findFirstTopicPathInHierarchy(activeFile, plugin.app, topicGraph);
             
-            if (!topicName) {
+            if (!topicPath) {
                 return false;
             }
 
             if (!checking) {
                 void (async () => {
                     await plugin.activateView();
-                    await plugin.revealTopicAllPaths(topicName);
+                    await plugin.revealTopicAllPaths(topicPath);
                 })();
             }
 

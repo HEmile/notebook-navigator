@@ -17,7 +17,8 @@
  */
 
 import { App, TFile } from 'obsidian';
-import { getTopicNameFromPath, getTopicRelations, getTopicTags, hasTopicTag } from './topicGraph';
+import { getTopicNameFromPath, getTopicRelations, getTopicTags, hasTopicTag, findTopicNode } from './topicGraph';
+import { TopicNode } from '../types/storage';
 
 /**
  * Gets the topic note file for a given topic name.
@@ -71,11 +72,13 @@ export function getTopicNameFromFile(file: TFile): string {
  * 
  * @param file - The file to start searching from
  * @param app - The Obsidian App instance
+ * @param topicGraph - The topic graph containing all topic nodes
  * @param visited - Set of visited file paths to prevent infinite loops
- * @returns The topic name if found, null otherwise
+ * @returns The topic path if found, null otherwise
  */
-export function findFirstTopicInHierarchy(file: TFile, app: App, visited: Set<string> = new Set()): string | null {
+export function findFirstTopicPathInHierarchy(file: TFile, app: App, topicGraph: Map<string, TopicNode>, visited: Set<string> = new Set()): string | null {
     // Prevent infinite loops
+    console.log('visited', visited, file.path);
     if (visited.has(file.path)) {
         return null;
     }
@@ -88,7 +91,39 @@ export function findFirstTopicInHierarchy(file: TFile, app: App, visited: Set<st
 
     // Check if this file itself is a topic
     if (isTopicNote(file, app)) {
-        return getTopicNameFromFile(file);
+        const topicName = getTopicNameFromFile(file);
+        // Get the TopicNode from the graph
+        const topicNode = findTopicNode(topicGraph, topicName);
+        if (!topicNode) {
+            // If not in graph, just return the name
+            return topicName;
+        }
+        
+        // Traverse up using parents to form the full topicPath
+        const pathParts: string[] = [];
+        const visitedNodes = new Set<string>();
+        
+        function traverseUp(node: TopicNode) {
+            // Prevent infinite loops in case of circular references
+            if (visitedNodes.has(node.name)) {
+                return;
+            }
+            visitedNodes.add(node.name);
+            
+            // Add current node to path
+            pathParts.unshift(node.name);
+            
+            // If there are parents, traverse up the first parent
+            // (in case of multiple parents, we choose the first one)
+            if (node.parents.size > 0) {
+                const firstParent = node.parents.values().next().value;
+                traverseUp(firstParent);
+            }
+        }
+        
+        traverseUp(topicNode);
+        // Return the full path (e.g., "AI/Machine Learning/Neural Networks")
+        return pathParts.join('/');
     }
 
     // Get all parent links from frontmatter
@@ -106,9 +141,9 @@ export function findFirstTopicInHierarchy(file: TFile, app: App, visited: Set<st
         }
 
         // Recursively search for a topic
-        const topicName = findFirstTopicInHierarchy(parentFile, app, visited);
-        if (topicName) {
-            return topicName;
+        const topicPath = findFirstTopicPathInHierarchy(parentFile, app, topicGraph, visited);
+        if (topicPath) {
+            return topicPath;
         }
     }
 
