@@ -34,7 +34,7 @@ import {App, CachedMetadata, MetadataCache, TFile} from 'obsidian';
 let noteCountCache: WeakMap<TopicNode, number> | null = null;
 
 export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw"]
-export const HAS_TOPIC_RELATIONS = ["hasTopic", "isA", "for", "subset", "in", "partOf", "adres", 'with', "groep", "voor", "worksIn", "decennium", "year", "eeuw"]
+export const HAS_TOPIC_RELATIONS = ["hasTopic", "isA", "for", "subset", "in", "partOf", "adres", 'with', "groep", "voor", "worksIn", "decennium", "year", "eeuw", "maand"]
 export const TOPIC_TAGS = ["topic", "jaar", "decennium", "maand"]
 
 /**
@@ -208,9 +208,10 @@ export function buildTopicGraphFromDatabase(
             if (typeof topic !== "string" || topic.length === 0) {
                 continue;
             }
-            if (topic.startsWith('[[') && topic.endsWith(']]')) {
-                topic = topic.slice(2, -2).split("|")[0];
+            if (!(topic.startsWith('[[') && topic.endsWith(']]'))) {
+                continue;
             }
+            topic = topic.slice(2, -2).split("|")[0];
             // Use Obsidian API to resolve the parentTopic as a file path
             const topicFile = app.metadataCache.getFirstLinkpathDest(topic, "");
             if (!topicFile) {
