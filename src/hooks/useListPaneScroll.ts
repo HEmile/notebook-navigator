@@ -631,12 +631,16 @@ export function useListPaneScroll({
             // If we have a selected file, set a pending scroll
             // This works regardless of whether auto-reveal has run yet
             if (selectedFile && rowVirtualizer) {
-                setPending({
-                    type: 'file',
-                    filePath: selectedFile.path,
-                    reason: 'visibility-change',
-                    minIndexVersion: indexVersionRef.current
-                });
+                // Only scroll if file is in the list to avoid infinite scroll attempts
+                const fileInList = filePathToIndex.has(selectedFile.path);
+                if (fileInList) {
+                    setPending({
+                        type: 'file',
+                        filePath: selectedFile.path,
+                        reason: 'visibility-change',
+                        minIndexVersion: indexVersionRef.current
+                    });
+                }
             }
         };
 
@@ -722,12 +726,17 @@ export function useListPaneScroll({
 
         // Set a pending scroll to maintain position on selected file when config changes
         if (selectedFile) {
-            setPending({
-                type: 'file',
-                filePath: selectedFile.path,
-                reason: 'list-config-change',
-                minIndexVersion: indexVersionRef.current + 1
-            });
+            // Only scroll if file is in the list to avoid infinite scroll attempts
+            // This prevents issues when selectedFile is set to a file not in the current view
+            const fileInList = filePathToIndex.has(selectedFile.path);
+            if (fileInList) {
+                setPending({
+                    type: 'file',
+                    filePath: selectedFile.path,
+                    reason: 'list-config-change',
+                    minIndexVersion: indexVersionRef.current + 1
+                });
+            }
         } else if (wasShowingDescendants && !nowShowingDescendants) {
             // Special case: When disabling descendants and no file selected, scroll to top
             setPending({
@@ -745,7 +754,8 @@ export function useListPaneScroll({
         settings.noteGrouping,
         folderSettings,
         effectiveSort,
-        setPending
+        setPending,
+        filePathToIndex
     ]);
 
     /**
@@ -837,8 +847,11 @@ export function useListPaneScroll({
                 selectionDispatch({ type: 'SET_FOLDER_NAVIGATION', isFolderNavigation: false });
             }
 
+            // Only scroll to selected file if it's actually in the list
+            const fileInList = selectedFile && filePathToIndex.has(selectedFile.path);
+
             setPending(
-                selectedFile
+                fileInList
                     ? {
                           type: 'file',
                           filePath: selectedFile.path,
@@ -861,8 +874,13 @@ export function useListPaneScroll({
             // Clear the folder navigation flag
             selectionDispatch({ type: 'SET_FOLDER_NAVIGATION', isFolderNavigation: false });
 
+            // Only scroll to selected file if it's actually in the list
+            // This prevents infinite scroll attempts when the file isn't in the current view
+            // (e.g., topic note opened while viewing topic's files)
+            const fileInList = selectedFile && filePathToIndex.has(selectedFile.path);
+            
             setPending(
-                selectedFile
+                fileInList
                     ? {
                           type: 'file',
                           filePath: selectedFile.path,
@@ -880,8 +898,11 @@ export function useListPaneScroll({
                 prevListKeyRef.current = currentListKey;
             }
 
+            // Only scroll to selected file if it's actually in the list
+            const fileInList = selectedFile && filePathToIndex.has(selectedFile.path);
+
             setPending(
-                selectedFile
+                fileInList
                     ? {
                           type: 'file',
                           filePath: selectedFile.path,
@@ -910,16 +931,25 @@ export function useListPaneScroll({
      */
     useEffect(() => {
         if (selectionState.isRevealOperation && selectedFile && isScrollContainerReady) {
-            // Always use pending scroll for reveal operations
-            // This ensures proper timing and measurement before scrolling
-            setPending({
-                type: 'file',
-                filePath: selectedFile.path,
-                reason: 'reveal',
-                minIndexVersion: indexVersionRef.current
-            });
+            // Check if the file is actually in the current list before scrolling
+            const fileInList = filePathToIndex.has(selectedFile.path);
+            
+            if (fileInList) {
+                // File exists in list - proceed with scroll
+                setPending({
+                    type: 'file',
+                    filePath: selectedFile.path,
+                    reason: 'reveal',
+                    minIndexVersion: indexVersionRef.current
+                });
+            } else {
+                // File not in list - clear the reveal flag to prevent infinite scroll attempts
+                // This happens when revealing a file that's not in the current view
+                // (e.g., topic note opened while viewing topic's files)
+                selectionDispatch({ type: 'SET_SELECTION_TYPE', selectionType: selectionState.selectionType });
+            }
         }
-    }, [selectionState.isRevealOperation, selectedFile, isScrollContainerReady, selectionDispatch, filePathToIndex, setPending]);
+    }, [selectionState.isRevealOperation, selectionState.selectionType, selectedFile, isScrollContainerReady, selectionDispatch, filePathToIndex, setPending]);
 
     /**
      * Handle search query changes.
