@@ -5,3 +5,11 @@
 It is quite specific [to my setup](https://www.emilevankrieken.com/blog/2025/academic-obsidian/).
 It is functional, but it is also vibe-coded in a day, so no idea how production ready it is. 
 If you are interested on how to structure your notes to make use of this feature, and some examples, please read [this tutorial](https://www.emilevankrieken.com/blog/2025/academic-obsidian/). 
+
+## Merge from upstream
+It is apparently a bad idea to rebase from base/usptream. Best steps:
+- Create new branch
+- Use Github to create pull request from base into that new branch
+- Use `git pull https://github.com/johansan/notebook-navigator.git main --no-rebase`
+- Checkout new branch, then `git merge --no-ff johansan-main`
+- Git push
