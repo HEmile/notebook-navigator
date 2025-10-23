@@ -33,9 +33,9 @@ import {App, CachedMetadata, MetadataCache, TFile} from 'obsidian';
 // Cache for note counts to avoid recalculation
 let noteCountCache: WeakMap<TopicNode, number> | null = null;
 
-export const SUBSET_RELATIONS = ["subset", "in", "partOf"]
-export const HAS_TOPIC_RELATIONS = ["hasTopic", "isA", "for", "subset", "in", "partOf", "adres"]
-export const TOPIC_TAGS = ["topic"]
+export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw"]
+export const HAS_TOPIC_RELATIONS = ["hasTopic", "isA", "for", "subset", "in", "partOf", "adres", 'with', "groep", "voor", "worksIn", "decennium", "year", "eeuw"]
+export const TOPIC_TAGS = ["topic", "jaar", "decennium", "maand"]
 
 /**
  * Clear the note count cache
