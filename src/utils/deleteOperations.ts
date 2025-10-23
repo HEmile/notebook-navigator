@@ -60,8 +60,8 @@ export async function deleteSelectedFiles({
             allFiles = getFilesForFolder(selectionState.selectedFolder, settings, app);
         } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
             allFiles = getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
-        } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
-            allFiles = getFilesForTopic(selectionState.selectedTopic, settings, app, topicService);
+        } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            allFiles = getFilesForTopic(selectionState.selectedTopicPath, settings, app, topicService);
         }
 
         // Use centralized delete method with smart selection

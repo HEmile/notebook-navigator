@@ -40,8 +40,8 @@ export function useTopicNavigation() {
      * @param topicName - The topic name to navigate to
      */
     const navigateToTopic = useCallback(
-        (topicName: string) => {
-            if (!topicName) {
+        (topicPath: string) => {
+            if (!topicPath) {
                 return;
             }
 
@@ -50,7 +50,7 @@ export function useTopicNavigation() {
             // For now, topics don't have hierarchical expansion like tags with '/'
             // But we keep this structure for potential future enhancement
 
-            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicName });
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: topicPath });
 
             // Switch to files view in single-pane mode
             if (uiState.singlePane) {

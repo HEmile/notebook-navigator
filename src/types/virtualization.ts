@@ -72,7 +72,7 @@ export interface TopicItem {
     type: typeof NavigationPaneItemType.TOPIC;
     data: TopicNode;
     level: number;
-    path?: string;
+    path: string;
     key: string;
     color?: string;
     backgroundColor?: string;

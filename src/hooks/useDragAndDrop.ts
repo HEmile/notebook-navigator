@@ -113,8 +113,8 @@ export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>
             return getFilesForFolder(selectionState.selectedFolder, settings, app);
         } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
             return getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
-        } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
-            return getFilesForTopic(selectionState.selectedTopic, settings, app, topicService);
+        } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            return getFilesForTopic(selectionState.selectedTopicPath, settings, app, topicService);
         }
         return [];
     }, [selectionState, settings, app, tagTreeService]);

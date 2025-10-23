@@ -127,8 +127,8 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
             return resolveIndex(selectionState.selectedTag, ItemType.TAG);
         }
 
-        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic) {
-            return resolveIndex(selectionState.selectedTopic, ItemType.TOPIC);
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            return resolveIndex(selectionState.selectedTopicPath, ItemType.TOPIC);
         }
 
         return -1;
@@ -166,7 +166,7 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
             } else if (item.type === NavigationPaneItemType.TOPIC) {
                 const topicNode = item.data;
                 const topicPath = item.path ?? topicNode.name; // Use the unique path for this instance, fallback to name
-                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicPath });
+                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: topicPath });
 
                 // Auto-expand if enabled and topic has children
                 if (settings.autoExpandFoldersTags && topicNode.children.size > 0) {

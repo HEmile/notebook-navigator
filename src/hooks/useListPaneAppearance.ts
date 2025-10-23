@@ -20,7 +20,7 @@ export type TopicAppearance = FolderAppearance;
  */
 export function useListPaneAppearance() {
     const settings = useSettingsState();
-    const { selectedFolder, selectedTag, selectedTopic, selectionType } = useSelectionState();
+    const { selectedFolder, selectedTag, selectedTopicPath: selectedTopic, selectionType } = useSelectionState();
 
     return useMemo(() => {
         // For folders

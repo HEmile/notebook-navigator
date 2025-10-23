@@ -55,7 +55,13 @@ function getNoteCountCache(): WeakMap<TopicNode, number> {
 }
 
 export function getTopicNameFromPath(topicPath: string): string {
-    return topicPath.split('/').pop()?.split('.').slice(0, -1).join('') || '';
+    if (topicPath.includes("/")){
+        topicPath = topicPath.split('/').pop() || '';
+    }
+    if (topicPath.endsWith(".md")){
+        return topicPath.split('.').slice(0, -1).join('') || '';
+    }
+    return topicPath;
 }
 
 export function getTopicTags(metadata: CachedMetadata): string[] {
@@ -329,6 +335,7 @@ export function collectTopicFilePaths(node: TopicNode): Set<string> {
 /**
  * Find a topic node by its name
  */
+// TODO: This could technically be optimised if the topicName is a path. Now it does a linear search instead of logarithmic traversal of the topic hierarchy
 export function findTopicNode(tree: Map<string, TopicNode>, topicName: string): TopicNode | null {
     // Helper function to search recursively
     function searchNode(nodes: Map<string, TopicNode>): TopicNode | null {

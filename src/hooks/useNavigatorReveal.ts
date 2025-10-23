@@ -677,12 +677,12 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
      * Reveals a topic in the navigation pane by expanding ancestors and selecting it
      */
     const revealTopic = useCallback(
-        (topicName: string) => {
+        (topicPath: string) => {
             if (!topicService) {
                 return;
             }
 
-            const topicNode = topicService.findTopicNode(topicName);
+            const topicNode = topicService.findTopicNode(topicPath);
             if (!topicNode) {
                 return;
             }
@@ -694,9 +694,10 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
             // Build the full path for this topic from its ancestors
             // If ancestors = ["AI", "Machine Learning"], topicName = "Neural Networks"
             // Then topicPath = "AI/Machine Learning/Neural Networks"
-            const topicPath = ancestorNames.length > 0 
-                ? `${ancestorNames.join('/')}/${topicName}` 
-                : topicName;
+            // TODO: NOt sure if correct
+            if (!topicPath.includes("/") && topicNode.parents.size > 0){
+                topicPath = `${topicNode.name}/${topicPath}`;
+            }
 
             // Build ancestor paths for expansion
             // For ancestors ["AI", "Machine Learning"], we need paths ["AI", "AI/Machine Learning"]
@@ -717,7 +718,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
             }
 
             // Select the topic using its full path
-            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicNode.name });
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: topicPath });
 
             // Request scroll to the topic in navigation pane using its path
             setTimeout(() => {
@@ -771,7 +772,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
             }
 
             // Select the topic
-            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicNode.name });
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: topicNode.name });
 
             // Request scroll to the first path (arbitrary choice for scrolling)
             setTimeout(() => {

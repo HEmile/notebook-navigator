@@ -200,7 +200,7 @@ export const ListPane = React.memo(
         // Track render count
         const renderCountRef = useRef(0);
 
-        const { selectionType, selectedFolder, selectedTag, selectedTopic, selectedFile } = selectionState;
+        const { selectionType, selectedFolder, selectedTag, selectedTopicPath: selectedTopic, selectedFile } = selectionState;
 
         // Determine if list pane is visible early to optimize
         const isVisible = !uiState.singlePane || uiState.currentSinglePaneView === 'files';

@@ -106,6 +106,7 @@ import type { NoteCountInfo } from '../types/noteCounts';
 import { calculateFolderNoteCounts } from '../utils/noteCountUtils';
 import { normalizeNavigationSectionOrderInput } from '../utils/navigationSections';
 import { getPathBaseName } from '../utils/pathUtils';
+import { getTopicNameFromPath } from 'src/utils/topicGraph';
 
 export interface NavigationPaneHandle {
     getIndexOfPath: (itemType: ItemType, path: string) => number;
@@ -980,13 +981,15 @@ export const NavigationPane = React.memo(
         // Handle topic click
         // Parameter can be either a topic name (from shortcuts) or a topic path (from navigation tree)
         const handleTopicClick = useCallback(
-            (topicName: string) => {
-                const topicNode = topicService?.findTopicNode(topicName);
+            (topicPath: string) => {
+                const topicName = getTopicNameFromPath(topicPath);
+                const selectedTopic = selectionState.selectedTopicPath ? getTopicNameFromPath(selectionState.selectedTopicPath) : null;
+                const topicNode = topicService?.findTopicNode(topicPath);
                 if (!topicNode) {
                     return;
                 }
 
-                const isSameTopic = selectionState.selectionType === 'topic' && selectionState.selectedTopic === topicName;
+                const isSameTopic = selectionState.selectionType === 'topic' && selectedTopic === topicName;
 
                 if (isSameTopic) {
                     if (uiState.singlePane) {
@@ -1004,7 +1007,7 @@ export const NavigationPane = React.memo(
                 const topicNote = getTopicNote(topicName, app);
 
                 // Set topic as selected without auto-selecting first file to prevent interference
-                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicName, autoSelectedFile: null });
+                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: topicPath, autoSelectedFile: null });
 
                 // Open the topic note if it exists
                 if (topicNote) {
@@ -1031,7 +1034,7 @@ export const NavigationPane = React.memo(
                 settings.autoExpandFoldersTags,
                 topicService,
                 expansionDispatch,
-                selectionState.selectedTopic,
+                selectionState.selectedTopicPath,
                 selectionState.selectionType,
                 setActiveShortcut,
                 app,
@@ -1635,7 +1638,7 @@ export const NavigationPane = React.memo(
             }
 
             if (shortcut.type === ShortcutType.TOPIC) {
-                const selectedTopic = selectionState.selectedTopic;
+                const selectedTopic = selectionState.selectedTopicPath;
                 if (!selectedTopic || selectedTopic !== shortcut.topicName) {
                     setActiveShortcut(null);
                 }
@@ -1646,7 +1649,7 @@ export const NavigationPane = React.memo(
             selectionState.selectedFolder,
             selectionState.selectedFile,
             selectionState.selectedTag,
-            selectionState.selectedTopic,
+            selectionState.selectedTopicPath,
             setActiveShortcut
         ]);
 
@@ -2063,10 +2066,10 @@ export const NavigationPane = React.memo(
                                 tagNode={topicNode}
                                 level={item.level ?? 0}
                                 isExpanded={expansionState.expandedTopics.has(topicPath)}
-                                isSelected={selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopic === topicPath}
+                                isSelected={selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath === topicPath}
                                 isHidden={'isHidden' in item ? item.isHidden : false}
                                 onToggle={() => handleTopicToggle(topicPath)}
-                                onClick={() => handleTopicClick(topicName)}
+                                onClick={() => handleTopicClick(topicPath)}
                                 color={item.color}
                                 backgroundColor={item.backgroundColor}
                                 icon={item.icon}

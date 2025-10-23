@@ -41,7 +41,7 @@ export function ListToolbar({ isSearchActive, onSearchToggle }: ListToolbarProps
                 className={`nn-mobile-toolbar-button ${isSearchActive ? 'nn-mobile-toolbar-button-active' : ''}`}
                 aria-label={strings.paneHeader.search}
                 onClick={onSearchToggle}
-                disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopic}
+                disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopicPath}
                 tabIndex={-1}
             >
                 <ObsidianIcon name="lucide-search" />
@@ -50,7 +50,7 @@ export function ListToolbar({ isSearchActive, onSearchToggle }: ListToolbarProps
                 className={`nn-mobile-toolbar-button ${settings.includeDescendantNotes ? 'nn-mobile-toolbar-button-active' : ''}`}
                 aria-label={strings.paneHeader.toggleDescendantNotes}
                 onClick={handleToggleDescendants}
-                disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopic}
+                disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopicPath}
                 tabIndex={-1}
             >
                 <ObsidianIcon name="lucide-layers" />
@@ -59,7 +59,7 @@ export function ListToolbar({ isSearchActive, onSearchToggle }: ListToolbarProps
                 className={`nn-mobile-toolbar-button ${isCustomSort ? 'nn-mobile-toolbar-button-active' : ''}`}
                 aria-label={strings.paneHeader.changeSortOrder}
                 onClick={handleSortMenu}
-                disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopic}
+                disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopicPath}
                 tabIndex={-1}
             >
                 <ObsidianIcon name={getSortIcon()} />
@@ -68,7 +68,7 @@ export function ListToolbar({ isSearchActive, onSearchToggle }: ListToolbarProps
                 className={`nn-mobile-toolbar-button ${hasCustomAppearance ? 'nn-mobile-toolbar-button-active' : ''}`}
                 aria-label={strings.paneHeader.changeAppearance}
                 onClick={handleAppearanceMenu}
-                disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopic}
+                disabled={!selectionState.selectedFolder && !selectionState.selectedTag && !selectionState.selectedTopicPath}
                 tabIndex={-1}
             >
                 <ObsidianIcon name="lucide-palette" />

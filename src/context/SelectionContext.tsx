@@ -26,6 +26,7 @@ import type { NotebookNavigatorAPI } from '../api/NotebookNavigatorAPI';
 import type { TagTreeService } from '../services/TagTreeService';
 import type { TopicService } from '../services/TopicGraphService';
 import { normalizeTagPath } from '../utils/tagUtils';
+import { getTopicNameFromPath } from 'src/utils/topicGraph';
 
 export type SelectionRevealSource = 'auto' | 'manual' | 'shortcut' | 'startup';
 
@@ -34,7 +35,7 @@ export interface SelectionState {
     selectionType: NavigationItemType;
     selectedFolder: TFolder | null;
     selectedTag: string | null;
-    selectedTopic: string | null;
+    selectedTopicPath: string | null;
     selectedFiles: Set<string>; // Changed from single file to Set of file paths
     anchorIndex: number | null; // Anchor position for multi-selection
     lastMovementDirection: 'up' | 'down' | null; // Track direction for expand/contract
@@ -51,7 +52,7 @@ export interface SelectionState {
 export type SelectionAction =
     | { type: 'SET_SELECTED_FOLDER'; folder: TFolder | null; autoSelectedFile?: TFile | null }
     | { type: 'SET_SELECTED_TAG'; tag: string | null; autoSelectedFile?: TFile | null }
-    | { type: 'SET_SELECTED_TOPIC'; topic: string | null; autoSelectedFile?: TFile | null }
+    | { type: 'SET_SELECTED_TOPIC'; topicPath: string | null; autoSelectedFile?: TFile | null }
     | { type: 'SET_SELECTED_FILE'; file: TFile | null }
     | { type: 'SET_SELECTION_TYPE'; selectionType: NavigationItemType }
     | { type: 'CLEAR_SELECTION' }
@@ -125,7 +126,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
                 ...state,
                 selectedFolder: action.folder,
                 selectedTag: null,
-                selectedTopic: null,
+                selectedTopicPath: null,
                 selectionType: 'folder',
                 selectedFiles: newSelectedFiles,
                 selectedFile: action.autoSelectedFile || null,
@@ -149,7 +150,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
                 ...state,
                 selectedTag: normalizedTag,
                 selectedFolder: null,
-                selectedTopic: null,
+                selectedTopicPath: null,
                 selectionType: 'tag',
                 selectedFiles: newSelectedFiles,
                 selectedFile: action.autoSelectedFile || null,
@@ -170,7 +171,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
             }
             return {
                 ...state,
-                selectedTopic: action.topic,
+                selectedTopicPath: action.topicPath,
                 selectedFolder: null,
                 selectedTag: null,
                 selectionType: 'topic',
@@ -221,7 +222,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
                 ...state,
                 selectedFolder: null,
                 selectedTag: null,
-                selectedTopic: null,
+                selectedTopicPath: null,
                 selectedFiles: new Set<string>(),
                 selectedFile: null,
                 anchorIndex: null,
@@ -252,7 +253,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
                     selectionType: 'folder',
                     selectedFolder: folderToSelect,
                     selectedTag: null,
-                    selectedTopic: null,
+                    selectedTopicPath: null,
                     selectedFiles: newSelectedFiles,
                     selectedFile: action.file,
                     anchorIndex: null,
@@ -273,7 +274,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
                         selectionType: 'tag',
                         selectedTag: normalizedTargetTag,
                         selectedFolder: null,
-                        selectedTopic: null,
+                        selectedTopicPath: null,
                         selectedFiles: newSelectedFiles,
                         selectedFile: action.file,
                         anchorIndex: null,
@@ -292,7 +293,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
                     selectionType: 'folder',
                     selectedFolder: newFolder,
                     selectedTag: null,
-                    selectedTopic: null,
+                    selectedTopicPath: null,
                     selectedFiles: newSelectedFiles,
                     selectedFile: action.file,
                     anchorIndex: null,
@@ -306,14 +307,14 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
 
             // When targetTag is not specified, preserve current view type
             const shouldPreserveTag = state.selectionType === 'tag' && state.selectedTag;
-            const shouldPreserveTopic = state.selectionType === 'topic' && state.selectedTopic;
+            const shouldPreserveTopic = state.selectionType === 'topic' && state.selectedTopicPath;
             if (shouldPreserveTag) {
                 return {
                     ...state,
                     selectionType: 'tag',
                     selectedTag: state.selectedTag,
                     selectedFolder: null,
-                    selectedTopic: null,
+                    selectedTopicPath: null,
                     selectedFiles: newSelectedFiles,
                     selectedFile: action.file,
                     anchorIndex: null,
@@ -328,7 +329,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
                 return {
                     ...state,
                     selectionType: 'topic',
-                    selectedTopic: state.selectedTopic,
+                    selectedTopicPath: state.selectedTopicPath,
                     selectedFolder: null,
                     selectedTag: null,
                     selectedFiles: newSelectedFiles,
@@ -349,7 +350,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
                 selectionType: 'folder',
                 selectedFolder: newFolder,
                 selectedTag: null,
-                selectedTopic: null,
+                selectedTopicPath: null,
                 selectedFiles: newSelectedFiles,
                 selectedFile: action.file,
                 anchorIndex: null,
@@ -648,7 +649,7 @@ export function SelectionProvider({
             selectionType,
             selectedFolder,
             selectedTag: normalizedTag,
-            selectedTopic: null,
+            selectedTopicPath: null,
             selectedFiles,
             selectedFile,
             anchorIndex: null,
@@ -726,8 +727,9 @@ export function SelectionProvider({
             }
             // Handle auto-select logic for topic selection
             else if (action.type === 'SET_SELECTED_TOPIC' && action.autoSelectedFile === undefined) {
-                if (action.topic) {
-                    const filesForTopic = getFilesForTopic(action.topic, settings, app, topicService);
+                if (action.topicPath) {
+                    const topicName = getTopicNameFromPath(action.topicPath);
+                    const filesForTopic = getFilesForTopic(topicName, settings, app, topicService);
 
                     // Desktop with autoSelectFirstFile enabled: ALWAYS select first file
                     if (!isMobile && settings.autoSelectFirstFileOnFocusChange && filesForTopic.length > 0) {
