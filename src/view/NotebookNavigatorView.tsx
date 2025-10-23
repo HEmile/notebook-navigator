@@ -196,6 +196,14 @@ export class NotebookNavigatorView extends ItemView {
     }
 
     /**
+     * Reveals a topic by expanding all paths to root nodes
+     * This is useful when a topic appears in multiple places in the hierarchy
+     */
+    revealTopicAllPaths(topicName: string) {
+        this.componentRef.current?.revealTopicAllPaths(topicName);
+    }
+
+    /**
      * Moves focus to the visible pane without forcing a view switch
      */
     focusVisiblePane() {

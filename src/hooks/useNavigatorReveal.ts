@@ -729,11 +729,69 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
         [topicService, expansionState.expandedVirtualFolders, expansionDispatch, selectionDispatch, navigationPaneRef]
     );
 
+    /**
+     * Reveals a topic in the navigation pane by expanding ALL paths to root nodes.
+     * This is useful when a topic appears in multiple places in the hierarchy.
+     */
+    const revealTopicAllPaths = useCallback(
+        (topicName: string) => {
+            if (!topicService) {
+                return;
+            }
+
+            const topicNode = topicService.findTopicNode(topicName);
+            if (!topicNode) {
+                return;
+            }
+
+            // Get all paths from this topic to all root nodes
+            const { getAllTopicPathsToRoot } = require('../utils/topicGraph');
+            const allPaths = getAllTopicPathsToRoot(topicNode);
+
+            // Expand the Topics virtual folder
+            const currentExpanded = new Set(expansionState.expandedVirtualFolders);
+            currentExpanded.add('topics');
+            expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: currentExpanded });
+
+            // Build all ancestor paths for expansion
+            // For each path to root, we need to expand all intermediate nodes
+            const allAncestorPaths = new Set<string>();
+            
+            for (const pathToRoot of allPaths) {
+                // For each path like ["AI", "Machine Learning"], build ["AI", "AI/Machine Learning"]
+                for (let i = 0; i < pathToRoot.length; i++) {
+                    const path = pathToRoot.slice(0, i + 1).join('/');
+                    allAncestorPaths.add(path);
+                }
+            }
+
+            // Expand all ancestor topics
+            if (allAncestorPaths.size > 0) {
+                expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: Array.from(allAncestorPaths) });
+            }
+
+            // Select the topic
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topic: topicNode.name });
+
+            // Request scroll to the first path (arbitrary choice for scrolling)
+            setTimeout(() => {
+                const firstPath = allPaths.length > 0 
+                    ? `${allPaths[0].join('/')}/${topicName}` 
+                    : topicName;
+                navigationPaneRef.current?.requestScroll(firstPath, {
+                    itemType: ItemType.TOPIC
+                });
+            }, 50);
+        },
+        [topicService, expansionState.expandedVirtualFolders, expansionDispatch, selectionDispatch, navigationPaneRef]
+    );
+
     return {
         revealFileInActualFolder,
         revealFileInNearestFolder,
         navigateToFolder,
         revealTag,
-        revealTopic
+        revealTopic,
+        revealTopicAllPaths
     };
 }

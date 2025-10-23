@@ -124,6 +124,35 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
         }
     });
 
+    // Command to reveal the active topic note with all paths expanded
+    plugin.addCommand({
+        id: 'reveal-active-topic-all-paths',
+        name: strings.commands.revealActiveTopicAllPaths,
+        checkCallback: (checking: boolean) => {
+            const activeFile = plugin.app.workspace.getActiveFile();
+            if (!activeFile) {
+                return false;
+            }
+
+            // Find the first topic in the hierarchy (either the file itself or via isA/subset/hasTopic/for links)
+            const { findFirstTopicInHierarchy } = require('../../utils/topicNotes');
+            const topicName = findFirstTopicInHierarchy(activeFile, plugin.app);
+            
+            if (!topicName) {
+                return false;
+            }
+
+            if (!checking) {
+                void (async () => {
+                    await plugin.activateView();
+                    await plugin.revealTopicAllPaths(topicName);
+                })();
+            }
+
+            return true;
+        }
+    });
+
     // Command to toggle showing descendant files in folders
     plugin.addCommand({
         id: 'toggle-descendants',

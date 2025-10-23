@@ -803,6 +803,15 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.workspaceCoordinator?.revealTopic(topicName);
     }
 
+    /**
+     * Reveals a topic in the navigation pane by expanding ALL paths to root nodes
+     * This is useful when a topic appears in multiple places in the hierarchy
+     * @param topicName - The name of the topic to reveal
+     */
+    async revealTopicAllPaths(topicName: string) {
+        this.workspaceCoordinator?.revealTopicAllPaths(topicName);
+    }
+
     public resolveHomepageFile(): TFile | null {
         return this.homepageController?.resolveHomepageFile() ?? null;
     }

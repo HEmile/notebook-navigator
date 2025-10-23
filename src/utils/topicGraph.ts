@@ -382,6 +382,44 @@ export function getTopicAncestors(topicNode: TopicNode): string[] {
 }
 
 /**
+ * Gets all paths from a topic to all root nodes.
+ * Returns an array of paths, where each path is an array of topic names from root to the immediate parent.
+ * This is useful when a topic has multiple parent paths and you want to reveal/expand all of them.
+ * 
+ * @param topicNode - The topic node to get all paths for
+ * @returns Array of paths, where each path is an array of ancestor topic names from root to immediate parent
+ */
+export function getAllTopicPathsToRoot(topicNode: TopicNode): string[][] {
+    const allPaths: string[][] = [];
+    
+    // If no parents, return empty array (this is a root node)
+    if (topicNode.parents.size === 0) {
+        return allPaths;
+    }
+    
+    // Recursively collect all paths through each parent
+    function collectPathsThroughNode(node: TopicNode, currentPath: string[]): void {
+        if (node.parents.size === 0) {
+            // Reached a root node, add the current path
+            allPaths.push([...currentPath]);
+            return;
+        }
+        
+        // Recursively explore each parent
+        for (const parent of node.parents.values()) {
+            collectPathsThroughNode(parent, [parent.name, ...currentPath]);
+        }
+    }
+    
+    // Start collection from each parent of the target node
+    for (const parent of topicNode.parents.values()) {
+        collectPathsThroughNode(parent, [parent.name]);
+    }
+    
+    return allPaths;
+}
+
+/**
  * Exclude topics from tree based on exclusion patterns
  *
  * Removes topics that match the patterns and all their descendants.

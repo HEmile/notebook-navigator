@@ -446,6 +446,7 @@ export const STRINGS_JA = {
         openHomepage: 'ホームページを開く', // Command palette: Opens the Notebook Navigator view and loads the homepage file (English: Open homepage)
         revealFile: 'ファイルを表示', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         revealActiveTopic: 'アクティブなトピックを表示', // Command palette: Reveals the active topic note in the navigator (English: Reveal active topic)
+        revealActiveTopicAllPaths: 'アクティブなトピックを表示（すべてのパス）', // Command palette: Reveals the active topic note by expanding all paths to root nodes (English: Reveal active topic (all paths))
         search: '検索', // Command palette: Toggle search in the file list (English: Search)
         toggleDualPane: 'デュアルペインレイアウトを切り替え', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
         deleteFile: 'ファイルを削除', // Command palette: Deletes the currently active file (English: Delete file)

@@ -103,4 +103,17 @@ export default class WorkspaceCoordinator {
             }
         });
     }
+
+    /**
+     * Reveals a topic by expanding all paths to root nodes
+     * This is useful when a topic appears in multiple places in the hierarchy
+     */
+    revealTopicAllPaths(topicName: string): void {
+        this.getNavigatorLeaves().forEach(leaf => {
+            const { view } = leaf;
+            if (view instanceof NotebookNavigatorView) {
+                view.revealTopicAllPaths(topicName);
+            }
+        });
+    }
 }
