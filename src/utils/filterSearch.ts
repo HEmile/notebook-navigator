@@ -65,7 +65,7 @@ export function parseFilterSearchTokens(query: string): FilterSearchTokens {
     let cleanedQuery = query;
     let match;
     while ((match = topicPattern.exec(query)) !== null) {
-        const isExclude = match[1] === '-';
+        const isExclude = match[1] === '!';
         const topicName = match[2].trim().toLowerCase();
         
         if (isExclude) {
