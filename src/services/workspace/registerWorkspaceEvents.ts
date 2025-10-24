@@ -73,20 +73,21 @@ export default function registerWorkspaceEvents(plugin: NotebookNavigatorPlugin)
             plugin.recentNotesService?.renameEntry(oldPath, file.path);
             await plugin.metadataService?.handleFileRename(oldPath, file.path);
 
-            // Helper to extract parent folder path from file path
-            const getParentPath = (path: string): string => {
-                const lastSlash = path.lastIndexOf('/');
-                return lastSlash > 0 ? path.substring(0, lastSlash) : '/';
-            };
+            // // Helper to extract parent folder path from file path
+            // const getParentPath = (path: string): string => {
+            //     const lastSlash = path.lastIndexOf('/');
+            //     return lastSlash > 0 ? path.substring(0, lastSlash) : '/';
+            // };
 
-            // Auto-reveal active file if it was moved to a different folder
-            const movedToDifferentFolder = getParentPath(oldPath) !== getParentPath(file.path);
-            if (movedToDifferentFolder && file === plugin.app.workspace.getActiveFile()) {
-                // Skip reveal if the move was initiated from within the Navigator
-                if (!plugin.commandQueue?.isMovingFile()) {
-                    await plugin.revealFileInActualFolder(file);
-                }
-            }
+            // Emile: Annoying behaviour so removed
+            // // Auto-reveal active file if it was moved to a different folder
+            // const movedToDifferentFolder = getParentPath(oldPath) !== getParentPath(file.path);
+            // if (movedToDifferentFolder && file === plugin.app.workspace.getActiveFile()) {
+            //     // Skip reveal if the move was initiated from within the Navigator
+            //     if (!plugin.commandQueue?.isMovingFile()) {
+            //         await plugin.revealFileInActualFolder(file);
+            //     }
+            // }
 
             // Notify selection context to update stored file paths
             plugin.notifyFileRenameListeners(oldPath, file.path);
