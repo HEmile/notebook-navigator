@@ -893,14 +893,13 @@ export const NavigationPane = React.memo(
         const getAllDescendantTopics = useCallback(
             (topicPath: string): string[] => {
                 const descendants: string[] = [];
-                // Extract the topic name from the path (last part after /)
-                const topicName = topicPath.includes('/') ? topicPath.split('/').pop() || topicPath : topicPath;
-                const topicNode = topicService?.findTopicNode(topicName);
+                const topicNode = topicService?.findTopicNodeByPath(topicPath);
 
                 if (!topicNode) {
                     return descendants;
                 }
 
+                // TODO: This functionality should probably go somewhere else
                 const collectDescendants = (node: TopicNode, currentPath: string) => {
                     node.children.forEach(child => {
                         const childPath = `${currentPath}/${child.name}`;
@@ -984,7 +983,8 @@ export const NavigationPane = React.memo(
             (topicPath: string) => {
                 const topicName = getTopicNameFromPath(topicPath);
                 const selectedTopic = selectionState.selectedTopicPath ? getTopicNameFromPath(selectionState.selectedTopicPath) : null;
-                const topicNode = topicService?.findTopicNode(topicPath);
+                const isTopicPath = topicPath.includes('/');
+                const topicNode = isTopicPath ? topicService?.findTopicNodeByPath(topicPath) : topicService?.findTopicNodeByName(topicPath);
                 if (!topicNode) {
                     return;
                 }
@@ -1234,7 +1234,7 @@ export const NavigationPane = React.memo(
             (topicName: string, shortcutKey: string) => {
                 setActiveShortcut(shortcutKey);
                 
-                const topicNode = topicService?.findTopicNode(topicName);
+                const topicNode = topicService?.findTopicNodeByName(topicName);
                 if (!topicNode) {
                     return;
                 }
@@ -1541,7 +1541,7 @@ export const NavigationPane = React.memo(
                     return ZERO_NOTE_COUNT;
                 }
 
-                const topicNode = topicService?.findTopicNode(topicName);
+                const topicNode = topicService?.findTopicNodeByName(topicName);
                 if (!topicNode) {
                     return ZERO_NOTE_COUNT;
                 }

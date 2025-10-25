@@ -37,7 +37,7 @@ import { ListPaneItemType, ItemType } from '../types';
 import type { ListPaneItem } from '../types/virtualization';
 import { TIMEOUTS } from '../types/obsidian-extended';
 import { DateUtils } from '../utils/dateUtils';
-import { getFilesForFolder, getFilesForTag, getFilesForTopic, collectPinnedPaths } from '../utils/fileFinder';
+import { getFilesForFolder, getFilesForTag, collectPinnedPaths, getFilesForTopicByPath } from '../utils/fileFinder';
 import { getDateField, getEffectiveSortOption } from '../utils/sortUtils';
 import { strings } from '../i18n';
 import { FILE_VISIBILITY } from '../utils/fileTypeUtils';
@@ -60,7 +60,7 @@ interface UseListPaneDataParams {
     /** The currently selected tag, if any */
     selectedTag: string | null;
     /** The currently selected topic, if any */
-    selectedTopic: string | null;
+    selectedTopicPath: string | null;
     /** Plugin settings */
     settings: NotebookNavigatorSettings;
     /** Optional search query to filter files */
@@ -96,7 +96,7 @@ export function useListPaneData({
     selectionType,
     selectedFolder,
     selectedTag,
-    selectedTopic,
+    selectedTopicPath,
     settings,
     searchQuery
 }: UseListPaneDataParams): UseListPaneDataResult {
@@ -123,11 +123,11 @@ export function useListPaneData({
         if (selectionType === ItemType.TAG && selectedTag) {
             return getEffectiveSortOption(settings, ItemType.TAG, null, selectedTag);
         }
-        if (selectionType === ItemType.TOPIC && selectedTopic) {
-            return getEffectiveSortOption(settings, ItemType.TOPIC, null, null, selectedTopic);
+        if (selectionType === ItemType.TOPIC && selectedTopicPath) {
+            return getEffectiveSortOption(settings, ItemType.TOPIC, null, null, selectedTopicPath);
         }
         return getEffectiveSortOption(settings, ItemType.FOLDER, selectedFolder, selectedTag);
-    }, [selectionType, selectedFolder, selectedTag, selectedTopic, settings]);
+    }, [selectionType, selectedFolder, selectedTag, selectedTopicPath, settings]);
 
     /**
      * Calculate the base list of files based on current selection without search filtering.
@@ -140,15 +140,15 @@ export function useListPaneData({
             allFiles = getFilesForFolder(selectedFolder, settings, app);
         } else if (selectionType === ItemType.TAG && selectedTag) {
             allFiles = getFilesForTag(selectedTag, settings, app, tagTreeService);
-        } else if (selectionType === ItemType.TOPIC && selectedTopic) {
-            allFiles = getFilesForTopic(selectedTopic, settings, app, topicService);
+        } else if (selectionType === ItemType.TOPIC && selectedTopicPath) {
+            allFiles = getFilesForTopicByPath(selectedTopicPath, settings, app, topicService);
         }
 
         return allFiles;
         // NOTE: Excluding getFilesForFolder/getFilesForTag/getFilesForTopic - static imports
         // updateKey triggers re-computation on storage updates
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectionType, selectedFolder, selectedTag, selectedTopic, settings, app, tagTreeService, topicService, updateKey]);
+    }, [selectionType, selectedFolder, selectedTag, selectedTopicPath, settings, app, tagTreeService, topicService, updateKey]);
 
     // Set of file paths for the current view scope
     const basePathSet = useMemo(() => new Set(baseFiles.map(file => file.path)), [baseFiles]);
@@ -808,7 +808,7 @@ export function useListPaneData({
                         return;
                     }
                 }
-            } else if ((selectionType === ItemType.TAG && selectedTag) || (selectionType === ItemType.TOPIC && selectedTopic)) {
+            } else if ((selectionType === ItemType.TAG && selectedTag) || (selectionType === ItemType.TOPIC && selectedTopicPath)) {
                 // For tag/topic view, schedule a trailing refresh and extend if more changes arrive
                 if (operationActiveRef.current) {
                     pendingRefreshRef.current = true;
@@ -833,7 +833,7 @@ export function useListPaneData({
             }
 
             const isTagView = selectionType === ItemType.TAG && selectedTag;
-            const isTopicView = selectionType === ItemType.TOPIC && selectedTopic;
+            const isTopicView = selectionType === ItemType.TOPIC && selectedTopicPath;
             const isFolderView = selectionType === ItemType.FOLDER && selectedFolder;
 
             let shouldRefresh = false;
@@ -866,7 +866,7 @@ export function useListPaneData({
             // Cancel any pending scheduled refresh to avoid stray updates
             scheduleRefresh.cancel();
         };
-    }, [app, selectionType, selectedTag, selectedTopic, selectedFolder, settings.includeDescendantNotes, getDB, commandQueue, basePathSet, sortOption]);
+    }, [app, selectionType, selectedTag, selectedTopicPath, selectedFolder, settings.includeDescendantNotes, getDB, commandQueue, basePathSet, sortOption]);
 
     return {
         listItems,

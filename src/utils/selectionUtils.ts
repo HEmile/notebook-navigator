@@ -21,7 +21,7 @@ import { SelectionDispatch, SelectionState } from '../context/SelectionContext';
 import { ItemType } from '../types';
 import { NotebookNavigatorSettings } from '../settings';
 import { TagTreeService } from '../services/TagTreeService';
-import { getFilesForFolder, getFilesForTag, getFilesForTopic } from './fileFinder';
+import { getFilesForFolder, getFilesForTag, getFilesForTopicByPath} from './fileFinder';
 import { TopicService } from 'src/services/TopicGraphService';
 
 /**
@@ -65,7 +65,7 @@ export function getFilesForSelection(
         return getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
     }
     if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
-        return getFilesForTopic(selectionState.selectedTopicPath, settings, app, topicService);
+        return getFilesForTopicByPath(selectionState.selectedTopicPath, settings, app, topicService);
     }
     return [];
 }

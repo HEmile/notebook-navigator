@@ -17,7 +17,7 @@
  */
 
 import { TopicNode } from '../types/storage';
-import { findTopicNode, collectTopicDescendants, getTopicNameFromPath } from '../utils/topicGraph';
+import { findTopicNode, collectTopicDescendants, getTopicNameFromPath, findTopicNodeByPath } from '../utils/topicGraph';
 import { ITopicGraphProvider } from '../interfaces/ITagTreeProvider';
 
 /**
@@ -45,8 +45,15 @@ export class TopicService implements ITopicGraphProvider {
     /**
      * Finds a topic node by its name within the topic graph
      */
-    findTopicNode(topicPath: string): TopicNode | null {
-        return findTopicNode(this.topicGraph, getTopicNameFromPath(topicPath));
+    findTopicNodeByName(topicName: string): TopicNode | null {
+        return findTopicNode(this.topicGraph, topicName);
+    }
+
+    /**
+     * Finds a topic node by its path within the topic graph
+     */
+    findTopicNodeByPath(topicPath: string): TopicNode | null {
+        return findTopicNodeByPath(this.topicGraph, topicPath);
     }
 
     /**

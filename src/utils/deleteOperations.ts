@@ -23,7 +23,7 @@ import { FileSystemOperations } from '../services/FileSystemService';
 import { TagTreeService } from '../services/TagTreeService';
 import { NotebookNavigatorSettings } from '../settings';
 import { ItemType } from '../types';
-import { getFilesForFolder, getFilesForTag, getFilesForTopic } from './fileFinder';
+import { getFilesForFolder, getFilesForTag, getFilesForTopicByPath } from './fileFinder';
 import { TopicService } from 'src/services/TopicGraphService';
 
 interface BaseDeleteOperationsContext {
@@ -61,7 +61,7 @@ export async function deleteSelectedFiles({
         } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
             allFiles = getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
         } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
-            allFiles = getFilesForTopic(selectionState.selectedTopicPath, settings, app, topicService);
+            allFiles = getFilesForTopicByPath(selectionState.selectedTopicPath, settings, app, topicService);
         }
 
         // Use centralized delete method with smart selection

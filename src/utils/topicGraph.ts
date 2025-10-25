@@ -33,8 +33,8 @@ import {App, CachedMetadata, MetadataCache, TFile} from 'obsidian';
 // Cache for note counts to avoid recalculation
 let noteCountCache: WeakMap<TopicNode, number> | null = null;
 
-export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw"]
-export const HAS_TOPIC_RELATIONS = ["hasTopic", "isA", "for", "subset", "in", "partOf", "adres", 'with', "groep", "voor", "worksIn", "decennium", "year", "eeuw", "maand", "author", "publishedIn", "by"]
+export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw", "stroming"]
+export const HAS_TOPIC_RELATIONS = ["hasTopic", "isA", "for", "subset", "in", "partOf", "adres", 'with', "groep", "voor", "worksIn", "decennium", "year", "eeuw", "maand", "author", "publishedIn", "by", "stroming", "artiest", "genre"]
 export const TOPIC_TAGS = ["topic", "jaar", "decennium", "maand"]
 
 /**
@@ -85,12 +85,12 @@ export function hasTopicTag(tags: string[]): boolean {
     return tags?.some(tag => TOPIC_TAGS.some(topicTag => tag.contains(topicTag)));
 }
 
-function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, app: App): TopicNode | undefined {
+function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, app: App, visitedTopics: Set<string>): TopicNode {
     const topicName = getTopicNameFromPath(topicPath);
 
     // If topic is already in allTopics, return immediately
     if (allTopics.has(topicName)) {
-        return allTopics.get(topicName);
+        return allTopics.get(topicName) as TopicNode;
     }
 
     // Otherwise, add topic and traverse up if possible
@@ -132,9 +132,13 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
         if (metadata && !hasTopicTag(getTopicTags(metadata))) {
             continue;
         }
-        
-        const parent = traverseTopicsUp(allTopics, parentFilePath, app);
+
         const parentName = getTopicNameFromPath(parentFilePath);
+        if (visitedTopics.has(parentName)) {
+            continue;
+        }
+        visitedTopics.add(parentName);
+        const parent = traverseTopicsUp(allTopics, parentFilePath, app, visitedTopics);
         // if (topicName === "topology") {
         //     console.log('metadata', metadata);
         //     console.log('parentName', parentName);
@@ -189,11 +193,13 @@ export function buildTopicGraphFromDatabase(
         if (allTopics.has(path)) {
             continue;
         }
+        const visitedTopics = new Set<string>();
+        visitedTopics.add(getTopicNameFromPath(path));
         // Traverse the topic hierarchy up
-        traverseTopicsUp(allTopics, path, app);
+        traverseTopicsUp(allTopics, path, app, visitedTopics);
     }
 
-    function collectParentTopics(file: TFile, path: string) {
+    function collectParentTopics(file: TFile, path: string, visitedPaths: Set<string>) {
         const metadata = app.metadataCache.getFileCache(file);
         if (!metadata || hasTopicTag(getTopicTags(metadata))) {
             return 
@@ -214,13 +220,15 @@ export function buildTopicGraphFromDatabase(
             topic = topic.slice(2, -2).split("|")[0];
             // Use Obsidian API to resolve the parentTopic as a file path
             const topicFile = app.metadataCache.getFirstLinkpathDest(topic, "");
-            if (!topicFile) {
+            if (!topicFile || visitedPaths.has(topicFile.path)) {
+                // Visited paths check in case of circular dependencies
                 continue;
             }
+            visitedPaths.add(topicFile.path);
             const metadataTopic = app.metadataCache.getFileCache(topicFile);
             if (metadataTopic && !hasTopicTag(getTopicTags(metadataTopic))) {
                 // Handle isA / hasTopics / subsets / fors up recursively until first topic found
-                collectParentTopics(topicFile, path);
+                collectParentTopics(topicFile, path, visitedPaths);
             } else {
                 const topicName = getTopicNameFromPath(topicFile.path);
                 const topicNode = allTopics.get(topicName);
@@ -245,14 +253,10 @@ export function buildTopicGraphFromDatabase(
         if (!file) {
             continue;
         }
-        try {
-            collectParentTopics(file, path);
-        } catch (RangeError) {
-            console.error(RangeError);
-            console.error("You likely have a circular dependency in your hierarchy. This breaks the plugin! Fix it :). Hint: it's caused by");
-            console.error(path)
-            continue;
-        }
+        const visitedPaths = new Set<string>();
+        visitedPaths.add(path);
+        collectParentTopics(file, path, visitedPaths);
+
     }
 
     const rootTopics = new Map<string, TopicNode>();
@@ -293,11 +297,17 @@ export function getTotalNoteCount(node: TopicNode): number {
     // Helper to collect files from children
     function collectFromChildren(n: TopicNode): void {
         for (const child of n.children.values()) {
+            if (visitedTopics.has(child.name)) {
+                continue;
+            }
+            visitedTopics.add(child.name);
             child.notesWithTag.forEach(file => allFiles.add(file));
             collectFromChildren(child);
         }
     }
 
+    const visitedTopics = new Set<string>();
+    visitedTopics.add(node.name);
     collectFromChildren(node);
     count = allFiles.size;
 
@@ -311,10 +321,14 @@ export function getTotalNoteCount(node: TopicNode): number {
  * Collect all topic names from a node and its descendants
  * Returns lowercase paths for logic operations
  */
-export function collectTopicDescendants(node: TopicNode, paths: Set<TopicNode> = new Set()): Set<TopicNode> {
+export function collectTopicDescendants(node: TopicNode, paths: Set<TopicNode> = new Set(), visitedTopics: Set<string> = new Set()): Set<TopicNode> {
     paths.add(node);
+    if (visitedTopics.has(node.name)) {
+        return paths;
+    }
+    visitedTopics.add(node.name);
     for (const child of node.children.values()) {
-        collectTopicDescendants(child, paths);
+        collectTopicDescendants(child, paths, visitedTopics);
     }
     return paths;
 }
@@ -324,7 +338,11 @@ export function collectTopicDescendants(node: TopicNode, paths: Set<TopicNode> =
  * @param node - The topic node to collect files from
  * @returns Set of file paths associated with the topic and its descendants
  */
-export function collectTopicFilePaths(node: TopicNode): Set<string> {
+export function collectTopicFilePaths(node: TopicNode, visitedTopics: Set<string> = new Set()): Set<string> {
+    if (visitedTopics.has(node.name)) {
+        return new Set();
+    }
+    visitedTopics.add(node.name);
     const filePaths = new Set<string>();
     
     // Add files from the current node
@@ -332,7 +350,7 @@ export function collectTopicFilePaths(node: TopicNode): Set<string> {
     
     // Recursively add files from all descendants
     for (const child of node.children.values()) {
-        const childPaths = collectTopicFilePaths(child);
+        const childPaths = collectTopicFilePaths(child, visitedTopics);
         childPaths.forEach(path => filePaths.add(path));
     }
     
@@ -343,13 +361,18 @@ export function collectTopicFilePaths(node: TopicNode): Set<string> {
  * Find a topic node by its name
  */
 // TODO: This could technically be optimised if the topicName is a path. Now it does a linear search instead of logarithmic traversal of the topic hierarchy
-export function findTopicNode(tree: Map<string, TopicNode>, topicName: string): TopicNode | null {
+export function findTopicNode(graph: Map<string, TopicNode>, topicName: string): TopicNode | null {
+    const visitedTopics = new Set<string>();
     // Helper function to search recursively
     function searchNode(nodes: Map<string, TopicNode>): TopicNode | null {
         for (const node of nodes.values()) {
             if (node.name === topicName) {
                 return node;
             }
+            if (visitedTopics.has(node.name)) {
+                continue;
+            }
+            visitedTopics.add(node.name);
             // Search in children
             const found = searchNode(node.children);
             if (found) {
@@ -359,7 +382,25 @@ export function findTopicNode(tree: Map<string, TopicNode>, topicName: string): 
         return null;
     }
 
-    return searchNode(tree);
+    return searchNode(graph);
+}
+
+/**
+ * Find a topic node by its path. Preferred to findTopicNode if path is known as it is a simple tree traversal.
+ */
+export function findTopicNodeByPath(graph: Map<string, TopicNode>, topicPath: string): TopicNode | null {
+    const visitedTopicNames = topicPath.split('/');
+    let currentNode = graph.get(visitedTopicNames[0]);
+    if (!currentNode) {
+        return null;
+    }
+    for (const topicName of visitedTopicNames.slice(1)) {
+        currentNode = currentNode.children.get(topicName);
+        if (!currentNode) {
+            return null;
+        }
+    }
+    return currentNode;
 }
 
 /**
@@ -379,12 +420,19 @@ export function getTopicAncestors(topicNode: TopicNode): string[] {
     
     // Choose the first parent (arbitrary choice when multiple paths exist)
     const firstParent = Array.from(topicNode.parents.values())[0];
+    const visitedTopics = new Set<string>();
+    visitedTopics.add(firstParent.name);
     
     // Recursively collect ancestors
     function collectAncestors(node: TopicNode) {
         if (node.parents.size > 0) {
             // Choose first parent
             const parent = Array.from(node.parents.values())[0];
+            if (visitedTopics.has(parent.name)) {
+                // TODO: IDK what this should do lol
+                return;
+            }
+            visitedTopics.add(parent.name);
             collectAncestors(parent);
         }
         ancestors.push(node.name);

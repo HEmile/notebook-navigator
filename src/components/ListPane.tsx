@@ -200,7 +200,7 @@ export const ListPane = React.memo(
         // Track render count
         const renderCountRef = useRef(0);
 
-        const { selectionType, selectedFolder, selectedTag, selectedTopicPath: selectedTopic, selectedFile } = selectionState;
+        const { selectionType, selectedFolder, selectedTag, selectedTopicPath, selectedFile } = selectionState;
 
         // Determine if list pane is visible early to optimize
         const isVisible = !uiState.singlePane || uiState.currentSinglePaneView === 'files';
@@ -210,7 +210,7 @@ export const ListPane = React.memo(
             selectionType,
             selectedFolder,
             selectedTag,
-            selectedTopic,
+            selectedTopicPath,
             settings,
             // Use debounced value for filtering
             searchQuery: isSearchActive ? debouncedSearchQuery : undefined
@@ -485,7 +485,7 @@ export const ListPane = React.memo(
 
         // Scroll to top handler for mobile header click
         // Get effective sort option for the current view
-        const effectiveSortOption = getEffectiveSortOption(settings, selectionType, selectedFolder, selectedTag, selectedTopic);
+        const effectiveSortOption = getEffectiveSortOption(settings, selectionType, selectedFolder, selectedTag, selectedTopicPath);
 
         // Create a stable onClick handler for FileItem that uses pre-calculated fileIndex
         const handleFileItemClick = useCallback(
@@ -658,7 +658,7 @@ export const ListPane = React.memo(
         });
 
         // Determine if we're showing empty state
-        const isEmptySelection = !selectedFolder && !selectedTag && !selectedTopic;
+        const isEmptySelection = !selectedFolder && !selectedTag && !selectedTopicPath;
         const hasNoFiles = files.length === 0;
 
         // Single return with conditional content

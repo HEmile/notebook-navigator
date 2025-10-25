@@ -20,7 +20,7 @@ import { MenuItem, TFile, Notice, Menu, App, Platform, FileSystemAdapter } from 
 import { FileMenuBuilderParams } from './menuTypes';
 import { strings } from '../../i18n';
 import { getInternalPlugin } from '../../utils/typeGuards';
-import { getFilesForFolder, getFilesForTag, getFilesForTopic } from '../../utils/fileFinder';
+import { getFilesForFolder, getFilesForTag, getFilesForTopicByPath} from '../../utils/fileFinder';
 import { ItemType, NavigatorContext } from '../../types';
 import { MetadataService } from '../../services/MetadataService';
 import { FileSystemOperations } from '../../services/FileSystemService';
@@ -66,7 +66,7 @@ export function buildFileMenu(params: FileMenuBuilderParams): void {
         } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
             return getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
         } else if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
-            return getFilesForTopic(selectionState.selectedTopicPath, settings, app, topicService);
+            return getFilesForTopicByPath(selectionState.selectedTopicPath, settings, app, topicService);
         }
         return [];
     })();

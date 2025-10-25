@@ -329,10 +329,26 @@ export function getFilesForTag(tag: string, settings: NotebookNavigatorSettings,
     return [...pinnedFiles, ...unpinnedFiles];
 }
 
+export function getFilesForTopicByName(topicName: string, settings: NotebookNavigatorSettings, app: App, topicService: TopicService | null): TFile[] {
+    const topicNode = topicService?.findTopicNodeByName(topicName);
+    if (!topicNode) {
+        return [];
+    }
+    return getFilesForTopic(topicNode, settings, app, topicService);
+}
+
+export function getFilesForTopicByPath(topicPath: string, settings: NotebookNavigatorSettings, app: App, topicService: TopicService | null): TFile[] {
+    const topicNode = topicService?.findTopicNodeByPath(topicPath);
+    if (!topicNode) {
+        return [];
+    }
+    return getFilesForTopic(topicNode, settings, app, topicService);
+}
+
 /**
  * Gets a sorted list of files for a given topic, respecting all plugin settings.
  */
-export function getFilesForTopic(topicName: string, settings: NotebookNavigatorSettings, app: App, topicService: TopicService | null): TFile[] {
+function getFilesForTopic(topicNode: TopicNode, settings: NotebookNavigatorSettings, app: App, topicService: TopicService | null): TFile[] {
     // Get all files based on visibility setting, with proper filtering
     let allFiles: TFile[] = [];
 
@@ -345,40 +361,34 @@ export function getFilesForTopic(topicName: string, settings: NotebookNavigatorS
     }
 
     let filteredFiles: TFile[] = [];
-    const selectedNode = topicService?.findTopicNode(topicName);
 
-    if (selectedNode) {
-        // Collect topics to include based on setting:
-        // - When showing notes from descendants: include selected topic and all descendants
-        // - Otherwise: include only the exact selected topic
-        const topicsToInclude = settings.includeDescendantNotes
-            ? collectTopicDescendants(selectedNode)
-            : new Set<TopicNode>([selectedNode]);
+    // Collect topics to include based on setting:
+    // - When showing notes from descendants: include selected topic and all descendants
+    // - Otherwise: include only the exact selected topic
+    const topicsToInclude = settings.includeDescendantNotes
+        ? collectTopicDescendants(topicNode)
+        : new Set<TopicNode>([topicNode]);
 
-        if (topicsToInclude.size === 0) {
-            return [];
-        }
+    if (topicsToInclude.size === 0) {
+        return [];
+    }
 
-        // Collect all files from the selected topic and its descendants
-        let filesToInclude = new Set<string>();
-        for (const topic of topicsToInclude) {
-            filesToInclude = new Set([...filesToInclude, ...topic.notesWithTag]);
+    // Collect all files from the selected topic and its descendants
+    let filesToInclude = new Set<string>();
+    for (const topic of topicsToInclude) {
+        filesToInclude = new Set([...filesToInclude, ...topic.notesWithTag]);
+    }
+    for (const filePath of filesToInclude) {
+        const file = app.vault.getFileByPath(filePath);
+        if (file) {
+            filteredFiles.push(file);
+        } else {
+            console.error(`File not found: ${filePath}`);
         }
-        for (const filePath of filesToInclude) {
-            const file = app.vault.getFileByPath(filePath);
-            if (file) {
-                filteredFiles.push(file);
-            } else {
-                console.error(`File not found: ${filePath}`);
-            }
-        }
-    } else {
-        // Fallback to empty if topic not found
-        filteredFiles = [];
     }
 
     // Sort files
-    const sortOption = getEffectiveSortOption(settings, 'topic', null, null, topicName);
+    const sortOption = getEffectiveSortOption(settings, 'topic', null, null, topicNode.name);
 
     if (settings.useFrontmatterMetadata) {
         const metadataCache = new Map<string, ReturnType<typeof extractMetadata>>();
