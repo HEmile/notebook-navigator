@@ -137,8 +137,9 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
         if (visitedTopics.has(parentName)) {
             continue;
         }
-        visitedTopics.add(parentName);
-        const parent = traverseTopicsUp(allTopics, parentFilePath, app, visitedTopics);
+        const parentVisitedTopic = new Set(visitedTopics);
+        parentVisitedTopic.add(parentName);
+        const parent = traverseTopicsUp(allTopics, parentFilePath, app, parentVisitedTopic);
         // if (topicName === "topology") {
         //     console.log('metadata', metadata);
         //     console.log('parentName', parentName);
