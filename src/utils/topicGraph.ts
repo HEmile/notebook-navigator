@@ -33,8 +33,8 @@ import {App, CachedMetadata, MetadataCache, TFile} from 'obsidian';
 // Cache for note counts to avoid recalculation
 let noteCountCache: WeakMap<TopicNode, number> | null = null;
 
-export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw", "stroming"]
-export const HAS_TOPIC_RELATIONS = ["hasTopic", "isA", "for", "subset", "in", "partOf", "adres", 'with', "groep", "voor", "worksIn", "decennium", "year", "eeuw", "maand", "author", "publishedIn", "by", "stroming", "artiest", "genre"]
+export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw", "maand", "stroming", "festival", "genre"]
+export const HAS_TOPIC_RELATIONS = SUBSET_RELATIONS.concat(["hasTopic", "isA", "for", 'with', "voor", "author", "publishedIn", "by", "artiest", "live", "adres"])
 export const TOPIC_TAGS = ["topic", "jaar", "decennium", "maand"]
 
 /**
@@ -71,9 +71,11 @@ export function getTopicTags(metadata: CachedMetadata): string[] {
     return metadata.tags?.map(tag => tag.tag) || [];
 }
 
-export function getTopicRelations(metadata: CachedMetadata): string[] {
+export function getTopicRelations(metadata: CachedMetadata, isTopicNote: boolean = false): string[] {
     let topics: string[] = [];
-    for (const relation of HAS_TOPIC_RELATIONS) {
+    // If it is a topic note, we only want to get the relations that are not subset relations
+    const relations = isTopicNote ? HAS_TOPIC_RELATIONS.filter(relation => !SUBSET_RELATIONS.includes(relation)) : HAS_TOPIC_RELATIONS;
+    for (const relation of relations) {
         if (metadata.frontmatter?.[relation]) {
             topics = topics.concat(metadata.frontmatter?.[relation] as string[]);
         }
@@ -202,10 +204,11 @@ export function buildTopicGraphFromDatabase(
 
     function collectParentTopics(file: TFile, path: string, visitedPaths: Set<string>) {
         const metadata = app.metadataCache.getFileCache(file);
-        if (!metadata || hasTopicTag(getTopicTags(metadata))) {
-            return 
+        if (!metadata) {
+            return;
         }
-        const topics = getTopicRelations(metadata);
+        const isTopicNote = hasTopicTag(getTopicTags(metadata));
+        const topics = getTopicRelations(metadata, isTopicNote);
         if (!topics.length) {
             return;
         }
