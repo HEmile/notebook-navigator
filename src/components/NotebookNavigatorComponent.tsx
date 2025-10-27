@@ -159,12 +159,36 @@ export const NotebookNavigatorComponent = React.memo(
         // Use tag navigation logic
         const { navigateToTag } = useTagNavigation();
 
-        // Handles file reveal from shortcuts, using nearest folder navigation
+        // Handles file reveal from shortcuts, revealing the topic if available
         const handleShortcutNoteReveal = useCallback(
             (file: TFile) => {
-                revealFileInNearestFolder(file, { source: 'shortcut' });
+                // Try to find the topic associated with this file
+                if (topicService) {
+                    const topicGraph = topicService.getTopicGraph();
+                    const { findFirstTopicPathInHierarchy } = require('../utils/topicNotes');
+                    const topicPath = findFirstTopicPathInHierarchy(file, app, topicGraph);
+                    
+                    if (topicPath) {
+                        // Reveal the topic instead of the folder
+                        revealTopic(topicPath);
+                        
+                        // Also select the file in the list pane
+                        selectionDispatch({
+                            type: 'REVEAL_FILE',
+                            file,
+                            preserveFolder: true,
+                            isManualReveal: false,
+                            targetTopic: topicPath,
+                            source: 'shortcut'
+                        });
+                        return;
+                    }
+                }
+                
+                // Fall back to folder reveal if no topic found. Disabled in personal topic mode
+                // revealFileInNearestFolder(file, { source: 'shortcut' });
             },
-            [revealFileInNearestFolder]
+            [revealFileInNearestFolder, revealTopic, topicService, app, selectionDispatch]
         );
 
         // Get updateSettings from SettingsContext for refresh
@@ -657,6 +681,8 @@ export const NotebookNavigatorComponent = React.memo(
         }, [
             revealFileInActualFolder,
             revealFileInNearestFolder,
+            revealTopic,
+            revealTopicAllPaths,
             uiDispatch,
             updateSettings,
             selectionState,
@@ -671,6 +697,7 @@ export const NotebookNavigatorComponent = React.memo(
             settings,
             plugin,
             tagTreeService,
+            topicService,
             commandQueue,
             tagOperations,
             handleExpandCollapseAll,

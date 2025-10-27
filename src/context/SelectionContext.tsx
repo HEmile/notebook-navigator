@@ -19,7 +19,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
 import { App, TFile, TFolder } from 'obsidian';
 import { NavigationItemType, STORAGE_KEYS } from '../types';
-import { getFilesForFolder, getFilesForTag, getFilesForTopic } from '../utils/fileFinder';
+import { getFilesForFolder, getFilesForTag, getFilesForTopicByPath} from '../utils/fileFinder';
 import { useSettingsState } from './SettingsContext';
 import { localStorage } from '../utils/localStorage';
 import type { NotebookNavigatorAPI } from '../api/NotebookNavigatorAPI';
@@ -62,6 +62,7 @@ export type SelectionAction =
           preserveFolder?: boolean;
           isManualReveal?: boolean;
           targetTag?: string | null;
+          targetTopic?: string | null;
           source?: SelectionRevealSource;
           targetFolder?: TFolder | null;
       }
@@ -239,6 +240,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
             }
 
             const normalizedTargetTag = action.targetTag === undefined ? undefined : normalizeTagPath(action.targetTag);
+            const targetTopic = action.targetTopic ?? undefined;
             const newSelectedFiles = new Set<string>();
             newSelectedFiles.add(action.file.path);
 
@@ -263,6 +265,29 @@ function selectionReducer(state: SelectionState, action: SelectionAction, app?: 
                     isKeyboardNavigation: false,
                     revealSource
                 };
+            }
+
+            // Auto-reveals: Check if we have a target topic
+            if (targetTopic !== undefined) {
+                if (targetTopic) {
+                    // Switch to or stay in topic view
+                    return {
+                        ...state,
+                        selectionType: 'topic',
+                        selectedTopicPath: targetTopic,
+                        selectedFolder: null,
+                        selectedTag: null,
+                        selectedFiles: newSelectedFiles,
+                        selectedFile: action.file,
+                        anchorIndex: null,
+                        lastMovementDirection: null,
+                        isRevealOperation: true,
+                        isFolderChangeWithAutoSelect: false,
+                        isKeyboardNavigation: false,
+                        revealSource
+                    };
+                }
+                // No topic to reveal, fall through to check target tag
             }
 
             // Auto-reveals: Check if we have a target tag
@@ -728,8 +753,7 @@ export function SelectionProvider({
             // Handle auto-select logic for topic selection
             else if (action.type === 'SET_SELECTED_TOPIC' && action.autoSelectedFile === undefined) {
                 if (action.topicPath) {
-                    const topicName = getTopicNameFromPath(action.topicPath);
-                    const filesForTopic = getFilesForTopic(topicName, settings, app, topicService);
+                    const filesForTopic = getFilesForTopicByPath(action.topicPath, settings, app, topicService);
 
                     // Desktop with autoSelectFirstFile enabled: ALWAYS select first file
                     if (!isMobile && settings.autoSelectFirstFileOnFocusChange && filesForTopic.length > 0) {

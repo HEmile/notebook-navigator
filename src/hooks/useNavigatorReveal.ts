@@ -494,6 +494,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
         const detectActiveFileChange = () => {
             // Get the currently active file view
             const view = app.workspace.getActiveViewOfType(FileView);
+            const { isTopicNote } = require('../utils/topicNotes');
             if (!view?.file || !(view.file instanceof TFile)) {
                 return;
             }
@@ -545,6 +546,15 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
                 return;
             }
 
+            // Don't reveal if we're opening a topic note while viewing topics
+            // Topic notes are not shown in the topic's file list (which shows files that link TO the topic)
+            // Revealing them would cause scroll issues as the file isn't in the list
+            const isViewingTopic = selectionState.selectionType === 'topic';
+            
+            if (isViewingTopic && isTopicNote(file, app)) {
+                return;
+            }
+
             // Reveal the file
             setFileToReveal(file);
         };
@@ -580,7 +590,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
             app.workspace.offref(activeLeafEventRef);
             app.workspace.offref(fileOpenEventRef);
         };
-    }, [app, app.workspace, settings.autoRevealActiveFile, settings.autoRevealIgnoreRightSidebar, settings.startView, commandQueue]);
+    }, [app, app.workspace, settings.autoRevealActiveFile, settings.autoRevealIgnoreRightSidebar, settings.startView, commandQueue, selectionState.selectionType]);
 
     // Handle revealing the file when detected
     useEffect(() => {
@@ -682,7 +692,9 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
                 return;
             }
 
-            const topicNode = topicService.findTopicNode(topicPath);
+            const isPath = topicPath.includes("/");
+            // Not really ideal if looking for root topics, but it's ok
+            const topicNode = isPath ? topicService.findTopicNodeByPath(topicPath) : topicService.findTopicNodeByName(topicPath);
             if (!topicNode) {
                 return;
             }
@@ -691,11 +703,11 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
             const { getTopicAncestors } = require('../utils/topicGraph');
             const ancestorNames = getTopicAncestors(topicNode);
 
-            // Build the full path for this topic from its ancestors
+            // Build the full path for this topic from its ancestors if a topicName
             // If ancestors = ["AI", "Machine Learning"], topicName = "Neural Networks"
             // Then topicPath = "AI/Machine Learning/Neural Networks"
             // TODO: NOt sure if correct
-            if (!topicPath.includes("/") && topicNode.parents.size > 0){
+            if (!isPath && topicNode.parents.size > 0){
                 topicPath = `${topicNode.name}/${topicPath}`;
             }
 
@@ -740,7 +752,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, listPaneRef }: UseN
                 return;
             }
 
-            const topicNode = topicService.findTopicNode(topicName);
+            const topicNode = topicService.findTopicNodeByName(topicName);
             if (!topicNode) {
                 return;
             }

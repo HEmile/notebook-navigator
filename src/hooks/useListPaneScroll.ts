@@ -760,12 +760,12 @@ export function useListPaneScroll({
 
     /**
      * Preserve scroll when the list index changes within the same context (implicit reorders like pin/unpin).
-     * Uses indexVersion changes keyed by current folder/tag context. Avoids duplicate triggers on navigation.
+     * Uses indexVersion changes keyed by current folder/tag/topic context. Avoids duplicate triggers on navigation.
      */
     useEffect(() => {
         if (!rowVirtualizer || !isScrollContainerReady) return;
 
-        const contextKey = `${selectedFolder?.path || ''}_${selectedTag || ''}`;
+        const contextKey = `${selectedFolder?.path || ''}_${selectedTag || ''}_${selectionState.selectedTopicPath || ''}`;
         const prev = contextIndexVersionRef.current;
 
         // Initialize on first run or when context changes
@@ -795,14 +795,14 @@ export function useListPaneScroll({
         isScrollContainerReady,
         selectedFolder?.path,
         selectedTag,
-        filePathToIndex,
+        selectionState.selectedTopicPath,
         filePathToIndex.size,
         selectedFile,
         setPending
     ]);
 
     /**
-     * Handle scrolling when navigating between folders/tags.
+     * Handle scrolling when navigating between folders/tags/topics.
      * Supports both visible and hidden panes (for single-pane mode).
      * Manages folder navigation flags and list context changes.
      * SCROLL_FOLDER_NAVIGATION: Sets pending scroll with 'folder-navigation' reason
@@ -813,7 +813,7 @@ export function useListPaneScroll({
         }
 
         // Create a key representing the current list context
-        const currentListKey = `${selectedFolder?.path || ''}_${selectedTag || ''}`;
+        const currentListKey = `${selectedFolder?.path || ''}_${selectedTag || ''}_${selectionState.selectedTopicPath || ''}`;
         const listChanged = prevListKeyRef.current !== currentListKey;
 
         // Check if this is a folder navigation where we need to scroll to maintain the selected file
@@ -917,11 +917,13 @@ export function useListPaneScroll({
         rowVirtualizer,
         selectedFolder?.path,
         selectedTag,
+        selectionState.selectedTopicPath,
         selectedFile,
         selectionState.isFolderNavigation,
         selectionDispatch,
         listItems.length,
-        setPending
+        setPending,
+        filePathToIndex
     ]);
 
     /**
