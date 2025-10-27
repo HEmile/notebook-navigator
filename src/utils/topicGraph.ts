@@ -76,7 +76,16 @@ export function getTopicRelations(metadata: CachedMetadata, isTopicNote: boolean
     // If it is a topic note, we only want to get the relations that are not subset relations
     const relations = isTopicNote ? HAS_TOPIC_RELATIONS.filter(relation => !SUBSET_RELATIONS.includes(relation)) : HAS_TOPIC_RELATIONS;
     for (const relation of relations) {
-        if (metadata.frontmatter?.[relation]) {
+        // Check if the value is an iterable and handle accordingly
+        const value = metadata.frontmatter?.[relation];
+
+        if (value && Symbol.iterator in Object(value)) {
+            for (const topic of metadata.frontmatter?.[relation] as string[]) {
+                // Only add topics that are links
+                if (topic.startsWith('[[') && topic.endsWith(']]')) {
+                    topics.push(topic);
+                } 
+            }
             topics = topics.concat(metadata.frontmatter?.[relation] as string[]);
         }
     }

@@ -735,10 +735,11 @@ export function useNavigationPaneData({
             if (isTopicShortcut(shortcut)) {
                 const name = topicName ?? shortcut.topicName;
                 if (!name) {
+                    
                     return;
                 }
 
-                const topicNode = topicService?.findTopicNode(name);
+                const topicNode = topicService?.findTopicNodeByName(name);
                 const displayName = topicNode?.name ?? name;
                 const isMissing = !topicNode;
 
