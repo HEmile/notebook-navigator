@@ -82,7 +82,7 @@ export function getTopicRelations(metadata: CachedMetadata, isTopicNote: boolean
         if (value && Symbol.iterator in Object(value)) {
             for (const topic of metadata.frontmatter?.[relation] as string[]) {
                 // Only add topics that are links
-                if (topic.startsWith('[[') && topic.endsWith(']]')) {
+                if (typeof topic === "string" && topic.startsWith('[[') && topic.endsWith(']]')) {
                     topics.push(topic);
                 } 
             }
