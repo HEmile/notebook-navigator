@@ -1,6 +1,6 @@
 # Notebook Navigator API Reference
 
-Updated: February 14, 2026
+Updated: February 24, 2026
 
 The Notebook Navigator plugin exposes a public API for other plugins and scripts to interact with navigator features.
 
@@ -446,7 +446,7 @@ Since Obsidian plugins don't export types like npm packages, you have two option
 
 Download the TypeScript definitions file:
 
-**[📄 notebook-navigator.d.ts](https://github.com/johansanneblad/notebook-navigator/blob/main/src/api/public/notebook-navigator.d.ts)**
+**[📄 notebook-navigator.d.ts](https://github.com/johansan/notebook-navigator/blob/main/src/api/public/notebook-navigator.d.ts)**
 
 Save it to your plugin project and import:
 

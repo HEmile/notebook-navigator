@@ -1,6 +1,6 @@
 # Notebook Navigator Theming Guide
 
-Updated: February 10, 2026
+Updated: February 24, 2026
 
 ## Table of Contents
 
@@ -66,6 +66,7 @@ Most variables are colors and should resolve to a computed color (some are used 
 | `--nn-theme-calendar-weekend-bg`              | `color-mix(in srgb, var(--nn-theme-foreground) 10%, transparent)` | Background color for weekend day cells |
 | `--nn-theme-calendar-hover-bg`                | `var(--background-modifier-hover)`     | Hover background for calendar buttons and days  |
 | `--nn-theme-calendar-day-has-note-bg`         | `var(--nn-theme-foreground-faint)`     | Dot color for dates with a daily note           |
+| `--nn-theme-calendar-day-has-unfinished-task-color` | `var(--nn-theme-calendar-day-has-note-bg)` | Color for the hollow indicator shown on dates with unfinished tasks |
 | `--nn-theme-calendar-day-has-feature-image-color` | `white`                             | Text color for dates with feature images        |
 | `--nn-theme-calendar-day-today-color`         | `var(--nn-theme-calendar-day-in-month-color)` | Text color for today's date                |
 | `--nn-theme-calendar-day-today-bg`            | `var(--text-selection)`                | Background color for today's date highlight     |
@@ -86,27 +87,27 @@ Most variables are colors and should resolve to a computed color (some are used 
 | ----------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
 | `--nn-theme-pinned-shortcut-shadow-color` | `rgba(0, 0, 0, 0.03)` | Gradient overlay rendered beneath pinned shortcuts (defaults to `rgba(0, 0, 0, 0.18)` in `.theme-dark`) |
 
-#### Folder & tag items
+#### Navigation items
 
 | Variable                                             | Default                                          | Description                                                         |
 | ---------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------- |
 | `--nn-theme-navitem-chevron-color`                   | `var(--nn-theme-foreground-muted)`               | Color for expand/collapse arrows                                    |
-| `--nn-theme-navitem-icon-color`                      | `var(--nn-theme-foreground-muted)`               | Icon color for folders and tags                                     |
-| `--nn-theme-navitem-name-color`                      | `var(--nn-theme-foreground)`                     | Text color for folder and tag names                                 |
+| `--nn-theme-navitem-icon-color`                      | `var(--nn-theme-foreground-muted)`               | Icon color for folders, tags, and properties                        |
+| `--nn-theme-navitem-name-color`                      | `var(--nn-theme-foreground)`                     | Text color for folder, tag, and property names                      |
 | `--nn-theme-navitem-file-name-color`                 | `var(--nn-theme-navitem-name-color)`             | Text color for note shortcuts and recent files                      |
 | `--nn-theme-navitem-count-color`                     | `var(--nn-theme-foreground-muted)`               | Text color for file count badges                                    |
 | `--nn-theme-navitem-count-bg`                        | `transparent`                                    | Background color for file count badges                              |
 | `--nn-theme-navitem-count-border-radius`             | `8px`                                            | Corner radius for file count badges (0-8px)                         |
-| `--nn-theme-navitem-border-radius`                   | `4px`                                            | Corner radius for folder and tag items (0-14px)                     |
+| `--nn-theme-navitem-border-radius`                   | `4px`                                            | Corner radius for navigation items (0-14px)                         |
 | `--nn-theme-navitem-hover-bg`                        | `var(--background-modifier-hover)`               | Item hover background color (desktop only)                          |
 | `--nn-theme-navitem-selected-bg`                     | `var(--text-selection)`                          | Selected item background color                                      |
 | `--nn-theme-navitem-selected-chevron-color`          | `var(--nn-theme-navitem-chevron-color)`          | Expand/collapse arrow color when item is selected                   |
 | `--nn-theme-navitem-selected-icon-color`             | `var(--nn-theme-navitem-icon-color)`             | Icon color when item is selected                                    |
-| `--nn-theme-navitem-selected-name-color`             | `var(--nn-theme-navitem-name-color)`             | Folder/tag name color when selected                                 |
+| `--nn-theme-navitem-selected-name-color`             | `var(--nn-theme-navitem-name-color)`             | Navigation item name color when selected                             |
 | `--nn-theme-navitem-selected-count-color`            | `var(--nn-theme-navitem-count-color)`            | File count text color when item is selected                         |
 | `--nn-theme-navitem-selected-count-bg`               | `var(--nn-theme-navitem-count-bg)`               | File count background color when selected                           |
 | `--nn-theme-navitem-selected-inactive-bg`            | `var(--background-modifier-hover)`               | Selected item background when pane is inactive (desktop only)       |
-| `--nn-theme-navitem-selected-inactive-name-color`    | `var(--nn-theme-navitem-name-color)`             | Folder/tag name color when selected and pane is inactive            |
+| `--nn-theme-navitem-selected-inactive-name-color`    | `var(--nn-theme-navitem-name-color)`             | Navigation item name color when selected and pane is inactive       |
 | `--nn-theme-navitem-selected-inactive-chevron-color` | `var(--nn-theme-navitem-selected-chevron-color)` | Expand/collapse arrow color when selected and pane is inactive      |
 | `--nn-theme-navitem-selected-inactive-icon-color`    | `var(--nn-theme-navitem-selected-icon-color)`    | Icon color when selected and pane is inactive                       |
 | `--nn-theme-navitem-selected-inactive-count-color`   | `var(--nn-theme-navitem-selected-count-color)`   | File count text color when selected and pane is inactive            |
@@ -116,15 +117,15 @@ Most variables are colors and should resolve to a computed color (some are used 
 
 #### Text styling
 
-These variables control the font weight and decoration of folder/tag names and file names in shortcuts and recent files.
+These variables control the font weight and decoration of folder/tag/property names and file names in shortcuts and recent files.
 Priority order: folder note styles override custom color styles, which override the default style.
 
 | Variable                                                | Default     | Description                                                                   |
 | ------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------- |
-| `--nn-theme-navitem-name-font-weight`                   | `400`       | Default font weight for all folder/tag names (400 = regular, 600 = bold)      |
+| `--nn-theme-navitem-name-font-weight`                   | `400`       | Default font weight for all folder/tag/property names (400 = regular, 600 = bold) |
 | `--nn-theme-navitem-file-name-font-weight`              | `400`       | Default font weight for file names in shortcuts and recent files              |
 | `--nn-theme-navitem-count-font-weight`                  | `400`       | Font weight for file count badges                                             |
-| `--nn-theme-navitem-custom-color-name-font-weight`      | `600`       | Font weight for folders/tags with custom colors (overrides default)           |
+| `--nn-theme-navitem-custom-color-name-font-weight`      | `600`       | Font weight for folders/tags/properties with custom colors (overrides default) |
 | `--nn-theme-navitem-custom-color-file-name-font-weight` | `600`       | Font weight for file names with custom colors (overrides default file weight) |
 | `--nn-theme-navitem-folder-note-name-font-weight`       | `400`       | Font weight for folders with notes (overrides all others)                     |
 | `--nn-theme-navitem-folder-note-name-decoration`        | `underline` | Text decoration for folders with notes (none, underline, underline dotted)    |
@@ -132,7 +133,7 @@ Priority order: folder note styles override custom color styles, which override 
 
 ### Borders
 
-Border variables apply to folder/tag rows, file rows, count badges, and file pills.
+Border variables apply to navigation rows, file rows, count badges, and file pills.
 
 #### Border widths
 
@@ -141,7 +142,7 @@ Border variables apply to folder/tag rows, file rows, count badges, and file pil
 | `--nn-theme-navitem-border-width`     | `0px`   | Border width for navigation custom backgrounds, hover, and selection |
 | `--nn-theme-navitem-count-border-width` | `0px` | Border width for navigation file count badges                     |
 | `--nn-theme-file-border-width`        | `0px`   | Border width for file item hover and selection                    |
-| `--nn-theme-file-pill-border-width`   | `1px`   | Border width for tag and custom property pills                    |
+| `--nn-theme-file-pill-border-width`   | `1px`   | Border width for tag and property pills                           |
 
 #### Border colors
 
@@ -158,9 +159,9 @@ Border variables apply to folder/tag rows, file rows, count badges, and file pil
 | `--nn-theme-file-selected-border-color`                   | `transparent`                                     | Border color for selected file rows                             |
 | `--nn-theme-file-selected-inactive-border-color`          | `var(--nn-theme-file-selected-border-color)`      | Border color for selected file rows when pane is inactive       |
 | `--nn-theme-file-tag-border-color`                        | `color-mix(in srgb, var(--nn-theme-foreground) 30%, transparent)` | Border color for tag pills                                      |
-| `--nn-theme-file-custom-property-border-color`            | `var(--nn-theme-file-tag-border-color)`           | Border color for custom property pills                          |
+| `--nn-theme-file-property-border-color`                   | `var(--nn-theme-file-tag-border-color)`           | Border color for property pills                                 |
 | `--nn-theme-file-selected-tag-border-color`               | `var(--nn-theme-file-tag-border-color)`           | Border color for tag pills in selected file rows                |
-| `--nn-theme-file-selected-custom-property-border-color`   | `var(--nn-theme-file-custom-property-border-color)` | Border color for custom property pills in selected file rows    |
+| `--nn-theme-file-selected-property-border-color`          | `var(--nn-theme-file-property-border-color)`      | Border color for property pills in selected file rows           |
 
 ### Pane divider (desktop only)
 
@@ -174,7 +175,7 @@ Border variables apply to folder/tag rows, file rows, count badges, and file pil
 | Variable                                  | Default                             | Description                                                                        |
 | ----------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------- |
 | `--nn-theme-list-bg`                      | `var(--background-primary)`         | Background color of the list pane (desktop only, see mobile styles)                |
-| `--nn-theme-list-header-icon-color`       | `var(--nn-theme-foreground-muted)`  | Folder/tag icon color shown beside the breadcrumb in the desktop header            |
+| `--nn-theme-list-header-icon-color`       | `var(--nn-theme-foreground-muted)`  | Folder/tag/property icon color shown beside the breadcrumb in the desktop header   |
 | `--nn-theme-list-header-breadcrumb-color` | `var(--nn-theme-foreground-muted)`  | Text color for the breadcrumb path in the desktop header                           |
 | `--nn-theme-list-search-active-bg`        | `var(--text-highlight-bg)`          | Background color for the search field and match highlights when a search query is active |
 | `--nn-theme-list-search-border-color`     | `var(--background-modifier-border)` | Border and focus ring color for the search field                                   |
@@ -188,16 +189,17 @@ Border variables apply to folder/tag rows, file rows, count badges, and file pil
 | ------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------- |
 | `--nn-theme-file-name-color`                      | `var(--nn-theme-foreground)`                  | Text color for file names                                       |
 | `--nn-theme-file-preview-color`                   | `var(--nn-theme-foreground-muted)`            | Text color for content preview                                  |
+| `--nn-theme-file-task-icon-color`                 | `var(--nn-theme-navitem-icon-color)`          | Icon color for notes with unfinished tasks                      |
 | `--nn-theme-file-feature-border-radius`           | `4px`                                         | Corner radius for feature images (0-32px)                       |
 | `--nn-theme-file-date-color`                      | `var(--nn-theme-foreground-faded)`            | Text color for creation or modification dates                   |
 | `--nn-theme-file-parent-color`                    | `var(--nn-theme-foreground-faded)`            | Text color for parent folder path (when showing subfolders)     |
 | `--nn-theme-file-tag-color`                       | `var(--nn-theme-foreground-faded)`            | Text color for tag pills without custom colors                  |
 | `--nn-theme-file-tag-custom-color-text-color`     | `var(--nn-theme-navitem-name-color)`          | Text color for tags with custom backgrounds but no custom color |
 | `--nn-theme-file-tag-bg`                          | `transparent`                                 | Background color for tag pills without custom backgrounds       |
-| `--nn-theme-file-custom-property-color`           | `var(--nn-theme-foreground-faded)`            | Text color for custom property pill                             |
-| `--nn-theme-file-custom-property-bg`              | `transparent`                                 | Background color for custom property pill                       |
+| `--nn-theme-file-property-color`                  | `var(--nn-theme-foreground-faded)`            | Text color for property pills                                   |
+| `--nn-theme-file-property-bg`                     | `transparent`                                 | Background color for property pills                              |
 | `--nn-theme-file-tag-border-radius`               | `10px`                                        | Corner radius for tag pills (0-10px)                            |
-| `--nn-theme-file-custom-property-border-radius`   | `10px`                                        | Corner radius for custom property pills (0-10px)                |
+| `--nn-theme-file-property-border-radius`          | `10px`                                        | Corner radius for property pills (0-10px)                       |
 | `--nn-theme-file-border-radius`                   | `8px`                                         | Corner radius for file items (0-16px)                           |
 | `--nn-theme-file-selected-bg`                     | `var(--text-selection)`                       | Selected file background color                                  |
 | `--nn-theme-file-selected-name-color`             | `var(--nn-theme-file-name-color)`             | Text color for file names when selected                         |
@@ -206,8 +208,8 @@ Border variables apply to folder/tag rows, file rows, count badges, and file pil
 | `--nn-theme-file-selected-parent-color`           | `var(--nn-theme-foreground-muted)`            | Text color for parent folder path when selected                 |
 | `--nn-theme-file-selected-tag-color`              | `var(--nn-theme-foreground-muted)`            | Text color for tag pills when selected                          |
 | `--nn-theme-file-selected-tag-bg`                 | `var(--nn-theme-file-tag-bg)`                 | Background color for tag pills when selected                    |
-| `--nn-theme-file-selected-custom-property-color`  | `var(--nn-theme-foreground-muted)`            | Text color for custom property pill when selected               |
-| `--nn-theme-file-selected-custom-property-bg`     | `var(--nn-theme-file-custom-property-bg)`     | Background color for custom property pill when selected         |
+| `--nn-theme-file-selected-property-color`         | `var(--nn-theme-foreground-muted)`            | Text color for property pills when selected                     |
+| `--nn-theme-file-selected-property-bg`            | `var(--nn-theme-file-property-bg)`            | Background color for property pills when selected               |
 | `--nn-theme-file-selected-inactive-bg`            | `var(--background-modifier-hover)`            | Selected file background when pane is inactive (desktop only)   |
 | `--nn-theme-file-selected-inactive-name-color`    | `var(--nn-theme-file-selected-name-color)`    | File name color when selected and pane is inactive              |
 | `--nn-theme-file-selected-inactive-preview-color` | `var(--nn-theme-file-selected-preview-color)` | Content preview color when selected and pane is inactive        |
@@ -215,8 +217,8 @@ Border variables apply to folder/tag rows, file rows, count badges, and file pil
 | `--nn-theme-file-selected-inactive-parent-color`  | `var(--nn-theme-file-selected-parent-color)`  | Parent folder color when selected and pane is inactive          |
 | `--nn-theme-file-selected-inactive-tag-color`     | `var(--nn-theme-file-selected-tag-color)`     | Tag text color when selected and pane is inactive               |
 | `--nn-theme-file-selected-inactive-tag-bg`        | `var(--nn-theme-file-tag-bg)`                 | Tag background color when selected and pane is inactive         |
-| `--nn-theme-file-selected-inactive-custom-property-color` | `var(--nn-theme-file-selected-custom-property-color)` | Custom property text color when selected and pane is inactive   |
-| `--nn-theme-file-selected-inactive-custom-property-bg`    | `var(--nn-theme-file-custom-property-bg)`     | Custom property background color when selected and pane is inactive |
+| `--nn-theme-file-selected-inactive-property-color` | `var(--nn-theme-file-selected-property-color)` | Property pill text color when selected and pane is inactive     |
+| `--nn-theme-file-selected-inactive-property-bg`    | `var(--nn-theme-file-property-bg)`            | Property pill background color when selected and pane is inactive |
 
 Tag pills that only set a custom text color use the list pane background. Tag pills that set a custom background use the
 navigation pane background. In `primary` and `secondary` background modes, both panes share the same background.
@@ -233,7 +235,7 @@ navigation pane background. In `primary` and `secondary` background modes, both 
 | `--nn-theme-file-preview-font-weight`           | `400`   | Font weight for file preview text                    |
 | `--nn-theme-file-date-font-weight`              | `400`   | Font weight for file dates                           |
 | `--nn-theme-file-parent-font-weight`            | `400`   | Font weight for parent folder path                   |
-| `--nn-theme-file-tag-font-weight`               | `400`   | Font weight for tag pills                            |
+| `--nn-theme-file-tag-font-weight`               | `400`   | Font weight for tag and property pills               |
 
 #### Quick actions (desktop only)
 
@@ -305,11 +307,12 @@ body {
   --nn-theme-calendar-weekend-bg: rgba(169, 183, 198, 0.1);
   --nn-theme-calendar-hover-bg: #4b5059;
   --nn-theme-calendar-day-has-note-bg: #4a78c8;
+  --nn-theme-calendar-day-has-unfinished-task-color: #4a78c8;
   --nn-theme-calendar-day-has-feature-image-color: #ffffff;
   --nn-theme-calendar-day-today-color: #ffffff;
   --nn-theme-calendar-day-today-bg: #4a78c8;
 
-  /* Folder & tag items */
+  /* Navigation items */
   --nn-theme-navitem-chevron-color: #6e6e6e;
   --nn-theme-navitem-icon-color: #afb1b3;
   --nn-theme-navitem-name-color: #a9b7c6;
@@ -376,16 +379,17 @@ body {
   /* File items */
   --nn-theme-file-name-color: #a9b7c6;
   --nn-theme-file-preview-color: #7f8b91;
+  --nn-theme-file-task-icon-color: #afb1b3;
   --nn-theme-file-feature-border-radius: 3px;
   --nn-theme-file-date-color: #6a8759;
   --nn-theme-file-parent-color: #cc7832;
   --nn-theme-file-tag-color: #9876aa;
   --nn-theme-file-tag-custom-color-text-color: #ffffff;
   --nn-theme-file-tag-bg: #383a3e;
-  --nn-theme-file-custom-property-color: #cc7832;
-  --nn-theme-file-custom-property-bg: #383a3e;
+  --nn-theme-file-property-color: #cc7832;
+  --nn-theme-file-property-bg: #383a3e;
   --nn-theme-file-tag-border-radius: 3px;
-  --nn-theme-file-custom-property-border-radius: 3px;
+  --nn-theme-file-property-border-radius: 3px;
   --nn-theme-file-border-radius: 4px;
   --nn-theme-file-selected-bg: #4a78c8;
   --nn-theme-file-selected-name-color: #ffffff;
@@ -394,8 +398,8 @@ body {
   --nn-theme-file-selected-parent-color: #ffd580;
   --nn-theme-file-selected-tag-color: #ffffff;
   --nn-theme-file-selected-tag-bg: #5a5f66;
-  --nn-theme-file-selected-custom-property-color: #ffffff;
-  --nn-theme-file-selected-custom-property-bg: #5a5f66;
+  --nn-theme-file-selected-property-color: #ffffff;
+  --nn-theme-file-selected-property-bg: #5a5f66;
   --nn-theme-file-selected-inactive-bg: #383c45;
   --nn-theme-file-selected-inactive-name-color: #dfe3e8;
   --nn-theme-file-selected-inactive-preview-color: #b9bec6;
@@ -403,17 +407,17 @@ body {
   --nn-theme-file-selected-inactive-parent-color: #e3b173;
   --nn-theme-file-selected-inactive-tag-color: #dfe3e8;
   --nn-theme-file-selected-inactive-tag-bg: #4c5058;
-  --nn-theme-file-selected-inactive-custom-property-color: #dfe3e8;
-  --nn-theme-file-selected-inactive-custom-property-bg: #4c5058;
+  --nn-theme-file-selected-inactive-property-color: #dfe3e8;
+  --nn-theme-file-selected-inactive-property-bg: #4c5058;
   --nn-theme-file-border-width: 1px;
   --nn-theme-file-pill-border-width: 1px;
   --nn-theme-file-hover-border-color: rgba(255, 255, 255, 0.16);
   --nn-theme-file-selected-border-color: rgba(255, 255, 255, 0.24);
   --nn-theme-file-selected-inactive-border-color: rgba(255, 255, 255, 0.14);
   --nn-theme-file-tag-border-color: rgba(255, 255, 255, 0.2);
-  --nn-theme-file-custom-property-border-color: rgba(255, 255, 255, 0.2);
+  --nn-theme-file-property-border-color: rgba(255, 255, 255, 0.2);
   --nn-theme-file-selected-tag-border-color: rgba(255, 255, 255, 0.3);
-  --nn-theme-file-selected-custom-property-border-color: rgba(255, 255, 255, 0.3);
+  --nn-theme-file-selected-property-border-color: rgba(255, 255, 255, 0.3);
 
   /* File text styling */
   --nn-theme-list-heading-font-weight: 600;
