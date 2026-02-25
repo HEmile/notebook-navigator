@@ -77,6 +77,14 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '2.4.3',
+        date: '2026-03-02',
+        showOnUpdate: true,
+        improved: [
+            '==Search filter now uses accent-insensitive matching==. "cafe" matches "café", "cancion" matches "canción". Non-Latin scripts like Arabic are not affected.'
+        ]
+    },
+    {
         version: '2.4.2',
         date: '2026-02-24',
         showOnUpdate: true,

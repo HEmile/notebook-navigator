@@ -134,6 +134,73 @@ export function casefold(value: string): string {
     return trimmed.toLowerCase();
 }
 
+// Reference: "Text Normalization: Unicode Forms, Case Folding & Whitespace Handling for NLP"
+// https://mbrenndoerfer.com/writing/text-normalization-unicode-nlp
+
+// Matches Unicode combining-mark code points.
+const SEARCH_COMBINING_MARK_PATTERN = /\p{M}/u;
+// Matches Latin script letters used to gate accent stripping.
+const SEARCH_LATIN_LETTER_PATTERN = /\p{Script=Latin}/u;
+// Fast path: ASCII-only strings already match after lowercase conversion.
+const SEARCH_NORMALIZATION_NON_ASCII_PATTERN = /[\u0080-\uFFFF]/;
+
+const foldSearchLowercaseValue = (lowercaseValue: string): string => {
+    // ASCII-only inputs are already in final folded form after lowercase conversion.
+    if (!SEARCH_NORMALIZATION_NON_ASCII_PATTERN.test(lowercaseValue)) {
+        return lowercaseValue;
+    }
+
+    // NFD exposes accents as combining marks so marks can be inspected per code point.
+    const decomposed = lowercaseValue.normalize('NFD');
+    let folded = '';
+    // Tracks whether the previous base character belongs to Latin script.
+    // Combining marks are removed only when this flag is true.
+    let previousBaseWasLatin = false;
+
+    for (const char of decomposed) {
+        // Combining marks are dropped for Latin letters (`cafe` matches `café`).
+        // Combining marks are preserved for non-Latin scripts (`مدرس` stays distinct from `مُدَرِّس`).
+        if (SEARCH_COMBINING_MARK_PATTERN.test(char)) {
+            if (previousBaseWasLatin) {
+                continue;
+            }
+            folded += char;
+            continue;
+        }
+
+        // Base character: always keep it, then update script tracking for following combining marks.
+        folded += char;
+        previousBaseWasLatin = SEARCH_LATIN_LETTER_PATTERN.test(char);
+    }
+
+    // Recompose so folded strings remain in stable canonical form for storage/comparison.
+    return folded.normalize('NFC');
+};
+
+/**
+ * Folds pre-lowercased search text for accent-insensitive matching on Latin script characters.
+ * Combining marks on non-Latin scripts are preserved.
+ */
+export function foldSearchTextFromLowercase(lowercaseValue: string): string {
+    if (!lowercaseValue) {
+        return '';
+    }
+
+    return foldSearchLowercaseValue(lowercaseValue);
+}
+
+/**
+ * Folds search text for accent-insensitive matching on Latin script characters.
+ * Combining marks on non-Latin scripts are preserved.
+ */
+export function foldSearchText(value: string): string {
+    if (!value) {
+        return '';
+    }
+
+    return foldSearchLowercaseValue(value.toLowerCase());
+}
+
 export function sortAndDedupeByComparator<T>(values: readonly T[], compare: (left: T, right: T) => number): T[] {
     if (values.length === 0) {
         return [];

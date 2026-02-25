@@ -110,6 +110,7 @@ import { getFolderNote, getFolderNoteDetectionSettings, openFolderNoteFile } fro
 import { collectAllTagPaths, findTagNode, getTotalNoteCount } from '../utils/tagTree';
 import { FILE_VISIBILITY, getExtensionSuffix, shouldShowExtensionSuffix } from '../utils/fileTypeUtils';
 import { getTagSearchModifierOperator, resolveCanonicalTagPath } from '../utils/tagUtils';
+import { foldSearchText } from '../utils/recordUtils';
 import { FolderItem } from './FolderItem';
 import { NavigationPaneHeader } from './NavigationPaneHeader';
 import { NavigationToolbar } from './NavigationToolbar';
@@ -178,7 +179,10 @@ import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
 import { getDBInstanceOrNull } from '../storage/fileOperations';
 import { getActiveVaultProfile } from '../utils/vaultProfiles';
 import {
+    buildPropertyKeyNodeId,
+    buildPropertyValueNodeId,
     getDirectPropertyKeyNoteCount,
+    parsePropertyNodeId,
     getTotalPropertyNoteCount,
     resolvePropertyShortcutNodeId,
     resolvePropertyTreeNode
@@ -219,6 +223,58 @@ interface NavigationPaneProps {
 const ZERO_NOTE_COUNT: NoteCountInfo = { current: 0, descendants: 0, total: 0 };
 const EMPTY_TAG_TOKENS: string[] = [];
 const EMPTY_INDENT_GUIDE_MAP = new Map<string, number[]>();
+const MAX_FOLDED_SEARCH_CACHE_ENTRIES = 2048;
+
+const buildNormalizedSearchTokenSet = (
+    tokens: readonly string[] | null | undefined,
+    normalizeToken: (token: string) => string
+): Set<string> | null => {
+    if (!tokens || tokens.length === 0) {
+        return null;
+    }
+
+    const normalizedTokens = new Set<string>();
+    tokens.forEach(token => {
+        // The caller controls normalization strategy (plain fold vs property-node parsing + fold).
+        const normalizedToken = normalizeToken(token);
+        if (!normalizedToken) {
+            return;
+        }
+        normalizedTokens.add(normalizedToken);
+    });
+
+    return normalizedTokens.size > 0 ? normalizedTokens : null;
+};
+
+const setBoundedFoldedSearchCacheEntry = (cache: Map<string, string>, key: string, value: string): void => {
+    // Keep the oldest insertion order entry bounded out of the cache.
+    // This keeps memory usage stable while preserving fast-path hits for recently rendered nodes.
+    if (!cache.has(key) && cache.size >= MAX_FOLDED_SEARCH_CACHE_ENTRIES) {
+        for (const oldestKey of cache.keys()) {
+            cache.delete(oldestKey);
+            break;
+        }
+    }
+
+    cache.set(key, value);
+};
+
+// Converts property node IDs into folded key/value IDs used by search token matching.
+const normalizePropertyNodeIdForSearchMatch = (propertyNodeId: string): string => {
+    const parsed = parsePropertyNodeId(propertyNodeId);
+    if (!parsed) {
+        // Fallback for non-standard IDs: fold raw ID and compare directly.
+        return foldSearchText(propertyNodeId);
+    }
+
+    // IDs are rebuilt from folded key/value segments so query tokens and rendered nodes use the same representation.
+    const foldedKey = foldSearchText(parsed.key);
+    if (!parsed.valuePath) {
+        return buildPropertyKeyNodeId(foldedKey);
+    }
+
+    return buildPropertyValueNodeId(foldedKey, foldSearchText(parsed.valuePath));
+};
 
 interface SortableShortcutItemProps extends React.ComponentProps<typeof ShortcutItem> {
     sortableId: string;
@@ -543,34 +599,62 @@ export const NavigationPane = React.memo(
 
         // Convert tag filter arrays to sets for faster membership checks while rendering
         const searchIncludeTokenSet = useMemo(() => {
-            if (searchIncludeTokens.length === 0) {
-                return null;
-            }
-            return new Set(searchIncludeTokens);
+            // Tags from search filters are normalized before tree-node comparisons.
+            return buildNormalizedSearchTokenSet(searchIncludeTokens, foldSearchText);
         }, [searchIncludeTokens]);
 
         const searchExcludeTokenSet = useMemo(() => {
-            if (searchExcludeTokens.length === 0) {
-                return null;
-            }
-            return new Set(searchExcludeTokens);
+            // Excluded tag tokens use the same folded representation.
+            return buildNormalizedSearchTokenSet(searchExcludeTokens, foldSearchText);
         }, [searchExcludeTokens]);
+        const hasTagTokenSearchHighlights = searchIncludeTokenSet !== null || searchExcludeTokenSet !== null;
 
         const propertyIncludeTokenSet = useMemo(() => {
-            const includeTokens = searchNavFilters?.properties.include;
-            if (!includeTokens || includeTokens.length === 0) {
-                return null;
-            }
-            return new Set(includeTokens);
+            // Property filters are normalized as property node IDs (`key:...` / `key:...=...`) in folded form.
+            return buildNormalizedSearchTokenSet(searchNavFilters?.properties.include, normalizePropertyNodeIdForSearchMatch);
         }, [searchNavFilters]);
 
         const propertyExcludeTokenSet = useMemo(() => {
-            const excludeTokens = searchNavFilters?.properties.exclude;
-            if (!excludeTokens || excludeTokens.length === 0) {
-                return null;
-            }
-            return new Set(excludeTokens);
+            // Excluded property filters share the same normalized node ID shape.
+            return buildNormalizedSearchTokenSet(searchNavFilters?.properties.exclude, normalizePropertyNodeIdForSearchMatch);
         }, [searchNavFilters]);
+        const hasPropertyTokenSearchHighlights = propertyIncludeTokenSet !== null || propertyExcludeTokenSet !== null;
+        const foldedTagPathCacheRef = useRef<Map<string, string>>(new Map());
+        const foldedPropertyNodeIdCacheRef = useRef<Map<string, string>>(new Map());
+
+        const getFoldedTagPath = useCallback((tagPath: string): string => {
+            const cached = foldedTagPathCacheRef.current.get(tagPath);
+            if (cached !== undefined) {
+                return cached;
+            }
+
+            // Fold once per distinct path rendered in the current highlight state.
+            const normalizedTagPath = foldSearchText(tagPath);
+            setBoundedFoldedSearchCacheEntry(foldedTagPathCacheRef.current, tagPath, normalizedTagPath);
+            return normalizedTagPath;
+        }, []);
+
+        const getFoldedPropertyNodeId = useCallback((propertyNodeId: string): string => {
+            const cached = foldedPropertyNodeIdCacheRef.current.get(propertyNodeId);
+            if (cached !== undefined) {
+                return cached;
+            }
+
+            // Parse/fold/rebuild once per distinct property node ID rendered in the current highlight state.
+            const normalizedPropertyNodeId = normalizePropertyNodeIdForSearchMatch(propertyNodeId);
+            setBoundedFoldedSearchCacheEntry(foldedPropertyNodeIdCacheRef.current, propertyNodeId, normalizedPropertyNodeId);
+            return normalizedPropertyNodeId;
+        }, []);
+
+        useEffect(() => {
+            // Search token sets changed; previous folded path cache no longer matches the active highlight context.
+            foldedTagPathCacheRef.current.clear();
+        }, [searchIncludeTokenSet, searchExcludeTokenSet]);
+
+        useEffect(() => {
+            // Property token sets changed; clear cached folded property IDs.
+            foldedPropertyNodeIdCacheRef.current.clear();
+        }, [propertyIncludeTokenSet, propertyExcludeTokenSet]);
 
         const menuServices = useMemo<MenuServices>(
             () => ({
@@ -3098,10 +3182,13 @@ export const NavigationPane = React.memo(
                             } else if (highlightExcludeTagged) {
                                 searchMatch = 'exclude';
                             }
-                        } else if (searchExcludeTokenSet?.has(tagNode.path)) {
-                            searchMatch = 'exclude';
-                        } else if (searchIncludeTokenSet?.has(tagNode.path)) {
-                            searchMatch = 'include';
+                        } else if (hasTagTokenSearchHighlights) {
+                            const normalizedTagPath = getFoldedTagPath(tagNode.path);
+                            if (searchExcludeTokenSet?.has(normalizedTagPath)) {
+                                searchMatch = 'exclude';
+                            } else if (searchIncludeTokenSet?.has(normalizedTagPath)) {
+                                searchMatch = 'include';
+                            }
                         }
                         return (
                             <TagTreeItem
@@ -3150,10 +3237,13 @@ export const NavigationPane = React.memo(
                         const selectedPropertyNodeId =
                             selectionState.selectionType === ItemType.PROPERTY ? selectionState.selectedProperty : null;
                         let searchMatch: 'include' | 'exclude' | undefined;
-                        if (propertyExcludeTokenSet?.has(propertyNode.id)) {
-                            searchMatch = 'exclude';
-                        } else if (propertyIncludeTokenSet?.has(propertyNode.id)) {
-                            searchMatch = 'include';
+                        if (hasPropertyTokenSearchHighlights) {
+                            const normalizedPropertyNodeId = getFoldedPropertyNodeId(propertyNode.id);
+                            if (propertyExcludeTokenSet?.has(normalizedPropertyNodeId)) {
+                                searchMatch = 'exclude';
+                            } else if (propertyIncludeTokenSet?.has(normalizedPropertyNodeId)) {
+                                searchMatch = 'include';
+                            }
                         }
 
                         return (
@@ -3289,6 +3379,10 @@ export const NavigationPane = React.memo(
                 handleShortcutFolderNoteClick,
                 handleShortcutFolderNoteMouseDown,
                 isMobile,
+                hasTagTokenSearchHighlights,
+                hasPropertyTokenSearchHighlights,
+                getFoldedTagPath,
+                getFoldedPropertyNodeId,
                 searchIncludeTokenSet,
                 searchExcludeTokenSet,
                 propertyIncludeTokenSet,

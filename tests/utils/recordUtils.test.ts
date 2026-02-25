@@ -19,6 +19,8 @@ import { describe, expect, it } from 'vitest';
 import {
     clonePinnedNotesRecord,
     ensureRecord,
+    foldSearchText,
+    foldSearchTextFromLowercase,
     isStringRecordValue,
     normalizePinnedNoteContext,
     sanitizeRecord
@@ -52,6 +54,29 @@ describe('sanitizeRecord', () => {
         const sanitized = sanitizeRecord(record, isStringRecordValue);
 
         expect(sanitized).toEqual({ good: 'yes' });
+    });
+});
+
+describe('foldSearchText', () => {
+    it('folds accents to base characters', () => {
+        expect(foldSearchText('Canción')).toBe('cancion');
+        expect(foldSearchText('Ścieżka')).toBe('sciezka');
+    });
+
+    it('preserves combining marks on non-Latin scripts', () => {
+        expect(foldSearchText('مُدَرِّس')).toBe('مُدَرِّس');
+        expect(foldSearchText('Άλφα')).toBe('άλφα');
+    });
+
+    it('does not apply compatibility equivalence mappings', () => {
+        expect(foldSearchText('straße')).not.toBe(foldSearchText('strasse'));
+        expect(foldSearchText('ﬁle')).not.toBe(foldSearchText('file'));
+        expect(foldSearchText('ＡＢＣ')).not.toBe(foldSearchText('abc'));
+    });
+
+    it('matches foldSearchTextFromLowercase output for lowercased input', () => {
+        const lowercased = 'canción';
+        expect(foldSearchTextFromLowercase(lowercased)).toBe(foldSearchText(lowercased));
     });
 });
 

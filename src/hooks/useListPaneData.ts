@@ -78,7 +78,7 @@ import type { SearchProvider } from '../types/search';
 import { PreviewTextUtils } from '../utils/previewTextUtils';
 import { getCachedFileTags } from '../utils/tagUtils';
 import { createOmnisearchHighlightQueryTokenContext, sanitizeOmnisearchHighlightTokens } from '../utils/omnisearchHighlight';
-import { casefold } from '../utils/recordUtils';
+import { foldSearchText } from '../utils/recordUtils';
 import { normalizePropertyTreeValuePath, type PropertySelectionNodeId } from '../utils/propertyTree';
 import { getFilesForNavigationSelection } from '../utils/selectionUtils';
 import { getActivePropertyFields } from '../utils/vaultProfiles';
@@ -86,6 +86,8 @@ import { getActivePropertyFields } from '../utils/vaultProfiles';
 const EMPTY_SEARCH_META = new Map<string, SearchResultMeta>();
 // Shared empty map used when no files are hidden to avoid allocations
 const EMPTY_HIDDEN_STATE = new Map<string, boolean>();
+// Shared empty property map used when a file has no searchable properties.
+const EMPTY_FILTER_SEARCH_PROPERTIES = new Map<string, string[]>();
 // Shared sentinel array used when only tag presence is required
 const TAG_PRESENCE_SENTINEL = ['__nn_tag_present__'];
 
@@ -399,7 +401,8 @@ export function useListPaneData({
         const map = new Map<string, string>();
         for (const file of baseFiles) {
             const name = getFileDisplayName(file);
-            map.set(file.path, name.toLowerCase());
+            // Store folded names once and reuse during every filter pass.
+            map.set(file.path, foldSearchText(name));
         }
         setSearchableNames(map);
     }, [baseFiles, getFileDisplayName]);
@@ -411,7 +414,8 @@ export function useListPaneData({
             if (!changedFile) return;
             const path = changedFile.path;
             if (!basePaths.has(path)) return;
-            const lower = getFileDisplayName(changedFile).toLowerCase();
+            // Keep incremental updates aligned with the initial folded representation.
+            const lower = foldSearchText(getFileDisplayName(changedFile));
             setSearchableNames(prev => {
                 const current = prev.get(path);
                 if (current === lower) return prev;
@@ -474,40 +478,22 @@ export function useListPaneData({
 
         const db = getDB();
 
-        // Cache normalized tag arrays to avoid repeated string transformations
-        const normalizedTagCache = new Map<string, string[]>();
         const emptyTags: string[] = [];
-        const normalizedPropertyCache = new Map<string, Map<string, string[]>>();
-        const emptyProperties = new Map<string, string[]>();
 
-        // Get or compute normalized tags for a file path
-        const resolveNormalizedTags = (path: string, rawTags: readonly string[]): string[] => {
-            const cached = normalizedTagCache.get(path);
-            if (cached !== undefined) {
-                return cached;
-            }
-            const normalized = rawTags.map(tag => normalizeTagPathValue(tag)).filter((value): value is string => value.length > 0);
-            normalizedTagCache.set(path, normalized);
-            return normalized;
+        const normalizeTagsForFilterSearch = (rawTags: readonly string[]): string[] => {
+            // Tag values are normalized to canonical tag paths, then folded for accent-insensitive comparison.
+            return rawTags.map(tag => foldSearchText(normalizeTagPathValue(tag))).filter((value): value is string => value.length > 0);
         };
 
-        const resolveNormalizedProperties = (
-            path: string,
-            properties: { fieldKey: string; value: string }[] | null
-        ): Map<string, string[]> => {
-            const cached = normalizedPropertyCache.get(path);
-            if (cached) {
-                return cached;
-            }
-
+        const normalizePropertiesForFilterSearch = (properties: { fieldKey: string; value: string }[] | null): Map<string, string[]> => {
             if (!properties || properties.length === 0) {
-                normalizedPropertyCache.set(path, emptyProperties);
-                return emptyProperties;
+                return EMPTY_FILTER_SEARCH_PROPERTIES;
             }
 
             const normalizedValues = new Map<string, Set<string>>();
             properties.forEach(entry => {
-                const normalizedKey = casefold(entry.fieldKey);
+                // Fold property keys with the same search normalization used by parsed property tokens.
+                const normalizedKey = foldSearchText(entry.fieldKey.trim());
                 if (!normalizedKey) {
                     return;
                 }
@@ -522,7 +508,9 @@ export function useListPaneData({
                 if (!normalizedValue) {
                     return;
                 }
-                values.add(normalizedValue);
+                // `normalizePropertyTreeValuePath` handles property-specific cleanup (trim/wiki-link display text).
+                // Folded values are then compared against folded query tokens.
+                values.add(foldSearchText(normalizedValue));
             });
 
             const normalized = new Map<string, string[]>();
@@ -530,12 +518,11 @@ export function useListPaneData({
                 normalized.set(key, Array.from(values));
             });
 
-            normalizedPropertyCache.set(path, normalized);
             return normalized;
         };
 
         const filteredByFilterSearch = baseFiles.filter(file => {
-            const lowercaseName = searchableNames.get(file.path) || '';
+            const foldedName = searchableNames.get(file.path) || '';
             const fileData = hasTaskFilters || needsTagLookup || needsPropertyLookup ? db.getFile(file.path) : null;
             const hasUnfinishedTasks = hasTaskFilters && typeof fileData?.taskUnfinished === 'number' && fileData.taskUnfinished > 0;
             const needsMatchOptions = hasTaskFilters || hasFolderFilters || hasExtensionFilters;
@@ -544,16 +531,19 @@ export function useListPaneData({
                 matchOptions = { hasUnfinishedTasks };
 
                 if (hasFolderFilters) {
-                    matchOptions.lowercaseFolderPath = (file.parent?.path ?? '').toLowerCase();
+                    // Folder paths are folded before matching with parsed folder tokens.
+                    matchOptions.foldedFolderPath = foldSearchText(file.parent?.path ?? '');
                 }
 
                 if (hasExtensionFilters) {
-                    matchOptions.lowercaseExtension = file.extension.toLowerCase();
+                    // Extension values are folded before direct equality checks.
+                    matchOptions.foldedExtension = foldSearchText(file.extension);
                 }
             }
 
             if (needsPropertyLookup) {
-                const propertyValuesByKey = resolveNormalizedProperties(file.path, fileData?.properties ?? null);
+                // Property keys/values are folded once per file before property token evaluation.
+                const propertyValuesByKey = normalizePropertiesForFilterSearch(fileData?.properties ?? null);
                 if (matchOptions) {
                     matchOptions = { ...matchOptions, propertyValuesByKey };
                 } else {
@@ -561,9 +551,9 @@ export function useListPaneData({
                 }
             }
 
-            // Skip tag lookup if tokens do not reference tags
+            // Skip tag extraction when no tag token requires tag metadata.
             if (!needsTagLookup) {
-                if (!fileMatchesFilterTokens(lowercaseName, emptyTags, tokens, matchOptions)) {
+                if (!fileMatchesFilterTokens(foldedName, emptyTags, tokens, matchOptions)) {
                     return false;
                 }
 
@@ -586,16 +576,18 @@ export function useListPaneData({
                 return false;
             }
 
-            let lowercaseTags: string[];
+            let foldedTags: string[];
             if (!hasTags) {
-                lowercaseTags = emptyTags;
+                foldedTags = emptyTags;
             } else if (requiresNormalizedTagValues) {
-                lowercaseTags = resolveNormalizedTags(file.path, rawTags);
+                // Tag expression mode and tag token matching require folded tag path values.
+                foldedTags = normalizeTagsForFilterSearch(rawTags);
             } else {
-                lowercaseTags = TAG_PRESENCE_SENTINEL;
+                // Sentinel preserves "has tags" semantics without per-tag normalization when only presence is needed.
+                foldedTags = TAG_PRESENCE_SENTINEL;
             }
 
-            if (!fileMatchesFilterTokens(lowercaseName, lowercaseTags, tokens, matchOptions)) {
+            if (!fileMatchesFilterTokens(foldedName, foldedTags, tokens, matchOptions)) {
                 return false;
             }
 

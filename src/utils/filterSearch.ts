@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { casefold } from './recordUtils';
+import { casefold, foldSearchText, foldSearchTextFromLowercase } from './recordUtils';
 import { matchesPropertyValuePath, normalizePropertyTreeValuePath } from './propertyTree';
 
 // Determines evaluation mode for search tokens (filter uses AND for all, tag uses expression tree)
@@ -151,7 +151,7 @@ const OPERATOR_PRECEDENCE: Record<InclusionOperator, number> = {
 const CONNECTOR_TOKEN_SET = new Set(['and', 'or']);
 const UNFINISHED_TASK_FILTER_TOKEN_SET = new Set(['has:task', 'has:tasks']);
 
-// Checks if a tag token matches a lowercase tag path (exact or descendant)
+// Checks if a tag token matches a folded tag path (exact or descendant)
 const tagMatchesToken = (tagPath: string, token: string): boolean => {
     if (!tagPath || !token) {
         return false;
@@ -271,6 +271,14 @@ const parsePropertyFilterToken = (token: string): PropertySearchToken | null => 
     return {
         key: normalizedKey,
         value: normalizedValue
+    };
+};
+
+const foldPropertySearchToken = (token: PropertySearchToken): PropertySearchToken => {
+    // Property tokens are folded once during parsing so matching can stay on pre-normalized values.
+    return {
+        key: foldSearchText(token.key),
+        value: token.value === null ? null : foldSearchText(token.value)
     };
 };
 
@@ -1050,23 +1058,49 @@ const classifyRawTokens = (rawTokens: string[]): TokenClassificationResult => {
             continue;
         }
 
+        // Token shape detection (operators, prefixes, separators) is done on lowercase text.
+        // Accent folding is applied only to operand payloads that participate in matching.
+        const lowercaseToken = token.toLowerCase();
+        let foldedLowercaseToken: string | null = null;
+        const getFoldedLowercaseToken = (): string => {
+            if (foldedLowercaseToken !== null) {
+                return foldedLowercaseToken;
+            }
+
+            // Fold once per token and reuse in all branches.
+            foldedLowercaseToken = foldSearchTextFromLowercase(lowercaseToken);
+            return foldedLowercaseToken;
+        };
+
         // Classify connector words first. Whether they behave as operators
         // or literal words is decided later by mode selection:
         // - expression mode (pure tag/property queries): operators
         // - filter mode (mixed queries): literal name tokens
-        if (token === 'and') {
+        // Connector detection intentionally runs before accent folding:
+        // `and`/`or` become operators, while `ånd`/`ör` stay literal tokens.
+        if (lowercaseToken === 'and') {
             tokens.push({ kind: 'operator', operator: 'AND' });
             continue;
         }
 
-        if (token === 'or') {
+        if (lowercaseToken === 'or') {
             tokens.push({ kind: 'operator', operator: 'OR' });
             continue;
         }
 
-        const negationPrefix = getNegationPrefix(token);
+        const negationPrefix = getNegationPrefix(lowercaseToken);
         if (negationPrefix !== null) {
-            const negatedToken = token.slice(1);
+            const negatedToken = lowercaseToken.slice(1);
+            let foldedNegatedToken: string | null = null;
+            const getFoldedNegatedToken = (): string => {
+                if (foldedNegatedToken !== null) {
+                    return foldedNegatedToken;
+                }
+
+                foldedNegatedToken = foldSearchTextFromLowercase(negatedToken);
+                return foldedNegatedToken;
+            };
+
             if (!negatedToken) {
                 hasInvalidToken = true;
                 continue;
@@ -1096,14 +1130,18 @@ const classifyRawTokens = (rawTokens: string[]): TokenClassificationResult => {
                 }
 
                 hasNonTagOperand = true;
-                tokens.push({ kind: 'nameNegation', value: negatedToken });
+                tokens.push({ kind: 'nameNegation', value: getFoldedNegatedToken() });
                 continue;
             }
 
             if (isFolderFilterCandidate(negatedToken)) {
                 const folderValue = parseFolderFilterToken(negatedToken);
                 if (folderValue) {
-                    tokens.push({ kind: 'folderNegation', value: folderValue });
+                    // Folder tokens store folded segment/exact values so compare paths can use direct equality/includes.
+                    tokens.push({
+                        kind: 'folderNegation',
+                        value: { ...folderValue, value: foldSearchTextFromLowercase(folderValue.value) }
+                    });
                     // Folder filters are non-tag operands.
                     hasNonTagOperand = true;
                 }
@@ -1114,7 +1152,7 @@ const classifyRawTokens = (rawTokens: string[]): TokenClassificationResult => {
             if (isExtensionFilterCandidate(negatedToken)) {
                 const extensionValue = parseExtensionFilterToken(negatedToken);
                 if (extensionValue) {
-                    tokens.push({ kind: 'extensionNegation', value: extensionValue });
+                    tokens.push({ kind: 'extensionNegation', value: foldSearchTextFromLowercase(extensionValue) });
                     // Extension filters are non-tag operands.
                     hasNonTagOperand = true;
                 }
@@ -1125,7 +1163,7 @@ const classifyRawTokens = (rawTokens: string[]): TokenClassificationResult => {
             if (isPropertyFilterCandidate(negatedToken)) {
                 const propertyValue = parsePropertyFilterToken(negatedToken);
                 if (propertyValue) {
-                    tokens.push({ kind: 'propertyNegation', value: propertyValue });
+                    tokens.push({ kind: 'propertyNegation', value: foldPropertySearchToken(propertyValue) });
                     hasTagOperand = true;
                 }
                 continue;
@@ -1133,28 +1171,28 @@ const classifyRawTokens = (rawTokens: string[]): TokenClassificationResult => {
 
             if (negatedToken.startsWith('#')) {
                 const tagValue = negatedToken.slice(1);
-                tokens.push({ kind: 'tagNegation', value: tagValue.length > 0 ? tagValue : null });
+                tokens.push({ kind: 'tagNegation', value: tagValue.length > 0 ? foldSearchTextFromLowercase(tagValue) : null });
                 hasTagOperand = true;
                 continue;
             }
 
             hasNonTagOperand = true;
-            tokens.push({ kind: 'nameNegation', value: negatedToken });
+            tokens.push({ kind: 'nameNegation', value: getFoldedNegatedToken() });
             continue;
         }
 
-        if (isUnfinishedTaskFilterToken(token)) {
+        if (isUnfinishedTaskFilterToken(lowercaseToken)) {
             tokens.push({ kind: 'unfinishedTask' });
             // Task filters are non-tag operands.
             hasNonTagOperand = true;
             continue;
         }
 
-        if (token.startsWith('@')) {
-            if (isDateFilterCandidate(token)) {
+        if (lowercaseToken.startsWith('@')) {
+            if (isDateFilterCandidate(lowercaseToken)) {
                 // Only commit to a date filter when parsing succeeds. Partial/invalid date fragments are ignored
                 // so they don't affect filtering until the token is complete.
-                const range = parseDateFilterRange(token);
+                const range = parseDateFilterRange(lowercaseToken);
                 if (range) {
                     tokens.push({ kind: 'date', range });
                     // Date filters are non-tag operands.
@@ -1164,14 +1202,14 @@ const classifyRawTokens = (rawTokens: string[]): TokenClassificationResult => {
             }
 
             hasNonTagOperand = true;
-            tokens.push({ kind: 'name', value: token });
+            tokens.push({ kind: 'name', value: getFoldedLowercaseToken() });
             continue;
         }
 
-        if (isFolderFilterCandidate(token)) {
-            const folderValue = parseFolderFilterToken(token);
+        if (isFolderFilterCandidate(lowercaseToken)) {
+            const folderValue = parseFolderFilterToken(lowercaseToken);
             if (folderValue) {
-                tokens.push({ kind: 'folder', value: folderValue });
+                tokens.push({ kind: 'folder', value: { ...folderValue, value: foldSearchTextFromLowercase(folderValue.value) } });
                 // Folder filters are non-tag operands.
                 hasNonTagOperand = true;
             }
@@ -1179,10 +1217,10 @@ const classifyRawTokens = (rawTokens: string[]): TokenClassificationResult => {
             continue;
         }
 
-        if (isExtensionFilterCandidate(token)) {
-            const extensionValue = parseExtensionFilterToken(token);
+        if (isExtensionFilterCandidate(lowercaseToken)) {
+            const extensionValue = parseExtensionFilterToken(lowercaseToken);
             if (extensionValue) {
-                tokens.push({ kind: 'extension', value: extensionValue });
+                tokens.push({ kind: 'extension', value: foldSearchTextFromLowercase(extensionValue) });
                 // Extension filters are non-tag operands.
                 hasNonTagOperand = true;
             }
@@ -1190,24 +1228,24 @@ const classifyRawTokens = (rawTokens: string[]): TokenClassificationResult => {
             continue;
         }
 
-        if (isPropertyFilterCandidate(token)) {
-            const propertyValue = parsePropertyFilterToken(token);
+        if (isPropertyFilterCandidate(lowercaseToken)) {
+            const propertyValue = parsePropertyFilterToken(lowercaseToken);
             if (propertyValue) {
-                tokens.push({ kind: 'property', value: propertyValue });
+                tokens.push({ kind: 'property', value: foldPropertySearchToken(propertyValue) });
                 hasTagOperand = true;
             }
             continue;
         }
 
-        if (token.startsWith('#')) {
-            const tagValue = token.slice(1);
-            tokens.push({ kind: 'tag', value: tagValue.length > 0 ? tagValue : null });
+        if (lowercaseToken.startsWith('#')) {
+            const tagValue = lowercaseToken.slice(1);
+            tokens.push({ kind: 'tag', value: tagValue.length > 0 ? foldSearchTextFromLowercase(tagValue) : null });
             hasTagOperand = true;
             continue;
         }
 
         hasNonTagOperand = true;
-        tokens.push({ kind: 'name', value: token });
+        tokens.push({ kind: 'name', value: getFoldedLowercaseToken() });
     }
 
     return {
@@ -1386,7 +1424,7 @@ const buildTagExpression = (classifiedTokens: ClassifiedToken[]): TagExpressionB
 // Evaluates a postfix tag expression against a file's tags
 const evaluateTagExpression = (
     expression: TagExpressionToken[],
-    lowercaseTags: string[],
+    foldedTags: string[],
     propertyValuesByKey: Map<string, string[]>
 ): boolean => {
     if (expression.length === 0) {
@@ -1396,7 +1434,7 @@ const evaluateTagExpression = (
     const stack: boolean[] = [];
 
     const hasTagMatch = (token: string): boolean => {
-        for (const tag of lowercaseTags) {
+        for (const tag of foldedTags) {
             if (tagMatchesToken(tag, token)) {
                 return true;
             }
@@ -1421,9 +1459,9 @@ const evaluateTagExpression = (
         } else if (token.kind === 'notTag') {
             value = !hasTagMatch(token.value);
         } else if (token.kind === 'requireTagged') {
-            value = lowercaseTags.length > 0;
+            value = foldedTags.length > 0;
         } else if (token.kind === 'untagged') {
-            value = lowercaseTags.length === 0;
+            value = foldedTags.length === 0;
         } else if (token.kind === 'property') {
             value = propertyTokenMatches(propertyValuesByKey, token.value);
         } else if (token.kind === 'notProperty') {
@@ -1435,7 +1473,7 @@ const evaluateTagExpression = (
     return stack.length === 0 ? true : Boolean(stack[stack.length - 1]);
 };
 
-const evaluateTagRequirementExpression = (expression: TagExpressionToken[], lowercaseTags: string[]): boolean => {
+const evaluateTagRequirementExpression = (expression: TagExpressionToken[], foldedTags: string[]): boolean => {
     if (expression.length === 0) {
         return true;
     }
@@ -1443,7 +1481,7 @@ const evaluateTagRequirementExpression = (expression: TagExpressionToken[], lowe
     const stack: boolean[] = [];
 
     const hasTagMatch = (token: string): boolean => {
-        for (const tag of lowercaseTags) {
+        for (const tag of foldedTags) {
             if (tagMatchesToken(tag, token)) {
                 return true;
             }
@@ -1468,9 +1506,9 @@ const evaluateTagRequirementExpression = (expression: TagExpressionToken[], lowe
         } else if (token.kind === 'notTag') {
             value = !hasTagMatch(token.value);
         } else if (token.kind === 'requireTagged') {
-            value = lowercaseTags.length > 0;
+            value = foldedTags.length > 0;
         } else if (token.kind === 'untagged') {
-            value = lowercaseTags.length === 0;
+            value = foldedTags.length === 0;
         } else if (token.kind === 'property' || token.kind === 'notProperty') {
             value = true;
         }
@@ -1711,7 +1749,7 @@ const parseFilterModeTokens = (
  * - In pure tag queries, AND has higher precedence than OR
  * - Adjacent tokens without connectors implicitly use AND
  * - Leading or consecutive connectors are treated as literal text tokens in filter mode
- * - All tokens are normalized to lowercase for case-insensitive matching
+ * - All tokens are normalized with lowercase folding plus Latin diacritic folding
  *
  * @param query - Raw search query from the UI
  * @returns Parsed tokens with include/exclude criteria for filtering
@@ -1722,9 +1760,10 @@ export function parseFilterSearchTokens(query: string): FilterSearchTokens {
         return EMPTY_TOKENS;
     }
 
-    const rawTokens = tokenizeFilterSearchQuery(trimmedQuery)
-        .map(token => token.toLowerCase())
-        .filter(Boolean);
+    // Tokenization preserves original code points.
+    // Normalization is handled in classification so token type detection and token folding
+    // stay explicit and testable.
+    const rawTokens = tokenizeFilterSearchQuery(trimmedQuery).filter(Boolean);
     if (rawTokens.length === 0) {
         return EMPTY_TOKENS;
     }
@@ -1958,8 +1997,8 @@ export function updateFilterQueryWithTag(
     const formattedTag = `#${normalizedTag}`;
     const tokens = trimmed.length > 0 ? tokenizeFilterSearchQuery(trimmed) : [];
     const tagOnlyQuery = isTagOnlyMutationQuery(trimmed);
-    const lowerTarget = formattedTag.toLowerCase();
-    const removalIndex = tokens.findIndex(token => token.toLowerCase() === lowerTarget);
+    const lowerTarget = foldSearchText(formattedTag);
+    const removalIndex = tokens.findIndex(token => foldSearchText(token) === lowerTarget);
 
     if (removalIndex !== -1) {
         const updatedTokens = removeMutationToken(tokens, removalIndex, tagOnlyQuery);
@@ -2015,17 +2054,20 @@ export function updateFilterQueryWithProperty(
     const formattedToken = formatPropertyTokenForQuery(propertyToken);
     const tokens = trimmed.length > 0 ? tokenizeFilterSearchQuery(trimmed) : [];
     const tagOnlyQuery = isTagOnlyMutationQuery(trimmed);
+    const foldedTargetKey = foldSearchText(propertyToken.key);
+    const foldedTargetValue = foldSearchText(propertyToken.value ?? '');
 
     const removalIndex = tokens.findIndex(token => {
-        const normalizedToken = token.toLowerCase();
-        if (normalizedToken.startsWith('-')) {
+        if (token.startsWith('-')) {
             return false;
         }
-        const parsed = parsePropertyFilterToken(normalizedToken);
+        const parsed = parsePropertyFilterToken(token);
         if (!parsed) {
             return false;
         }
-        return parsed.key === propertyToken.key && parsed.value === propertyToken.value;
+        const parsedKey = foldSearchText(parsed.key);
+        const parsedValue = foldSearchText(parsed.value ?? '');
+        return parsedKey === foldedTargetKey && parsedValue === foldedTargetValue;
     });
 
     if (removalIndex !== -1) {
@@ -2108,8 +2150,8 @@ export function filterSearchRequiresTagsForEveryMatch(tokens: FilterSearchTokens
 
 export interface FilterSearchMatchOptions {
     hasUnfinishedTasks: boolean;
-    lowercaseFolderPath?: string;
-    lowercaseExtension?: string;
+    foldedFolderPath?: string;
+    foldedExtension?: string;
     propertyValuesByKey?: Map<string, string[]>;
 }
 
@@ -2122,21 +2164,23 @@ export interface FilterSearchMatchOptions {
  * - All exclusion tokens (-name, -#tag, -folder:..., -ext:...) are ANDed - file must match NONE
  * - Tag requirements (# or -#) control whether tagged/untagged notes are shown
  *
- * @param lowercaseName - File display name in lowercase
- * @param lowercaseTags - File tags in lowercase
+ * @param foldedName - File display name in folded search form
+ * @param foldedTags - File tags in folded search form
  * @param tokens - Parsed query tokens with include/exclude criteria
  * @param options - Match options containing task, folder path, and extension context
  * @returns True when the file passes all filter criteria
  */
 export function fileMatchesFilterTokens(
-    lowercaseName: string,
-    lowercaseTags: string[],
+    foldedName: string,
+    foldedTags: string[],
     tokens: FilterSearchTokens,
     options?: FilterSearchMatchOptions
 ): boolean {
     const hasUnfinishedTasks = options?.hasUnfinishedTasks ?? false;
-    const lowercaseFolderPath = options?.lowercaseFolderPath ?? '';
-    const lowercaseExtension = options?.lowercaseExtension ?? '';
+    // Callers provide pre-folded folder/extension values so this matcher can use direct comparisons.
+    const foldedFolderPath = options?.foldedFolderPath ?? '';
+    const foldedExtension = options?.foldedExtension ?? '';
+    // Property map keys and values are expected in folded form.
     const propertyValuesByKey = options?.propertyValuesByKey ?? EMPTY_PROPERTY_VALUE_MAP;
 
     if (tokens.excludeUnfinishedTasks && hasUnfinishedTasks) {
@@ -2149,7 +2193,7 @@ export function fileMatchesFilterTokens(
 
     if (tokens.mode === 'filter') {
         const hasFolderCriteria = tokens.excludeFolderTokens.length > 0 || tokens.folderTokens.length > 0;
-        const normalizedFolderPath = hasFolderCriteria ? normalizeFolderPathForMatch(lowercaseFolderPath) : '';
+        const normalizedFolderPath = hasFolderCriteria ? normalizeFolderPathForMatch(foldedFolderPath) : '';
         const needsFolderSegments =
             hasFolderCriteria &&
             (tokens.excludeFolderTokens.some(token => token.mode === 'segment') ||
@@ -2157,7 +2201,7 @@ export function fileMatchesFilterTokens(
         const folderSegments = needsFolderSegments ? normalizedFolderPath.split('/').filter(Boolean) : null;
 
         if (tokens.excludeNameTokens.length > 0) {
-            const hasExcludedName = tokens.excludeNameTokens.some(token => lowercaseName.includes(token));
+            const hasExcludedName = tokens.excludeNameTokens.some(token => foldedName.includes(token));
             if (hasExcludedName) {
                 return false;
             }
@@ -2173,18 +2217,18 @@ export function fileMatchesFilterTokens(
         }
 
         if (tokens.excludeExtensionTokens.length > 0) {
-            const hasExcludedExtension = tokens.excludeExtensionTokens.some(token => extensionMatchesToken(lowercaseExtension, token));
+            const hasExcludedExtension = tokens.excludeExtensionTokens.some(token => extensionMatchesToken(foldedExtension, token));
             if (hasExcludedExtension) {
                 return false;
             }
         }
 
         if (tokens.excludeTagged) {
-            if (lowercaseTags.length > 0) {
+            if (foldedTags.length > 0) {
                 return false;
             }
-        } else if (tokens.excludeTagTokens.length > 0 && lowercaseTags.length > 0) {
-            const hasExcludedTag = tokens.excludeTagTokens.some(token => lowercaseTags.some(tag => tagMatchesToken(tag, token)));
+        } else if (tokens.excludeTagTokens.length > 0 && foldedTags.length > 0) {
+            const hasExcludedTag = tokens.excludeTagTokens.some(token => foldedTags.some(tag => tagMatchesToken(tag, token)));
             if (hasExcludedTag) {
                 return false;
             }
@@ -2198,7 +2242,7 @@ export function fileMatchesFilterTokens(
         }
 
         if (tokens.nameTokens.length > 0) {
-            const matchesName = tokens.nameTokens.every(token => lowercaseName.includes(token));
+            const matchesName = tokens.nameTokens.every(token => foldedName.includes(token));
             if (!matchesName) {
                 return false;
             }
@@ -2214,7 +2258,7 @@ export function fileMatchesFilterTokens(
         }
 
         if (tokens.extensionTokens.length > 0) {
-            const matchesExtensions = tokens.extensionTokens.every(token => extensionMatchesToken(lowercaseExtension, token));
+            const matchesExtensions = tokens.extensionTokens.every(token => extensionMatchesToken(foldedExtension, token));
             if (!matchesExtensions) {
                 return false;
             }
@@ -2228,11 +2272,11 @@ export function fileMatchesFilterTokens(
         }
 
         if (tokens.requireTagged || tokens.tagTokens.length > 0) {
-            if (lowercaseTags.length === 0) {
+            if (foldedTags.length === 0) {
                 return false;
             }
             if (tokens.tagTokens.length > 0) {
-                const matchesTags = tokens.tagTokens.every(token => lowercaseTags.some(tag => tagMatchesToken(tag, token)));
+                const matchesTags = tokens.tagTokens.every(token => foldedTags.some(tag => tagMatchesToken(tag, token)));
                 if (!matchesTags) {
                     return false;
                 }
@@ -2243,7 +2287,7 @@ export function fileMatchesFilterTokens(
     }
 
     if (tokens.excludeTagged) {
-        if (lowercaseTags.length > 0) {
+        if (foldedTags.length > 0) {
             return false;
         }
     }
@@ -2252,7 +2296,7 @@ export function fileMatchesFilterTokens(
         return true;
     }
 
-    return evaluateTagExpression(tokens.expression, lowercaseTags, propertyValuesByKey);
+    return evaluateTagExpression(tokens.expression, foldedTags, propertyValuesByKey);
 }
 
 // File date context passed to date filter matching functions

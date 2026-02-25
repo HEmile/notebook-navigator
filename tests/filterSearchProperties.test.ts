@@ -18,6 +18,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { fileMatchesFilterTokens, parseFilterSearchTokens, updateFilterQueryWithProperty } from '../src/utils/filterSearch';
+import { foldSearchText } from '../src/utils/recordUtils';
 
 describe('filterSearch property tokenization', () => {
     it('keeps quoted property values in one token', () => {
@@ -132,6 +133,16 @@ describe('filterSearch property evaluation', () => {
             })
         ).toBe(false);
     });
+
+    it('matches folded property keys and values', () => {
+        const tokens = parseFilterSearchTokens('.status=accion');
+        expect(
+            fileMatchesFilterTokens('note', [], tokens, {
+                hasUnfinishedTasks: false,
+                propertyValuesByKey: new Map<string, string[]>([[foldSearchText('Státus'), [foldSearchText('acción')]]])
+            })
+        ).toBe(true);
+    });
 });
 
 describe('updateFilterQueryWithProperty', () => {
@@ -145,6 +156,13 @@ describe('updateFilterQueryWithProperty', () => {
         expect(removed.query).toBe('');
         expect(removed.action).toBe('removed');
         expect(removed.changed).toBe(true);
+    });
+
+    it('removes property tokens using folded key/value matching', () => {
+        const result = updateFilterQueryWithProperty('.Státus=acción AND .phase=done', 'status', 'accion', 'AND');
+        expect(result.query).toBe('.phase=done');
+        expect(result.action).toBe('removed');
+        expect(result.changed).toBe(true);
     });
 
     it('inserts OR connectors in expression queries', () => {
