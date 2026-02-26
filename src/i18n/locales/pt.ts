@@ -1656,7 +1656,7 @@ export const STRINGS_PT = {
             },
             enableFolderNotes: {
                 name: 'Ativar notas de pasta',
-                desc: 'Quando ativado, pastas com notas associadas são exibidas como links clicáveis.'
+                desc: 'As pastas com um ficheiro de nota correspondente são apresentadas como ligações clicáveis.'
             },
             folderNoteType: {
                 name: 'Tipo de nota de pasta predefinido',
@@ -1681,17 +1681,21 @@ export const STRINGS_PT = {
                 name: 'Modelo de nota de pasta',
                 desc: 'Ficheiro de modelo para novas notas de pasta Markdown. Definir localização da pasta de modelos em Geral > Modelos.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Abrir notas de pasta em novo separador',
-                desc: 'Abrir sempre as notas de pasta num novo separador ao clicar numa pasta.'
+            enableFolderNoteLinks: {
+                name: 'Ativar ligações de notas de pasta',
+                desc: 'As etiquetas das pastas são apresentadas como ligações e abrem notas de pasta ao clicar. Quando desativado, as notas de pasta continuam a fornecer metadados de nome, ícone e cor.'
             },
             hideFolderNoteInList: {
                 name: 'Ocultar nota de pasta na lista',
-                desc: 'Ocultar a nota de pasta de aparecer na lista de notas da pasta.'
+                desc: 'Ocultar notas de pasta da lista de ficheiros.'
             },
             pinCreatedFolderNote: {
                 name: 'Fixar notas de pasta criadas',
-                desc: 'Fixar automaticamente notas de pasta quando criadas a partir do menu de contexto.'
+                desc: 'Fixar notas de pasta ao criá-las a partir do menu de contexto.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Abrir notas de pasta em novo separador',
+                desc: 'Abrir notas de pasta num novo separador ao clicar numa pasta.'
             },
             confirmBeforeDelete: {
                 name: 'Confirmar antes de eliminar',

@@ -1658,7 +1658,7 @@ export const STRINGS_PT_BR = {
             },
             enableFolderNotes: {
                 name: 'Ativar notas de pasta',
-                desc: 'Quando ativado, pastas com notas associadas são exibidas como links clicáveis.'
+                desc: 'As pastas com um arquivo de nota correspondente são exibidas como links clicáveis.'
             },
             folderNoteType: {
                 name: 'Tipo de nota de pasta padrão',
@@ -1683,17 +1683,21 @@ export const STRINGS_PT_BR = {
                 name: 'Modelo de nota de pasta',
                 desc: 'Arquivo de modelo para novas notas de pasta Markdown. Definir localização da pasta de modelos em Geral > Modelos.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Abrir notas de pasta em nova aba',
-                desc: 'Sempre abrir notas de pasta em uma nova aba ao clicar em uma pasta.'
+            enableFolderNoteLinks: {
+                name: 'Ativar links de notas de pasta',
+                desc: 'Os rótulos das pastas são exibidos como links e abrem notas de pasta ao clicar. Quando desativado, as notas de pasta continuam fornecendo metadados de nome, ícone e cor.'
             },
             hideFolderNoteInList: {
                 name: 'Ocultar notas de pasta na lista',
-                desc: 'Ocultar a nota de pasta de aparecer na lista de notas da pasta.'
+                desc: 'Ocultar notas de pasta da lista de arquivos.'
             },
             pinCreatedFolderNote: {
                 name: 'Fixar notas de pasta criadas',
-                desc: 'Fixar automaticamente notas de pasta quando criadas a partir do menu de contexto.'
+                desc: 'Fixar notas de pasta ao criá-las pelo menu de contexto.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Abrir notas de pasta em nova aba',
+                desc: 'Abrir notas de pasta em uma nova aba ao clicar em uma pasta.'
             },
             confirmBeforeDelete: {
                 name: 'Confirmar antes de excluir',

@@ -1656,7 +1656,7 @@ export const STRINGS_NL = {
             },
             enableFolderNotes: {
                 name: 'Mapnotities inschakelen',
-                desc: 'Indien ingeschakeld, worden mappen met gekoppelde notities weergegeven als klikbare links.'
+                desc: 'Mappen met een overeenkomstig notitiebestand worden weergegeven als klikbare koppelingen.'
             },
             folderNoteType: {
                 name: 'Standaard mapnotitie-type',
@@ -1681,17 +1681,21 @@ export const STRINGS_NL = {
                 name: 'Mapnotitiesjabloon',
                 desc: 'Sjabloonbestand voor nieuwe Markdown-mapnotities. Stel de sjabloonmaplocatie in bij Algemeen > Sjablonen.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Mapnotities in nieuw tabblad openen',
-                desc: 'Mapnotities altijd in een nieuw tabblad openen bij het klikken op een map.'
+            enableFolderNoteLinks: {
+                name: 'Mapnotitiekoppelingen inschakelen',
+                desc: 'Maplabels worden weergegeven als koppelingen en openen mapnotities bij klikken. Wanneer uitgeschakeld, bieden mapnotities nog steeds naam-, pictogram- en kleurmetadata.'
             },
             hideFolderNoteInList: {
                 name: 'Mapnotities in lijst verbergen',
-                desc: 'De mapnotitie verbergen in de notitielijst van de map.'
+                desc: 'Mapnotities verbergen in de bestandslijst.'
             },
             pinCreatedFolderNote: {
                 name: 'Aangemaakte mapnotities vastpinnen',
-                desc: 'Mapnotities automatisch vastpinnen wanneer aangemaakt vanuit het contextmenu.'
+                desc: 'Mapnotities vastmaken wanneer ze via het contextmenu worden aangemaakt.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Mapnotities in nieuw tabblad openen',
+                desc: 'Mapnotities openen in een nieuw tabblad bij het klikken op een map.'
             },
             confirmBeforeDelete: {
                 name: 'Bevestigen voor verwijderen',

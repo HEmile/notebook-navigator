@@ -1648,7 +1648,7 @@ export const STRINGS_ZH_CN = {
             },
             enableFolderNotes: {
                 name: '启用文件夹笔记',
-                desc: '启用后，具有关联笔记的文件夹将显示为可点击的链接。'
+                desc: '具有匹配笔记文件的文件夹显示为可点击的链接。'
             },
             folderNoteType: {
                 name: '默认文件夹笔记类型',
@@ -1673,17 +1673,21 @@ export const STRINGS_ZH_CN = {
                 name: '文件夹笔记模板',
                 desc: '新建 Markdown 文件夹笔记的模板文件。在常规 > 模板中设置模板文件夹位置。'
             },
-            openFolderNotesInNewTab: {
-                name: '在新标签页中打开文件夹笔记',
-                desc: '点击文件夹时始终在新标签页中打开文件夹笔记。'
+            enableFolderNoteLinks: {
+                name: '启用文件夹笔记链接',
+                desc: '文件夹标签显示为链接样式，点击可打开文件夹笔记。关闭时，文件夹笔记仍提供名称、图标和颜色元数据。'
             },
             hideFolderNoteInList: {
                 name: '在列表中隐藏文件夹笔记',
-                desc: '隐藏文件夹笔记，使其不出现在文件夹的笔记列表中。'
+                desc: '在文件列表中隐藏文件夹笔记。'
             },
             pinCreatedFolderNote: {
                 name: '固定创建的文件夹笔记',
-                desc: '从上下文菜单创建文件夹笔记时自动固定。'
+                desc: '从上下文菜单创建时固定文件夹笔记。'
+            },
+            openFolderNotesInNewTab: {
+                name: '在新标签页中打开文件夹笔记',
+                desc: '点击文件夹时在新标签页中打开文件夹笔记。'
             },
             confirmBeforeDelete: {
                 name: '删除前确认',

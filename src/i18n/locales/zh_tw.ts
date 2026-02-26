@@ -1647,7 +1647,7 @@ export const STRINGS_ZH_TW = {
             },
             enableFolderNotes: {
                 name: '啟用資料夾筆記',
-                desc: '啟用後，具有關聯筆記的資料夾將顯示為可點按的連結。'
+                desc: '具有匹配筆記檔案的資料夾顯示為可點擊的連結。'
             },
             folderNoteType: {
                 name: '預設資料夾筆記類型',
@@ -1672,17 +1672,21 @@ export const STRINGS_ZH_TW = {
                 name: '資料夾筆記範本',
                 desc: '新建 Markdown 資料夾筆記的範本檔案。在一般 > 範本中設定範本資料夾位置。'
             },
-            openFolderNotesInNewTab: {
-                name: '在新分頁中開啟資料夾筆記',
-                desc: '點擊資料夾時始終在新分頁中開啟資料夾筆記。'
+            enableFolderNoteLinks: {
+                name: '啟用資料夾筆記連結',
+                desc: '資料夾標籤顯示為連結樣式，點擊可開啟資料夾筆記。關閉時，資料夾筆記仍提供名稱、圖示和顏色中繼資料。'
             },
             hideFolderNoteInList: {
                 name: '在列表中隱藏資料夾筆記',
-                desc: '隱藏資料夾筆記，使其不出現在資料夾的筆記列表中。'
+                desc: '在檔案列表中隱藏資料夾筆記。'
             },
             pinCreatedFolderNote: {
                 name: '釘選建立的資料夾筆記',
-                desc: '從右鍵選單建立資料夾筆記時自動釘選。'
+                desc: '從右鍵選單建立時釘選資料夾筆記。'
+            },
+            openFolderNotesInNewTab: {
+                name: '在新分頁中開啟資料夾筆記',
+                desc: '點擊資料夾時在新分頁中開啟資料夾筆記。'
             },
             confirmBeforeDelete: {
                 name: '刪除前確認',

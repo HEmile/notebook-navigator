@@ -119,13 +119,13 @@ export function ListPaneHeader({
     const selectedFolderFileVersion = useSelectedFolderFileVersion(
         app.vault,
         selectedFolder,
-        settings.enableFolderNotes && shouldResolveSelectedFolderNote
+        settings.enableFolderNotes && settings.enableFolderNoteLinks && shouldResolveSelectedFolderNote
     );
     // Resolves the selected folder's note file with current folder note settings.
     const selectedFolderNote = useMemo(() => {
         void selectedFolderFileVersion;
 
-        if (!selectedFolder || !settings.enableFolderNotes || !shouldResolveSelectedFolderNote) {
+        if (!selectedFolder || !settings.enableFolderNotes || !settings.enableFolderNoteLinks || !shouldResolveSelectedFolderNote) {
             return null;
         }
 
@@ -137,6 +137,7 @@ export function ListPaneHeader({
     }, [
         selectedFolder,
         settings.enableFolderNotes,
+        settings.enableFolderNoteLinks,
         settings.folderNoteName,
         settings.folderNoteNamePattern,
         shouldResolveSelectedFolderNote,

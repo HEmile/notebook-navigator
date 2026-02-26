@@ -1647,7 +1647,7 @@ export const STRINGS_EN = {
             },
             enableFolderNotes: {
                 name: 'Enable folder notes',
-                desc: 'When enabled, folders with associated notes are displayed as clickable links.'
+                desc: 'Folders with a matching note file are displayed as clickable links.'
             },
             folderNoteType: {
                 name: 'Default folder note type',
@@ -1672,17 +1672,21 @@ export const STRINGS_EN = {
                 name: 'Folder note template',
                 desc: 'Template file for new markdown folder notes. Set template folder location in General > Templates.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Open folder notes in new tab',
-                desc: 'Always open folder notes in a new tab when clicking on a folder.'
+            enableFolderNoteLinks: {
+                name: 'Enable folder note links',
+                desc: 'Folder labels are styled as links and open folder notes on click. When off, folder notes still provide name, icon, and color metadata.'
             },
             hideFolderNoteInList: {
                 name: 'Hide folder notes in list',
-                desc: "Hide the folder note from appearing in the folder's note list."
+                desc: 'Hide folder notes from appearing in the file list.'
             },
             pinCreatedFolderNote: {
                 name: 'Pin created folder notes',
-                desc: 'Automatically pin folder notes when created from the context menu.'
+                desc: 'Pin folder notes when created from the context menu.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Open folder notes in new tab',
+                desc: 'Open folder notes in a new tab when clicking on a folder.'
             },
             confirmBeforeDelete: {
                 name: 'Confirm before deleting',

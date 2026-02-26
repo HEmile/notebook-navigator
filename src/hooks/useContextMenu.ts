@@ -117,7 +117,7 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
             // Folder note override:
             // Right-clicking on a folder name should behave like right-clicking the folder note file.
             let menuConfig: MenuConfig = config;
-            if (menuConfig.type === ItemType.FOLDER && targetElement?.closest('.nn-navitem-name')) {
+            if (settings.enableFolderNoteLinks && menuConfig.type === ItemType.FOLDER && targetElement?.closest('.nn-navitem-name')) {
                 const folderNote = getFolderNote(menuConfig.item, settings);
                 if (folderNote) {
                     menuConfig = { type: ItemType.FILE, item: folderNote };

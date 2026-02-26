@@ -1659,7 +1659,7 @@ export const STRINGS_FR = {
             },
             enableFolderNotes: {
                 name: 'Activer les notes de dossier',
-                desc: "Lorsqu'activé, les dossiers avec des notes associées sont affichés comme des liens cliquables."
+                desc: 'Les dossiers ayant un fichier de note correspondant sont affichés comme des liens cliquables.'
             },
             folderNoteType: {
                 name: 'Type de note de dossier par défaut',
@@ -1684,17 +1684,21 @@ export const STRINGS_FR = {
                 name: 'Modèle de note de dossier',
                 desc: "Fichier modèle pour les nouvelles notes de dossier Markdown. Définir l'emplacement du dossier de modèles dans Général > Modèles."
             },
-            openFolderNotesInNewTab: {
-                name: 'Ouvrir les notes de dossier dans un nouvel onglet',
-                desc: 'Toujours ouvrir les notes de dossier dans un nouvel onglet lors du clic sur un dossier.'
+            enableFolderNoteLinks: {
+                name: 'Activer les liens de notes de dossier',
+                desc: "Les libellés des dossiers sont stylisés comme des liens et ouvrent les notes de dossier au clic. Lorsque désactivé, les notes de dossier fournissent toujours les métadonnées de nom, d'icône et de couleur."
             },
             hideFolderNoteInList: {
                 name: 'Masquer les notes de dossier dans la liste',
-                desc: "Masquer la note de dossier pour qu'elle n'apparaisse pas dans la liste des notes du dossier."
+                desc: 'Masquer les notes de dossier dans la liste des fichiers.'
             },
             pinCreatedFolderNote: {
                 name: 'Épingler les notes de dossier créées',
-                desc: 'Épingler automatiquement les notes de dossier lors de leur création depuis le menu contextuel.'
+                desc: 'Épingler les notes de dossier lors de leur création depuis le menu contextuel.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Ouvrir les notes de dossier dans un nouvel onglet',
+                desc: 'Ouvrir les notes de dossier dans un nouvel onglet en cliquant sur un dossier.'
             },
             confirmBeforeDelete: {
                 name: 'Confirmer avant de supprimer',

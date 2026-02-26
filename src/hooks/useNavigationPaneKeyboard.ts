@@ -285,7 +285,12 @@ export function useNavigationPaneKeyboard({ items, virtualizer, containerRef, pa
                 return -1;
             };
 
-            if (isEnterKey(e) && selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
+            if (
+                isEnterKey(e) &&
+                settings.enableFolderNoteLinks &&
+                selectionState.selectionType === ItemType.FOLDER &&
+                selectionState.selectedFolder
+            ) {
                 const folder = selectionState.selectedFolder;
                 const folderNote = getFolderNote(folder, settings);
                 if (folderNote) {

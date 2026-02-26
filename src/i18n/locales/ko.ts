@@ -1652,7 +1652,7 @@ export const STRINGS_KO = {
             },
             enableFolderNotes: {
                 name: '폴더 노트 활성화',
-                desc: '활성화되면 관련 노트가 있는 폴더가 클릭 가능한 링크로 표시됩니다.'
+                desc: '일치하는 노트 파일이 있는 폴더가 클릭 가능한 링크로 표시됩니다.'
             },
             folderNoteType: {
                 name: '기본 폴더 노트 형식',
@@ -1677,17 +1677,21 @@ export const STRINGS_KO = {
                 name: '폴더 노트 템플릿',
                 desc: '새 마크다운 폴더 노트용 템플릿 파일. 템플릿 폴더 위치는 일반 > 템플릿에서 설정하세요.'
             },
-            openFolderNotesInNewTab: {
-                name: '폴더 노트를 새 탭에서 열기',
-                desc: '폴더를 클릭할 때 항상 폴더 노트를 새 탭에서 엽니다.'
+            enableFolderNoteLinks: {
+                name: '폴더 노트 링크 활성화',
+                desc: '폴더 레이블이 링크로 표시되며 클릭 시 폴더 노트를 엽니다. 비활성화하면 폴더 노트는 여전히 이름, 아이콘, 색상 메타데이터를 제공합니다.'
             },
             hideFolderNoteInList: {
                 name: '목록에서 폴더 노트 숨기기',
-                desc: '폴더 노트가 폴더의 노트 목록에 나타나지 않도록 숨깁니다.'
+                desc: '파일 목록에서 폴더 노트를 숨깁니다.'
             },
             pinCreatedFolderNote: {
                 name: '생성된 폴더 노트 고정',
-                desc: '컨텍스트 메뉴에서 생성한 폴더 노트를 자동으로 고정합니다.'
+                desc: '컨텍스트 메뉴에서 생성 시 폴더 노트를 고정합니다.'
+            },
+            openFolderNotesInNewTab: {
+                name: '폴더 노트를 새 탭에서 열기',
+                desc: '폴더를 클릭할 때 폴더 노트를 새 탭에서 엽니다.'
             },
             confirmBeforeDelete: {
                 name: '삭제 전 확인',

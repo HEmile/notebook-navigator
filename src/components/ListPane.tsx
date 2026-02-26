@@ -1384,19 +1384,27 @@ export const ListPane = React.memo(
                     return;
                 }
 
-                const folderNote = settings.enableFolderNotes
-                    ? getFolderNote(folder, {
-                          enableFolderNotes: settings.enableFolderNotes,
-                          folderNoteName: settings.folderNoteName,
-                          folderNoteNamePattern: settings.folderNoteNamePattern
-                      })
-                    : null;
+                const folderNote =
+                    settings.enableFolderNotes && settings.enableFolderNoteLinks
+                        ? getFolderNote(folder, {
+                              enableFolderNotes: settings.enableFolderNotes,
+                              folderNoteName: settings.folderNoteName,
+                              folderNoteNamePattern: settings.folderNoteNamePattern
+                          })
+                        : null;
 
                 targets.set(folderPath, { folder, folderNote });
             });
 
             return targets;
-        }, [app.vault, listItems, settings.enableFolderNotes, settings.folderNoteName, settings.folderNoteNamePattern]);
+        }, [
+            app.vault,
+            listItems,
+            settings.enableFolderNotes,
+            settings.enableFolderNoteLinks,
+            settings.folderNoteName,
+            settings.folderNoteNamePattern
+        ]);
 
         const handleFolderGroupHeaderClick = useCallback(
             (event: React.MouseEvent<HTMLSpanElement>, target: FolderGroupHeaderTarget) => {

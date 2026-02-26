@@ -1473,7 +1473,7 @@ export const NavigationPane = React.memo(
         // Handle folder name click (for folder notes)
         const handleFolderNameClick = useCallback(
             (folder: TFolder, event?: React.MouseEvent<HTMLSpanElement>) => {
-                if (!settings.enableFolderNotes) {
+                if (!settings.enableFolderNotes || !settings.enableFolderNoteLinks) {
                     handleFolderClick(folder);
                     return;
                 }
@@ -1500,7 +1500,7 @@ export const NavigationPane = React.memo(
 
         const handleFolderNameMouseDown = useCallback(
             (folder: TFolder, event: React.MouseEvent<HTMLSpanElement>) => {
-                if (event.button !== 1 || !settings.enableFolderNotes) {
+                if (event.button !== 1 || !settings.enableFolderNotes || !settings.enableFolderNoteLinks) {
                     return;
                 }
 
@@ -2684,7 +2684,10 @@ export const NavigationPane = React.memo(
                         })();
                         const folderCountInfo =
                             canInteract && folder && shouldShowShortcutCounts ? getFolderShortcutCount(folder) : ZERO_NOTE_COUNT;
-                        const folderNote = canInteract && folder && settings.enableFolderNotes ? getFolderNote(folder, settings) : null;
+                        const folderNote =
+                            canInteract && folder && settings.enableFolderNotes && settings.enableFolderNoteLinks
+                                ? getFolderNote(folder, settings)
+                                : null;
                         const folderAlias = isFolderShortcut(item.shortcut) ? item.shortcut.alias : undefined;
                         const folderLabel = folderAlias && folderAlias.length > 0 ? folderAlias : folderName;
 

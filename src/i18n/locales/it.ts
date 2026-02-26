@@ -1652,7 +1652,7 @@ export const STRINGS_IT = {
             },
             enableFolderNotes: {
                 name: 'Abilita note cartella',
-                desc: 'Quando abilitato, le cartelle con note associate sono visualizzate come link cliccabili.'
+                desc: 'Le cartelle con un file nota corrispondente vengono visualizzate come link cliccabili.'
             },
             folderNoteType: {
                 name: 'Tipo nota cartella predefinito',
@@ -1677,17 +1677,21 @@ export const STRINGS_IT = {
                 name: 'Modello nota cartella',
                 desc: 'File modello per le nuove note cartella Markdown. Impostare la posizione della cartella modelli in Generale > Modelli.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Apri note cartella in nuova scheda',
-                desc: 'Apri sempre le note cartella in una nuova scheda quando clicchi su una cartella.'
+            enableFolderNoteLinks: {
+                name: 'Attiva link note cartella',
+                desc: 'Le etichette delle cartelle sono visualizzate come link e aprono le note cartella al clic. Quando disattivato, le note cartella forniscono comunque metadati di nome, icona e colore.'
             },
             hideFolderNoteInList: {
                 name: 'Nascondi note cartella nella lista',
-                desc: "Nascondi la nota cartella dall'apparire nell'elenco note della cartella."
+                desc: "Nascondere le note cartella dall'elenco dei file."
             },
             pinCreatedFolderNote: {
                 name: 'Fissa note cartella create',
-                desc: 'Fissa automaticamente le note cartella quando create dal menu contestuale.'
+                desc: 'Fissare le note cartella quando create dal menu contestuale.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Apri note cartella in nuova scheda',
+                desc: 'Aprire le note cartella in una nuova scheda cliccando su una cartella.'
             },
             confirmBeforeDelete: {
                 name: 'Conferma prima di eliminare',

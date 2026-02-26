@@ -1656,7 +1656,7 @@ export const STRINGS_ES = {
             },
             enableFolderNotes: {
                 name: 'Habilitar notas de carpeta',
-                desc: 'Cuando está habilitado, las carpetas con notas asociadas se muestran como enlaces clicables.'
+                desc: 'Las carpetas con un archivo de nota correspondiente se muestran como enlaces clicables.'
             },
             folderNoteType: {
                 name: 'Tipo predeterminado de nota de carpeta',
@@ -1681,17 +1681,21 @@ export const STRINGS_ES = {
                 name: 'Plantilla de nota de carpeta',
                 desc: 'Archivo de plantilla para nuevas notas de carpeta en Markdown. Establecer ubicación de carpeta de plantillas en General > Plantillas.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Abrir notas de carpeta en nueva pestaña',
-                desc: 'Abrir siempre las notas de carpeta en una nueva pestaña al hacer clic en una carpeta.'
+            enableFolderNoteLinks: {
+                name: 'Activar enlaces de notas de carpeta',
+                desc: 'Las etiquetas de carpeta se muestran como enlaces y abren notas de carpeta al hacer clic. Cuando está desactivado, las notas de carpeta siguen proporcionando metadatos de nombre, icono y color.'
             },
             hideFolderNoteInList: {
                 name: 'Ocultar notas de carpeta en la lista',
-                desc: 'Ocultar la nota de carpeta para que no aparezca en la lista de notas de la carpeta.'
+                desc: 'Ocultar las notas de carpeta en la lista de archivos.'
             },
             pinCreatedFolderNote: {
                 name: 'Anclar notas de carpeta creadas',
-                desc: 'Anclar automáticamente las notas de carpeta cuando se crean desde el menú contextual.'
+                desc: 'Fijar las notas de carpeta al crearlas desde el menú contextual.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Abrir notas de carpeta en nueva pestaña',
+                desc: 'Abrir las notas de carpeta en una pestaña nueva al hacer clic en una carpeta.'
             },
             confirmBeforeDelete: {
                 name: 'Confirmar antes de eliminar',

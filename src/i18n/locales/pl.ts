@@ -1657,7 +1657,7 @@ export const STRINGS_PL = {
             },
             enableFolderNotes: {
                 name: 'Włącz notatki folderów',
-                desc: 'Po włączeniu foldery z powiązanymi notatkami są wyświetlane jako klikalne linki'
+                desc: 'Foldery z pasującym plikiem notatki są wyświetlane jako klikalne linki.'
             },
             folderNoteType: {
                 name: 'Domyślny rodzaj notatki folderu',
@@ -1682,17 +1682,21 @@ export const STRINGS_PL = {
                 name: 'Szablon notatki folderu',
                 desc: 'Plik szablonu dla nowych notatek folderów Markdown. Ustaw lokalizację folderu szablonów w Ogólne > Szablony.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Otwórz notatki folderów w nowej karcie',
-                desc: 'Zawsze otwieraj notatki folderów w nowej karcie po kliknięciu w folder.'
+            enableFolderNoteLinks: {
+                name: 'Włącz linki notatek folderów',
+                desc: 'Etykiety folderów są wyświetlane jako linki i otwierają notatki folderów po kliknięciu. Po wyłączeniu notatki folderów nadal dostarczają metadane nazwy, ikony i koloru.'
             },
             hideFolderNoteInList: {
                 name: 'Ukryj notatki folderów na liście',
-                desc: 'Ukryj notatkę folderu na liście.'
+                desc: 'Ukryj notatki folderów z listy plików.'
             },
             pinCreatedFolderNote: {
                 name: 'Przypnij utworzone notatki folderów',
-                desc: 'Automatycznie przypinaj notatki folderów podczas tworzenia za pomocą menu kontekstowego.'
+                desc: 'Przypnij notatki folderów podczas tworzenia z menu kontekstowego.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Otwórz notatki folderów w nowej karcie',
+                desc: 'Otwórz notatki folderów w nowej karcie po kliknięciu folderu.'
             },
             confirmBeforeDelete: {
                 name: 'Potwierdź przed usunięciem',

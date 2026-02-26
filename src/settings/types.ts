@@ -342,9 +342,10 @@ export interface NotebookNavigatorSettings {
     folderNoteName: string;
     folderNoteNamePattern: string;
     folderNoteTemplate: string | null;
-    openFolderNotesInNewTab: boolean;
+    enableFolderNoteLinks: boolean;
     hideFolderNoteInList: boolean;
     pinCreatedFolderNote: boolean;
+    openFolderNotesInNewTab: boolean;
 
     // Tags tab
     showTags: boolean;

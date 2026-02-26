@@ -1653,7 +1653,7 @@ export const STRINGS_TR = {
             },
             enableFolderNotes: {
                 name: 'Klasör notlarını etkinleştir',
-                desc: 'Etkinleştirildiğinde, ilişkili notları olan klasörler tıklanabilir bağlantılar olarak görüntülenir.'
+                desc: 'Eşleşen bir not dosyası olan klasörler tıklanabilir bağlantılar olarak görüntülenir.'
             },
             folderNoteType: {
                 name: 'Varsayılan klasör notu türü',
@@ -1678,17 +1678,21 @@ export const STRINGS_TR = {
                 name: 'Klasör notu şablonu',
                 desc: 'Yeni Markdown klasör notları için şablon dosyası. Şablon klasörü konumunu Genel > Şablonlar bölümünden ayarlayın.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Klasör notlarını yeni sekmede aç',
-                desc: 'Bir klasöre tıklandığında klasör notlarını her zaman yeni sekmede aç.'
+            enableFolderNoteLinks: {
+                name: 'Klasör notu bağlantılarını etkinleştir',
+                desc: 'Klasör etiketleri bağlantı olarak gösterilir ve tıklandığında klasör notlarını açar. Kapalı olduğunda, klasör notları yine de ad, simge ve renk meta verilerini sağlar.'
             },
             hideFolderNoteInList: {
                 name: 'Listede klasör notunu gizle',
-                desc: 'Klasör notunun klasörün not listesinde görünmesini engelle.'
+                desc: 'Klasör notlarını dosya listesinden gizle.'
             },
             pinCreatedFolderNote: {
                 name: 'Oluşturulan klasör notlarını sabitle',
-                desc: 'Bağlam menüsünden oluşturulduğunda klasör notlarını otomatik olarak sabitle.'
+                desc: 'Bağlam menüsünden oluşturulduğunda klasör notlarını sabitle.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Klasör notlarını yeni sekmede aç',
+                desc: 'Bir klasöre tıklandığında klasör notlarını yeni sekmede aç.'
             },
             confirmBeforeDelete: {
                 name: 'Silmeden önce onayla',

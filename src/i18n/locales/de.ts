@@ -1655,7 +1655,7 @@ export const STRINGS_DE = {
             },
             enableFolderNotes: {
                 name: 'Ordnernotizen aktivieren',
-                desc: 'Wenn aktiviert, werden Ordner mit zugehörigen Notizen als anklickbare Links angezeigt.'
+                desc: 'Ordner mit einer passenden Notizdatei werden als anklickbare Links angezeigt.'
             },
             folderNoteType: {
                 name: 'Standardtyp für Ordnernotizen',
@@ -1680,17 +1680,21 @@ export const STRINGS_DE = {
                 name: 'Ordnernotiz-Vorlage',
                 desc: 'Vorlagendatei für neue Markdown-Ordnernotizen. Vorlagenordner unter Allgemein > Vorlagen festlegen.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Ordnernotizen in neuem Tab öffnen',
-                desc: 'Ordnernotizen beim Klicken auf einen Ordner immer in einem neuen Tab öffnen.'
+            enableFolderNoteLinks: {
+                name: 'Ordnernotiz-Links aktivieren',
+                desc: 'Ordnerbeschriftungen werden als Links dargestellt und öffnen Ordnernotizen beim Klicken. Wenn deaktiviert, liefern Ordnernotizen weiterhin Name-, Symbol- und Farbmetadaten.'
             },
             hideFolderNoteInList: {
                 name: 'Ordnernotizen in Liste ausblenden',
-                desc: 'Die Ordnernotiz in der Notizliste des Ordners ausblenden.'
+                desc: 'Ordnernotizen in der Dateiliste ausblenden.'
             },
             pinCreatedFolderNote: {
                 name: 'Erstellte Ordnernotizen anheften',
-                desc: 'Automatisch Ordnernotizen anheften, wenn sie über das Kontextmenü erstellt werden.'
+                desc: 'Ordnernotizen anheften, wenn sie über das Kontextmenü erstellt werden.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Ordnernotizen in neuem Tab öffnen',
+                desc: 'Ordnernotizen beim Klicken auf einen Ordner in einem neuen Tab öffnen.'
             },
             confirmBeforeDelete: {
                 name: 'Vor dem Löschen bestätigen',

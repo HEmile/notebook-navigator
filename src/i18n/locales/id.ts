@@ -1654,7 +1654,7 @@ export const STRINGS_ID = {
             },
             enableFolderNotes: {
                 name: 'Aktifkan catatan folder',
-                desc: 'Saat diaktifkan, folder dengan catatan terkait ditampilkan sebagai tautan yang dapat diklik.'
+                desc: 'Folder dengan file catatan yang cocok ditampilkan sebagai tautan yang dapat diklik.'
             },
             folderNoteType: {
                 name: 'Jenis catatan folder default',
@@ -1679,17 +1679,21 @@ export const STRINGS_ID = {
                 name: 'Templat catatan folder',
                 desc: 'File templat untuk catatan folder markdown baru. Atur lokasi folder templat di Umum > Templat.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Buka catatan folder di tab baru',
-                desc: 'Selalu buka catatan folder di tab baru saat mengklik folder.'
+            enableFolderNoteLinks: {
+                name: 'Aktifkan tautan catatan folder',
+                desc: 'Label folder ditampilkan sebagai tautan dan membuka catatan folder saat diklik. Saat dinonaktifkan, catatan folder tetap menyediakan metadata nama, ikon, dan warna.'
             },
             hideFolderNoteInList: {
                 name: 'Sembunyikan catatan folder di daftar',
-                desc: 'Sembunyikan catatan folder dari muncul di daftar catatan folder.'
+                desc: 'Sembunyikan catatan folder dari daftar file.'
             },
             pinCreatedFolderNote: {
                 name: 'Sematkan catatan folder yang dibuat',
-                desc: 'Secara otomatis sematkan catatan folder saat dibuat dari menu konteks.'
+                desc: 'Sematkan catatan folder saat dibuat dari menu konteks.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Buka catatan folder di tab baru',
+                desc: 'Buka catatan folder di tab baru saat mengklik folder.'
             },
             confirmBeforeDelete: {
                 name: 'Konfirmasi sebelum menghapus',

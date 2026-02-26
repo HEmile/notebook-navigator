@@ -160,11 +160,11 @@ export function renderFoldersTab(context: SettingsTabContext): void {
     }
 
     new Setting(folderNotesSettingsEl)
-        .setName(strings.settings.items.openFolderNotesInNewTab.name)
-        .setDesc(strings.settings.items.openFolderNotesInNewTab.desc)
+        .setName(strings.settings.items.enableFolderNoteLinks.name)
+        .setDesc(strings.settings.items.enableFolderNoteLinks.desc)
         .addToggle(toggle =>
-            toggle.setValue(plugin.settings.openFolderNotesInNewTab).onChange(async value => {
-                plugin.settings.openFolderNotesInNewTab = value;
+            toggle.setValue(plugin.settings.enableFolderNoteLinks).onChange(async value => {
+                plugin.settings.enableFolderNoteLinks = value;
                 await plugin.saveSettingsAndUpdate();
             })
         );
@@ -185,6 +185,16 @@ export function renderFoldersTab(context: SettingsTabContext): void {
         .addToggle(toggle =>
             toggle.setValue(plugin.settings.pinCreatedFolderNote).onChange(async value => {
                 plugin.settings.pinCreatedFolderNote = value;
+                await plugin.saveSettingsAndUpdate();
+            })
+        );
+
+    new Setting(folderNotesSettingsEl)
+        .setName(strings.settings.items.openFolderNotesInNewTab.name)
+        .setDesc(strings.settings.items.openFolderNotesInNewTab.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.openFolderNotesInNewTab).onChange(async value => {
+                plugin.settings.openFolderNotesInNewTab = value;
                 await plugin.saveSettingsAndUpdate();
             })
         );

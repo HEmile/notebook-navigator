@@ -225,15 +225,16 @@ export const FolderItem = React.memo(function FolderItem({
     const customColor = color;
     // Determine whether to apply color to the folder name instead of the icon
     const applyColorToName = Boolean(customColor) && !settings.colorIconOnly;
+    const folderNoteLinksEnabled = settings.enableFolderNotes && settings.enableFolderNoteLinks;
 
     const hasFolderNote = useMemo(() => {
-        if (!settings.enableFolderNotes) return false;
+        if (!folderNoteLinksEnabled) return false;
         const folderNote = getFolderNote(folder, settings);
         return folderNote !== null;
         // NOTE TO REVIEWER: Including **noteCounts.current** to detect folder content changes
         // NOTE TO REVIEWER: Including **vaultChangeVersion** to react to new folder notes
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [folder, settings, noteCounts.current, vaultChangeVersion]);
+    }, [folder, settings, folderNoteLinksEnabled, noteCounts.current, vaultChangeVersion]);
 
     const isRootFolder = folder.path === '/';
     const effectiveDisplayName = isRootFolder ? settings.customVaultName || app.vault.getName() : displayName || folder.name;

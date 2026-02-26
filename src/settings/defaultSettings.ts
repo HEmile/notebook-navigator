@@ -178,9 +178,10 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     folderNoteName: '',
     folderNoteNamePattern: '',
     folderNoteTemplate: null,
-    openFolderNotesInNewTab: false,
+    enableFolderNoteLinks: true,
     hideFolderNoteInList: true,
     pinCreatedFolderNote: false,
+    openFolderNotesInNewTab: false,
 
     // Tags tab
     showTags: true,

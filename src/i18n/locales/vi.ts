@@ -1654,7 +1654,7 @@ export const STRINGS_VI = {
             },
             enableFolderNotes: {
                 name: 'Bật ghi chú thư mục',
-                desc: 'Khi bật, thư mục có ghi chú liên kết được hiển thị như liên kết có thể nhấn.'
+                desc: 'Thư mục có tệp ghi chú trùng khớp được hiển thị dưới dạng liên kết có thể nhấp.'
             },
             folderNoteType: {
                 name: 'Loại ghi chú thư mục mặc định',
@@ -1679,17 +1679,21 @@ export const STRINGS_VI = {
                 name: 'Mẫu ghi chú thư mục',
                 desc: 'Tệp mẫu cho ghi chú thư mục Markdown mới. Đặt vị trí thư mục mẫu trong Chung > Mẫu.'
             },
-            openFolderNotesInNewTab: {
-                name: 'Mở ghi chú thư mục trong tab mới',
-                desc: 'Luôn mở ghi chú thư mục trong tab mới khi nhấp vào thư mục.'
+            enableFolderNoteLinks: {
+                name: 'Bật liên kết ghi chú thư mục',
+                desc: 'Nhãn thư mục được hiển thị dưới dạng liên kết và mở ghi chú thư mục khi nhấp. Khi tắt, ghi chú thư mục vẫn cung cấp siêu dữ liệu tên, biểu tượng và màu.'
             },
             hideFolderNoteInList: {
                 name: 'Ẩn ghi chú thư mục trong danh sách',
-                desc: 'Ẩn ghi chú thư mục không xuất hiện trong danh sách ghi chú của thư mục.'
+                desc: 'Ẩn ghi chú thư mục khỏi danh sách tệp.'
             },
             pinCreatedFolderNote: {
                 name: 'Ghim ghi chú thư mục đã tạo',
-                desc: 'Tự động ghim ghi chú thư mục khi tạo từ menu ngữ cảnh.'
+                desc: 'Ghim ghi chú thư mục khi tạo từ menu ngữ cảnh.'
+            },
+            openFolderNotesInNewTab: {
+                name: 'Mở ghi chú thư mục trong tab mới',
+                desc: 'Mở ghi chú thư mục trong tab mới khi nhấp vào thư mục.'
             },
             confirmBeforeDelete: {
                 name: 'Xác nhận trước khi xóa',
