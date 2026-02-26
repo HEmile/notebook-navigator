@@ -1461,6 +1461,10 @@ export const STRINGS_DE = {
                 name: 'HTML in Vorschauen entfernen',
                 desc: 'HTML-Tags aus dem Vorschautext entfernen. Kann die Leistung bei großen Notizen beeinträchtigen.'
             },
+            stripLatexInPreview: {
+                name: 'LaTeX in Vorschauen entfernen',
+                desc: 'Inline- und Block-LaTeX-Ausdrücke aus dem Vorschautext entfernen.'
+            },
             previewProperties: {
                 name: 'Vorschau-Eigenschaften',
                 desc: 'Kommagetrennte Liste von Frontmatter-Eigenschaften für Vorschautext. Die erste Eigenschaft mit Text wird verwendet.',

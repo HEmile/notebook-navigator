@@ -1457,6 +1457,10 @@ export const STRINGS_IT = {
                 name: 'Rimuovi HTML nelle anteprime',
                 desc: 'Rimuove i tag HTML dal testo di anteprima. Potrebbe influire sulle prestazioni nelle note lunghe.'
             },
+            stripLatexInPreview: {
+                name: 'Rimuovi LaTeX nelle anteprime',
+                desc: 'Rimuove le espressioni LaTeX inline e a blocco dal testo di anteprima.'
+            },
             previewProperties: {
                 name: 'Proprietà anteprima',
                 desc: 'Lista di proprietà frontmatter separate da virgola da controllare per testo anteprima. La prima proprietà con testo sarà usata.',

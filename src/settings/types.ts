@@ -407,6 +407,7 @@ export interface NotebookNavigatorSettings {
     skipHeadingsInPreview: boolean;
     skipCodeBlocksInPreview: boolean;
     stripHtmlInPreview: boolean;
+    stripLatexInPreview: boolean;
     previewRows: number;
     previewProperties: string[];
     showFeatureImage: boolean;

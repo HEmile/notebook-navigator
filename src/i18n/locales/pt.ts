@@ -1461,6 +1461,10 @@ export const STRINGS_PT = {
                 name: 'Remover HTML nas pré-visualizações',
                 desc: 'Remover etiquetas HTML do texto de pré-visualização. Pode afetar o desempenho em notas grandes.'
             },
+            stripLatexInPreview: {
+                name: 'Remover LaTeX nas pré-visualizações',
+                desc: 'Remover expressões LaTeX inline e em bloco do texto de pré-visualização.'
+            },
             previewProperties: {
                 name: 'Propriedades de pré-visualização',
                 desc: 'Lista de propriedades frontmatter separadas por vírgulas para verificar texto de pré-visualização. A primeira propriedade com texto será usada.',

@@ -1461,6 +1461,10 @@ export const STRINGS_NL = {
                 name: 'HTML verwijderen in voorbeelden',
                 desc: 'HTML-tags uit de voorbeeldtekst verwijderen. Kan de prestaties bij grote notities beïnvloeden.'
             },
+            stripLatexInPreview: {
+                name: 'LaTeX verwijderen in voorbeelden',
+                desc: 'Inline- en blok-LaTeX-expressies uit de voorbeeldtekst verwijderen.'
+            },
             previewProperties: {
                 name: 'Voorbeeldeigenschappen',
                 desc: 'Kommagescheiden lijst van frontmatter-eigenschappen om te controleren op voorbeeldtekst. De eerste eigenschap met tekst wordt gebruikt.',

@@ -1452,6 +1452,10 @@ export const STRINGS_ZH_TW = {
                 name: '移除預覽中的 HTML',
                 desc: '從預覽文字中移除 HTML 標籤。可能會影響大型筆記的效能。'
             },
+            stripLatexInPreview: {
+                name: '移除預覽中的 LaTeX',
+                desc: '從預覽文字中移除行內和區塊 LaTeX 運算式。'
+            },
             previewProperties: {
                 name: '預覽屬性',
                 desc: '用於尋找預覽文字的前置屬性的逗號分隔列表。將使用第一個包含文字的屬性。',

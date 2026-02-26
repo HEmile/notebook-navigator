@@ -1453,6 +1453,10 @@ export const STRINGS_EN = {
                 name: 'Strip HTML in previews',
                 desc: 'Remove HTML tags from preview text. May affect performance on large notes.'
             },
+            stripLatexInPreview: {
+                name: 'Strip LaTeX in previews',
+                desc: 'Remove inline and block LaTeX expressions from preview text.'
+            },
             previewProperties: {
                 name: 'Preview properties',
                 desc: 'Comma-separated list of frontmatter properties to check for preview text. The first property with text will be used.',

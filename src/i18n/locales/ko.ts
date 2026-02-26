@@ -1457,6 +1457,10 @@ export const STRINGS_KO = {
                 name: '미리보기에서 HTML 제거',
                 desc: '미리보기 텍스트에서 HTML 태그를 제거합니다. 큰 노트에서는 성능에 영향을 줄 수 있습니다.'
             },
+            stripLatexInPreview: {
+                name: '미리보기에서 LaTeX 제거',
+                desc: '미리보기 텍스트에서 인라인 및 블록 LaTeX 수식을 제거합니다.'
+            },
             previewProperties: {
                 name: '미리보기 속성',
                 desc: '미리보기 텍스트를 확인할 frontmatter 속성의 쉼표로 구분된 목록입니다. 텍스트가 있는 첫 번째 속성이 사용됩니다.',

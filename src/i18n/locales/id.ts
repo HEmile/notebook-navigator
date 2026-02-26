@@ -1459,6 +1459,10 @@ export const STRINGS_ID = {
                 name: 'Hapus HTML di pratinjau',
                 desc: 'Hapus tag HTML dari teks pratinjau. Dapat memengaruhi kinerja pada catatan besar.'
             },
+            stripLatexInPreview: {
+                name: 'Hapus LaTeX di pratinjau',
+                desc: 'Hapus ekspresi LaTeX inline dan blok dari teks pratinjau.'
+            },
             previewProperties: {
                 name: 'Properti pratinjau',
                 desc: 'Daftar properti frontmatter yang dipisahkan koma untuk memeriksa teks pratinjau. Properti pertama dengan teks akan digunakan.',

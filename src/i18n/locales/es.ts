@@ -1461,6 +1461,10 @@ export const STRINGS_ES = {
                 name: 'Eliminar HTML en vistas previas',
                 desc: 'Eliminar etiquetas HTML del texto de vista previa. Puede afectar el rendimiento en notas grandes.'
             },
+            stripLatexInPreview: {
+                name: 'Eliminar LaTeX en vistas previas',
+                desc: 'Eliminar expresiones LaTeX en línea y en bloque del texto de vista previa.'
+            },
             previewProperties: {
                 name: 'Propiedades de vista previa',
                 desc: 'Lista separada por comas de propiedades de frontmatter para buscar texto de vista previa. Se usará la primera propiedad con texto.',

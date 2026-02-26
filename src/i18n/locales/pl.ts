@@ -1462,6 +1462,10 @@ export const STRINGS_PL = {
                 name: 'Usuń HTML w podglądach',
                 desc: 'Usuń znaczniki HTML z tekstu podglądu. Może wpływać na wydajność przy dużych notatkach.'
             },
+            stripLatexInPreview: {
+                name: 'Usuń LaTeX w podglądach',
+                desc: 'Usuń wyrażenia LaTeX inline i blokowe z tekstu podglądu.'
+            },
             previewProperties: {
                 name: 'Podgląd atrybutów',
                 desc: 'Lista atrybutów rozdzielonych przecinkami do sprawdzenia dla tekstu podglądu. Zostanie użyty pierwszy atrybut z tekstem.',

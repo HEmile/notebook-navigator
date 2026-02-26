@@ -1459,6 +1459,10 @@ export const STRINGS_JA = {
                 name: 'プレビューのHTMLを削除',
                 desc: 'プレビューテキストからHTMLタグを削除します。大きなノートではパフォーマンスに影響する場合があります。'
             },
+            stripLatexInPreview: {
+                name: 'プレビューのLaTeXを削除',
+                desc: 'プレビューテキストからインラインおよびブロックLaTeX式を削除します。'
+            },
             previewProperties: {
                 name: 'プレビュープロパティ',
                 desc: 'プレビューテキストを検索するフロントマタープロパティのカンマ区切りリスト。テキストがある最初のプロパティが使用されます。',

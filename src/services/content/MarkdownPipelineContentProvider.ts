@@ -359,6 +359,7 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
             'skipHeadingsInPreview',
             'skipCodeBlocksInPreview',
             'stripHtmlInPreview',
+            'stripLatexInPreview',
             'previewProperties',
             'showFeatureImage',
             'featureImageProperties',
@@ -397,6 +398,7 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
             oldSettings.skipHeadingsInPreview !== newSettings.skipHeadingsInPreview ||
             oldSettings.skipCodeBlocksInPreview !== newSettings.skipCodeBlocksInPreview ||
             oldSettings.stripHtmlInPreview !== newSettings.stripHtmlInPreview ||
+            oldSettings.stripLatexInPreview !== newSettings.stripLatexInPreview ||
             !areStringArraysEqual(oldSettings.previewProperties, newSettings.previewProperties);
         const shouldClearPreview =
             previewExtractionSettingsChanged ||

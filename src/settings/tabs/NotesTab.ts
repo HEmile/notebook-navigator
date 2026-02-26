@@ -286,6 +286,16 @@ export function renderNotesTab(context: SettingsTabContext): void {
         );
 
     new Setting(previewSettingsEl)
+        .setName(strings.settings.items.stripLatexInPreview.name)
+        .setDesc(strings.settings.items.stripLatexInPreview.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.stripLatexInPreview).onChange(async value => {
+                plugin.settings.stripLatexInPreview = value;
+                await plugin.saveSettingsAndUpdate();
+            })
+        );
+
+    new Setting(previewSettingsEl)
         .setName(strings.settings.items.previewRows.name)
         .setDesc(strings.settings.items.previewRows.desc)
         .addDropdown(dropdown =>

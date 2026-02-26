@@ -12,6 +12,7 @@ Updated: February 18, 2026
 - [Derived content generation](#derived-content-generation)
 - [Full cache rebuild](#full-cache-rebuild)
 - [Markdown pipeline stages](#markdown-pipeline-stages)
+- [Preview math delimiter rules](#preview-math-delimiter-rules)
 - [Completion signals](#completion-signals)
 
 ## Overview
@@ -256,6 +257,47 @@ Body reads are only performed when at least one output requires markdown content
 The provider can also skip reads for large markdown files and still apply “safe” updates derived from frontmatter/metadata (for example, setting `wordCount=0` and clearing previews by writing an empty preview string).
 
 Feature image references can be resolved from frontmatter without reading the note body. Exclusion rules (`featureImageExcludeProperties`) can force the “no image” marker (`featureImageKey=''`, `featureImageStatus='none'`).
+
+## Preview math delimiter rules
+
+Preview math stripping in `src/utils/previewTextUtils.ts` follows Obsidian's bundled markdown math tokenizer behavior for dollar delimiters.
+
+Rule set for inline math parsing:
+
+- Delimiters: `$...$` and `$$...$$`
+- Escaped opening `\$` is parsed as literal `$`, not as a math start
+- Single-dollar opening is rejected when the first character after `$` is a space or tab
+- Single-dollar closing is accepted only when:
+  - the character before the closing `$` is not a space or tab
+  - the character after the closing `$` is not a digit (`0-9`)
+- Double-dollar closing requires a closing `$$` pair
+- After closing `$$`, trailing whitespace up to the first newline is consumed by the tokenizer
+
+Rule set for fenced-dollar math blocks:
+
+- Opening fence line:
+  - optional leading spaces
+  - two or more dollars
+  - optional spaces
+  - newline
+- Closing fence line:
+  - optional indentation
+  - dollar run length equal to or greater than the opening run length
+  - optional trailing spaces
+- If no closing fence is found, the block token extends to end of input
+
+Delimiter scope:
+
+- Supported delimiters in this parser path: `$...$`, `$$...$$`, and fenced dollar runs
+- Delimiters `\(...\)` and `\[...\]` are not part of this tokenizer path
+
+Processing boundaries in Notebook Navigator:
+
+- Math stripping runs only when `stripLatexInPreview` is enabled
+- The preview source is clipped before stripping (`MAX_PREVIEW_TEXT_LENGTH`, `PREVIEW_SOURCE_SLACK`, `PREVIEW_EXTENSION_LIMIT`)
+- Stripping runs only on non-code segments; inline and fenced code ranges are preserved
+- Cache invalidation for preview regeneration is triggered when `stripLatexInPreview` changes
+  (`MarkdownPipelineContentProvider.getRelevantSettings()` and `getClearFlags()`)
 
 ## Completion signals
 

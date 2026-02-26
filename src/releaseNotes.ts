@@ -81,7 +81,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-03-02',
         showOnUpdate: true,
         new: [
-            'New setting: ==Folders > Enable folder note links==. Disable to only use folder notes for folder styles (icon and color), enable to use folder notes as links (default).'
+            'New setting: ==Folders > Enable folder note links==. Disable to only use folder notes for folder styles (icon and color), enable to use folder notes as links (default).',
+            'New setting: ==List pane > Notes > Strip LaTeX in previews==. Removes inline and block LaTeX expressions from preview text. Default enabled.'
         ],
         improved: [
             '==Search filter now uses accent-insensitive matching==. "cafe" matches "café", "cancion" matches "canción". Non-Latin scripts like Arabic are not affected.'

@@ -1458,6 +1458,10 @@ export const STRINGS_TR = {
                 name: 'Önizlemelerde HTML kaldır',
                 desc: 'Önizleme metninden HTML etiketlerini kaldırır. Büyük notlarda performansı etkileyebilir.'
             },
+            stripLatexInPreview: {
+                name: 'Önizlemelerde LaTeX kaldır',
+                desc: 'Önizleme metninden satır içi ve blok LaTeX ifadelerini kaldırır.'
+            },
             previewProperties: {
                 name: 'Önizleme özellikleri',
                 desc: 'Önizleme metni için kontrol edilecek virgülle ayrılmış frontmatter özellikleri listesi. Metni olan ilk özellik kullanılacak.',

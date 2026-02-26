@@ -1464,6 +1464,10 @@ export const STRINGS_FR = {
                 name: 'Supprimer le HTML dans les aperçus',
                 desc: "Supprimer les balises HTML du texte d'aperçu. Peut affecter les performances sur les longues notes."
             },
+            stripLatexInPreview: {
+                name: 'Supprimer le LaTeX dans les aperçus',
+                desc: "Supprimer les expressions LaTeX en ligne et en bloc du texte d'aperçu."
+            },
             previewProperties: {
                 name: "Propriétés d'aperçu",
                 desc: "Liste séparée par des virgules de propriétés frontmatter pour le texte d'aperçu. La première propriété avec du texte sera utilisée.",

@@ -1463,6 +1463,10 @@ export const STRINGS_PT_BR = {
                 name: 'Remover HTML nas visualizações',
                 desc: 'Remover tags HTML do texto de visualização. Pode afetar o desempenho em notas grandes.'
             },
+            stripLatexInPreview: {
+                name: 'Remover LaTeX nas visualizações',
+                desc: 'Remover expressões LaTeX inline e em bloco do texto de visualização.'
+            },
             previewProperties: {
                 name: 'Propriedades de visualização',
                 desc: 'Lista separada por vírgulas de propriedades do frontmatter para verificar texto de visualização. A primeira propriedade com texto será usada.',
