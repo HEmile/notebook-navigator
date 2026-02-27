@@ -87,7 +87,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
         ],
         improved: [
             '==Search filter now uses accent-insensitive matching==. "cafe" matches "café", "cancion" matches "canción". Non-Latin scripts like Arabic are not affected.'
-        ]
+        ],
+        fixed: ['Recent items no longer shows hidden items.']
     },
     {
         version: '2.4.2',
