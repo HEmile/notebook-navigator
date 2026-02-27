@@ -81,7 +81,7 @@ import { naturalCompare } from '../utils/sortUtils';
 import type { NoteCountInfo } from '../types/noteCounts';
 import { calculateFolderNoteCounts } from '../utils/noteCountUtils';
 import { resolveFolderDisplayName } from '../utils/folderDisplayName';
-import { getEffectiveFrontmatterExclusions } from '../utils/exclusionUtils';
+import { createFileHiddenMatcher, getEffectiveFrontmatterExclusions } from '../utils/exclusionUtils';
 import { sanitizeNavigationSectionOrder } from '../utils/navigationSections';
 import { getVirtualTagCollection, isVirtualTagCollectionId, VIRTUAL_TAG_COLLECTION_IDS } from '../utils/virtualTagCollections';
 import { casefold } from '../utils/recordUtils';
@@ -1746,6 +1746,10 @@ export function useNavigationPaneData({
         tagTreeForOrdering
     ]);
 
+    const recentNotesHiddenFileMatcher = useMemo(() => {
+        return createFileHiddenMatcher({ hiddenFileProperties, hiddenFolders, hiddenFileNames, hiddenFileTags }, app, showHiddenItems);
+    }, [app, showHiddenItems, hiddenFileProperties, hiddenFolders, hiddenFileNames, hiddenFileTags]);
+
     // Build list of recent notes items with proper hierarchy.
     //
     // `recentNotes` is persisted as an array of paths, and the vault can change independently (files moved/deleted).
@@ -1753,8 +1757,8 @@ export function useNavigationPaneData({
     //
     // Design:
     // - Collapsed: return only the header and compute `hasChildren` via a short scan over the configured limit, stopping at the
-    //   first path that resolves to a `TFile`. This keeps the chevron accurate without building child items.
-    // - Expanded: build the child item list, filtering out paths that do not resolve to a `TFile`.
+    //   first path that resolves to a visible `TFile` (existing + not hidden by settings).
+    // - Expanded: build the child item list and keep only visible files.
     const recentNotesItems = useMemo((): CombinedNavigationItem[] => {
         if (!settings.showRecentNotes) {
             return [];
@@ -1762,9 +1766,16 @@ export function useNavigationPaneData({
 
         const headerLevel = 0;
         const itemLevel = headerLevel + 1;
-
         const limit = Math.max(1, settings.recentNotesCount ?? 1);
         const recentPaths = recentNotes.slice(0, limit);
+        const getVisibleRecentFile = (path: string): TFile | null => {
+            const file = app.vault.getAbstractFileByPath(path);
+            if (!(file instanceof TFile)) {
+                return null;
+            }
+
+            return recentNotesHiddenFileMatcher(file) ? null : file;
+        };
 
         // Use appropriate header based on file visibility setting
         const recentHeaderName =
@@ -1776,8 +1787,7 @@ export function useNavigationPaneData({
         if (!recentNotesExpanded) {
             let hasChildren = false;
             for (const path of recentPaths) {
-                const file = app.vault.getAbstractFileByPath(path);
-                if (file instanceof TFile) {
+                if (getVisibleRecentFile(path)) {
                     hasChildren = true;
                     break;
                 }
@@ -1800,8 +1810,8 @@ export function useNavigationPaneData({
         // Expanded: build child items and keep `hasChildren` aligned with the filtered child list.
         const childItems: CombinedNavigationItem[] = [];
         recentPaths.forEach(path => {
-            const file = app.vault.getAbstractFileByPath(path);
-            if (file instanceof TFile) {
+            const file = getVisibleRecentFile(path);
+            if (file) {
                 childItems.push({
                     type: NavigationPaneItemType.RECENT_NOTE,
                     key: `recent-${path}`,
@@ -1834,12 +1844,13 @@ export function useNavigationPaneData({
         return items;
     }, [
         app,
-        settings.recentNotesCount,
         settings.showRecentNotes,
+        settings.recentNotesCount,
         settings.interfaceIcons,
         recentNotes,
         fileVisibility,
-        recentNotesExpanded
+        recentNotesExpanded,
+        recentNotesHiddenFileMatcher
     ]);
 
     const shouldPinRecentNotes = pinShortcuts && settings.pinRecentNotesWithShortcuts && settings.showRecentNotes;
