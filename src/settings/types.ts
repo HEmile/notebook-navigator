@@ -218,6 +218,7 @@ export interface VaultProfilePropertyKey {
     key: string;
     showInNavigation: boolean;
     showInList: boolean;
+    showInFileMenu: boolean;
 }
 
 /** Vault profile storing per-profile filtering and layout preferences */

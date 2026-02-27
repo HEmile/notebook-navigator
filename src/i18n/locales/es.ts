@@ -278,6 +278,7 @@ export const STRINGS_ES = {
             moveMultipleNotesToFolder: 'Mover {count} notas a...',
             moveMultipleFilesToFolder: 'Mover {count} archivos a...',
             addTag: 'Añadir etiqueta',
+            addPropertyKey: 'Establecer propiedad',
             removeTag: 'Eliminar etiqueta',
             removeAllTags: 'Eliminar todas las etiquetas',
             changeIcon: 'Cambiar icono',
@@ -587,12 +588,16 @@ export const STRINGS_ES = {
         },
         propertyKeyVisibility: {
             title: 'Visibilidad de claves de propiedad',
+            description:
+                'Controla dónde se muestran los valores de propiedad. Las columnas corresponden al panel de navegación, panel de lista y menú contextual del archivo. Usa la fila inferior para alternar todas las filas de una columna.',
             searchPlaceholder: 'Buscar claves de propiedad...',
             propertyColumnLabel: 'Propiedad',
             showInNavigation: 'Mostrar en navegación',
             showInList: 'Mostrar en lista',
+            showInFileMenu: 'Mostrar en menú de archivo',
             toggleAllInNavigation: 'Alternar todos en navegación',
             toggleAllInList: 'Alternar todos en lista',
+            toggleAllInFileMenu: 'Alternar todos en menú de archivo',
             applyButton: 'Aplicar',
             emptyState: 'No se encontraron claves de propiedad.'
         },

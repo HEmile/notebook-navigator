@@ -292,6 +292,7 @@ export const STRINGS_NL = {
             moveMultipleNotesToFolder: '{count} notities verplaatsen naar...',
             moveMultipleFilesToFolder: '{count} bestanden verplaatsen naar...',
             addTag: 'Tag toevoegen',
+            addPropertyKey: 'Eigenschap instellen',
             removeTag: 'Tag verwijderen',
             removeAllTags: 'Alle tags verwijderen',
             changeIcon: 'Pictogram wijzigen',
@@ -587,12 +588,16 @@ export const STRINGS_NL = {
         },
         propertyKeyVisibility: {
             title: 'Zichtbaarheid van eigenschapssleutels',
+            description:
+                'Bepaal waar eigenschapswaarden worden weergegeven. De kolommen komen overeen met het navigatiepaneel, het lijstpaneel en het contextmenu van bestanden. Gebruik de onderste rij om alle rijen in een kolom om te schakelen.',
             searchPlaceholder: 'Eigenschapssleutels zoeken...',
             propertyColumnLabel: 'Eigenschap',
             showInNavigation: 'Tonen in navigatie',
             showInList: 'Tonen in lijst',
+            showInFileMenu: 'Tonen in bestandsmenu',
             toggleAllInNavigation: 'Alles in navigatie omschakelen',
             toggleAllInList: 'Alles in lijst omschakelen',
+            toggleAllInFileMenu: 'Alles in bestandsmenu omschakelen',
             applyButton: 'Toepassen',
             emptyState: 'Geen eigenschapssleutels gevonden.'
         },

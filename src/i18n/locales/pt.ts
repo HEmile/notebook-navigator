@@ -291,6 +291,7 @@ export const STRINGS_PT = {
             moveMultipleNotesToFolder: 'Mover {count} notas para...',
             moveMultipleFilesToFolder: 'Mover {count} ficheiros para...',
             addTag: 'Adicionar etiqueta',
+            addPropertyKey: 'Definir propriedade',
             removeTag: 'Remover etiqueta',
             removeAllTags: 'Remover todas as etiquetas',
             changeIcon: 'Alterar ícone',
@@ -587,12 +588,16 @@ export const STRINGS_PT = {
         },
         propertyKeyVisibility: {
             title: 'Visibilidade das chaves de propriedade',
+            description:
+                'Controle onde os valores de propriedade são apresentados. As colunas correspondem ao painel de navegação, painel de lista e menu de contexto do ficheiro. Use a linha inferior para alternar todas as linhas de uma coluna.',
             searchPlaceholder: 'Pesquisar chaves de propriedade...',
             propertyColumnLabel: 'Propriedade',
             showInNavigation: 'Mostrar na navegação',
             showInList: 'Mostrar na lista',
+            showInFileMenu: 'Mostrar no menu do ficheiro',
             toggleAllInNavigation: 'Alternar todos na navegação',
             toggleAllInList: 'Alternar todos na lista',
+            toggleAllInFileMenu: 'Alternar todos no menu do ficheiro',
             applyButton: 'Aplicar',
             emptyState: 'Nenhuma chave de propriedade encontrada.'
         },

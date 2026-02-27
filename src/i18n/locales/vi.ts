@@ -290,6 +290,7 @@ export const STRINGS_VI = {
             moveMultipleNotesToFolder: 'Di chuyển {count} ghi chú...',
             moveMultipleFilesToFolder: 'Di chuyển {count} tệp...',
             addTag: 'Thêm thẻ',
+            addPropertyKey: 'Đặt thuộc tính',
             removeTag: 'Gỡ thẻ',
             removeAllTags: 'Gỡ tất cả thẻ',
             changeIcon: 'Đổi biểu tượng',
@@ -588,12 +589,16 @@ export const STRINGS_VI = {
         },
         propertyKeyVisibility: {
             title: 'Hiển thị khóa thuộc tính',
+            description:
+                'Kiểm soát nơi hiển thị giá trị thuộc tính. Các cột tương ứng với bảng điều hướng, bảng danh sách và menu ngữ cảnh tệp. Sử dụng hàng dưới cùng để chuyển đổi tất cả các hàng trong một cột.',
             searchPlaceholder: 'Tìm khóa thuộc tính...',
             propertyColumnLabel: 'Thuộc tính',
             showInNavigation: 'Hiển thị trong điều hướng',
             showInList: 'Hiển thị trong danh sách',
+            showInFileMenu: 'Hiển thị trong menu tệp',
             toggleAllInNavigation: 'Chuyển đổi tất cả trong điều hướng',
             toggleAllInList: 'Chuyển đổi tất cả trong danh sách',
+            toggleAllInFileMenu: 'Chuyển đổi tất cả trong menu tệp',
             applyButton: 'Áp dụng',
             emptyState: 'Không tìm thấy khóa thuộc tính.'
         },

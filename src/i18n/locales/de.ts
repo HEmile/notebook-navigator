@@ -278,6 +278,7 @@ export const STRINGS_DE = {
             moveMultipleNotesToFolder: '{count} Notizen verschieben nach...',
             moveMultipleFilesToFolder: '{count} Dateien verschieben nach...',
             addTag: 'Tag hinzufügen',
+            addPropertyKey: 'Eigenschaft setzen',
             removeTag: 'Tag entfernen',
             removeAllTags: 'Alle Tags entfernen',
             changeIcon: 'Symbol ändern',
@@ -587,12 +588,16 @@ export const STRINGS_DE = {
         },
         propertyKeyVisibility: {
             title: 'Sichtbarkeit der Eigenschaftsschlüssel',
+            description:
+                'Steuern Sie, wo Eigenschaftswerte angezeigt werden. Die Spalten entsprechen dem Navigationsbereich, dem Listenbereich und dem Datei-Kontextmenü. Verwenden Sie die untere Zeile, um alle Zeilen einer Spalte umzuschalten.',
             searchPlaceholder: 'Eigenschaftsschlüssel suchen...',
             propertyColumnLabel: 'Eigenschaft',
             showInNavigation: 'In Navigation anzeigen',
             showInList: 'In Liste anzeigen',
+            showInFileMenu: 'Im Dateimenü anzeigen',
             toggleAllInNavigation: 'Alle in Navigation umschalten',
             toggleAllInList: 'Alle in Liste umschalten',
+            toggleAllInFileMenu: 'Alle im Dateimenü umschalten',
             applyButton: 'Anwenden',
             emptyState: 'Keine Eigenschaftsschlüssel gefunden.'
         },

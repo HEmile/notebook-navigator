@@ -290,6 +290,7 @@ export const STRINGS_PL = {
             moveMultipleNotesToFolder: 'Przenieś notatki ({count}) do...',
             moveMultipleFilesToFolder: 'Przenieś pliki ({count}) do...',
             addTag: 'Dodaj tag',
+            addPropertyKey: 'Ustaw właściwość',
             removeTag: 'Usuń tag',
             removeAllTags: 'Usuń wszystkie tagi',
             changeIcon: 'Zmień ikonkę',
@@ -588,12 +589,16 @@ export const STRINGS_PL = {
         },
         propertyKeyVisibility: {
             title: 'Widoczność kluczy atrybutów',
+            description:
+                'Kontroluj, gdzie wyświetlane są wartości atrybutów. Kolumny odpowiadają panelowi nawigacji, panelowi listy i menu kontekstowemu pliku. Użyj dolnego wiersza, aby przełączyć wszystkie wiersze w kolumnie.',
             searchPlaceholder: 'Szukaj kluczy atrybutów...',
             propertyColumnLabel: 'Atrybut',
             showInNavigation: 'Pokaż w nawigacji',
             showInList: 'Pokaż na liście',
+            showInFileMenu: 'Pokaż w menu pliku',
             toggleAllInNavigation: 'Przełącz wszystkie w nawigacji',
             toggleAllInList: 'Przełącz wszystkie na liście',
+            toggleAllInFileMenu: 'Przełącz wszystkie w menu pliku',
             applyButton: 'Zastosuj',
             emptyState: 'Nie znaleziono kluczy atrybutów.'
         },

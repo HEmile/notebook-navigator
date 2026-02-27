@@ -173,6 +173,13 @@ export function getDirectPropertyKeyNoteCount(keyNode: PropertyTreeNode): number
     return getOrBuildDirectPropertyKeyPaths(keyNode).size;
 }
 
+/**
+ * Returns direct note paths for a key node without child value paths.
+ */
+export function getDirectPropertyKeyFilePathSet(keyNode: PropertyTreeNode): ReadonlySet<string> {
+    return getOrBuildDirectPropertyKeyPaths(keyNode);
+}
+
 function buildDirectPropertyKeyPaths(keyNode: PropertyTreeNode): Set<string> {
     const directPaths = new Set<string>(keyNode.notesWithValue);
     keyNode.children.forEach(childNode => {

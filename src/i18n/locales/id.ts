@@ -291,6 +291,7 @@ export const STRINGS_ID = {
             moveMultipleNotesToFolder: 'Pindahkan {count} catatan ke...',
             moveMultipleFilesToFolder: 'Pindahkan {count} file ke...',
             addTag: 'Tambah tag',
+            addPropertyKey: 'Atur properti',
             removeTag: 'Hapus tag',
             removeAllTags: 'Hapus semua tag',
             changeIcon: 'Ubah ikon',
@@ -587,12 +588,16 @@ export const STRINGS_ID = {
         },
         propertyKeyVisibility: {
             title: 'Visibilitas kunci properti',
+            description:
+                'Kontrol tempat nilai properti ditampilkan. Kolom-kolom sesuai dengan panel navigasi, panel daftar, dan menu konteks file. Gunakan baris bawah untuk mengalihkan semua baris dalam kolom.',
             searchPlaceholder: 'Cari kunci properti...',
             propertyColumnLabel: 'Properti',
             showInNavigation: 'Tampilkan di navigasi',
             showInList: 'Tampilkan di daftar',
+            showInFileMenu: 'Tampilkan di menu file',
             toggleAllInNavigation: 'Alihkan semua di navigasi',
             toggleAllInList: 'Alihkan semua di daftar',
+            toggleAllInFileMenu: 'Alihkan semua di menu file',
             applyButton: 'Terapkan',
             emptyState: 'Tidak ditemukan kunci properti.'
         },

@@ -3820,7 +3820,7 @@ body {
 /* Source: src/styles/sections/list-tags.css */
 
 /* ========================================================================
-   Tag & Custom Property Display Styles
+   Tag & Property Value Display Styles
    ======================================================================== */
 
 /* Tag container */
@@ -5650,9 +5650,9 @@ body.nn-resizing {
    ======================================================================== */
 
 .modal.nn-property-keys-modal {
-    width: 520px;
+    width: 560px;
     max-width: calc(100vw - 40px);
-    height: min(520px, calc(100vh - 40px));
+    height: min(580px, calc(100vh - 40px));
 }
 
 .is-mobile .modal.nn-property-keys-modal {
@@ -5671,6 +5671,14 @@ body.nn-resizing {
 .modal.nn-property-keys-modal .modal-title {
     width: 100%;
     text-align: center;
+}
+
+.nn-property-keys-description {
+    text-align: center;
+    color: var(--nn-theme-foreground-muted);
+    font-size: var(--font-smallest);
+    margin: var(--size-4-2) 0 0;
+    line-height: 1.4;
 }
 
 .is-mobile .modal.nn-property-keys-modal .modal-content {
@@ -5740,7 +5748,7 @@ body.nn-resizing {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    margin-top: var(--size-2-2);
+    margin-top: var(--size-4-2);
     padding-right: 4px;
     padding-bottom: var(--size-1-5);
 }

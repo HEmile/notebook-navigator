@@ -85,7 +85,6 @@ import { openAddTagToFilesModal } from '../utils/tagModalHelpers';
 import { casefold } from '../utils/recordUtils';
 import { resolveUXIcon } from '../utils/uxIcons';
 import type { InclusionOperator } from '../utils/filterSearch';
-import { isRecord } from '../utils/typeGuards';
 import {
     buildPropertyKeyNodeId,
     buildPropertyValueNodeId,
@@ -149,15 +148,6 @@ const sortPropertyPillGroup = (pills: readonly PropertyPill[], prioritizeColored
 
     return [...coloredPills, ...regularPills];
 };
-
-function isKeyOnlyTruePropertyEntry(entry: PropertyItem): boolean {
-    const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
-    if (normalizedValuePath !== 'true') {
-        return false;
-    }
-
-    return isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
-}
 
 type PropertyPill = {
     value: string;
@@ -763,68 +753,6 @@ export const FileItem = React.memo(function FileItem({
         return true;
     }, [categorizedTags, isCompactMode, settings.showFileTags, settings.showFileTagsInCompactMode, settings.showTags]);
 
-    const keyOnlyTrueVisiblePropertyKeys = useMemo(() => {
-        const keyOnlyTrueKeys = new Set<string>();
-        if (!properties || properties.length === 0) {
-            return keyOnlyTrueKeys;
-        }
-        if (visiblePropertyKeys.size === 0) {
-            return keyOnlyTrueKeys;
-        }
-
-        for (const entry of properties) {
-            const normalizedFieldKey = casefold(entry.fieldKey);
-            if (!visiblePropertyKeys.has(normalizedFieldKey)) {
-                continue;
-            }
-            if (!isKeyOnlyTruePropertyEntry(entry)) {
-                continue;
-            }
-
-            keyOnlyTrueKeys.add(normalizedFieldKey);
-        }
-
-        return keyOnlyTrueKeys;
-    }, [properties, visiblePropertyKeys]);
-
-    const nullScalarFrontmatterPropertyKeys = useMemo(() => {
-        void metadataVersion;
-        const nullScalarKeys = new Set<string>();
-        if (file.extension !== 'md') {
-            return nullScalarKeys;
-        }
-        if (keyOnlyTrueVisiblePropertyKeys.size === 0) {
-            return nullScalarKeys;
-        }
-
-        const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
-        if (!isRecord(frontmatter)) {
-            return nullScalarKeys;
-        }
-
-        for (const [rawKey, rawValue] of Object.entries(frontmatter)) {
-            if (rawValue !== null) {
-                continue;
-            }
-
-            const normalizedKey = casefold(rawKey);
-            if (!normalizedKey) {
-                continue;
-            }
-
-            if (!keyOnlyTrueVisiblePropertyKeys.has(normalizedKey)) {
-                continue;
-            }
-
-            nullScalarKeys.add(normalizedKey);
-            if (nullScalarKeys.size === keyOnlyTrueVisiblePropertyKeys.size) {
-                break;
-            }
-        }
-
-        return nullScalarKeys;
-    }, [app.metadataCache, file, keyOnlyTrueVisiblePropertyKeys, metadataVersion]);
-
     const visibleProperties = useMemo(() => {
         if (!properties || properties.length === 0) {
             return properties;
@@ -833,19 +761,25 @@ export const FileItem = React.memo(function FileItem({
             return [];
         }
 
+        // Includes configured keys with visible values and skips key-only boolean markers.
         return properties.filter(entry => {
             const normalizedFieldKey = casefold(entry.fieldKey);
             if (!visiblePropertyKeys.has(normalizedFieldKey)) {
                 return false;
             }
 
-            if (!nullScalarFrontmatterPropertyKeys.has(normalizedFieldKey)) {
+            if (entry.valueKind === 'string') {
                 return true;
             }
 
-            return !isKeyOnlyTruePropertyEntry(entry);
+            if (entry.valueKind !== undefined) {
+                return false;
+            }
+
+            const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
+            return !isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
         });
-    }, [nullScalarFrontmatterPropertyKeys, properties, visiblePropertyKeys]);
+    }, [properties, visiblePropertyKeys]);
 
     const propertyColorSignature = useMemo(() => {
         if (!settings.showFileProperties || !settings.colorFileProperties || !visibleProperties || visibleProperties.length === 0) {
@@ -963,7 +897,7 @@ export const FileItem = React.memo(function FileItem({
             const normalizedValuePath = normalizePropertyTreeValuePath(rawValue);
             const isKeyOnlyValue = isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
             const wikiLink = isKeyOnlyValue ? null : parseStrictWikiLink(rawValue);
-            const label = isKeyOnlyValue ? entry.fieldKey : wikiLink ? wikiLink.displayText : rawValue;
+            const label = wikiLink ? wikiLink.displayText : rawValue;
 
             // Resolve property colors at render time from field key and raw value.
             // This keeps persisted property items stable across style rule changes.

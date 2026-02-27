@@ -289,6 +289,7 @@ export const STRINGS_KO = {
             moveMultipleNotesToFolder: '{count}개의 노트 이동...',
             moveMultipleFilesToFolder: '{count}개의 파일 이동...',
             addTag: '태그 추가',
+            addPropertyKey: '속성 설정',
             removeTag: '태그 제거',
             removeAllTags: '모든 태그 제거',
             changeIcon: '아이콘 변경',
@@ -585,12 +586,16 @@ export const STRINGS_KO = {
         },
         propertyKeyVisibility: {
             title: '속성 키 표시 설정',
+            description:
+                '속성 값이 표시되는 위치를 제어합니다. 열은 탐색 창, 목록 창, 파일 컨텍스트 메뉴에 해당합니다. 하단 행을 사용하여 열의 모든 행을 전환합니다.',
             searchPlaceholder: '속성 키 검색...',
             propertyColumnLabel: '속성',
             showInNavigation: '탐색에 표시',
             showInList: '목록에 표시',
+            showInFileMenu: '파일 메뉴에 표시',
             toggleAllInNavigation: '탐색에서 모두 전환',
             toggleAllInList: '목록에서 모두 전환',
+            toggleAllInFileMenu: '파일 메뉴에서 모두 전환',
             applyButton: '적용',
             emptyState: '속성 키를 찾을 수 없습니다.'
         },

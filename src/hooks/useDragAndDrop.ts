@@ -36,11 +36,7 @@ import { normalizeTagPathValue } from '../utils/tagPrefixMatcher';
 import { runAsyncAction } from '../utils/async';
 import { extractFilePathsFromDataTransfer } from '../utils/dragData';
 import { FolderMoveError } from '../services/FileSystemService';
-import { getCachedCommaSeparatedList } from '../utils/commaSeparatedListUtils';
-import { casefold } from '../utils/recordUtils';
-import { buildPropertyKeyNodeId, normalizePropertyTreeValuePath, parsePropertyNodeId } from '../utils/propertyTree';
 import { getFilesForNavigationSelection } from '../utils/selectionUtils';
-import { getActivePropertyFields } from '../utils/vaultProfiles';
 
 /**
  * Enables drag and drop for files and folders using event delegation.
@@ -104,22 +100,6 @@ export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>
         }
         return Math.round(Math.min(2, Math.max(0.1, delaySeconds)) * 1000);
     }, [settings.springLoadedFoldersSubsequentDelay]);
-    const activePropertyFields = getActivePropertyFields(settings);
-    const configuredPropertyDisplayByNodeId = useMemo(() => {
-        const displayByNodeId = new Map<string, string>();
-        getCachedCommaSeparatedList(activePropertyFields).forEach(fieldName => {
-            const normalizedKey = casefold(fieldName);
-            const displayName = fieldName.trim();
-            if (!normalizedKey || !displayName) {
-                return;
-            }
-            const nodeId = buildPropertyKeyNodeId(normalizedKey);
-            if (!displayByNodeId.has(nodeId)) {
-                displayByNodeId.set(nodeId, displayName);
-            }
-        });
-        return displayByNodeId;
-    }, [activePropertyFields]);
 
     /**
      * Sets or clears the drag payload in Obsidian's internal drag manager.
@@ -158,10 +138,6 @@ export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>
 
     const isGhostableDragType = (value: string | null): value is ItemType => {
         return value === ItemType.FILE || value === ItemType.FOLDER || value === ItemType.TAG;
-    };
-
-    const isUnknownArray = (value: unknown): value is unknown[] => {
-        return Array.isArray(value);
     };
 
     /**
@@ -753,120 +729,9 @@ export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>
                 return;
             }
 
-            if (!propertyTreeService) {
-                console.error('[Notebook Navigator] PropertyTreeService not available');
-                return;
-            }
-
-            const targetNode = propertyTreeService.findNode(targetPropertyNodeId);
-            const configuredDisplayName = configuredPropertyDisplayByNodeId.get(targetPropertyNodeId);
-            const parsedTargetNode = parsePropertyNodeId(targetPropertyNodeId);
-            const resolvedNodeKind = targetNode ? targetNode.kind : configuredDisplayName ? 'key' : null;
-            const resolvedNodeKey = targetNode ? targetNode.key : configuredDisplayName ? (parsedTargetNode?.key ?? '') : '';
-
-            if (!resolvedNodeKind || !resolvedNodeKey) {
-                return;
-            }
-
-            const keyNode = propertyTreeService.getKeyNode(resolvedNodeKey);
-            const propertyKey = (keyNode?.name ?? configuredDisplayName ?? resolvedNodeKey).trim();
-            if (propertyKey.length === 0) {
-                return;
-            }
-            const normalizedPropertyKey = casefold(propertyKey);
-
-            const desiredValue = resolvedNodeKind === 'value' ? (targetNode?.name.trim() ?? null) : null;
-            const normalizedDesiredValue = desiredValue ? normalizePropertyTreeValuePath(desiredValue) : null;
-            if (resolvedNodeKind === 'value' && !normalizedDesiredValue) {
-                return;
-            }
-
-            let updated = 0;
-            let skipped = 0;
-
-            try {
-                for (const file of files) {
-                    let didChange = false;
-
-                    await app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
-                        const resolveExistingFrontmatterKey = (): string | null => {
-                            for (const existingKey of Object.keys(frontmatter)) {
-                                if (casefold(existingKey) === normalizedPropertyKey) {
-                                    return existingKey;
-                                }
-                            }
-                            return null;
-                        };
-
-                        if (resolvedNodeKind === 'key') {
-                            const existingPropertyKey = resolveExistingFrontmatterKey();
-                            if (existingPropertyKey) {
-                                return;
-                            }
-                            frontmatter[propertyKey] = true;
-                            didChange = true;
-                            return;
-                        }
-
-                        if (!desiredValue || !normalizedDesiredValue) {
-                            return;
-                        }
-
-                        const targetPropertyKey = resolveExistingFrontmatterKey() ?? propertyKey;
-                        const currentValue = frontmatter[targetPropertyKey];
-                        if (typeof currentValue === 'string') {
-                            if (normalizePropertyTreeValuePath(currentValue) === normalizedDesiredValue) {
-                                return;
-                            }
-                            frontmatter[targetPropertyKey] = desiredValue;
-                            didChange = true;
-                            return;
-                        }
-
-                        if (isUnknownArray(currentValue)) {
-                            const hasMatch = currentValue.some(
-                                entry => typeof entry === 'string' && normalizePropertyTreeValuePath(entry) === normalizedDesiredValue
-                            );
-                            if (hasMatch) {
-                                return;
-                            }
-                            frontmatter[targetPropertyKey] = [...currentValue, desiredValue];
-                            didChange = true;
-                            return;
-                        }
-
-                        frontmatter[targetPropertyKey] = desiredValue;
-                        didChange = true;
-                    });
-
-                    if (didChange) {
-                        updated++;
-                    } else {
-                        skipped++;
-                    }
-                }
-            } catch (error) {
-                const msg = error instanceof Error ? error.message : strings.common.unknownError;
-                showNotice(strings.dragDrop.errors.failedToSetProperty.replace('{error}', msg), { variant: 'warning' });
-                return;
-            }
-
-            if (updated > 0) {
-                const message =
-                    updated === 1
-                        ? strings.fileSystem.notifications.propertySetOnNote
-                        : strings.fileSystem.notifications.propertySetOnNotes.replace('{count}', updated.toString());
-                showNotice(message, { variant: 'success' });
-            }
-
-            if (skipped > 0) {
-                showNotice(strings.dragDrop.notifications.filesAlreadyHaveProperty.replace('{count}', skipped.toString()), {
-                    timeout: TIMEOUTS.NOTICE_ERROR,
-                    variant: 'warning'
-                });
-            }
+            await fileSystemOps.applyPropertyNodeToFiles(targetPropertyNodeId, files);
         },
-        [app.fileManager, configuredPropertyDisplayByNodeId, getMarkdownFilesFromDragEvent, propertyTreeService]
+        [fileSystemOps, getMarkdownFilesFromDragEvent]
     );
 
     /**

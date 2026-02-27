@@ -290,6 +290,7 @@ export const STRINGS_EN = {
             moveMultipleNotesToFolder: 'Move {count} notes to...',
             moveMultipleFilesToFolder: 'Move {count} files to...',
             addTag: 'Add tag',
+            addPropertyKey: 'Set property',
             removeTag: 'Remove tag',
             removeAllTags: 'Remove all tags',
             changeIcon: 'Change icon',
@@ -583,12 +584,16 @@ export const STRINGS_EN = {
         },
         propertyKeyVisibility: {
             title: 'Property key visibility',
+            description:
+                'Control where property values are shown. The columns correspond to the navigation pane, list pane, and file context menu. Use the bottom row to toggle all rows in a column.',
             searchPlaceholder: 'Search property keys...',
             propertyColumnLabel: 'Property',
             showInNavigation: 'Show in navigation',
             showInList: 'Show in list',
+            showInFileMenu: 'Show in file menu',
             toggleAllInNavigation: 'Toggle all in navigation',
             toggleAllInList: 'Toggle all in list',
+            toggleAllInFileMenu: 'Toggle all in file menu',
             applyButton: 'Apply',
             emptyState: 'No property keys found.'
         },

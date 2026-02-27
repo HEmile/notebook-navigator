@@ -83,7 +83,8 @@ const arePropertyKeysEqual = (prev?: VaultProfile['propertyKeys'], next?: VaultP
         if (
             previous.key !== current.key ||
             previous.showInNavigation !== current.showInNavigation ||
-            previous.showInList !== current.showInList
+            previous.showInList !== current.showInList ||
+            previous.showInFileMenu !== current.showInFileMenu
         ) {
             return false;
         }

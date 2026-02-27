@@ -277,6 +277,7 @@ export const STRINGS_ZH_CN = {
             moveMultipleNotesToFolder: '将 {count} 个笔记移动到...',
             moveMultipleFilesToFolder: '将 {count} 个文件移动到...',
             addTag: '添加标签',
+            addPropertyKey: '设置属性',
             removeTag: '移除标签',
             removeAllTags: '移除所有标签',
             changeIcon: '更改图标',
@@ -582,12 +583,15 @@ export const STRINGS_ZH_CN = {
         },
         propertyKeyVisibility: {
             title: '属性键可见性',
+            description: '控制属性值的显示位置。各列分别对应导航面板、列表面板和文件上下文菜单。使用底部行切换某列中的所有行。',
             searchPlaceholder: '搜索属性键...',
             propertyColumnLabel: '属性',
             showInNavigation: '在导航中显示',
             showInList: '在列表中显示',
+            showInFileMenu: '在文件菜单中显示',
             toggleAllInNavigation: '切换导航中的全部',
             toggleAllInList: '切换列表中的全部',
+            toggleAllInFileMenu: '切换文件菜单中的全部',
             applyButton: '应用',
             emptyState: '未找到属性键。'
         },

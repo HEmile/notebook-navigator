@@ -291,6 +291,7 @@ export const STRINGS_UK = {
             moveMultipleNotesToFolder: 'Перемістити {count} нотаток до...',
             moveMultipleFilesToFolder: 'Перемістити {count} файлів до...',
             addTag: 'Додати тег',
+            addPropertyKey: 'Встановити властивість',
             removeTag: 'Вилучити тег',
             removeAllTags: 'Вилучити всі теги',
             changeIcon: 'Змінити іконку',
@@ -584,12 +585,16 @@ export const STRINGS_UK = {
         },
         propertyKeyVisibility: {
             title: 'Видимість ключів властивостей',
+            description:
+                'Керування місцем відображення значень властивостей. Стовпці відповідають панелі навігації, панелі списку та контекстному меню файлу. Використовуйте нижній рядок для перемикання всіх рядків у стовпці.',
             searchPlaceholder: 'Пошук ключів властивостей...',
             propertyColumnLabel: 'Властивість',
             showInNavigation: 'Показати в навігації',
             showInList: 'Показати у списку',
+            showInFileMenu: 'Показати в меню файлу',
             toggleAllInNavigation: 'Перемкнути все в навігації',
             toggleAllInList: 'Перемкнути все у списку',
+            toggleAllInFileMenu: 'Перемкнути все в меню файлу',
             applyButton: 'Застосувати',
             emptyState: 'Ключі властивостей не знайдено.'
         },

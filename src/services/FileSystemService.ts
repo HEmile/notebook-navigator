@@ -56,7 +56,13 @@ import type { PropertyTreeService } from './PropertyTreeService';
 import { CommandQueueService, type MoveFilesCommandData } from './CommandQueueService';
 import type { MaybePromise } from '../utils/async';
 import { showNotice } from '../utils/noticeUtils';
-import { normalizePropertyNodeId, parsePropertyNodeId, type PropertySelectionNodeId } from '../utils/propertyTree';
+import {
+    getDirectPropertyKeyNoteCount,
+    normalizePropertyNodeId,
+    normalizePropertyTreeValuePath,
+    parsePropertyNodeId,
+    type PropertySelectionNodeId
+} from '../utils/propertyTree';
 import type { ISettingsProvider } from '../interfaces/ISettingsProvider';
 import { casefold, ensureRecord, isStringRecordValue } from '../utils/recordUtils';
 import type { MetadataService } from './MetadataService';
@@ -120,6 +126,31 @@ interface MoveFilesResult {
     cancelledCount: number;
     /** Files that failed to move with their errors */
     errors: { file: TFile; error: Error }[];
+}
+
+/**
+ * Summary of property assignment results across a file batch.
+ */
+interface ApplyPropertyNodeResult {
+    updated: number;
+    skipped: number;
+}
+
+/**
+ * Serialized value shape written into frontmatter.
+ */
+type PropertyNodeAssignmentValueKind = 'boolean' | 'string';
+
+/**
+ * Normalized property write request derived from a tree node id.
+ */
+interface ResolvedPropertyNodeAssignment {
+    propertyKey: string;
+    nodeKind: 'key' | 'value';
+    desiredValue: string | null;
+    normalizedDesiredValue: string | null;
+    writeValue: boolean | string;
+    writeValueKind: PropertyNodeAssignmentValueKind;
 }
 
 interface PlannedFileMove {
@@ -506,6 +537,86 @@ export class FileSystemOperations {
         }
 
         return null;
+    }
+
+    /**
+     * Resolves a property node id into a normalized frontmatter assignment.
+     */
+    private resolvePropertyNodeAssignment(propertyNodeId: string): ResolvedPropertyNodeAssignment | null {
+        const requestedNode = parsePropertyNodeId(propertyNodeId);
+        if (!requestedNode) {
+            return null;
+        }
+
+        const normalizedNodeId = normalizePropertyNodeId(propertyNodeId);
+        if (!normalizedNodeId) {
+            return null;
+        }
+
+        const parsedNode = parsePropertyNodeId(normalizedNodeId);
+        if (!parsedNode) {
+            return null;
+        }
+
+        const propertyTreeService = this.getPropertyTreeService();
+        const targetNode = propertyTreeService?.findNode(normalizedNodeId) ?? null;
+        const keyNode = propertyTreeService?.getKeyNode(parsedNode.key) ?? null;
+
+        const propertyKey = (keyNode?.name?.trim() || this.resolveConfiguredPropertyDisplayKey(parsedNode.key) || parsedNode.key).trim();
+        if (!propertyKey) {
+            return null;
+        }
+
+        const nodeKind: 'key' | 'value' = targetNode?.kind === 'value' || parsedNode.valuePath ? 'value' : 'key';
+        const requestedValuePath = requestedNode.valuePath?.trim() ?? null;
+        const desiredValue: string | null =
+            nodeKind === 'key'
+                ? null
+                : targetNode && targetNode.kind === 'value' && targetNode.name.trim().length > 0
+                  ? targetNode.name.trim()
+                  : requestedValuePath || parsedNode.valuePath || null;
+        const normalizedDesiredValue = desiredValue ? normalizePropertyTreeValuePath(desiredValue) : null;
+        if (nodeKind === 'value' && !normalizedDesiredValue) {
+            return null;
+        }
+
+        if (nodeKind === 'key') {
+            return {
+                propertyKey,
+                nodeKind,
+                desiredValue,
+                normalizedDesiredValue,
+                writeValue: true,
+                writeValueKind: 'boolean'
+            };
+        }
+
+        if (!desiredValue || !normalizedDesiredValue) {
+            return null;
+        }
+
+        const isBooleanLiteral = normalizedDesiredValue === 'true' || normalizedDesiredValue === 'false';
+        const canResolveBooleanValue =
+            isBooleanLiteral && keyNode !== null && targetNode === null && getDirectPropertyKeyNoteCount(keyNode) > 0;
+        if (canResolveBooleanValue) {
+            return {
+                propertyKey,
+                nodeKind,
+                desiredValue,
+                normalizedDesiredValue,
+                writeValue: normalizedDesiredValue === 'true',
+                writeValueKind: 'boolean'
+            };
+        }
+
+        return {
+            propertyKey,
+            nodeKind,
+            desiredValue,
+            normalizedDesiredValue,
+            writeValue: desiredValue,
+            writeValueKind: 'string'
+        };
     }
 
     private async syncHiddenFolderPathChange(previousPath: string, nextPath: string): Promise<void> {
@@ -908,37 +1019,12 @@ export class FileSystemOperations {
             return null;
         }
 
-        const requestedNode = parsePropertyNodeId(propertyNodeId);
-        if (!requestedNode) {
+        const assignment = this.resolvePropertyNodeAssignment(propertyNodeId);
+        if (!assignment) {
             return null;
         }
 
-        const normalizedNodeId = normalizePropertyNodeId(propertyNodeId);
-        if (!normalizedNodeId) {
-            return null;
-        }
-
-        const parsed = parsePropertyNodeId(normalizedNodeId);
-        if (!parsed) {
-            return null;
-        }
-
-        const propertyTreeService = this.getPropertyTreeService();
-        const keyNode = propertyTreeService?.getKeyNode(parsed.key) ?? null;
-        const valueNode = parsed.valuePath ? (propertyTreeService?.findNode(normalizedNodeId) ?? null) : null;
-
-        const propertyKey = keyNode?.name?.trim() || this.resolveConfiguredPropertyDisplayKey(parsed.key) || parsed.key;
-        if (!propertyKey) {
-            return null;
-        }
-
-        const requestedValuePath = requestedNode.valuePath?.trim() ?? null;
-        const propertyValue: unknown =
-            parsed.valuePath === null
-                ? true
-                : valueNode && valueNode.kind === 'value' && valueNode.name.trim().length > 0
-                  ? valueNode.name.trim()
-                  : requestedValuePath || parsed.valuePath;
+        const propertyValue: unknown = assignment.writeValue;
 
         try {
             const activeFilePath = this.app.workspace.getActiveFile()?.path ?? '';
@@ -951,7 +1037,7 @@ export class FileSystemOperations {
             try {
                 // Mutate frontmatter through Obsidian's API so YAML serialization matches other property operations.
                 await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
-                    frontmatter[propertyKey] = propertyValue;
+                    frontmatter[assignment.propertyKey] = propertyValue;
                 });
             } catch (error) {
                 console.error('[Notebook Navigator] Failed to update created note properties', error);
@@ -973,6 +1059,139 @@ export class FileSystemOperations {
             this.notifyError(strings.fileSystem.errors.createFile, error);
             return null;
         }
+    }
+
+    /**
+     * Applies a property key/value node to one or more markdown files.
+     * Key nodes set `key: true`.
+     * Value nodes set `key: value`, replacing the current value. When the current value is a string array, replaces it with a single item array.
+     */
+    async applyPropertyNodeToFiles(propertyNodeId: string, files: readonly TFile[]): Promise<ApplyPropertyNodeResult> {
+        const markdownFiles = files.filter(file => file.extension === 'md');
+        if (markdownFiles.length === 0) {
+            return { updated: 0, skipped: 0 };
+        }
+
+        if (markdownFiles.length !== files.length) {
+            showNotice(strings.fileSystem.notifications.propertiesRequireMarkdown, { variant: 'warning' });
+            return { updated: 0, skipped: 0 };
+        }
+
+        const assignment = this.resolvePropertyNodeAssignment(propertyNodeId);
+        if (!assignment) {
+            return { updated: 0, skipped: 0 };
+        }
+
+        const normalizedPropertyKey = casefold(assignment.propertyKey);
+
+        const isUnknownArray = (value: unknown): value is unknown[] => Array.isArray(value);
+
+        let updated = 0;
+        let skipped = 0;
+
+        try {
+            for (const file of markdownFiles) {
+                let didChange = false;
+
+                await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
+                    const resolveExistingFrontmatterKey = (): string | null => {
+                        for (const existingKey of Object.keys(frontmatter)) {
+                            if (casefold(existingKey) === normalizedPropertyKey) {
+                                return existingKey;
+                            }
+                        }
+                        return null;
+                    };
+
+                    const targetPropertyKey = resolveExistingFrontmatterKey() ?? assignment.propertyKey;
+                    const currentValue = frontmatter[targetPropertyKey];
+
+                    if (assignment.nodeKind === 'key') {
+                        if (currentValue === true || currentValue === null) {
+                            return;
+                        }
+
+                        frontmatter[targetPropertyKey] = true;
+                        didChange = true;
+                        return;
+                    }
+
+                    if (assignment.writeValueKind === 'boolean') {
+                        const desiredValue = assignment.writeValue;
+                        if (typeof desiredValue !== 'boolean') {
+                            return;
+                        }
+
+                        if (currentValue === desiredValue || (desiredValue && currentValue === null)) {
+                            return;
+                        }
+
+                        frontmatter[targetPropertyKey] = desiredValue;
+                        didChange = true;
+                        return;
+                    }
+
+                    const desiredValue = assignment.desiredValue;
+                    const normalizedDesiredValue = assignment.normalizedDesiredValue;
+                    if (!desiredValue || !normalizedDesiredValue) {
+                        return;
+                    }
+
+                    if (typeof currentValue === 'string') {
+                        if (normalizePropertyTreeValuePath(currentValue) === normalizedDesiredValue) {
+                            return;
+                        }
+                        frontmatter[targetPropertyKey] = desiredValue;
+                        didChange = true;
+                        return;
+                    }
+
+                    if (isUnknownArray(currentValue)) {
+                        const isSingleMatch =
+                            currentValue.length === 1 &&
+                            typeof currentValue[0] === 'string' &&
+                            normalizePropertyTreeValuePath(currentValue[0]) === normalizedDesiredValue;
+                        if (isSingleMatch) {
+                            return;
+                        }
+
+                        frontmatter[targetPropertyKey] = [desiredValue];
+                        didChange = true;
+                        return;
+                    }
+
+                    frontmatter[targetPropertyKey] = desiredValue;
+                    didChange = true;
+                });
+
+                if (didChange) {
+                    updated += 1;
+                } else {
+                    skipped += 1;
+                }
+            }
+        } catch (error) {
+            const message = getErrorMessage(error, strings.common.unknownError);
+            showNotice(strings.dragDrop.errors.failedToSetProperty.replace('{error}', message), { variant: 'warning' });
+            return { updated, skipped };
+        }
+
+        if (updated > 0) {
+            const message =
+                updated === 1
+                    ? strings.fileSystem.notifications.propertySetOnNote
+                    : strings.fileSystem.notifications.propertySetOnNotes.replace('{count}', updated.toString());
+            showNotice(message, { variant: 'success' });
+        }
+
+        if (skipped > 0) {
+            showNotice(strings.dragDrop.notifications.filesAlreadyHaveProperty.replace('{count}', skipped.toString()), {
+                timeout: TIMEOUTS.NOTICE_ERROR,
+                variant: 'warning'
+            });
+        }
+
+        return { updated, skipped };
     }
 
     /**

@@ -290,6 +290,7 @@ export const STRINGS_AR = {
             moveMultipleNotesToFolder: 'نقل {count} ملاحظة إلى...',
             moveMultipleFilesToFolder: 'نقل {count} ملف إلى...',
             addTag: 'إضافة وسم',
+            addPropertyKey: 'تعيين خاصية',
             removeTag: 'إزالة وسم',
             removeAllTags: 'إزالة جميع الوسوم',
             changeIcon: 'تغيير الأيقونة',
@@ -585,12 +586,16 @@ export const STRINGS_AR = {
         },
         propertyKeyVisibility: {
             title: 'رؤية مفاتيح الخصائص',
+            description:
+                'التحكم في مكان عرض قيم الخصائص. تتوافق الأعمدة مع لوحة التنقل ولوحة القائمة وقائمة سياق الملف. استخدم الصف السفلي لتبديل جميع الصفوف في عمود.',
             searchPlaceholder: 'بحث في مفاتيح الخصائص...',
             propertyColumnLabel: 'خاصية',
             showInNavigation: 'إظهار في التنقل',
             showInList: 'إظهار في القائمة',
+            showInFileMenu: 'إظهار في قائمة الملف',
             toggleAllInNavigation: 'تبديل الكل في التنقل',
             toggleAllInList: 'تبديل الكل في القائمة',
+            toggleAllInFileMenu: 'تبديل الكل في قائمة الملف',
             applyButton: 'تطبيق',
             emptyState: 'لم يتم العثور على مفاتيح خصائص.'
         },

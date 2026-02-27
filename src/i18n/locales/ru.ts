@@ -291,6 +291,7 @@ export const STRINGS_RU = {
             moveMultipleNotesToFolder: 'Переместить {count} заметок в...',
             moveMultipleFilesToFolder: 'Переместить {count} файлов в...',
             addTag: 'Добавить тег',
+            addPropertyKey: 'Задать свойство',
             removeTag: 'Удалить тег',
             removeAllTags: 'Удалить все теги',
             changeIcon: 'Изменить иконку',
@@ -584,12 +585,16 @@ export const STRINGS_RU = {
         },
         propertyKeyVisibility: {
             title: 'Видимость ключей свойств',
+            description:
+                'Управление отображением значений свойств. Столбцы соответствуют панели навигации, панели списка и контекстному меню файла. Используйте нижнюю строку для переключения всех строк в столбце.',
             searchPlaceholder: 'Поиск ключей свойств...',
             propertyColumnLabel: 'Свойство',
             showInNavigation: 'Показать в навигации',
             showInList: 'Показать в списке',
+            showInFileMenu: 'Показать в меню файла',
             toggleAllInNavigation: 'Переключить все в навигации',
             toggleAllInList: 'Переключить все в списке',
+            toggleAllInFileMenu: 'Переключить все в меню файла',
             applyButton: 'Применить',
             emptyState: 'Ключи свойств не найдены.'
         },

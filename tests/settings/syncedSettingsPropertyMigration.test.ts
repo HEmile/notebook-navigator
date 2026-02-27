@@ -56,8 +56,8 @@ describe('migrateLegacySyncedSettings property key migration', () => {
 
         expect(settings.notePropertyType).toBe('wordCount');
         expect(settings.vaultProfiles[0]?.propertyKeys).toEqual([
-            { key: 'status', showInNavigation: true, showInList: true },
-            { key: 'type', showInNavigation: true, showInList: true }
+            { key: 'status', showInNavigation: true, showInList: true, showInFileMenu: false },
+            { key: 'type', showInNavigation: true, showInList: true, showInFileMenu: false }
         ]);
         expect(settings.showFilePropertiesInCompactMode).toBe(true);
         expect(settings.showPropertiesOnSeparateRows).toBe(false);

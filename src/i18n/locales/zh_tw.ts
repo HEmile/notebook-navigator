@@ -277,6 +277,7 @@ export const STRINGS_ZH_TW = {
             moveMultipleNotesToFolder: '將 {count} 個筆記移動至...',
             moveMultipleFilesToFolder: '將 {count} 個檔案移動至...',
             addTag: '新增標籤',
+            addPropertyKey: '設定屬性',
             removeTag: '移除標籤',
             removeAllTags: '移除所有標籤',
             changeIcon: '變更圖示',
@@ -582,12 +583,15 @@ export const STRINGS_ZH_TW = {
         },
         propertyKeyVisibility: {
             title: '屬性鍵可見性',
+            description: '控制屬性值的顯示位置。各欄分別對應導航面板、列表面板和檔案上下文選單。使用底部列切換某欄中的所有列。',
             searchPlaceholder: '搜尋屬性鍵...',
             propertyColumnLabel: '屬性',
             showInNavigation: '在導覽中顯示',
             showInList: '在清單中顯示',
+            showInFileMenu: '在檔案選單中顯示',
             toggleAllInNavigation: '切換導覽中的全部',
             toggleAllInList: '切換清單中的全部',
+            toggleAllInFileMenu: '切換檔案選單中的全部',
             applyButton: '套用',
             emptyState: '未找到屬性鍵。'
         },

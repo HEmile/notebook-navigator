@@ -20,6 +20,7 @@ import type { TFile } from 'obsidian';
 import type { FeatureImageStatus, FileData } from '../storage/IndexedDBStorage';
 import type { NotePropertyType } from '../settings/types';
 import { isImageFile } from './fileTypeUtils';
+import { isPropertyKeyOnlyValuePath, normalizePropertyTreeValuePath } from './propertyTree';
 import { casefold } from './recordUtils';
 
 /**
@@ -111,14 +112,14 @@ export function shouldShowFeatureImageArea({
 type PropertyEntries = Exclude<FileData['properties'], null>;
 
 type PropertyRowSummary = {
-    hasAnyNonEmptyValue: boolean;
-    normalizedKeysWithNonEmptyValues: ReadonlySet<string>;
+    hasAnyVisibleValue: boolean;
+    normalizedKeysWithVisibleValues: ReadonlySet<string>;
     uniqueDisplayFieldKeys: readonly { displayKey: string; normalizedKey: string }[];
 };
 
 const EMPTY_PROPERTY_ROW_SUMMARY: PropertyRowSummary = {
-    hasAnyNonEmptyValue: false,
-    normalizedKeysWithNonEmptyValues: new Set<string>(),
+    hasAnyVisibleValue: false,
+    normalizedKeysWithVisibleValues: new Set<string>(),
     uniqueDisplayFieldKeys: []
 };
 
@@ -134,8 +135,8 @@ function getPropertyRowSummary(properties: FileData['properties'] | undefined): 
         return cached;
     }
 
-    let hasAnyNonEmptyValue = false;
-    const normalizedKeysWithNonEmptyValues = new Set<string>();
+    let hasAnyVisibleValue = false;
+    const normalizedKeysWithVisibleValues = new Set<string>();
     const uniqueDisplayFieldKeys = new Map<string, string>();
 
     properties.forEach(entry => {
@@ -143,10 +144,22 @@ function getPropertyRowSummary(properties: FileData['properties'] | undefined): 
             return;
         }
 
-        hasAnyNonEmptyValue = true;
+        // Mirrors FileItem visibility rules so row estimates match rendered property pills.
+        if (entry.valueKind !== 'string') {
+            if (entry.valueKind !== undefined) {
+                return;
+            }
+
+            const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
+            if (isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind)) {
+                return;
+            }
+        }
+
+        hasAnyVisibleValue = true;
         const normalizedFieldKey = casefold(entry.fieldKey);
         if (normalizedFieldKey.length > 0) {
-            normalizedKeysWithNonEmptyValues.add(normalizedFieldKey);
+            normalizedKeysWithVisibleValues.add(normalizedFieldKey);
         }
 
         const trimmedFieldKey = entry.fieldKey.trim();
@@ -157,8 +170,8 @@ function getPropertyRowSummary(properties: FileData['properties'] | undefined): 
     });
 
     const summary: PropertyRowSummary = {
-        hasAnyNonEmptyValue,
-        normalizedKeysWithNonEmptyValues,
+        hasAnyVisibleValue,
+        normalizedKeysWithVisibleValues,
         uniqueDisplayFieldKeys: Array.from(uniqueDisplayFieldKeys.entries()).map(([displayKey, normalizedKey]) => ({
             displayKey,
             normalizedKey
@@ -219,9 +232,9 @@ function shouldShowPropertyRow({
             return false;
         }
         if (visiblePropertyKeys === undefined) {
-            return propertySummary.hasAnyNonEmptyValue;
+            return propertySummary.hasAnyVisibleValue;
         }
-        return hasVisiblePropertyKeyMatch(propertySummary.normalizedKeysWithNonEmptyValues, visiblePropertyKeys);
+        return hasVisiblePropertyKeyMatch(propertySummary.normalizedKeysWithVisibleValues, visiblePropertyKeys);
     })();
 
     return hasWordCount || hasPropertyValues;
@@ -275,8 +288,8 @@ export function getPropertyRowCount({
         const propertySummary = getPropertyRowSummary(properties);
         const hasVisiblePropertyValues =
             visiblePropertyKeys === undefined
-                ? propertySummary.hasAnyNonEmptyValue
-                : hasVisiblePropertyKeyMatch(propertySummary.normalizedKeysWithNonEmptyValues, visiblePropertyKeys);
+                ? propertySummary.hasAnyVisibleValue
+                : hasVisiblePropertyKeyMatch(propertySummary.normalizedKeysWithVisibleValues, visiblePropertyKeys);
 
         if (!showPropertiesOnSeparateRows) {
             frontmatterPropertyRowCount = hasVisiblePropertyValues ? 1 : 0;

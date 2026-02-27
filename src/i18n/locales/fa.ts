@@ -290,6 +290,7 @@ export const STRINGS_FA = {
             moveMultipleNotesToFolder: 'انتقال {count} یادداشت به...',
             moveMultipleFilesToFolder: 'انتقال {count} فایل به...',
             addTag: 'افزودن برچسب',
+            addPropertyKey: 'تنظیم ویژگی',
             removeTag: 'حذف برچسب',
             removeAllTags: 'حذف همه برچسب‌ها',
             changeIcon: 'تغییر آیکون',
@@ -587,12 +588,16 @@ export const STRINGS_FA = {
         },
         propertyKeyVisibility: {
             title: 'نمایش کلیدهای ویژگی',
+            description:
+                'کنترل محل نمایش مقادیر ویژگی. ستون‌ها مربوط به پنل ناوبری، پنل فهرست و منوی زمینه فایل هستند. از ردیف پایین برای تغییر وضعیت همه ردیف‌های یک ستون استفاده کنید.',
             searchPlaceholder: 'جستجوی کلیدهای ویژگی...',
             propertyColumnLabel: 'ویژگی',
             showInNavigation: 'نمایش در ناوبری',
             showInList: 'نمایش در فهرست',
+            showInFileMenu: 'نمایش در منوی فایل',
             toggleAllInNavigation: 'تغییر وضعیت همه در ناوبری',
             toggleAllInList: 'تغییر وضعیت همه در فهرست',
+            toggleAllInFileMenu: 'تغییر وضعیت همه در منوی فایل',
             applyButton: 'اعمال',
             emptyState: 'کلید ویژگی‌ای یافت نشد.'
         },

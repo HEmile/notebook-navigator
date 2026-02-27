@@ -291,6 +291,7 @@ export const STRINGS_TR = {
             moveMultipleNotesToFolder: '{count} notu taşı...',
             moveMultipleFilesToFolder: '{count} dosyayı taşı...',
             addTag: 'Etiket ekle',
+            addPropertyKey: 'Özellik ayarla',
             removeTag: 'Etiketi kaldır',
             removeAllTags: 'Tüm etiketleri kaldır',
             changeIcon: 'Simgeyi değiştir',
@@ -587,12 +588,16 @@ export const STRINGS_TR = {
         },
         propertyKeyVisibility: {
             title: 'Özellik anahtarı görünürlüğü',
+            description:
+                'Özellik değerlerinin nerede gösterileceğini kontrol edin. Sütunlar gezinme paneli, liste paneli ve dosya bağlam menüsüne karşılık gelir. Alt satırı kullanarak bir sütundaki tüm satırları değiştirin.',
             searchPlaceholder: 'Özellik anahtarlarını ara...',
             propertyColumnLabel: 'Özellik',
             showInNavigation: 'Gezinmede göster',
             showInList: 'Listede göster',
+            showInFileMenu: 'Dosya menüsünde göster',
             toggleAllInNavigation: 'Gezinmede tümünü değiştir',
             toggleAllInList: 'Listede tümünü değiştir',
+            toggleAllInFileMenu: 'Dosya menüsünde tümünü değiştir',
             applyButton: 'Uygula',
             emptyState: 'Özellik anahtarı bulunamadı.'
         },

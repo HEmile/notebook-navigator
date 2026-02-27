@@ -277,6 +277,7 @@ export const STRINGS_JA = {
             moveMultipleNotesToFolder: '{count}個のノートを移動先...',
             moveMultipleFilesToFolder: '{count}個のファイルを移動先...',
             addTag: 'タグを追加',
+            addPropertyKey: 'プロパティを設定',
             removeTag: 'タグを削除',
             removeAllTags: 'すべてのタグを削除',
             changeIcon: 'アイコンを変更',
@@ -585,12 +586,16 @@ export const STRINGS_JA = {
         },
         propertyKeyVisibility: {
             title: 'プロパティキーの表示設定',
+            description:
+                'プロパティ値の表示場所を制御します。列はナビゲーションペイン、リストペイン、ファイルコンテキストメニューに対応しています。下の行を使って列内のすべての行を切り替えます。',
             searchPlaceholder: 'プロパティキーを検索...',
             propertyColumnLabel: 'プロパティ',
             showInNavigation: 'ナビゲーションに表示',
             showInList: 'リストに表示',
+            showInFileMenu: 'ファイルメニューに表示',
             toggleAllInNavigation: 'ナビゲーションの全てを切り替え',
             toggleAllInList: 'リストの全てを切り替え',
+            toggleAllInFileMenu: 'ファイルメニューの全てを切り替え',
             applyButton: '適用',
             emptyState: 'プロパティキーが見つかりません。'
         },

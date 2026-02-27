@@ -37,21 +37,24 @@ type RowState = {
     noteCount: number;
     showInNavigation: boolean;
     showInList: boolean;
+    showInFileMenu: boolean;
 };
 
 type RowControls = {
     rowEl: HTMLDivElement;
     navigationButton: HTMLButtonElement;
     listButton: HTMLButtonElement;
+    fileMenuButton: HTMLButtonElement;
 };
 
-type ToggleTarget = 'navigation' | 'list';
+type ToggleTarget = 'navigation' | 'list' | 'fileMenu';
 type ColumnToggleState = 'none' | 'some' | 'all';
 
 type SelectAllControls = {
     rowEl: HTMLDivElement;
     navigationButton: HTMLButtonElement;
     listButton: HTMLButtonElement;
+    fileMenuButton: HTMLButtonElement;
 };
 
 const CHECKBOX_OFF_ICON = 'lucide-square';
@@ -60,6 +63,7 @@ const CHECKBOX_ON_ICON = 'lucide-square-check-big';
 const SEARCH_CLEAR_ICON = 'lucide-circle-x';
 const NAVIGATION_PANE_TAB_ICON = 'panel-left';
 const LIST_PANE_TAB_ICON = 'list';
+const FILE_MENU_ICON = 'square-menu';
 
 export class PropertyKeyVisibilityModal extends Modal {
     private options: PropertyKeyVisibilityModalOptions;
@@ -144,6 +148,7 @@ export class PropertyKeyVisibilityModal extends Modal {
         this.listEl = scrollContainer.createDiv({ cls: 'nn-property-keys-list' });
         this.renderRows();
 
+        this.renderDescription();
         this.renderFooter();
         this.updateApplyButtonState();
 
@@ -190,7 +195,8 @@ export class PropertyKeyVisibilityModal extends Modal {
                 displayKey: entry.key.trim(),
                 noteCount: 0,
                 showInNavigation: entry.showInNavigation,
-                showInList: entry.showInList
+                showInList: entry.showInList,
+                showInFileMenu: entry.showInFileMenu
             });
         });
 
@@ -212,7 +218,8 @@ export class PropertyKeyVisibilityModal extends Modal {
                 displayKey,
                 noteCount: suggestion.noteCount,
                 showInNavigation: false,
-                showInList: false
+                showInList: false,
+                showInFileMenu: false
             });
         });
 
@@ -236,7 +243,8 @@ export class PropertyKeyVisibilityModal extends Modal {
             .map(entry => ({
                 key: entry.key,
                 showInNavigation: entry.showInNavigation,
-                showInList: entry.showInList
+                showInList: entry.showInList,
+                showInFileMenu: entry.showInFileMenu
             }))
             .sort((left, right) => {
                 const leftKey = casefold(left.key);
@@ -271,7 +279,8 @@ export class PropertyKeyVisibilityModal extends Modal {
             included.push({
                 key,
                 showInNavigation: row.showInNavigation,
-                showInList: row.showInList
+                showInList: row.showInList,
+                showInFileMenu: row.showInFileMenu
             });
         };
 
@@ -280,14 +289,14 @@ export class PropertyKeyVisibilityModal extends Modal {
             if (!row) {
                 return;
             }
-            if (!row.showInNavigation && !row.showInList) {
+            if (!row.showInNavigation && !row.showInList && !row.showInFileMenu) {
                 return;
             }
             includeRow(row);
         });
 
         const appended = this.rows.filter(row => {
-            if (!row.showInNavigation && !row.showInList) {
+            if (!row.showInNavigation && !row.showInList && !row.showInFileMenu) {
                 return false;
             }
             return !inInitialOrder.has(row.normalizedKey);
@@ -353,35 +362,22 @@ export class PropertyKeyVisibilityModal extends Modal {
 
             const actionsEl = rowEl.createDiv({ cls: 'nn-property-keys-actions' });
 
-            const navigationButton = actionsEl.createEl('button', {
-                cls: ['nn-action-btn', 'nn-property-keys-toggle'],
-                attr: {
-                    type: 'button',
-                    'aria-label': strings.modals.propertyKeyVisibility.showInNavigation
-                }
-            });
+            const navigationButton = this.createToggleButton(actionsEl, strings.modals.propertyKeyVisibility.showInNavigation);
+            const listButton = this.createToggleButton(actionsEl, strings.modals.propertyKeyVisibility.showInList);
+            const fileMenuButton = this.createToggleButton(actionsEl, strings.modals.propertyKeyVisibility.showInFileMenu);
 
-            const listButton = actionsEl.createEl('button', {
-                cls: ['nn-action-btn', 'nn-property-keys-toggle'],
-                attr: {
-                    type: 'button',
-                    'aria-label': strings.modals.propertyKeyVisibility.showInList
-                }
-            });
-
-            const controls = { rowEl, navigationButton, listButton };
+            const controls = { rowEl, navigationButton, listButton, fileMenuButton };
             this.rowControls.set(row.normalizedKey, controls);
             this.updateRowControls(row, controls);
-            this.rowDisposers.push(
-                addAsyncEventListener(navigationButton, 'click', () => {
-                    this.toggleRow(row.normalizedKey, 'navigation');
-                })
-            );
-            this.rowDisposers.push(
-                addAsyncEventListener(listButton, 'click', () => {
-                    this.toggleRow(row.normalizedKey, 'list');
-                })
-            );
+            this.registerToggleButtonHandler(navigationButton, () => {
+                this.toggleRow(row.normalizedKey, 'navigation');
+            });
+            this.registerToggleButtonHandler(listButton, () => {
+                this.toggleRow(row.normalizedKey, 'list');
+            });
+            this.registerToggleButtonHandler(fileMenuButton, () => {
+                this.toggleRow(row.normalizedKey, 'fileMenu');
+            });
         });
 
         this.renderSelectAllRow();
@@ -415,9 +411,33 @@ export class PropertyKeyVisibilityModal extends Modal {
         const listIconEl = actionsEl.createDiv({ cls: ['nn-property-keys-toggle', 'nn-property-keys-header-icon', 'is-enabled'] });
         listIconEl.setAttribute('aria-hidden', 'true');
         setIcon(listIconEl, LIST_PANE_TAB_ICON);
+
+        const fileMenuIconEl = actionsEl.createDiv({ cls: ['nn-property-keys-toggle', 'nn-property-keys-header-icon', 'is-enabled'] });
+        fileMenuIconEl.setAttribute('aria-hidden', 'true');
+        setIcon(fileMenuIconEl, FILE_MENU_ICON);
     }
 
-    private toggleRow(normalizedKey: string, toggle: 'navigation' | 'list'): void {
+    /**
+     * Creates a toggle button used in row and select-all action columns.
+     */
+    private createToggleButton(actionsEl: HTMLElement, ariaLabel: string): HTMLButtonElement {
+        return actionsEl.createEl('button', {
+            cls: ['nn-action-btn', 'nn-property-keys-toggle'],
+            attr: {
+                type: 'button',
+                'aria-label': ariaLabel
+            }
+        });
+    }
+
+    /**
+     * Registers a click handler and tracks its disposer for modal teardown.
+     */
+    private registerToggleButtonHandler(button: HTMLButtonElement, handler: () => void): void {
+        this.rowDisposers.push(addAsyncEventListener(button, 'click', handler));
+    }
+
+    private toggleRow(normalizedKey: string, toggle: ToggleTarget): void {
         const row = this.rowsByKey.get(normalizedKey);
         if (!row) {
             return;
@@ -425,8 +445,10 @@ export class PropertyKeyVisibilityModal extends Modal {
 
         if (toggle === 'navigation') {
             row.showInNavigation = !row.showInNavigation;
-        } else {
+        } else if (toggle === 'list') {
             row.showInList = !row.showInList;
+        } else {
+            row.showInFileMenu = !row.showInFileMenu;
         }
 
         const controls = this.rowControls.get(normalizedKey);
@@ -439,7 +461,7 @@ export class PropertyKeyVisibilityModal extends Modal {
     }
 
     private updateRowControls(row: RowState, controls: RowControls): void {
-        const enabled = row.showInNavigation || row.showInList;
+        const enabled = row.showInNavigation || row.showInList || row.showInFileMenu;
         controls.rowEl.toggleClass('is-enabled', enabled);
 
         controls.navigationButton.toggleClass('is-enabled', row.showInNavigation);
@@ -447,6 +469,9 @@ export class PropertyKeyVisibilityModal extends Modal {
 
         controls.listButton.toggleClass('is-enabled', row.showInList);
         setIcon(controls.listButton, row.showInList ? CHECKBOX_ON_ICON : CHECKBOX_OFF_ICON);
+
+        controls.fileMenuButton.toggleClass('is-enabled', row.showInFileMenu);
+        setIcon(controls.fileMenuButton, row.showInFileMenu ? CHECKBOX_ON_ICON : CHECKBOX_OFF_ICON);
     }
 
     private renderSelectAllRow(): void {
@@ -459,35 +484,22 @@ export class PropertyKeyVisibilityModal extends Modal {
 
         const actionsEl = rowEl.createDiv({ cls: 'nn-property-keys-actions' });
 
-        const navigationButton = actionsEl.createEl('button', {
-            cls: ['nn-action-btn', 'nn-property-keys-toggle'],
-            attr: {
-                type: 'button',
-                'aria-label': strings.modals.propertyKeyVisibility.toggleAllInNavigation
-            }
-        });
+        const navigationButton = this.createToggleButton(actionsEl, strings.modals.propertyKeyVisibility.toggleAllInNavigation);
+        const listButton = this.createToggleButton(actionsEl, strings.modals.propertyKeyVisibility.toggleAllInList);
+        const fileMenuButton = this.createToggleButton(actionsEl, strings.modals.propertyKeyVisibility.toggleAllInFileMenu);
 
-        const listButton = actionsEl.createEl('button', {
-            cls: ['nn-action-btn', 'nn-property-keys-toggle'],
-            attr: {
-                type: 'button',
-                'aria-label': strings.modals.propertyKeyVisibility.toggleAllInList
-            }
-        });
-
-        this.selectAllControls = { rowEl, navigationButton, listButton };
+        this.selectAllControls = { rowEl, navigationButton, listButton, fileMenuButton };
         this.updateSelectAllControls();
 
-        this.rowDisposers.push(
-            addAsyncEventListener(navigationButton, 'click', () => {
-                this.toggleAllRows('navigation');
-            })
-        );
-        this.rowDisposers.push(
-            addAsyncEventListener(listButton, 'click', () => {
-                this.toggleAllRows('list');
-            })
-        );
+        this.registerToggleButtonHandler(navigationButton, () => {
+            this.toggleAllRows('navigation');
+        });
+        this.registerToggleButtonHandler(listButton, () => {
+            this.toggleAllRows('list');
+        });
+        this.registerToggleButtonHandler(fileMenuButton, () => {
+            this.toggleAllRows('fileMenu');
+        });
     }
 
     private getColumnToggleState(toggle: ToggleTarget, rows: readonly RowState[]): ColumnToggleState {
@@ -505,7 +517,12 @@ export class PropertyKeyVisibilityModal extends Modal {
                 return;
             }
 
-            if (row.showInList) {
+            if (toggle === 'list' && row.showInList) {
+                selected += 1;
+                return;
+            }
+
+            if (toggle === 'fileMenu' && row.showInFileMenu) {
                 selected += 1;
             }
         });
@@ -542,6 +559,7 @@ export class PropertyKeyVisibilityModal extends Modal {
         const filteredRows = this.getFilteredRows();
         const navigationState = this.getColumnToggleState('navigation', filteredRows);
         const listState = this.getColumnToggleState('list', filteredRows);
+        const fileMenuState = this.getColumnToggleState('fileMenu', filteredRows);
 
         controls.navigationButton.toggleClass('is-enabled', navigationState !== 'none');
         setIcon(controls.navigationButton, this.getIconForColumnState(navigationState));
@@ -549,7 +567,10 @@ export class PropertyKeyVisibilityModal extends Modal {
         controls.listButton.toggleClass('is-enabled', listState !== 'none');
         setIcon(controls.listButton, this.getIconForColumnState(listState));
 
-        controls.rowEl.toggleClass('is-enabled', navigationState !== 'none' || listState !== 'none');
+        controls.fileMenuButton.toggleClass('is-enabled', fileMenuState !== 'none');
+        setIcon(controls.fileMenuButton, this.getIconForColumnState(fileMenuState));
+
+        controls.rowEl.toggleClass('is-enabled', navigationState !== 'none' || listState !== 'none' || fileMenuState !== 'none');
     }
 
     private toggleAllRows(toggle: ToggleTarget): void {
@@ -560,8 +581,10 @@ export class PropertyKeyVisibilityModal extends Modal {
         filteredRows.forEach(row => {
             if (toggle === 'navigation') {
                 row.showInNavigation = nextChecked;
-            } else {
+            } else if (toggle === 'list') {
                 row.showInList = nextChecked;
+            } else {
+                row.showInFileMenu = nextChecked;
             }
         });
 
@@ -575,6 +598,16 @@ export class PropertyKeyVisibilityModal extends Modal {
 
         this.updateSelectAllControls();
         this.updateApplyButtonState();
+    }
+
+    /**
+     * Renders helper text below the property key list.
+     */
+    private renderDescription(): void {
+        this.contentEl.createEl('p', {
+            cls: 'nn-property-keys-description',
+            text: strings.modals.propertyKeyVisibility.description
+        });
     }
 
     private renderFooter(): void {

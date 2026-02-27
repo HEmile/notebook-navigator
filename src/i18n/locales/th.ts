@@ -290,6 +290,7 @@ export const STRINGS_TH = {
             moveMultipleNotesToFolder: 'ย้าย {count} โน้ตไปยัง...',
             moveMultipleFilesToFolder: 'ย้าย {count} ไฟล์ไปยัง...',
             addTag: 'เพิ่มแท็ก',
+            addPropertyKey: 'ตั้งค่าคุณสมบัติ',
             removeTag: 'นำแท็กออก',
             removeAllTags: 'นำแท็กทั้งหมดออก',
             changeIcon: 'เปลี่ยนไอคอน',
@@ -583,12 +584,16 @@ export const STRINGS_TH = {
         },
         propertyKeyVisibility: {
             title: 'การแสดงผลคีย์คุณสมบัติ',
+            description:
+                'ควบคุมตำแหน่งที่แสดงค่าคุณสมบัติ คอลัมน์ตรงกับแผงนำทาง แผงรายการ และเมนูบริบทของไฟล์ ใช้แถวล่างสุดเพื่อสลับทุกแถวในคอลัมน์',
             searchPlaceholder: 'ค้นหาคีย์คุณสมบัติ...',
             propertyColumnLabel: 'คุณสมบัติ',
             showInNavigation: 'แสดงในการนำทาง',
             showInList: 'แสดงในรายการ',
+            showInFileMenu: 'แสดงในเมนูไฟล์',
             toggleAllInNavigation: 'สลับทั้งหมดในการนำทาง',
             toggleAllInList: 'สลับทั้งหมดในรายการ',
+            toggleAllInFileMenu: 'สลับทั้งหมดในเมนูไฟล์',
             applyButton: 'นำไปใช้',
             emptyState: 'ไม่พบคีย์คุณสมบัติ'
         },

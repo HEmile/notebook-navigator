@@ -244,11 +244,14 @@ const clonePropertyKeyEntry = (entry: VaultProfilePropertyKey): VaultProfileProp
     return {
         key: entry.key,
         showInNavigation: entry.showInNavigation,
-        showInList: entry.showInList
+        showInList: entry.showInList,
+        showInFileMenu: entry.showInFileMenu
     };
 };
 
 const normalizePropertyKeyToggle = (value: unknown): boolean => value !== false;
+// File menu visibility stays disabled unless persisted settings explicitly set true.
+const normalizePropertyKeyFileMenuToggle = (value: unknown): boolean => value === true;
 
 const sanitizePropertyKeyEntry = (entry: unknown): VaultProfilePropertyKey | null => {
     if (!isRecord(entry)) {
@@ -264,7 +267,8 @@ const sanitizePropertyKeyEntry = (entry: unknown): VaultProfilePropertyKey | nul
     return {
         key,
         showInNavigation: normalizePropertyKeyToggle(entry['showInNavigation']),
-        showInList: normalizePropertyKeyToggle(entry['showInList'])
+        showInList: normalizePropertyKeyToggle(entry['showInList']),
+        showInFileMenu: normalizePropertyKeyFileMenuToggle(entry['showInFileMenu'])
     };
 };
 
@@ -280,7 +284,7 @@ export const clonePropertyKeys = (propertyKeys: VaultProfilePropertyKey[] | unde
         if (!sanitized) {
             return;
         }
-        if (!sanitized.showInNavigation && !sanitized.showInList) {
+        if (!sanitized.showInNavigation && !sanitized.showInList && !sanitized.showInFileMenu) {
             return;
         }
 
@@ -298,7 +302,7 @@ export const clonePropertyKeys = (propertyKeys: VaultProfilePropertyKey[] | unde
 
 export function getActivePropertyKeySet(
     settings: NotebookNavigatorSettings,
-    mode: 'any' | 'navigation' | 'list' = 'any'
+    mode: 'any' | 'navigation' | 'list' | 'file-menu' = 'any'
 ): ReadonlySet<string> {
     const profile = getActiveVaultProfile(settings);
     const entries = Array.isArray(profile.propertyKeys) ? profile.propertyKeys : [];
@@ -319,8 +323,11 @@ export function getActivePropertyKeySet(
         if (mode === 'list' && !entry.showInList) {
             return;
         }
+        if (mode === 'file-menu' && !entry.showInFileMenu) {
+            return;
+        }
 
-        if (mode === 'any' && !entry.showInNavigation && !entry.showInList) {
+        if (mode === 'any' && !entry.showInNavigation && !entry.showInList && !entry.showInFileMenu) {
             return;
         }
 
@@ -364,7 +371,8 @@ export function createPropertyKeysFromPropertyFields(
         propertyKeys.push({
             key,
             showInNavigation: existing?.showInNavigation ?? true,
-            showInList: existing?.showInList ?? true
+            showInList: existing?.showInList ?? true,
+            showInFileMenu: existing?.showInFileMenu ?? false
         });
     });
 

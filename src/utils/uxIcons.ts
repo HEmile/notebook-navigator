@@ -165,13 +165,24 @@ function tryResolveLucideMenuIconId(iconId: string): string | null {
     return slug ? `lucide-${slug}` : null;
 }
 
+/**
+ * Normalizes an icon id into a Lucide menu icon id.
+ */
+export function resolveIconForMenu(iconId: string | null | undefined): string | null {
+    if (typeof iconId !== 'string') {
+        return null;
+    }
+
+    return tryResolveLucideMenuIconId(iconId);
+}
+
 export function resolveUXIconForMenu(
     uxIconMap: Record<string, string> | undefined,
     iconId: UXIconId,
     fallbackLucideMenuIconId: string
 ): string {
     const resolved = resolveUXIcon(uxIconMap, iconId);
-    return tryResolveLucideMenuIconId(resolved) ?? fallbackLucideMenuIconId;
+    return resolveIconForMenu(resolved) ?? fallbackLucideMenuIconId;
 }
 
 export function normalizeUXIconMapRecord(uxIconMap: Record<string, string> | undefined): Record<string, string> {
