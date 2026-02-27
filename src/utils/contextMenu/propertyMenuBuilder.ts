@@ -333,7 +333,8 @@ export function buildPropertyMenu(params: PropertyMenuBuilderParams): void {
         });
     }
 
-    if (propertyKey) {
+    const canManagePropertyKey = propertyNode?.kind === 'key' && propertyNode.notesWithValue.size > 0;
+    if (propertyKey && canManagePropertyKey) {
         menu.addSeparator();
 
         menu.addItem((item: MenuItem) => {
