@@ -625,7 +625,7 @@ export function useDragAndDrop(containerRef: React.RefObject<HTMLElement | null>
                     }
                 } else if (dropType === 'property') {
                     clearAutoExpandTimer();
-                    e.dataTransfer.dropEffect = 'copy';
+                    e.dataTransfer.dropEffect = 'move';
                 }
 
                 if (dropType === 'tag-root') {
