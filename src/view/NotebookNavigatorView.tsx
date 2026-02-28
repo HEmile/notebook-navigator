@@ -442,6 +442,13 @@ export class NotebookNavigatorView extends ItemView {
     }
 
     /**
+     * Set a property on the currently selected files
+     */
+    async setPropertyOnSelectedFiles(): Promise<void> {
+        await this.componentRef.current?.setPropertyOnSelectedFiles();
+    }
+
+    /**
      * Remove a tag from the currently selected files
      */
     async removeTagFromSelectedFiles(): Promise<void> {

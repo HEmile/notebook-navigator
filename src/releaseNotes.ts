@@ -83,6 +83,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         bannerUrl: true,
         new: [
             'You can now ==add properties to files== by right clicking in the list pane and choosing "Set property". Just add properties to list in this menu in the properties modal first, accessed by right-clicking Properties and choosing "Configure property keys".',
+            'New command: ==Set property on selected files==. Quickly apply a property value to selected notes.',
             'New setting: ==Folders > Enable folder note links==. You can now use folder notes only for styling! Disable this setting to only use folder notes for folder styles (icon and color), enable to use folder notes as links (default).',
             'New setting: ==List pane > Notes > Strip LaTeX in previews==. Removes inline and block LaTeX expressions from preview text. Default enabled.',
             'New file menu option: ==Open in default app==. Opens the file in its default application outside of Obsidian.'
@@ -91,8 +92,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
             '==Search filter now uses accent-insensitive matching==. "cafe" matches "café", "cancion" matches "canción". Non-Latin scripts like Arabic are not affected.'
         ],
         fixed: [
-            'Recent items no longer shows hidden items.',
-            'Fixed an issue where deleting multiple open notes at the same time could trigger the error: Failed to open "".'
+            'Fixed an issue where deleting multiple open notes at the same time could trigger the error: Failed to open "".',
+            'Recent items no longer shows hidden items.'
         ]
     },
     {

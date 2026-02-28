@@ -30,7 +30,6 @@ import { SelectionState, SelectionAction } from '../../context/SelectionContext'
 import type { ShortcutsContextValue } from '../../context/ShortcutsContext';
 import { NotebookNavigatorSettings } from '../../settings';
 import { CommandQueueService } from '../../services/CommandQueueService';
-import type { PropertyTreeService } from '../../services/PropertyTreeService';
 import { addCopyPathSubmenu, setAsyncOnClick, tryCreateSubmenu } from './menuAsyncHelpers';
 import { addShortcutRenameMenuItem } from './shortcutRenameMenuItem';
 import { openFileInContext } from '../openFileInContext';
@@ -38,13 +37,8 @@ import { confirmRemoveAllTagsFromFiles, openAddTagToFilesModal, removeTagFromFil
 import { addFolderStyleChangeActions, addFolderStyleMenu, addStyleMenu } from './styleMenuBuilder';
 import { resolveIconForMenu, resolveUXIconForMenu } from '../uxIcons';
 import { isFolderNote } from '../../utils/folderNotes';
-import { casefold } from '../../utils/recordUtils';
 import { getFilesForNavigationSelection } from '../selectionUtils';
-import { naturalCompare } from '../../utils/sortUtils';
-import type { PropertyTreeNode } from '../../types/storage';
-import { getDBInstanceOrNull } from '../../storage/fileOperations';
-import { getDirectPropertyKeyFilePathSet, normalizePropertyTreeValuePath } from '../propertyTree';
-import { getActiveVaultProfile } from '../../utils/vaultProfiles';
+import { collectFileMenuPropertyActions, type FileMenuPropertyAction } from '../../utils/propertyMenuActions';
 
 type FileStyleTarget = { type: 'folder'; folderPath: string } | { type: 'files'; files: TFile[] };
 
@@ -86,66 +80,6 @@ interface FileStyleRemovalAvailability {
     hasRemovableColor: boolean;
 }
 
-interface FileMenuPropertyAction {
-    nodeId: string;
-    keyNodeId: string;
-    label: string;
-}
-
-/**
- * Caches whether a key node has at least one direct boolean true value.
- */
-const booleanTrueKeyNodeCache = new WeakMap<PropertyTreeNode, boolean>();
-
-/**
- * Returns whether the key node has a direct boolean true entry.
- */
-function keyNodeHasBooleanTrueValue(keyNode: PropertyTreeNode): boolean {
-    const cached = booleanTrueKeyNodeCache.get(keyNode);
-    if (cached !== undefined) {
-        return cached;
-    }
-
-    const directPaths = getDirectPropertyKeyFilePathSet(keyNode);
-    if (directPaths.size === 0) {
-        booleanTrueKeyNodeCache.set(keyNode, false);
-        return false;
-    }
-
-    const db = getDBInstanceOrNull();
-    if (!db) {
-        booleanTrueKeyNodeCache.set(keyNode, false);
-        return false;
-    }
-
-    const normalizedKey = keyNode.key;
-    for (const path of directPaths) {
-        const fileData = db.getFile(path);
-        const properties = fileData?.properties;
-        if (!properties) {
-            continue;
-        }
-
-        for (const entry of properties) {
-            if (casefold(entry.fieldKey) !== normalizedKey) {
-                continue;
-            }
-
-            if (entry.valueKind !== undefined && entry.valueKind !== 'boolean') {
-                continue;
-            }
-
-            if (normalizePropertyTreeValuePath(entry.value) === 'true') {
-                booleanTrueKeyNodeCache.set(keyNode, true);
-                return true;
-            }
-        }
-    }
-
-    booleanTrueKeyNodeCache.set(keyNode, false);
-    return false;
-}
-
 /**
  * Resolves an icon for a file-menu property action.
  */
@@ -167,92 +101,6 @@ function resolveFileMenuPropertyActionIcon(
     }
 
     return resolveUXIconForMenu(settings.interfaceIcons, 'nav-property-value', 'lucide-equal');
-}
-
-/**
- * Collects property actions configured for the file context menu.
- */
-function collectFileMenuPropertyActions(
-    settings: NotebookNavigatorSettings,
-    propertyTreeService: PropertyTreeService | null
-): FileMenuPropertyAction[] {
-    const profile = getActiveVaultProfile(settings);
-    const configuredKeys = Array.isArray(profile.propertyKeys) ? profile.propertyKeys : [];
-    const enabledKeys: { normalizedKey: string; displayKey: string }[] = [];
-    const seenKeys = new Set<string>();
-
-    configuredKeys.forEach(entry => {
-        if (!entry.showInFileMenu) {
-            return;
-        }
-
-        const displayKey = entry.key.trim();
-        const normalizedKey = casefold(displayKey);
-        if (!displayKey || !normalizedKey || seenKeys.has(normalizedKey)) {
-            return;
-        }
-
-        seenKeys.add(normalizedKey);
-        enabledKeys.push({ normalizedKey, displayKey });
-    });
-
-    if (enabledKeys.length === 0) {
-        return [];
-    }
-
-    const actions: FileMenuPropertyAction[] = [];
-    enabledKeys.forEach(({ normalizedKey, displayKey }) => {
-        const keyNode = propertyTreeService?.getKeyNode(normalizedKey) ?? null;
-        if (!keyNode) {
-            return;
-        }
-
-        const keyLabel = (keyNode.name.trim() || displayKey).trim();
-        const hasBooleanTrueValue = keyNodeHasBooleanTrueValue(keyNode);
-        const valueNodes = Array.from(keyNode.children.values()).filter(node => node.kind === 'value' && node.name.trim().length > 0);
-
-        if (!hasBooleanTrueValue && valueNodes.length === 0) {
-            return;
-        }
-
-        if (hasBooleanTrueValue) {
-            actions.push({
-                nodeId: keyNode.id,
-                keyNodeId: keyNode.id,
-                label: `${keyLabel}: true`
-            });
-        }
-
-        valueNodes.sort((left, right) => {
-            const compare = naturalCompare(left.name, right.name);
-            if (compare !== 0) {
-                return compare;
-            }
-            return left.name.localeCompare(right.name);
-        });
-
-        valueNodes.forEach(node => {
-            const valueLabel = node.name.trim();
-            actions.push({
-                nodeId: node.id,
-                keyNodeId: keyNode.id,
-                label: `${keyLabel}: ${valueLabel}`
-            });
-        });
-    });
-
-    const deduped: FileMenuPropertyAction[] = [];
-    const seenNodeIds = new Set<string>();
-    actions.forEach(action => {
-        // Keeps one menu action per canonical property node id.
-        if (seenNodeIds.has(action.nodeId)) {
-            return;
-        }
-        seenNodeIds.add(action.nodeId);
-        deduped.push(action);
-    });
-
-    return deduped;
 }
 
 /**

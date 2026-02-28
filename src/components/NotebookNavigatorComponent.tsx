@@ -61,6 +61,7 @@ import { confirmRemoveAllTagsFromFiles, openAddTagToFilesModal, removeTagFromFil
 import { normalizeTagPath } from '../utils/tagUtils';
 import { getTemplaterCreateNewNoteFromTemplate } from '../utils/templaterIntegration';
 import { normalizePropertyNodeId } from '../utils/propertyTree';
+import { collectFileMenuPropertyActions } from '../utils/propertyMenuActions';
 import { useNavigatorScale } from '../hooks/useNavigatorScale';
 import { ListPane } from './ListPane';
 import type { ListPaneHandle } from './ListPane';
@@ -110,6 +111,7 @@ export interface NotebookNavigatorHandle {
     navigateToTagWithModal: () => void;
     navigateToPropertyWithModal: () => void;
     addTagToSelectedFiles: () => Promise<void>;
+    setPropertyOnSelectedFiles: () => Promise<void>;
     removeTagFromSelectedFiles: () => Promise<void>;
     removeAllTagsFromSelectedFiles: () => Promise<void>;
     toggleSearch: () => void;
@@ -887,6 +889,41 @@ export const NotebookNavigatorComponent = React.memo(
                         tagOperations,
                         files: selectedFiles
                     });
+                },
+                setPropertyOnSelectedFiles: async () => {
+                    const selectedFiles = getSelectedFiles();
+                    if (selectedFiles.length === 0) {
+                        showNotice(strings.fileSystem.notifications.noFilesSelected, { variant: 'warning' });
+                        return;
+                    }
+
+                    if (!selectedFiles.every(file => file.extension === 'md')) {
+                        showNotice(strings.fileSystem.notifications.propertiesRequireMarkdown, { variant: 'warning' });
+                        return;
+                    }
+
+                    const propertyActions = collectFileMenuPropertyActions(settings, propertyTreeService);
+                    const suggestions = propertyActions.map(action => ({
+                        nodeId: action.nodeId,
+                        label: action.label,
+                        searchText: action.label,
+                        noteCount: 0
+                    }));
+                    if (suggestions.length === 0) {
+                        showNotice(strings.fileSystem.notifications.propertyOperationsNotAvailable, { variant: 'warning' });
+                        return;
+                    }
+
+                    const modal = new PropertyNodeSuggestModal(
+                        app,
+                        suggestions,
+                        async nodeId => {
+                            await fileSystemOps.applyPropertyNodeToFiles(nodeId, selectedFiles);
+                        },
+                        strings.modals.propertySuggest.placeholder,
+                        strings.modals.propertySuggest.instructions.select
+                    );
+                    modal.open();
                 },
                 removeTagFromSelectedFiles: async () => {
                     if (!tagOperations) {

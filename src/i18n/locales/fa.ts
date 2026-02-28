@@ -767,6 +767,7 @@ export const STRINGS_FA = {
         toggleCompactMode: 'تغییر حالت فشرده', // Command palette: Toggles list mode between standard and compact (English: Toggle compact mode)
         collapseExpand: 'جمع / باز کردن همه آیتم‌ها',
         addTag: 'افزودن برچسب به فایل‌های انتخابی',
+        setProperty: 'تنظیم ویژگی روی فایل‌های انتخابی', // Command palette: Opens a fuzzy dialog to set a property on selected files (English: Set property on selected files)
         removeTag: 'حذف برچسب از فایل‌های انتخابی',
         removeAllTags: 'حذف همه برچسب‌ها از فایل‌های انتخابی',
         openAllFiles: 'باز کردن همه فایل‌ها',

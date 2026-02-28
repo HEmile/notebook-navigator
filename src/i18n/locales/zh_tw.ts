@@ -760,6 +760,7 @@ export const STRINGS_ZH_TW = {
         toggleCompactMode: '切換精簡模式', // Command palette: Toggles list mode between standard and compact (English: Toggle compact mode)
         collapseExpand: '摺疊/展開所有項目',
         addTag: '為選定檔案新增標籤',
+        setProperty: '為選定檔案設定屬性', // Command palette: Opens a fuzzy dialog to set a property on selected files (English: Set property on selected files)
         removeTag: '從選定檔案移除標籤',
         removeAllTags: '從選定檔案移除所有標籤',
         openAllFiles: '開啟所有檔案',

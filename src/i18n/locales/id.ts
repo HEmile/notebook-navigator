@@ -767,6 +767,7 @@ export const STRINGS_ID = {
         toggleCompactMode: 'Alihkan mode kompak', // Command palette: Toggles list mode between standard and compact (English: Toggle compact mode)
         collapseExpand: 'Ciutkan / luaskan semua item',
         addTag: 'Tambah tag ke file yang dipilih',
+        setProperty: 'Atur properti pada file yang dipilih', // Command palette: Opens a fuzzy dialog to set a property on selected files (English: Set property on selected files)
         removeTag: 'Hapus tag dari file yang dipilih',
         removeAllTags: 'Hapus semua tag dari file yang dipilih',
         openAllFiles: 'Buka semua file',

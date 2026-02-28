@@ -296,6 +296,7 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 **Tag operations**
 
 - `Notebook Navigator: Add tag to selected files` Dialog to add tag to selected files. Supports creating new tags
+- `Notebook Navigator: Set property on selected files` Dialog to set property on selected files
 - `Notebook Navigator: Remove tag from selected files` Dialog to remove specific tag. Removes immediately if only one tag
 - `Notebook Navigator: Remove all tags from selected files` Clear all tags from selected files with confirmation
 
@@ -354,6 +355,7 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 | `notebook-navigator:pin-all-folder-notes`   | Notebook Navigator: Pin all folder notes (requires folder notes enabled and an unpinned folder note) |
 | `notebook-navigator:delete-files`           | Notebook Navigator: Delete files                                                                     |
 | `notebook-navigator:add-tag`                | Notebook Navigator: Add tag to selected files                                                        |
+| `notebook-navigator:set-property`           | Notebook Navigator: Set property on selected files                                                   |
 | `notebook-navigator:remove-tag`             | Notebook Navigator: Remove tag from selected files                                                   |
 | `notebook-navigator:remove-all-tags`        | Notebook Navigator: Remove all tags from selected files                                              |
 | `notebook-navigator:rebuild-cache`          | Notebook Navigator: Rebuild cache                                                                    |

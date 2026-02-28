@@ -1219,6 +1219,20 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
         }
     });
 
+    // Command to set a property on selected files
+    plugin.addCommand({
+        id: 'set-property',
+        name: strings.commands.setProperty,
+        callback: () => {
+            runAsyncAction(async () => {
+                const view = await ensureNavigatorOpen(plugin);
+                if (view) {
+                    await view.setPropertyOnSelectedFiles();
+                }
+            });
+        }
+    });
+
     // Command to remove a tag from selected files
     plugin.addCommand({
         id: 'remove-tag',
