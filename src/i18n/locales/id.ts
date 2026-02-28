@@ -1817,7 +1817,7 @@ export const STRINGS_ID = {
             },
             updateCheckOnStart: {
                 name: 'Periksa versi baru saat mulai',
-                desc: 'Memeriksa rilis plugin baru saat startup dan menampilkan notifikasi saat pembaruan tersedia. Setiap versi diumumkan hanya sekali, dan pemeriksaan terjadi paling banyak sekali sehari.',
+                desc: 'Memeriksa rilis plugin baru saat startup dan menampilkan notifikasi saat pembaruan tersedia. Pemeriksaan terjadi paling banyak sekali sehari.',
                 status: 'Versi baru tersedia: {version}'
             },
             whatsNew: {

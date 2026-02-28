@@ -1817,7 +1817,7 @@ export const STRINGS_VI = {
             },
             updateCheckOnStart: {
                 name: 'Kiểm tra phiên bản mới khi khởi động',
-                desc: 'Kiểm tra bản phát hành plugin mới khi khởi động và hiện thông báo khi có bản cập nhật. Mỗi phiên bản chỉ được thông báo một lần, và kiểm tra xảy ra tối đa một lần mỗi ngày.',
+                desc: 'Kiểm tra bản phát hành plugin mới khi khởi động và hiện thông báo khi có bản cập nhật. Kiểm tra xảy ra tối đa một lần mỗi ngày.',
                 status: 'Có phiên bản mới: {version}'
             },
             whatsNew: {

@@ -1822,7 +1822,7 @@ export const STRINGS_FR = {
             },
             updateCheckOnStart: {
                 name: 'Vérifier les nouvelles versions au démarrage',
-                desc: "Vérifie les nouvelles versions du plugin au démarrage et affiche une notification lorsqu'une mise à jour est disponible. Chaque version n'est annoncée qu'une seule fois, et les vérifications ont lieu au maximum une fois par jour.",
+                desc: "Vérifie les nouvelles versions du plugin au démarrage et affiche une notification lorsqu'une mise à jour est disponible. Les vérifications ont lieu au maximum une fois par jour.",
                 status: 'Nouvelle version disponible : {version}'
             },
             whatsNew: {

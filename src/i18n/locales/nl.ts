@@ -1819,7 +1819,7 @@ export const STRINGS_NL = {
             },
             updateCheckOnStart: {
                 name: 'Controleren op nieuwe versie bij opstarten',
-                desc: 'Controleert bij het opstarten op nieuwe plugin-releases en toont een melding wanneer een update beschikbaar is. Elke versie wordt slechts één keer aangekondigd en controles vinden hooguit één keer per dag plaats.',
+                desc: 'Controleert bij het opstarten op nieuwe plugin-releases en toont een melding wanneer een update beschikbaar is. Controles vinden hooguit één keer per dag plaats.',
                 status: 'Nieuwe versie beschikbaar: {version}'
             },
             whatsNew: {

@@ -1810,7 +1810,7 @@ export const STRINGS_EN = {
             },
             updateCheckOnStart: {
                 name: 'Check for new version on start',
-                desc: 'Checks for new plugin releases on startup and shows a notification when an update is available. Each version is announced only once, and checks occur at most once per day.',
+                desc: 'Checks for new plugin releases on startup and shows a notification when an update is available. Checks occur at most once per day.',
                 status: 'New version available: {version}'
             },
             whatsNew: {

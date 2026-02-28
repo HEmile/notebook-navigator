@@ -1821,7 +1821,7 @@ export const STRINGS_PT_BR = {
             },
             updateCheckOnStart: {
                 name: 'Verificar nova versão ao iniciar',
-                desc: 'Verifica novas versões do plugin na inicialização e mostra uma notificação quando uma atualização está disponível. Cada versão é anunciada apenas uma vez, e as verificações ocorrem no máximo uma vez por dia.',
+                desc: 'Verifica novas versões do plugin na inicialização e mostra uma notificação quando uma atualização está disponível. As verificações ocorrem no máximo uma vez por dia.',
                 status: 'Nova versão disponível: {version}'
             },
             whatsNew: {

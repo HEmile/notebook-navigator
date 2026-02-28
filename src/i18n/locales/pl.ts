@@ -1820,7 +1820,7 @@ export const STRINGS_PL = {
             },
             updateCheckOnStart: {
                 name: 'Sprawdź nową wersję podczas uruchamiania',
-                desc: 'Sprawdza dostępność nowych wersji wtyczki podczas uruchamiania i wyświetla powiadomienie, gdy dostępna jest aktualizacja. Powiadomienie o każdej wersji jest wysyłane tylko raz, a sprawdzanie odbywa się maksymalnie raz dziennie.',
+                desc: 'Sprawdza dostępność nowych wersji wtyczki podczas uruchamiania i wyświetla powiadomienie, gdy dostępna jest aktualizacja. Sprawdzanie odbywa się maksymalnie raz dziennie.',
                 status: 'Nowa wersja dostępna: {version}'
             },
             whatsNew: {

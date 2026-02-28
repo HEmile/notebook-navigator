@@ -1816,7 +1816,7 @@ export const STRINGS_TR = {
             },
             updateCheckOnStart: {
                 name: 'Başlangıçta yeni sürüm kontrolü',
-                desc: 'Başlangıçta yeni eklenti sürümlerini kontrol eder ve güncelleme mevcut olduğunda bildirim gösterir. Her sürüm yalnızca bir kez duyurulur ve kontroller günde en fazla bir kez yapılır.',
+                desc: 'Başlangıçta yeni eklenti sürümlerini kontrol eder ve güncelleme mevcut olduğunda bildirim gösterir. Kontroller günde en fazla bir kez yapılır.',
                 status: 'Yeni sürüm mevcut: {version}'
             },
             whatsNew: {

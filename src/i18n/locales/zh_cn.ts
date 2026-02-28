@@ -1809,7 +1809,7 @@ export const STRINGS_ZH_CN = {
             },
             updateCheckOnStart: {
                 name: '启动时检查新版本',
-                desc: '启动时检查新的插件版本，当有可用更新时显示通知。每个版本仅通知一次，检查最多每天一次。',
+                desc: '启动时检查新的插件版本，当有可用更新时显示通知。检查最多每天一次。',
                 status: '有新版本可用：{version}'
             },
             whatsNew: {

@@ -1815,7 +1815,7 @@ export const STRINGS_IT = {
             },
             updateCheckOnStart: {
                 name: "Controlla nuova versione all'avvio",
-                desc: "Controlla nuovi rilasci plugin all'avvio e mostra notifica quando un aggiornamento è disponibile. Ogni versione è annunciata solo una volta, e i controlli avvengono al massimo una volta al giorno.",
+                desc: "Controlla nuovi rilasci plugin all'avvio e mostra notifica quando un aggiornamento è disponibile. I controlli avvengono al massimo una volta al giorno.",
                 status: 'Nuova versione disponibile: {version}'
             },
             whatsNew: {
