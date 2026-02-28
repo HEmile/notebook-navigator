@@ -158,11 +158,7 @@ export class WhatsNewModal extends Modal {
 
         contentEl.empty();
         this.modalEl.addClass('nn-whats-new-modal');
-
-        contentEl.createEl('h2', {
-            text: strings.whatsNew.title,
-            cls: 'nn-whats-new-header'
-        });
+        this.titleEl.setText(strings.whatsNew.title);
 
         this.attachCloseButtonHandler();
 
