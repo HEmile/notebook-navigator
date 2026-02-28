@@ -599,6 +599,12 @@ export function buildFileMenu(params: FileMenuBuilderParams): void {
                     }
                 );
             });
+
+            menu.addItem((item: MenuItem) => {
+                setAsyncOnClick(item.setTitle(strings.contextMenu.file.openInDefaultApp).setIcon('lucide-external-link'), async () => {
+                    await fileSystemOps.openInDefaultApp(file);
+                });
+            });
         }
 
         if (canRevealInFolder || canRevealInSystemExplorer) {

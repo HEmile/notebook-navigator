@@ -16,7 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, TFile, TFolder, TAbstractFile, normalizePath, Platform, WorkspaceLeaf, ViewState } from 'obsidian';
+import {
+    App,
+    FileSystemAdapter,
+    TFile,
+    TFolder,
+    TAbstractFile,
+    normalizePath,
+    Platform,
+    WorkspaceLeaf,
+    ViewState,
+    FileView
+} from 'obsidian';
 import type { SelectionDispatch } from '../context/SelectionContext';
 import { strings } from '../i18n';
 import { ConfirmModal } from '../modals/ConfirmModal';
@@ -24,7 +35,7 @@ import { FolderSuggestModal } from '../modals/FolderSuggestModal';
 import { InputModal } from '../modals/InputModal';
 import { MoveFileConflictModal, type MoveFileConflictItem, type MoveFileConflictResolution } from '../modals/MoveFileConflictModal';
 import { NotebookNavigatorSettings } from '../settings';
-import { NavigationItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../types';
+import { getSupportedLeaves, NavigationItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../types';
 import type { VisibilityPreferences } from '../types';
 import { ExtendedApp, TIMEOUTS, OBSIDIAN_COMMANDS } from '../types/obsidian-extended';
 import {
@@ -206,6 +217,18 @@ interface MoveFolderResult {
  * Result of a folder move operation initiated via modal
  */
 type MoveFolderModalResult = { status: 'success'; data: MoveFolderResult } | { status: 'cancelled' } | { status: 'error'; error: unknown };
+
+interface ElectronShell {
+    openPath(path: string): Promise<string>;
+}
+
+interface ElectronModule {
+    shell: ElectronShell;
+}
+
+interface WindowWithRequire {
+    require(moduleName: string): unknown;
+}
 
 export class FolderMoveError extends Error {
     constructor(
@@ -2295,6 +2318,7 @@ export class FileSystemOperations {
         if (files.length === 0) return;
 
         const performDeleteCore = async () => {
+            const sourcePaths = files.map(file => file.path);
             const attachmentDeletion = this.prepareAttachmentDeletionState(files);
 
             // Run optional pre-delete action (e.g., to update selection)
@@ -2307,23 +2331,66 @@ export class FileSystemOperations {
                 }
             }
 
-            // Delete all files in parallel for instant removal
+            // Delete files. When any target file is currently open, delete sequentially.
             const errors: { file: TFile; error: unknown }[] = [];
             let deletedCount = 0;
-
-            const results = await Promise.allSettled(files.map(file => this.app.fileManager.trashFile(file)));
             const deletedSourcePaths = new Set<string>();
 
-            results.forEach((result, index) => {
-                if (result.status === 'fulfilled') {
-                    deletedCount++;
-                    deletedSourcePaths.add(files[index].path);
-                } else {
+            const targetPathSet = new Set(sourcePaths);
+            let hasOpenLeaf = false;
+
+            try {
+                hasOpenLeaf = getSupportedLeaves(this.app).some(leaf => {
+                    const { view } = leaf;
+                    if (!(view instanceof FileView)) {
+                        return false;
+                    }
+                    const currentFile = view.file;
+                    if (!currentFile) {
+                        return false;
+                    }
+                    return targetPathSet.has(currentFile.path);
+                });
+            } catch {
+                // Unit tests may provide an app mock without workspace leaf helpers.
+                hasOpenLeaf = false;
+            }
+
+            if (hasOpenLeaf) {
+                for (let index = 0; index < files.length; index++) {
                     const file = files[index];
-                    errors.push({ file, error: result.reason });
-                    console.error('Error deleting file:', file.path, result.reason);
+                    const sourcePath = sourcePaths[index] ?? file.path;
+
+                    try {
+                        await this.app.fileManager.trashFile(file);
+                        deletedCount++;
+                        deletedSourcePaths.add(sourcePath);
+
+                        // Allow the workspace to process leaf updates between deletes.
+                        if (index < files.length - 1) {
+                            await new Promise<void>(resolve => setTimeout(resolve, 0));
+                        }
+                    } catch (error) {
+                        errors.push({ file, error });
+                        console.error('Error deleting file:', sourcePath, error);
+                    }
                 }
-            });
+            } else {
+                const results = await Promise.allSettled(files.map(file => this.app.fileManager.trashFile(file)));
+
+                results.forEach((result, index) => {
+                    const file = files[index];
+                    const sourcePath = sourcePaths[index] ?? file.path;
+
+                    if (result.status === 'fulfilled') {
+                        deletedCount++;
+                        deletedSourcePaths.add(sourcePath);
+                    } else {
+                        errors.push({ file, error: result.reason });
+                        console.error('Error deleting file:', sourcePath, result.reason);
+                    }
+                });
+            }
 
             await this.maybeDeleteAttachmentsAfterFileDelete(
                 attachmentDeletion.candidatesBySourcePath,
@@ -2497,10 +2564,96 @@ export class FileSystemOperations {
         }
     }
 
+    /**
+     * Opens a file or folder in the operating system default app
+     * @param file - The file or folder to open
+     */
+    async openInDefaultApp(file: TFile | TFolder): Promise<void> {
+        if (Platform.isMobile) {
+            showNotice(strings.fileSystem.errors.openInDefaultAppNotAvailable, { variant: 'warning' });
+            return;
+        }
+
+        const adapter = this.app.vault.adapter;
+        if (!(adapter instanceof FileSystemAdapter)) {
+            showNotice(strings.fileSystem.errors.openInDefaultAppNotAvailable, { variant: 'warning' });
+            return;
+        }
+
+        const shell = this.getElectronShell();
+        if (!shell) {
+            showNotice(strings.fileSystem.errors.openInDefaultAppNotAvailable, { variant: 'warning' });
+            return;
+        }
+
+        const absolutePath = adapter.getFullPath(file.path);
+
+        try {
+            const shellResult = await shell.openPath(absolutePath);
+            if (shellResult.trim().length > 0) {
+                this.notifyError(strings.fileSystem.errors.openInDefaultApp, shellResult);
+            }
+        } catch (error) {
+            this.notifyError(strings.fileSystem.errors.openInDefaultApp, error);
+        }
+    }
+
     /** Type guard checking if the app exposes the showInFolder method */
     private hasShowInFolder(app: App): app is ExtendedApp {
         const showInFolder: unknown = Reflect.get(app, 'showInFolder');
         return typeof showInFolder === 'function';
+    }
+
+    /** Returns the Electron shell module when available in desktop runtime */
+    private getElectronShell(): ElectronShell | null {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
+        const runtimeWindow: unknown = window;
+        if (!this.hasWindowRequire(runtimeWindow)) {
+            return null;
+        }
+
+        try {
+            const electronModule = runtimeWindow.require('electron');
+            if (!this.hasElectronModule(electronModule)) {
+                return null;
+            }
+            return electronModule.shell;
+        } catch {
+            return null;
+        }
+    }
+
+    /** Type guard checking if the runtime window exposes CommonJS require */
+    private hasWindowRequire(value: unknown): value is WindowWithRequire {
+        if (typeof value !== 'object' || value === null) {
+            return false;
+        }
+
+        const requireFn: unknown = Reflect.get(value, 'require');
+        return typeof requireFn === 'function';
+    }
+
+    /** Type guard checking if a value exposes Electron shell methods */
+    private hasElectronModule(value: unknown): value is ElectronModule {
+        if (typeof value !== 'object' || value === null) {
+            return false;
+        }
+
+        const shell: unknown = Reflect.get(value, 'shell');
+        return this.hasElectronShell(shell);
+    }
+
+    /** Type guard checking if a value is an Electron shell object */
+    private hasElectronShell(value: unknown): value is ElectronShell {
+        if (typeof value !== 'object' || value === null) {
+            return false;
+        }
+
+        const openPath: unknown = Reflect.get(value, 'openPath');
+        return typeof openPath === 'function';
     }
 
     /**
