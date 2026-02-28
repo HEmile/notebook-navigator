@@ -78,8 +78,9 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.4.3',
-        date: '2026-03-01',
+        date: '2026-02-28',
         showOnUpdate: true,
+        bannerUrl: true,
         new: [
             'You can now ==add properties to files== by right clicking in the list pane and choosing "Set property". Just add properties to list in this menu in the properties modal first, accessed by right-clicking Properties and choosing "Configure property keys".',
             'New setting: ==Folders > Enable folder note links==. You can now use folder notes only for styling! Disable this setting to only use folder notes for folder styles (icon and color), enable to use folder notes as links (default).',
