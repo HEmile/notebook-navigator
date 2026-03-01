@@ -1548,7 +1548,7 @@ export const STRINGS_ES = {
             },
             showSectionIcons: {
                 name: 'Mostrar iconos para atajos y elementos recientes',
-                desc: 'Muestra iconos para secciones de navegación como Atajos y Archivos recientes.'
+                desc: 'Muestra iconos junto a los elementos en las secciones Atajos y Recientes.'
             },
             interfaceIcons: {
                 name: 'Iconos de interfaz',

@@ -1546,7 +1546,7 @@ export const STRINGS_ID = {
             },
             showSectionIcons: {
                 name: 'Tampilkan ikon untuk pintasan dan item terbaru',
-                desc: 'Tampilkan ikon untuk bagian navigasi seperti Pintasan dan File terbaru.'
+                desc: 'Tampilkan ikon di samping item pada bagian Pintasan dan Terbaru.'
             },
             interfaceIcons: {
                 name: 'Ikon antarmuka',

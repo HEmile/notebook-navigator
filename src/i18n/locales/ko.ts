@@ -1544,7 +1544,7 @@ export const STRINGS_KO = {
             },
             showSectionIcons: {
                 name: '바로 가기 및 최근 항목 아이콘 표시',
-                desc: '바로 가기 및 최근 파일과 같은 탐색 섹션의 아이콘을 표시합니다.'
+                desc: '바로 가기 및 최근 섹션의 항목 옆에 아이콘을 표시합니다.'
             },
             interfaceIcons: {
                 name: '인터페이스 아이콘',

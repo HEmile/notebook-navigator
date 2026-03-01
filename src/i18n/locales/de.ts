@@ -1547,7 +1547,7 @@ export const STRINGS_DE = {
             },
             showSectionIcons: {
                 name: 'Icons für Shortcuts und kürzliche Elemente anzeigen',
-                desc: 'Icons für Navigationsbereiche wie Shortcuts und Zuletzt verwendete Dateien anzeigen.'
+                desc: 'Icons neben Einträgen in den Bereichen Shortcuts und Zuletzt verwendet anzeigen.'
             },
             interfaceIcons: {
                 name: 'Oberflächensymbole',

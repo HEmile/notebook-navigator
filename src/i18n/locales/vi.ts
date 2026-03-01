@@ -1546,7 +1546,7 @@ export const STRINGS_VI = {
             },
             showSectionIcons: {
                 name: 'Hiện biểu tượng cho lối tắt và mục gần đây',
-                desc: 'Hiển thị biểu tượng cho các phần điều hướng như Lối tắt và Tệp gần đây.'
+                desc: 'Hiển thị biểu tượng bên cạnh các mục trong phần Lối tắt và Gần đây.'
             },
             interfaceIcons: {
                 name: 'Biểu tượng giao diện',

@@ -1551,7 +1551,7 @@ export const STRINGS_FR = {
             },
             showSectionIcons: {
                 name: 'Afficher les icônes pour les raccourcis et les éléments récents',
-                desc: 'Afficher les icônes pour les sections de navigation comme Raccourcis et Fichiers récents.'
+                desc: 'Afficher les icônes à côté des éléments dans les sections Raccourcis et Récents.'
             },
             interfaceIcons: {
                 name: "Icônes de l'interface",

@@ -1544,7 +1544,7 @@ export const STRINGS_IT = {
             },
             showSectionIcons: {
                 name: 'Mostra icone per scorciatoie e elementi recenti',
-                desc: 'Visualizza icone per sezioni navigazione come Scorciatoie e File recenti.'
+                desc: 'Visualizza icone accanto agli elementi nelle sezioni Scorciatoie e Recenti.'
             },
             interfaceIcons: {
                 name: "Icone dell'interfaccia",

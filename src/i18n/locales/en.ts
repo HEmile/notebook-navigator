@@ -1539,7 +1539,7 @@ export const STRINGS_EN = {
             },
             showSectionIcons: {
                 name: 'Show icons for shortcuts and recent items',
-                desc: 'Display icons for navigation sections like Shortcuts and Recent files.'
+                desc: 'Display icons next to items in the Shortcuts and Recent sections.'
             },
             interfaceIcons: {
                 name: 'Interface icons',

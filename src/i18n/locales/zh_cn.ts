@@ -1539,7 +1539,7 @@ export const STRINGS_ZH_CN = {
             },
             showSectionIcons: {
                 name: '显示快捷方式和最近项目的图标',
-                desc: '显示导航分区（如快捷方式和最近文件）的图标。'
+                desc: '在快捷方式和最近文件分区中的项目旁显示图标。'
             },
             interfaceIcons: {
                 name: '界面图标',

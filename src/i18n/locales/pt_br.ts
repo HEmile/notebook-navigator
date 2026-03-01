@@ -1550,7 +1550,7 @@ export const STRINGS_PT_BR = {
             },
             showSectionIcons: {
                 name: 'Mostrar ícones para atalhos e itens recentes',
-                desc: 'Exibir ícones para seções de navegação como Atalhos e Arquivos recentes.'
+                desc: 'Exibir ícones ao lado dos itens nas seções Atalhos e Recentes.'
             },
             interfaceIcons: {
                 name: 'Ícones da interface',

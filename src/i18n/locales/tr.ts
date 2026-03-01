@@ -1545,7 +1545,7 @@ export const STRINGS_TR = {
             },
             showSectionIcons: {
                 name: 'Kısayollar ve son öğeler için simgeleri göster',
-                desc: 'Kısayollar ve Son dosyalar gibi gezinme bölümleri için simgeleri görüntüle.'
+                desc: 'Kısayollar ve Son kullanılanlar bölümlerindeki öğelerin yanında simgeleri görüntüle.'
             },
             interfaceIcons: {
                 name: 'Arayüz simgeleri',

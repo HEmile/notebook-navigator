@@ -1549,7 +1549,7 @@ export const STRINGS_PL = {
             },
             showSectionIcons: {
                 name: 'Pokaż ikonki skrótów i ostatnich elementów',
-                desc: 'Wyświetla ikonki w panelu nawigacji dla sekcji, takich jak Skróty i Ostatnie pliki.'
+                desc: 'Wyświetla ikonki obok elementów w sekcjach Skróty i Ostatnie.'
             },
             interfaceIcons: {
                 name: 'Ikonki interfejsu',

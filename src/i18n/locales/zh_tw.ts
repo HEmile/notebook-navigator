@@ -1538,7 +1538,7 @@ export const STRINGS_ZH_TW = {
             },
             showSectionIcons: {
                 name: '顯示捷徑和最近項目的圖示',
-                desc: '顯示導覽區段（如捷徑和最近檔案）的圖示。'
+                desc: '在捷徑和最近檔案區段中的項目旁顯示圖示。'
             },
             interfaceIcons: {
                 name: '介面圖示',

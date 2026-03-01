@@ -49,7 +49,6 @@ import { useSettingsState } from '../context/SettingsContext';
 import { getIconService, useIconServiceVersion } from '../services/icons';
 import {
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
-    RECENT_NOTES_VIRTUAL_FOLDER_ID,
     SHORTCUTS_VIRTUAL_FOLDER_ID,
     TAGS_ROOT_VIRTUAL_FOLDER_ID,
     VirtualFolder,
@@ -203,18 +202,6 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
 
     const contentClassName = useMemo(() => buildSearchMatchContentClass(['nn-navitem-content'], searchMatch), [searchMatch]);
 
-    const shouldShowIcon = useMemo(() => {
-        if (
-            virtualFolder.id === SHORTCUTS_VIRTUAL_FOLDER_ID ||
-            virtualFolder.id === RECENT_NOTES_VIRTUAL_FOLDER_ID ||
-            virtualFolder.id === TAGS_ROOT_VIRTUAL_FOLDER_ID
-        ) {
-            return true;
-        }
-
-        return settings.showSectionIcons;
-    }, [settings.showSectionIcons, virtualFolder.id]);
-
     const handleDoubleClick = useCallback(() => {
         if (hasChildren) {
             onToggle();
@@ -265,12 +252,12 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
         );
     }, [hasChildren, iconVersion, isExpanded, settings.interfaceIcons]);
 
-    // Renders icon for virtual folders based on folder type and icon visibility settings
+    // Renders icon for virtual folders when an icon is configured on the item
     useEffect(() => {
-        if (iconRef.current && shouldShowIcon && virtualFolder.icon) {
+        if (iconRef.current && virtualFolder.icon) {
             getIconService().renderIcon(iconRef.current, virtualFolder.icon);
         }
-    }, [virtualFolder.icon, shouldShowIcon, iconVersion]);
+    }, [virtualFolder.icon, iconVersion]);
 
     const virtualFolderStyle: CSSPropertiesWithVars = { '--level': level };
 
@@ -305,7 +292,7 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
                     onDoubleClick={handleChevronDoubleClick}
                     tabIndex={-1}
                 />
-                {shouldShowIcon && virtualFolder.icon && <span className="nn-navitem-icon" ref={iconRef} />}
+                {virtualFolder.icon && <span className="nn-navitem-icon" ref={iconRef} />}
                 <span className="nn-navitem-name">{virtualFolder.name}</span>
                 <span className="nn-navitem-spacer" />
                 {shouldRenderCountBadge && noteCountDisplay && <span className="nn-navitem-count">{noteCountDisplay.label}</span>}

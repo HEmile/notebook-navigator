@@ -1548,7 +1548,7 @@ export const STRINGS_NL = {
             },
             showSectionIcons: {
                 name: 'Pictogrammen tonen voor snelkoppelingen en recente items',
-                desc: 'Pictogrammen voor navigatiesecties zoals Snelkoppelingen en Recente bestanden weergeven.'
+                desc: 'Pictogrammen naast items in de secties Snelkoppelingen en Recent weergeven.'
             },
             interfaceIcons: {
                 name: 'Interface-iconen',
