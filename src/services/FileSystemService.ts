@@ -1428,6 +1428,11 @@ export class FileSystemOperations {
                     await preDeleteAction();
                 }
 
+                // Before deleting a file, ensure that no open leaf is still displaying it.
+                // (Used both for single delete actions and as a safety net when a pre-delete action
+                // attempted to open a replacement file but did not update every open leaf.)
+                await this.clearOpenLeavesForFileDelete(file);
+
                 await this.app.fileManager.trashFile(file);
 
                 if (onSuccess) {
@@ -1467,6 +1472,130 @@ export class FileSystemOperations {
                 await commandQueue.executeDeleteFiles([file], performDeleteCore);
             } else {
                 await performDeleteCore();
+            }
+        }
+    }
+
+    /**
+     * Returns leaves that are currently displaying the provided file.
+     *
+     * This is used by delete/move operations that need to change open leaves before
+     * the vault operation runs.
+     */
+    private getLeavesDisplayingFile(file: TFile): WorkspaceLeaf[] {
+        try {
+            const matches: WorkspaceLeaf[] = [];
+
+            const supportedLeaves = getSupportedLeaves(this.app);
+            for (const leaf of supportedLeaves) {
+                const view = leaf.view;
+                if (!(view instanceof FileView)) {
+                    continue;
+                }
+
+                if (view.file?.path !== file.path) {
+                    continue;
+                }
+
+                matches.push(leaf);
+            }
+
+            return matches;
+        } catch {
+            // Unit tests can provide an app mock without workspace leaf helpers.
+            return [];
+        }
+    }
+
+    /**
+     * Clears any open file-view leaf that is currently displaying the provided file.
+     *
+     * `app.fileManager.trashFile(...)` can detach/close leaves that are showing the deleted file.
+     * Plugins can react to that leaf change and read/modify the previously active file.
+     *
+     * Clearing the view state removes the deleted file from the leaf without changing the active leaf.
+     * The delete then runs with no open leaf referencing the soon-to-be-deleted path.
+     */
+    private async clearOpenLeavesForFileDelete(file: TFile): Promise<void> {
+        const leavesDisplayingDeletedFile = this.getLeavesDisplayingFile(file);
+        if (leavesDisplayingDeletedFile.length === 0) {
+            return;
+        }
+
+        const emptyViewState: ViewState = { type: 'empty', state: {} };
+        for (const leaf of leavesDisplayingDeletedFile) {
+            try {
+                await leaf.setViewState(emptyViewState);
+            } catch {
+                // Ignore failures when clearing leaf state. The file delete still runs.
+            }
+        }
+    }
+
+    /**
+     * Opens a replacement file in any leaf that currently displays `fileToReplace`.
+     *
+     * If no matching leaf is found, opens the replacement file in the default leaf
+     * selection returned by `workspace.getLeaf(false)`.
+     */
+    private async replaceOpenLeavesForFileDelete(fileToReplace: TFile, replacement: TFile): Promise<void> {
+        const leaves = this.getLeavesDisplayingFile(fileToReplace);
+
+        if (leaves.length === 0) {
+            const fallbackLeaf = this.app.workspace.getLeaf(false);
+            if (!fallbackLeaf) {
+                return;
+            }
+
+            try {
+                await fallbackLeaf.openFile(replacement, { active: false });
+            } catch {
+                // Ignore failures when opening a replacement file. The delete still runs.
+            }
+            return;
+        }
+
+        for (const leaf of leaves) {
+            try {
+                await leaf.openFile(replacement, { active: false });
+            } catch {
+                // Ignore failures when opening a replacement file. The delete still runs.
+            }
+        }
+    }
+
+    /**
+     * Opens a replacement file in any leaf that currently displays one of the deleted files.
+     *
+     * This is used by multi-delete operations that select a single "next file" for the list selection.
+     */
+    private async replaceOpenLeavesForFilesDelete(filesToReplace: readonly TFile[], replacement: TFile): Promise<void> {
+        const uniqueLeaves = new Set<WorkspaceLeaf>();
+        for (const fileToReplace of filesToReplace) {
+            this.getLeavesDisplayingFile(fileToReplace).forEach(leaf => {
+                uniqueLeaves.add(leaf);
+            });
+        }
+
+        if (uniqueLeaves.size === 0) {
+            const fallbackLeaf = this.app.workspace.getLeaf(false);
+            if (!fallbackLeaf) {
+                return;
+            }
+
+            try {
+                await fallbackLeaf.openFile(replacement, { active: false });
+            } catch {
+                // Ignore failures when opening a replacement file. The delete still runs.
+            }
+            return;
+        }
+
+        for (const leaf of uniqueLeaves) {
+            try {
+                await leaf.openFile(replacement, { active: false });
+            } catch {
+                // Ignore failures when opening a replacement file. The delete still runs.
             }
         }
     }
@@ -1528,7 +1657,11 @@ export class FileSystemOperations {
                 const stillExists = this.app.vault.getFileByPath(nextFileToSelect.path);
                 if (stillExists) {
                     // Update selection and open the file
-                    await updateSelectionAfterFileOperation(nextFileToSelect, selectionDispatch, this.app);
+                    await updateSelectionAfterFileOperation(stillExists, selectionDispatch, this.app, { openInEditor: false });
+
+                    // If the file being deleted is currently open in a leaf, open the next file in that
+                    // same leaf before deleting. This keeps the workspace leaf stable during the delete.
+                    await this.replaceOpenLeavesForFileDelete(file, stillExists);
                 } else {
                     // Next file was deleted, clear selection
                     await updateSelectionAfterFileOperation(null, selectionDispatch, this.app);
@@ -2362,6 +2495,9 @@ export class FileSystemOperations {
                     const sourcePath = sourcePaths[index] ?? file.path;
 
                     try {
+                        // Ensure no leaf is still displaying the deleted file before the vault operation.
+                        await this.clearOpenLeavesForFileDelete(file);
+
                         await this.app.fileManager.trashFile(file);
                         deletedCount++;
                         deletedSourcePaths.add(sourcePath);
@@ -2475,7 +2611,11 @@ export class FileSystemOperations {
                 const stillExists = this.app.vault.getFileByPath(nextFileToSelect.path);
                 if (stillExists) {
                     // Update selection using same params as single file deletion
-                    await updateSelectionAfterFileOperation(nextFileToSelect, selectionDispatch, this.app);
+                    await updateSelectionAfterFileOperation(stillExists, selectionDispatch, this.app, { openInEditor: false });
+
+                    // If any of the deleted files are currently open in a leaf, open the next file in that
+                    // same leaf before deleting. This keeps the workspace leaf stable during the delete.
+                    await this.replaceOpenLeavesForFilesDelete(filesToDelete, stillExists);
                 } else {
                     // Next file was deleted, clear selection
                     await updateSelectionAfterFileOperation(null, selectionDispatch, this.app);
