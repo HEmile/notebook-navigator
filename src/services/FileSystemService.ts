@@ -1508,13 +1508,33 @@ export class FileSystemOperations {
     }
 
     /**
+     * Returns the currently active file-view leaf.
+     *
+     * Obsidian's workspace state is not available in some unit tests, and workspace APIs
+     * can throw when app mocks do not implement all required properties.
+     */
+    private getActiveFileViewLeaf(): WorkspaceLeaf | null {
+        try {
+            const view = this.app.workspace.getActiveViewOfType(FileView);
+            return view?.leaf ?? null;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
      * Clears any open file-view leaf that is currently displaying the provided file.
      *
      * `app.fileManager.trashFile(...)` can detach/close leaves that are showing the deleted file.
      * Plugins can react to that leaf change and read/modify the previously active file.
      *
-     * Clearing the view state removes the deleted file from the leaf without changing the active leaf.
-     * The delete then runs with no open leaf referencing the soon-to-be-deleted path.
+     * Clearing the view state removes the file from open leaves without changing which leaf is focused.
+     *
+     * Background leaves are detached after clearing.
+     * This closes tabs that were showing the soon-to-be-deleted file, without opening a replacement file.
+     *
+     * The active leaf is never detached here. Detaching the active leaf changes focus and can trigger
+     * "focused file change" listeners while the file still exists and is about to be deleted.
      */
     private async clearOpenLeavesForFileDelete(file: TFile): Promise<void> {
         const leavesDisplayingDeletedFile = this.getLeavesDisplayingFile(file);
@@ -1522,6 +1542,7 @@ export class FileSystemOperations {
             return;
         }
 
+        const activeLeaf = this.getActiveFileViewLeaf();
         const emptyViewState: ViewState = { type: 'empty', state: {} };
         for (const leaf of leavesDisplayingDeletedFile) {
             try {
@@ -1529,14 +1550,28 @@ export class FileSystemOperations {
             } catch {
                 // Ignore failures when clearing leaf state. The file delete still runs.
             }
+
+            if (activeLeaf && leaf === activeLeaf) {
+                continue;
+            }
+
+            try {
+                leaf.detach();
+            } catch {
+                // Ignore failures when detaching leaves. The file delete still runs.
+            }
         }
     }
 
     /**
-     * Opens a replacement file in any leaf that currently displays `fileToReplace`.
+     * Updates open leaves before deleting `fileToReplace`.
      *
-     * If no matching leaf is found, opens the replacement file in the default leaf
-     * selection returned by `workspace.getLeaf(false)`.
+     * Some plugins react to leaf changes and read/modify the previously active file.
+     * Deleting a file while it is still shown in the focused leaf can produce file-not-found reads.
+     *
+     * - If the active file-view leaf is displaying `fileToReplace`, open `replacement` in that leaf.
+     * - Any other leaf displaying `fileToReplace` is detached (tab closed).
+     * - If no leaf is displaying `fileToReplace`, open `replacement` in `workspace.getLeaf(false)`.
      */
     private async replaceOpenLeavesForFileDelete(fileToReplace: TFile, replacement: TFile): Promise<void> {
         const leaves = this.getLeavesDisplayingFile(fileToReplace);
@@ -1555,19 +1590,68 @@ export class FileSystemOperations {
             return;
         }
 
-        for (const leaf of leaves) {
+        // Closing the active leaf can trigger "focused file change" listeners that expect the file
+        // still exists. If the active leaf is one of the leaves showing `fileToReplace`, open the
+        // replacement file in that same leaf before the delete runs.
+        const activeLeaf = this.getActiveFileViewLeaf();
+        if (activeLeaf && leaves.includes(activeLeaf)) {
             try {
-                await leaf.openFile(replacement, { active: false });
+                await activeLeaf.openFile(replacement, { active: false });
             } catch {
                 // Ignore failures when opening a replacement file. The delete still runs.
+            }
+
+            // Any other leaf that was displaying the deleted file is a background tab.
+            // Detach it. This closes the tab.
+            // When deleting many open files, detaching background leaves prevents multiple tabs from opening the same replacement file.
+            const emptyViewState: ViewState = { type: 'empty', state: {} };
+            for (const leaf of leaves) {
+                if (leaf === activeLeaf) {
+                    continue;
+                }
+
+                try {
+                    // Clear the file from the view, then detach the leaf.
+                    // Leaf-close listeners observe an empty view instead of a file view.
+                    await leaf.setViewState(emptyViewState);
+                } catch {
+                    // Ignore failures when clearing leaf state. The delete still runs.
+                }
+
+                try {
+                    leaf.detach();
+                } catch {
+                    // Ignore failures when detaching leaves. The delete still runs.
+                }
+            }
+
+            return;
+        }
+
+        // If the file is only open in background leaves, close those leaves and keep the active leaf unchanged.
+        // The Navigator selection is still updated separately.
+        const emptyViewState: ViewState = { type: 'empty', state: {} };
+        for (const leaf of leaves) {
+            try {
+                await leaf.setViewState(emptyViewState);
+            } catch {
+                // Ignore failures when clearing leaf state. The delete still runs.
+            }
+
+            try {
+                leaf.detach();
+            } catch {
+                // Ignore failures when detaching leaves. The delete still runs.
             }
         }
     }
 
     /**
-     * Opens a replacement file in any leaf that currently displays one of the deleted files.
+     * Updates open leaves before deleting multiple files.
      *
-     * This is used by multi-delete operations that select a single "next file" for the list selection.
+     * - If the active file-view leaf is displaying one of the deleted files, open `replacement` in that leaf.
+     * - Any other leaf displaying a deleted file is detached (tab closed).
+     * - If no leaf is displaying a deleted file, open `replacement` in `workspace.getLeaf(false)`.
      */
     private async replaceOpenLeavesForFilesDelete(filesToReplace: readonly TFile[], replacement: TFile): Promise<void> {
         const uniqueLeaves = new Set<WorkspaceLeaf>();
@@ -1591,11 +1675,51 @@ export class FileSystemOperations {
             return;
         }
 
-        for (const leaf of uniqueLeaves) {
+        const activeLeaf = this.getActiveFileViewLeaf();
+        if (activeLeaf && uniqueLeaves.has(activeLeaf)) {
             try {
-                await leaf.openFile(replacement, { active: false });
+                await activeLeaf.openFile(replacement, { active: false });
             } catch {
                 // Ignore failures when opening a replacement file. The delete still runs.
+            }
+
+            // Close any other leaf that was displaying one of the deleted files.
+            const emptyViewState: ViewState = { type: 'empty', state: {} };
+            for (const leaf of uniqueLeaves) {
+                if (leaf === activeLeaf) {
+                    continue;
+                }
+
+                try {
+                    await leaf.setViewState(emptyViewState);
+                } catch {
+                    // Ignore failures when clearing leaf state. The delete still runs.
+                }
+
+                try {
+                    leaf.detach();
+                } catch {
+                    // Ignore failures when detaching leaves. The delete still runs.
+                }
+            }
+
+            return;
+        }
+
+        // None of the deleted files are in the focused leaf. Close affected background tabs and keep
+        // the current editor leaf unchanged.
+        const emptyViewState: ViewState = { type: 'empty', state: {} };
+        for (const leaf of uniqueLeaves) {
+            try {
+                await leaf.setViewState(emptyViewState);
+            } catch {
+                // Ignore failures when clearing leaf state. The delete still runs.
+            }
+
+            try {
+                leaf.detach();
+            } catch {
+                // Ignore failures when detaching leaves. The delete still runs.
             }
         }
     }
