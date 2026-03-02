@@ -1245,7 +1245,7 @@ export function useNavigationPaneData({
         keyNodes.sort(effectiveComparator);
 
         let collectionCount: NoteCountInfo | undefined;
-        const shouldShowRootFolder = settings.showAllPropertiesFolder || keyNodes.length === 0;
+        const shouldShowRootFolder = settings.showAllPropertiesFolder;
         const shouldComputeCollectionCount = settings.showNoteCount && (shouldShowRootFolder || hasRootPropertyShortcut);
 
         if (shouldComputeCollectionCount) {
@@ -1293,7 +1293,7 @@ export function useNavigationPaneData({
         const rootId = PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
         const keyNodes = propertySectionBase.keyNodes;
         const collectionCount = propertySectionBase.collectionCount;
-        const shouldShowRootFolder = settings.showAllPropertiesFolder || keyNodes.length === 0;
+        const shouldShowRootFolder = settings.showAllPropertiesFolder;
         const rootLevel = shouldShowRootFolder ? 1 : 0;
         const childLevel = rootLevel + 1;
 
