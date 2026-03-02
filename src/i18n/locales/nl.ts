@@ -742,6 +742,7 @@ export const STRINGS_NL = {
         search: 'Zoeken',
         searchVaultRoot: 'Zoeken in kluisroot',
         toggleDualPane: 'Dubbel paneel in-/uitschakelen',
+        toggleDualPaneOrientation: 'Dubbel paneel oriëntatie wisselen', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'Kalender in-/uitschakelen',
         selectVaultProfile: 'Kluisprofiel wijzigen',
         selectVaultProfile1: 'Kluisprofiel 1 selecteren',

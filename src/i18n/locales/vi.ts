@@ -742,6 +742,7 @@ export const STRINGS_VI = {
         search: 'Tìm kiếm', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Tìm kiếm trong thư mục gốc vault', // Command palette: Selects the vault root folder and focuses search (English: Search in vault root)
         toggleDualPane: 'Bật/tắt hai ngăn', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
+        toggleDualPaneOrientation: 'Chuyển đổi hướng hai ngăn', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'Bật/tắt lịch', // Command palette: Toggles showing the calendar overlay in the navigation pane (English: Toggle calendar)
         selectVaultProfile: 'Chọn hồ sơ vault', // Command palette: Opens a modal to choose a different vault profile (English: Select vault profile)
         selectVaultProfile1: 'Chọn hồ sơ vault 1', // Command palette: Activates the first vault profile without opening the modal (English: Select vault profile 1)

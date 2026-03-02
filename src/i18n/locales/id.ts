@@ -741,6 +741,7 @@ export const STRINGS_ID = {
         search: 'Cari',
         searchVaultRoot: 'Cari di root vault',
         toggleDualPane: 'Alihkan tata letak panel ganda',
+        toggleDualPaneOrientation: 'Alihkan orientasi panel ganda', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'Alihkan kalender',
         selectVaultProfile: 'Pilih profil vault',
         selectVaultProfile1: 'Pilih profil vault 1',

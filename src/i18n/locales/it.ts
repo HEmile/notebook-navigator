@@ -737,6 +737,7 @@ export const STRINGS_IT = {
         search: 'Cerca', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Cerca nella radice del vault', // Command palette: Selects the vault root folder and focuses search (English: Search in vault root)
         toggleDualPane: 'Attiva/disattiva doppio pannello', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
+        toggleDualPaneOrientation: 'Cambia orientamento doppio pannello', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'Attiva/disattiva calendario', // Command palette: Toggles showing the calendar overlay in the navigation pane (English: Toggle calendar)
         selectVaultProfile: 'Seleziona profilo vault', // Command palette: Opens a modal to choose a different vault profile (English: Select vault profile)
         selectVaultProfile1: 'Seleziona profilo vault 1', // Command palette: Activates the first vault profile without opening the modal (English: Select vault profile 1)

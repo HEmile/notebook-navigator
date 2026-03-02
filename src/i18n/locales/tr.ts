@@ -741,6 +741,7 @@ export const STRINGS_TR = {
         search: 'Ara', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Kasa kökünde ara', // Command palette: Selects the vault root folder and focuses search (English: Search in vault root)
         toggleDualPane: 'Çift bölme düzenini aç/kapat', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
+        toggleDualPaneOrientation: 'Çift bölme yönünü değiştir', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'Takvimi aç/kapat', // Command palette: Toggles showing the calendar overlay in the navigation pane (English: Toggle calendar)
         selectVaultProfile: 'Kasa profili seç', // Command palette: Opens a modal to choose a different vault profile (English: Select vault profile)
         selectVaultProfile1: 'Kasa profili 1 seç', // Command palette: Activates the first vault profile without opening the modal (English: Select vault profile 1)

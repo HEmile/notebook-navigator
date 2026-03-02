@@ -740,6 +740,7 @@ export const STRINGS_KO = {
         search: '검색', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: '보관소 루트에서 검색', // Command palette: Selects the vault root folder and focuses search (English: Search in vault root)
         toggleDualPane: '이중 창 레이아웃 전환', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
+        toggleDualPaneOrientation: '이중 창 방향 전환', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: '캘린더 전환', // Command palette: Toggles showing the calendar overlay in the navigation pane (English: Toggle calendar)
         selectVaultProfile: '보관소 프로필 변경', // Command palette: Opens a modal to choose a different vault profile (English: Switch vault profile)
         selectVaultProfile1: '보관소 프로필 1 선택', // Command palette: Activates the first vault profile without opening the modal (English: Select vault profile 1)

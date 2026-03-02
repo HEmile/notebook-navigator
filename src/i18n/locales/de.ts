@@ -742,6 +742,7 @@ export const STRINGS_DE = {
         search: 'Suchen', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Im Tresorverzeichnis suchen', // Command palette: Selects the vault root folder and focuses search (English: Search in vault root)
         toggleDualPane: 'Doppelbereichslayout umschalten', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
+        toggleDualPaneOrientation: 'Doppelbereich-Ausrichtung umschalten', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'Kalender umschalten', // Command palette: Toggles showing the calendar overlay in the navigation pane (English: Toggle calendar)
         selectVaultProfile: 'Tresorprofil wechseln', // Command palette: Opens a modal to choose a different vault profile (English: Switch vault profile)
         selectVaultProfile1: 'Tresorprofil 1 auswählen', // Command palette: Activates the first vault profile without opening the modal (English: Select vault profile 1)

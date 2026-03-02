@@ -738,6 +738,7 @@ export const STRINGS_RU = {
         search: 'Поиск', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Поиск в корне хранилища', // Command palette: Selects the vault root folder and focuses search (English: Search in vault root)
         toggleDualPane: 'Переключить двухпанельный режим', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
+        toggleDualPaneOrientation: 'Переключить ориентацию двухпанельного режима', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'Переключить календарь', // Command palette: Toggles showing the calendar overlay in the navigation pane (English: Toggle calendar)
         selectVaultProfile: 'Выбрать профиль хранилища', // Command palette: Opens a modal to choose a different vault profile (English: Select vault profile)
         selectVaultProfile1: 'Выбрать профиль хранилища 1', // Command palette: Activates the first vault profile without opening the modal (English: Select vault profile 1)

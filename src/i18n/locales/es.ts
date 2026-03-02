@@ -742,6 +742,7 @@ export const STRINGS_ES = {
         search: 'Buscar', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Buscar en la raíz de la bóveda', // Command palette: Selects the vault root folder and focuses search (English: Search in vault root)
         toggleDualPane: 'Alternar diseño de doble panel', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
+        toggleDualPaneOrientation: 'Alternar orientación del doble panel', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'Alternar calendario', // Command palette: Toggles showing the calendar overlay in the navigation pane (English: Toggle calendar)
         selectVaultProfile: 'Cambiar perfil de bóveda', // Command palette: Opens a modal to choose a different vault profile (English: Switch vault profile)
         selectVaultProfile1: 'Cambiar al perfil de bóveda 1', // Command palette: Activates the first vault profile without opening the modal (English: Select vault profile 1)

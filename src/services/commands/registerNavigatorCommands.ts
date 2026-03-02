@@ -785,6 +785,19 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
         }
     });
 
+    // Command to toggle dual-pane orientation between horizontal and vertical
+    plugin.addCommand({
+        id: 'toggle-dual-pane-orientation',
+        name: strings.commands.toggleDualPaneOrientation,
+        callback: () => {
+            runAsyncAction(async () => {
+                await plugin.activateView();
+                const nextOrientation = plugin.getDualPaneOrientation() === 'vertical' ? 'horizontal' : 'vertical';
+                await plugin.setDualPaneOrientation(nextOrientation);
+            });
+        }
+    });
+
     // Command to toggle showing the calendar overlay in the navigation pane
     plugin.addCommand({
         id: 'toggle-calendar',

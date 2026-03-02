@@ -739,6 +739,7 @@ export const STRINGS_AR = {
         search: 'بحث', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'بحث في جذر الخزنة', // Command palette: Selects the vault root folder and focuses search (English: Search in vault root)
         toggleDualPane: 'تبديل تخطيط اللوحتين', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
+        toggleDualPaneOrientation: 'تبديل اتجاه اللوحتين', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'تبديل التقويم', // Command palette: Toggles showing the calendar overlay in the navigation pane (English: Toggle calendar)
         selectVaultProfile: 'اختيار ملف الخزنة', // Command palette: Opens a modal to choose a different vault profile (English: Select vault profile)
         selectVaultProfile1: 'اختيار ملف الخزنة 1', // Command palette: Activates the first vault profile without opening the modal (English: Select vault profile 1)

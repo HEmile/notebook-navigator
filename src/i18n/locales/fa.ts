@@ -741,6 +741,7 @@ export const STRINGS_FA = {
         search: 'جستجو',
         searchVaultRoot: 'جستجو در ریشه خزانه',
         toggleDualPane: 'تغییر نمای پنل دوگانه',
+        toggleDualPaneOrientation: 'تغییر جهت پنل دوگانه', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'تغییر تقویم',
         selectVaultProfile: 'انتخاب پروفایل خزانه',
         selectVaultProfile1: 'انتخاب پروفایل خزانه ۱',

@@ -80,6 +80,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.4.4',
         date: '2026-03-05',
         showOnUpdate: false,
+        new: [
+            'New command: ==Toggle dual pane orientation== to quickly change orientation between horizontal and vertical dual panes.',
+        ],
         fixed: [
             'Fixed an issue where deleting the active note could trigger "file not found" errors in Linter when "Lint on Focused File Change" is enabled.',
             'Fixed an issue where disabling "Show icons for shortcuts and recent items" also disabled the icon for the Properties root virtual folder.',

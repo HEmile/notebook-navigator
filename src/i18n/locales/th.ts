@@ -737,6 +737,7 @@ export const STRINGS_TH = {
         search: 'ค้นหา',
         searchVaultRoot: 'ค้นหาในรูทห้องนิรภัย',
         toggleDualPane: 'สลับรูปแบบแผงคู่',
+        toggleDualPaneOrientation: 'สลับทิศทางแผงคู่', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'สลับปฏิทิน',
         selectVaultProfile: 'เลือกโปรไฟล์ห้องนิรภัย',
         selectVaultProfile1: 'เลือกโปรไฟล์ห้องนิรภัย 1',

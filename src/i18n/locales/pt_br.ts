@@ -743,6 +743,7 @@ export const STRINGS_PT_BR = {
         search: 'Pesquisar',
         searchVaultRoot: 'Pesquisar na raiz do cofre',
         toggleDualPane: 'Alternar layout de painel duplo',
+        toggleDualPaneOrientation: 'Alternar orientação do painel duplo', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
         toggleCalendar: 'Alternar calendário',
         selectVaultProfile: 'Alterar perfil do cofre',
         selectVaultProfile1: 'Alterar para o perfil do cofre 1',
