@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
     compareByAlphaSortOrder,
+    getEffectiveSortOption,
     resolveFolderChildSortOrder,
     sortFiles,
     shouldRefreshOnFileModifyForSort,
     shouldRefreshOnMetadataChangeForSort
 } from '../../src/utils/sortUtils';
 import type { AlphaSortOrder } from '../../src/settings';
+import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
+import { ItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../src/types';
+import { buildPropertyKeyNodeId } from '../../src/utils/propertyTree';
 import { createTestTFile } from './createTestTFile';
 
 function createFolderSortSettings(folderSortOrder: AlphaSortOrder, overrides: Record<string, AlphaSortOrder> = {}) {
@@ -408,5 +412,39 @@ describe('folder child sort order', () => {
             '/': 'alpha-desc'
         });
         expect(resolveFolderChildSortOrder(settings, '/')).toBe('alpha-desc');
+    });
+});
+
+describe('getEffectiveSortOption', () => {
+    it('returns a property-specific sort override for selected property nodes', () => {
+        const propertyNodeId = buildPropertyKeyNodeId('status');
+        const settings = structuredClone(DEFAULT_SETTINGS);
+        settings.defaultFolderSort = 'modified-desc';
+        settings.propertySortOverrides = {
+            [propertyNodeId]: 'title-asc'
+        };
+
+        const effective = getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, propertyNodeId);
+        expect(effective).toBe('title-asc');
+    });
+
+    it('returns default sort when property selection has no override', () => {
+        const settings = structuredClone(DEFAULT_SETTINGS);
+        settings.defaultFolderSort = 'created-asc';
+        settings.propertySortOverrides = {};
+
+        const effective = getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, buildPropertyKeyNodeId('status'));
+        expect(effective).toBe('created-asc');
+    });
+
+    it('supports a custom sort override on the properties root selection', () => {
+        const settings = structuredClone(DEFAULT_SETTINGS);
+        settings.defaultFolderSort = 'modified-desc';
+        settings.propertySortOverrides = {
+            [PROPERTIES_ROOT_VIRTUAL_FOLDER_ID]: 'filename-asc'
+        };
+
+        const effective = getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID);
+        expect(effective).toBe('filename-asc');
     });
 });

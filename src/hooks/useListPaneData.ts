@@ -221,6 +221,7 @@ export function useListPaneData({
             noteGrouping: settings.noteGrouping,
             folderAppearances: settings.folderAppearances,
             tagAppearances: settings.tagAppearances,
+            propertyAppearances: settings.propertyAppearances,
             folderSortOrder: settings.folderSortOrder,
             folderTreeSortOverrides: settings.folderTreeSortOverrides
         }),
@@ -234,7 +235,8 @@ export function useListPaneData({
             settings.showFileTags,
             settings.showPinnedGroupHeader,
             settings.showTags,
-            settings.tagAppearances
+            settings.tagAppearances,
+            settings.propertyAppearances
         ]
     );
 
@@ -242,8 +244,11 @@ export function useListPaneData({
         if (selectionType === ItemType.TAG && selectedTag) {
             return getEffectiveSortOption(settings, ItemType.TAG, null, selectedTag);
         }
+        if (selectionType === ItemType.PROPERTY && selectedProperty) {
+            return getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, selectedProperty);
+        }
         return getEffectiveSortOption(settings, ItemType.FOLDER, selectedFolder, selectedTag);
-    }, [selectionType, selectedFolder, selectedTag, settings]);
+    }, [selectionType, selectedFolder, selectedTag, selectedProperty, settings]);
     const activePropertyFields = getActivePropertyFields(settings);
 
     /**
@@ -297,6 +302,7 @@ export function useListPaneData({
         settings.showProperties,
         settings.folderSortOverrides,
         settings.tagSortOverrides,
+        settings.propertySortOverrides,
         propertyTreeService,
         includeDescendantNotes,
         showHiddenItems,
@@ -780,11 +786,13 @@ export function useListPaneData({
             settings: {
                 noteGrouping: listConfig.noteGrouping,
                 folderAppearances: listConfig.folderAppearances,
-                tagAppearances: listConfig.tagAppearances
+                tagAppearances: listConfig.tagAppearances,
+                propertyAppearances: listConfig.propertyAppearances
             },
             selectionType: selectionType ?? undefined,
             folderPath: selectedFolder ? selectedFolder.path : null,
-            tag: selectedTag ?? null
+            tag: selectedTag ?? null,
+            propertyNodeId: selectedProperty ?? null
         });
         const groupingMode = groupingInfo.effectiveGrouping;
         // Date grouping is only applied when sorting by date
@@ -978,6 +986,7 @@ export function useListPaneData({
         selectionType,
         selectedFolder,
         selectedTag,
+        selectedProperty,
         getFileTimestamps,
         searchMetaMap,
         sortOption,

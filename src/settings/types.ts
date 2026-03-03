@@ -484,7 +484,9 @@ export interface NotebookNavigatorSettings {
     propertyIcons: Record<string, string>;
     propertyColors: Record<string, string>;
     propertyBackgroundColors: Record<string, string>;
+    propertySortOverrides: Record<string, SortOption>;
     propertyTreeSortOverrides: Record<string, AlphaSortOrder>;
+    propertyAppearances: Record<string, FolderAppearance>;
     navigationSeparators: Record<string, boolean>;
     userColors: string[];
     lastShownVersion: string;

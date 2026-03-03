@@ -743,7 +743,7 @@ export function getFilesForProperty(
         });
     })();
 
-    const sortOption = getEffectiveSortOption(settings, ItemType.PROPERTY, null, null);
+    const sortOption = getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, propertyNodeId);
     sortNavigationFiles(matchedFiles, settings, app, sortOption);
 
     return applyPinnedOrdering(matchedFiles, settings, 'property');

@@ -175,22 +175,27 @@ function compareDates(a: TFile, b: TFile, getDate: (file: TFile) => number, desc
 /**
  * Determines the effective sort option for a given context
  * @param settings - Plugin settings
- * @param selectionType - Whether folder or tag is selected
+ * @param selectionType - Active navigation scope
  * @param selectedFolder - The currently selected folder (if any)
  * @param selectedTag - The currently selected tag (if any)
+ * @param selectedProperty - The currently selected property node id (if any)
  * @returns The sort option to use
  */
 export function getEffectiveSortOption(
     settings: NotebookNavigatorSettings,
     selectionType: NavigationItemType,
     selectedFolder: TFolder | null,
-    selectedTag?: string | null
+    selectedTag?: string | null,
+    selectedProperty?: string | null
 ): SortOption {
     if (selectionType === ItemType.FOLDER && selectedFolder && settings.folderSortOverrides?.[selectedFolder.path]) {
         return settings.folderSortOverrides[selectedFolder.path];
     }
     if (selectionType === ItemType.TAG && selectedTag && settings.tagSortOverrides?.[selectedTag]) {
         return settings.tagSortOverrides[selectedTag];
+    }
+    if (selectionType === ItemType.PROPERTY && selectedProperty && settings.propertySortOverrides?.[selectedProperty]) {
+        return settings.propertySortOverrides[selectedProperty];
     }
     return settings.defaultFolderSort;
 }

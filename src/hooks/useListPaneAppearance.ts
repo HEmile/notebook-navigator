@@ -78,7 +78,7 @@ function getVisibilityForMode(mode: ListDisplayMode, settings: NotebookNavigator
  */
 export function useListPaneAppearance() {
     const settings = useSettingsState();
-    const { selectedFolder, selectedTag, selectionType } = useSelectionState();
+    const { selectedFolder, selectedTag, selectedProperty, selectionType } = useSelectionState();
 
     return useMemo(() => {
         const defaultMode = getDefaultListMode(settings);
@@ -135,6 +135,23 @@ export function useListPaneAppearance() {
             };
         }
 
+        // For properties
+        if (selectionType === ItemType.PROPERTY && selectedProperty) {
+            const propertyAppearance = settings.propertyAppearances?.[selectedProperty];
+            const grouping = resolveListGrouping({
+                settings,
+                selectionType,
+                propertyNodeId: selectedProperty
+            });
+
+            const appearance = buildAppearance(propertyAppearance);
+
+            return {
+                ...appearance,
+                groupBy: grouping.effectiveGrouping
+            };
+        }
+
         // Default (no selection or other selection types)
         // Resolve default grouping mode when no folder or tag is selected
         const grouping = resolveListGrouping({ settings });
@@ -143,5 +160,5 @@ export function useListPaneAppearance() {
             ...appearance,
             groupBy: grouping.effectiveGrouping
         };
-    }, [settings, selectedFolder, selectedTag, selectionType]);
+    }, [settings, selectedFolder, selectedTag, selectedProperty, selectionType]);
 }

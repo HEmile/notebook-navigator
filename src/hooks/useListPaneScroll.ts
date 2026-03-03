@@ -55,6 +55,7 @@ import type { ListPaneItem } from '../types/virtualization';
 import type { NotebookNavigatorSettings } from '../settings';
 import type { NotePropertyType } from '../settings/types';
 import type { SelectionState } from '../context/SelectionContext';
+import { getEffectiveSortOption } from '../utils/sortUtils';
 import { calculateCompactListMetrics } from '../utils/listPaneMetrics';
 import { getPropertyRowCount, getListPaneMeasurements, shouldShowFeatureImageArea } from '../utils/listPaneMeasurements';
 import type { PropertySelectionNodeId } from '../utils/propertyTree';
@@ -777,22 +778,10 @@ export function useListPaneScroll({
      * Maintains scroll position on the selected file.
      * Effect includes all dependencies but only scrolls when config actually changes.
      */
-    // Calculate effective sort order based on folder/tag overrides or default
-    const { defaultFolderSort, folderSortOverrides, tagSortOverrides } = settings;
+    // Calculate effective sort order based on current selection and custom overrides
     const effectiveSort = useMemo(() => {
-        if (
-            selectionState.selectionType === 'folder' &&
-            selectedFolder &&
-            folderSortOverrides &&
-            folderSortOverrides[selectedFolder.path]
-        ) {
-            return folderSortOverrides[selectedFolder.path];
-        }
-        if (selectionState.selectionType === 'tag' && selectedTag && tagSortOverrides && tagSortOverrides[selectedTag]) {
-            return tagSortOverrides[selectedTag];
-        }
-        return defaultFolderSort;
-    }, [defaultFolderSort, folderSortOverrides, tagSortOverrides, selectionState.selectionType, selectedFolder, selectedTag]);
+        return getEffectiveSortOption(settings, selectionState.selectionType, selectedFolder, selectedTag, selectedProperty);
+    }, [settings, selectionState.selectionType, selectedFolder, selectedTag, selectedProperty]);
     useEffect(() => {
         if (!rowVirtualizer || !isScrollContainerReady) {
             return;

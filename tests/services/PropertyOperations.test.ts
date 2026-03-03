@@ -23,6 +23,7 @@ import type { NotebookNavigatorSettings } from '../../src/settings';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import { createTestTFile } from '../utils/createTestTFile';
 import { getActivePropertyFields, setActivePropertyFields } from '../../src/utils/vaultProfiles';
+import { buildPropertyKeyNodeId, buildPropertyValueNodeId } from '../../src/utils/propertyTree';
 
 class TestPropertyOperations extends PropertyOperations {
     public renameSettings(oldKeyNormalized: string, newKeyDisplay: string): Promise<void> {
@@ -100,6 +101,109 @@ describe('PropertyOperations settings updates', () => {
         await operations.renameSettings('status', 'State');
 
         expect(saveSettingsAndUpdate).toHaveBeenCalledTimes(0);
+    });
+
+    it('migrates property metadata records on key rename', async () => {
+        const oldKeyNodeId = buildPropertyKeyNodeId('status');
+        const oldValueNodeId = buildPropertyValueNodeId('status', 'todo');
+        const newKeyNodeId = buildPropertyKeyNodeId('state');
+        const newValueNodeId = buildPropertyValueNodeId('state', 'todo');
+
+        settings.propertyColors = {
+            [oldKeyNodeId]: '#111111',
+            [newKeyNodeId]: '#999999'
+        };
+        settings.propertyBackgroundColors = {
+            [oldValueNodeId]: '#222222'
+        };
+        settings.propertyIcons = {
+            [oldValueNodeId]: 'lucide-check'
+        };
+        settings.propertySortOverrides = {
+            [oldKeyNodeId]: 'title-asc'
+        };
+        settings.propertyAppearances = {
+            [oldKeyNodeId]: { groupBy: 'date' }
+        };
+        settings.propertyTreeSortOverrides = {
+            [oldKeyNodeId]: 'alpha-desc'
+        };
+
+        await operations.renameSettings('status', 'State');
+
+        expect(saveSettingsAndUpdate).toHaveBeenCalledTimes(1);
+        expect(settings.propertyColors).toEqual({
+            [newKeyNodeId]: '#111111'
+        });
+        expect(settings.propertyBackgroundColors).toEqual({
+            [newValueNodeId]: '#222222'
+        });
+        expect(settings.propertyIcons).toEqual({
+            [newValueNodeId]: 'lucide-check'
+        });
+        expect(settings.propertySortOverrides).toEqual({
+            [newKeyNodeId]: 'title-asc'
+        });
+        expect(settings.propertyAppearances).toEqual({
+            [newKeyNodeId]: { groupBy: 'date' }
+        });
+        expect(settings.propertyTreeSortOverrides).toEqual({
+            [newKeyNodeId]: 'alpha-desc'
+        });
+    });
+
+    it('removes property metadata records on key delete', async () => {
+        const deletedKeyNodeId = buildPropertyKeyNodeId('status');
+        const deletedValueNodeId = buildPropertyValueNodeId('status', 'todo');
+        const keptKeyNodeId = buildPropertyKeyNodeId('priority');
+        const keptValueNodeId = buildPropertyValueNodeId('priority', 'high');
+
+        settings.propertyColors = {
+            [deletedKeyNodeId]: '#111111',
+            [keptKeyNodeId]: '#333333'
+        };
+        settings.propertyBackgroundColors = {
+            [deletedValueNodeId]: '#222222',
+            [keptValueNodeId]: '#444444'
+        };
+        settings.propertyIcons = {
+            [deletedValueNodeId]: 'lucide-check',
+            [keptValueNodeId]: 'lucide-flag'
+        };
+        settings.propertySortOverrides = {
+            [deletedKeyNodeId]: 'title-asc',
+            [keptKeyNodeId]: 'title-desc'
+        };
+        settings.propertyAppearances = {
+            [deletedKeyNodeId]: { groupBy: 'date' },
+            [keptKeyNodeId]: { groupBy: 'none' }
+        };
+        settings.propertyTreeSortOverrides = {
+            [deletedKeyNodeId]: 'alpha-desc',
+            [keptKeyNodeId]: 'alpha-asc'
+        };
+
+        await operations.deleteSettings('status');
+
+        expect(saveSettingsAndUpdate).toHaveBeenCalledTimes(1);
+        expect(settings.propertyColors).toEqual({
+            [keptKeyNodeId]: '#333333'
+        });
+        expect(settings.propertyBackgroundColors).toEqual({
+            [keptValueNodeId]: '#444444'
+        });
+        expect(settings.propertyIcons).toEqual({
+            [keptValueNodeId]: 'lucide-flag'
+        });
+        expect(settings.propertySortOverrides).toEqual({
+            [keptKeyNodeId]: 'title-desc'
+        });
+        expect(settings.propertyAppearances).toEqual({
+            [keptKeyNodeId]: { groupBy: 'none' }
+        });
+        expect(settings.propertyTreeSortOverrides).toEqual({
+            [keptKeyNodeId]: 'alpha-asc'
+        });
     });
 
     it('does not finalize rename when no markdown files are processed', async () => {

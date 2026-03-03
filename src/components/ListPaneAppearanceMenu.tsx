@@ -24,15 +24,24 @@ import { NotebookNavigatorSettings } from '../settings';
 import { ItemType } from '../types';
 import { resolveListGrouping } from '../utils/listGrouping';
 import { runAsyncAction } from '../utils/async';
+import { ensureRecord, sanitizeRecord } from '../utils/recordUtils';
 import { resolveUXIconForMenu } from '../utils/uxIcons';
+import type { PropertySelectionNodeId } from '../utils/propertyTree';
 
 interface AppearanceMenuProps {
     event: MouseEvent;
     settings: NotebookNavigatorSettings;
     selectedFolder: TFolder | null;
     selectedTag?: string | null;
+    selectedProperty?: PropertySelectionNodeId | null;
     selectionType?: ItemType;
     updateSettings: (updater: (settings: NotebookNavigatorSettings) => void) => Promise<void>;
+}
+
+interface AppearanceRecordAccessor {
+    key: string;
+    getRecord: (settings: NotebookNavigatorSettings) => Record<string, FolderAppearance> | undefined;
+    setRecord: (settings: NotebookNavigatorSettings, next: Record<string, FolderAppearance>) => void;
 }
 
 export function showListPaneAppearanceMenu({
@@ -40,10 +49,42 @@ export function showListPaneAppearanceMenu({
     settings,
     selectedFolder,
     selectedTag,
+    selectedProperty,
     selectionType,
     updateSettings
 }: AppearanceMenuProps) {
     const defaultMode: ListDisplayMode = getDefaultListMode(settings);
+    const resolveAppearanceAccessor = (): AppearanceRecordAccessor | null => {
+        if (selectionType === ItemType.TAG && selectedTag) {
+            return {
+                key: selectedTag,
+                getRecord: targetSettings => targetSettings.tagAppearances,
+                setRecord: (targetSettings, next) => {
+                    targetSettings.tagAppearances = next;
+                }
+            };
+        }
+        if (selectionType === ItemType.FOLDER && selectedFolder) {
+            return {
+                key: selectedFolder.path,
+                getRecord: targetSettings => targetSettings.folderAppearances,
+                setRecord: (targetSettings, next) => {
+                    targetSettings.folderAppearances = next;
+                }
+            };
+        }
+        if (selectionType === ItemType.PROPERTY && selectedProperty) {
+            return {
+                key: selectedProperty,
+                getRecord: targetSettings => targetSettings.propertyAppearances,
+                setRecord: (targetSettings, next) => {
+                    targetSettings.propertyAppearances = next;
+                }
+            };
+        }
+        return null;
+    };
+    const appearanceAccessor = resolveAppearanceAccessor();
 
     const updateAppearance = (updates: Partial<FolderAppearance>) => {
         const normalizeAppearance = (appearance: FolderAppearance) => {
@@ -59,52 +100,31 @@ export function showListPaneAppearanceMenu({
             return normalized;
         };
 
-        if (selectionType === ItemType.TAG && selectedTag) {
-            // Update tag appearance
-            runAsyncAction(() =>
-                updateSettings(s => {
-                    const newAppearances = { ...s.tagAppearances };
-                    const currentAppearance = newAppearances[selectedTag] || {};
-                    const normalizedAppearance = normalizeAppearance({ ...currentAppearance, ...updates });
-                    if (Object.keys(normalizedAppearance).length === 0) {
-                        delete newAppearances[selectedTag];
-                    } else {
-                        newAppearances[selectedTag] = normalizedAppearance;
-                    }
-
-                    s.tagAppearances = newAppearances;
-                })
-            );
-        } else if (selectionType === ItemType.FOLDER && selectedFolder) {
-            // Update folder appearance
-            const folderPath = selectedFolder.path;
-            runAsyncAction(() =>
-                updateSettings(s => {
-                    const newAppearances = { ...s.folderAppearances };
-                    const currentAppearance = newAppearances[folderPath] || {};
-                    const normalizedAppearance = normalizeAppearance({ ...currentAppearance, ...updates });
-                    if (Object.keys(normalizedAppearance).length === 0) {
-                        delete newAppearances[folderPath];
-                    } else {
-                        newAppearances[folderPath] = normalizedAppearance;
-                    }
-
-                    s.folderAppearances = newAppearances;
-                })
-            );
+        if (!appearanceAccessor) {
+            return;
         }
+
+        runAsyncAction(() =>
+            updateSettings(s => {
+                const next = sanitizeRecord(ensureRecord(appearanceAccessor.getRecord(s)));
+                const currentAppearance = next[appearanceAccessor.key] || {};
+                const normalizedAppearance = normalizeAppearance({ ...currentAppearance, ...updates });
+                if (Object.keys(normalizedAppearance).length === 0) {
+                    delete next[appearanceAccessor.key];
+                } else {
+                    next[appearanceAccessor.key] = normalizedAppearance;
+                }
+
+                appearanceAccessor.setRecord(s, next);
+            })
+        );
     };
 
     const menu = new Menu();
 
     // Get custom appearance settings for the selected folder/tag
     // Will be undefined if no custom appearance has been set
-    let appearance: FolderAppearance | undefined;
-    if (selectionType === ItemType.TAG && selectedTag) {
-        appearance = settings.tagAppearances?.[selectedTag];
-    } else if (selectionType === ItemType.FOLDER && selectedFolder) {
-        appearance = settings.folderAppearances?.[selectedFolder.path];
-    }
+    const appearance = appearanceAccessor ? appearanceAccessor.getRecord(settings)?.[appearanceAccessor.key] : undefined;
     const effectiveMode = resolveListMode({ appearance, defaultMode });
 
     // Resolve grouping settings to detect custom overrides for this folder/tag
@@ -112,7 +132,8 @@ export function showListPaneAppearanceMenu({
         settings,
         selectionType,
         folderPath: selectedFolder ? selectedFolder.path : null,
-        tag: selectedTag ?? null
+        tag: selectedTag ?? null,
+        propertyNodeId: selectedProperty ?? null
     });
     const hasCustomGroupBy = groupingInfo.hasCustomOverride;
 
@@ -210,9 +231,10 @@ export function showListPaneAppearanceMenu({
 
     const isFolderSelection = selectionType === ItemType.FOLDER && Boolean(selectedFolder);
     const isTagSelection = selectionType === ItemType.TAG && Boolean(selectedTag);
+    const isPropertySelection = selectionType === ItemType.PROPERTY && Boolean(selectedProperty);
 
-    // Add groupBy menu section for folders and tags
-    if (isFolderSelection || isTagSelection) {
+    // Add groupBy menu section for folders, tags, and properties
+    if (isFolderSelection || isTagSelection || isPropertySelection) {
         const getNotePropertyTypeLabel = (type: NotePropertyType): string => {
             switch (type) {
                 case 'wordCount':
@@ -276,7 +298,7 @@ export function showListPaneAppearanceMenu({
                 });
         });
 
-        // Custom grouping options (folders support all three, tags only support none/date)
+        // Custom grouping options (folders support all three, tags and properties only support none/date)
         const groupOptions: ListNoteGroupingOption[] = isFolderSelection ? ['none', 'date', 'folder'] : ['none', 'date'];
         groupOptions.forEach(option => {
             menu.addItem(item => {

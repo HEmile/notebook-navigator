@@ -40,6 +40,7 @@ import {
     MIN_PANE_TRANSITION_DURATION_MS,
     NOTEBOOK_NAVIGATOR_CALENDAR_VIEW,
     NOTEBOOK_NAVIGATOR_VIEW,
+    PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
     STORAGE_KEYS,
     type DualPaneOrientation,
     type UXPreferences,
@@ -121,6 +122,7 @@ import {
 } from './settings/types';
 import { clearHiddenTagPatternCache } from './utils/tagPrefixMatcher';
 import { getPathPatternCacheKey } from './utils/pathPatternMatcher';
+import { normalizePropertyKeyNodeId, normalizePropertyNodeId } from './utils/propertyTree';
 import { sanitizeUIScale } from './utils/uiScale';
 import { MAX_RECENT_COLORS } from './constants/colorPalette';
 import { NOTEBOOK_NAVIGATOR_ICON_ID, NOTEBOOK_NAVIGATOR_ICON_SVG } from './constants/notebookNavigatorIcon';
@@ -909,12 +911,11 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.dualPaneOrientationPreference = this.settings.dualPaneOrientation;
         const storedLocalStorageVersion = localStorage.get<number>(STORAGE_KEYS.localStorageVersionKey);
         this.loadUXPreferences();
+        this.normalizeTagSettings();
+        this.normalizePropertySettings();
 
         // Handle first launch initialization
         if (isFirstLaunch) {
-            // Normalize all tag settings to lowercase
-            this.normalizeTagSettings();
-
             // Clear all localStorage data (if plugin was reinstalled)
             this.clearAllLocalStorage();
 
@@ -1911,11 +1912,13 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.settings.propertyBackgroundColors = sanitizeStringMap(this.settings.propertyBackgroundColors);
         this.settings.folderSortOverrides = sanitizeSortMap(this.settings.folderSortOverrides);
         this.settings.tagSortOverrides = sanitizeSortMap(this.settings.tagSortOverrides);
+        this.settings.propertySortOverrides = sanitizeSortMap(this.settings.propertySortOverrides);
         this.settings.folderTreeSortOverrides = sanitizeAlphaSortOrderMap(this.settings.folderTreeSortOverrides);
         this.settings.tagTreeSortOverrides = sanitizeAlphaSortOrderMap(this.settings.tagTreeSortOverrides);
         this.settings.propertyTreeSortOverrides = sanitizeAlphaSortOrderMap(this.settings.propertyTreeSortOverrides);
         this.settings.folderAppearances = sanitizeAppearanceMap(this.settings.folderAppearances);
         this.settings.tagAppearances = sanitizeAppearanceMap(this.settings.tagAppearances);
+        this.settings.propertyAppearances = sanitizeAppearanceMap(this.settings.propertyAppearances);
         this.settings.navigationSeparators = sanitizeBooleanMap(this.settings.navigationSeparators);
         this.settings.externalIconProviders = sanitizeBooleanMap(this.settings.externalIconProviders);
         this.settings.syncModes = sanitizeSettingsSyncMap(this.settings.syncModes);
@@ -2061,6 +2064,66 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
                 profile.hiddenTags = normalizeArray(profile.hiddenTags);
                 profile.hiddenFileTags = normalizeArray(profile.hiddenFileTags);
             });
+        }
+    }
+
+    /**
+     * Normalizes property-related settings to canonical property node ids.
+     */
+    private normalizePropertySettings() {
+        const normalizePropertyNodeRecord = <T>(record: Record<string, T> | undefined): Record<string, T> => {
+            if (!record) return Object.create(null) as Record<string, T>;
+
+            const normalized = Object.create(null) as Record<string, T>;
+            const sanitized = sanitizeRecord(record);
+            for (const [key, value] of Object.entries(sanitized)) {
+                const normalizedKey =
+                    key === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID ? PROPERTIES_ROOT_VIRTUAL_FOLDER_ID : normalizePropertyNodeId(key);
+                if (!normalizedKey) {
+                    continue;
+                }
+                normalized[normalizedKey] = value;
+            }
+            return normalized;
+        };
+
+        const normalizePropertyKeyRecord = <T>(record: Record<string, T> | undefined): Record<string, T> => {
+            if (!record) return Object.create(null) as Record<string, T>;
+
+            const normalized = Object.create(null) as Record<string, T>;
+            const sanitized = sanitizeRecord(record);
+            for (const [key, value] of Object.entries(sanitized)) {
+                const normalizedKey = normalizePropertyKeyNodeId(key);
+                if (!normalizedKey) {
+                    continue;
+                }
+                normalized[normalizedKey] = value;
+            }
+            return normalized;
+        };
+
+        if (this.settings.propertyColors) {
+            this.settings.propertyColors = normalizePropertyNodeRecord(this.settings.propertyColors);
+        }
+
+        if (this.settings.propertyBackgroundColors) {
+            this.settings.propertyBackgroundColors = normalizePropertyNodeRecord(this.settings.propertyBackgroundColors);
+        }
+
+        if (this.settings.propertyIcons) {
+            this.settings.propertyIcons = normalizePropertyNodeRecord(this.settings.propertyIcons);
+        }
+
+        if (this.settings.propertySortOverrides) {
+            this.settings.propertySortOverrides = normalizePropertyNodeRecord(this.settings.propertySortOverrides);
+        }
+
+        if (this.settings.propertyTreeSortOverrides) {
+            this.settings.propertyTreeSortOverrides = normalizePropertyKeyRecord(this.settings.propertyTreeSortOverrides);
+        }
+
+        if (this.settings.propertyAppearances) {
+            this.settings.propertyAppearances = normalizePropertyNodeRecord(this.settings.propertyAppearances);
         }
     }
 

@@ -23,11 +23,12 @@ import { strings } from '../i18n';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { PropertyKeyRenameModal } from '../modals/PropertyKeyRenameModal';
 import { LIMITS } from '../constants/limits';
-import { casefold } from '../utils/recordUtils';
+import { casefold, sanitizeRecord } from '../utils/recordUtils';
 import { showNotice } from '../utils/noticeUtils';
 import { runAsyncAction } from '../utils/async';
 import { removePropertyField, renamePropertyField } from '../utils/propertyUtils';
 import { isRecord } from '../utils/typeGuards';
+import { buildPropertyKeyNodeId } from '../utils/propertyTree';
 import { buildUsageSummaryFromPaths, renderAffectedFilesPreview, yieldToEventLoop } from './operations/OperationBatchUtils';
 import { PropertyFileMutations } from './propertyOperations/PropertyFileMutations';
 import type { PropertyKeyDeleteEventPayload, PropertyKeyRenameEventPayload } from './propertyOperations/types';
@@ -37,6 +38,51 @@ export type { PropertyKeyRenameEventPayload, PropertyKeyDeleteEventPayload } fro
 
 const MUTATION_BATCH_SIZE = LIMITS.operations.metadataMutationYieldBatchSize;
 type RenameConflictSnapshot = Map<string, Set<string>>;
+type PropertyMetadataRecord = Record<string, unknown>;
+interface PropertyMetadataAccessor {
+    read: (settings: NotebookNavigatorSettings) => PropertyMetadataRecord | undefined;
+    write: (settings: NotebookNavigatorSettings, next: PropertyMetadataRecord) => void;
+}
+const PROPERTY_NODE_METADATA_ACCESSORS: readonly PropertyMetadataAccessor[] = [
+    {
+        read: settings => settings.propertyColors,
+        write: (settings, next) => {
+            settings.propertyColors = next as NotebookNavigatorSettings['propertyColors'];
+        }
+    },
+    {
+        read: settings => settings.propertyBackgroundColors,
+        write: (settings, next) => {
+            settings.propertyBackgroundColors = next as NotebookNavigatorSettings['propertyBackgroundColors'];
+        }
+    },
+    {
+        read: settings => settings.propertyIcons,
+        write: (settings, next) => {
+            settings.propertyIcons = next as NotebookNavigatorSettings['propertyIcons'];
+        }
+    },
+    {
+        read: settings => settings.propertySortOverrides,
+        write: (settings, next) => {
+            settings.propertySortOverrides = next as NotebookNavigatorSettings['propertySortOverrides'];
+        }
+    },
+    {
+        read: settings => settings.propertyAppearances,
+        write: (settings, next) => {
+            settings.propertyAppearances = next as NotebookNavigatorSettings['propertyAppearances'];
+        }
+    }
+];
+const PROPERTY_KEY_METADATA_ACCESSORS: readonly PropertyMetadataAccessor[] = [
+    {
+        read: settings => settings.propertyTreeSortOverrides,
+        write: (settings, next) => {
+            settings.propertyTreeSortOverrides = next as NotebookNavigatorSettings['propertyTreeSortOverrides'];
+        }
+    }
+];
 
 /**
  * Facade for property key rename/delete operations across the vault.
@@ -349,10 +395,169 @@ export class PropertyOperations {
         return true;
     }
 
+    private renamePropertyNodeMetadataRecord<T>(
+        record: Record<string, T> | undefined,
+        oldKeyNodeId: string,
+        newKeyNodeId: string
+    ): { changed: boolean; next: Record<string, T> | undefined } {
+        if (!record || oldKeyNodeId === newKeyNodeId) {
+            return { changed: false, next: record };
+        }
+
+        const oldValuePrefix = `${oldKeyNodeId}=`;
+        const keys = Object.keys(record);
+        let next: Record<string, T> | undefined;
+        let changed = false;
+
+        keys.forEach(key => {
+            if (key !== oldKeyNodeId && !key.startsWith(oldValuePrefix)) {
+                return;
+            }
+
+            if (!next) {
+                next = sanitizeRecord(record);
+            }
+
+            if (key === oldKeyNodeId) {
+                next[newKeyNodeId] = next[key];
+                delete next[key];
+                changed = true;
+                return;
+            }
+
+            if (key.startsWith(oldValuePrefix)) {
+                const mappedKey = `${newKeyNodeId}${key.slice(oldKeyNodeId.length)}`;
+                next[mappedKey] = next[key];
+                delete next[key];
+                changed = true;
+            }
+        });
+
+        return changed && next ? { changed: true, next } : { changed: false, next: record };
+    }
+
+    private renamePropertyKeyMetadataRecord<T>(
+        record: Record<string, T> | undefined,
+        oldKeyNodeId: string,
+        newKeyNodeId: string
+    ): { changed: boolean; next: Record<string, T> | undefined } {
+        if (!record || oldKeyNodeId === newKeyNodeId || !Object.prototype.hasOwnProperty.call(record, oldKeyNodeId)) {
+            return { changed: false, next: record };
+        }
+
+        const next = sanitizeRecord(record);
+        next[newKeyNodeId] = next[oldKeyNodeId];
+        delete next[oldKeyNodeId];
+        return { changed: true, next };
+    }
+
+    private removePropertyNodeMetadataRecord<T>(
+        record: Record<string, T> | undefined,
+        keyNodeId: string
+    ): { changed: boolean; next: Record<string, T> | undefined } {
+        if (!record) {
+            return { changed: false, next: record };
+        }
+
+        const valuePrefix = `${keyNodeId}=`;
+        const keys = Object.keys(record);
+        let next: Record<string, T> | undefined;
+        let changed = false;
+
+        keys.forEach(key => {
+            if (key !== keyNodeId && !key.startsWith(valuePrefix)) {
+                return;
+            }
+
+            if (!next) {
+                next = sanitizeRecord(record);
+            }
+
+            delete next[key];
+            changed = true;
+        });
+
+        return changed && next ? { changed: true, next } : { changed: false, next: record };
+    }
+
+    private removePropertyKeyMetadataRecord<T>(
+        record: Record<string, T> | undefined,
+        keyNodeId: string
+    ): { changed: boolean; next: Record<string, T> | undefined } {
+        if (!record || !Object.prototype.hasOwnProperty.call(record, keyNodeId)) {
+            return { changed: false, next: record };
+        }
+
+        const next = sanitizeRecord(record);
+        delete next[keyNodeId];
+        return { changed: true, next };
+    }
+
+    private mutatePropertyMetadataRecords(
+        settings: NotebookNavigatorSettings,
+        accessors: readonly PropertyMetadataAccessor[],
+        mutate: (record: PropertyMetadataRecord | undefined) => { changed: boolean; next: PropertyMetadataRecord | undefined }
+    ): boolean {
+        let changed = false;
+        accessors.forEach(accessor => {
+            const result = mutate(accessor.read(settings));
+            if (!result.changed || !result.next) {
+                return;
+            }
+            accessor.write(settings, result.next);
+            changed = true;
+        });
+        return changed;
+    }
+
+    private renamePropertyNodeMetadataFields(settings: NotebookNavigatorSettings, oldKeyNodeId: string, newKeyNodeId: string): boolean {
+        return this.mutatePropertyMetadataRecords(settings, PROPERTY_NODE_METADATA_ACCESSORS, record =>
+            this.renamePropertyNodeMetadataRecord(record, oldKeyNodeId, newKeyNodeId)
+        );
+    }
+
+    private renamePropertyKeyMetadataFields(settings: NotebookNavigatorSettings, oldKeyNodeId: string, newKeyNodeId: string): boolean {
+        return this.mutatePropertyMetadataRecords(settings, PROPERTY_KEY_METADATA_ACCESSORS, record =>
+            this.renamePropertyKeyMetadataRecord(record, oldKeyNodeId, newKeyNodeId)
+        );
+    }
+
+    private removePropertyNodeMetadataFields(settings: NotebookNavigatorSettings, keyNodeId: string): boolean {
+        return this.mutatePropertyMetadataRecords(settings, PROPERTY_NODE_METADATA_ACCESSORS, record =>
+            this.removePropertyNodeMetadataRecord(record, keyNodeId)
+        );
+    }
+
+    private removePropertyKeyMetadataFields(settings: NotebookNavigatorSettings, keyNodeId: string): boolean {
+        return this.mutatePropertyMetadataRecords(settings, PROPERTY_KEY_METADATA_ACCESSORS, record =>
+            this.removePropertyKeyMetadataRecord(record, keyNodeId)
+        );
+    }
+
+    private migratePropertyMetadataAfterRename(
+        settings: NotebookNavigatorSettings,
+        oldKeyNormalized: string,
+        newKeyNormalized: string
+    ): boolean {
+        const oldKeyNodeId = buildPropertyKeyNodeId(oldKeyNormalized);
+        const newKeyNodeId = buildPropertyKeyNodeId(newKeyNormalized);
+        const nodeChanged = this.renamePropertyNodeMetadataFields(settings, oldKeyNodeId, newKeyNodeId);
+        const keyChanged = this.renamePropertyKeyMetadataFields(settings, oldKeyNodeId, newKeyNodeId);
+        return nodeChanged || keyChanged;
+    }
+
+    private removePropertyMetadataForDeletedKey(settings: NotebookNavigatorSettings, normalizedKey: string): boolean {
+        const keyNodeId = buildPropertyKeyNodeId(normalizedKey);
+        const nodeChanged = this.removePropertyNodeMetadataFields(settings, keyNodeId);
+        const keyChanged = this.removePropertyKeyMetadataFields(settings, keyNodeId);
+        return nodeChanged || keyChanged;
+    }
+
     protected async updateSettingsAfterRename(oldKeyNormalized: string, newKeyDisplay: string): Promise<void> {
         const settings = this.getSettings();
         let changed = false;
         const activePropertyFields = getActivePropertyFields(settings);
+        const newKeyNormalized = casefold(newKeyDisplay);
 
         const nextPropertyFields = renamePropertyField(activePropertyFields, oldKeyNormalized, newKeyDisplay, false);
         changed = setActivePropertyFields(settings, nextPropertyFields) || changed;
@@ -360,6 +565,10 @@ export class PropertyOperations {
         if (casefold(settings.propertySortKey) === oldKeyNormalized && settings.propertySortKey !== newKeyDisplay) {
             settings.propertySortKey = newKeyDisplay;
             changed = true;
+        }
+
+        if (newKeyNormalized) {
+            changed = this.migratePropertyMetadataAfterRename(settings, oldKeyNormalized, newKeyNormalized) || changed;
         }
 
         if (changed) {
@@ -379,6 +588,8 @@ export class PropertyOperations {
             settings.propertySortKey = '';
             changed = true;
         }
+
+        changed = this.removePropertyMetadataForDeletedKey(settings, normalizedKey) || changed;
 
         if (changed) {
             await this.saveSettingsAndUpdate();

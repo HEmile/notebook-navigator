@@ -34,6 +34,11 @@ import { runAsyncAction } from '../utils/async';
 import { FILE_VISIBILITY } from '../utils/fileTypeUtils';
 import { findVaultProfileById } from '../utils/vaultProfiles';
 
+type SelectionSortTarget =
+    | { type: typeof ItemType.FOLDER; key: string }
+    | { type: typeof ItemType.TAG; key: string }
+    | { type: typeof ItemType.PROPERTY; key: string };
+
 /**
  * Custom hook that provides shared actions for list pane toolbars.
  * Used by both ListPaneHeader (desktop) and ListToolbar (mobile) to avoid code duplication.
@@ -60,8 +65,20 @@ export function useListActions() {
         hasTagSelection && selectionState.selectedTag !== TAGGED_TAG_ID && selectionState.selectedTag !== UNTAGGED_TAG_ID;
     const hasPropertySelection = selectionState.selectionType === ItemType.PROPERTY && Boolean(selectionState.selectedProperty);
     const hasCreatablePropertySelection = hasPropertySelection && selectionState.selectedProperty !== PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
-    const hasFolderOrTagSelection = hasFolderSelection || hasTagSelection;
+    const hasAppearanceOrSortSelection = hasFolderSelection || hasTagSelection || hasPropertySelection;
     const canCreateNewFile = Boolean(selectionState.selectedFolder) || hasCreatableTagSelection || hasCreatablePropertySelection;
+    const getSelectionSortTarget = useCallback((): SelectionSortTarget | null => {
+        if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
+            return { type: ItemType.FOLDER, key: selectionState.selectedFolder.path };
+        }
+        if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
+            return { type: ItemType.TAG, key: selectionState.selectedTag };
+        }
+        if (selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty) {
+            return { type: ItemType.PROPERTY, key: selectionState.selectedProperty };
+        }
+        return null;
+    }, [selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag, selectionState.selectedProperty]);
 
     const handleNewFile = useCallback(async () => {
         try {
@@ -96,16 +113,77 @@ export function useListActions() {
     ]);
 
     const getCurrentSortOption = useCallback((): SortOption => {
-        return getEffectiveSortOption(settings, selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag);
-    }, [settings, selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag]);
+        return getEffectiveSortOption(
+            settings,
+            selectionState.selectionType,
+            selectionState.selectedFolder,
+            selectionState.selectedTag,
+            selectionState.selectedProperty
+        );
+    }, [
+        settings,
+        selectionState.selectionType,
+        selectionState.selectedFolder,
+        selectionState.selectedTag,
+        selectionState.selectedProperty
+    ]);
 
     const getSortIcon = useCallback(() => {
         return getSortIconName(getCurrentSortOption());
     }, [getCurrentSortOption]);
 
+    const getSelectionSortOverride = useCallback((): SortOption | undefined => {
+        const target = getSelectionSortTarget();
+        if (!target) {
+            return undefined;
+        }
+        if (target.type === ItemType.FOLDER) {
+            return metadataService.getFolderSortOverride(target.key);
+        }
+        if (target.type === ItemType.TAG) {
+            return metadataService.getTagSortOverride(target.key);
+        }
+        return metadataService.getPropertySortOverride(target.key);
+    }, [getSelectionSortTarget, metadataService]);
+
+    const removeSelectionSortOverride = useCallback(async () => {
+        const target = getSelectionSortTarget();
+        if (!target) {
+            return;
+        }
+        if (target.type === ItemType.FOLDER) {
+            await metadataService.removeFolderSortOverride(target.key);
+            return;
+        }
+        if (target.type === ItemType.TAG) {
+            await metadataService.removeTagSortOverride(target.key);
+            return;
+        }
+        await metadataService.removePropertySortOverride(target.key);
+    }, [getSelectionSortTarget, metadataService]);
+
+    const setSelectionSortOverride = useCallback(
+        async (sortOption: SortOption) => {
+            const target = getSelectionSortTarget();
+            if (!target) {
+                return;
+            }
+            if (target.type === ItemType.FOLDER) {
+                await metadataService.setFolderSortOverride(target.key, sortOption);
+                return;
+            }
+            if (target.type === ItemType.TAG) {
+                await metadataService.setTagSortOverride(target.key, sortOption);
+                return;
+            }
+            await metadataService.setPropertySortOverride(target.key, sortOption);
+        },
+        [getSelectionSortTarget, metadataService]
+    );
+
     const handleAppearanceMenu = useCallback(
         (event: React.MouseEvent) => {
-            if (!hasFolderOrTagSelection) {
+            if (!hasAppearanceOrSortSelection) {
                 return;
             }
 
@@ -114,15 +192,17 @@ export function useListActions() {
                 settings,
                 selectedFolder: selectionState.selectedFolder,
                 selectedTag: selectionState.selectedTag,
+                selectedProperty: selectionState.selectedProperty,
                 selectionType: selectionState.selectionType,
                 updateSettings
             });
         },
         [
-            hasFolderOrTagSelection,
+            hasAppearanceOrSortSelection,
             settings,
             selectionState.selectedFolder,
             selectionState.selectedTag,
+            selectionState.selectedProperty,
             selectionState.selectionType,
             updateSettings
         ]
@@ -130,7 +210,7 @@ export function useListActions() {
 
     const handleSortMenu = useCallback(
         (event: React.MouseEvent) => {
-            if (!hasFolderOrTagSelection) {
+            if (!hasAppearanceOrSortSelection) {
                 return;
             }
 
@@ -149,23 +229,15 @@ export function useListActions() {
                 return strings.settings.items.sortNotesBy.options[option];
             };
 
-            const isCustomSort =
-                (hasFolderSelection &&
-                    selectionState.selectedFolder &&
-                    metadataService.getFolderSortOverride(selectionState.selectedFolder.path)) ||
-                (hasTagSelection && selectionState.selectedTag && metadataService.getTagSortOverride(selectionState.selectedTag));
+            const hasSelectionSortOverride = Boolean(getSelectionSortOverride());
 
             menu.addItem(item => {
                 item.setTitle(`${strings.paneHeader.defaultSort}: ${getSortOptionLabel(settings.defaultFolderSort)}`)
-                    .setChecked(!isCustomSort)
+                    .setChecked(!hasSelectionSortOverride)
                     .onClick(() => {
                         // Reset to default sort
                         runAsyncAction(async () => {
-                            if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
-                                await metadataService.removeFolderSortOverride(selectionState.selectedFolder.path);
-                            } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
-                                await metadataService.removeTagSortOverride(selectionState.selectedTag);
-                            }
+                            await removeSelectionSortOverride();
                             app.workspace.requestSaveLayout();
                         });
                     });
@@ -183,15 +255,11 @@ export function useListActions() {
 
                 menu.addItem(item => {
                     item.setTitle(getSortOptionLabel(option))
-                        .setChecked(!!isCustomSort && currentSort === option)
+                        .setChecked(hasSelectionSortOverride && currentSort === option)
                         .onClick(() => {
                             // Apply sort option
                             runAsyncAction(async () => {
-                                if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
-                                    await metadataService.setFolderSortOverride(selectionState.selectedFolder.path, option);
-                                } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
-                                    await metadataService.setTagSortOverride(selectionState.selectedTag, option);
-                                }
+                                await setSelectionSortOverride(option);
                                 app.workspace.requestSaveLayout();
                             });
                         });
@@ -201,15 +269,12 @@ export function useListActions() {
             menu.showAtMouseEvent(event.nativeEvent);
         },
         [
-            hasFolderOrTagSelection,
-            hasFolderSelection,
-            hasTagSelection,
-            selectionState.selectionType,
-            selectionState.selectedFolder,
-            selectionState.selectedTag,
+            hasAppearanceOrSortSelection,
             app,
             getCurrentSortOption,
-            metadataService,
+            getSelectionSortOverride,
+            removeSelectionSortOverride,
+            setSelectionSortOverride,
             settings
         ]
     );
@@ -252,11 +317,7 @@ export function useListActions() {
         settings
     ]);
 
-    const isCustomSort =
-        (hasFolderSelection &&
-            selectionState.selectedFolder &&
-            metadataService.getFolderSortOverride(selectionState.selectedFolder.path)) ||
-        (hasTagSelection && selectionState.selectedTag && metadataService.getTagSortOverride(selectionState.selectedTag));
+    const isCustomSort = Boolean(getSelectionSortOverride());
 
     const defaultMode = getDefaultListMode(settings);
     const hasMeaningfulOverrides = (appearance: FolderAppearance | undefined) => {
@@ -274,12 +335,15 @@ export function useListActions() {
         return hasModeOverride || otherOverrides;
     };
 
-    // Check if folder or tag has custom appearance settings
+    // Check if folder, tag, or property has custom appearance settings
     const hasCustomAppearance =
         (hasFolderSelection &&
             selectionState.selectedFolder &&
             hasMeaningfulOverrides(settings.folderAppearances?.[selectionState.selectedFolder.path])) ||
-        (hasTagSelection && selectionState.selectedTag && hasMeaningfulOverrides(settings.tagAppearances?.[selectionState.selectedTag]));
+        (hasTagSelection && selectionState.selectedTag && hasMeaningfulOverrides(settings.tagAppearances?.[selectionState.selectedTag])) ||
+        (hasPropertySelection &&
+            selectionState.selectedProperty &&
+            hasMeaningfulOverrides(settings.propertyAppearances?.[selectionState.selectedProperty]));
 
     const activeFileVisibility = useMemo(() => {
         return findVaultProfileById(vaultProfiles, vaultProfileId).fileVisibility;
@@ -311,6 +375,7 @@ export function useListActions() {
         handleToggleDescendants,
         getCurrentSortOption,
         getSortIcon,
+        hasAppearanceOrSortSelection,
         isCustomSort,
         hasCustomAppearance,
         descendantsTooltip

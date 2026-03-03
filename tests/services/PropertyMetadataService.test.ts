@@ -26,6 +26,7 @@ import type { CleanupValidators } from '../../src/services/MetadataService';
 import { createDefaultFileData } from '../../src/storage/indexeddb/fileData';
 import { buildPropertyKeyNodeId, buildPropertyValueNodeId } from '../../src/utils/propertyTree';
 import { setActivePropertyFields } from '../../src/utils/vaultProfiles';
+import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../src/types';
 
 class TestSettingsProvider implements ISettingsProvider {
     constructor(public settings: NotebookNavigatorSettings) {}
@@ -59,6 +60,7 @@ function createSettings(): NotebookNavigatorSettings {
     settings.propertyColors = {};
     settings.propertyBackgroundColors = {};
     settings.propertyIcons = {};
+    settings.propertySortOverrides = {};
     settings.propertyTreeSortOverrides = {};
     return settings;
 }
@@ -210,5 +212,47 @@ describe('PropertyMetadataService color inheritance', () => {
             color: undefined,
             background: undefined
         });
+    });
+});
+
+describe('PropertyMetadataService sort overrides', () => {
+    const app = new App();
+
+    it('sets and removes property sort overrides for normalized node ids', async () => {
+        const settings = createSettings();
+        const provider = new TestSettingsProvider(settings);
+        const service = new PropertyMetadataService(app, provider);
+        const normalizedNodeId = buildPropertyKeyNodeId('status');
+
+        await service.setPropertySortOverride('key:Status', 'title-desc');
+        expect(service.getPropertySortOverride(normalizedNodeId)).toBe('title-desc');
+
+        await service.removePropertySortOverride('key:Status');
+        expect(service.getPropertySortOverride(normalizedNodeId)).toBeUndefined();
+        expect(provider.saveSettingsAndUpdate).toHaveBeenCalledTimes(2);
+    });
+
+    it('supports the properties root virtual folder id as a sort target', async () => {
+        const settings = createSettings();
+        const provider = new TestSettingsProvider(settings);
+        const service = new PropertyMetadataService(app, provider);
+
+        await service.setPropertySortOverride(PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, 'filename-asc');
+        expect(service.getPropertySortOverride(PROPERTIES_ROOT_VIRTUAL_FOLDER_ID)).toBe('filename-asc');
+
+        await service.removePropertySortOverride(PROPERTIES_ROOT_VIRTUAL_FOLDER_ID);
+        expect(service.getPropertySortOverride(PROPERTIES_ROOT_VIRTUAL_FOLDER_ID)).toBeUndefined();
+    });
+
+    it('ignores invalid property node ids for sort overrides', async () => {
+        const settings = createSettings();
+        const provider = new TestSettingsProvider(settings);
+        const service = new PropertyMetadataService(app, provider);
+
+        await service.setPropertySortOverride('status', 'title-asc');
+        await service.removePropertySortOverride('status');
+
+        expect(service.getPropertySortOverride('status')).toBeUndefined();
+        expect(provider.saveSettingsAndUpdate).toHaveBeenCalledTimes(0);
     });
 });

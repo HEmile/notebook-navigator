@@ -46,6 +46,7 @@ export function ListToolbar({ isSearchActive, onSearchToggle }: ListToolbarProps
         handleToggleDescendants,
         descendantsTooltip,
         getCurrentSortOption,
+        hasAppearanceOrSortSelection,
         isCustomSort,
         hasCustomAppearance
     } = useListActions();
@@ -56,7 +57,6 @@ export function ListToolbar({ isSearchActive, onSearchToggle }: ListToolbarProps
     const showAppearanceButton = listVisibility.appearance;
     const showNewNoteButton = listVisibility.newNote;
     const hasNavigationSelection = Boolean(selectionState.selectedFolder || selectionState.selectedTag || selectionState.selectedProperty);
-    const hasAppearanceOrSortSelection = Boolean(selectionState.selectedFolder || selectionState.selectedTag);
 
     const leftButtonCount = [showSearchButton, showDescendantsButton, showSortButton, showAppearanceButton].filter(Boolean).length;
     const totalButtonCount = leftButtonCount + (showNewNoteButton ? 1 : 0);
