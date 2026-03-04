@@ -1580,7 +1580,7 @@ export const STRINGS_IT = {
             },
             navRainbowTransitionStyle: {
                 name: 'Stile di transizione',
-                desc: 'Interpolazione utilizzata tra il primo e l\'ultimo colore.',
+                desc: "Interpolazione utilizzata tra il primo e l'ultimo colore.",
                 options: {
                     hue: 'Hue',
                     rgb: 'RGB'
