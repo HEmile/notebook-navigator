@@ -63,6 +63,26 @@ interface NavRainbowSectionSettingsAccess {
     levelScope?: LevelScopeSettingAccess;
 }
 
+interface LevelScopeConfig<TSection extends NavRainbowSettings['shortcuts']> {
+    getValue: (section: TSection) => NavRainbowScope;
+    setValue: (section: TSection, value: NavRainbowScope) => TSection;
+    isValid: (value: unknown) => value is NavRainbowScope;
+    name: string;
+    desc: string;
+    rootOption: string;
+    childOption: string;
+    allOption: string;
+}
+
+const NOOP_SET_COLOR = async (path: string, color: string): Promise<void> => {
+    void path;
+    void color;
+};
+
+const NOOP_REMOVE_COLOR = async (path: string): Promise<void> => {
+    void path;
+};
+
 export class NavRainbowSectionModal extends Modal {
     private readonly plugin: NotebookNavigatorPlugin;
     private readonly section: NavRainbowSectionId;
@@ -139,68 +159,24 @@ export class NavRainbowSectionModal extends Modal {
     }
 
     private getSectionSettingsAccess(): NavRainbowSectionSettingsAccess {
-        const getNavRainbow = (): NavRainbowSettings => this.plugin.settings.navRainbow;
-        const updateNavRainbow = (updater: (settings: NavRainbowSettings) => NavRainbowSettings): void => {
-            this.plugin.settings.navRainbow = updater(this.plugin.settings.navRainbow);
-        };
-        const defaultNavRainbow = DEFAULT_SETTINGS.navRainbow;
-
         if (this.section === 'shortcuts') {
-            return {
+            return this.createSectionAccess({
                 sectionLabel: strings.settings.items.navRainbowApplyToShortcuts.name,
-                firstColor: {
-                    getValue: () => getNavRainbow().shortcuts.firstColor,
-                    setValue: value => {
-                        updateNavRainbow(settings => ({ ...settings, shortcuts: { ...settings.shortcuts, firstColor: value } }));
-                    },
-                    defaultValue: defaultNavRainbow.shortcuts.firstColor
-                },
-                lastColor: {
-                    getValue: () => getNavRainbow().shortcuts.lastColor,
-                    setValue: value => {
-                        updateNavRainbow(settings => ({ ...settings, shortcuts: { ...settings.shortcuts, lastColor: value } }));
-                    },
-                    defaultValue: defaultNavRainbow.shortcuts.lastColor
-                },
-                transitionStyle: {
-                    getValue: () => getNavRainbow().shortcuts.transitionStyle,
-                    setValue: value => {
-                        updateNavRainbow(settings => ({ ...settings, shortcuts: { ...settings.shortcuts, transitionStyle: value } }));
-                    },
-                    defaultValue: defaultNavRainbow.shortcuts.transitionStyle
-                }
-            };
+                getSection: settings => settings.shortcuts,
+                setSection: (settings, section) => ({ ...settings, shortcuts: section }),
+                defaultSection: DEFAULT_SETTINGS.navRainbow.shortcuts
+            });
         }
 
         if (this.section === 'folders') {
-            return {
+            return this.createSectionAccess({
                 sectionLabel: strings.settings.items.navRainbowApplyToFolders.name,
-                firstColor: {
-                    getValue: () => getNavRainbow().folders.firstColor,
-                    setValue: value => {
-                        updateNavRainbow(settings => ({ ...settings, folders: { ...settings.folders, firstColor: value } }));
-                    },
-                    defaultValue: defaultNavRainbow.folders.firstColor
-                },
-                lastColor: {
-                    getValue: () => getNavRainbow().folders.lastColor,
-                    setValue: value => {
-                        updateNavRainbow(settings => ({ ...settings, folders: { ...settings.folders, lastColor: value } }));
-                    },
-                    defaultValue: defaultNavRainbow.folders.lastColor
-                },
-                transitionStyle: {
-                    getValue: () => getNavRainbow().folders.transitionStyle,
-                    setValue: value => {
-                        updateNavRainbow(settings => ({ ...settings, folders: { ...settings.folders, transitionStyle: value } }));
-                    },
-                    defaultValue: defaultNavRainbow.folders.transitionStyle
-                },
+                getSection: settings => settings.folders,
+                setSection: (settings, section) => ({ ...settings, folders: section }),
+                defaultSection: DEFAULT_SETTINGS.navRainbow.folders,
                 levelScope: {
-                    getValue: (): NavRainbowScope => getNavRainbow().folders.scope,
-                    setValue: (value: NavRainbowScope) => {
-                        updateNavRainbow(settings => ({ ...settings, folders: { ...settings.folders, scope: value } }));
-                    },
+                    getValue: section => section.scope,
+                    setValue: (section, value) => ({ ...section, scope: value }),
                     isValid: isNavRainbowScope,
                     name: strings.settings.items.navRainbowFolderScope.name,
                     desc: strings.settings.items.navRainbowFolderScope.desc,
@@ -208,38 +184,18 @@ export class NavRainbowSectionModal extends Modal {
                     childOption: strings.settings.items.navRainbowFolderScope.options.child,
                     allOption: strings.settings.items.navRainbowFolderScope.options.all
                 }
-            };
+            });
         }
 
         if (this.section === 'tags') {
-            return {
+            return this.createSectionAccess({
                 sectionLabel: strings.settings.items.navRainbowApplyToTags.name,
-                firstColor: {
-                    getValue: () => getNavRainbow().tags.firstColor,
-                    setValue: value => {
-                        updateNavRainbow(settings => ({ ...settings, tags: { ...settings.tags, firstColor: value } }));
-                    },
-                    defaultValue: defaultNavRainbow.tags.firstColor
-                },
-                lastColor: {
-                    getValue: () => getNavRainbow().tags.lastColor,
-                    setValue: value => {
-                        updateNavRainbow(settings => ({ ...settings, tags: { ...settings.tags, lastColor: value } }));
-                    },
-                    defaultValue: defaultNavRainbow.tags.lastColor
-                },
-                transitionStyle: {
-                    getValue: () => getNavRainbow().tags.transitionStyle,
-                    setValue: value => {
-                        updateNavRainbow(settings => ({ ...settings, tags: { ...settings.tags, transitionStyle: value } }));
-                    },
-                    defaultValue: defaultNavRainbow.tags.transitionStyle
-                },
+                getSection: settings => settings.tags,
+                setSection: (settings, section) => ({ ...settings, tags: section }),
+                defaultSection: DEFAULT_SETTINGS.navRainbow.tags,
                 levelScope: {
-                    getValue: (): NavRainbowScope => getNavRainbow().tags.scope,
-                    setValue: (value: NavRainbowScope) => {
-                        updateNavRainbow(settings => ({ ...settings, tags: { ...settings.tags, scope: value } }));
-                    },
+                    getValue: section => section.scope,
+                    setValue: (section, value) => ({ ...section, scope: value }),
                     isValid: isNavRainbowScope,
                     name: strings.settings.items.navRainbowTagScope.name,
                     desc: strings.settings.items.navRainbowTagScope.desc,
@@ -247,37 +203,17 @@ export class NavRainbowSectionModal extends Modal {
                     childOption: strings.settings.items.navRainbowTagScope.options.child,
                     allOption: strings.settings.items.navRainbowTagScope.options.all
                 }
-            };
+            });
         }
 
-        return {
+        return this.createSectionAccess({
             sectionLabel: strings.settings.items.navRainbowApplyToProperties.name,
-            firstColor: {
-                getValue: () => getNavRainbow().properties.firstColor,
-                setValue: value => {
-                    updateNavRainbow(settings => ({ ...settings, properties: { ...settings.properties, firstColor: value } }));
-                },
-                defaultValue: defaultNavRainbow.properties.firstColor
-            },
-            lastColor: {
-                getValue: () => getNavRainbow().properties.lastColor,
-                setValue: value => {
-                    updateNavRainbow(settings => ({ ...settings, properties: { ...settings.properties, lastColor: value } }));
-                },
-                defaultValue: defaultNavRainbow.properties.lastColor
-            },
-            transitionStyle: {
-                getValue: () => getNavRainbow().properties.transitionStyle,
-                setValue: value => {
-                    updateNavRainbow(settings => ({ ...settings, properties: { ...settings.properties, transitionStyle: value } }));
-                },
-                defaultValue: defaultNavRainbow.properties.transitionStyle
-            },
+            getSection: settings => settings.properties,
+            setSection: (settings, section) => ({ ...settings, properties: section }),
+            defaultSection: DEFAULT_SETTINGS.navRainbow.properties,
             levelScope: {
-                getValue: (): NavRainbowScope => getNavRainbow().properties.scope,
-                setValue: (value: NavRainbowScope) => {
-                    updateNavRainbow(settings => ({ ...settings, properties: { ...settings.properties, scope: value } }));
-                },
+                getValue: section => section.scope,
+                setValue: (section, value) => ({ ...section, scope: value }),
                 isValid: isNavRainbowScope,
                 name: strings.settings.items.navRainbowPropertyScope.name,
                 desc: strings.settings.items.navRainbowPropertyScope.desc,
@@ -285,6 +221,95 @@ export class NavRainbowSectionModal extends Modal {
                 childOption: strings.settings.items.navRainbowPropertyScope.options.child,
                 allOption: strings.settings.items.navRainbowPropertyScope.options.all
             }
+        });
+    }
+
+    private createSectionAccess<TSection extends NavRainbowSettings['shortcuts']>(params: {
+        sectionLabel: string;
+        getSection: (settings: NavRainbowSettings) => TSection;
+        setSection: (settings: NavRainbowSettings, section: TSection) => NavRainbowSettings;
+        defaultSection: TSection;
+        levelScope?: LevelScopeConfig<TSection>;
+    }): NavRainbowSectionSettingsAccess {
+        const getNavRainbow = (): NavRainbowSettings => this.plugin.settings.navRainbow;
+        const updateSection = (updater: (section: TSection) => TSection): void => {
+            const current = getNavRainbow();
+            const nextSection = updater(params.getSection(current));
+            this.plugin.settings.navRainbow = params.setSection(current, nextSection);
+        };
+
+        const access: NavRainbowSectionSettingsAccess = {
+            sectionLabel: params.sectionLabel,
+            firstColor: {
+                getValue: () => params.getSection(getNavRainbow()).firstColor,
+                setValue: value => {
+                    updateSection(section => ({ ...section, firstColor: value }));
+                },
+                defaultValue: params.defaultSection.firstColor
+            },
+            lastColor: {
+                getValue: () => params.getSection(getNavRainbow()).lastColor,
+                setValue: value => {
+                    updateSection(section => ({ ...section, lastColor: value }));
+                },
+                defaultValue: params.defaultSection.lastColor
+            },
+            transitionStyle: {
+                getValue: () => params.getSection(getNavRainbow()).transitionStyle,
+                setValue: value => {
+                    updateSection(section => ({ ...section, transitionStyle: value }));
+                },
+                defaultValue: params.defaultSection.transitionStyle
+            }
+        };
+
+        if (params.levelScope) {
+            const levelScope = params.levelScope;
+            access.levelScope = {
+                getValue: () => levelScope.getValue(params.getSection(getNavRainbow())),
+                setValue: value => {
+                    updateSection(section => levelScope.setValue(section, value));
+                },
+                isValid: levelScope.isValid,
+                name: levelScope.name,
+                desc: levelScope.desc,
+                rootOption: levelScope.rootOption,
+                childOption: levelScope.childOption,
+                allOption: levelScope.allOption
+            };
+        }
+
+        return access;
+    }
+
+    private createRainbowColorPickerService(params: {
+        access: ColorSettingAccess;
+        metadataService: NonNullable<NotebookNavigatorPlugin['metadataService']>;
+    }) {
+        const { access, metadataService } = params;
+        return {
+            setTagColor: (path: string, color: string) => metadataService.setTagColor(path, color),
+            setFolderColor: NOOP_SET_COLOR,
+            setFileColor: (path: string, color: string) => metadataService.setFileColor(path, color),
+            setPropertyColor: (path: string, color: string) => metadataService.setPropertyColor(path, color),
+            removeTagColor: (path: string) => metadataService.removeTagColor(path),
+            removeFolderColor: NOOP_REMOVE_COLOR,
+            removeFileColor: (path: string) => metadataService.removeFileColor(path),
+            removePropertyColor: (path: string) => metadataService.removePropertyColor(path),
+            setTagBackgroundColor: (path: string, color: string) => metadataService.setTagBackgroundColor(path, color),
+            setFolderBackgroundColor: NOOP_SET_COLOR,
+            setPropertyBackgroundColor: (path: string, color: string) => metadataService.setPropertyBackgroundColor(path, color),
+            removeTagBackgroundColor: (path: string) => metadataService.removeTagBackgroundColor(path),
+            removeFolderBackgroundColor: NOOP_REMOVE_COLOR,
+            removePropertyBackgroundColor: (path: string) => metadataService.removePropertyBackgroundColor(path),
+            getTagColor: (path: string) => metadataService.getTagColor(path),
+            getFolderColor: () => access.getValue(),
+            getFileColor: (path: string) => metadataService.getFileColor(path),
+            getPropertyColor: (path: string) => metadataService.getPropertyColor(path),
+            getTagBackgroundColor: (path: string) => metadataService.getTagBackgroundColor(path),
+            getFolderBackgroundColor: () => access.getValue(),
+            getPropertyBackgroundColor: (path: string) => metadataService.getPropertyBackgroundColor(path),
+            getSettingsProvider: () => metadataService.getSettingsProvider()
         };
     }
 
@@ -311,30 +336,7 @@ export class NavRainbowSectionModal extends Modal {
                 const { ColorPickerModal } = await import('./ColorPickerModal');
                 const modal = new ColorPickerModal(
                     this.app,
-                    {
-                        setTagColor: (path, color) => metadataService.setTagColor(path, color),
-                        setFolderColor: async () => {},
-                        setFileColor: (path, color) => metadataService.setFileColor(path, color),
-                        setPropertyColor: (path, color) => metadataService.setPropertyColor(path, color),
-                        removeTagColor: path => metadataService.removeTagColor(path),
-                        removeFolderColor: async () => {},
-                        removeFileColor: path => metadataService.removeFileColor(path),
-                        removePropertyColor: path => metadataService.removePropertyColor(path),
-                        setTagBackgroundColor: (path, color) => metadataService.setTagBackgroundColor(path, color),
-                        setFolderBackgroundColor: async () => {},
-                        setPropertyBackgroundColor: (path, color) => metadataService.setPropertyBackgroundColor(path, color),
-                        removeTagBackgroundColor: path => metadataService.removeTagBackgroundColor(path),
-                        removeFolderBackgroundColor: async () => {},
-                        removePropertyBackgroundColor: path => metadataService.removePropertyBackgroundColor(path),
-                        getTagColor: path => metadataService.getTagColor(path),
-                        getFolderColor: () => params.access.getValue(),
-                        getFileColor: path => metadataService.getFileColor(path),
-                        getPropertyColor: path => metadataService.getPropertyColor(path),
-                        getTagBackgroundColor: path => metadataService.getTagBackgroundColor(path),
-                        getFolderBackgroundColor: () => params.access.getValue(),
-                        getPropertyBackgroundColor: path => metadataService.getPropertyBackgroundColor(path),
-                        getSettingsProvider: () => metadataService.getSettingsProvider()
-                    },
+                    this.createRainbowColorPickerService({ access: params.access, metadataService }),
                     '__nn-settings-rainbow-colors__',
                     ItemType.FOLDER,
                     'foreground',

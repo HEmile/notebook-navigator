@@ -56,6 +56,17 @@ function createTagItem(path: string, level: number): CombinedNavigationItem {
     };
 }
 
+function createFolderItem(path: string, level: number): CombinedNavigationItem {
+    return {
+        type: NavigationPaneItemType.FOLDER,
+        data: createTestTFolder(path),
+        level,
+        path,
+        key: path,
+        isExcluded: false
+    };
+}
+
 function createPropertyNode(params: {
     id: `key:${string}` | `key:${string}=${string}`;
     kind: 'key' | 'value';
@@ -231,5 +242,83 @@ describe('navigationRainbow', () => {
         expect(allScope.rootColor).toBe(palette[0]);
         expect(rootScope.colorsByNodeId.get('key:status')).toBe(allScope.colorsByNodeId.get('key:status'));
         expect(rootScope.colorsByNodeId.get('key:type')).toBe(allScope.colorsByNodeId.get('key:type'));
+    });
+
+    it('inherits folder rainbow color from nearest root-scoped ancestor', () => {
+        const start = parseCssColor('#000000') ?? { r: 0, g: 0, b: 0, a: 1 };
+        const end = parseCssColor('#ffffff') ?? { r: 255, g: 255, b: 255, a: 1 };
+        const palette = buildRainbowPalette({ steps: 1024, start, end, style: 'rgb' });
+
+        const items: CombinedNavigationItem[] = [
+            createFolderItem('/', 0),
+            createFolderItem('A', 1),
+            createFolderItem('B', 1),
+            createFolderItem('A/child', 2),
+            createFolderItem('A/child/grandchild', 3)
+        ];
+
+        const folderRainbow = buildFolderRainbowColors({
+            items,
+            palette,
+            scope: 'root',
+            showRootFolder: true,
+            rootLevel: 1,
+            inheritColors: true
+        });
+
+        const parentColor = folderRainbow.colorsByPath.get('A');
+        expect(parentColor).toBeDefined();
+        expect(folderRainbow.getInheritedColor('A/child')).toBe(parentColor);
+        expect(folderRainbow.getInheritedColor('A/child/grandchild')).toBe(parentColor);
+    });
+
+    it('inherits tag rainbow color from nearest root-scoped ancestor', () => {
+        const start = parseCssColor('#000000') ?? { r: 0, g: 0, b: 0, a: 1 };
+        const end = parseCssColor('#ffffff') ?? { r: 255, g: 255, b: 255, a: 1 };
+        const palette = buildRainbowPalette({ steps: 1024, start, end, style: 'rgb' });
+
+        const items: CombinedNavigationItem[] = [
+            createTagItem('alpha', 1),
+            createTagItem('beta', 1),
+            createTagItem('alpha/child', 2),
+            createTagItem('alpha/child/grandchild', 3)
+        ];
+
+        const tagRainbow = buildTagRainbowColors({
+            items,
+            palette,
+            scope: 'root',
+            rootLevel: 1,
+            showAllTagsFolder: true,
+            inheritColors: true
+        });
+
+        const parentColor = tagRainbow.colorsByPath.get('alpha');
+        expect(parentColor).toBeDefined();
+        expect(tagRainbow.getInheritedColor('alpha/child')).toBe(parentColor);
+        expect(tagRainbow.getInheritedColor('alpha/child/grandchild')).toBe(parentColor);
+    });
+
+    it('does not assign key colors when property scope is child', () => {
+        const start = parseCssColor('#000000') ?? { r: 0, g: 0, b: 0, a: 1 };
+        const end = parseCssColor('#ffffff') ?? { r: 255, g: 255, b: 255, a: 1 };
+        const palette = buildRainbowPalette({ steps: 1024, start, end, style: 'rgb' });
+
+        const items: CombinedNavigationItem[] = [
+            createPropertyKeyItem('key:status', 'status', 1),
+            createPropertyValueItem('key:status=todo', 'status', 'todo', 2),
+            createPropertyValueItem('key:status=done', 'status', 'done', 2)
+        ];
+
+        const propertyRainbow = buildPropertyRainbowColors({
+            items,
+            palette,
+            scope: 'child',
+            showAllPropertiesFolder: true
+        });
+
+        expect(propertyRainbow.colorsByNodeId.has('key:status')).toBe(false);
+        expect(propertyRainbow.colorsByNodeId.has('key:status=todo')).toBe(true);
+        expect(propertyRainbow.colorsByNodeId.has('key:status=done')).toBe(true);
     });
 });

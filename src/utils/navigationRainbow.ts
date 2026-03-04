@@ -58,6 +58,136 @@ interface NavRainbowPaletteSource {
     transitionStyle: 'hue' | 'rgb';
 }
 
+interface CollectUniqueKeysOptions {
+    excludeKey?: (key: string) => boolean;
+}
+
+function collectUniqueKeys<T>(params: {
+    items: readonly T[];
+    includeItem: (item: T) => boolean;
+    getKey: (item: T) => string | undefined;
+    options?: CollectUniqueKeysOptions;
+}): string[] {
+    const { items, includeItem, getKey, options } = params;
+    const keys: string[] = [];
+    const seen = new Set<string>();
+
+    for (const item of items) {
+        if (!includeItem(item)) {
+            continue;
+        }
+
+        const key = getKey(item);
+        if (!key || seen.has(key) || options?.excludeKey?.(key)) {
+            continue;
+        }
+
+        seen.add(key);
+        keys.push(key);
+    }
+
+    return keys;
+}
+
+function collectSiblingKeysByParent<T>(params: {
+    items: readonly T[];
+    includeItem: (item: T) => boolean;
+    getKey: (item: T) => string | undefined;
+    getParentKey: (item: T, key: string) => string;
+}): Map<string, string[]> {
+    const { items, includeItem, getKey, getParentKey } = params;
+    const groupedKeys = new Map<string, string[]>();
+    const seenChildrenByParent = new Map<string, Set<string>>();
+
+    for (const item of items) {
+        if (!includeItem(item)) {
+            continue;
+        }
+
+        const key = getKey(item);
+        if (!key) {
+            continue;
+        }
+
+        const parentKey = getParentKey(item, key);
+        let seen = seenChildrenByParent.get(parentKey);
+        if (!seen) {
+            seen = new Set<string>();
+            seenChildrenByParent.set(parentKey, seen);
+        }
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+
+        const siblings = groupedKeys.get(parentKey);
+        if (siblings) {
+            siblings.push(key);
+        } else {
+            groupedKeys.set(parentKey, [key]);
+        }
+    }
+
+    return groupedKeys;
+}
+
+function assignColorsBySiblingGroups(params: {
+    groupedKeys: ReadonlyMap<string, readonly string[]>;
+    palette: readonly string[];
+    target: Map<string, string>;
+}): void {
+    const { groupedKeys, palette, target } = params;
+    for (const keys of groupedKeys.values()) {
+        assignRainbowColorsFromPalette({ keys, palette, target });
+    }
+}
+
+function assignColorsWithVirtualRootOffset(params: {
+    keys: readonly string[];
+    palette: readonly string[];
+    virtualRootKey: string;
+}): Map<string, string> {
+    return buildRainbowColorMapFromPalette({
+        keys: [params.virtualRootKey, ...params.keys],
+        palette: params.palette
+    });
+}
+
+function createInheritedColorResolver(params: {
+    scope: NavRainbowScope;
+    inheritColors: boolean;
+    colorsByPath: ReadonlyMap<string, string>;
+    getParentPath: (path: string) => string;
+    isTerminalPath: (path: string) => boolean;
+}): (path: string) => string | undefined {
+    const { scope, inheritColors, colorsByPath, getParentPath, isTerminalPath } = params;
+    const inheritedCache = new Map<string, string | null>();
+
+    return (path: string): string | undefined => {
+        if (scope !== 'root' || !inheritColors) {
+            return undefined;
+        }
+
+        if (inheritedCache.has(path)) {
+            return inheritedCache.get(path) ?? undefined;
+        }
+
+        let ancestorPath = getParentPath(path);
+        while (!isTerminalPath(ancestorPath)) {
+            const ancestorRainbowColor = colorsByPath.get(ancestorPath);
+            if (ancestorRainbowColor) {
+                inheritedCache.set(path, ancestorRainbowColor);
+                return ancestorRainbowColor;
+            }
+
+            ancestorPath = getParentPath(ancestorPath);
+        }
+
+        inheritedCache.set(path, null);
+        return undefined;
+    };
+}
+
 function resolveRainbowColorEndpoints(firstColor: string, lastColor: string): { start: RGBA; end: RGBA } {
     return {
         start: parseCssColor(firstColor) ?? NAV_RAINBOW_DEFAULT_START,
@@ -141,33 +271,20 @@ export function buildFolderRainbowColors(params: {
     let rootColor: string | undefined;
 
     if (scope === 'root') {
-        const keys: string[] = [];
-        const seen = new Set<string>();
-
-        for (const item of items) {
-            if (item.type !== NavigationPaneItemType.FOLDER) {
-                continue;
-            }
-            if (item.isExcluded) {
-                continue;
-            }
-            if (item.level !== rootLevel) {
-                continue;
-            }
-            const path = item.data.path;
-            if (!path || path === '/' || seen.has(path)) {
-                continue;
-            }
-            seen.add(path);
-            keys.push(path);
-        }
+        const keys = collectUniqueKeys({
+            items,
+            includeItem: item => item.type === NavigationPaneItemType.FOLDER && !item.isExcluded && item.level === rootLevel,
+            getKey: item => (item.type === NavigationPaneItemType.FOLDER ? item.data.path : undefined),
+            options: { excludeKey: key => key === '/' }
+        });
 
         rootColor = paletteStart;
 
         if (showRootFolder) {
-            const rootScopedColors = buildRainbowColorMapFromPalette({
-                keys: [FOLDER_VIRTUAL_ROOT_RAINBOW_KEY, ...keys],
-                palette
+            const rootScopedColors = assignColorsWithVirtualRootOffset({
+                keys,
+                palette,
+                virtualRootKey: FOLDER_VIRTUAL_ROOT_RAINBOW_KEY
             });
 
             for (const key of keys) {
@@ -180,76 +297,38 @@ export function buildFolderRainbowColors(params: {
             assignRainbowColorsFromPalette({ keys, palette, target: colorsByPath });
         }
     } else {
-        const childPathsByParent = new Map<string, string[]>();
-        const seenChildrenByParent = new Map<string, Set<string>>();
+        const childPathsByParent = collectSiblingKeysByParent({
+            items,
+            includeItem: item =>
+                item.type === NavigationPaneItemType.FOLDER && !item.isExcluded && (scope !== 'child' || item.level > rootLevel),
+            getKey: item => {
+                if (item.type !== NavigationPaneItemType.FOLDER) {
+                    return undefined;
+                }
 
-        for (const item of items) {
-            if (item.type !== NavigationPaneItemType.FOLDER) {
-                continue;
-            }
-            if (item.isExcluded) {
-                continue;
-            }
-            if (scope === 'child' && item.level <= rootLevel) {
-                continue;
-            }
-
-            const path = item.data.path;
-            if (!path || path === '/') {
-                continue;
-            }
-
-            const parentPath = getParentFolderPath(path);
-            let seen = seenChildrenByParent.get(parentPath);
-            if (!seen) {
-                seen = new Set<string>();
-                seenChildrenByParent.set(parentPath, seen);
-            }
-            if (seen.has(path)) {
-                continue;
-            }
-            seen.add(path);
-
-            const siblings = childPathsByParent.get(parentPath);
-            if (siblings) {
-                siblings.push(path);
-            } else {
-                childPathsByParent.set(parentPath, [path]);
-            }
-        }
+                const path = item.data.path;
+                if (!path || path === '/') {
+                    return undefined;
+                }
+                return path;
+            },
+            getParentKey: (_item, path) => getParentFolderPath(path)
+        });
 
         if (showRootFolder && scope === 'all') {
             rootColor = paletteStart;
         }
 
-        for (const keys of childPathsByParent.values()) {
-            assignRainbowColorsFromPalette({ keys, palette, target: colorsByPath });
-        }
+        assignColorsBySiblingGroups({ groupedKeys: childPathsByParent, palette, target: colorsByPath });
     }
 
-    const inheritedCache = new Map<string, string | null>();
-    const getInheritedColor = (folderPath: string): string | undefined => {
-        if (scope !== 'root' || !inheritColors) {
-            return undefined;
-        }
-
-        if (inheritedCache.has(folderPath)) {
-            return inheritedCache.get(folderPath) ?? undefined;
-        }
-
-        let ancestorPath = getParentFolderPath(folderPath);
-        while (ancestorPath && ancestorPath !== '/') {
-            const ancestorRainbowColor = colorsByPath.get(ancestorPath);
-            if (ancestorRainbowColor) {
-                inheritedCache.set(folderPath, ancestorRainbowColor);
-                return ancestorRainbowColor;
-            }
-            ancestorPath = getParentFolderPath(ancestorPath);
-        }
-
-        inheritedCache.set(folderPath, null);
-        return undefined;
-    };
+    const getInheritedColor = createInheritedColorResolver({
+        scope,
+        inheritColors,
+        colorsByPath,
+        getParentPath: getParentFolderPath,
+        isTerminalPath: path => path === '/' || path === ''
+    });
 
     return { colorsByPath, rootColor, getInheritedColor };
 }
@@ -282,95 +361,41 @@ export function buildTagRainbowColors(params: {
     let rootColor: string | undefined;
 
     if (scope === 'root') {
-        const keys: string[] = [];
-        const seen = new Set<string>();
-
-        for (const item of items) {
-            if (item.type !== NavigationPaneItemType.TAG && item.type !== NavigationPaneItemType.UNTAGGED) {
-                continue;
-            }
-            if (item.level !== rootLevel) {
-                continue;
-            }
-
-            const path = item.data.path;
-            if (!path || seen.has(path)) {
-                continue;
-            }
-            seen.add(path);
-            keys.push(path);
-        }
+        const keys = collectUniqueKeys({
+            items,
+            includeItem: item =>
+                (item.type === NavigationPaneItemType.TAG || item.type === NavigationPaneItemType.UNTAGGED) && item.level === rootLevel,
+            getKey: item =>
+                item.type === NavigationPaneItemType.TAG || item.type === NavigationPaneItemType.UNTAGGED ? item.data.path : undefined
+        });
 
         rootColor = palette[0];
         assignRainbowColorsFromPalette({ keys, palette, target: colorsByPath });
     } else {
-        const childPathsByParent = new Map<string, string[]>();
-        const seenChildrenByParent = new Map<string, Set<string>>();
+        const childPathsByParent = collectSiblingKeysByParent({
+            items,
+            includeItem: item =>
+                (item.type === NavigationPaneItemType.TAG || item.type === NavigationPaneItemType.UNTAGGED) &&
+                (scope !== 'child' || item.level > rootLevel),
+            getKey: item =>
+                item.type === NavigationPaneItemType.TAG || item.type === NavigationPaneItemType.UNTAGGED ? item.data.path : undefined,
+            getParentKey: (_item, path) => getParentTagPath(path)
+        });
 
-        for (const item of items) {
-            if (item.type !== NavigationPaneItemType.TAG && item.type !== NavigationPaneItemType.UNTAGGED) {
-                continue;
-            }
-            if (scope === 'child' && item.level <= rootLevel) {
-                continue;
-            }
-
-            const path = item.data.path;
-            if (!path) {
-                continue;
-            }
-
-            const parentPath = getParentTagPath(path);
-            let seen = seenChildrenByParent.get(parentPath);
-            if (!seen) {
-                seen = new Set<string>();
-                seenChildrenByParent.set(parentPath, seen);
-            }
-            if (seen.has(path)) {
-                continue;
-            }
-            seen.add(path);
-
-            const siblings = childPathsByParent.get(parentPath);
-            if (siblings) {
-                siblings.push(path);
-            } else {
-                childPathsByParent.set(parentPath, [path]);
-            }
-        }
-
-        for (const keys of childPathsByParent.values()) {
-            assignRainbowColorsFromPalette({ keys, palette, target: colorsByPath });
-        }
+        assignColorsBySiblingGroups({ groupedKeys: childPathsByParent, palette, target: colorsByPath });
 
         if (showAllTagsFolder && scope === 'all') {
             rootColor = palette[0];
         }
     }
 
-    const inheritedCache = new Map<string, string | null>();
-    const getInheritedColor = (tagPath: string): string | undefined => {
-        if (scope !== 'root' || !inheritColors) {
-            return undefined;
-        }
-
-        if (inheritedCache.has(tagPath)) {
-            return inheritedCache.get(tagPath) ?? undefined;
-        }
-
-        let ancestorPath = getParentTagPath(tagPath);
-        while (ancestorPath) {
-            const ancestorRainbowColor = colorsByPath.get(ancestorPath);
-            if (ancestorRainbowColor) {
-                inheritedCache.set(tagPath, ancestorRainbowColor);
-                return ancestorRainbowColor;
-            }
-            ancestorPath = getParentTagPath(ancestorPath);
-        }
-
-        inheritedCache.set(tagPath, null);
-        return undefined;
-    };
+    const getInheritedColor = createInheritedColorResolver({
+        scope,
+        inheritColors,
+        colorsByPath,
+        getParentPath: getParentTagPath,
+        isTerminalPath: path => path === ''
+    });
 
     return { colorsByPath, rootColor, getInheritedColor };
 }
@@ -394,20 +419,11 @@ export function buildPropertyRainbowColors(params: {
     let rootColor: string | undefined;
 
     if (scope === 'root') {
-        const keys: string[] = [];
-        const seen = new Set<string>();
-
-        for (const item of items) {
-            if (item.type !== NavigationPaneItemType.PROPERTY_KEY) {
-                continue;
-            }
-            const nodeId = item.data.id;
-            if (seen.has(nodeId)) {
-                continue;
-            }
-            seen.add(nodeId);
-            keys.push(nodeId);
-        }
+        const keys = collectUniqueKeys({
+            items,
+            includeItem: item => item.type === NavigationPaneItemType.PROPERTY_KEY,
+            getKey: item => (item.type === NavigationPaneItemType.PROPERTY_KEY ? item.data.id : undefined)
+        });
 
         rootColor = palette[0];
         assignRainbowColorsFromPalette({ keys, palette, target: colorsByNodeId });
@@ -423,41 +439,29 @@ export function buildPropertyRainbowColors(params: {
             rootColorsByKey.set(item.data.key, color);
         }
     } else {
-        const childIdsByParent = new Map<string, string[]>();
-        const seenChildrenByParent = new Map<string, Set<string>>();
+        const childIdsByParent = collectSiblingKeysByParent({
+            items,
+            includeItem: item =>
+                (item.type === NavigationPaneItemType.PROPERTY_KEY || item.type === NavigationPaneItemType.PROPERTY_VALUE) &&
+                (scope !== 'child' || item.type !== NavigationPaneItemType.PROPERTY_KEY),
+            getKey: item =>
+                item.type === NavigationPaneItemType.PROPERTY_KEY || item.type === NavigationPaneItemType.PROPERTY_VALUE
+                    ? item.data.id
+                    : undefined,
+            getParentKey: (item, _nodeId) => {
+                if (item.type === NavigationPaneItemType.PROPERTY_KEY) {
+                    return '__root__';
+                }
 
-        for (const item of items) {
-            if (item.type !== NavigationPaneItemType.PROPERTY_KEY && item.type !== NavigationPaneItemType.PROPERTY_VALUE) {
-                continue;
-            }
-            if (scope === 'child' && item.type === NavigationPaneItemType.PROPERTY_KEY) {
-                continue;
-            }
+                if (item.type === NavigationPaneItemType.PROPERTY_VALUE) {
+                    return `key:${item.data.key}`;
+                }
 
-            const nodeId = item.data.id;
-            const parentId = item.type === NavigationPaneItemType.PROPERTY_KEY ? '__root__' : `key:${item.data.key}`;
-
-            let seen = seenChildrenByParent.get(parentId);
-            if (!seen) {
-                seen = new Set<string>();
-                seenChildrenByParent.set(parentId, seen);
+                return '__root__';
             }
-            if (seen.has(nodeId)) {
-                continue;
-            }
-            seen.add(nodeId);
+        });
 
-            const siblings = childIdsByParent.get(parentId);
-            if (siblings) {
-                siblings.push(nodeId);
-            } else {
-                childIdsByParent.set(parentId, [nodeId]);
-            }
-        }
-
-        for (const keys of childIdsByParent.values()) {
-            assignRainbowColorsFromPalette({ keys, palette, target: colorsByNodeId });
-        }
+        assignColorsBySiblingGroups({ groupedKeys: childIdsByParent, palette, target: colorsByNodeId });
 
         if (showAllPropertiesFolder && scope === 'all') {
             rootColor = palette[0];
@@ -478,31 +482,21 @@ export function buildShortcutRainbowColors(params: {
 }): ShortcutRainbowColors {
     const { items, palette } = params;
 
-    const keys: string[] = [];
-    const seen = new Set<string>();
+    const keys = collectUniqueKeys({
+        items,
+        includeItem: item =>
+            item.type === NavigationPaneItemType.SHORTCUT_FOLDER ||
+            item.type === NavigationPaneItemType.SHORTCUT_NOTE ||
+            item.type === NavigationPaneItemType.SHORTCUT_SEARCH ||
+            item.type === NavigationPaneItemType.SHORTCUT_TAG ||
+            item.type === NavigationPaneItemType.SHORTCUT_PROPERTY,
+        getKey: item => item.key
+    });
 
-    for (const item of items) {
-        if (
-            item.type !== NavigationPaneItemType.SHORTCUT_FOLDER &&
-            item.type !== NavigationPaneItemType.SHORTCUT_NOTE &&
-            item.type !== NavigationPaneItemType.SHORTCUT_SEARCH &&
-            item.type !== NavigationPaneItemType.SHORTCUT_TAG &&
-            item.type !== NavigationPaneItemType.SHORTCUT_PROPERTY
-        ) {
-            continue;
-        }
-
-        const key = item.key;
-        if (seen.has(key)) {
-            continue;
-        }
-        seen.add(key);
-        keys.push(key);
-    }
-
-    const rootScopedColors = buildRainbowColorMapFromPalette({
-        keys: [SHORTCUT_VIRTUAL_ROOT_RAINBOW_KEY, ...keys],
-        palette
+    const rootScopedColors = assignColorsWithVirtualRootOffset({
+        keys,
+        palette,
+        virtualRootKey: SHORTCUT_VIRTUAL_ROOT_RAINBOW_KEY
     });
 
     const rootColor = rootScopedColors.get(SHORTCUT_VIRTUAL_ROOT_RAINBOW_KEY) ?? palette[0];
