@@ -110,7 +110,7 @@ import { getFolderNote, getFolderNoteDetectionSettings, openFolderNoteFile } fro
 import { collectAllTagPaths, findTagNode, getTotalNoteCount } from '../utils/tagTree';
 import { FILE_VISIBILITY, getExtensionSuffix, shouldShowExtensionSuffix } from '../utils/fileTypeUtils';
 import { getTagSearchModifierOperator, resolveCanonicalTagPath } from '../utils/tagUtils';
-import { foldSearchText } from '../utils/recordUtils';
+import { ensureRecord, foldSearchText, isStringRecordValue } from '../utils/recordUtils';
 import { FolderItem } from './FolderItem';
 import { NavigationPaneHeader } from './NavigationPaneHeader';
 import { NavigationToolbar } from './NavigationToolbar';
@@ -159,6 +159,7 @@ import {
     type MenuState,
     type MenuDispatchers
 } from '../utils/contextMenu';
+import { addStyleMenu } from '../utils/contextMenu/styleMenuBuilder';
 import type { NoteCountInfo } from '../types/noteCounts';
 import type { SearchNavFilterState } from '../types/search';
 import type { InclusionOperator } from '../utils/filterSearch';
@@ -2236,9 +2237,6 @@ export const NavigationPane = React.memo(
         // Shows a context menu for navigation section headers with separator and shortcut actions
         const handleSectionContextMenu = useCallback(
             (event: React.MouseEvent<HTMLDivElement>, sectionId: NavigationSectionId, options?: { allowSeparator?: boolean }) => {
-                event.preventDefault();
-                event.stopPropagation();
-
                 const isShortcutsSection = sectionId === NavigationSectionId.SHORTCUTS;
                 const isTagSection = sectionId === NavigationSectionId.TAGS;
                 const isPropertySection = sectionId === NavigationSectionId.PROPERTIES;
@@ -2261,6 +2259,179 @@ export const NavigationPane = React.memo(
                                 handleConfigurePropertyKeysFromSectionMenu();
                             });
                     });
+                    hasActions = true;
+                    menu.addSeparator();
+                }
+
+                const virtualFolderId = isShortcutsSection
+                    ? SHORTCUTS_VIRTUAL_FOLDER_ID
+                    : isTagSection
+                      ? TAGS_ROOT_VIRTUAL_FOLDER_ID
+                      : isPropertySection
+                        ? PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
+                        : null;
+
+                if (virtualFolderId) {
+                    const settingsProvider = metadataService.getSettingsProvider();
+                    type VirtualFolderStyleKey = 'virtualFolderColors' | 'virtualFolderBackgroundColors';
+
+                    const updateVirtualFolderStyleRecord = (
+                        key: VirtualFolderStyleKey,
+                        path: string,
+                        nextValue: string | null
+                    ): boolean => {
+                        const currentRecord = settingsProvider.settings[key];
+                        const record = ensureRecord(currentRecord, isStringRecordValue);
+                        if (nextValue === null) {
+                            if (!Object.prototype.hasOwnProperty.call(record, path)) {
+                                return false;
+                            }
+
+                            delete record[path];
+                            settingsProvider.settings[key] = record;
+                            return true;
+                        }
+
+                        if (Object.prototype.hasOwnProperty.call(record, path) && record[path] === nextValue) {
+                            return false;
+                        }
+
+                        record[path] = nextValue;
+                        settingsProvider.settings[key] = record;
+                        return true;
+                    };
+
+                    const setVirtualFolderStyle = async (
+                        path: string,
+                        updates: { color?: string | null; background?: string | null }
+                    ): Promise<void> => {
+                        let didChange = false;
+
+                        if (updates.color !== undefined) {
+                            didChange = updateVirtualFolderStyleRecord('virtualFolderColors', path, updates.color) || didChange;
+                        }
+
+                        if (updates.background !== undefined) {
+                            didChange =
+                                updateVirtualFolderStyleRecord('virtualFolderBackgroundColors', path, updates.background) || didChange;
+                        }
+
+                        if (!didChange) {
+                            return;
+                        }
+
+                        await settingsProvider.saveSettingsAndUpdate();
+                    };
+
+                    const virtualFolderColor = settingsProvider.settings.virtualFolderColors?.[virtualFolderId];
+                    const virtualFolderBackgroundColor = settingsProvider.settings.virtualFolderBackgroundColors?.[virtualFolderId];
+                    const virtualFolderColorService = {
+                        setTagColor: (path: string, color: string) => metadataService.setTagColor(path, color),
+                        setFolderColor: async (path: string, color: string) => {
+                            await setVirtualFolderStyle(path, { color });
+                        },
+                        setFileColor: (path: string, color: string) => metadataService.setFileColor(path, color),
+                        setPropertyColor: (path: string, color: string) => metadataService.setPropertyColor(path, color),
+                        removeTagColor: (path: string) => metadataService.removeTagColor(path),
+                        removeFolderColor: async (path: string) => {
+                            await setVirtualFolderStyle(path, { color: null });
+                        },
+                        removeFileColor: (path: string) => metadataService.removeFileColor(path),
+                        removePropertyColor: (path: string) => metadataService.removePropertyColor(path),
+                        setTagBackgroundColor: (path: string, color: string) => metadataService.setTagBackgroundColor(path, color),
+                        setFolderBackgroundColor: async (path: string, color: string) => {
+                            await setVirtualFolderStyle(path, { background: color });
+                        },
+                        setPropertyBackgroundColor: (path: string, color: string) =>
+                            metadataService.setPropertyBackgroundColor(path, color),
+                        removeTagBackgroundColor: (path: string) => metadataService.removeTagBackgroundColor(path),
+                        removeFolderBackgroundColor: async (path: string) => {
+                            await setVirtualFolderStyle(path, { background: null });
+                        },
+                        removePropertyBackgroundColor: (path: string) => metadataService.removePropertyBackgroundColor(path),
+                        getTagColor: (path: string) => metadataService.getTagColor(path),
+                        getFolderColor: (path: string) => settingsProvider.settings.virtualFolderColors?.[path],
+                        getFileColor: (path: string) => metadataService.getFileColor(path),
+                        getPropertyColor: (path: string) => metadataService.getPropertyColor(path),
+                        getTagBackgroundColor: (path: string) => metadataService.getTagBackgroundColor(path),
+                        getFolderBackgroundColor: (path: string) => settingsProvider.settings.virtualFolderBackgroundColors?.[path],
+                        getPropertyBackgroundColor: (path: string) => metadataService.getPropertyBackgroundColor(path),
+                        getSettingsProvider: () => settingsProvider
+                    };
+
+                    const titleOverride = isShortcutsSection
+                        ? strings.navigationPane.shortcutsHeader
+                        : isTagSection
+                          ? strings.tagList.tags
+                          : strings.navigationPane.properties;
+
+                    menu.addItem(item => {
+                        item.setTitle(strings.contextMenu.folder.changeColor)
+                            .setIcon('lucide-palette')
+                            .onClick(() => {
+                                runAsyncAction(async () => {
+                                    const { ColorPickerModal } = await import('../modals/ColorPickerModal');
+                                    const modal = new ColorPickerModal(
+                                        app,
+                                        virtualFolderColorService,
+                                        virtualFolderId,
+                                        ItemType.FOLDER,
+                                        'foreground',
+                                        { titleOverride }
+                                    );
+                                    modal.open();
+                                });
+                            });
+                    });
+
+                    menu.addItem(item => {
+                        item.setTitle(strings.contextMenu.folder.changeBackground)
+                            .setIcon('lucide-paint-bucket')
+                            .onClick(() => {
+                                runAsyncAction(async () => {
+                                    const { ColorPickerModal } = await import('../modals/ColorPickerModal');
+                                    const modal = new ColorPickerModal(
+                                        app,
+                                        virtualFolderColorService,
+                                        virtualFolderId,
+                                        ItemType.FOLDER,
+                                        'background',
+                                        { titleOverride }
+                                    );
+                                    modal.open();
+                                });
+                            });
+                    });
+
+                    const hasRemovableVirtualFolderColor = Boolean(virtualFolderColor);
+                    const hasRemovableVirtualFolderBackground = Boolean(virtualFolderBackgroundColor);
+
+                    addStyleMenu({
+                        menu,
+                        styleData: {
+                            color: virtualFolderColor,
+                            background: virtualFolderBackgroundColor
+                        },
+                        hasColor: true,
+                        hasBackground: true,
+                        applyStyle: async clipboard => {
+                            await setVirtualFolderStyle(virtualFolderId, {
+                                color: clipboard.color ?? undefined,
+                                background: clipboard.background ?? undefined
+                            });
+                        },
+                        removeColor: hasRemovableVirtualFolderColor
+                            ? async () => setVirtualFolderStyle(virtualFolderId, { color: null })
+                            : undefined,
+                        removeBackground: hasRemovableVirtualFolderBackground
+                            ? async () => setVirtualFolderStyle(virtualFolderId, { background: null })
+                            : undefined,
+                        clearStyle:
+                            hasRemovableVirtualFolderColor && hasRemovableVirtualFolderBackground
+                                ? async () => setVirtualFolderStyle(virtualFolderId, { color: null, background: null })
+                                : undefined
+                    });
+
                     hasActions = true;
                     menu.addSeparator();
                 }
@@ -2397,6 +2568,8 @@ export const NavigationPane = React.memo(
                     return;
                 }
 
+                event.preventDefault();
+                event.stopPropagation();
                 menu.showAtMouseEvent(event.nativeEvent);
             },
             [
@@ -3111,15 +3284,12 @@ export const NavigationPane = React.memo(
 
                         const shouldDisableFirstSectionMenu =
                             shouldPinShortcuts && sectionId !== null && firstSectionId !== null && sectionId === firstSectionId;
-                        const allowSeparatorActions = !isShortcutsGroup || !shouldPinShortcuts;
-                        const hasShortcutMenuActions = isShortcutsGroup && shortcutsList.length > 0;
-                        const hasShortcutsPinAction = isShortcutsGroup;
+                        const baseAllowSeparatorActions = !isShortcutsGroup || !shouldPinShortcuts;
+                        const allowSeparatorActions = baseAllowSeparatorActions && !shouldDisableFirstSectionMenu;
                         // When shortcuts are pinned they render in their own panel, so separator actions are disabled for that section.
                         // Shortcuts have to be unpinned to edit the first inline section separator.
                         const sectionContextMenu =
-                            sectionId !== null &&
-                            (!shouldDisableFirstSectionMenu || isShortcutsGroup) &&
-                            (allowSeparatorActions || hasShortcutMenuActions || hasShortcutsPinAction)
+                            sectionId !== null
                                 ? (event: React.MouseEvent<HTMLDivElement>) =>
                                       handleSectionContextMenu(event, sectionId, { allowSeparator: allowSeparatorActions })
                                 : undefined;
@@ -3345,7 +3515,6 @@ export const NavigationPane = React.memo(
                 firstSectionId,
                 firstInlineFolderPath,
                 handleVirtualFolderToggle,
-                shortcutsList.length,
                 getAllDescendantFolders,
                 getAllDescendantTags,
                 getAllDescendantPropertyNodeIds,

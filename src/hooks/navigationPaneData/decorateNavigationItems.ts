@@ -237,6 +237,49 @@ function applyRainbowOverlayToColors(params: {
     });
 }
 
+function inheritVirtualFolderStyle(params: {
+    ctx: NavigationItemDecorationContext;
+    enabled: boolean;
+    virtualFolderId: string;
+    color: string | undefined;
+    backgroundColor: string | undefined;
+}): { color: string | undefined; backgroundColor: string | undefined } | null {
+    const { ctx, enabled, virtualFolderId, color, backgroundColor } = params;
+    if (!enabled) {
+        return null;
+    }
+
+    if (color && backgroundColor) {
+        return null;
+    }
+
+    const inheritedColor = color ? undefined : ctx.settings.virtualFolderColors[virtualFolderId];
+    const inheritedBackgroundColor = backgroundColor ? undefined : ctx.settings.virtualFolderBackgroundColors[virtualFolderId];
+
+    if (!inheritedColor && !inheritedBackgroundColor) {
+        return null;
+    }
+
+    return {
+        color: color ?? inheritedColor,
+        backgroundColor: backgroundColor ?? inheritedBackgroundColor
+    };
+}
+
+function inheritShortcutsRootStyle(
+    ctx: NavigationItemDecorationContext,
+    color: string | undefined,
+    backgroundColor: string | undefined
+): { color: string | undefined; backgroundColor: string | undefined } | null {
+    return inheritVirtualFolderStyle({
+        ctx,
+        enabled: ctx.settings.inheritFolderColors,
+        virtualFolderId: SHORTCUTS_VIRTUAL_FOLDER_ID,
+        color,
+        backgroundColor
+    });
+}
+
 function overlayItemWithRainbow<T extends { color?: string; backgroundColor?: string }>(
     ctx: NavigationItemDecorationContext,
     item: T,
@@ -329,6 +372,18 @@ function decorateTagLikeNavigationItem(ctx: NavigationItemDecorationContext, ite
     let color = tagColorData.color;
     let backgroundColor = tagColorData.background;
 
+    const inheritedRoot = inheritVirtualFolderStyle({
+        ctx,
+        enabled: ctx.settings.showAllTagsFolder && ctx.settings.inheritTagColors,
+        virtualFolderId: TAGS_ROOT_VIRTUAL_FOLDER_ID,
+        color,
+        backgroundColor
+    });
+    if (inheritedRoot) {
+        color = inheritedRoot.color;
+        backgroundColor = inheritedRoot.backgroundColor;
+    }
+
     const tagRainbow = ctx.rainbow.tag;
     if (tagRainbow.isEnabled) {
         const ownRainbowColor = tagRainbow.colors.colorsByPath.get(tagNode.path);
@@ -370,6 +425,18 @@ function decoratePropertyLikeNavigationItem(
     let color = propertyColorData.color;
     let backgroundColor = propertyColorData.background;
 
+    const inheritedRoot = inheritVirtualFolderStyle({
+        ctx,
+        enabled: ctx.settings.showAllPropertiesFolder && ctx.settings.inheritPropertyColors,
+        virtualFolderId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
+        color,
+        backgroundColor
+    });
+    if (inheritedRoot) {
+        color = inheritedRoot.color;
+        backgroundColor = inheritedRoot.backgroundColor;
+    }
+
     const propertyRainbow = ctx.rainbow.property;
     if (propertyRainbow.isEnabled) {
         const ownRainbowColor = propertyRainbow.colors.colorsByNodeId.get(propertyNode.id);
@@ -400,6 +467,18 @@ function decorateVirtualFolderNavigationItem(
     ctx: NavigationItemDecorationContext,
     item: VirtualFolderNavigationItem
 ): CombinedNavigationItem {
+    const virtualFolderId = item.data.id;
+    const color = ctx.settings.virtualFolderColors[virtualFolderId];
+    const backgroundColor = ctx.settings.virtualFolderBackgroundColors[virtualFolderId];
+    const nextItem =
+        color || backgroundColor
+            ? {
+                  ...item,
+                  color: color ?? undefined,
+                  backgroundColor: backgroundColor ?? undefined
+              }
+            : item;
+
     let rainbowColor: string | undefined;
     if (item.data.id === TAGS_ROOT_VIRTUAL_FOLDER_ID) {
         rainbowColor = ctx.rainbow.tag.colors.rootColor;
@@ -409,7 +488,7 @@ function decorateVirtualFolderNavigationItem(
         rainbowColor = ctx.rainbow.shortcut.colors.rootColor;
     }
 
-    return overlayItemWithRainbow(ctx, item, rainbowColor);
+    return overlayItemWithRainbow(ctx, nextItem, rainbowColor);
 }
 
 function decorateShortcutFolderNavigationItem(
@@ -421,7 +500,13 @@ function decorateShortcutFolderNavigationItem(
     const defaultIcon = folderPath === '/' ? 'vault' : 'lucide-folder';
 
     let color = folderDisplayData?.color;
-    let backgroundColor = folderDisplayData?.backgroundColor;
+    let backgroundColor: string | undefined;
+
+    const inheritedRoot = inheritShortcutsRootStyle(ctx, color, backgroundColor);
+    if (inheritedRoot) {
+        color = inheritedRoot.color;
+        backgroundColor = inheritedRoot.backgroundColor;
+    }
 
     if (!item.isExcluded) {
         const rainbowColor = resolveShortcutRainbowColor(ctx, item.key);
@@ -444,7 +529,13 @@ function decorateShortcutFolderNavigationItem(
 function decorateShortcutTagNavigationItem(ctx: NavigationItemDecorationContext, item: ShortcutTagNavigationItem): CombinedNavigationItem {
     const tagColorData = ctx.metadataService.getTagColorData(item.tagPath);
     let color = tagColorData.color;
-    let backgroundColor = tagColorData.background;
+    let backgroundColor: string | undefined;
+
+    const inheritedRoot = inheritShortcutsRootStyle(ctx, color, backgroundColor);
+    if (inheritedRoot) {
+        color = inheritedRoot.color;
+        backgroundColor = inheritedRoot.backgroundColor;
+    }
 
     const rainbowColor = resolveShortcutRainbowColor(ctx, item.key);
     if (rainbowColor) {
@@ -482,7 +573,13 @@ function decorateShortcutPropertyNavigationItem(
     })();
 
     let color = propertyColorData.color;
-    let backgroundColor = propertyColorData.background;
+    let backgroundColor: string | undefined;
+
+    const inheritedRoot = inheritShortcutsRootStyle(ctx, color, backgroundColor);
+    if (inheritedRoot) {
+        color = inheritedRoot.color;
+        backgroundColor = inheritedRoot.backgroundColor;
+    }
 
     const rainbowColor = resolveShortcutRainbowColor(ctx, item.key);
     if (rainbowColor) {
@@ -508,7 +605,13 @@ function decorateShortcutNoteNavigationItem(
     const resolvedIconId = resolveNavigationFileIconId(ctx, note, customIconId);
 
     let color = baseColor;
-    let backgroundColor = item.backgroundColor;
+    let backgroundColor: string | undefined;
+
+    const inheritedRoot = inheritShortcutsRootStyle(ctx, color, backgroundColor);
+    if (inheritedRoot) {
+        color = inheritedRoot.color;
+        backgroundColor = inheritedRoot.backgroundColor;
+    }
 
     const rainbowColor = resolveShortcutRainbowColor(ctx, item.key);
     if (rainbowColor) {
@@ -533,8 +636,20 @@ function decorateShortcutSearchNavigationItem(
     ctx: NavigationItemDecorationContext,
     item: ShortcutSearchNavigationItem
 ): CombinedNavigationItem {
+    let color = item.color;
+    let backgroundColor: string | undefined;
+
+    const inheritedRoot = inheritShortcutsRootStyle(ctx, color, backgroundColor);
+    if (inheritedRoot) {
+        color = inheritedRoot.color;
+        backgroundColor = inheritedRoot.backgroundColor;
+    }
+
     const rainbowColor = resolveShortcutRainbowColor(ctx, item.key);
-    return overlayItemWithRainbow(ctx, item, rainbowColor);
+    if (color === item.color && backgroundColor === item.backgroundColor) {
+        return overlayItemWithRainbow(ctx, item, rainbowColor);
+    }
+    return overlayItemWithRainbow(ctx, { ...item, color, backgroundColor }, rainbowColor);
 }
 
 function decorateNavigationItem(ctx: NavigationItemDecorationContext, item: CombinedNavigationItem): CombinedNavigationItem {

@@ -1252,3 +1252,86 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         unsubscribe();
     });
 });
+
+describe('FolderMetadataService folder color inheritance', () => {
+    let app: App;
+    let service: FolderMetadataService;
+    let settingsProvider: TestSettingsProvider;
+
+    beforeEach(() => {
+        getFileMock.mockReset();
+        updateFileMetadataMock.mockReset();
+        onContentChangeMock.mockReset();
+        onContentChangeMock.mockImplementation(() => () => {});
+        getDBInstanceOrNullMock.mockReset();
+        getDBInstanceOrNullMock.mockImplementation(() => ({
+            getFile: getFileMock,
+            updateFileMetadata: updateFileMetadataMock,
+            onContentChange: onContentChangeMock
+        }));
+
+        settingsProvider = new TestSettingsProvider({
+            ...createSettings(),
+            useFrontmatterMetadata: false,
+            enableFolderNotes: false
+        });
+
+        const vaultListeners = new Map<string, Set<(...data: unknown[]) => unknown>>();
+        app = new App();
+        Object.defineProperty(app.vault, 'on', {
+            configurable: true,
+            value: (name: string, callback: (...data: unknown[]) => unknown) => {
+                const listeners = vaultListeners.get(name);
+                if (listeners) {
+                    listeners.add(callback);
+                } else {
+                    vaultListeners.set(name, new Set([callback]));
+                }
+                return {};
+            }
+        });
+        Object.defineProperty(app.vault, 'offref', {
+            configurable: true,
+            value: vi.fn()
+        });
+
+        service = new FolderMetadataService(app, settingsProvider);
+    });
+
+    it('inherits root folder color when inheritance is enabled', () => {
+        settingsProvider.settings.inheritFolderColors = true;
+        settingsProvider.settings.folderColors = { '/': '#ff0000' };
+
+        expect(service.getFolderColor('Projects')).toBe('#ff0000');
+        expect(service.getFolderColor('Projects/Client')).toBe('#ff0000');
+    });
+
+    it('does not inherit root folder color when inheritance is disabled', () => {
+        settingsProvider.settings.inheritFolderColors = false;
+        settingsProvider.settings.folderColors = { '/': '#ff0000' };
+
+        expect(service.getFolderColor('Projects')).toBeUndefined();
+    });
+
+    it('prefers nearest ancestor color over root folder color', () => {
+        settingsProvider.settings.inheritFolderColors = true;
+        settingsProvider.settings.folderColors = { '/': '#ff0000', Projects: '#00ff00' };
+
+        expect(service.getFolderColor('Projects/Client')).toBe('#00ff00');
+    });
+
+    it('inherits root folder background color when inheritance is enabled', () => {
+        settingsProvider.settings.inheritFolderColors = true;
+        settingsProvider.settings.folderBackgroundColors = { '/': '#0000ff' };
+
+        expect(
+            service.getFolderDisplayData('Projects', {
+                includeDisplayName: false,
+                includeColor: false,
+                includeBackgroundColor: true,
+                includeIcon: false,
+                includeInheritedColors: true
+            }).backgroundColor
+        ).toBe('#0000ff');
+    });
+});

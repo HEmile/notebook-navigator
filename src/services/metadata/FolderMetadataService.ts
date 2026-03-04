@@ -1182,6 +1182,10 @@ export class FolderMetadataService extends BaseMetadataService {
             return {};
         }
 
+        if (folderPath === '/') {
+            return {};
+        }
+
         let color: string | undefined;
         let backgroundColor: string | undefined;
         const pathParts = folderPath.split('/');
@@ -1209,6 +1213,25 @@ export class FolderMetadataService extends BaseMetadataService {
             if ((!needs.color || color) && (!needs.backgroundColor || backgroundColor)) {
                 break;
             }
+        }
+
+        if ((!needs.color || color) && (!needs.backgroundColor || backgroundColor)) {
+            return { color, backgroundColor };
+        }
+
+        const rootDisplayData = this.getFolderDisplayData('/', {
+            includeDisplayName: false,
+            includeColor: needs.color && !color,
+            includeBackgroundColor: needs.backgroundColor && !backgroundColor,
+            includeIcon: false,
+            includeInheritedColors: false
+        });
+
+        if (!color && rootDisplayData.color) {
+            color = rootDisplayData.color;
+        }
+        if (!backgroundColor && rootDisplayData.backgroundColor) {
+            backgroundColor = rootDisplayData.backgroundColor;
         }
 
         return {

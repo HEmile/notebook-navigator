@@ -220,6 +220,8 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
         const tagBackgroundColors = sanitizeRecord(plugin.settings.tagBackgroundColors);
         const propertyColors = sanitizeRecord(plugin.settings.propertyColors);
         const propertyBackgroundColors = sanitizeRecord(plugin.settings.propertyBackgroundColors);
+        const virtualFolderColors = sanitizeRecord(plugin.settings.virtualFolderColors);
+        const virtualFolderBackgroundColors = sanitizeRecord(plugin.settings.virtualFolderBackgroundColors);
         const tagIcons = sanitizeRecord(plugin.settings.tagIcons, isStringRecordValue);
         const propertyIcons = sanitizeRecord(plugin.settings.propertyIcons, isStringRecordValue);
         const rawInterfaceIcons = plugin.settings.interfaceIcons;
@@ -238,6 +240,8 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
             tagBackgroundColors,
             propertyColors,
             propertyBackgroundColors,
+            virtualFolderColors,
+            virtualFolderBackgroundColors,
             tagIcons,
             propertyIcons,
             interfaceIcons,

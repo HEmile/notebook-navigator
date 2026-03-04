@@ -1968,6 +1968,8 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.settings.tagBackgroundColors = sanitizeStringMap(this.settings.tagBackgroundColors);
         this.settings.propertyColors = sanitizeStringMap(this.settings.propertyColors);
         this.settings.propertyBackgroundColors = sanitizeStringMap(this.settings.propertyBackgroundColors);
+        this.settings.virtualFolderColors = sanitizeStringMap(this.settings.virtualFolderColors);
+        this.settings.virtualFolderBackgroundColors = sanitizeStringMap(this.settings.virtualFolderBackgroundColors);
         this.settings.folderSortOverrides = sanitizeSortMap(this.settings.folderSortOverrides);
         this.settings.tagSortOverrides = sanitizeSortMap(this.settings.tagSortOverrides);
         this.settings.propertySortOverrides = sanitizeSortMap(this.settings.propertySortOverrides);

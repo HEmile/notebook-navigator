@@ -523,6 +523,8 @@ export interface NotebookNavigatorSettings {
     propertySortOverrides: Record<string, SortOption>;
     propertyTreeSortOverrides: Record<string, AlphaSortOrder>;
     propertyAppearances: Record<string, FolderAppearance>;
+    virtualFolderColors: Record<string, string>;
+    virtualFolderBackgroundColors: Record<string, string>;
     navigationSeparators: Record<string, boolean>;
     userColors: string[];
     lastShownVersion: string;
