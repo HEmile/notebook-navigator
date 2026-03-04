@@ -29,18 +29,15 @@ import {
 } from './colorUtils';
 import { getParentFolderPath } from './pathUtils';
 
-export const NAV_RAINBOW_DEFAULT_START: RGBA = parseCssColor(DEFAULT_SETTINGS.navRainbow.folders.firstColor) ?? {
-    r: 239,
-    g: 68,
-    b: 68,
-    a: 1
-};
-export const NAV_RAINBOW_DEFAULT_END: RGBA = parseCssColor(DEFAULT_SETTINGS.navRainbow.folders.lastColor) ?? {
-    r: 139,
-    g: 92,
-    b: 246,
-    a: 1
-};
+const navRainbowDefaultStart = parseCssColor(DEFAULT_SETTINGS.navRainbow.folders.firstColor);
+const navRainbowDefaultEnd = parseCssColor(DEFAULT_SETTINGS.navRainbow.folders.lastColor);
+
+if (!navRainbowDefaultStart || !navRainbowDefaultEnd) {
+    throw new Error('[Notebook Navigator] Invalid nav rainbow default colors.');
+}
+
+export const NAV_RAINBOW_DEFAULT_START: RGBA = navRainbowDefaultStart;
+export const NAV_RAINBOW_DEFAULT_END: RGBA = navRainbowDefaultEnd;
 
 const FOLDER_VIRTUAL_ROOT_RAINBOW_KEY = '__nn-folder-virtual-root__';
 const TAG_VIRTUAL_ROOT_RAINBOW_KEY = '__nn-tag-virtual-root__';

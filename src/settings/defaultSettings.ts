@@ -22,15 +22,7 @@ import { FILE_VISIBILITY } from '../utils/fileTypeUtils';
 import { LISTPANE_MEASUREMENTS, NAVPANE_MEASUREMENTS, type PinnedNotes } from '../types';
 import { DEFAULT_UI_SCALE } from '../utils/uiScale';
 import type { FolderAppearance, TagAppearance } from '../hooks/useListPaneAppearance';
-import {
-    SYNC_MODE_SETTING_IDS,
-    type NavRainbowColorMode,
-    type NavRainbowSettings,
-    type NavRainbowScope,
-    type NavRainbowTransitionStyle,
-    type NotebookNavigatorSettings,
-    type SettingSyncMode
-} from './types';
+import { SYNC_MODE_SETTING_IDS, type NavRainbowSettings, type NotebookNavigatorSettings, type SettingSyncMode } from './types';
 import { sanitizeRecord } from '../utils/recordUtils';
 import {
     DEFAULT_CALENDAR_CUSTOM_FILE_PATTERN,
@@ -45,70 +37,41 @@ SYNC_MODE_SETTING_IDS.forEach(settingId => {
     defaultSettingsSync[settingId] = 'synced';
 });
 
-interface NavRainbowColorDefaults {
-    firstColor: string;
-    lastColor: string;
-    transitionStyle: NavRainbowTransitionStyle;
-}
-
-interface NavRainbowSectionDefaults {
-    enabled: boolean;
-}
-
-type NavRainbowSectionDefaultsWithScope = NavRainbowSectionDefaults & { scope: NavRainbowScope };
-
-const NAV_RAINBOW_MODE_DEFAULT: NavRainbowColorMode = 'none';
-
-const NAV_RAINBOW_COLOR_DEFAULTS: NavRainbowColorDefaults = {
-    firstColor: '#ef4444',
-    lastColor: '#8b5cf6',
-    transitionStyle: 'hue'
-};
-
-const NAV_RAINBOW_SECTION_DEFAULTS = {
-    shortcuts: { enabled: false },
-    folders: { enabled: true, scope: 'root' },
-    tags: { enabled: false, scope: 'root' },
-    properties: { enabled: false, scope: 'root' }
-} satisfies {
-    shortcuts: NavRainbowSectionDefaults;
-    folders: NavRainbowSectionDefaultsWithScope;
-    tags: NavRainbowSectionDefaultsWithScope;
-    properties: NavRainbowSectionDefaultsWithScope;
-};
+const NAV_RAINBOW_FIRST_COLOR_DEFAULT = '#ef4444';
+const NAV_RAINBOW_LAST_COLOR_DEFAULT = '#8b5cf6';
 
 const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
-    mode: NAV_RAINBOW_MODE_DEFAULT,
+    mode: 'none',
 
     shortcuts: {
-        enabled: NAV_RAINBOW_SECTION_DEFAULTS.shortcuts.enabled,
-        firstColor: NAV_RAINBOW_COLOR_DEFAULTS.firstColor,
-        lastColor: NAV_RAINBOW_COLOR_DEFAULTS.lastColor,
-        transitionStyle: NAV_RAINBOW_COLOR_DEFAULTS.transitionStyle
+        enabled: false,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        transitionStyle: 'rgb'
     },
 
     folders: {
-        enabled: NAV_RAINBOW_SECTION_DEFAULTS.folders.enabled,
-        firstColor: NAV_RAINBOW_COLOR_DEFAULTS.firstColor,
-        lastColor: NAV_RAINBOW_COLOR_DEFAULTS.lastColor,
-        transitionStyle: NAV_RAINBOW_COLOR_DEFAULTS.transitionStyle,
-        scope: NAV_RAINBOW_SECTION_DEFAULTS.folders.scope
+        enabled: true,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        transitionStyle: 'hue',
+        scope: 'root'
     },
 
     tags: {
-        enabled: NAV_RAINBOW_SECTION_DEFAULTS.tags.enabled,
-        firstColor: NAV_RAINBOW_COLOR_DEFAULTS.firstColor,
-        lastColor: NAV_RAINBOW_COLOR_DEFAULTS.lastColor,
-        transitionStyle: NAV_RAINBOW_COLOR_DEFAULTS.transitionStyle,
-        scope: NAV_RAINBOW_SECTION_DEFAULTS.tags.scope
+        enabled: false,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        transitionStyle: 'hue',
+        scope: 'root'
     },
 
     properties: {
-        enabled: NAV_RAINBOW_SECTION_DEFAULTS.properties.enabled,
-        firstColor: NAV_RAINBOW_COLOR_DEFAULTS.firstColor,
-        lastColor: NAV_RAINBOW_COLOR_DEFAULTS.lastColor,
-        transitionStyle: NAV_RAINBOW_COLOR_DEFAULTS.transitionStyle,
-        scope: NAV_RAINBOW_SECTION_DEFAULTS.properties.scope
+        enabled: false,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        transitionStyle: 'hue',
+        scope: 'root'
     }
 };
 
@@ -248,7 +211,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     // Folders tab
     showFolderIcons: true,
     showRootFolder: true,
-    inheritFolderColors: false,
+    inheritFolderColors: true,
     folderSortOrder: 'alpha-asc',
     enableFolderNotes: false,
     folderNoteType: 'markdown',
