@@ -572,7 +572,7 @@ export const NavigationPane = React.memo(
         // Invalidates the solid background cache when surface color changes
         useEffect(() => {
             solidBackgroundCacheRef.current.clear();
-        }, [navSurfaceColor, navSurfaceVersion]);
+        }, [navSurfaceColor, navSurfaceVersion, settings.navRainbow]);
 
         // Extract included tag tokens from search filters for highlighting
         const searchIncludeTokens = useMemo(() => {
@@ -2781,6 +2781,7 @@ export const NavigationPane = React.memo(
                             canInteract && note
                                 ? { type: 'note', key: item.key, file: note }
                                 : { type: 'missing', key: item.key, kind: 'note' };
+                        const shortcutBackground = isMissing ? undefined : getSolidBackground(item.backgroundColor);
 
                         const shortcutProps = {
                             icon: isMissing
@@ -2789,6 +2790,7 @@ export const NavigationPane = React.memo(
                                   ? 'lucide-eye-off'
                                   : (item.icon ?? 'lucide-file-text'),
                             color: isMissing ? undefined : item.color,
+                            backgroundColor: shortcutBackground,
                             label,
                             description: undefined,
                             level: item.level,
@@ -2834,6 +2836,7 @@ export const NavigationPane = React.memo(
 
                     case NavigationPaneItemType.SHORTCUT_SEARCH: {
                         const searchShortcut = item.searchShortcut;
+                        const shortcutBackground = getSolidBackground(item.backgroundColor);
 
                         const dragHandlers = buildShortcutExternalHandlers(item.key);
                         const isDragSource = shouldUseShortcutDnd && activeShortcutId === item.key;
@@ -2841,6 +2844,7 @@ export const NavigationPane = React.memo(
                         const shortcutProps = {
                             icon: 'lucide-search',
                             color: item.color,
+                            backgroundColor: shortcutBackground,
                             label: searchShortcut.name,
                             level: item.level,
                             type: 'search' as const,
@@ -3131,6 +3135,8 @@ export const NavigationPane = React.memo(
                             <VirtualFolderComponent
                                 virtualFolder={virtualFolder}
                                 level={item.level}
+                                color={item.color}
+                                backgroundColor={getSolidBackground(item.backgroundColor)}
                                 indentGuideLevels={indentGuideLevels}
                                 isExpanded={isExpanded}
                                 hasChildren={hasChildren}

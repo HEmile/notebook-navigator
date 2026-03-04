@@ -27,7 +27,9 @@ export const STRINGS_NL = {
         delete: 'Verwijderen',
         clear: 'Wissen',
         remove: 'Verwijderen',
+        restoreDefault: 'Standaard herstellen', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Verzenden',
+        configure: 'Configureren', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Geen selectie',
         untagged: 'Zonder tags',
         featureImageAlt: 'Uitgelichte afbeelding',
@@ -373,6 +375,9 @@ export const STRINGS_NL = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Regenboogkleuren: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Pictogrammen zoeken...',
             recentlyUsedHeader: 'Recent gebruikt',
@@ -439,7 +444,6 @@ export const STRINGS_NL = {
             recentColors: 'Recente kleuren',
             clearRecentColors: 'Recente kleuren wissen',
             removeRecentColor: 'Kleur verwijderen',
-            removeColor: 'Kleur verwijderen',
             apply: 'Toepassen',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -830,6 +834,7 @@ export const STRINGS_NL = {
             },
             navigation: {
                 appearance: 'Uiterlijk',
+                rainbowColors: 'Regenboogkleuren',
                 leftSidebar: 'Linkerzijbalk',
                 calendarIntegration: 'Kalenderintegratie'
             },
@@ -1559,6 +1564,74 @@ export const STRINGS_NL = {
             showIconsColorOnly: {
                 name: 'Kleur alleen op pictogrammen toepassen',
                 desc: 'Indien ingeschakeld, worden aangepaste kleuren alleen op pictogrammen toegepast. Indien uitgeschakeld, worden kleuren toegepast op zowel pictogrammen als tekstlabels.'
+            },
+            navRainbowMode: {
+                name: 'Regenboogkleurmodus',
+                desc: 'Regenboogkleuren toepassen in het navigatievenster.',
+                options: {
+                    none: 'Uit',
+                    foreground: 'Tekstkleur',
+                    background: 'Achtergrondkleur'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Eerste kleur',
+                desc: 'Eerste kleur in het regenboogverloop.'
+            },
+            navRainbowLastColor: {
+                name: 'Laatste kleur',
+                desc: 'Laatste kleur in het regenboogverloop.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Overgangsstijl',
+                desc: 'Interpolatie tussen de eerste en laatste kleur.',
+                options: {
+                    hue: 'Hue',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Toepassen op snelkoppelingen',
+                desc: 'Regenboogkleuren toepassen op snelkoppelingen.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Toepassen op mappen',
+                desc: 'Regenboogkleuren toepassen op mappen.'
+            },
+            navRainbowFolderScope: {
+                name: 'Mappenbereik',
+                desc: 'Selecteer welke mapniveaus kleurtoewijzingen starten.',
+                options: {
+                    root: 'Hoofdniveau',
+                    child: 'Subniveau',
+                    all: 'Elk niveau'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Toepassen op tags',
+                desc: 'Regenboogkleuren toepassen op tags.'
+            },
+            navRainbowTagScope: {
+                name: 'Tagbereik',
+                desc: 'Selecteer welke tagniveaus kleurtoewijzingen starten.',
+                options: {
+                    root: 'Hoofdniveau',
+                    child: 'Subniveau',
+                    all: 'Elk niveau'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Toepassen op eigenschappen',
+                desc: 'Regenboogkleuren toepassen op eigenschappen.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Eigenschappenbereik',
+                desc: 'Selecteer welke eigenschapsniveaus kleurtoewijzingen starten.',
+                options: {
+                    root: 'Hoofdniveau',
+                    child: 'Subniveau',
+                    all: 'Elk niveau'
+                }
             },
             collapseBehavior: {
                 name: 'Items inklappen',

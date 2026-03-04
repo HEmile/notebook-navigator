@@ -19,19 +19,48 @@
 import { ButtonComponent, Platform, Setting, SliderComponent } from 'obsidian';
 import { strings } from '../../i18n';
 import { NavigationBannerModal } from '../../modals/NavigationBannerModal';
+import { NavRainbowSectionModal } from '../../modals/NavRainbowSectionModal';
 import { DEFAULT_SETTINGS } from '../defaultSettings';
-import type { ItemScope } from '../types';
+import { isNavRainbowColorMode, type ItemScope, type NavRainbowSettings } from '../types';
 import type { SettingsTabContext } from './SettingsTabContext';
 import { runAsyncAction } from '../../utils/async';
 import { getActiveVaultProfile } from '../../utils/vaultProfiles';
 import { createSettingGroupFactory } from '../settingGroups';
 import { addSettingSyncModeToggle } from '../syncModeToggle';
-import { createSubSettingsContainer, wireToggleSettingWithSubSettings } from '../subSettings';
+import { createSubSettingsContainer, setElementVisible, wireToggleSettingWithSubSettings } from '../subSettings';
+import { createHueInterpolator, toCssRgba } from '../../utils/colorUtils';
+import { NAV_RAINBOW_DEFAULT_END, NAV_RAINBOW_DEFAULT_START } from '../../utils/navigationRainbow';
 
 /** Renders the navigation pane settings tab */
 export function renderNavigationPaneTab(context: SettingsTabContext): void {
     const { containerEl, plugin, addToggleSetting } = context;
     const getActiveProfile = () => getActiveVaultProfile(plugin.settings);
+
+    const createRainbowHeading = (heading: string): DocumentFragment => {
+        const doc = containerEl.ownerDocument;
+        const fragment = doc.createDocumentFragment();
+        const chars = Array.from(heading);
+        const coloredChars = chars.filter(char => char.trim().length > 0);
+        const colorDenominator = Math.max(1, coloredChars.length - 1);
+        const interpolateHeadingColor = createHueInterpolator(NAV_RAINBOW_DEFAULT_START, NAV_RAINBOW_DEFAULT_END);
+        let colorIndex = 0;
+
+        for (const char of chars) {
+            if (char.trim().length === 0) {
+                fragment.appendChild(doc.createTextNode(char));
+                continue;
+            }
+
+            const span = doc.createElement('span');
+            const color = interpolateHeadingColor(colorIndex / colorDenominator);
+            span.style.color = toCssRgba(color);
+            span.setText(char);
+            fragment.appendChild(span);
+            colorIndex += 1;
+        }
+
+        return fragment;
+    };
 
     const createGroup = createSettingGroupFactory(containerEl);
     const appearanceGroup = createGroup(strings.settings.groups.navigation.appearance);
@@ -252,6 +281,105 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
         );
 
     addSettingSyncModeToggle({ setting: navItemHeightScaleTextSetting, plugin, settingId: 'navItemHeightScaleText' });
+
+    const rainbowGroup = createGroup(createRainbowHeading(strings.settings.groups.navigation.rainbowColors));
+
+    const rainbowModeSetting = rainbowGroup.addSetting(setting => {
+        setting.setName(strings.settings.items.navRainbowMode.name).setDesc(strings.settings.items.navRainbowMode.desc);
+    });
+
+    const rainbowSubSettingsEl = createSubSettingsContainer(rainbowModeSetting);
+    setElementVisible(rainbowSubSettingsEl, plugin.settings.navRainbow.mode !== 'none');
+
+    const updateNavRainbow = async (updater: (settings: NavRainbowSettings) => NavRainbowSettings): Promise<void> => {
+        plugin.settings.navRainbow = updater(plugin.settings.navRainbow);
+        await plugin.saveSettingsAndUpdate();
+    };
+
+    rainbowModeSetting.addDropdown(dropdown =>
+        dropdown
+            .addOption('none', strings.settings.items.navRainbowMode.options.none)
+            .addOption('foreground', strings.settings.items.navRainbowMode.options.foreground)
+            .addOption('background', strings.settings.items.navRainbowMode.options.background)
+            .setValue(plugin.settings.navRainbow.mode)
+            .onChange(async value => {
+                if (!isNavRainbowColorMode(value)) {
+                    return;
+                }
+
+                await updateNavRainbow(settings => ({ ...settings, mode: value }));
+                setElementVisible(rainbowSubSettingsEl, value !== 'none');
+            })
+    );
+
+    const createRainbowSectionSetting = (params: {
+        name: string;
+        desc: string;
+        getEnabled: () => boolean;
+        setEnabled: (value: boolean) => Promise<void>;
+        onConfigure: () => void;
+    }): void => {
+        const setting = new Setting(rainbowSubSettingsEl).setName(params.name).setDesc(params.desc);
+
+        setting.addToggle(toggle =>
+            toggle.setValue(params.getEnabled()).onChange(async value => {
+                await params.setEnabled(value);
+            })
+        );
+
+        setting.addButton(button => {
+            button.setButtonText(strings.common.configure);
+            button.onClick(params.onConfigure);
+        });
+    };
+
+    createRainbowSectionSetting({
+        name: strings.settings.items.navRainbowApplyToShortcuts.name,
+        desc: strings.settings.items.navRainbowApplyToShortcuts.desc,
+        getEnabled: () => plugin.settings.navRainbow.shortcuts.enabled,
+        setEnabled: async value => {
+            await updateNavRainbow(settings => ({ ...settings, shortcuts: { ...settings.shortcuts, enabled: value } }));
+        },
+        onConfigure: () => {
+            new NavRainbowSectionModal(context.app, plugin, 'shortcuts').open();
+        }
+    });
+
+    createRainbowSectionSetting({
+        name: strings.settings.items.navRainbowApplyToFolders.name,
+        desc: strings.settings.items.navRainbowApplyToFolders.desc,
+        getEnabled: () => plugin.settings.navRainbow.folders.enabled,
+        setEnabled: async value => {
+            await updateNavRainbow(settings => ({ ...settings, folders: { ...settings.folders, enabled: value } }));
+        },
+        onConfigure: () => {
+            new NavRainbowSectionModal(context.app, plugin, 'folders').open();
+        }
+    });
+
+    createRainbowSectionSetting({
+        name: strings.settings.items.navRainbowApplyToTags.name,
+        desc: strings.settings.items.navRainbowApplyToTags.desc,
+        getEnabled: () => plugin.settings.navRainbow.tags.enabled,
+        setEnabled: async value => {
+            await updateNavRainbow(settings => ({ ...settings, tags: { ...settings.tags, enabled: value } }));
+        },
+        onConfigure: () => {
+            new NavRainbowSectionModal(context.app, plugin, 'tags').open();
+        }
+    });
+
+    createRainbowSectionSetting({
+        name: strings.settings.items.navRainbowApplyToProperties.name,
+        desc: strings.settings.items.navRainbowApplyToProperties.desc,
+        getEnabled: () => plugin.settings.navRainbow.properties.enabled,
+        setEnabled: async value => {
+            await updateNavRainbow(settings => ({ ...settings, properties: { ...settings.properties, enabled: value } }));
+        },
+        onConfigure: () => {
+            new NavRainbowSectionModal(context.app, plugin, 'properties').open();
+        }
+    });
 
     const behaviorGroup = createGroup(strings.settings.groups.general.behavior);
 

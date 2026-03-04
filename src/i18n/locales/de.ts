@@ -27,7 +27,9 @@ export const STRINGS_DE = {
         delete: 'Löschen', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Zurücksetzen', // Button text for clearing values (English: Clear)
         remove: 'Entfernen', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Standard wiederherstellen', // Button text for restoring values to defaults (English: Restore default)
         submit: 'OK', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Konfigurieren', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Keine Auswahl', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Ohne Tag', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Vorschaubild', // Alt text for thumbnail/preview images (English: Feature image)
@@ -372,6 +374,9 @@ export const STRINGS_DE = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Regenbogenfarben: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Symbole suchen...',
             recentlyUsedHeader: 'Kürzlich verwendet',
@@ -438,7 +443,6 @@ export const STRINGS_DE = {
             recentColors: 'Zuletzt verwendete Farben',
             clearRecentColors: 'Zuletzt verwendete Farben löschen',
             removeRecentColor: 'Farbe entfernen',
-            removeColor: 'Farbe entfernen',
             apply: 'Anwenden',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -830,6 +834,7 @@ export const STRINGS_DE = {
             },
             navigation: {
                 appearance: 'Darstellung',
+                rainbowColors: 'Regenbogenfarben',
                 leftSidebar: 'Linke Seitenleiste',
                 calendarIntegration: 'Kalenderintegration'
             },
@@ -1558,6 +1563,74 @@ export const STRINGS_DE = {
             showIconsColorOnly: {
                 name: 'Farbe nur auf Symbole anwenden',
                 desc: 'Wenn aktiviert, werden benutzerdefinierte Farben nur auf Symbole angewendet. Wenn deaktiviert, werden Farben sowohl auf Symbole als auch auf Textbeschriftungen angewendet.'
+            },
+            navRainbowMode: {
+                name: 'Regenbogen-Farbmodus',
+                desc: 'Regenbogenfarben im Navigationsbereich anwenden.',
+                options: {
+                    none: 'Aus',
+                    foreground: 'Textfarbe',
+                    background: 'Hintergrundfarbe'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Erste Farbe',
+                desc: 'Erste Farbe im Regenbogenverlauf.'
+            },
+            navRainbowLastColor: {
+                name: 'Letzte Farbe',
+                desc: 'Letzte Farbe im Regenbogenverlauf.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Übergangsstil',
+                desc: 'Interpolation zwischen der ersten und letzten Farbe.',
+                options: {
+                    hue: 'Farbton',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Auf Verknüpfungen anwenden',
+                desc: 'Regenbogenfarben auf Verknüpfungen anwenden.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Auf Ordner anwenden',
+                desc: 'Regenbogenfarben auf Ordner anwenden.'
+            },
+            navRainbowFolderScope: {
+                name: 'Ordnerbereich',
+                desc: 'Auswählen, welche Ordnerebenen Farbzuweisungen starten.',
+                options: {
+                    root: 'Stammebene',
+                    child: 'Unterebene',
+                    all: 'Jede Ebene'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Auf Tags anwenden',
+                desc: 'Regenbogenfarben auf Tags anwenden.'
+            },
+            navRainbowTagScope: {
+                name: 'Tag-Bereich',
+                desc: 'Auswählen, welche Tag-Ebenen Farbzuweisungen starten.',
+                options: {
+                    root: 'Stammebene',
+                    child: 'Unterebene',
+                    all: 'Jede Ebene'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Auf Eigenschaften anwenden',
+                desc: 'Regenbogenfarben auf Eigenschaften anwenden.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Eigenschaftsbereich',
+                desc: 'Auswählen, welche Eigenschaftsebenen Farbzuweisungen starten.',
+                options: {
+                    root: 'Stammebene',
+                    child: 'Unterebene',
+                    all: 'Jede Ebene'
+                }
             },
             collapseBehavior: {
                 name: 'Elemente einklappen',

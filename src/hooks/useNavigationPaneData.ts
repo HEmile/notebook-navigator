@@ -29,9 +29,8 @@
  * - Managing tag expansion state
  */
 
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { TFile, TFolder, debounce } from 'obsidian';
-import type { App } from 'obsidian';
 import { useServices, useMetadataService } from '../context/ServicesContext';
 import { useRecentData } from '../context/RecentDataContext';
 import { useExpansionState } from '../context/ExpansionContext';
@@ -46,7 +45,6 @@ import {
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
     NavigationPaneItemType,
     VirtualFolder,
-    ItemType,
     SHORTCUTS_VIRTUAL_FOLDER_ID,
     RECENT_NOTES_VIRTUAL_FOLDER_ID,
     NavigationSectionId
@@ -54,7 +52,7 @@ import {
 import { TIMEOUTS } from '../types/obsidian-extended';
 import { PropertyTreeNode, TagTreeNode } from '../types/storage';
 import type { CombinedNavigationItem } from '../types/virtualization';
-import type { NotebookNavigatorSettings, TagSortOrder } from '../settings/types';
+import type { NotebookNavigatorSettings } from '../settings/types';
 import {
     createFrontmatterPropertyExclusionMatcher,
     createHiddenFileNameMatcherForVisibility,
@@ -62,29 +60,44 @@ import {
     shouldExcludeFileWithMatcher,
     shouldExcludeFileName
 } from '../utils/fileFilters';
-import { shouldDisplayFile, FILE_VISIBILITY } from '../utils/fileTypeUtils';
-import { resolveFileIconId, type FileNameIconNeedle } from '../utils/fileIconUtils';
+import { FILE_VISIBILITY } from '../utils/fileTypeUtils';
 // Use Obsidian's trailing debounce for vault-driven updates
-import { getTotalNoteCount, excludeFromTagTree, findTagNode } from '../utils/tagTree';
+import { excludeFromTagTree, findTagNode } from '../utils/tagTree';
 import { flattenFolderTree, flattenTagTree, comparePropertyOrderWithFallback, compareTagOrderWithFallback } from '../utils/treeFlattener';
 import { createHiddenTagVisibility, matchesHiddenTagPattern } from '../utils/tagPrefixMatcher';
-import { setNavigationIndex } from '../utils/navigationIndex';
+import { buildNavigationPathIndexMap } from '../utils/navigationIndex';
 import { resolveCanonicalTagPath } from '../utils/tagUtils';
 import { getCachedFileTags } from '../utils/tagUtils';
 import { isFolderShortcut, isNoteShortcut, isSearchShortcut, isTagShortcut, isPropertyShortcut } from '../types/shortcuts';
 import { useRootFolderOrder, type RootFileChangeEvent } from './useRootFolderOrder';
 import { useRootPropertyOrder } from './useRootPropertyOrder';
 import { useRootTagOrder } from './useRootTagOrder';
+import { createNavigationItemDecorator, type NavigationRainbowColors } from './navigationPaneData/decorateNavigationItems';
+import {
+    comparePropertyKeyNodesAlphabetically,
+    comparePropertyValueNodesAlphabetically,
+    compareTagAlphabetically,
+    createPropertyComparator,
+    createTagComparator,
+    type PropertyNodeComparator,
+    type TagComparator
+} from './navigationPaneData/navigationComparators';
+import { insertRootSpacing, SPACER_ITEM_TYPES } from './navigationPaneData/rootSpacing';
 import { getFolderNote, getFolderNoteDetectionSettings } from '../utils/folderNotes';
 import { getDBInstance, getDBInstanceOrNull } from '../storage/fileOperations';
-import { naturalCompare } from '../utils/sortUtils';
 import type { NoteCountInfo } from '../types/noteCounts';
-import { calculateFolderNoteCounts } from '../utils/noteCountUtils';
 import { resolveFolderDisplayName } from '../utils/folderDisplayName';
 import { createFileHiddenMatcher, getEffectiveFrontmatterExclusions } from '../utils/exclusionUtils';
 import { sanitizeNavigationSectionOrder } from '../utils/navigationSections';
 import { getVirtualTagCollection, isVirtualTagCollectionId, VIRTUAL_TAG_COLLECTION_IDS } from '../utils/virtualTagCollections';
 import { casefold } from '../utils/recordUtils';
+import {
+    buildFolderRainbowColors,
+    buildNavigationRainbowPalettes,
+    buildPropertyRainbowColors,
+    buildShortcutRainbowColors,
+    buildTagRainbowColors
+} from '../utils/navigationRainbow';
 import {
     getDirectPropertyKeyNoteCount,
     getTotalPropertyNoteCount,
@@ -101,12 +114,12 @@ import {
     parseNavigationSeparatorKey
 } from '../utils/navigationSeparators';
 import { resolveUXIcon } from '../utils/uxIcons';
-import type { MetadataService } from '../services/MetadataService';
 import { useSettingsDerived, type ActiveProfileState } from '../context/SettingsContext';
 import { getParentFolderPath, getPathBaseName } from '../utils/pathUtils';
 import { resolveFolderNoteName } from '../utils/folderNoteName';
 import { EXCALIDRAW_BASENAME_SUFFIX } from '../utils/fileNameUtils';
 import { FOLDER_NOTE_TYPE_EXTENSIONS } from '../types/folderNote';
+import { useNavigationNoteCounts } from './navigationPaneData/useNavigationNoteCounts';
 
 // Checks if a navigation item is a shortcut-related item (virtual folder, shortcut, or header)
 const isShortcutNavigationItem = (item: CombinedNavigationItem): boolean => {
@@ -132,345 +145,8 @@ const isRecentNavigationItem = (item: CombinedNavigationItem): boolean => {
     return item.type === NavigationPaneItemType.RECENT_NOTE;
 };
 
-/** Options controlling which navigation items are eligible for root spacing */
-interface RootSpacingOptions {
-    showRootFolder: boolean;
-    tagRootLevel: number;
-}
-
-/** Determines if the navigation item is a top-level folder or tag eligible for root spacing */
-const isRootSpacingCandidate = (item: CombinedNavigationItem, options: RootSpacingOptions): boolean => {
-    if (item.type === NavigationPaneItemType.FOLDER) {
-        const desiredLevel = options.showRootFolder ? 1 : 0;
-        return item.level === desiredLevel;
-    }
-    if (item.type === NavigationPaneItemType.TAG || item.type === NavigationPaneItemType.UNTAGGED) {
-        return item.level === options.tagRootLevel;
-    }
-    return false;
-};
-
 const FOLDER_SORT_NAME_CACHE_MAX_ENTRIES = 2000;
 const FOLDER_NOTE_EXTENSIONS = new Set<string>(Object.values(FOLDER_NOTE_TYPE_EXTENSIONS));
-
-function decorateNavigationItems(
-    source: CombinedNavigationItem[],
-    app: App,
-    settings: NotebookNavigatorSettings,
-    fileNameIconNeedles: readonly FileNameIconNeedle[],
-    getFileDisplayName: (file: TFile) => string,
-    metadataService: MetadataService,
-    parsedExcludedFolders: string[],
-    metadataDecorationVersion: number
-): CombinedNavigationItem[] {
-    void metadataDecorationVersion;
-    const shouldResolveFileNameIcons = settings.showFilenameMatchIcons;
-    const fileIconSettings = {
-        showFilenameMatchIcons: settings.showFilenameMatchIcons,
-        fileNameIconMap: settings.fileNameIconMap,
-        showCategoryIcons: true,
-        fileTypeIconMap: settings.fileTypeIconMap
-    };
-    const fileIconFallbackMode = 'file';
-    const folderDisplayDataByPath = new Map<string, ReturnType<MetadataService['getFolderDisplayData']>>();
-    const getFolderDisplayData = (folderPath: string): ReturnType<MetadataService['getFolderDisplayData']> => {
-        const cachedData = folderDisplayDataByPath.get(folderPath);
-        if (cachedData) {
-            return cachedData;
-        }
-
-        const nextData = metadataService.getFolderDisplayData(folderPath);
-        folderDisplayDataByPath.set(folderPath, nextData);
-        return nextData;
-    };
-
-    return source.map(item => {
-        if (item.type === NavigationPaneItemType.FOLDER) {
-            const folderDisplayData = getFolderDisplayData(item.data.path);
-            return {
-                ...item,
-                displayName: folderDisplayData.displayName,
-                color: folderDisplayData.color,
-                backgroundColor: folderDisplayData.backgroundColor,
-                icon: folderDisplayData.icon,
-                parsedExcludedFolders
-            };
-        }
-        if (item.type === NavigationPaneItemType.TAG || item.type === NavigationPaneItemType.UNTAGGED) {
-            const tagNode = item.data;
-            // Resolve both color and background in one pass (including inherited values when enabled).
-            const tagColorData = metadataService.getTagColorData(tagNode.path);
-            return {
-                ...item,
-                color: tagColorData.color,
-                backgroundColor: tagColorData.background,
-                icon: metadataService.getTagIcon(tagNode.path)
-            };
-        }
-        if (item.type === NavigationPaneItemType.PROPERTY_KEY || item.type === NavigationPaneItemType.PROPERTY_VALUE) {
-            const propertyNode = item.data;
-            const propertyNodeId = propertyNode.id;
-            const propertyColorData = metadataService.getPropertyColorData(propertyNodeId);
-            const icon =
-                metadataService.getPropertyIcon(propertyNodeId) ||
-                (propertyNode.kind === 'value' ? resolveUXIcon(settings.interfaceIcons, 'nav-property-value') : undefined);
-
-            return {
-                ...item,
-                color: propertyColorData.color,
-                backgroundColor: propertyColorData.background,
-                icon
-            };
-        }
-        if (item.type === NavigationPaneItemType.SHORTCUT_FOLDER) {
-            const folderPath = item.folder?.path;
-            const folderDisplayData = folderPath ? getFolderDisplayData(folderPath) : undefined;
-            const defaultIcon = folderPath === '/' ? 'vault' : 'lucide-folder';
-            return {
-                ...item,
-                displayName: folderDisplayData?.displayName,
-                icon: folderDisplayData?.icon || defaultIcon,
-                color: folderDisplayData?.color,
-                backgroundColor: folderDisplayData?.backgroundColor
-            };
-        }
-        if (item.type === NavigationPaneItemType.SHORTCUT_TAG) {
-            // Resolve both color and background in one pass (including inherited values when enabled).
-            const tagColorData = metadataService.getTagColorData(item.tagPath);
-            return {
-                ...item,
-                icon: metadataService.getTagIcon(item.tagPath) || resolveUXIcon(settings.interfaceIcons, 'nav-tag'),
-                color: tagColorData.color,
-                backgroundColor: tagColorData.background
-            };
-        }
-        if (item.type === NavigationPaneItemType.SHORTCUT_PROPERTY) {
-            const propertyNodeId = item.propertyNodeId;
-            const propertyColorData = metadataService.getPropertyColorData(propertyNodeId);
-            const icon = (() => {
-                if (propertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
-                    return resolveUXIcon(settings.interfaceIcons, 'nav-properties');
-                }
-
-                const parsed = parsePropertyNodeId(propertyNodeId);
-                return (
-                    metadataService.getPropertyIcon(propertyNodeId) ||
-                    (parsed?.valuePath
-                        ? resolveUXIcon(settings.interfaceIcons, 'nav-property-value')
-                        : resolveUXIcon(settings.interfaceIcons, 'nav-property'))
-                );
-            })();
-
-            return {
-                ...item,
-                icon,
-                color: propertyColorData.color,
-                backgroundColor: propertyColorData.background
-            };
-        }
-        if (item.type === NavigationPaneItemType.SHORTCUT_NOTE) {
-            const note = item.note;
-            if (!note) {
-                return item;
-            }
-            const color = metadataService.getFileColor(note.path);
-            const customIconId = metadataService.getFileIcon(note.path);
-            const isExternalFile = !shouldDisplayFile(note, FILE_VISIBILITY.SUPPORTED, app);
-            const resolvedIconId = resolveFileIconId(note, fileIconSettings, {
-                customIconId,
-                metadataCache: app.metadataCache,
-                isExternalFile,
-                fallbackMode: fileIconFallbackMode,
-                fileNameNeedles: fileNameIconNeedles,
-                fileNameForMatch: shouldResolveFileNameIcons ? getFileDisplayName(note) : undefined
-            });
-            return {
-                ...item,
-                icon: resolvedIconId ?? undefined,
-                color
-            };
-        }
-        if (item.type === NavigationPaneItemType.RECENT_NOTE) {
-            const note = item.note;
-            const customIconId = metadataService.getFileIcon(note.path);
-            const color = metadataService.getFileColor(note.path);
-            const isExternalFile = !shouldDisplayFile(note, FILE_VISIBILITY.SUPPORTED, app);
-            const resolvedIconId = resolveFileIconId(note, fileIconSettings, {
-                customIconId,
-                metadataCache: app.metadataCache,
-                isExternalFile,
-                fallbackMode: fileIconFallbackMode,
-                fileNameNeedles: fileNameIconNeedles,
-                fileNameForMatch: shouldResolveFileNameIcons ? getFileDisplayName(note) : undefined
-            });
-            return {
-                ...item,
-                icon: resolvedIconId ?? undefined,
-                color
-            };
-        }
-        return item;
-    });
-}
-
-/**
- * Inserts spacer items between consecutive root-level folders or tags
- * @param items Navigation items to augment with spacing
- * @param spacing Spacing value in pixels
- */
-const CUSTOM_SEPARATOR_PREFIXES = ['folder:', 'tag:', 'property:'];
-const isCustomSeparatorKey = (key: string): boolean => CUSTOM_SEPARATOR_PREFIXES.some(prefix => key.startsWith(prefix));
-const SPACER_ITEM_TYPES = new Set<NavigationPaneItemType>([
-    NavigationPaneItemType.TOP_SPACER,
-    NavigationPaneItemType.LIST_SPACER,
-    NavigationPaneItemType.BOTTOM_SPACER,
-    NavigationPaneItemType.ROOT_SPACER
-]);
-
-const insertRootSpacing = (items: CombinedNavigationItem[], spacing: number, options: RootSpacingOptions): CombinedNavigationItem[] => {
-    if (spacing <= 0) {
-        return items;
-    }
-
-    const result: CombinedNavigationItem[] = [];
-    let rootCountInSection = 0;
-    let spacerId = 0;
-
-    const shouldResetSection = (item: CombinedNavigationItem): boolean => {
-        if (
-            item.type === NavigationPaneItemType.TOP_SPACER ||
-            item.type === NavigationPaneItemType.BOTTOM_SPACER ||
-            item.type === NavigationPaneItemType.VIRTUAL_FOLDER
-        ) {
-            return true;
-        }
-
-        if (item.type === NavigationPaneItemType.LIST_SPACER) {
-            return !isCustomSeparatorKey(item.key);
-        }
-
-        return false;
-    };
-
-    for (const item of items) {
-        if (shouldResetSection(item)) {
-            rootCountInSection = 0;
-            result.push(item);
-            continue;
-        }
-
-        if (isRootSpacingCandidate(item, options)) {
-            if (rootCountInSection > 0) {
-                result.push({
-                    type: NavigationPaneItemType.ROOT_SPACER,
-                    key: `root-spacer-${spacerId++}`,
-                    spacing
-                });
-            }
-            rootCountInSection += 1;
-            result.push(item);
-            continue;
-        }
-
-        result.push(item);
-    }
-
-    return result;
-};
-
-/** Comparator function type for sorting tag tree nodes */
-type TagComparator = (a: TagTreeNode, b: TagTreeNode) => number;
-type PropertyNodeComparator = (a: PropertyTreeNode, b: PropertyTreeNode) => number;
-type NavigationComparator<T> = (a: T, b: T) => number;
-
-function reverseComparator<T>(comparator: NavigationComparator<T>): NavigationComparator<T> {
-    return (a, b) => -comparator(a, b);
-}
-
-function createFrequencyComparator<T>(params: {
-    order: TagSortOrder;
-    compareAlphabetically: NavigationComparator<T>;
-    getFrequency: (node: T) => number;
-}): NavigationComparator<T> | undefined {
-    const { order, compareAlphabetically, getFrequency } = params;
-
-    if (order === 'alpha-asc') {
-        return undefined;
-    }
-
-    if (order === 'alpha-desc') {
-        return reverseComparator(compareAlphabetically);
-    }
-
-    const compareByFrequency: NavigationComparator<T> = (a, b) => {
-        const diff = getFrequency(a) - getFrequency(b);
-        if (diff !== 0) {
-            return diff;
-        }
-        return compareAlphabetically(a, b);
-    };
-
-    if (order === 'frequency-asc') {
-        return compareByFrequency;
-    }
-
-    return reverseComparator(compareByFrequency);
-}
-
-/** Compares tags alphabetically by name with fallback to path */
-const compareTagAlphabetically: TagComparator = (a, b) => {
-    const nameCompare = naturalCompare(a.name, b.name);
-    if (nameCompare !== 0) {
-        return nameCompare;
-    }
-    return a.path.localeCompare(b.path);
-};
-
-// Creates comparator for tag sorting modes. Returns undefined for default alphabetical ascending order.
-const createTagComparator = (order: TagSortOrder, includeDescendantNotes: boolean): TagComparator | undefined => {
-    const getCount = includeDescendantNotes
-        ? (node: TagTreeNode) => getTotalNoteCount(node)
-        : (node: TagTreeNode) => node.notesWithTag.size;
-
-    return createFrequencyComparator<TagTreeNode>({
-        order,
-        compareAlphabetically: compareTagAlphabetically,
-        getFrequency: getCount
-    });
-};
-
-/** Compares property key nodes alphabetically by display name with key fallback */
-const comparePropertyKeyNodesAlphabetically: PropertyNodeComparator = (a, b) => {
-    const nameCompare = naturalCompare(a.name, b.name);
-    if (nameCompare !== 0) {
-        return nameCompare;
-    }
-    return a.key.localeCompare(b.key);
-};
-
-/** Compares property value nodes alphabetically by display name with value-path fallback */
-const comparePropertyValueNodesAlphabetically: PropertyNodeComparator = (a, b) => {
-    const nameCompare = naturalCompare(a.name, b.name);
-    if (nameCompare !== 0) {
-        return nameCompare;
-    }
-    return (a.valuePath ?? '').localeCompare(b.valuePath ?? '');
-};
-
-/** Creates a property node comparator for alpha/frequency sorting modes */
-const createPropertyComparator = (params: {
-    order: TagSortOrder;
-    compareAlphabetically: PropertyNodeComparator;
-    getFrequency: (node: PropertyTreeNode) => number;
-}): PropertyNodeComparator => {
-    const { order, compareAlphabetically, getFrequency } = params;
-    const comparator = createFrequencyComparator<PropertyTreeNode>({
-        order,
-        compareAlphabetically,
-        getFrequency
-    });
-    return comparator ?? compareAlphabetically;
-};
 
 /**
  * Parameters for the useNavigationPaneData hook
@@ -514,8 +190,6 @@ interface UseNavigationPaneDataResult {
     shouldPinRecentNotes: boolean;
     /** Map from item keys to index in items array */
     pathToIndex: Map<string, number>;
-    /** Map from shortcut id to index */
-    shortcutIndex: Map<string, number>;
     /** Map from tag path to current/descendant note counts */
     tagCounts: Map<string, NoteCountInfo>;
     /** Map from property node id to current/descendant note counts */
@@ -641,15 +315,18 @@ export function useNavigationPaneData({
     // Version counter that increments when vault files change
     const [fileChangeVersion, setFileChangeVersion] = useState(0);
     const [folderExclusionVersion, setFolderExclusionVersion] = useState(0);
+    const bumpVaultChangeVersion = useCallback(() => {
+        setFileChangeVersion(value => value + 1);
+    }, []);
     // Increments version counter to trigger dependent recalculations
     const handleRootFileChange = useCallback(
         (change: RootFileChangeEvent) => {
-            setFileChangeVersion(value => value + 1);
+            bumpVaultChangeVersion();
             if (isFolderNoteRelatedPath(change.path) || (change.oldPath !== undefined && isFolderNoteRelatedPath(change.oldPath))) {
                 setFolderExclusionVersion(value => value + 1);
             }
         },
-        [isFolderNoteRelatedPath]
+        [bumpVaultChangeVersion, isFolderNoteRelatedPath]
     );
     // Get ordered root folders and notify on file changes
     const { rootFolders, rootLevelFolders, rootFolderOrderMap, missingRootFolderPaths } = useRootFolderOrder({
@@ -2141,26 +1818,105 @@ export function useNavigationPaneData({
         return result;
     }, [firstSectionId, items, parsedNavigationSeparators, sectionSpacerMap, showHiddenItems, pinShortcuts]);
 
-    const decorateItems = useCallback(
-        (sourceItems: CombinedNavigationItem[]) =>
-            decorateNavigationItems(
-                sourceItems,
-                app,
-                settings,
-                fileNameIconNeedles,
-                getFileDisplayName,
-                metadataService,
-                parsedExcludedFolders,
-                metadataDecorationVersion
-            ),
-        [app, settings, fileNameIconNeedles, getFileDisplayName, metadataService, parsedExcludedFolders, metadataDecorationVersion]
+    const navRainbowPalettes = useMemo(() => buildNavigationRainbowPalettes(settings.navRainbow), [settings.navRainbow]);
+
+    const folderRainbowColors = useMemo(() => {
+        const palette = navRainbowPalettes.folder;
+        if (!palette) {
+            return { colorsByPath: new Map<string, string>(), rootColor: undefined, getInheritedColor: (_path: string) => undefined };
+        }
+
+        return buildFolderRainbowColors({
+            items: folderItems,
+            palette,
+            scope: settings.navRainbow.folders.scope,
+            showRootFolder: settings.showRootFolder,
+            rootLevel: settings.showRootFolder ? 1 : 0,
+            inheritColors: settings.inheritFolderColors
+        });
+    }, [folderItems, navRainbowPalettes.folder, settings.navRainbow.folders.scope, settings.showRootFolder, settings.inheritFolderColors]);
+
+    const tagRainbowColors = useMemo(() => {
+        const palette = navRainbowPalettes.tag;
+        if (!palette) {
+            return { colorsByPath: new Map<string, string>(), rootColor: undefined, getInheritedColor: (_path: string) => undefined };
+        }
+
+        return buildTagRainbowColors({
+            items: tagItems,
+            palette,
+            scope: settings.navRainbow.tags.scope,
+            rootLevel: settings.showAllTagsFolder ? 1 : 0,
+            showAllTagsFolder: settings.showAllTagsFolder,
+            inheritColors: settings.inheritTagColors
+        });
+    }, [tagItems, navRainbowPalettes.tag, settings.navRainbow.tags.scope, settings.showAllTagsFolder, settings.inheritTagColors]);
+
+    const propertyRainbowColors = useMemo(() => {
+        const palette = navRainbowPalettes.property;
+        if (!palette) {
+            return { colorsByNodeId: new Map<string, string>(), rootColor: undefined, rootColorsByKey: new Map<string, string>() };
+        }
+
+        return buildPropertyRainbowColors({
+            items: propertyItems,
+            palette,
+            scope: settings.navRainbow.properties.scope,
+            showAllPropertiesFolder: settings.showAllPropertiesFolder
+        });
+    }, [propertyItems, navRainbowPalettes.property, settings.navRainbow.properties.scope, settings.showAllPropertiesFolder]);
+
+    const shortcutRainbowColors = useMemo(() => {
+        const palette = navRainbowPalettes.shortcut;
+        if (!palette) {
+            return { colorsByKey: new Map<string, string>(), rootColor: undefined };
+        }
+
+        return buildShortcutRainbowColors({
+            items: shortcutItems,
+            palette
+        });
+    }, [shortcutItems, navRainbowPalettes.shortcut]);
+
+    const navRainbowColors = useMemo<NavigationRainbowColors>(
+        () => ({
+            folder: folderRainbowColors,
+            tag: tagRainbowColors,
+            property: propertyRainbowColors,
+            shortcut: shortcutRainbowColors
+        }),
+        [folderRainbowColors, tagRainbowColors, propertyRainbowColors, shortcutRainbowColors]
     );
+
+    const decorateItem = useMemo(() => {
+        void metadataDecorationVersion;
+        return createNavigationItemDecorator({
+            app,
+            settings,
+            fileNameIconNeedles,
+            getFileDisplayName,
+            metadataService,
+            parsedExcludedFolders,
+            navRainbowPalettes,
+            navRainbowColors
+        });
+    }, [
+        app,
+        settings,
+        fileNameIconNeedles,
+        getFileDisplayName,
+        metadataService,
+        parsedExcludedFolders,
+        metadataDecorationVersion,
+        navRainbowPalettes,
+        navRainbowColors
+    ]);
 
     /**
      * Add metadata (colors, icons) and excluded folders to items
      * This pre-computation avoids calling these functions during render
      */
-    const itemsWithMetadata = useMemo(() => decorateItems(itemsWithSeparators), [decorateItems, itemsWithSeparators]);
+    const itemsWithMetadata = useMemo(() => itemsWithSeparators.map(decorateItem), [decorateItem, itemsWithSeparators]);
 
     const decoratedRecentNotes = useMemo(() => itemsWithMetadata.filter(isRecentNavigationItem), [itemsWithMetadata]);
 
@@ -2169,8 +1925,8 @@ export function useNavigationPaneData({
         if (!pinShortcuts) {
             return [];
         }
-        return decorateItems(shortcutItems);
-    }, [decorateItems, pinShortcuts, shortcutItems]);
+        return shortcutItems.map(decorateItem);
+    }, [decorateItem, pinShortcuts, shortcutItems]);
 
     const pinnedRecentNotesItems = useMemo((): CombinedNavigationItem[] => {
         if (!shouldPinRecentNotes) {
@@ -2179,8 +1935,8 @@ export function useNavigationPaneData({
         if (decoratedRecentNotes.length > 0) {
             return decoratedRecentNotes;
         }
-        return decorateItems(recentNotesItems);
-    }, [decorateItems, decoratedRecentNotes, recentNotesItems, shouldPinRecentNotes]);
+        return recentNotesItems.map(decorateItem);
+    }, [decorateItem, decoratedRecentNotes, recentNotesItems, shouldPinRecentNotes]);
 
     /**
      * Filter items based on showHiddenItems setting
@@ -2290,310 +2046,42 @@ export function useNavigationPaneData({
      */
     const itemsWithRootSpacing = useMemo(() => {
         const tagRootLevel = settings.showAllTagsFolder ? 1 : 0;
+        const propertyRootLevel = settings.showAllPropertiesFolder ? 1 : 0;
         return insertRootSpacing(filteredItemsForDisplay, settings.rootLevelSpacing, {
             showRootFolder: settings.showRootFolder,
-            tagRootLevel
+            tagRootLevel,
+            propertyRootLevel
         });
-    }, [filteredItemsForDisplay, settings.rootLevelSpacing, settings.showRootFolder, settings.showAllTagsFolder]);
-
-    const pathToIndex = useMemo(() => {
-        const indexMap = new Map<string, number>();
-
-        itemsWithRootSpacing.forEach((item, index) => {
-            if (item.type === NavigationPaneItemType.FOLDER) {
-                setNavigationIndex(indexMap, ItemType.FOLDER, item.data.path, index);
-            } else if (item.type === NavigationPaneItemType.TAG || item.type === NavigationPaneItemType.UNTAGGED) {
-                const tagNode = item.data;
-                setNavigationIndex(indexMap, ItemType.TAG, tagNode.path, index);
-            } else if (item.type === NavigationPaneItemType.VIRTUAL_FOLDER && item.tagCollectionId) {
-                setNavigationIndex(indexMap, ItemType.TAG, item.tagCollectionId, index);
-            } else if (item.type === NavigationPaneItemType.VIRTUAL_FOLDER && item.propertyCollectionId) {
-                setNavigationIndex(indexMap, ItemType.PROPERTY, item.key, index);
-            } else if (item.type === NavigationPaneItemType.PROPERTY_KEY || item.type === NavigationPaneItemType.PROPERTY_VALUE) {
-                setNavigationIndex(indexMap, ItemType.PROPERTY, item.data.id, index);
-            }
-        });
-
-        return indexMap;
-    }, [itemsWithRootSpacing]);
-
-    // Build index map for shortcuts to enable scrolling to specific shortcuts
-    const shortcutIndex = useMemo(() => {
-        const indexMap = new Map<string, number>();
-
-        const source = pinShortcuts ? shortcutItemsWithMetadata : itemsWithRootSpacing;
-
-        source.forEach((item, index) => {
-            if (
-                item.type === NavigationPaneItemType.SHORTCUT_FOLDER ||
-                item.type === NavigationPaneItemType.SHORTCUT_NOTE ||
-                item.type === NavigationPaneItemType.SHORTCUT_SEARCH ||
-                item.type === NavigationPaneItemType.SHORTCUT_TAG ||
-                item.type === NavigationPaneItemType.SHORTCUT_PROPERTY
-            ) {
-                indexMap.set(item.key, index);
-            }
-        });
-
-        return indexMap;
-    }, [itemsWithRootSpacing, pinShortcuts, shortcutItemsWithMetadata]);
-
-    const lastTagCountsRef = useRef<Map<string, NoteCountInfo>>(new Map());
-    const lastPropertyCountsRef = useRef<Map<string, NoteCountInfo>>(new Map());
-    const lastFolderCountsRef = useRef<Map<string, NoteCountInfo>>(new Map());
-
-    /**
-     * Pre-compute tag counts to avoid expensive calculations during render
-     */
-    const computedTagCounts = useMemo((): Map<string, NoteCountInfo> | null => {
-        // Skip computation if pane is not visible or not showing tags
-        if (!isVisible || !settings.showTags) {
-            return null;
-        }
-
-        const counts = new Map<string, NoteCountInfo>();
-
-        const taggedCollectionCurrent = includeDescendantNotes ? visibleTaggedCount : 0;
-
-        counts.set(TAGGED_TAG_ID, {
-            current: taggedCollectionCurrent,
-            descendants: 0,
-            total: taggedCollectionCurrent
-        });
-
-        // Add untagged count
-        if (settings.showUntagged) {
-            counts.set(UNTAGGED_TAG_ID, {
-                current: untaggedCount,
-                descendants: 0,
-                total: untaggedCount
-            });
-        }
-
-        // Compute counts for all tag items
-        itemsWithMetadata.forEach(item => {
-            if (item.type === NavigationPaneItemType.TAG) {
-                const tagNode = item.data;
-                const current = tagNode.notesWithTag.size;
-                if (includeDescendantNotes) {
-                    const total = getTotalNoteCount(tagNode);
-                    const descendants = Math.max(total - current, 0);
-                    counts.set(tagNode.path, { current, descendants, total });
-                } else {
-                    counts.set(tagNode.path, {
-                        current,
-                        descendants: 0,
-                        total: current
-                    });
-                }
-            }
-        });
-
-        return counts;
-    }, [itemsWithMetadata, settings.showTags, settings.showUntagged, includeDescendantNotes, visibleTaggedCount, untaggedCount, isVisible]);
-
-    const tagCounts = useMemo(() => {
-        if (!settings.showTags) {
-            return new Map<string, NoteCountInfo>();
-        }
-        return computedTagCounts ?? lastTagCountsRef.current;
-    }, [computedTagCounts, settings.showTags]);
-
-    useEffect(() => {
-        if (!settings.showTags) {
-            lastTagCountsRef.current = new Map();
-            return;
-        }
-        if (computedTagCounts) {
-            lastTagCountsRef.current = computedTagCounts;
-        }
-    }, [computedTagCounts, settings.showTags]);
-
-    const computedPropertyCounts = useMemo((): Map<string, NoteCountInfo> | null => {
-        if (!isVisible || !propertiesSectionActive || !settings.showNoteCount) {
-            return null;
-        }
-
-        const counts = new Map<string, NoteCountInfo>();
-        if (propertySectionBase.collectionCount) {
-            counts.set(PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, propertySectionBase.collectionCount);
-        }
-        const visiblePropertyNodes = new Map<string, PropertyTreeNode>();
-
-        itemsWithMetadata.forEach(item => {
-            if (item.type === NavigationPaneItemType.PROPERTY_KEY || item.type === NavigationPaneItemType.PROPERTY_VALUE) {
-                visiblePropertyNodes.set(item.data.id, item.data);
-            }
-        });
-
-        if (visiblePropertyNodes.size === 0) {
-            return counts;
-        }
-
-        const propertyTree = fileData.propertyTree ?? new Map<string, PropertyTreeNode>();
-
-        visiblePropertyNodes.forEach(node => {
-            if (node.kind === 'key') {
-                const current = getDirectPropertyKeyNoteCount(node);
-                if (!includeDescendantNotes) {
-                    counts.set(node.id, { current, descendants: 0, total: current });
-                    return;
-                }
-
-                const total = node.notesWithValue.size;
-                const descendants = Math.max(total - current, 0);
-                counts.set(node.id, { current, descendants, total });
-                return;
-            }
-
-            const current = node.notesWithValue.size;
-            if (!includeDescendantNotes || !node.valuePath) {
-                counts.set(node.id, { current, descendants: 0, total: current });
-                return;
-            }
-
-            const keyNode = propertyTree.get(node.key);
-            if (!keyNode) {
-                counts.set(node.id, { current, descendants: 0, total: current });
-                return;
-            }
-
-            const total = getTotalPropertyNoteCount(keyNode, node.valuePath);
-            const descendants = Math.max(total - current, 0);
-            counts.set(node.id, { current, descendants, total });
-        });
-
-        return counts;
     }, [
-        isVisible,
-        itemsWithMetadata,
-        propertiesSectionActive,
-        settings.showNoteCount,
-        fileData.propertyTree,
-        includeDescendantNotes,
-        propertySectionBase.collectionCount
+        filteredItemsForDisplay,
+        settings.rootLevelSpacing,
+        settings.showRootFolder,
+        settings.showAllTagsFolder,
+        settings.showAllPropertiesFolder
     ]);
 
-    const propertyCounts = useMemo(() => {
-        if (!propertiesSectionActive || !settings.showNoteCount) {
-            return new Map<string, NoteCountInfo>();
-        }
-        return computedPropertyCounts ?? lastPropertyCountsRef.current;
-    }, [computedPropertyCounts, propertiesSectionActive, settings.showNoteCount]);
+    const pathToIndex = useMemo(() => buildNavigationPathIndexMap(itemsWithRootSpacing), [itemsWithRootSpacing]);
 
-    useEffect(() => {
-        if (!propertiesSectionActive || !settings.showNoteCount) {
-            lastPropertyCountsRef.current = new Map();
-            return;
-        }
-        if (computedPropertyCounts) {
-            lastPropertyCountsRef.current = computedPropertyCounts;
-        }
-    }, [computedPropertyCounts, propertiesSectionActive, settings.showNoteCount]);
-
-    /**
-     * Pre-compute folder file counts to avoid recursive counting during render
-     */
-    const computedFolderCounts = useMemo((): Map<string, NoteCountInfo> | null => {
-        // Skip computation if pane is not visible or not showing note counts
-        if (!isVisible || !settings.showNoteCount) {
-            return null;
-        }
-
-        const counts = new Map<string, NoteCountInfo>();
-
-        const excludedProperties = effectiveFrontmatterExclusions;
-        const excludedFileMatcher = createFrontmatterPropertyExclusionMatcher(excludedProperties);
-        const excludedFolderPatterns = hiddenFolders;
-        const hiddenFileTagVisibility = showHiddenItems ? null : createHiddenTagVisibility(hiddenFileTags, false);
-        const db = hiddenFileTagVisibility && hiddenFileTagVisibility.hasHiddenRules ? getDBInstanceOrNull() : null;
-        const folderNoteSettings = getFolderNoteDetectionSettings(settings);
-        const includeDescendants = includeDescendantNotes;
-        const showHiddenFolders = showHiddenItems;
-        const countOptions = {
-            app,
-            db,
-            fileVisibility,
-            excludedFiles: excludedProperties,
-            excludedFileMatcher,
-            excludedFolders: excludedFolderPatterns,
-            fileNameMatcher: folderCountFileNameMatcher,
-            hiddenFileTagVisibility,
-            includeDescendants,
-            showHiddenFolders,
-            hideFolderNoteInList: settings.hideFolderNoteInList,
-            folderNoteSettings,
-            cache: counts
-        };
-
-        // Compute counts for all folder items
-        itemsWithMetadata.forEach(item => {
-            if (item.type === NavigationPaneItemType.FOLDER && item.data instanceof TFolder) {
-                calculateFolderNoteCounts(item.data, countOptions);
-            }
-        });
-
-        return counts;
-        // NOTE TO REVIEWER: Including **fileChangeVersion** to trigger recalculation when non-markdown files move
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
+    const { tagCounts, propertyCounts, folderCounts } = useNavigationNoteCounts({
+        app,
+        isVisible,
+        settings,
+        propertiesSectionActive,
         itemsWithMetadata,
-        settings.showNoteCount,
         includeDescendantNotes,
+        visibleTaggedCount,
+        untaggedCount,
+        propertyTree,
+        propertyCollectionCount: propertySectionBase.collectionCount,
         effectiveFrontmatterExclusions,
         hiddenFolders,
-        hiddenFileNames,
         hiddenFileTags,
         showHiddenItems,
         folderCountFileNameMatcher,
         fileVisibility,
-        settings.enableFolderNotes,
-        settings.folderNoteName,
-        settings.folderNoteNamePattern,
-        settings.hideFolderNoteInList,
-        app,
-        isVisible,
-        fileChangeVersion
-    ]);
-
-    const folderCounts = useMemo(() => {
-        if (!settings.showNoteCount) {
-            return new Map<string, NoteCountInfo>();
-        }
-        return computedFolderCounts ?? lastFolderCountsRef.current;
-    }, [computedFolderCounts, settings.showNoteCount]);
-
-    useEffect(() => {
-        if (!settings.showNoteCount) {
-            lastFolderCountsRef.current = new Map();
-            return;
-        }
-        if (computedFolderCounts) {
-            lastFolderCountsRef.current = computedFolderCounts;
-        }
-    }, [computedFolderCounts, settings.showNoteCount]);
-
-    // Refresh folder counts when frontmatter changes (e.g., hide/unhide via frontmatter properties)
-    useEffect(() => {
-        const bumpCounts = debounce(
-            () => {
-                setFileChangeVersion(v => v + 1);
-            },
-            TIMEOUTS.FILE_OPERATION_DELAY,
-            true
-        );
-
-        const metaRef = app.metadataCache.on('changed', file => {
-            if (file instanceof TFile) {
-                bumpCounts();
-            }
-        });
-
-        return () => {
-            app.metadataCache.offref(metaRef);
-            bumpCounts.cancel();
-        };
-    }, [app]);
+        vaultChangeVersion: fileChangeVersion,
+        bumpVaultChangeVersion
+    });
 
     return {
         items: itemsWithRootSpacing,
@@ -2605,7 +2093,6 @@ export function useNavigationPaneData({
         tagsVirtualFolderHasChildren,
         propertiesSectionActive,
         pathToIndex,
-        shortcutIndex,
         tagCounts,
         propertyCounts,
         folderCounts,

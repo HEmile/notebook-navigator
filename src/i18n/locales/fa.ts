@@ -27,7 +27,9 @@ export const STRINGS_FA = {
         delete: 'حذف',
         clear: 'پاک کردن',
         remove: 'حذف',
+        restoreDefault: 'بازگردانی پیش‌فرض', // Button text for restoring values to defaults (English: Restore default)
         submit: 'ارسال',
+        configure: 'پیکربندی', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'بدون انتخاب',
         untagged: 'بدون برچسب',
         featureImageAlt: 'تصویر ویژه',
@@ -371,6 +373,9 @@ export const STRINGS_FA = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `رنگ‌های رنگین‌کمان: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'جستجوی آیکون...',
             recentlyUsedHeader: 'اخیراً استفاده شده',
@@ -437,7 +442,6 @@ export const STRINGS_FA = {
             recentColors: 'رنگ‌های اخیر',
             clearRecentColors: 'پاک کردن رنگ‌های اخیر',
             removeRecentColor: 'حذف رنگ',
-            removeColor: 'حذف رنگ',
             apply: 'اعمال',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -829,6 +833,7 @@ export const STRINGS_FA = {
             },
             navigation: {
                 appearance: 'ظاهر',
+                rainbowColors: 'رنگ‌های رنگین‌کمان',
                 leftSidebar: 'نوار کناری چپ',
                 calendarIntegration: 'یکپارچه‌سازی تقویم'
             },
@@ -1556,6 +1561,74 @@ export const STRINGS_FA = {
             showIconsColorOnly: {
                 name: 'اعمال رنگ فقط به آیکون‌ها',
                 desc: 'وقتی فعال، رنگ‌های سفارشی فقط به آیکون‌ها اعمال می‌شوند. وقتی غیرفعال، رنگ‌ها به آیکون‌ها و برچسب‌های متن اعمال می‌شوند.'
+            },
+            navRainbowMode: {
+                name: 'حالت رنگ‌های رنگین‌کمان',
+                desc: 'اعمال رنگ‌های رنگین‌کمان در پنل ناوبری.',
+                options: {
+                    none: 'خاموش',
+                    foreground: 'رنگ متن',
+                    background: 'رنگ پس‌زمینه'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'رنگ اول',
+                desc: 'رنگ اول در گرادیان رنگین‌کمان.'
+            },
+            navRainbowLastColor: {
+                name: 'رنگ آخر',
+                desc: 'رنگ آخر در گرادیان رنگین‌کمان.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'سبک انتقال',
+                desc: 'درون‌یابی استفاده‌شده بین رنگ اول و آخر.',
+                options: {
+                    hue: 'فام',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'اعمال بر میانبرها',
+                desc: 'اعمال رنگ‌های رنگین‌کمان بر میانبرها.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'اعمال بر پوشه‌ها',
+                desc: 'اعمال رنگ‌های رنگین‌کمان بر پوشه‌ها.'
+            },
+            navRainbowFolderScope: {
+                name: 'محدوده پوشه‌ها',
+                desc: 'انتخاب سطوح پوشه‌ای که تخصیص رنگ از آن‌ها شروع می‌شود.',
+                options: {
+                    root: 'سطح ریشه',
+                    child: 'سطح فرزند',
+                    all: 'هر سطح'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'اعمال بر برچسب‌ها',
+                desc: 'اعمال رنگ‌های رنگین‌کمان بر برچسب‌ها.'
+            },
+            navRainbowTagScope: {
+                name: 'محدوده برچسب‌ها',
+                desc: 'انتخاب سطوح برچسبی که تخصیص رنگ از آن‌ها شروع می‌شود.',
+                options: {
+                    root: 'سطح ریشه',
+                    child: 'سطح فرزند',
+                    all: 'هر سطح'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'اعمال بر ویژگی‌ها',
+                desc: 'اعمال رنگ‌های رنگین‌کمان بر ویژگی‌ها.'
+            },
+            navRainbowPropertyScope: {
+                name: 'محدوده ویژگی‌ها',
+                desc: 'انتخاب سطوح ویژگی که تخصیص رنگ از آن‌ها شروع می‌شود.',
+                options: {
+                    root: 'سطح ریشه',
+                    child: 'سطح فرزند',
+                    all: 'هر سطح'
+                }
             },
             collapseBehavior: {
                 name: 'جمع کردن آیتم‌ها',

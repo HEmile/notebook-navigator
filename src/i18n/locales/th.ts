@@ -27,7 +27,9 @@ export const STRINGS_TH = {
         delete: 'ลบ',
         clear: 'ล้าง',
         remove: 'นำออก',
+        restoreDefault: 'คืนค่าเริ่มต้น', // Button text for restoring values to defaults (English: Restore default)
         submit: 'ส่ง',
+        configure: 'กำหนดค่า', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'ไม่มีการเลือก',
         untagged: 'ไม่มีแท็ก',
         featureImageAlt: 'รูปภาพประกอบ',
@@ -371,6 +373,9 @@ export const STRINGS_TH = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `สีรุ้ง: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'ค้นหาไอคอน...',
             recentlyUsedHeader: 'ใช้ล่าสุด',
@@ -437,7 +442,6 @@ export const STRINGS_TH = {
             recentColors: 'สีล่าสุด',
             clearRecentColors: 'ล้างสีล่าสุด',
             removeRecentColor: 'นำสีออก',
-            removeColor: 'นำสีออก',
             apply: 'นำไปใช้',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -825,6 +829,7 @@ export const STRINGS_TH = {
             },
             navigation: {
                 appearance: 'ลักษณะ',
+                rainbowColors: 'สีรุ้ง',
                 leftSidebar: 'แถบด้านซ้าย',
                 calendarIntegration: 'การรวมปฏิทิน'
             },
@@ -1552,6 +1557,74 @@ export const STRINGS_TH = {
             showIconsColorOnly: {
                 name: 'ใช้สีกับไอคอนเท่านั้น',
                 desc: 'เมื่อเปิดใช้งาน สีกำหนดเองจะใช้กับไอคอนเท่านั้น เมื่อปิดใช้งาน สีจะใช้กับทั้งไอคอนและป้ายข้อความ'
+            },
+            navRainbowMode: {
+                name: 'โหมดสีรุ้ง',
+                desc: 'ใช้สีรุ้งในแผงนำทาง',
+                options: {
+                    none: 'ปิด',
+                    foreground: 'สีข้อความ',
+                    background: 'สีพื้นหลัง'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'สีแรก',
+                desc: 'สีแรกในไล่ระดับสีรุ้ง'
+            },
+            navRainbowLastColor: {
+                name: 'สีสุดท้าย',
+                desc: 'สีสุดท้ายในไล่ระดับสีรุ้ง'
+            },
+            navRainbowTransitionStyle: {
+                name: 'รูปแบบการเปลี่ยน',
+                desc: 'การประมาณค่าที่ใช้ระหว่างสีแรกและสีสุดท้าย',
+                options: {
+                    hue: 'เฉดสี',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'ใช้กับทางลัด',
+                desc: 'ใช้สีรุ้งกับทางลัด'
+            },
+            navRainbowApplyToFolders: {
+                name: 'ใช้กับโฟลเดอร์',
+                desc: 'ใช้สีรุ้งกับโฟลเดอร์'
+            },
+            navRainbowFolderScope: {
+                name: 'ขอบเขตโฟลเดอร์',
+                desc: 'เลือกระดับโฟลเดอร์ที่เริ่มกำหนดสี',
+                options: {
+                    root: 'ระดับราก',
+                    child: 'ระดับย่อย',
+                    all: 'ทุกระดับ'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'ใช้กับแท็ก',
+                desc: 'ใช้สีรุ้งกับแท็ก'
+            },
+            navRainbowTagScope: {
+                name: 'ขอบเขตแท็ก',
+                desc: 'เลือกระดับแท็กที่เริ่มกำหนดสี',
+                options: {
+                    root: 'ระดับราก',
+                    child: 'ระดับย่อย',
+                    all: 'ทุกระดับ'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'ใช้กับคุณสมบัติ',
+                desc: 'ใช้สีรุ้งกับคุณสมบัติ'
+            },
+            navRainbowPropertyScope: {
+                name: 'ขอบเขตคุณสมบัติ',
+                desc: 'เลือกระดับคุณสมบัติที่เริ่มกำหนดสี',
+                options: {
+                    root: 'ระดับราก',
+                    child: 'ระดับย่อย',
+                    all: 'ทุกระดับ'
+                }
             },
             collapseBehavior: {
                 name: 'ยุบรายการ',

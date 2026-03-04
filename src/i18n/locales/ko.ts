@@ -27,7 +27,9 @@ export const STRINGS_KO = {
         delete: '삭제', // Button text for delete operations in dialogs (English: Delete)
         clear: '지우기', // Button text for clearing values (English: Clear)
         remove: '제거', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: '기본값 복원', // Button text for restoring values to defaults (English: Restore default)
         submit: '제출', // Button text for submitting forms and dialogs (English: Submit)
+        configure: '구성', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: '선택 없음', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: '태그 없음', // Label for notes without any tags (English: Untagged)
         featureImageAlt: '대표 이미지', // Alt text for thumbnail/preview images (English: Feature image)
@@ -370,6 +372,9 @@ export const STRINGS_KO = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `무지개 색상: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: '아이콘 검색...',
             recentlyUsedHeader: '최근 사용',
@@ -436,7 +441,6 @@ export const STRINGS_KO = {
             recentColors: '최근 색상',
             clearRecentColors: '최근 색상 지우기',
             removeRecentColor: '색상 제거',
-            removeColor: '색상 제거',
             apply: '적용',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -828,6 +832,7 @@ export const STRINGS_KO = {
             },
             navigation: {
                 appearance: '모양',
+                rainbowColors: '무지개 색상',
                 leftSidebar: '왼쪽 사이드바',
                 calendarIntegration: '캘린더 연동'
             },
@@ -1555,6 +1560,74 @@ export const STRINGS_KO = {
             showIconsColorOnly: {
                 name: '아이콘에만 색상 적용',
                 desc: '활성화하면 사용자 지정 색상이 아이콘에만 적용됩니다. 비활성화하면 아이콘과 텍스트 레이블 모두에 색상이 적용됩니다.'
+            },
+            navRainbowMode: {
+                name: '무지개 색상 모드',
+                desc: '탐색 창에 무지개 색상을 적용합니다.',
+                options: {
+                    none: '끄기',
+                    foreground: '텍스트 색상',
+                    background: '배경 색상'
+                }
+            },
+            navRainbowFirstColor: {
+                name: '첫 번째 색상',
+                desc: '무지개 그라데이션의 첫 번째 색상.'
+            },
+            navRainbowLastColor: {
+                name: '마지막 색상',
+                desc: '무지개 그라데이션의 마지막 색상.'
+            },
+            navRainbowTransitionStyle: {
+                name: '전환 스타일',
+                desc: '첫 번째와 마지막 색상 사이에 사용되는 보간.',
+                options: {
+                    hue: '색조',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: '바로가기에 적용',
+                desc: '무지개 색상을 바로가기에 적용합니다.'
+            },
+            navRainbowApplyToFolders: {
+                name: '폴더에 적용',
+                desc: '무지개 색상을 폴더에 적용합니다.'
+            },
+            navRainbowFolderScope: {
+                name: '폴더 범위',
+                desc: '색상 할당을 시작할 폴더 수준을 선택합니다.',
+                options: {
+                    root: '루트 수준',
+                    child: '하위 수준',
+                    all: '모든 수준'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: '태그에 적용',
+                desc: '무지개 색상을 태그에 적용합니다.'
+            },
+            navRainbowTagScope: {
+                name: '태그 범위',
+                desc: '색상 할당을 시작할 태그 수준을 선택합니다.',
+                options: {
+                    root: '루트 수준',
+                    child: '하위 수준',
+                    all: '모든 수준'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: '속성에 적용',
+                desc: '무지개 색상을 속성에 적용합니다.'
+            },
+            navRainbowPropertyScope: {
+                name: '속성 범위',
+                desc: '색상 할당을 시작할 속성 수준을 선택합니다.',
+                options: {
+                    root: '루트 수준',
+                    child: '하위 수준',
+                    all: '모든 수준'
+                }
             },
             collapseBehavior: {
                 name: '항목 접기',

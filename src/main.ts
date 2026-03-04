@@ -102,10 +102,14 @@ import {
     type CalendarLeftPlacement,
     type CalendarWeeksToShow,
     type AlphaSortOrder,
+    type NavRainbowSettings,
     isCalendarPlacement,
     isCalendarLeftPlacement,
     isCalendarWeekendDays,
     isAlphaSortOrder,
+    isNavRainbowColorMode,
+    isNavRainbowScope,
+    isNavRainbowTransitionStyle,
     isRecentNotesHideMode,
     isPropertySortSecondaryOption,
     resolveDeleteAttachmentsSetting,
@@ -166,6 +170,58 @@ function getDefaultUXPreferences(): UXPreferences {
     return {
         ...UX_PREFERENCES_DEFAULTS.base,
         ...overrides
+    };
+}
+
+function resolveRainbowColor(value: unknown, fallback: string): string {
+    if (typeof value !== 'string') {
+        return fallback;
+    }
+
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+        return fallback;
+    }
+
+    return trimmed;
+}
+
+function normalizeNavRainbowBaseSection(value: unknown, defaults: NavRainbowSettings['shortcuts']): NavRainbowSettings['shortcuts'] {
+    const section = isRecord(value) ? value : null;
+    return {
+        enabled: typeof section?.enabled === 'boolean' ? section.enabled : defaults.enabled,
+        firstColor: resolveRainbowColor(section?.firstColor, defaults.firstColor),
+        lastColor: resolveRainbowColor(section?.lastColor, defaults.lastColor),
+        transitionStyle: isNavRainbowTransitionStyle(section?.transitionStyle) ? section.transitionStyle : defaults.transitionStyle
+    };
+}
+
+function normalizeNavRainbowSettings(value: unknown, defaults: NavRainbowSettings): NavRainbowSettings {
+    const navRainbow = isRecord(value) ? value : null;
+    const shortcuts = isRecord(navRainbow?.shortcuts) ? navRainbow.shortcuts : null;
+    const folders = isRecord(navRainbow?.folders) ? navRainbow.folders : null;
+    const tags = isRecord(navRainbow?.tags) ? navRainbow.tags : null;
+    const properties = isRecord(navRainbow?.properties) ? navRainbow.properties : null;
+
+    const foldersBase = normalizeNavRainbowBaseSection(folders, defaults.folders);
+    const tagsBase = normalizeNavRainbowBaseSection(tags, defaults.tags);
+    const propertiesBase = normalizeNavRainbowBaseSection(properties, defaults.properties);
+
+    return {
+        mode: isNavRainbowColorMode(navRainbow?.mode) ? navRainbow.mode : defaults.mode,
+        shortcuts: normalizeNavRainbowBaseSection(shortcuts, defaults.shortcuts),
+        folders: {
+            ...foldersBase,
+            scope: isNavRainbowScope(folders?.scope) ? folders.scope : defaults.folders.scope
+        },
+        tags: {
+            ...tagsBase,
+            scope: isNavRainbowScope(tags?.scope) ? tags.scope : defaults.tags.scope
+        },
+        properties: {
+            ...propertiesBase,
+            scope: isNavRainbowScope(properties?.scope) ? properties.scope : defaults.properties.scope
+        }
     };
 }
 
@@ -509,6 +565,8 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         if (!isAlphaSortOrder(this.settings.folderSortOrder)) {
             this.settings.folderSortOrder = DEFAULT_SETTINGS.folderSortOrder;
         }
+
+        this.settings.navRainbow = normalizeNavRainbowSettings(this.settings.navRainbow, DEFAULT_SETTINGS.navRainbow);
 
         this.settings.deleteAttachments = resolveDeleteAttachmentsSetting(
             this.settings.deleteAttachments,

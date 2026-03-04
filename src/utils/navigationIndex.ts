@@ -17,6 +17,7 @@
  */
 
 import { ItemType, NavigationPaneItemType } from '../types';
+import type { CombinedNavigationItem } from '../types/virtualization';
 import { normalizeTagPath } from './tagUtils';
 
 export type NavigationIndexKey = string;
@@ -51,8 +52,28 @@ export function getNavigationIndex(indexMap: Map<NavigationIndexKey, number>, it
 /**
  * Stores the index for a navigation item using its type-aware key.
  */
-export function setNavigationIndex(indexMap: Map<NavigationIndexKey, number>, itemType: ItemType, path: string, index: number): void {
+function setNavigationIndex(indexMap: Map<NavigationIndexKey, number>, itemType: ItemType, path: string, index: number): void {
     indexMap.set(createNavigationIndexKey(itemType, path), index);
+}
+
+export function buildNavigationPathIndexMap(items: readonly CombinedNavigationItem[]): Map<NavigationIndexKey, number> {
+    const indexMap = new Map<NavigationIndexKey, number>();
+
+    items.forEach((item, index) => {
+        if (item.type === NavigationPaneItemType.FOLDER) {
+            setNavigationIndex(indexMap, ItemType.FOLDER, item.data.path, index);
+        } else if (item.type === NavigationPaneItemType.TAG || item.type === NavigationPaneItemType.UNTAGGED) {
+            setNavigationIndex(indexMap, ItemType.TAG, item.data.path, index);
+        } else if (item.type === NavigationPaneItemType.VIRTUAL_FOLDER && item.tagCollectionId) {
+            setNavigationIndex(indexMap, ItemType.TAG, item.tagCollectionId, index);
+        } else if (item.type === NavigationPaneItemType.VIRTUAL_FOLDER && item.propertyCollectionId) {
+            setNavigationIndex(indexMap, ItemType.PROPERTY, item.key, index);
+        } else if (item.type === NavigationPaneItemType.PROPERTY_KEY || item.type === NavigationPaneItemType.PROPERTY_VALUE) {
+            setNavigationIndex(indexMap, ItemType.PROPERTY, item.data.id, index);
+        }
+    });
+
+    return indexMap;
 }
 
 export interface IndentGuideItem {

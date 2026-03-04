@@ -27,7 +27,9 @@ export const STRINGS_VI = {
         delete: 'Xóa', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Xóa', // Button text for clearing values (English: Clear)
         remove: 'Gỡ bỏ', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Khôi phục mặc định', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Gửi', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Cấu hình', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Chưa chọn gì', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Không có thẻ', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Ảnh nổi bật', // Alt text for thumbnail/preview images (English: Feature image)
@@ -371,6 +373,9 @@ export const STRINGS_VI = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Màu cầu vồng: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Tìm biểu tượng...',
             recentlyUsedHeader: 'Dùng gần đây',
@@ -437,7 +442,6 @@ export const STRINGS_VI = {
             recentColors: 'Màu gần đây',
             clearRecentColors: 'Xóa màu gần đây',
             removeRecentColor: 'Gỡ màu',
-            removeColor: 'Gỡ màu',
             apply: 'Áp dụng',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -830,6 +834,7 @@ export const STRINGS_VI = {
             },
             navigation: {
                 appearance: 'Giao diện',
+                rainbowColors: 'Màu cầu vồng',
                 leftSidebar: 'Thanh bên trái',
                 calendarIntegration: 'Tích hợp lịch'
             },
@@ -1557,6 +1562,74 @@ export const STRINGS_VI = {
             showIconsColorOnly: {
                 name: 'Chỉ áp dụng màu cho biểu tượng',
                 desc: 'Khi bật, màu tùy chỉnh chỉ áp dụng cho biểu tượng. Khi tắt, màu áp dụng cho cả biểu tượng và nhãn văn bản.'
+            },
+            navRainbowMode: {
+                name: 'Chế độ màu cầu vồng',
+                desc: 'Áp dụng màu cầu vồng trong bảng điều hướng.',
+                options: {
+                    none: 'Tắt',
+                    foreground: 'Màu chữ',
+                    background: 'Màu nền'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Màu đầu tiên',
+                desc: 'Màu đầu tiên trong dải chuyển màu cầu vồng.'
+            },
+            navRainbowLastColor: {
+                name: 'Màu cuối cùng',
+                desc: 'Màu cuối cùng trong dải chuyển màu cầu vồng.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Kiểu chuyển tiếp',
+                desc: 'Nội suy được sử dụng giữa màu đầu tiên và màu cuối cùng.',
+                options: {
+                    hue: 'Sắc độ',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Áp dụng cho lối tắt',
+                desc: 'Áp dụng màu cầu vồng cho lối tắt.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Áp dụng cho thư mục',
+                desc: 'Áp dụng màu cầu vồng cho thư mục.'
+            },
+            navRainbowFolderScope: {
+                name: 'Phạm vi thư mục',
+                desc: 'Chọn cấp thư mục bắt đầu gán màu.',
+                options: {
+                    root: 'Cấp gốc',
+                    child: 'Cấp con',
+                    all: 'Mọi cấp'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Áp dụng cho thẻ',
+                desc: 'Áp dụng màu cầu vồng cho thẻ.'
+            },
+            navRainbowTagScope: {
+                name: 'Phạm vi thẻ',
+                desc: 'Chọn cấp thẻ bắt đầu gán màu.',
+                options: {
+                    root: 'Cấp gốc',
+                    child: 'Cấp con',
+                    all: 'Mọi cấp'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Áp dụng cho thuộc tính',
+                desc: 'Áp dụng màu cầu vồng cho thuộc tính.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Phạm vi thuộc tính',
+                desc: 'Chọn cấp thuộc tính bắt đầu gán màu.',
+                options: {
+                    root: 'Cấp gốc',
+                    child: 'Cấp con',
+                    all: 'Mọi cấp'
+                }
             },
             collapseBehavior: {
                 name: 'Thu gọn mục',

@@ -27,7 +27,9 @@ export const STRINGS_ZH_TW = {
         delete: '刪除',
         clear: '清除',
         remove: '移除',
+        restoreDefault: '恢復預設', // Button text for restoring values to defaults (English: Restore default)
         submit: '提交',
+        configure: '設定', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: '未選擇',
         untagged: '無標籤',
         featureImageAlt: '特色圖片',
@@ -371,6 +373,9 @@ export const STRINGS_ZH_TW = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `彩虹顏色: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: '搜尋圖示...',
             recentlyUsedHeader: '最近使用',
@@ -437,7 +442,6 @@ export const STRINGS_ZH_TW = {
             recentColors: '最近使用的顏色',
             clearRecentColors: '清除最近使用的顏色',
             removeRecentColor: '移除顏色',
-            removeColor: '移除顏色',
             apply: '套用',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -822,6 +826,7 @@ export const STRINGS_ZH_TW = {
             },
             navigation: {
                 appearance: '外觀',
+                rainbowColors: '彩虹顏色',
                 leftSidebar: '左側邊欄',
                 calendarIntegration: '行事曆整合'
             },
@@ -1549,6 +1554,74 @@ export const STRINGS_ZH_TW = {
             showIconsColorOnly: {
                 name: '僅對圖示套用顏色',
                 desc: '啟用時，自訂顏色僅套用於圖示。停用時，顏色將同時套用於圖示和文字標籤。'
+            },
+            navRainbowMode: {
+                name: '彩虹顏色模式',
+                desc: '在導覽窗格中套用彩虹顏色。',
+                options: {
+                    none: '關閉',
+                    foreground: '文字顏色',
+                    background: '背景顏色'
+                }
+            },
+            navRainbowFirstColor: {
+                name: '第一個顏色',
+                desc: '彩虹漸層中的第一個顏色。'
+            },
+            navRainbowLastColor: {
+                name: '最後一個顏色',
+                desc: '彩虹漸層中的最後一個顏色。'
+            },
+            navRainbowTransitionStyle: {
+                name: '過渡樣式',
+                desc: '第一個和最後一個顏色之間使用的插值。',
+                options: {
+                    hue: '色相',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: '套用到捷徑',
+                desc: '將彩虹顏色套用到捷徑。'
+            },
+            navRainbowApplyToFolders: {
+                name: '套用到資料夾',
+                desc: '將彩虹顏色套用到資料夾。'
+            },
+            navRainbowFolderScope: {
+                name: '資料夾範圍',
+                desc: '選擇哪些資料夾層級開始顏色指派。',
+                options: {
+                    root: '根層級',
+                    child: '子層級',
+                    all: '每個層級'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: '套用到標籤',
+                desc: '將彩虹顏色套用到標籤。'
+            },
+            navRainbowTagScope: {
+                name: '標籤範圍',
+                desc: '選擇哪些標籤層級開始顏色指派。',
+                options: {
+                    root: '根層級',
+                    child: '子層級',
+                    all: '每個層級'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: '套用到屬性',
+                desc: '將彩虹顏色套用到屬性。'
+            },
+            navRainbowPropertyScope: {
+                name: '屬性範圍',
+                desc: '選擇哪些屬性層級開始顏色指派。',
+                options: {
+                    root: '根層級',
+                    child: '子層級',
+                    all: '每個層級'
+                }
             },
             collapseBehavior: {
                 name: '摺疊項目',

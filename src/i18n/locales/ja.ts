@@ -27,7 +27,9 @@ export const STRINGS_JA = {
         delete: '削除', // Button text for delete operations in dialogs (English: Delete)
         clear: 'クリア', // Button text for clearing values (English: Clear)
         remove: '削除', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'デフォルトに戻す', // Button text for restoring values to defaults (English: Restore default)
         submit: '送信', // Button text for submitting forms and dialogs (English: Submit)
+        configure: '設定', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: '選択なし', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'タグなし', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'アイキャッチ画像', // Alt text for thumbnail/preview images (English: Feature image)
@@ -371,6 +373,9 @@ export const STRINGS_JA = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `レインボーカラー: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'アイコンを検索...',
             recentlyUsedHeader: '最近使用したアイコン',
@@ -437,7 +442,6 @@ export const STRINGS_JA = {
             recentColors: '最近使用した色',
             clearRecentColors: '最近使用した色をクリア',
             removeRecentColor: '色を削除',
-            removeColor: '色を削除',
             apply: '適用',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -828,6 +832,7 @@ export const STRINGS_JA = {
             },
             navigation: {
                 appearance: '外観',
+                rainbowColors: 'レインボーカラー',
                 leftSidebar: '左サイドバー',
                 calendarIntegration: 'カレンダー連携'
             },
@@ -1557,6 +1562,74 @@ export const STRINGS_JA = {
             showIconsColorOnly: {
                 name: 'アイコンのみに色を適用',
                 desc: '有効にすると、カスタムカラーはアイコンのみに適用されます。無効にすると、アイコンとテキストラベルの両方に色が適用されます。'
+            },
+            navRainbowMode: {
+                name: 'レインボーカラーモード',
+                desc: 'ナビゲーションペインにレインボーカラーを適用します。',
+                options: {
+                    none: 'オフ',
+                    foreground: 'テキストカラー',
+                    background: '背景色'
+                }
+            },
+            navRainbowFirstColor: {
+                name: '最初の色',
+                desc: 'レインボーグラデーションの最初の色。'
+            },
+            navRainbowLastColor: {
+                name: '最後の色',
+                desc: 'レインボーグラデーションの最後の色。'
+            },
+            navRainbowTransitionStyle: {
+                name: 'トランジションスタイル',
+                desc: '最初の色と最後の色の間で使用される補間。',
+                options: {
+                    hue: '色相',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'ショートカットに適用',
+                desc: 'レインボーカラーをショートカットに適用します。'
+            },
+            navRainbowApplyToFolders: {
+                name: 'フォルダーに適用',
+                desc: 'レインボーカラーをフォルダーに適用します。'
+            },
+            navRainbowFolderScope: {
+                name: 'フォルダー範囲',
+                desc: 'カラー割り当てを開始するフォルダーレベルを選択します。',
+                options: {
+                    root: 'ルートレベル',
+                    child: '子レベル',
+                    all: 'すべてのレベル'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'タグに適用',
+                desc: 'レインボーカラーをタグに適用します。'
+            },
+            navRainbowTagScope: {
+                name: 'タグ範囲',
+                desc: 'カラー割り当てを開始するタグレベルを選択します。',
+                options: {
+                    root: 'ルートレベル',
+                    child: '子レベル',
+                    all: 'すべてのレベル'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'プロパティに適用',
+                desc: 'レインボーカラーをプロパティに適用します。'
+            },
+            navRainbowPropertyScope: {
+                name: 'プロパティ範囲',
+                desc: 'カラー割り当てを開始するプロパティレベルを選択します。',
+                options: {
+                    root: 'ルートレベル',
+                    child: '子レベル',
+                    all: 'すべてのレベル'
+                }
             },
             collapseBehavior: {
                 name: '項目を折りたたむ',

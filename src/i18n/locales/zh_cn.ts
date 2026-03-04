@@ -27,7 +27,9 @@ export const STRINGS_ZH_CN = {
         delete: '删除', // Button text for delete operations in dialogs (English: Delete)
         clear: '清除', // Button text for clearing values (English: Clear)
         remove: '移除', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: '恢复默认', // Button text for restoring values to defaults (English: Restore default)
         submit: '提交', // Button text for submitting forms and dialogs (English: Submit)
+        configure: '配置', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: '未选择', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: '无标签', // Label for notes without any tags (English: Untagged)
         featureImageAlt: '特色图片', // Alt text for thumbnail/preview images (English: Feature image)
@@ -371,6 +373,9 @@ export const STRINGS_ZH_CN = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `彩虹颜色: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: '搜索图标...',
             recentlyUsedHeader: '最近使用',
@@ -437,7 +442,6 @@ export const STRINGS_ZH_CN = {
             recentColors: '最近使用的颜色',
             clearRecentColors: '清除最近使用的颜色',
             removeRecentColor: '移除颜色',
-            removeColor: '移除颜色',
             apply: '应用',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -822,6 +826,7 @@ export const STRINGS_ZH_CN = {
             },
             navigation: {
                 appearance: '外观',
+                rainbowColors: '彩虹颜色',
                 leftSidebar: '左侧边栏',
                 calendarIntegration: '日历集成'
             },
@@ -1550,6 +1555,74 @@ export const STRINGS_ZH_CN = {
             showIconsColorOnly: {
                 name: '仅对图标应用颜色',
                 desc: '启用时，自定义颜色仅应用于图标。禁用时，颜色将同时应用于图标和文本标签。'
+            },
+            navRainbowMode: {
+                name: '彩虹颜色模式',
+                desc: '在导航窗格中应用彩虹颜色。',
+                options: {
+                    none: '关闭',
+                    foreground: '文字颜色',
+                    background: '背景颜色'
+                }
+            },
+            navRainbowFirstColor: {
+                name: '第一种颜色',
+                desc: '彩虹渐变中的第一种颜色。'
+            },
+            navRainbowLastColor: {
+                name: '最后一种颜色',
+                desc: '彩虹渐变中的最后一种颜色。'
+            },
+            navRainbowTransitionStyle: {
+                name: '过渡样式',
+                desc: '第一种和最后一种颜色之间使用的插值。',
+                options: {
+                    hue: '色相',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: '应用到快捷方式',
+                desc: '将彩虹颜色应用到快捷方式。'
+            },
+            navRainbowApplyToFolders: {
+                name: '应用到文件夹',
+                desc: '将彩虹颜色应用到文件夹。'
+            },
+            navRainbowFolderScope: {
+                name: '文件夹范围',
+                desc: '选择哪些文件夹级别开始颜色分配。',
+                options: {
+                    root: '根级别',
+                    child: '子级别',
+                    all: '每个级别'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: '应用到标签',
+                desc: '将彩虹颜色应用到标签。'
+            },
+            navRainbowTagScope: {
+                name: '标签范围',
+                desc: '选择哪些标签级别开始颜色分配。',
+                options: {
+                    root: '根级别',
+                    child: '子级别',
+                    all: '每个级别'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: '应用到属性',
+                desc: '将彩虹颜色应用到属性。'
+            },
+            navRainbowPropertyScope: {
+                name: '属性范围',
+                desc: '选择哪些属性级别开始颜色分配。',
+                options: {
+                    root: '根级别',
+                    child: '子级别',
+                    all: '每个级别'
+                }
             },
             collapseBehavior: {
                 name: '折叠项目',

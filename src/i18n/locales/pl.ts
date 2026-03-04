@@ -27,7 +27,9 @@ export const STRINGS_PL = {
         delete: 'Usuń', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Wyczyść', // Button text for clearing values (English: Clear)
         remove: 'Usuń', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Przywróć domyślne', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Wyślij', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Konfiguruj', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Nie wybrano', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Bez tagów', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Wyróżniony obraz', // Alt text for thumbnail/preview images (English: Feature image)
@@ -373,6 +375,9 @@ export const STRINGS_PL = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Kolory tęczy: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Wyszukaj ikonki...',
             recentlyUsedHeader: 'Ostatnio używane',
@@ -439,7 +444,6 @@ export const STRINGS_PL = {
             recentColors: 'Ostatnio używane kolory',
             clearRecentColors: 'Wyczyść ostatnie kolory',
             removeRecentColor: 'Usuń kolor',
-            removeColor: 'Usuń kolor',
             apply: 'Zastosuj',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -831,6 +835,7 @@ export const STRINGS_PL = {
             },
             navigation: {
                 appearance: 'Wygląd',
+                rainbowColors: 'Kolory tęczy',
                 leftSidebar: 'Lewy panel boczny',
                 calendarIntegration: 'Integracja z kalendarzem'
             },
@@ -1560,6 +1565,74 @@ export const STRINGS_PL = {
             showIconsColorOnly: {
                 name: 'Zastosuj kolor tylko do ikonek',
                 desc: 'Po włączeniu niestandardowe kolory są stosowane tylko do ikonek. Po wyłączeniu kolory są stosowane zarówno do ikonek, jak i etykiet tekstowych.'
+            },
+            navRainbowMode: {
+                name: 'Tryb kolorów tęczy',
+                desc: 'Zastosuj kolory tęczy w panelu nawigacji.',
+                options: {
+                    none: 'Wyłączone',
+                    foreground: 'Kolor tekstu',
+                    background: 'Kolor tła'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Pierwszy kolor',
+                desc: 'Pierwszy kolor w gradiencie tęczy.'
+            },
+            navRainbowLastColor: {
+                name: 'Ostatni kolor',
+                desc: 'Ostatni kolor w gradiencie tęczy.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Styl przejścia',
+                desc: 'Interpolacja między pierwszym a ostatnim kolorem.',
+                options: {
+                    hue: 'Barwa',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Zastosuj do skrótów',
+                desc: 'Zastosuj kolory tęczy do skrótów.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Zastosuj do folderów',
+                desc: 'Zastosuj kolory tęczy do folderów.'
+            },
+            navRainbowFolderScope: {
+                name: 'Zakres folderów',
+                desc: 'Wybierz, które poziomy folderów rozpoczynają przypisywanie kolorów.',
+                options: {
+                    root: 'Poziom główny',
+                    child: 'Poziom podrzędny',
+                    all: 'Każdy poziom'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Zastosuj do tagów',
+                desc: 'Zastosuj kolory tęczy do tagów.'
+            },
+            navRainbowTagScope: {
+                name: 'Zakres tagów',
+                desc: 'Wybierz, które poziomy tagów rozpoczynają przypisywanie kolorów.',
+                options: {
+                    root: 'Poziom główny',
+                    child: 'Poziom podrzędny',
+                    all: 'Każdy poziom'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Zastosuj do właściwości',
+                desc: 'Zastosuj kolory tęczy do właściwości.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Zakres właściwości',
+                desc: 'Wybierz, które poziomy właściwości rozpoczynają przypisywanie kolorów.',
+                options: {
+                    root: 'Poziom główny',
+                    child: 'Poziom podrzędny',
+                    all: 'Każdy poziom'
+                }
             },
             collapseBehavior: {
                 name: 'Zwiń elementy',

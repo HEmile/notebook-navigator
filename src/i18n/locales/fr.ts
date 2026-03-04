@@ -27,7 +27,9 @@ export const STRINGS_FR = {
         delete: 'Supprimer', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Effacer', // Button text for clearing values (English: Clear)
         remove: 'Supprimer', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Restaurer la valeur par défaut', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Soumettre', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Configurer', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Aucune sélection', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Sans étiquette', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Image vedette', // Alt text for thumbnail/preview images (English: Feature image)
@@ -372,6 +374,9 @@ export const STRINGS_FR = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Couleurs arc-en-ciel: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Rechercher des icônes...',
             recentlyUsedHeader: 'Récemment utilisées',
@@ -438,7 +443,6 @@ export const STRINGS_FR = {
             recentColors: 'Couleurs récentes',
             clearRecentColors: 'Effacer les couleurs récentes',
             removeRecentColor: 'Supprimer la couleur',
-            removeColor: 'Supprimer la couleur',
             apply: 'Appliquer',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -831,6 +835,7 @@ export const STRINGS_FR = {
             },
             navigation: {
                 appearance: 'Apparence',
+                rainbowColors: 'Couleurs arc-en-ciel',
                 leftSidebar: 'Barre latérale gauche',
                 calendarIntegration: 'Intégration du calendrier'
             },
@@ -1562,6 +1567,74 @@ export const STRINGS_FR = {
             showIconsColorOnly: {
                 name: 'Appliquer la couleur uniquement aux icônes',
                 desc: "Lorsqu'activé, les couleurs personnalisées sont appliquées uniquement aux icônes. Lorsque désactivé, les couleurs sont appliquées aux icônes et aux étiquettes de texte."
+            },
+            navRainbowMode: {
+                name: 'Mode couleurs arc-en-ciel',
+                desc: 'Appliquer les couleurs arc-en-ciel dans le volet de navigation.',
+                options: {
+                    none: 'Désactivé',
+                    foreground: 'Couleur du texte',
+                    background: 'Couleur de fond'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Première couleur',
+                desc: 'Première couleur du dégradé arc-en-ciel.'
+            },
+            navRainbowLastColor: {
+                name: 'Dernière couleur',
+                desc: 'Dernière couleur du dégradé arc-en-ciel.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Style de transition',
+                desc: 'Interpolation utilisée entre la première et la dernière couleur.',
+                options: {
+                    hue: 'Teinte',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Appliquer aux raccourcis',
+                desc: 'Appliquer les couleurs arc-en-ciel aux raccourcis.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Appliquer aux dossiers',
+                desc: 'Appliquer les couleurs arc-en-ciel aux dossiers.'
+            },
+            navRainbowFolderScope: {
+                name: 'Portée des dossiers',
+                desc: 'Sélectionner les niveaux de dossier qui démarrent les attributions de couleur.',
+                options: {
+                    root: 'Niveau racine',
+                    child: 'Niveau enfant',
+                    all: 'Tous les niveaux'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Appliquer aux tags',
+                desc: 'Appliquer les couleurs arc-en-ciel aux tags.'
+            },
+            navRainbowTagScope: {
+                name: 'Portée des tags',
+                desc: 'Sélectionner les niveaux de tag qui démarrent les attributions de couleur.',
+                options: {
+                    root: 'Niveau racine',
+                    child: 'Niveau enfant',
+                    all: 'Tous les niveaux'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Appliquer aux propriétés',
+                desc: 'Appliquer les couleurs arc-en-ciel aux propriétés.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Portée des propriétés',
+                desc: 'Sélectionner les niveaux de propriété qui démarrent les attributions de couleur.',
+                options: {
+                    root: 'Niveau racine',
+                    child: 'Niveau enfant',
+                    all: 'Tous les niveaux'
+                }
             },
             collapseBehavior: {
                 name: 'Replier les éléments',

@@ -432,15 +432,15 @@ export class ColorPickerModal extends Modal {
         // Action buttons
         const buttonContainer = contentEl.createDiv('nn-color-button-container');
 
-        // Cancel/Remove button
-        const removeColorText = strings.modals.colorPicker.removeColor;
+        // Cancel/restore button
+        const restoreDefaultText = strings.common.restoreDefault;
         const cancelRemoveButton = buttonContainer.createEl('button', {
-            text: this.currentColor ? removeColorText : strings.common.cancel
+            text: this.currentColor ? restoreDefaultText : strings.common.cancel
         });
         this.domDisposers.push(
             addAsyncEventListener(cancelRemoveButton, 'click', () => {
                 if (this.currentColor) {
-                    return this.removeColor();
+                    return this.restoreDefaultColor();
                 }
                 this.close();
                 return undefined;
@@ -1490,9 +1490,9 @@ export class ColorPickerModal extends Modal {
     }
 
     /**
-     * Remove the color and close
+     * Restore default color and close
      */
-    private async removeColor() {
+    private async restoreDefaultColor() {
         const handled = await this.wasHandledBySelection(null);
         if (!handled) {
             await this.updateMetadataColor(null);

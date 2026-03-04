@@ -27,7 +27,9 @@ export const STRINGS_RU = {
         delete: 'Удалить', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Очистить', // Button text for clearing values (English: Clear)
         remove: 'Убрать', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Восстановить по умолчанию', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Отправить', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Настроить', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Ничего не выбрано', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Без тегов', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Изображение', // Alt text for thumbnail/preview images (English: Feature image)
@@ -372,6 +374,9 @@ export const STRINGS_RU = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Цвета радуги: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Поиск иконок...',
             recentlyUsedHeader: 'Недавно использованные',
@@ -438,7 +443,6 @@ export const STRINGS_RU = {
             recentColors: 'Недавние цвета',
             clearRecentColors: 'Очистить недавние цвета',
             removeRecentColor: 'Удалить цвет',
-            removeColor: 'Удалить цвет',
             apply: 'Применить',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -826,6 +830,7 @@ export const STRINGS_RU = {
             },
             navigation: {
                 appearance: 'Внешний вид',
+                rainbowColors: 'Цвета радуги',
                 leftSidebar: 'Левая боковая панель',
                 calendarIntegration: 'Интеграция с календарём'
             },
@@ -1554,6 +1559,74 @@ export const STRINGS_RU = {
             showIconsColorOnly: {
                 name: 'Применять цвет только к иконкам',
                 desc: 'При включении пользовательские цвета применяются только к иконкам. При отключении цвета применяются и к иконкам, и к текстовым меткам.'
+            },
+            navRainbowMode: {
+                name: 'Режим цветов радуги',
+                desc: 'Применить цвета радуги в панели навигации.',
+                options: {
+                    none: 'Выкл.',
+                    foreground: 'Цвет текста',
+                    background: 'Цвет фона'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Первый цвет',
+                desc: 'Первый цвет в радужном градиенте.'
+            },
+            navRainbowLastColor: {
+                name: 'Последний цвет',
+                desc: 'Последний цвет в радужном градиенте.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Стиль перехода',
+                desc: 'Интерполяция между первым и последним цветом.',
+                options: {
+                    hue: 'Тон',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Применить к ярлыкам',
+                desc: 'Применить цвета радуги к ярлыкам.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Применить к папкам',
+                desc: 'Применить цвета радуги к папкам.'
+            },
+            navRainbowFolderScope: {
+                name: 'Область папок',
+                desc: 'Выбрать уровни папок для начала назначения цветов.',
+                options: {
+                    root: 'Корневой уровень',
+                    child: 'Дочерний уровень',
+                    all: 'Каждый уровень'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Применить к тегам',
+                desc: 'Применить цвета радуги к тегам.'
+            },
+            navRainbowTagScope: {
+                name: 'Область тегов',
+                desc: 'Выбрать уровни тегов для начала назначения цветов.',
+                options: {
+                    root: 'Корневой уровень',
+                    child: 'Дочерний уровень',
+                    all: 'Каждый уровень'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Применить к свойствам',
+                desc: 'Применить цвета радуги к свойствам.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Область свойств',
+                desc: 'Выбрать уровни свойств для начала назначения цветов.',
+                options: {
+                    root: 'Корневой уровень',
+                    child: 'Дочерний уровень',
+                    all: 'Каждый уровень'
+                }
             },
             collapseBehavior: {
                 name: 'Сворачивание элементов',

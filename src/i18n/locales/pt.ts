@@ -27,7 +27,9 @@ export const STRINGS_PT = {
         delete: 'Eliminar', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Limpar', // Button text for clearing values (English: Clear)
         remove: 'Remover', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Restaurar padrão', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Submeter', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Configurar', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Sem seleção', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Sem etiquetas', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Imagem de destaque', // Alt text for thumbnail/preview images (English: Feature image)
@@ -372,6 +374,9 @@ export const STRINGS_PT = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Cores arco-íris: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Pesquisar ícones...',
             recentlyUsedHeader: 'Usados recentemente',
@@ -438,7 +443,6 @@ export const STRINGS_PT = {
             recentColors: 'Cores recentes',
             clearRecentColors: 'Limpar cores recentes',
             removeRecentColor: 'Remover cor',
-            removeColor: 'Remover cor',
             apply: 'Aplicar',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -829,6 +833,7 @@ export const STRINGS_PT = {
             },
             navigation: {
                 appearance: 'Aparência',
+                rainbowColors: 'Cores arco-íris',
                 leftSidebar: 'Barra lateral esquerda',
                 calendarIntegration: 'Integração do calendário'
             },
@@ -1559,6 +1564,74 @@ export const STRINGS_PT = {
             showIconsColorOnly: {
                 name: 'Aplicar cor apenas aos ícones',
                 desc: 'Quando ativado, as cores personalizadas são aplicadas apenas aos ícones. Quando desativado, as cores são aplicadas aos ícones e às etiquetas de texto.'
+            },
+            navRainbowMode: {
+                name: 'Modo de cores arco-íris',
+                desc: 'Aplicar cores arco-íris no painel de navegação.',
+                options: {
+                    none: 'Desativado',
+                    foreground: 'Cor do texto',
+                    background: 'Cor de fundo'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Primeira cor',
+                desc: 'Primeira cor no gradiente arco-íris.'
+            },
+            navRainbowLastColor: {
+                name: 'Última cor',
+                desc: 'Última cor no gradiente arco-íris.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Estilo de transição',
+                desc: 'Interpolação utilizada entre a primeira e a última cor.',
+                options: {
+                    hue: 'Matiz',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Aplicar a atalhos',
+                desc: 'Aplicar cores arco-íris aos atalhos.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Aplicar a pastas',
+                desc: 'Aplicar cores arco-íris às pastas.'
+            },
+            navRainbowFolderScope: {
+                name: 'Âmbito de pastas',
+                desc: 'Selecionar quais níveis de pasta iniciam atribuições de cor.',
+                options: {
+                    root: 'Nível raiz',
+                    child: 'Nível secundário',
+                    all: 'Todos os níveis'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Aplicar a etiquetas',
+                desc: 'Aplicar cores arco-íris às etiquetas.'
+            },
+            navRainbowTagScope: {
+                name: 'Âmbito de etiquetas',
+                desc: 'Selecionar quais níveis de etiqueta iniciam atribuições de cor.',
+                options: {
+                    root: 'Nível raiz',
+                    child: 'Nível secundário',
+                    all: 'Todos os níveis'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Aplicar a propriedades',
+                desc: 'Aplicar cores arco-íris às propriedades.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Âmbito de propriedades',
+                desc: 'Selecionar quais níveis de propriedade iniciam atribuições de cor.',
+                options: {
+                    root: 'Nível raiz',
+                    child: 'Nível secundário',
+                    all: 'Todos os níveis'
+                }
             },
             collapseBehavior: {
                 name: 'Recolher itens',

@@ -72,6 +72,8 @@ export interface VirtualFolderTrailingAction {
 interface VirtualFolderItemProps {
     virtualFolder: VirtualFolder; // Static data structure from NavigationPane
     level: number; // Nesting level for indentation
+    color?: string;
+    backgroundColor?: string;
     indentGuideLevels?: number[]; // Levels of expanded ancestors whose connector lines should be rendered on this row
     isExpanded: boolean; // From ExpansionContext via NavigationPane
     hasChildren: boolean; // Computed by NavigationPane from tag tree
@@ -113,6 +115,8 @@ interface VirtualFolderItemProps {
 export const VirtualFolderComponent = React.memo(function VirtualFolderComponent({
     virtualFolder,
     level,
+    color,
+    backgroundColor,
     indentGuideLevels,
     isExpanded,
     hasChildren,
@@ -136,6 +140,7 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
     const iconRef = useRef<HTMLSpanElement>(null);
     const iconVersion = useIconServiceVersion();
     const includeDescendantNotes = uxPreferences.includeDescendantNotes;
+    const applyColorToName = Boolean(color) && !settings.colorIconOnly;
 
     // Format note count display based on descendant notes preference and count settings
     const noteCountDisplay = useMemo(() => {
@@ -194,13 +199,23 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
         if (isSelected) {
             classes.push('nn-selected');
         }
+        if (backgroundColor) {
+            classes.push('nn-has-custom-background');
+        }
         if (searchMatch) {
             classes.push('nn-has-search-match');
         }
         return classes.join(' ');
-    }, [isSelected, searchMatch, virtualFolder.id]);
+    }, [backgroundColor, isSelected, searchMatch, virtualFolder.id]);
 
     const contentClassName = useMemo(() => buildSearchMatchContentClass(['nn-navitem-content'], searchMatch), [searchMatch]);
+    const virtualFolderNameClassName = useMemo(() => {
+        const classes = ['nn-navitem-name'];
+        if (applyColorToName && color) {
+            classes.push('nn-has-custom-color');
+        }
+        return classes.join(' ');
+    }, [applyColorToName, color]);
 
     const handleDoubleClick = useCallback(() => {
         if (hasChildren) {
@@ -259,7 +274,10 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
         }
     }, [virtualFolder.icon, iconVersion]);
 
-    const virtualFolderStyle: CSSPropertiesWithVars = { '--level': level };
+    const virtualFolderStyle: CSSPropertiesWithVars = {
+        '--level': level,
+        ...(backgroundColor ? { '--nn-navitem-custom-bg-color': backgroundColor } : {})
+    };
 
     return (
         <div
@@ -292,8 +310,10 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
                     onDoubleClick={handleChevronDoubleClick}
                     tabIndex={-1}
                 />
-                {virtualFolder.icon && <span className="nn-navitem-icon" ref={iconRef} />}
-                <span className="nn-navitem-name">{virtualFolder.name}</span>
+                {virtualFolder.icon && <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />}
+                <span className={virtualFolderNameClassName} style={applyColorToName ? { color } : undefined}>
+                    {virtualFolder.name}
+                </span>
                 <span className="nn-navitem-spacer" />
                 {shouldRenderCountBadge && noteCountDisplay && <span className="nn-navitem-count">{noteCountDisplay.label}</span>}
                 {trailingAction && (

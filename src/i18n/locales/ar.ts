@@ -27,7 +27,9 @@ export const STRINGS_AR = {
         delete: 'حذف', // Button text for delete operations in dialogs (English: Delete)
         clear: 'مسح', // Button text for clearing values (English: Clear)
         remove: 'إزالة', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'استعادة الافتراضي', // Button text for restoring values to defaults (English: Restore default)
         submit: 'إرسال', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'تكوين', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'لا يوجد تحديد', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'بدون وسم', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'صورة مميزة', // Alt text for thumbnail/preview images (English: Feature image)
@@ -371,6 +373,9 @@ export const STRINGS_AR = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `ألوان قوس قزح: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'البحث عن أيقونات...',
             recentlyUsedHeader: 'المستخدمة مؤخرًا',
@@ -437,7 +442,6 @@ export const STRINGS_AR = {
             recentColors: 'ألوان حديثة',
             clearRecentColors: 'مسح الألوان الحديثة',
             removeRecentColor: 'إزالة اللون',
-            removeColor: 'إزالة اللون',
             apply: 'تطبيق',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -827,6 +831,7 @@ export const STRINGS_AR = {
             },
             navigation: {
                 appearance: 'المظهر',
+                rainbowColors: 'ألوان قوس قزح',
                 leftSidebar: 'الشريط الجانبي الأيسر',
                 calendarIntegration: 'تكامل التقويم'
             },
@@ -1554,6 +1559,74 @@ export const STRINGS_AR = {
             showIconsColorOnly: {
                 name: 'تطبيق اللون على الأيقونات فقط',
                 desc: 'عند التمكين، تطبق الألوان المخصصة على الأيقونات فقط. عند التعطيل، تطبق الألوان على الأيقونات وتسميات النص.'
+            },
+            navRainbowMode: {
+                name: 'وضع ألوان قوس قزح',
+                desc: 'تطبيق ألوان قوس قزح في لوحة التنقل.',
+                options: {
+                    none: 'إيقاف',
+                    foreground: 'لون النص',
+                    background: 'لون الخلفية'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'اللون الأول',
+                desc: 'اللون الأول في تدرج قوس قزح.'
+            },
+            navRainbowLastColor: {
+                name: 'اللون الأخير',
+                desc: 'اللون الأخير في تدرج قوس قزح.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'نمط الانتقال',
+                desc: 'الاستيفاء المستخدم بين اللون الأول والأخير.',
+                options: {
+                    hue: 'درجة اللون',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'تطبيق على الاختصارات',
+                desc: 'تطبيق ألوان قوس قزح على الاختصارات.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'تطبيق على المجلدات',
+                desc: 'تطبيق ألوان قوس قزح على المجلدات.'
+            },
+            navRainbowFolderScope: {
+                name: 'نطاق المجلدات',
+                desc: 'تحديد مستويات المجلدات التي تبدأ تعيينات الألوان.',
+                options: {
+                    root: 'المستوى الجذر',
+                    child: 'المستوى الفرعي',
+                    all: 'كل مستوى'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'تطبيق على الوسوم',
+                desc: 'تطبيق ألوان قوس قزح على الوسوم.'
+            },
+            navRainbowTagScope: {
+                name: 'نطاق الوسوم',
+                desc: 'تحديد مستويات الوسوم التي تبدأ تعيينات الألوان.',
+                options: {
+                    root: 'المستوى الجذر',
+                    child: 'المستوى الفرعي',
+                    all: 'كل مستوى'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'تطبيق على الخصائص',
+                desc: 'تطبيق ألوان قوس قزح على الخصائص.'
+            },
+            navRainbowPropertyScope: {
+                name: 'نطاق الخصائص',
+                desc: 'تحديد مستويات الخصائص التي تبدأ تعيينات الألوان.',
+                options: {
+                    root: 'المستوى الجذر',
+                    child: 'المستوى الفرعي',
+                    all: 'كل مستوى'
+                }
             },
             collapseBehavior: {
                 name: 'طي العناصر',

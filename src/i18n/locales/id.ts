@@ -27,7 +27,9 @@ export const STRINGS_ID = {
         delete: 'Hapus',
         clear: 'Bersihkan',
         remove: 'Buang',
+        restoreDefault: 'Pulihkan default', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Kirim',
+        configure: 'Konfigurasi', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Tidak ada pilihan',
         untagged: 'Tanpa tag',
         featureImageAlt: 'Gambar unggulan',
@@ -372,6 +374,9 @@ export const STRINGS_ID = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Warna pelangi: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Cari ikon...',
             recentlyUsedHeader: 'Baru digunakan',
@@ -438,7 +443,6 @@ export const STRINGS_ID = {
             recentColors: 'Warna terbaru',
             clearRecentColors: 'Bersihkan warna terbaru',
             removeRecentColor: 'Hapus warna',
-            removeColor: 'Hapus warna',
             apply: 'Terapkan',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -829,6 +833,7 @@ export const STRINGS_ID = {
             },
             navigation: {
                 appearance: 'Tampilan',
+                rainbowColors: 'Warna pelangi',
                 leftSidebar: 'Bilah sisi kiri',
                 calendarIntegration: 'Integrasi kalender'
             },
@@ -1557,6 +1562,74 @@ export const STRINGS_ID = {
             showIconsColorOnly: {
                 name: 'Terapkan warna ke ikon saja',
                 desc: 'Saat diaktifkan, warna kustom hanya diterapkan ke ikon. Saat dinonaktifkan, warna diterapkan ke ikon dan label teks.'
+            },
+            navRainbowMode: {
+                name: 'Mode warna pelangi',
+                desc: 'Terapkan warna pelangi di panel navigasi.',
+                options: {
+                    none: 'Mati',
+                    foreground: 'Warna teks',
+                    background: 'Warna latar'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Warna pertama',
+                desc: 'Warna pertama dalam gradien pelangi.'
+            },
+            navRainbowLastColor: {
+                name: 'Warna terakhir',
+                desc: 'Warna terakhir dalam gradien pelangi.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Gaya transisi',
+                desc: 'Interpolasi yang digunakan antara warna pertama dan terakhir.',
+                options: {
+                    hue: 'Hue',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Terapkan ke pintasan',
+                desc: 'Terapkan warna pelangi ke pintasan.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Terapkan ke folder',
+                desc: 'Terapkan warna pelangi ke folder.'
+            },
+            navRainbowFolderScope: {
+                name: 'Cakupan folder',
+                desc: 'Pilih level folder mana yang memulai penetapan warna.',
+                options: {
+                    root: 'Level akar',
+                    child: 'Level anak',
+                    all: 'Setiap level'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Terapkan ke tag',
+                desc: 'Terapkan warna pelangi ke tag.'
+            },
+            navRainbowTagScope: {
+                name: 'Cakupan tag',
+                desc: 'Pilih level tag mana yang memulai penetapan warna.',
+                options: {
+                    root: 'Level akar',
+                    child: 'Level anak',
+                    all: 'Setiap level'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Terapkan ke properti',
+                desc: 'Terapkan warna pelangi ke properti.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Cakupan properti',
+                desc: 'Pilih level properti mana yang memulai penetapan warna.',
+                options: {
+                    root: 'Level akar',
+                    child: 'Level anak',
+                    all: 'Setiap level'
+                }
             },
             collapseBehavior: {
                 name: 'Ciutkan item',

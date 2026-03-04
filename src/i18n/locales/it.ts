@@ -27,7 +27,9 @@ export const STRINGS_IT = {
         delete: 'Elimina', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Cancella', // Button text for clearing values (English: Clear)
         remove: 'Rimuovi', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Ripristina predefinito', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Invia', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Configura', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Nessuna selezione', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Senza tag', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Immagine in evidenza', // Alt text for thumbnail/preview images (English: Feature image)
@@ -371,6 +373,9 @@ export const STRINGS_IT = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Colori arcobaleno: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Cerca icone...',
             recentlyUsedHeader: 'Usate di recente',
@@ -437,7 +442,6 @@ export const STRINGS_IT = {
             recentColors: 'Colori recenti',
             clearRecentColors: 'Cancella colori recenti',
             removeRecentColor: 'Rimuovi colore',
-            removeColor: 'Rimuovi colore',
             apply: 'Applica',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -825,6 +829,7 @@ export const STRINGS_IT = {
             },
             navigation: {
                 appearance: 'Aspetto',
+                rainbowColors: 'Colori arcobaleno',
                 leftSidebar: 'Barra laterale sinistra',
                 calendarIntegration: 'Integrazione calendario'
             },
@@ -1555,6 +1560,74 @@ export const STRINGS_IT = {
             showIconsColorOnly: {
                 name: 'Applica colore solo alle icone',
                 desc: 'Quando abilitato, i colori personalizzati sono applicati solo alle icone. Quando disabilitato, i colori sono applicati sia alle icone che alle etichette testo.'
+            },
+            navRainbowMode: {
+                name: 'Modalità colori arcobaleno',
+                desc: 'Applica colori arcobaleno nel pannello di navigazione.',
+                options: {
+                    none: 'Disattivato',
+                    foreground: 'Colore del testo',
+                    background: 'Colore di sfondo'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Primo colore',
+                desc: 'Primo colore nel gradiente arcobaleno.'
+            },
+            navRainbowLastColor: {
+                name: 'Ultimo colore',
+                desc: 'Ultimo colore nel gradiente arcobaleno.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Stile di transizione',
+                desc: 'Interpolazione utilizzata tra il primo e l\'ultimo colore.',
+                options: {
+                    hue: 'Hue',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Applica alle scorciatoie',
+                desc: 'Applica colori arcobaleno alle scorciatoie.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Applica alle cartelle',
+                desc: 'Applica colori arcobaleno alle cartelle.'
+            },
+            navRainbowFolderScope: {
+                name: 'Ambito cartelle',
+                desc: 'Seleziona quali livelli di cartella avviano le assegnazioni di colore.',
+                options: {
+                    root: 'Livello radice',
+                    child: 'Livello figlio',
+                    all: 'Ogni livello'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Applica ai tag',
+                desc: 'Applica colori arcobaleno ai tag.'
+            },
+            navRainbowTagScope: {
+                name: 'Ambito tag',
+                desc: 'Seleziona quali livelli di tag avviano le assegnazioni di colore.',
+                options: {
+                    root: 'Livello radice',
+                    child: 'Livello figlio',
+                    all: 'Ogni livello'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Applica alle proprietà',
+                desc: 'Applica colori arcobaleno alle proprietà.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Ambito proprietà',
+                desc: 'Seleziona quali livelli di proprietà avviano le assegnazioni di colore.',
+                options: {
+                    root: 'Livello radice',
+                    child: 'Livello figlio',
+                    all: 'Ogni livello'
+                }
             },
             collapseBehavior: {
                 name: 'Comprimi elementi',

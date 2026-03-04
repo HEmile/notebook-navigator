@@ -110,6 +110,8 @@ export interface VirtualFolderItem {
     data: VirtualFolder;
     level: number;
     key: string;
+    color?: string;
+    backgroundColor?: string;
     isSelectable?: boolean;
     isSelected?: boolean;
     tagCollectionId?: string;

@@ -27,7 +27,9 @@ export const STRINGS_UK = {
         delete: 'Видалити', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Очистити', // Button text for clearing values (English: Clear)
         remove: 'Вилучити', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Відновити за замовчуванням', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Надіслати', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Налаштувати', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Нічого не вибрано', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Без тегів', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Головне зображення', // Alt text for thumbnail/preview images (English: Feature image)
@@ -372,6 +374,9 @@ export const STRINGS_UK = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Кольори веселки: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Пошук іконок...',
             recentlyUsedHeader: 'Нещодавно використані',
@@ -438,7 +443,6 @@ export const STRINGS_UK = {
             recentColors: 'Останні кольори',
             clearRecentColors: 'Очистити останні кольори',
             removeRecentColor: 'Вилучити колір',
-            removeColor: 'Вилучити колір',
             apply: 'Застосувати',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -826,6 +830,7 @@ export const STRINGS_UK = {
             },
             navigation: {
                 appearance: 'Вигляд',
+                rainbowColors: 'Кольори веселки',
                 leftSidebar: 'Ліва бічна панель',
                 calendarIntegration: 'Інтеграція з календарем'
             },
@@ -1554,6 +1559,74 @@ export const STRINGS_UK = {
             showIconsColorOnly: {
                 name: 'Застосовувати колір лише до іконок',
                 desc: 'При увімкненні користувацькі кольори застосовуються лише до іконок. При вимкненні кольори застосовуються як до іконок, так і до текстових міток.'
+            },
+            navRainbowMode: {
+                name: 'Режим кольорів веселки',
+                desc: 'Застосувати кольори веселки в панелі навігації.',
+                options: {
+                    none: 'Вимк.',
+                    foreground: 'Колір тексту',
+                    background: 'Колір фону'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'Перший колір',
+                desc: 'Перший колір у градієнті веселки.'
+            },
+            navRainbowLastColor: {
+                name: 'Останній колір',
+                desc: 'Останній колір у градієнті веселки.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Стиль переходу',
+                desc: 'Інтерполяція між першим і останнім кольором.',
+                options: {
+                    hue: 'Тон',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Застосувати до ярликів',
+                desc: 'Застосувати кольори веселки до ярликів.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Застосувати до папок',
+                desc: 'Застосувати кольори веселки до папок.'
+            },
+            navRainbowFolderScope: {
+                name: 'Область папок',
+                desc: 'Вибрати рівні папок для початку призначення кольорів.',
+                options: {
+                    root: 'Кореневий рівень',
+                    child: 'Дочірній рівень',
+                    all: 'Кожний рівень'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Застосувати до тегів',
+                desc: 'Застосувати кольори веселки до тегів.'
+            },
+            navRainbowTagScope: {
+                name: 'Область тегів',
+                desc: 'Вибрати рівні тегів для початку призначення кольорів.',
+                options: {
+                    root: 'Кореневий рівень',
+                    child: 'Дочірній рівень',
+                    all: 'Кожний рівень'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Застосувати до властивостей',
+                desc: 'Застосувати кольори веселки до властивостей.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Область властивостей',
+                desc: 'Вибрати рівні властивостей для початку призначення кольорів.',
+                options: {
+                    root: 'Кореневий рівень',
+                    child: 'Дочірній рівень',
+                    all: 'Кожний рівень'
+                }
             },
             collapseBehavior: {
                 name: 'Згортати елементи',

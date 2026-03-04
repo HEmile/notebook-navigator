@@ -135,6 +135,39 @@ export function isTagSortOrder(value: string): value is TagSortOrder {
 /** Scope of items that button actions affect */
 export type ItemScope = 'all' | 'folders-only' | 'tags-only';
 
+export type NavRainbowColorMode = 'none' | 'foreground' | 'background';
+
+export function isNavRainbowColorMode(value: unknown): value is NavRainbowColorMode {
+    return value === 'none' || value === 'foreground' || value === 'background';
+}
+
+export type NavRainbowScope = 'root' | 'child' | 'all';
+
+export function isNavRainbowScope(value: unknown): value is NavRainbowScope {
+    return value === 'root' || value === 'child' || value === 'all';
+}
+
+export type NavRainbowTransitionStyle = 'hue' | 'rgb';
+
+export function isNavRainbowTransitionStyle(value: unknown): value is NavRainbowTransitionStyle {
+    return value === 'hue' || value === 'rgb';
+}
+
+export interface NavRainbowSectionSettings {
+    enabled: boolean;
+    firstColor: string;
+    lastColor: string;
+    transitionStyle: NavRainbowTransitionStyle;
+}
+
+export interface NavRainbowSettings {
+    mode: NavRainbowColorMode;
+    shortcuts: NavRainbowSectionSettings;
+    folders: NavRainbowSectionSettings & { scope: NavRainbowScope };
+    tags: NavRainbowSectionSettings & { scope: NavRainbowScope };
+    properties: NavRainbowSectionSettings & { scope: NavRainbowScope };
+}
+
 /** Modifier key used for multi-select operations */
 export type MultiSelectModifier = 'cmdCtrl' | 'optionAlt';
 
@@ -313,6 +346,9 @@ export interface NotebookNavigatorSettings {
     navIndent: number;
     navItemHeight: number;
     navItemHeightScaleText: boolean;
+
+    // Navigation pane tab - Rainbow colors
+    navRainbow: NavRainbowSettings;
 
     // Navigation pane tab - Behavior
     collapseBehavior: ItemScope;

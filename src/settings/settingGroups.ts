@@ -27,12 +27,13 @@ function supportsSettingGroups(): boolean {
     return typeof SettingGroup === 'function' && requireApiVersion('1.11.0');
 }
 
-export function createSettingGroupFactory(containerEl: HTMLElement): (heading?: string) => SettingGroupController {
+export function createSettingGroupFactory(containerEl: HTMLElement): (heading?: string | DocumentFragment) => SettingGroupController {
     const useSettingGroups = supportsSettingGroups();
 
-    return (heading?: string): SettingGroupController => {
+    return (heading?: string | DocumentFragment): SettingGroupController => {
         if (!useSettingGroups && heading) {
-            new Setting(containerEl).setName(heading).setHeading();
+            const headingText = typeof heading === 'string' ? heading : (heading.textContent ?? '');
+            new Setting(containerEl).setName(headingText).setHeading();
         }
 
         const wrapperEl = containerEl.createDiv();

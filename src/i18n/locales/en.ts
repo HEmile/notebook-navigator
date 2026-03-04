@@ -27,7 +27,9 @@ export const STRINGS_EN = {
         delete: 'Delete', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Clear', // Button text for clearing values (English: Clear)
         remove: 'Remove', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Restore default', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Submit', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Configure', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'No selection', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Untagged', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Feature image', // Alt text for thumbnail/preview images (English: Feature image)
@@ -371,6 +373,9 @@ export const STRINGS_EN = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Rainbow colors: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Search icons...',
             recentlyUsedHeader: 'Recently used',
@@ -437,7 +442,6 @@ export const STRINGS_EN = {
             recentColors: 'Recent colors',
             clearRecentColors: 'Clear recent colors',
             removeRecentColor: 'Remove color',
-            removeColor: 'Remove color',
             apply: 'Apply',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -825,6 +829,7 @@ export const STRINGS_EN = {
             },
             navigation: {
                 appearance: 'Appearance',
+                rainbowColors: 'Rainbow colors',
                 leftSidebar: 'Left sidebar',
                 calendarIntegration: 'Calendar integration'
             },
@@ -1550,6 +1555,74 @@ export const STRINGS_EN = {
             showIconsColorOnly: {
                 name: 'Apply color to icons only',
                 desc: 'When enabled, custom colors are applied only to icons. When disabled, colors are applied to both icons and text labels.'
+            },
+            navRainbowMode: {
+                name: 'Rainbow color mode',
+                desc: 'Apply rainbow colors in the navigation pane.',
+                options: {
+                    none: 'Off',
+                    foreground: 'Text color',
+                    background: 'Background color'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'First color',
+                desc: 'First color in the rainbow gradient.'
+            },
+            navRainbowLastColor: {
+                name: 'Last color',
+                desc: 'Last color in the rainbow gradient.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Transition style',
+                desc: 'Interpolation used between the first and last colors.',
+                options: {
+                    hue: 'Hue',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Apply to shortcuts',
+                desc: 'Apply rainbow colors to shortcuts.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Apply to folders',
+                desc: 'Apply rainbow colors to folders.'
+            },
+            navRainbowFolderScope: {
+                name: 'Folder scope',
+                desc: 'Select which folder levels start color assignments.',
+                options: {
+                    root: 'Root level',
+                    child: 'Child level',
+                    all: 'Every level'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Apply to tags',
+                desc: 'Apply rainbow colors to tags.'
+            },
+            navRainbowTagScope: {
+                name: 'Tag scope',
+                desc: 'Select which tag levels start color assignments.',
+                options: {
+                    root: 'Root level',
+                    child: 'Child level',
+                    all: 'Every level'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Apply to properties',
+                desc: 'Apply rainbow colors to properties.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Property scope',
+                desc: 'Select which property levels start color assignments.',
+                options: {
+                    root: 'Root level',
+                    child: 'Child level',
+                    all: 'Every level'
+                }
             },
             collapseBehavior: {
                 name: 'Collapse items',

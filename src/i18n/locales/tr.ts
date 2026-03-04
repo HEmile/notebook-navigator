@@ -27,7 +27,9 @@ export const STRINGS_TR = {
         delete: 'Sil', // Button text for delete operations in dialogs (English: Delete)
         clear: 'Temizle', // Button text for clearing values (English: Clear)
         remove: 'Kaldır', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: 'Varsayılana geri yükle', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Gönder', // Button text for submitting forms and dialogs (English: Submit)
+        configure: 'Yapılandır', // Generic button label used when opening a configuration dialog (English: Configure)
         noSelection: 'Seçim yok', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Etiketsiz', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Öne çıkan görsel', // Alt text for thumbnail/preview images (English: Feature image)
@@ -372,6 +374,9 @@ export const STRINGS_TR = {
 
     // Modal dialogs
     modals: {
+        navRainbowSection: {
+            title: (section: string) => `Gökkuşağı renkleri: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: 'Simge ara...',
             recentlyUsedHeader: 'Son kullanılanlar',
@@ -438,7 +443,6 @@ export const STRINGS_TR = {
             recentColors: 'Son renkler',
             clearRecentColors: 'Son renkleri temizle',
             removeRecentColor: 'Rengi kaldır',
-            removeColor: 'Rengi kaldır',
             apply: 'Uygula',
             hexLabel: 'HEX',
             rgbLabel: 'RGBA'
@@ -829,6 +833,7 @@ export const STRINGS_TR = {
             },
             navigation: {
                 appearance: 'Görünüm',
+                rainbowColors: 'Gökkuşağı renkleri',
                 leftSidebar: 'Sol kenar çubuğu',
                 calendarIntegration: 'Takvim entegrasyonu'
             },
@@ -1556,6 +1561,74 @@ export const STRINGS_TR = {
             showIconsColorOnly: {
                 name: 'Rengi yalnızca simgelere uygula',
                 desc: 'Etkinleştirildiğinde, özel renkler yalnızca simgelere uygulanır. Devre dışı bırakıldığında, renkler hem simgelere hem de metin etiketlerine uygulanır.'
+            },
+            navRainbowMode: {
+                name: 'Gökkuşağı renk modu',
+                desc: 'Gezinme panelinde gökkuşağı renkleri uygula.',
+                options: {
+                    none: 'Kapalı',
+                    foreground: 'Metin rengi',
+                    background: 'Arka plan rengi'
+                }
+            },
+            navRainbowFirstColor: {
+                name: 'İlk renk',
+                desc: 'Gökkuşağı gradyanındaki ilk renk.'
+            },
+            navRainbowLastColor: {
+                name: 'Son renk',
+                desc: 'Gökkuşağı gradyanındaki son renk.'
+            },
+            navRainbowTransitionStyle: {
+                name: 'Geçiş stili',
+                desc: 'İlk ve son renkler arasında kullanılan enterpolasyon.',
+                options: {
+                    hue: 'Ton',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: 'Kısayollara uygula',
+                desc: 'Gökkuşağı renklerini kısayollara uygula.'
+            },
+            navRainbowApplyToFolders: {
+                name: 'Klasörlere uygula',
+                desc: 'Gökkuşağı renklerini klasörlere uygula.'
+            },
+            navRainbowFolderScope: {
+                name: 'Klasör kapsamı',
+                desc: 'Renk atamalarını hangi klasör düzeylerinin başlatacağını seçin.',
+                options: {
+                    root: 'Kök düzey',
+                    child: 'Alt düzey',
+                    all: 'Her düzey'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: 'Etiketlere uygula',
+                desc: 'Gökkuşağı renklerini etiketlere uygula.'
+            },
+            navRainbowTagScope: {
+                name: 'Etiket kapsamı',
+                desc: 'Renk atamalarını hangi etiket düzeylerinin başlatacağını seçin.',
+                options: {
+                    root: 'Kök düzey',
+                    child: 'Alt düzey',
+                    all: 'Her düzey'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: 'Özelliklere uygula',
+                desc: 'Gökkuşağı renklerini özelliklere uygula.'
+            },
+            navRainbowPropertyScope: {
+                name: 'Özellik kapsamı',
+                desc: 'Renk atamalarını hangi özellik düzeylerinin başlatacağını seçin.',
+                options: {
+                    root: 'Kök düzey',
+                    child: 'Alt düzey',
+                    all: 'Her düzey'
+                }
             },
             collapseBehavior: {
                 name: 'Öğeleri daralt',
