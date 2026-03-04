@@ -40,8 +40,6 @@ export const NAV_RAINBOW_DEFAULT_START: RGBA = navRainbowDefaultStart;
 export const NAV_RAINBOW_DEFAULT_END: RGBA = navRainbowDefaultEnd;
 
 const FOLDER_VIRTUAL_ROOT_RAINBOW_KEY = '__nn-folder-virtual-root__';
-const TAG_VIRTUAL_ROOT_RAINBOW_KEY = '__nn-tag-virtual-root__';
-const PROPERTY_VIRTUAL_ROOT_RAINBOW_KEY = '__nn-property-virtual-root__';
 const SHORTCUT_VIRTUAL_ROOT_RAINBOW_KEY = '__nn-shortcuts-virtual-root__';
 
 const NAV_RAINBOW_PALETTE_SIZE = 1024;
@@ -303,24 +301,8 @@ export function buildTagRainbowColors(params: {
             keys.push(path);
         }
 
-        if (showAllTagsFolder) {
-            const rootScopedColors = buildRainbowColorMapFromPalette({
-                keys: [TAG_VIRTUAL_ROOT_RAINBOW_KEY, ...keys],
-                palette
-            });
-
-            rootColor = rootScopedColors.get(TAG_VIRTUAL_ROOT_RAINBOW_KEY) ?? palette[0];
-
-            for (const key of keys) {
-                const color = rootScopedColors.get(key);
-                if (color) {
-                    colorsByPath.set(key, color);
-                }
-            }
-        } else {
-            rootColor = palette[0];
-            assignRainbowColorsFromPalette({ keys, palette, target: colorsByPath });
-        }
+        rootColor = palette[0];
+        assignRainbowColorsFromPalette({ keys, palette, target: colorsByPath });
     } else {
         const childPathsByParent = new Map<string, string[]>();
         const seenChildrenByParent = new Map<string, Set<string>>();
@@ -427,24 +409,8 @@ export function buildPropertyRainbowColors(params: {
             keys.push(nodeId);
         }
 
-        if (showAllPropertiesFolder) {
-            const rootScopedColors = buildRainbowColorMapFromPalette({
-                keys: [PROPERTY_VIRTUAL_ROOT_RAINBOW_KEY, ...keys],
-                palette
-            });
-
-            rootColor = rootScopedColors.get(PROPERTY_VIRTUAL_ROOT_RAINBOW_KEY) ?? palette[0];
-
-            for (const key of keys) {
-                const color = rootScopedColors.get(key);
-                if (color) {
-                    colorsByNodeId.set(key, color);
-                }
-            }
-        } else {
-            rootColor = palette[0];
-            assignRainbowColorsFromPalette({ keys, palette, target: colorsByNodeId });
-        }
+        rootColor = palette[0];
+        assignRainbowColorsFromPalette({ keys, palette, target: colorsByNodeId });
 
         for (const item of items) {
             if (item.type !== NavigationPaneItemType.PROPERTY_KEY) {
