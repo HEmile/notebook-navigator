@@ -2117,6 +2117,12 @@ body {
     flex-shrink: 0;
 }
 
+.nn-navitem-hover-action-slot--overlay {
+    width: 0;
+    min-width: 0;
+    overflow: visible;
+}
+
 .nn-navitem-hover-action-button {
     position: absolute;
     top: 50%;
@@ -2148,6 +2154,12 @@ body {
 .nn-desktop .nn-properties-header-item:hover .nn-navitem-hover-action-button {
     visibility: visible;
     pointer-events: auto;
+}
+
+.nn-desktop .nn-shortcut-item--removable:hover .nn-navitem-hover-action-slot--overlay,
+.nn-desktop .nn-shortcut-header-item:hover .nn-navitem-hover-action-slot--overlay,
+.nn-desktop .nn-properties-header-item:hover .nn-navitem-hover-action-slot--overlay {
+    width: 18px;
 }
 
 .nn-desktop .nn-shortcut-item--removable:hover .nn-navitem-hover-action-count,

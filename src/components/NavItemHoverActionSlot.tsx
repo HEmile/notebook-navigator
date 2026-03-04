@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { ObsidianIcon } from './ObsidianIcon';
 
 interface NavItemHoverActionSlotProps {
@@ -24,10 +24,16 @@ interface NavItemHoverActionSlotProps {
     actionLabel: string;
     icon: string;
     onClick: () => void;
+    reserveSpaceWhenHidden?: boolean;
 }
 
-export function NavItemHoverActionSlot({ label, actionLabel, icon, onClick }: NavItemHoverActionSlotProps) {
-    const shouldRenderLabel = useMemo(() => typeof label === 'string' && label.length > 0, [label]);
+export function NavItemHoverActionSlot({ label, actionLabel, icon, onClick, reserveSpaceWhenHidden = true }: NavItemHoverActionSlotProps) {
+    const shouldRenderLabel = typeof label === 'string' && label.length > 0;
+    const shouldRenderPlaceholder = !shouldRenderLabel && reserveSpaceWhenHidden;
+    const slotClassName =
+        !shouldRenderLabel && !reserveSpaceWhenHidden
+            ? 'nn-navitem-hover-action-slot nn-navitem-hover-action-slot--overlay'
+            : 'nn-navitem-hover-action-slot';
 
     const handlePointerDown = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -49,12 +55,12 @@ export function NavItemHoverActionSlot({ label, actionLabel, icon, onClick }: Na
     );
 
     return (
-        <span className="nn-navitem-hover-action-slot">
+        <span className={slotClassName}>
             {shouldRenderLabel ? (
                 <span className="nn-navitem-count nn-navitem-hover-action-count">{label}</span>
-            ) : (
+            ) : shouldRenderPlaceholder ? (
                 <span className="nn-navitem-count nn-navitem-hover-action-placeholder" aria-hidden={true} />
-            )}
+            ) : null}
             <button
                 type="button"
                 className="nn-icon-button nn-navitem-hover-action-button"

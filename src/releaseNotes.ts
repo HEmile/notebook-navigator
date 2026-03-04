@@ -81,10 +81,13 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-03-05',
         showOnUpdate: false,
         new: [
-            'New feature: ==Rainbow colors==. You can now set rainbow colors for shortcuts, folders, tags or properties. Pick custom colors, choose between Hue (color wheel) and RGB (direct blend), and much more. There are lots of configuration settings, so just head to Settings > Navigation > Rainbow colors to check it out!',
+            'New feature: ==Rainbow colors==! You can now set rainbow colors for shortcuts, folders, tags or properties. Pick custom colors, choose between Hue (color wheel) and RGB (direct blend), and much more. There are lots of configuration settings, so just head to Settings > Navigation > Rainbow colors to check it out!',
             'New command: ==Toggle dual pane orientation== to quickly change orientation between horizontal and vertical dual panes.'
         ],
-        improved: ['The ==properties tree now supports custom appearance and sort order==.'],
+        improved: [
+            'The ==properties tree now supports custom appearance and sort order== in list pane.',
+            'Shortcut rows no longer reserve trailing badge space when Shortcut badge is None.'
+        ],
         fixed: [
             'Fixed an issue where deleting the active note could trigger "file not found" errors in Linter when "Lint on Focused File Change" is enabled.',
             'Fixed an issue where disabling "Show icons for shortcuts and recent items" also disabled the icon for the Properties root virtual folder.',

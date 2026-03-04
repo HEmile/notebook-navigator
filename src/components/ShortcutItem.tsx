@@ -160,6 +160,7 @@ export const ShortcutItem = React.memo(function ShortcutItem({
         return (
             <NavItemHoverActionSlot
                 label={shouldShowCount ? countLabel : undefined}
+                reserveSpaceWhenHidden={shouldShowCount}
                 actionLabel={strings.shortcuts.remove}
                 icon="lucide-x"
                 onClick={onRemove}
