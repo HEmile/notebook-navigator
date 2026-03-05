@@ -163,6 +163,7 @@ export interface NavRainbowSectionSettings {
 export interface NavRainbowSettings {
     mode: NavRainbowColorMode;
     shortcuts: NavRainbowSectionSettings;
+    recent: NavRainbowSectionSettings;
     folders: NavRainbowSectionSettings & { scope: NavRainbowScope };
     tags: NavRainbowSectionSettings & { scope: NavRainbowScope };
     properties: NavRainbowSectionSettings & { scope: NavRainbowScope };

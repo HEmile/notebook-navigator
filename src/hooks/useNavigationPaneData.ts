@@ -95,6 +95,7 @@ import {
     buildFolderRainbowColors,
     buildNavigationRainbowPalettes,
     buildPropertyRainbowColors,
+    buildRecentRainbowColors,
     buildShortcutRainbowColors,
     buildTagRainbowColors
 } from '../utils/navigationRainbow';
@@ -1878,14 +1879,27 @@ export function useNavigationPaneData({
         });
     }, [shortcutItems, navRainbowPalettes.shortcut]);
 
+    const recentRainbowColors = useMemo(() => {
+        const palette = navRainbowPalettes.recent;
+        if (!palette) {
+            return { colorsByKey: new Map<string, string>(), rootColor: undefined };
+        }
+
+        return buildRecentRainbowColors({
+            items: recentNotesItems,
+            palette
+        });
+    }, [recentNotesItems, navRainbowPalettes.recent]);
+
     const navRainbowColors = useMemo<NavigationRainbowColors>(
         () => ({
             folder: folderRainbowColors,
             tag: tagRainbowColors,
             property: propertyRainbowColors,
-            shortcut: shortcutRainbowColors
+            shortcut: shortcutRainbowColors,
+            recent: recentRainbowColors
         }),
-        [folderRainbowColors, tagRainbowColors, propertyRainbowColors, shortcutRainbowColors]
+        [folderRainbowColors, tagRainbowColors, propertyRainbowColors, shortcutRainbowColors, recentRainbowColors]
     );
 
     const decorateItem = useMemo(() => {

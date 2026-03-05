@@ -21,6 +21,7 @@ import type { App } from 'obsidian';
 
 import {
     NavigationPaneItemType,
+    RECENT_NOTES_VIRTUAL_FOLDER_ID,
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
     SHORTCUTS_VIRTUAL_FOLDER_ID,
     TAGS_ROOT_VIRTUAL_FOLDER_ID
@@ -36,6 +37,7 @@ import {
     createNavigationItemDecorationContext,
     inheritVirtualFolderStyle,
     overlayItemWithRainbow,
+    resolveRecentDecorationColors,
     resolveNavigationFileIconId,
     type DecorationColors,
     type NavigationItemDecorationContext,
@@ -207,6 +209,8 @@ function decorateVirtualFolderNavigationItem(
         rainbowColor = ctx.rainbow.property.colors.rootColor;
     } else if (item.data.id === SHORTCUTS_VIRTUAL_FOLDER_ID) {
         rainbowColor = ctx.rainbow.shortcut.colors.rootColor;
+    } else if (item.data.id === RECENT_NOTES_VIRTUAL_FOLDER_ID) {
+        rainbowColor = ctx.rainbow.recent.colors.rootColor;
     }
 
     return overlayItemWithRainbow(ctx, nextItem, rainbowColor);
@@ -215,10 +219,21 @@ function decorateVirtualFolderNavigationItem(
 function decorateRecentNoteNavigationItem(ctx: NavigationItemDecorationContext, item: RecentNoteNavigationItem): CombinedNavigationItem {
     const note: TFile = item.note;
     const customIconId = ctx.metadataService.getFileIcon(note.path);
-    const color = ctx.metadataService.getFileColor(note.path);
+    const baseColor = ctx.metadataService.getFileColor(note.path);
+    const colors = resolveRecentDecorationColors({
+        ctx,
+        itemKey: item.key,
+        color: baseColor,
+        backgroundColor: item.backgroundColor
+    });
     const resolvedIconId = resolveNavigationFileIconId(ctx, note, customIconId);
 
-    return { ...item, icon: resolvedIconId ?? undefined, color };
+    return {
+        ...item,
+        icon: resolvedIconId ?? undefined,
+        color: colors.color,
+        backgroundColor: colors.backgroundColor
+    };
 }
 
 function decorateNavigationItem(ctx: NavigationItemDecorationContext, item: CombinedNavigationItem): CombinedNavigationItem {

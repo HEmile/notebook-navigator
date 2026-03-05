@@ -41,6 +41,7 @@ export const NAV_RAINBOW_DEFAULT_END: RGBA = navRainbowDefaultEnd;
 
 const FOLDER_VIRTUAL_ROOT_RAINBOW_KEY = '__nn-folder-virtual-root__';
 const SHORTCUT_VIRTUAL_ROOT_RAINBOW_KEY = '__nn-shortcuts-virtual-root__';
+const RECENT_VIRTUAL_ROOT_RAINBOW_KEY = '__nn-recent-virtual-root__';
 
 const NAV_RAINBOW_PALETTE_SIZE = 1024;
 
@@ -49,6 +50,7 @@ export interface NavigationRainbowPalettes {
     tag: readonly string[] | null;
     property: readonly string[] | null;
     shortcut: readonly string[] | null;
+    recent: readonly string[] | null;
 }
 
 interface NavRainbowPaletteSource {
@@ -215,7 +217,8 @@ export function buildNavigationRainbowPalettes(navRainbow: NavRainbowSettings): 
         folder: buildSectionPalette(mode, navRainbow.folders),
         tag: buildSectionPalette(mode, navRainbow.tags),
         property: buildSectionPalette(mode, navRainbow.properties),
-        shortcut: buildSectionPalette(mode, navRainbow.shortcuts)
+        shortcut: buildSectionPalette(mode, navRainbow.shortcuts),
+        recent: buildSectionPalette(mode, navRainbow.recent)
     };
 }
 
@@ -500,6 +503,41 @@ export function buildShortcutRainbowColors(params: {
     });
 
     const rootColor = rootScopedColors.get(SHORTCUT_VIRTUAL_ROOT_RAINBOW_KEY) ?? palette[0];
+    const colorsByKey = new Map<string, string>();
+    for (const key of keys) {
+        const color = rootScopedColors.get(key);
+        if (color) {
+            colorsByKey.set(key, color);
+        }
+    }
+
+    return { colorsByKey, rootColor };
+}
+
+export interface RecentRainbowColors {
+    colorsByKey: Map<string, string>;
+    rootColor: string | undefined;
+}
+
+export function buildRecentRainbowColors(params: {
+    items: readonly CombinedNavigationItem[];
+    palette: readonly string[];
+}): RecentRainbowColors {
+    const { items, palette } = params;
+
+    const keys = collectUniqueKeys({
+        items,
+        includeItem: item => item.type === NavigationPaneItemType.RECENT_NOTE,
+        getKey: item => item.key
+    });
+
+    const rootScopedColors = assignColorsWithVirtualRootOffset({
+        keys,
+        palette,
+        virtualRootKey: RECENT_VIRTUAL_ROOT_RAINBOW_KEY
+    });
+
+    const rootColor = rootScopedColors.get(RECENT_VIRTUAL_ROOT_RAINBOW_KEY) ?? palette[0];
     const colorsByKey = new Map<string, string>();
     for (const key of keys) {
         const color = rootScopedColors.get(key);

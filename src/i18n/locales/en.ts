@@ -1585,6 +1585,10 @@ export const STRINGS_EN = {
                 name: 'Apply to shortcuts',
                 desc: 'Apply rainbow colors to shortcuts.'
             },
+            navRainbowApplyToRecent: {
+                name: 'Apply to recent items',
+                desc: 'Apply rainbow colors to recent items.'
+            },
             navRainbowApplyToFolders: {
                 name: 'Apply to folders',
                 desc: 'Apply rainbow colors to folders.'

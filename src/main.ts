@@ -199,6 +199,7 @@ function normalizeNavRainbowBaseSection(value: unknown, defaults: NavRainbowSett
 function normalizeNavRainbowSettings(value: unknown, defaults: NavRainbowSettings): NavRainbowSettings {
     const navRainbow = isRecord(value) ? value : null;
     const shortcuts = isRecord(navRainbow?.shortcuts) ? navRainbow.shortcuts : null;
+    const recent = isRecord(navRainbow?.recent) ? navRainbow.recent : null;
     const folders = isRecord(navRainbow?.folders) ? navRainbow.folders : null;
     const tags = isRecord(navRainbow?.tags) ? navRainbow.tags : null;
     const properties = isRecord(navRainbow?.properties) ? navRainbow.properties : null;
@@ -210,6 +211,7 @@ function normalizeNavRainbowSettings(value: unknown, defaults: NavRainbowSetting
     return {
         mode: isNavRainbowColorMode(navRainbow?.mode) ? navRainbow.mode : defaults.mode,
         shortcuts: normalizeNavRainbowBaseSection(shortcuts, defaults.shortcuts),
+        recent: normalizeNavRainbowBaseSection(recent, defaults.recent),
         folders: {
             ...foldersBase,
             scope: isNavRainbowScope(folders?.scope) ? folders.scope : defaults.folders.scope

@@ -19,7 +19,7 @@
 import { TFile } from 'obsidian';
 import type { App } from 'obsidian';
 
-import { SHORTCUTS_VIRTUAL_FOLDER_ID } from '../../types';
+import { RECENT_NOTES_VIRTUAL_FOLDER_ID, SHORTCUTS_VIRTUAL_FOLDER_ID } from '../../types';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { MetadataService } from '../../services/MetadataService';
 import { shouldDisplayFile, FILE_VISIBILITY } from '../../utils/fileTypeUtils';
@@ -34,6 +34,7 @@ import {
     type FolderRainbowColors,
     type NavigationRainbowPalettes,
     type PropertyRainbowColors,
+    type RecentRainbowColors,
     type ShortcutRainbowColors,
     type TagRainbowColors
 } from '../../utils/navigationRainbow';
@@ -64,6 +65,11 @@ interface ShortcutRainbowContext {
     colors: ShortcutRainbowColors;
 }
 
+interface RecentRainbowContext {
+    isEnabled: boolean;
+    colors: RecentRainbowColors;
+}
+
 interface NavigationRainbowContext {
     mode: NotebookNavigatorSettings['navRainbow']['mode'];
     isEnabled: boolean;
@@ -71,6 +77,7 @@ interface NavigationRainbowContext {
     tag: TagRainbowContext;
     property: PropertyRainbowContext;
     shortcut: ShortcutRainbowContext;
+    recent: RecentRainbowContext;
 }
 
 interface NavigationFileIconContext {
@@ -95,6 +102,7 @@ export interface NavigationRainbowColors {
     tag: TagRainbowColors;
     property: PropertyRainbowColors;
     shortcut: ShortcutRainbowColors;
+    recent: RecentRainbowColors;
 }
 
 export function createNavigationItemDecorationContext(params: {
@@ -155,6 +163,7 @@ export function createNavigationItemDecorationContext(params: {
     const tagPalette = navRainbowPalettes.tag;
     const propertyPalette = navRainbowPalettes.property;
     const shortcutPalette = navRainbowPalettes.shortcut;
+    const recentPalette = navRainbowPalettes.recent;
 
     return {
         app,
@@ -189,7 +198,8 @@ export function createNavigationItemDecorationContext(params: {
                 rootLevel: propertyRootLevel,
                 colors: navRainbowColors.property
             },
-            shortcut: { isEnabled: Boolean(shortcutPalette), colors: navRainbowColors.shortcut }
+            shortcut: { isEnabled: Boolean(shortcutPalette), colors: navRainbowColors.shortcut },
+            recent: { isEnabled: Boolean(recentPalette), colors: navRainbowColors.recent }
         }
     };
 }
@@ -286,6 +296,20 @@ function inheritShortcutsRootStyle(
     });
 }
 
+function inheritRecentRootStyle(
+    ctx: NavigationItemDecorationContext,
+    color: string | undefined,
+    backgroundColor: string | undefined
+): { color: string | undefined; backgroundColor: string | undefined } | null {
+    return inheritVirtualFolderStyle({
+        ctx,
+        enabled: ctx.settings.inheritFolderColors,
+        virtualFolderId: RECENT_NOTES_VIRTUAL_FOLDER_ID,
+        color,
+        backgroundColor
+    });
+}
+
 export function overlayItemWithRainbow<T extends { color?: string; backgroundColor?: string }>(
     ctx: NavigationItemDecorationContext,
     item: T,
@@ -336,6 +360,13 @@ function resolveShortcutRainbowColor(ctx: NavigationItemDecorationContext, key: 
     return ctx.rainbow.shortcut.colors.colorsByKey.get(key);
 }
 
+function resolveRecentRainbowColor(ctx: NavigationItemDecorationContext, key: string): string | undefined {
+    if (!ctx.rainbow.recent.isEnabled) {
+        return undefined;
+    }
+    return ctx.rainbow.recent.colors.colorsByKey.get(key);
+}
+
 export function resolveShortcutDecorationColors(params: {
     ctx: NavigationItemDecorationContext;
     itemKey: string;
@@ -362,6 +393,33 @@ export function resolveShortcutDecorationColors(params: {
         ctx,
         shouldApply: true,
         rainbowColor: resolveShortcutRainbowColor(ctx, itemKey),
+        colors: {
+            color: nextColor,
+            backgroundColor: nextBackgroundColor
+        }
+    });
+}
+
+export function resolveRecentDecorationColors(params: {
+    ctx: NavigationItemDecorationContext;
+    itemKey: string;
+    color: string | undefined;
+    backgroundColor: string | undefined;
+}): DecorationColors {
+    const { ctx, itemKey, color, backgroundColor } = params;
+    let nextColor = color;
+    let nextBackgroundColor = backgroundColor;
+
+    const inheritedRoot = inheritRecentRootStyle(ctx, nextColor, nextBackgroundColor);
+    if (inheritedRoot) {
+        nextColor = inheritedRoot.color;
+        nextBackgroundColor = inheritedRoot.backgroundColor;
+    }
+
+    return applyScopedRainbow({
+        ctx,
+        shouldApply: true,
+        rainbowColor: resolveRecentRainbowColor(ctx, itemKey),
         colors: {
             color: nextColor,
             backgroundColor: nextBackgroundColor

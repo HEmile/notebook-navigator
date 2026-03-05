@@ -29,7 +29,7 @@ import {
 } from '../settings/types';
 import { DEFAULT_SETTINGS } from '../settings/defaultSettings';
 
-type NavRainbowSectionId = 'shortcuts' | 'folders' | 'tags' | 'properties';
+type NavRainbowSectionId = 'shortcuts' | 'recent' | 'folders' | 'tags' | 'properties';
 
 interface ColorSettingAccess {
     getValue: () => string;
@@ -155,6 +155,15 @@ export class NavRainbowSectionModal extends Modal {
                 getSection: settings => settings.shortcuts,
                 setSection: (settings, section) => ({ ...settings, shortcuts: section }),
                 defaultSection: DEFAULT_SETTINGS.navRainbow.shortcuts
+            });
+        }
+
+        if (this.section === 'recent') {
+            return this.createSectionAccess({
+                sectionLabel: strings.settings.items.navRainbowApplyToRecent.name,
+                getSection: settings => settings.recent,
+                setSection: (settings, section) => ({ ...settings, recent: section }),
+                defaultSection: DEFAULT_SETTINGS.navRainbow.recent
             });
         }
 

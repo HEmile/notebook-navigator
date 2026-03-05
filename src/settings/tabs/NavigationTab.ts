@@ -346,6 +346,18 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
     });
 
     createRainbowSectionSetting({
+        name: strings.settings.items.navRainbowApplyToRecent.name,
+        desc: strings.settings.items.navRainbowApplyToRecent.desc,
+        getEnabled: () => plugin.settings.navRainbow.recent.enabled,
+        setEnabled: async value => {
+            await updateNavRainbow(settings => ({ ...settings, recent: { ...settings.recent, enabled: value } }));
+        },
+        onConfigure: () => {
+            new NavRainbowSectionModal(context.app, plugin, 'recent').open();
+        }
+    });
+
+    createRainbowSectionSetting({
         name: strings.settings.items.navRainbowApplyToFolders.name,
         desc: strings.settings.items.navRainbowApplyToFolders.desc,
         getEnabled: () => plugin.settings.navRainbow.folders.enabled,

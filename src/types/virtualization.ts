@@ -161,6 +161,7 @@ export interface RecentNoteNavItem {
     key: string;
     icon?: string;
     color?: string;
+    backgroundColor?: string;
 }
 
 export interface ShortcutSearchNavItem extends ShortcutNavigationBase {

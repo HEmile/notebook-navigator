@@ -84,7 +84,7 @@ import { useSettingsState, useSettingsUpdate, useActiveProfile } from '../contex
 import { useUXPreferences } from '../context/UXPreferencesContext';
 import { showNotice } from '../utils/noticeUtils';
 import { executeCommand } from '../utils/typeGuards';
-import { resolveUXIcon, resolveUXIconForMenu } from '../utils/uxIcons';
+import { resolveUXIcon, resolveUXIconForMenu, type UXIconId } from '../utils/uxIcons';
 import { useFileCache } from '../context/StorageContext';
 import { useUIState, useUIDispatch } from '../context/UIStateContext';
 import { useNavigationPaneKeyboard } from '../hooks/useNavigationPaneKeyboard';
@@ -110,7 +110,7 @@ import { getFolderNote, getFolderNoteDetectionSettings, openFolderNoteFile } fro
 import { collectAllTagPaths, findTagNode, getTotalNoteCount } from '../utils/tagTree';
 import { FILE_VISIBILITY, getExtensionSuffix, shouldShowExtensionSuffix } from '../utils/fileTypeUtils';
 import { getTagSearchModifierOperator, resolveCanonicalTagPath } from '../utils/tagUtils';
-import { ensureRecord, foldSearchText, isStringRecordValue } from '../utils/recordUtils';
+import { ensureRecord, foldSearchText, isStringRecordValue, sanitizeRecord } from '../utils/recordUtils';
 import { FolderItem } from './FolderItem';
 import { NavigationPaneHeader } from './NavigationPaneHeader';
 import { NavigationToolbar } from './NavigationToolbar';
@@ -188,6 +188,7 @@ import {
     resolvePropertyShortcutNodeId,
     resolvePropertyTreeNode
 } from '../utils/propertyTree';
+import { normalizeCanonicalIconId, serializeIconForFrontmatter } from '../utils/iconizeFormat';
 
 export interface NavigationPaneHandle {
     getIndexOfPath: (itemType: ItemType, path: string) => number;
@@ -2238,6 +2239,7 @@ export const NavigationPane = React.memo(
         const handleSectionContextMenu = useCallback(
             (event: React.MouseEvent<HTMLDivElement>, sectionId: NavigationSectionId, options?: { allowSeparator?: boolean }) => {
                 const isShortcutsSection = sectionId === NavigationSectionId.SHORTCUTS;
+                const isRecentSection = sectionId === NavigationSectionId.RECENT;
                 const isTagSection = sectionId === NavigationSectionId.TAGS;
                 const isPropertySection = sectionId === NavigationSectionId.PROPERTIES;
                 const target = { type: 'section', id: sectionId } as const;
@@ -2265,15 +2267,44 @@ export const NavigationPane = React.memo(
 
                 const virtualFolderId = isShortcutsSection
                     ? SHORTCUTS_VIRTUAL_FOLDER_ID
-                    : isTagSection
-                      ? TAGS_ROOT_VIRTUAL_FOLDER_ID
-                      : isPropertySection
-                        ? PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
-                        : null;
+                    : isRecentSection
+                      ? RECENT_NOTES_VIRTUAL_FOLDER_ID
+                      : isTagSection
+                        ? TAGS_ROOT_VIRTUAL_FOLDER_ID
+                        : isPropertySection
+                          ? PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
+                          : null;
 
                 if (virtualFolderId) {
                     const settingsProvider = metadataService.getSettingsProvider();
                     type VirtualFolderStyleKey = 'virtualFolderColors' | 'virtualFolderBackgroundColors';
+                    interface VirtualRootMenuConfig {
+                        uxIconId: UXIconId;
+                        title: string;
+                    }
+
+                    let virtualRootMenuConfig: VirtualRootMenuConfig | null = null;
+                    if (isShortcutsSection) {
+                        virtualRootMenuConfig = {
+                            uxIconId: 'nav-shortcuts',
+                            title: strings.navigationPane.shortcutsHeader
+                        };
+                    } else if (isRecentSection) {
+                        virtualRootMenuConfig = {
+                            uxIconId: 'nav-recent-files',
+                            title: useRecentFilesLabel ? strings.navigationPane.recentFilesHeader : strings.navigationPane.recentNotesHeader
+                        };
+                    } else if (isTagSection) {
+                        virtualRootMenuConfig = {
+                            uxIconId: 'nav-tags',
+                            title: strings.tagList.tags
+                        };
+                    } else if (isPropertySection) {
+                        virtualRootMenuConfig = {
+                            uxIconId: 'nav-properties',
+                            title: strings.navigationPane.properties
+                        };
+                    }
 
                     const updateVirtualFolderStyleRecord = (
                         key: VirtualFolderStyleKey,
@@ -2325,12 +2356,66 @@ export const NavigationPane = React.memo(
 
                     const virtualFolderColor = settingsProvider.settings.virtualFolderColors?.[virtualFolderId];
                     const virtualFolderBackgroundColor = settingsProvider.settings.virtualFolderBackgroundColors?.[virtualFolderId];
+                    const titleOverride = virtualRootMenuConfig?.title ?? '';
 
-                    const titleOverride = isShortcutsSection
-                        ? strings.navigationPane.shortcutsHeader
-                        : isTagSection
-                          ? strings.tagList.tags
-                          : strings.navigationPane.properties;
+                    const setVirtualRootIcon = async (uxIconId: UXIconId, iconId: string | null): Promise<void> => {
+                        const interfaceIcons = sanitizeRecord(settingsProvider.settings.interfaceIcons, isStringRecordValue);
+                        const defaultIconId = normalizeCanonicalIconId(resolveUXIcon(undefined, uxIconId));
+                        let didChange = false;
+
+                        if (!iconId) {
+                            if (Object.prototype.hasOwnProperty.call(interfaceIcons, uxIconId)) {
+                                delete interfaceIcons[uxIconId];
+                                didChange = true;
+                            }
+                        } else {
+                            const canonicalIconId = normalizeCanonicalIconId(iconId);
+                            const serializedIconId = serializeIconForFrontmatter(canonicalIconId);
+
+                            if (!serializedIconId || canonicalIconId === defaultIconId) {
+                                if (Object.prototype.hasOwnProperty.call(interfaceIcons, uxIconId)) {
+                                    delete interfaceIcons[uxIconId];
+                                    didChange = true;
+                                }
+                            } else if (interfaceIcons[uxIconId] !== serializedIconId) {
+                                interfaceIcons[uxIconId] = serializedIconId;
+                                didChange = true;
+                            }
+                        }
+
+                        if (!didChange) {
+                            return;
+                        }
+
+                        settingsProvider.settings.interfaceIcons = interfaceIcons;
+                        await settingsProvider.saveSettingsAndUpdate();
+                    };
+
+                    if (virtualRootMenuConfig) {
+                        menu.addItem(item => {
+                            item.setTitle(strings.contextMenu.folder.changeIcon)
+                                .setIcon('lucide-image')
+                                .onClick(() => {
+                                    runAsyncAction(async () => {
+                                        const { IconPickerModal } = await import('../modals/IconPickerModal');
+                                        const modal = new IconPickerModal(app, metadataService, virtualFolderId, ItemType.FILE, {
+                                            titleOverride,
+                                            currentIconId: resolveUXIcon(
+                                                settingsProvider.settings.interfaceIcons,
+                                                virtualRootMenuConfig.uxIconId
+                                            ),
+                                            showRemoveButton: true,
+                                            disableMetadataUpdates: true
+                                        });
+                                        modal.onChooseIcon = async iconId => {
+                                            await setVirtualRootIcon(virtualRootMenuConfig.uxIconId, iconId);
+                                            return { handled: true };
+                                        };
+                                        modal.open();
+                                    });
+                                });
+                        });
+                    }
 
                     menu.addItem(item => {
                         item.setTitle(strings.contextMenu.folder.changeColor)
@@ -2546,6 +2631,7 @@ export const NavigationPane = React.memo(
                 handleConfigurePropertyKeysFromSectionMenu,
                 metadataService,
                 pinToggleLabel,
+                useRecentFilesLabel,
                 plugin.manifest.id,
                 settings.interfaceIcons,
                 tagShortcutKeysByPath,
@@ -3307,6 +3393,7 @@ export const NavigationPane = React.memo(
                             <ShortcutItem
                                 icon={item.icon ?? 'lucide-file-text'}
                                 color={item.color}
+                                backgroundColor={getSolidBackground(item.backgroundColor)}
                                 label={label}
                                 level={item.level}
                                 type="note"

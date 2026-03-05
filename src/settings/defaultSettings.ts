@@ -50,6 +50,13 @@ const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
         transitionStyle: 'rgb'
     },
 
+    recent: {
+        enabled: false,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        transitionStyle: 'rgb'
+    },
+
     folders: {
         enabled: true,
         firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
