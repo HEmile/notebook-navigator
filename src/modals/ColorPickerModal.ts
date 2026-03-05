@@ -25,22 +25,18 @@ import {
     MAX_RECENT_COLORS,
     USER_COLOR_SLOT_COUNT
 } from '../constants/colorPalette';
-import { ItemType } from '../types';
 import { ISettingsProvider } from '../interfaces/ISettingsProvider';
 import { runAsyncAction } from '../utils/async';
 import { addAsyncEventListener } from '../utils/domEventListeners';
 import { showNotice } from '../utils/noticeUtils';
 import { createDragGhostManager, type DragGhostManager } from '../utils/dragGhost';
 import { ConfirmModal } from './ConfirmModal';
-import { parsePropertyNodeId } from '../utils/propertyTree';
 
 const DEFAULT_COLOR = '#3b82f6';
 
 type ColorChannel = 'r' | 'g' | 'b' | 'a';
 
 type RGBAValues = { r: number; g: number; b: number; a: number };
-
-type ColorPickerMode = 'foreground' | 'background';
 
 /** Palette display mode: default (read-only preset colors) or custom (user-editable colors) */
 type PaletteMode = 'default' | 'custom';
@@ -49,37 +45,11 @@ interface PaletteDragData {
     color: string;
 }
 
-/** Result returned by external color selection handlers */
-interface ColorSelectionHandlerResult {
-    handled: boolean;
-}
-
-/**
- * Extended metadata service interface for color operations
- */
-interface ColorMetadataService {
-    setTagColor(path: string, color: string): Promise<void>;
-    setFolderColor(path: string, color: string): Promise<void>;
-    setFileColor(path: string, color: string): Promise<void>;
-    setPropertyColor(path: string, color: string): Promise<void>;
-    removeTagColor(path: string): Promise<void>;
-    removeFolderColor(path: string): Promise<void>;
-    removeFileColor(path: string): Promise<void>;
-    removePropertyColor(path: string): Promise<void>;
-    setTagBackgroundColor(path: string, color: string): Promise<void>;
-    setFolderBackgroundColor(path: string, color: string): Promise<void>;
-    setPropertyBackgroundColor(path: string, color: string): Promise<void>;
-    removeTagBackgroundColor(path: string): Promise<void>;
-    removeFolderBackgroundColor(path: string): Promise<void>;
-    removePropertyBackgroundColor(path: string): Promise<void>;
-    getTagColor(path: string): string | undefined;
-    getFolderColor(path: string): string | undefined;
-    getFileColor(path: string): string | undefined;
-    getPropertyColor(path: string): string | undefined;
-    getTagBackgroundColor(path: string): string | undefined;
-    getFolderBackgroundColor(path: string): string | undefined;
-    getPropertyBackgroundColor(path: string): string | undefined;
-    getSettingsProvider(): ISettingsProvider;
+export interface ColorPickerModalParams {
+    title: string;
+    initialColor: string | null;
+    settingsProvider: ISettingsProvider;
+    onChooseColor: (color: string | null) => void | Promise<void>;
 }
 
 /**
@@ -92,14 +62,11 @@ interface ColorMetadataService {
  */
 export class ColorPickerModal extends Modal {
     private static lastPaletteMode: PaletteMode = 'default';
-    private itemPath: string;
-    private itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.PROPERTY | typeof ItemType.FILE;
-    private metadataService: ColorMetadataService;
+    private title: string;
     private settingsProvider: ISettingsProvider;
-    private titleOverride?: string;
+    private chooseColorHandler: (color: string | null) => void | Promise<void>;
     private currentColor: string | null = null;
     private selectedColor: string = DEFAULT_COLOR;
-    private isBackgroundMode: boolean;
     private hexInput: HTMLInputElement;
     private previewCurrent: HTMLDivElement;
     private previewNew: HTMLDivElement;
@@ -126,9 +93,6 @@ export class ColorPickerModal extends Modal {
     private dragGhostManager: DragGhostManager;
     private pendingPaletteSwitchHandle: number | null = null;
 
-    /** Callback function invoked when a color is selected */
-    public onChooseColor?: (color: string | null) => ColorSelectionHandlerResult | Promise<ColorSelectionHandlerResult>;
-
     /** Returns the last used palette mode across modal instances */
     public static getLastPaletteMode(): PaletteMode {
         return ColorPickerModal.lastPaletteMode;
@@ -142,32 +106,19 @@ export class ColorPickerModal extends Modal {
     /**
      * Creates a new color picker modal
      * @param app - The Obsidian app instance
-     * @param metadataService - The metadata service for managing folder/tag colors
-     * @param itemPath - Path of the folder or tag to set color for
-     * @param itemType - Whether this is for a folder or tag
+     * @param params - Color picker configuration
      */
-    constructor(
-        app: App,
-        metadataService: ColorMetadataService,
-        itemPath: string,
-        itemType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.PROPERTY | typeof ItemType.FILE = ItemType.FOLDER,
-        colorMode: ColorPickerMode = 'foreground',
-        options?: { titleOverride?: string }
-    ) {
+    constructor(app: App, params: ColorPickerModalParams) {
         super(app);
-        this.metadataService = metadataService;
-        this.itemPath = itemPath;
-        this.itemType = itemType;
-        this.titleOverride = options?.titleOverride;
-        this.isBackgroundMode = itemType !== ItemType.FILE && colorMode === 'background';
+        this.title = params.title;
+        this.settingsProvider = params.settingsProvider;
+        this.chooseColorHandler = params.onChooseColor;
         this.dragGhostManager = createDragGhostManager();
 
-        // Access settings through the service (used for recent colors storage)
-        this.settingsProvider = metadataService.getSettingsProvider();
         this.customColors = [];
         this.paletteMode = ColorPickerModal.getLastPaletteMode();
 
-        const initialColor = this.resolveInitialColor();
+        const initialColor = params.initialColor;
         if (initialColor) {
             this.currentColor = initialColor;
             const parsedInitial = this.parseColorString(initialColor);
@@ -182,35 +133,6 @@ export class ColorPickerModal extends Modal {
     }
 
     /**
-     * Retrieves the current stored color for the item based on type and mode
-     */
-    private resolveInitialColor(): string | null {
-        if (this.isBackgroundMode) {
-            if (this.isTag()) {
-                return this.metadataService.getTagBackgroundColor(this.itemPath) ?? null;
-            }
-            if (this.isProperty()) {
-                return this.metadataService.getPropertyBackgroundColor(this.itemPath) ?? null;
-            }
-            return this.metadataService.getFolderBackgroundColor(this.itemPath) ?? null;
-        }
-
-        if (this.isTag()) {
-            return this.metadataService.getTagColor(this.itemPath) ?? null;
-        }
-
-        if (this.isProperty()) {
-            return this.metadataService.getPropertyColor(this.itemPath) ?? null;
-        }
-
-        if (this.isFile()) {
-            return this.metadataService.getFileColor(this.itemPath) ?? null;
-        }
-
-        return this.metadataService.getFolderColor(this.itemPath) ?? null;
-    }
-
-    /**
      * Called when the modal is opened
      */
     onOpen() {
@@ -218,30 +140,9 @@ export class ColorPickerModal extends Modal {
         contentEl.empty();
         this.modalEl.addClass('nn-color-picker-modal');
 
-        // Header showing the folder/tag name
+        // Header showing the item name
         const header = contentEl.createDiv('nn-color-picker-header');
-        const headerText = (() => {
-            if (this.titleOverride) {
-                return this.titleOverride;
-            }
-
-            if (this.isTag()) {
-                return `#${this.itemPath}`;
-            }
-
-            if (this.isProperty()) {
-                const parsed = parsePropertyNodeId(this.itemPath);
-                if (parsed?.valuePath) {
-                    return `${parsed.key} = ${parsed.valuePath}`;
-                }
-                if (parsed) {
-                    return parsed.key;
-                }
-            }
-
-            return this.itemPath.split('/').pop() || this.itemPath;
-        })();
-        header.createEl('h3', { text: headerText });
+        header.createEl('h3', { text: this.title });
 
         this.attachCloseButtonHandler();
 
@@ -1478,26 +1379,10 @@ export class ColorPickerModal extends Modal {
     }
 
     /**
-     * Invokes the external handler and returns whether it handled the color update
-     */
-    private async wasHandledBySelection(color: string | null): Promise<boolean> {
-        if (!this.onChooseColor) {
-            return false;
-        }
-
-        const result = await this.onChooseColor(color);
-        return result?.handled === true;
-    }
-
-    /**
      * Restore default color and close
      */
     private async restoreDefaultColor() {
-        const handled = await this.wasHandledBySelection(null);
-        if (!handled) {
-            await this.updateMetadataColor(null);
-        }
-
+        await this.chooseColorHandler(null);
         this.close();
     }
 
@@ -1507,79 +1392,6 @@ export class ColorPickerModal extends Modal {
     private async saveColor() {
         // Save to recent colors
         this.saveToRecentColors(this.selectedColor);
-
-        const handled = await this.wasHandledBySelection(this.selectedColor);
-        if (handled) {
-            return;
-        }
-
-        await this.updateMetadataColor(this.selectedColor);
-    }
-
-    /**
-     * Helper to check if this is for a tag
-     */
-    private isTag(): boolean {
-        return this.itemType === ItemType.TAG;
-    }
-
-    private isProperty(): boolean {
-        return this.itemType === ItemType.PROPERTY;
-    }
-
-    private isFile(): boolean {
-        return this.itemType === ItemType.FILE;
-    }
-
-    /**
-     * Update metadata for the current mode and item type
-     */
-    private async updateMetadataColor(color: string | null): Promise<void> {
-        const isTag = this.isTag();
-        const isProperty = this.isProperty();
-        const isFile = this.isFile();
-
-        if (color === null) {
-            if (isTag) {
-                if (this.isBackgroundMode) {
-                    await this.metadataService.removeTagBackgroundColor(this.itemPath);
-                } else {
-                    await this.metadataService.removeTagColor(this.itemPath);
-                }
-            } else if (isProperty) {
-                if (this.isBackgroundMode) {
-                    await this.metadataService.removePropertyBackgroundColor(this.itemPath);
-                } else {
-                    await this.metadataService.removePropertyColor(this.itemPath);
-                }
-            } else if (isFile) {
-                await this.metadataService.removeFileColor(this.itemPath);
-            } else if (this.isBackgroundMode) {
-                await this.metadataService.removeFolderBackgroundColor(this.itemPath);
-            } else {
-                await this.metadataService.removeFolderColor(this.itemPath);
-            }
-            return;
-        }
-
-        if (isTag) {
-            if (this.isBackgroundMode) {
-                await this.metadataService.setTagBackgroundColor(this.itemPath, color);
-            } else {
-                await this.metadataService.setTagColor(this.itemPath, color);
-            }
-        } else if (isProperty) {
-            if (this.isBackgroundMode) {
-                await this.metadataService.setPropertyBackgroundColor(this.itemPath, color);
-            } else {
-                await this.metadataService.setPropertyColor(this.itemPath, color);
-            }
-        } else if (isFile) {
-            await this.metadataService.setFileColor(this.itemPath, color);
-        } else if (this.isBackgroundMode) {
-            await this.metadataService.setFolderBackgroundColor(this.itemPath, color);
-        } else {
-            await this.metadataService.setFolderColor(this.itemPath, color);
-        }
+        await this.chooseColorHandler(this.selectedColor);
     }
 }

@@ -184,8 +184,18 @@ export function buildPropertyMenu(params: PropertyMenuBuilderParams): void {
     menu.addItem((item: MenuItem) => {
         setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeColor).setIcon('lucide-palette'), async () => {
             const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, metadataService, normalizedNodeId, ItemType.PROPERTY, 'foreground', {
-                titleOverride: label
+            const modal = new ColorPickerModal(app, {
+                title: label,
+                initialColor: metadataService.getPropertyColor(normalizedNodeId) ?? null,
+                settingsProvider: metadataService.getSettingsProvider(),
+                onChooseColor: async color => {
+                    if (color === null) {
+                        await metadataService.removePropertyColor(normalizedNodeId);
+                        return;
+                    }
+
+                    await metadataService.setPropertyColor(normalizedNodeId, color);
+                }
             });
             modal.open();
         });
@@ -194,8 +204,18 @@ export function buildPropertyMenu(params: PropertyMenuBuilderParams): void {
     menu.addItem((item: MenuItem) => {
         setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeBackground).setIcon('lucide-paint-bucket'), async () => {
             const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, metadataService, normalizedNodeId, ItemType.PROPERTY, 'background', {
-                titleOverride: label
+            const modal = new ColorPickerModal(app, {
+                title: label,
+                initialColor: metadataService.getPropertyBackgroundColor(normalizedNodeId) ?? null,
+                settingsProvider: metadataService.getSettingsProvider(),
+                onChooseColor: async color => {
+                    if (color === null) {
+                        await metadataService.removePropertyBackgroundColor(normalizedNodeId);
+                        return;
+                    }
+
+                    await metadataService.setPropertyBackgroundColor(normalizedNodeId, color);
+                }
             });
             modal.open();
         });

@@ -2325,39 +2325,6 @@ export const NavigationPane = React.memo(
 
                     const virtualFolderColor = settingsProvider.settings.virtualFolderColors?.[virtualFolderId];
                     const virtualFolderBackgroundColor = settingsProvider.settings.virtualFolderBackgroundColors?.[virtualFolderId];
-                    const virtualFolderColorService = {
-                        setTagColor: (path: string, color: string) => metadataService.setTagColor(path, color),
-                        setFolderColor: async (path: string, color: string) => {
-                            await setVirtualFolderStyle(path, { color });
-                        },
-                        setFileColor: (path: string, color: string) => metadataService.setFileColor(path, color),
-                        setPropertyColor: (path: string, color: string) => metadataService.setPropertyColor(path, color),
-                        removeTagColor: (path: string) => metadataService.removeTagColor(path),
-                        removeFolderColor: async (path: string) => {
-                            await setVirtualFolderStyle(path, { color: null });
-                        },
-                        removeFileColor: (path: string) => metadataService.removeFileColor(path),
-                        removePropertyColor: (path: string) => metadataService.removePropertyColor(path),
-                        setTagBackgroundColor: (path: string, color: string) => metadataService.setTagBackgroundColor(path, color),
-                        setFolderBackgroundColor: async (path: string, color: string) => {
-                            await setVirtualFolderStyle(path, { background: color });
-                        },
-                        setPropertyBackgroundColor: (path: string, color: string) =>
-                            metadataService.setPropertyBackgroundColor(path, color),
-                        removeTagBackgroundColor: (path: string) => metadataService.removeTagBackgroundColor(path),
-                        removeFolderBackgroundColor: async (path: string) => {
-                            await setVirtualFolderStyle(path, { background: null });
-                        },
-                        removePropertyBackgroundColor: (path: string) => metadataService.removePropertyBackgroundColor(path),
-                        getTagColor: (path: string) => metadataService.getTagColor(path),
-                        getFolderColor: (path: string) => settingsProvider.settings.virtualFolderColors?.[path],
-                        getFileColor: (path: string) => metadataService.getFileColor(path),
-                        getPropertyColor: (path: string) => metadataService.getPropertyColor(path),
-                        getTagBackgroundColor: (path: string) => metadataService.getTagBackgroundColor(path),
-                        getFolderBackgroundColor: (path: string) => settingsProvider.settings.virtualFolderBackgroundColors?.[path],
-                        getPropertyBackgroundColor: (path: string) => metadataService.getPropertyBackgroundColor(path),
-                        getSettingsProvider: () => settingsProvider
-                    };
 
                     const titleOverride = isShortcutsSection
                         ? strings.navigationPane.shortcutsHeader
@@ -2371,14 +2338,14 @@ export const NavigationPane = React.memo(
                             .onClick(() => {
                                 runAsyncAction(async () => {
                                     const { ColorPickerModal } = await import('../modals/ColorPickerModal');
-                                    const modal = new ColorPickerModal(
-                                        app,
-                                        virtualFolderColorService,
-                                        virtualFolderId,
-                                        ItemType.FOLDER,
-                                        'foreground',
-                                        { titleOverride }
-                                    );
+                                    const modal = new ColorPickerModal(app, {
+                                        title: titleOverride,
+                                        initialColor: virtualFolderColor ?? null,
+                                        settingsProvider,
+                                        onChooseColor: async color => {
+                                            await setVirtualFolderStyle(virtualFolderId, { color });
+                                        }
+                                    });
                                     modal.open();
                                 });
                             });
@@ -2390,14 +2357,14 @@ export const NavigationPane = React.memo(
                             .onClick(() => {
                                 runAsyncAction(async () => {
                                     const { ColorPickerModal } = await import('../modals/ColorPickerModal');
-                                    const modal = new ColorPickerModal(
-                                        app,
-                                        virtualFolderColorService,
-                                        virtualFolderId,
-                                        ItemType.FOLDER,
-                                        'background',
-                                        { titleOverride }
-                                    );
+                                    const modal = new ColorPickerModal(app, {
+                                        title: titleOverride,
+                                        initialColor: virtualFolderBackgroundColor ?? null,
+                                        settingsProvider,
+                                        onChooseColor: async color => {
+                                            await setVirtualFolderStyle(virtualFolderId, { background: color });
+                                        }
+                                    });
                                     modal.open();
                                 });
                             });

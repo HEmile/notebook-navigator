@@ -609,20 +609,19 @@ function addFileStyleActionsForFileContext(params: FileStyleActionsParams): void
     menu.addItem((item: MenuItem) => {
         setAsyncOnClick(item.setTitle(strings.contextMenu.file.changeColor).setIcon('lucide-palette'), async () => {
             const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, metadataService, file.path, ItemType.FILE, 'foreground');
-            modal.onChooseColor = async color => {
-                if (color === undefined) {
-                    return { handled: true };
+            const modal = new ColorPickerModal(app, {
+                title: file.basename,
+                initialColor: metadataService.getFileColor(file.path) ?? null,
+                settingsProvider: metadataService.getSettingsProvider(),
+                onChooseColor: async color => {
+                    const actions = targetFiles.map(selectedFile =>
+                        color === null
+                            ? metadataService.removeFileColor(selectedFile.path)
+                            : metadataService.setFileColor(selectedFile.path, color)
+                    );
+                    await Promise.all(actions);
                 }
-
-                const actions = targetFiles.map(selectedFile =>
-                    color === null
-                        ? metadataService.removeFileColor(selectedFile.path)
-                        : metadataService.setFileColor(selectedFile.path, color)
-                );
-                await Promise.all(actions);
-                return { handled: true };
-            };
+            });
             modal.open();
         });
     });

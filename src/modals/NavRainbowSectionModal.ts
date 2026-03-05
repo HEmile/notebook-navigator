@@ -20,7 +20,6 @@ import { App, Modal, Setting } from 'obsidian';
 import NotebookNavigatorPlugin from '../main';
 import { strings } from '../i18n';
 import { runAsyncAction } from '../utils/async';
-import { ItemType } from '../types';
 import {
     isNavRainbowScope,
     isNavRainbowTransitionStyle,
@@ -73,15 +72,6 @@ interface LevelScopeConfig<TSection extends NavRainbowSettings['shortcuts']> {
     childOption: string;
     allOption: string;
 }
-
-const NOOP_SET_COLOR = async (path: string, color: string): Promise<void> => {
-    void path;
-    void color;
-};
-
-const NOOP_REMOVE_COLOR = async (path: string): Promise<void> => {
-    void path;
-};
 
 export class NavRainbowSectionModal extends Modal {
     private readonly plugin: NotebookNavigatorPlugin;
@@ -282,37 +272,6 @@ export class NavRainbowSectionModal extends Modal {
         return access;
     }
 
-    private createRainbowColorPickerService(params: {
-        access: ColorSettingAccess;
-        metadataService: NonNullable<NotebookNavigatorPlugin['metadataService']>;
-    }) {
-        const { access, metadataService } = params;
-        return {
-            setTagColor: (path: string, color: string) => metadataService.setTagColor(path, color),
-            setFolderColor: NOOP_SET_COLOR,
-            setFileColor: (path: string, color: string) => metadataService.setFileColor(path, color),
-            setPropertyColor: (path: string, color: string) => metadataService.setPropertyColor(path, color),
-            removeTagColor: (path: string) => metadataService.removeTagColor(path),
-            removeFolderColor: NOOP_REMOVE_COLOR,
-            removeFileColor: (path: string) => metadataService.removeFileColor(path),
-            removePropertyColor: (path: string) => metadataService.removePropertyColor(path),
-            setTagBackgroundColor: (path: string, color: string) => metadataService.setTagBackgroundColor(path, color),
-            setFolderBackgroundColor: NOOP_SET_COLOR,
-            setPropertyBackgroundColor: (path: string, color: string) => metadataService.setPropertyBackgroundColor(path, color),
-            removeTagBackgroundColor: (path: string) => metadataService.removeTagBackgroundColor(path),
-            removeFolderBackgroundColor: NOOP_REMOVE_COLOR,
-            removePropertyBackgroundColor: (path: string) => metadataService.removePropertyBackgroundColor(path),
-            getTagColor: (path: string) => metadataService.getTagColor(path),
-            getFolderColor: () => access.getValue(),
-            getFileColor: (path: string) => metadataService.getFileColor(path),
-            getPropertyColor: (path: string) => metadataService.getPropertyColor(path),
-            getTagBackgroundColor: (path: string) => metadataService.getTagBackgroundColor(path),
-            getFolderBackgroundColor: () => access.getValue(),
-            getPropertyBackgroundColor: (path: string) => metadataService.getPropertyBackgroundColor(path),
-            getSettingsProvider: () => metadataService.getSettingsProvider()
-        };
-    }
-
     private createColorSetting(params: { containerEl: HTMLElement; name: string; desc: string; access: ColorSettingAccess }): void {
         const setting = new Setting(params.containerEl).setName(params.name).setDesc(params.desc);
 
@@ -334,22 +293,17 @@ export class NavRainbowSectionModal extends Modal {
 
                 const metadataService = this.plugin.metadataService;
                 const { ColorPickerModal } = await import('./ColorPickerModal');
-                const modal = new ColorPickerModal(
-                    this.app,
-                    this.createRainbowColorPickerService({ access: params.access, metadataService }),
-                    '__nn-settings-rainbow-colors__',
-                    ItemType.FOLDER,
-                    'foreground',
-                    { titleOverride: params.name }
-                );
-
-                modal.onChooseColor = async color => {
-                    const nextValue = typeof color === 'string' && color.trim().length > 0 ? color.trim() : params.access.defaultValue;
-                    params.access.setValue(nextValue);
-                    await this.plugin.saveSettingsAndUpdate();
-                    renderValue();
-                    return { handled: true };
-                };
+                const modal = new ColorPickerModal(this.app, {
+                    title: params.name,
+                    initialColor: params.access.getValue(),
+                    settingsProvider: metadataService.getSettingsProvider(),
+                    onChooseColor: async color => {
+                        const nextValue = typeof color === 'string' && color.trim().length > 0 ? color.trim() : params.access.defaultValue;
+                        params.access.setValue(nextValue);
+                        await this.plugin.saveSettingsAndUpdate();
+                        renderValue();
+                    }
+                });
 
                 modal.open();
             });

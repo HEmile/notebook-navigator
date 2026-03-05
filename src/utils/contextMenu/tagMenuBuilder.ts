@@ -96,7 +96,19 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
     menu.addItem((item: MenuItem) => {
         setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeColor).setIcon('lucide-palette'), async () => {
             const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, metadataService, tagPath, ItemType.TAG, 'foreground');
+            const modal = new ColorPickerModal(app, {
+                title: `#${tagPath}`,
+                initialColor: metadataService.getTagColor(tagPath) ?? null,
+                settingsProvider: metadataService.getSettingsProvider(),
+                onChooseColor: async color => {
+                    if (color === null) {
+                        await metadataService.removeTagColor(tagPath);
+                        return;
+                    }
+
+                    await metadataService.setTagColor(tagPath, color);
+                }
+            });
             modal.open();
         });
     });
@@ -105,7 +117,19 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
     menu.addItem((item: MenuItem) => {
         setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeBackground).setIcon('lucide-paint-bucket'), async () => {
             const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, metadataService, tagPath, ItemType.TAG, 'background');
+            const modal = new ColorPickerModal(app, {
+                title: `#${tagPath}`,
+                initialColor: metadataService.getTagBackgroundColor(tagPath) ?? null,
+                settingsProvider: metadataService.getSettingsProvider(),
+                onChooseColor: async color => {
+                    if (color === null) {
+                        await metadataService.removeTagBackgroundColor(tagPath);
+                        return;
+                    }
+
+                    await metadataService.setTagBackgroundColor(tagPath, color);
+                }
+            });
             modal.open();
         });
     });
