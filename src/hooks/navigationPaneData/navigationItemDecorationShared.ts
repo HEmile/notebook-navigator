@@ -289,7 +289,7 @@ function inheritShortcutsRootStyle(
 ): { color: string | undefined; backgroundColor: string | undefined } | null {
     return inheritVirtualFolderStyle({
         ctx,
-        enabled: ctx.settings.inheritFolderColors,
+        enabled: true,
         virtualFolderId: SHORTCUTS_VIRTUAL_FOLDER_ID,
         color,
         backgroundColor
@@ -303,7 +303,7 @@ function inheritRecentRootStyle(
 ): { color: string | undefined; backgroundColor: string | undefined } | null {
     return inheritVirtualFolderStyle({
         ctx,
-        enabled: ctx.settings.inheritFolderColors,
+        enabled: true,
         virtualFolderId: RECENT_NOTES_VIRTUAL_FOLDER_ID,
         color,
         backgroundColor
