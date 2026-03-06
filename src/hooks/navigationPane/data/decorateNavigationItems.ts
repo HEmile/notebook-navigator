@@ -25,13 +25,13 @@ import {
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
     SHORTCUTS_VIRTUAL_FOLDER_ID,
     TAGS_ROOT_VIRTUAL_FOLDER_ID
-} from '../../types';
-import type { NotebookNavigatorSettings } from '../../settings/types';
-import type { MetadataService } from '../../services/MetadataService';
-import type { CombinedNavigationItem } from '../../types/virtualization';
-import type { NavigationRainbowPalettes } from '../../utils/navigationRainbow';
-import type { FileNameIconNeedle } from '../../utils/fileIconUtils';
-import { resolveUXIcon } from '../../utils/uxIcons';
+} from '../../../types';
+import type { NotebookNavigatorSettings } from '../../../settings/types';
+import type { MetadataService } from '../../../services/MetadataService';
+import type { CombinedNavigationItem } from '../../../types/virtualization';
+import type { NavigationRainbowPalettes } from '../../../utils/navigationRainbow';
+import type { FileNameIconNeedle } from '../../../utils/fileIconUtils';
+import { resolveUXIcon } from '../../../utils/uxIcons';
 import {
     applyScopedRainbow,
     createNavigationItemDecorationContext,

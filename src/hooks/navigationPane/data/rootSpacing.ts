@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { NavigationPaneItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGS_ROOT_VIRTUAL_FOLDER_ID } from '../../types';
-import type { CombinedNavigationItem } from '../../types/virtualization';
-import { parseNavigationSeparatorKey } from '../../utils/navigationSeparators';
+import { NavigationPaneItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGS_ROOT_VIRTUAL_FOLDER_ID } from '../../../types';
+import type { CombinedNavigationItem } from '../../../types/virtualization';
+import { parseNavigationSeparatorKey } from '../../../utils/navigationSeparators';
 
 /** Options controlling which navigation items are eligible for root spacing */
 export interface RootSpacingOptions {

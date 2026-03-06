@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { NavigationPaneItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../types';
-import type { CombinedNavigationItem } from '../../types/virtualization';
-import { parsePropertyNodeId } from '../../utils/propertyTree';
-import { resolveUXIcon } from '../../utils/uxIcons';
+import { NavigationPaneItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../../types';
+import type { CombinedNavigationItem } from '../../../types/virtualization';
+import { parsePropertyNodeId } from '../../../utils/propertyTree';
+import { resolveUXIcon } from '../../../utils/uxIcons';
 import {
     resolveNavigationFileIconId,
     resolveShortcutDecorationColors,

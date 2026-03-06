@@ -29,7 +29,7 @@ import { useUXPreferences } from '../../context/UXPreferencesContext';
 import { useFileCache } from '../../context/StorageContext';
 import { useUIState, useUIDispatch } from '../../context/UIStateContext';
 import { useNavigationPaneKeyboard } from '../../hooks/useNavigationPaneKeyboard';
-import { useNavigationPaneData } from '../../hooks/useNavigationPaneData';
+import { useNavigationPaneData } from '../../hooks/navigationPane/useNavigationPaneData';
 import { useNavigationPaneScroll } from '../../hooks/useNavigationPaneScroll';
 import { useNavigationRootReorder } from '../../hooks/useNavigationRootReorder';
 import { useMeasuredElementHeight } from '../../hooks/useMeasuredElementHeight';

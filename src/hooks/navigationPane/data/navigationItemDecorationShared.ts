@@ -19,16 +19,16 @@
 import { TFile } from 'obsidian';
 import type { App } from 'obsidian';
 
-import { RECENT_NOTES_VIRTUAL_FOLDER_ID, SHORTCUTS_VIRTUAL_FOLDER_ID } from '../../types';
-import type { NotebookNavigatorSettings } from '../../settings/types';
-import type { MetadataService } from '../../services/MetadataService';
-import { shouldDisplayFile, FILE_VISIBILITY } from '../../utils/fileTypeUtils';
+import { RECENT_NOTES_VIRTUAL_FOLDER_ID, SHORTCUTS_VIRTUAL_FOLDER_ID } from '../../../types';
+import type { NotebookNavigatorSettings } from '../../../settings/types';
+import type { MetadataService } from '../../../services/MetadataService';
+import { shouldDisplayFile, FILE_VISIBILITY } from '../../../utils/fileTypeUtils';
 import {
     resolveFileIconId,
     type FileIconFallbackMode,
     type FileIconResolutionSettings,
     type FileNameIconNeedle
-} from '../../utils/fileIconUtils';
+} from '../../../utils/fileIconUtils';
 import {
     applyRainbowOverlay,
     type FolderRainbowColors,
@@ -37,7 +37,7 @@ import {
     type RecentRainbowColors,
     type ShortcutRainbowColors,
     type TagRainbowColors
-} from '../../utils/navigationRainbow';
+} from '../../../utils/navigationRainbow';
 
 interface FolderRainbowContext {
     isEnabled: boolean;

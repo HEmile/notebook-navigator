@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { TagSortOrder } from '../../settings/types';
-import type { PropertyTreeNode, TagTreeNode } from '../../types/storage';
-import { naturalCompare } from '../../utils/sortUtils';
-import { getTotalNoteCount } from '../../utils/tagTree';
+import type { TagSortOrder } from '../../../settings/types';
+import type { PropertyTreeNode, TagTreeNode } from '../../../types/storage';
+import { naturalCompare } from '../../../utils/sortUtils';
+import { getTotalNoteCount } from '../../../utils/tagTree';
 
 export type TagComparator = (a: TagTreeNode, b: TagTreeNode) => number;
 export type PropertyNodeComparator = (a: PropertyTreeNode, b: PropertyTreeNode) => number;
