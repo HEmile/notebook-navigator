@@ -16,26 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import {
-    App,
-    FileSystemAdapter,
-    TFile,
-    TFolder,
-    TAbstractFile,
-    normalizePath,
-    Platform,
-    WorkspaceLeaf,
-    ViewState,
-    FileView
-} from 'obsidian';
+import { App, FileSystemAdapter, TFile, TFolder, TAbstractFile, Platform, WorkspaceLeaf, ViewState } from 'obsidian';
 import type { SelectionDispatch } from '../context/SelectionContext';
 import { strings } from '../i18n';
-import { ConfirmModal } from '../modals/ConfirmModal';
-import { FolderSuggestModal } from '../modals/FolderSuggestModal';
 import { InputModal } from '../modals/InputModal';
-import { MoveFileConflictModal, type MoveFileConflictItem, type MoveFileConflictResolution } from '../modals/MoveFileConflictModal';
 import { NotebookNavigatorSettings } from '../settings';
-import { getSupportedLeaves, NavigationItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../types';
+import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../types';
 import type { VisibilityPreferences } from '../types';
 import { ExtendedApp, TIMEOUTS, OBSIDIAN_COMMANDS } from '../types/obsidian-extended';
 import {
@@ -45,7 +31,6 @@ import {
     createDatabaseContent,
     generateUniqueFilename
 } from '../utils/fileCreationUtils';
-import { cleanupExclusionPatterns, isPathInExcludedFolder } from '../utils/fileFilters';
 import {
     containsForbiddenNameCharactersAllPlatforms,
     containsForbiddenNameCharactersWindows,
@@ -59,85 +44,38 @@ import {
 } from '../utils/fileNameUtils';
 import { resolveFolderNoteName, shouldRenameFolderNoteWithFolderName } from '../utils/folderNoteName';
 import { getFolderNote, getFolderNoteDetectionSettings, isFolderNote, isSupportedFolderNoteExtension } from '../utils/folderNotes';
-import { findNextFileAfterRemoval, getFilesForNavigationSelection, updateSelectionAfterFileOperation } from '../utils/selectionUtils';
 import { executeCommand, isPluginInstalled } from '../utils/typeGuards';
 import { getErrorMessage } from '../utils/errorUtils';
 import { TagTreeService } from './TagTreeService';
 import type { PropertyTreeService } from './PropertyTreeService';
-import { CommandQueueService, type MoveFilesCommandData } from './CommandQueueService';
-import type { MaybePromise } from '../utils/async';
+import { CommandQueueService } from './CommandQueueService';
 import { showNotice } from '../utils/noticeUtils';
 import {
     getDirectPropertyKeyNoteCount,
     normalizePropertyNodeId,
     normalizePropertyTreeValuePath,
-    parsePropertyNodeId,
-    type PropertySelectionNodeId
+    parsePropertyNodeId
 } from '../utils/propertyTree';
 import type { ISettingsProvider } from '../interfaces/ISettingsProvider';
-import { casefold, ensureRecord, isStringRecordValue } from '../utils/recordUtils';
+import { casefold } from '../utils/recordUtils';
 import type { MetadataService } from './MetadataService';
-import {
-    ensureVaultProfiles,
-    getActiveVaultProfile,
-    normalizeHiddenFolderPath,
-    removeHiddenFolderExactMatches,
-    updateHiddenFolderExactMatches
-} from '../utils/vaultProfiles';
+import { ensureVaultProfiles, getActiveVaultProfile } from '../utils/vaultProfiles';
 import { EXCALIDRAW_PLUGIN_ID, TLDRAW_PLUGIN_ID } from '../constants/pluginIds';
 import { createDrawingWithPlugin, DrawingType, getDrawingFilePath, getDrawingTemplate } from '../utils/drawingFileUtils';
 import { resolveFolderDisplayName } from '../utils/folderDisplayName';
 import { normalizeTagPath } from '../utils/tagUtils';
-import { isPrimaryDocumentFile } from '../utils/fileTypeUtils';
-import {
-    type DeleteAttachmentsSetting,
-    type MoveFileConflictsSetting,
-    resolveDeleteAttachmentsSetting,
-    resolveMoveFileConflictsSetting
-} from '../settings/types';
-
-/**
- * Selection context for file operations
- * Contains the current selection state needed for smart deletion
- */
-interface SelectionContext {
-    selectionType: NavigationItemType;
-    selectedFolder?: TFolder;
-    selectedTag?: string;
-    selectedProperty?: PropertySelectionNodeId;
-}
-
-/**
- * Options for the moveFilesToFolder method
- */
-interface MoveFilesOptions {
-    /** Files to move */
-    files: TFile[];
-    /** Target folder to move files into */
-    targetFolder: TFolder;
-    /** Current selection context for smart selection updates */
-    selectionContext?: {
-        selectedFile: TFile | null;
-        dispatch: SelectionDispatch;
-        allFiles: TFile[];
-    };
-    /** Whether to show notifications (default: true) */
-    showNotifications?: boolean;
-}
-
-/**
- * Result of the moveFilesToFolder operation
- */
-interface MoveFilesResult {
-    /** Number of files successfully moved */
-    movedCount: number;
-    /** Number of files skipped due to conflicts */
-    skippedCount: number;
-    /** Number of files skipped due to user cancellation */
-    cancelledCount: number;
-    /** Files that failed to move with their errors */
-    errors: { file: TFile; error: Error }[];
-}
+import { FolderPathSettingsSync } from './fileSystem/FolderPathSettingsSync';
+import { FileMoveService } from './fileSystem/FileMoveService';
+import { FileDeletionService } from './fileSystem/FileDeletionService';
+import type {
+    MoveFilesOptions,
+    MoveFilesResult,
+    MoveFilesSelectionContext,
+    MoveFolderModalResult,
+    MoveFolderResult,
+    SelectionContext
+} from './fileSystem/types';
+export { FolderMoveError } from './fileSystem/FileMoveService';
 
 /**
  * Summary of property assignment results across a file batch.
@@ -164,60 +102,6 @@ interface ResolvedPropertyNodeAssignment {
     writeValueKind: PropertyNodeAssignmentValueKind;
 }
 
-interface PlannedFileMove {
-    file: TFile;
-    originalPath: string;
-    targetPath: string;
-    overwrite: boolean;
-}
-
-interface DeferredMoveConflict {
-    file: TFile;
-    originalPath: string;
-    desiredPath: string;
-    suggestedPath: string;
-    canOverwrite: boolean;
-}
-
-interface PlannedMoveExecutionOutcomeMoved {
-    status: 'moved';
-    originalPath: string;
-}
-
-interface PlannedMoveExecutionOutcomeSkipped {
-    status: 'skipped';
-}
-
-interface PlannedMoveExecutionOutcomeErrored {
-    status: 'error';
-    originalPath: string;
-    error: unknown;
-}
-
-type PlannedMoveExecutionOutcome =
-    | PlannedMoveExecutionOutcomeMoved
-    | PlannedMoveExecutionOutcomeSkipped
-    | PlannedMoveExecutionOutcomeErrored;
-
-const FILE_MOVE_BATCH_SIZE = 12;
-
-/**
- * Result of a folder move initiated from the context menu
- */
-interface MoveFolderResult {
-    /** Original folder path before the move */
-    oldPath: string;
-    /** New folder path after the move */
-    newPath: string;
-    /** Destination folder that now contains the moved folder */
-    targetFolder: TFolder;
-}
-
-/**
- * Result of a folder move operation initiated via modal
- */
-type MoveFolderModalResult = { status: 'success'; data: MoveFolderResult } | { status: 'cancelled' } | { status: 'error'; error: unknown };
-
 interface ElectronShell {
     openPath(path: string): Promise<string>;
 }
@@ -230,47 +114,16 @@ interface WindowWithRequire {
     require(moduleName: string): unknown;
 }
 
-export class FolderMoveError extends Error {
-    constructor(
-        public readonly code: 'invalid-target' | 'destination-exists' | 'verification-failed',
-        message?: string
-    ) {
-        super(message ?? code);
-        this.name = 'FolderMoveError';
-    }
-}
-
-/**
- * Folder suggest modal that handles cancellation events.
- * Invokes a callback when the modal is closed without selection.
- */
-class CancelAwareFolderSuggestModal extends FolderSuggestModal {
-    constructor(
-        app: App,
-        onChooseFolder: (folder: TFolder) => MaybePromise,
-        placeholderText: string,
-        actionText: string,
-        excludePaths: Set<string>,
-        private readonly onCancel: () => void
-    ) {
-        super(app, onChooseFolder, placeholderText, actionText, excludePaths);
-    }
-
-    /**
-     * Invokes the cancellation callback when modal is closed
-     */
-    onClose(): void {
-        super.onClose();
-        this.onCancel();
-    }
-}
-
 /**
  * Handles all file system operations for Notebook Navigator
  * Provides centralized methods for creating, renaming, and deleting files/folders
  * Manages user input modals and confirmation dialogs
  */
 export class FileSystemOperations {
+    private readonly folderPathSettingsSync: FolderPathSettingsSync;
+    private readonly moveService: FileMoveService;
+    private readonly deletionService: FileDeletionService;
+
     /**
      * Creates a new FileSystemOperations instance
      * @param app - The Obsidian app instance for vault operations
@@ -287,7 +140,27 @@ export class FileSystemOperations {
         private getMetadataService: () => MetadataService | null,
         private getVisibilityPreferences: () => VisibilityPreferences, // Function to get current visibility preferences for descendant/hidden items state
         private settingsProvider: ISettingsProvider
-    ) {}
+    ) {
+        this.folderPathSettingsSync = new FolderPathSettingsSync(this.settingsProvider);
+        this.moveService = new FileMoveService({
+            app: this.app,
+            settingsProvider: this.settingsProvider,
+            getCommandQueue: this.getCommandQueue,
+            resolveFolderDisplayLabel: folder => this.resolveFolderDisplayLabel(folder),
+            folderPathSettingsSync: this.folderPathSettingsSync
+        });
+        this.deletionService = new FileDeletionService({
+            app: this.app,
+            settingsProvider: this.settingsProvider,
+            getTagTreeService: this.getTagTreeService,
+            getPropertyTreeService: this.getPropertyTreeService,
+            getCommandQueue: this.getCommandQueue,
+            getVisibilityPreferences: this.getVisibilityPreferences,
+            resolveFolderDisplayLabel: folder => this.resolveFolderDisplayLabel(folder),
+            notifyError: (template, error, fallback) => this.notifyError(template, error, fallback),
+            folderPathSettingsSync: this.folderPathSettingsSync
+        });
+    }
 
     /**
      * Resolves UI label for a folder, including frontmatter display names.
@@ -312,231 +185,6 @@ export class FileSystemOperations {
     private notifyError(template: string, error: unknown, fallback?: string): void {
         const message = template.replace('{error}', getErrorMessage(error, fallback ?? strings.common.unknownError));
         showNotice(message, { variant: 'warning' });
-    }
-
-    private isAttachmentFile(file: TFile): boolean {
-        return !isPrimaryDocumentFile(file);
-    }
-
-    private normalizeAttachmentLinkTarget(rawLink: string): string | null {
-        const trimmed = rawLink.trim();
-        if (!trimmed) {
-            return null;
-        }
-
-        const withoutAlias = trimmed.split('|')[0]?.trim() ?? '';
-        if (!withoutAlias) {
-            return null;
-        }
-
-        const withoutSubpath = withoutAlias.split(/[#^]/, 1)[0]?.trim() ?? '';
-        if (!withoutSubpath) {
-            return null;
-        }
-
-        const lower = withoutSubpath.toLowerCase();
-        if (lower.includes('://') || lower.startsWith('mailto:')) {
-            return null;
-        }
-
-        return withoutSubpath;
-    }
-
-    private getLinkedAttachmentCandidates(sourceFile: TFile): TFile[] {
-        const cache = this.app.metadataCache.getFileCache(sourceFile);
-        if (!cache) {
-            return [];
-        }
-
-        const resolved = new Map<string, TFile>();
-        const references = [...(cache.links ?? []), ...(cache.embeds ?? []), ...(cache.frontmatterLinks ?? [])];
-
-        for (const reference of references) {
-            const target = this.normalizeAttachmentLinkTarget(reference.link);
-            if (!target) {
-                continue;
-            }
-
-            const destination = this.app.metadataCache.getFirstLinkpathDest(target, sourceFile.path);
-            if (!(destination instanceof TFile)) {
-                continue;
-            }
-
-            if (!this.isAttachmentFile(destination)) {
-                continue;
-            }
-
-            resolved.set(destination.path, destination);
-        }
-
-        return Array.from(resolved.values()).sort((a, b) => a.path.localeCompare(b.path));
-    }
-
-    private getOrphanLinkedAttachments(attachmentCandidates: readonly TFile[], deletedSourcePaths: Set<string>): TFile[] {
-        if (attachmentCandidates.length === 0) {
-            return [];
-        }
-
-        const candidatesByPath = new Map<string, TFile>();
-        attachmentCandidates.forEach(file => {
-            candidatesByPath.set(file.path, file);
-        });
-
-        const candidatePaths = new Set<string>(candidatesByPath.keys());
-        const usedElsewhere = new Set<string>();
-
-        const { resolvedLinks } = this.app.metadataCache;
-        for (const sourcePath of Object.keys(resolvedLinks)) {
-            if (deletedSourcePaths.has(sourcePath)) {
-                continue;
-            }
-
-            const destinations = resolvedLinks[sourcePath];
-            for (const destinationPath of Object.keys(destinations)) {
-                if (!candidatePaths.has(destinationPath)) {
-                    continue;
-                }
-                usedElsewhere.add(destinationPath);
-                if (usedElsewhere.size === candidatePaths.size) {
-                    break;
-                }
-            }
-
-            if (usedElsewhere.size === candidatePaths.size) {
-                break;
-            }
-        }
-
-        const orphaned = Array.from(candidatesByPath.values()).filter(file => !usedElsewhere.has(file.path));
-        return orphaned.sort((a, b) => a.path.localeCompare(b.path));
-    }
-
-    private resolveAttachmentDeletionSetting(): DeleteAttachmentsSetting {
-        return resolveDeleteAttachmentsSetting(this.settingsProvider.settings.deleteAttachments, 'ask');
-    }
-
-    private resolveMoveFileConflictsSetting(): MoveFileConflictsSetting {
-        return resolveMoveFileConflictsSetting(this.settingsProvider.settings.moveFileConflicts, 'ask');
-    }
-
-    private collectAttachmentCandidatesBySourcePath(
-        sourceFiles: readonly TFile[],
-        setting: DeleteAttachmentsSetting
-    ): Map<string, TFile[]> {
-        const candidatesBySourcePath = new Map<string, TFile[]>();
-        if (setting === 'never') {
-            return candidatesBySourcePath;
-        }
-
-        sourceFiles.forEach(file => {
-            candidatesBySourcePath.set(file.path, this.getLinkedAttachmentCandidates(file));
-        });
-        return candidatesBySourcePath;
-    }
-
-    private prepareAttachmentDeletionState(sourceFiles: readonly TFile[]): {
-        setting: DeleteAttachmentsSetting;
-        candidatesBySourcePath: Map<string, TFile[]>;
-    } {
-        const setting = this.resolveAttachmentDeletionSetting();
-        return {
-            setting,
-            candidatesBySourcePath: this.collectAttachmentCandidatesBySourcePath(sourceFiles, setting)
-        };
-    }
-
-    private getAttachmentCandidatesForDeletedSources(
-        candidatesBySourcePath: ReadonlyMap<string, readonly TFile[]>,
-        deletedSourcePaths: Set<string>
-    ): TFile[] {
-        if (candidatesBySourcePath.size === 0 || deletedSourcePaths.size === 0) {
-            return [];
-        }
-
-        const dedupedCandidatesByPath = new Map<string, TFile>();
-        deletedSourcePaths.forEach(path => {
-            const candidates = candidatesBySourcePath.get(path);
-            if (!candidates || candidates.length === 0) {
-                return;
-            }
-
-            candidates.forEach(candidate => {
-                if (!deletedSourcePaths.has(candidate.path)) {
-                    dedupedCandidatesByPath.set(candidate.path, candidate);
-                }
-            });
-        });
-
-        return Array.from(dedupedCandidatesByPath.values());
-    }
-
-    private async maybeDeleteAttachmentsAfterFileDelete(
-        candidatesBySourcePath: ReadonlyMap<string, readonly TFile[]>,
-        deletedSourcePaths: Set<string>,
-        setting: DeleteAttachmentsSetting
-    ): Promise<void> {
-        if (setting === 'never' || deletedSourcePaths.size === 0) {
-            return;
-        }
-
-        const attachmentCandidates = this.getAttachmentCandidatesForDeletedSources(candidatesBySourcePath, deletedSourcePaths);
-        if (attachmentCandidates.length === 0) {
-            return;
-        }
-
-        try {
-            await this.maybeDeleteOrphanedLinkedAttachments(attachmentCandidates, deletedSourcePaths, setting);
-        } catch (error) {
-            this.notifyError(strings.fileSystem.errors.deleteAttachments, error);
-        }
-    }
-
-    private async maybeDeleteOrphanedLinkedAttachments(
-        attachmentCandidates: readonly TFile[],
-        deletedSourcePaths: Set<string>,
-        setting: DeleteAttachmentsSetting
-    ): Promise<void> {
-        if (setting === 'never') {
-            return;
-        }
-
-        const orphaned = this.getOrphanLinkedAttachments(attachmentCandidates, deletedSourcePaths);
-        if (orphaned.length === 0) {
-            return;
-        }
-
-        let attachmentsToDelete: readonly TFile[] | null = orphaned;
-
-        if (setting === 'ask') {
-            const { promptDeleteFileAttachments } = await import('../modals/DeleteFileAttachmentsModal');
-            attachmentsToDelete = await promptDeleteFileAttachments(this.app, orphaned);
-        }
-
-        if (!attachmentsToDelete || attachmentsToDelete.length === 0) {
-            return;
-        }
-
-        const results = await Promise.allSettled(attachmentsToDelete.map(file => this.app.fileManager.trashFile(file)));
-
-        const failures: { file: TFile; error: unknown }[] = [];
-        results.forEach((result, index) => {
-            if (result.status === 'rejected') {
-                failures.push({ file: attachmentsToDelete[index], error: result.reason });
-                console.error('Error deleting attachment:', attachmentsToDelete[index].path, result.reason);
-            }
-        });
-
-        if (failures.length === 0) {
-            return;
-        }
-
-        const errorMsg =
-            failures.length === 1
-                ? strings.fileSystem.errors.failedToDeleteFile
-                      .replace('{name}', failures[0].file.name)
-                      .replace('{error}', getErrorMessage(failures[0].error))
-                : strings.fileSystem.errors.failedToDeleteMultipleFiles.replace('{count}', failures.length.toString());
-        showNotice(errorMsg, { variant: 'warning' });
     }
 
     private resolveConfiguredPropertyDisplayKey(normalizedKey: string): string | null {
@@ -642,178 +290,6 @@ export class FileSystemOperations {
         };
     }
 
-    private async syncHiddenFolderPathChange(previousPath: string, nextPath: string): Promise<void> {
-        const updated = updateHiddenFolderExactMatches(this.settingsProvider.settings, previousPath, nextPath);
-        if (!updated) {
-            return;
-        }
-
-        try {
-            await this.settingsProvider.saveSettingsAndUpdate();
-        } catch (error) {
-            console.error('Failed to persist hidden folder path updates', error);
-        }
-    }
-
-    private async removeHiddenFolderPathMatch(targetPath: string): Promise<void> {
-        const removed = removeHiddenFolderExactMatches(this.settingsProvider.settings, targetPath);
-        if (!removed) {
-            return;
-        }
-
-        try {
-            await this.settingsProvider.saveSettingsAndUpdate();
-        } catch (error) {
-            console.error('Failed to persist hidden folder removal updates', error);
-        }
-    }
-
-    private isFolderHiddenInProfile(normalizedPath: string, patterns: string[]): boolean {
-        if (!normalizedPath || !Array.isArray(patterns) || patterns.length === 0) {
-            return false;
-        }
-
-        const trimmedPath = normalizedPath.startsWith('/') ? normalizedPath.slice(1) : normalizedPath;
-        if (!trimmedPath) {
-            return false;
-        }
-
-        const placeholderPath = `${trimmedPath}/__nn_new_folder__`;
-        return isPathInExcludedFolder(placeholderPath, patterns);
-    }
-
-    private async hideFolderInOtherVaultProfiles(folderPath: string): Promise<void> {
-        const normalizedPath = normalizeHiddenFolderPath(folderPath);
-        if (!normalizedPath) {
-            return;
-        }
-
-        const settings = this.settingsProvider.settings;
-        ensureVaultProfiles(settings);
-        const activeProfileId = settings.vaultProfile;
-        let didUpdate = false;
-
-        settings.vaultProfiles.forEach(profile => {
-            if (profile.id === activeProfileId) {
-                return;
-            }
-
-            if (!Array.isArray(profile.hiddenFolders)) {
-                profile.hiddenFolders = [];
-            }
-
-            if (this.isFolderHiddenInProfile(normalizedPath, profile.hiddenFolders)) {
-                return;
-            }
-
-            profile.hiddenFolders = cleanupExclusionPatterns(profile.hiddenFolders, normalizedPath);
-            didUpdate = true;
-        });
-
-        if (!didUpdate) {
-            return;
-        }
-
-        try {
-            await this.settingsProvider.saveSettingsAndUpdate();
-        } catch (error) {
-            console.error('Failed to persist hidden folder preference for other vault profiles', error);
-        }
-    }
-
-    /**
-     * Copies folder icon and color metadata to a duplicated folder path
-     * @param sourcePath - Original folder path
-     * @param targetPath - New folder path created by duplication
-     */
-    private async copyFolderDisplayMetadata(sourcePath: string, targetPath: string): Promise<void> {
-        if (!sourcePath || !targetPath || sourcePath === targetPath || sourcePath === '/') {
-            return;
-        }
-
-        const sourcePrefix = `${sourcePath}/`;
-        let changed = false;
-
-        const processRecord = (record: Record<string, string> | undefined, updateRecord: (sanitized: Record<string, string>) => void) => {
-            if (!record) {
-                return;
-            }
-
-            const keys = Object.keys(record);
-            let sanitized = record;
-            let sanitizedApplied = false;
-
-            for (const key of keys) {
-                if (key !== sourcePath && !key.startsWith(sourcePrefix)) {
-                    continue;
-                }
-
-                const value = record[key];
-                if (typeof value !== 'string') {
-                    continue;
-                }
-
-                if (!sanitizedApplied) {
-                    sanitized = ensureRecord(record, isStringRecordValue);
-                    updateRecord(sanitized);
-                    sanitizedApplied = true;
-                }
-
-                const suffix = key === sourcePath ? '' : key.substring(sourcePrefix.length);
-                const destinationPath = suffix ? `${targetPath}/${suffix}` : targetPath;
-
-                if (Object.prototype.hasOwnProperty.call(sanitized, destinationPath)) {
-                    continue;
-                }
-
-                sanitized[destinationPath] = value;
-                changed = true;
-            }
-        };
-
-        const settings = this.settingsProvider.settings;
-        processRecord(settings.folderIcons, sanitized => {
-            settings.folderIcons = sanitized;
-        });
-        processRecord(settings.folderColors, sanitized => {
-            settings.folderColors = sanitized;
-        });
-        processRecord(settings.folderBackgroundColors, sanitized => {
-            settings.folderBackgroundColors = sanitized;
-        });
-
-        if (!changed) {
-            return;
-        }
-
-        try {
-            await this.settingsProvider.saveSettingsAndUpdate();
-        } catch (error) {
-            console.error('Failed to persist folder display metadata after duplication', error);
-        }
-    }
-
-    /**
-     * Generates placeholder text for folder move modal
-     * Optionally wraps the target name in single quotes
-     */
-    private getMovePlaceholder(targetName: string, shouldQuote: boolean): string {
-        const label = shouldQuote ? `'${targetName}'` : targetName;
-        return strings.modals.folderSuggest.placeholder(label);
-    }
-
-    /**
-     * Returns label text for files being moved
-     * Returns file name for single file, or count label for multiple files
-     */
-    private getMoveTargetLabelForFiles(files: TFile[]): string {
-        if (files.length === 1) {
-            return files[0].name;
-        }
-
-        return strings.modals.folderSuggest.multipleFilesLabel(files.length);
-    }
-
     /**
      * Filters input name for live typing
      * Strips leading periods to avoid hidden files
@@ -894,26 +370,6 @@ export class FileSystemOperations {
     }
 
     /**
-     * Returns display title for file deletion modal
-     * Uses full path for folder notes, basename for regular notes
-     */
-    private getDeleteFileTitle(file: TFile): string {
-        const settings = this.settingsProvider.settings;
-        const parent = file.parent;
-        if (!parent || !(parent instanceof TFolder)) {
-            return file.basename;
-        }
-
-        const detectionSettings = getFolderNoteDetectionSettings(settings);
-
-        if (!isFolderNote(file, parent, detectionSettings)) {
-            return file.basename;
-        }
-
-        return file.path;
-    }
-
-    /**
      * Creates a new folder with user-provided name
      * Shows input modal for folder name and handles creation
      * @param parent - The parent folder to create the new folder in
@@ -947,7 +403,7 @@ export class FileSystemOperations {
                     const path = buildPathInFolder(parent.path, filteredName);
                     await this.app.vault.createFolder(path);
                     if (showHiddenOption && context?.checkboxValue) {
-                        await this.hideFolderInOtherVaultProfiles(path);
+                        await this.folderPathSettingsSync.hideFolderInOtherVaultProfiles(path);
                     }
                     if (onSuccess) {
                         onSuccess(path);
@@ -1267,7 +723,7 @@ export class FileSystemOperations {
 
                     // Rename the folder (moves contents including the folder note)
                     await this.app.fileManager.renameFile(folder, newFolderPath);
-                    await this.syncHiddenFolderPathChange(previousFolderPath, newFolderPath);
+                    await this.folderPathSettingsSync.syncHiddenFolderPathChange(previousFolderPath, newFolderPath);
 
                     // Rename folder note when naming is tied to the folder name.
                     if (folderNote && renamedFolderNoteFileName !== null) {
@@ -1362,379 +818,19 @@ export class FileSystemOperations {
         modal.open();
     }
 
-    /**
-     * Deletes a folder and all its contents
-     * Shows confirmation dialog if confirmBeforeDelete is true
-     * Recursively deletes all files and subfolders
-     * @param folder - The folder to delete
-     * @param confirmBeforeDelete - Whether to show confirmation dialog
-     * @param onSuccess - Optional callback on successful deletion
-     */
     async deleteFolder(folder: TFolder, confirmBeforeDelete: boolean, onSuccess?: () => void): Promise<void> {
-        const folderDisplayName = this.resolveFolderDisplayLabel(folder);
-        const deleteFolderWithCleanup = async () => {
-            const deletedPath = folder.path;
-            await this.app.fileManager.trashFile(folder);
-            await this.removeHiddenFolderPathMatch(deletedPath);
-            if (onSuccess) {
-                onSuccess();
-            }
-        };
-
-        if (confirmBeforeDelete) {
-            const confirmModal = new ConfirmModal(
-                this.app,
-                strings.modals.fileSystem.deleteFolderTitle.replace('{name}', folderDisplayName),
-                strings.modals.fileSystem.deleteFolderConfirm,
-                async () => {
-                    try {
-                        await deleteFolderWithCleanup();
-                    } catch (error) {
-                        this.notifyError(strings.fileSystem.errors.deleteFolder, error);
-                    }
-                }
-            );
-            confirmModal.open();
-        } else {
-            // Direct deletion without confirmation
-            try {
-                await deleteFolderWithCleanup();
-            } catch (error) {
-                this.notifyError(strings.fileSystem.errors.deleteFolder, error);
-            }
-        }
+        await this.deletionService.deleteFolder(folder, confirmBeforeDelete, onSuccess);
     }
 
-    /**
-     * Deletes a file from the vault
-     * Shows confirmation dialog if confirmBeforeDelete is true
-     * @param file - The file to delete
-     * @param confirmBeforeDelete - Whether to show confirmation dialog
-     * @param onSuccess - Optional callback on successful deletion
-     * @param preDeleteAction - Optional action to run BEFORE the file is deleted (e.g., to select next file)
-     */
     async deleteFile(
         file: TFile,
         confirmBeforeDelete: boolean,
         onSuccess?: () => void,
         preDeleteAction?: () => Promise<void>
     ): Promise<void> {
-        const deleteTitle = this.getDeleteFileTitle(file);
-        const performDeleteCore = async () => {
-            const attachmentDeletion = this.prepareAttachmentDeletionState([file]);
-            try {
-                // Run pre-delete action if provided
-                if (preDeleteAction) {
-                    await preDeleteAction();
-                }
-
-                // Before deleting a file, ensure that no open leaf is still displaying it.
-                // (Used both for single delete actions and as a safety net when a pre-delete action
-                // attempted to open a replacement file but did not update every open leaf.)
-                await this.clearOpenLeavesForFileDelete(file);
-
-                await this.app.fileManager.trashFile(file);
-
-                if (onSuccess) {
-                    onSuccess();
-                }
-            } catch (error) {
-                this.notifyError(strings.fileSystem.errors.deleteFile, error);
-                return;
-            }
-
-            await this.maybeDeleteAttachmentsAfterFileDelete(
-                attachmentDeletion.candidatesBySourcePath,
-                new Set([file.path]),
-                attachmentDeletion.setting
-            );
-        };
-
-        if (confirmBeforeDelete) {
-            const confirmModal = new ConfirmModal(
-                this.app,
-                strings.modals.fileSystem.deleteFileTitle.replace('{name}', deleteTitle),
-                strings.modals.fileSystem.deleteFileConfirm,
-                async () => {
-                    const commandQueue = this.getCommandQueue();
-                    if (commandQueue) {
-                        await commandQueue.executeDeleteFiles([file], performDeleteCore);
-                    } else {
-                        await performDeleteCore();
-                    }
-                }
-            );
-            confirmModal.open();
-        } else {
-            // Direct deletion without confirmation
-            const commandQueue = this.getCommandQueue();
-            if (commandQueue) {
-                await commandQueue.executeDeleteFiles([file], performDeleteCore);
-            } else {
-                await performDeleteCore();
-            }
-        }
+        await this.deletionService.deleteFile(file, confirmBeforeDelete, onSuccess, preDeleteAction);
     }
 
-    /**
-     * Returns leaves that are currently displaying the provided file.
-     *
-     * This is used by delete/move operations that need to change open leaves before
-     * the vault operation runs.
-     */
-    private getLeavesDisplayingFile(file: TFile): WorkspaceLeaf[] {
-        try {
-            const matches: WorkspaceLeaf[] = [];
-
-            const supportedLeaves = getSupportedLeaves(this.app);
-            for (const leaf of supportedLeaves) {
-                const view = leaf.view;
-                if (!(view instanceof FileView)) {
-                    continue;
-                }
-
-                if (view.file?.path !== file.path) {
-                    continue;
-                }
-
-                matches.push(leaf);
-            }
-
-            return matches;
-        } catch {
-            // Unit tests can provide an app mock without workspace leaf helpers.
-            return [];
-        }
-    }
-
-    /**
-     * Returns the currently active file-view leaf.
-     *
-     * Obsidian's workspace state is not available in some unit tests, and workspace APIs
-     * can throw when app mocks do not implement all required properties.
-     */
-    private getActiveFileViewLeaf(): WorkspaceLeaf | null {
-        try {
-            const view = this.app.workspace.getActiveViewOfType(FileView);
-            return view?.leaf ?? null;
-        } catch {
-            return null;
-        }
-    }
-
-    /**
-     * Clears any open file-view leaf that is currently displaying the provided file.
-     *
-     * `app.fileManager.trashFile(...)` can detach/close leaves that are showing the deleted file.
-     * Plugins can react to that leaf change and read/modify the previously active file.
-     *
-     * Clearing the view state removes the file from open leaves without changing which leaf is focused.
-     *
-     * Background leaves are detached after clearing.
-     * This closes tabs that were showing the soon-to-be-deleted file, without opening a replacement file.
-     *
-     * The active leaf is never detached here. Detaching the active leaf changes focus and can trigger
-     * "focused file change" listeners while the file still exists and is about to be deleted.
-     */
-    private async clearOpenLeavesForFileDelete(file: TFile): Promise<void> {
-        const leavesDisplayingDeletedFile = this.getLeavesDisplayingFile(file);
-        if (leavesDisplayingDeletedFile.length === 0) {
-            return;
-        }
-
-        const activeLeaf = this.getActiveFileViewLeaf();
-        const emptyViewState: ViewState = { type: 'empty', state: {} };
-        for (const leaf of leavesDisplayingDeletedFile) {
-            try {
-                await leaf.setViewState(emptyViewState);
-            } catch {
-                // Ignore failures when clearing leaf state. The file delete still runs.
-            }
-
-            if (activeLeaf && leaf === activeLeaf) {
-                continue;
-            }
-
-            try {
-                leaf.detach();
-            } catch {
-                // Ignore failures when detaching leaves. The file delete still runs.
-            }
-        }
-    }
-
-    /**
-     * Updates open leaves before deleting `fileToReplace`.
-     *
-     * Some plugins react to leaf changes and read/modify the previously active file.
-     * Deleting a file while it is still shown in the focused leaf can produce file-not-found reads.
-     *
-     * - If the active file-view leaf is displaying `fileToReplace`, open `replacement` in that leaf.
-     * - Any other leaf displaying `fileToReplace` is detached (tab closed).
-     * - If no leaf is displaying `fileToReplace`, open `replacement` in `workspace.getLeaf(false)`.
-     */
-    private async replaceOpenLeavesForFileDelete(fileToReplace: TFile, replacement: TFile): Promise<void> {
-        const leaves = this.getLeavesDisplayingFile(fileToReplace);
-
-        if (leaves.length === 0) {
-            const fallbackLeaf = this.app.workspace.getLeaf(false);
-            if (!fallbackLeaf) {
-                return;
-            }
-
-            try {
-                await fallbackLeaf.openFile(replacement, { active: false });
-            } catch {
-                // Ignore failures when opening a replacement file. The delete still runs.
-            }
-            return;
-        }
-
-        // Closing the active leaf can trigger "focused file change" listeners that expect the file
-        // still exists. If the active leaf is one of the leaves showing `fileToReplace`, open the
-        // replacement file in that same leaf before the delete runs.
-        const activeLeaf = this.getActiveFileViewLeaf();
-        if (activeLeaf && leaves.includes(activeLeaf)) {
-            try {
-                await activeLeaf.openFile(replacement, { active: false });
-            } catch {
-                // Ignore failures when opening a replacement file. The delete still runs.
-            }
-
-            // Any other leaf that was displaying the deleted file is a background tab.
-            // Detach it. This closes the tab.
-            // When deleting many open files, detaching background leaves prevents multiple tabs from opening the same replacement file.
-            const emptyViewState: ViewState = { type: 'empty', state: {} };
-            for (const leaf of leaves) {
-                if (leaf === activeLeaf) {
-                    continue;
-                }
-
-                try {
-                    // Clear the file from the view, then detach the leaf.
-                    // Leaf-close listeners observe an empty view instead of a file view.
-                    await leaf.setViewState(emptyViewState);
-                } catch {
-                    // Ignore failures when clearing leaf state. The delete still runs.
-                }
-
-                try {
-                    leaf.detach();
-                } catch {
-                    // Ignore failures when detaching leaves. The delete still runs.
-                }
-            }
-
-            return;
-        }
-
-        // If the file is only open in background leaves, close those leaves and keep the active leaf unchanged.
-        // The Navigator selection is still updated separately.
-        const emptyViewState: ViewState = { type: 'empty', state: {} };
-        for (const leaf of leaves) {
-            try {
-                await leaf.setViewState(emptyViewState);
-            } catch {
-                // Ignore failures when clearing leaf state. The delete still runs.
-            }
-
-            try {
-                leaf.detach();
-            } catch {
-                // Ignore failures when detaching leaves. The delete still runs.
-            }
-        }
-    }
-
-    /**
-     * Updates open leaves before deleting multiple files.
-     *
-     * - If the active file-view leaf is displaying one of the deleted files, open `replacement` in that leaf.
-     * - Any other leaf displaying a deleted file is detached (tab closed).
-     * - If no leaf is displaying a deleted file, open `replacement` in `workspace.getLeaf(false)`.
-     */
-    private async replaceOpenLeavesForFilesDelete(filesToReplace: readonly TFile[], replacement: TFile): Promise<void> {
-        const uniqueLeaves = new Set<WorkspaceLeaf>();
-        for (const fileToReplace of filesToReplace) {
-            this.getLeavesDisplayingFile(fileToReplace).forEach(leaf => {
-                uniqueLeaves.add(leaf);
-            });
-        }
-
-        if (uniqueLeaves.size === 0) {
-            const fallbackLeaf = this.app.workspace.getLeaf(false);
-            if (!fallbackLeaf) {
-                return;
-            }
-
-            try {
-                await fallbackLeaf.openFile(replacement, { active: false });
-            } catch {
-                // Ignore failures when opening a replacement file. The delete still runs.
-            }
-            return;
-        }
-
-        const activeLeaf = this.getActiveFileViewLeaf();
-        if (activeLeaf && uniqueLeaves.has(activeLeaf)) {
-            try {
-                await activeLeaf.openFile(replacement, { active: false });
-            } catch {
-                // Ignore failures when opening a replacement file. The delete still runs.
-            }
-
-            // Close any other leaf that was displaying one of the deleted files.
-            const emptyViewState: ViewState = { type: 'empty', state: {} };
-            for (const leaf of uniqueLeaves) {
-                if (leaf === activeLeaf) {
-                    continue;
-                }
-
-                try {
-                    await leaf.setViewState(emptyViewState);
-                } catch {
-                    // Ignore failures when clearing leaf state. The delete still runs.
-                }
-
-                try {
-                    leaf.detach();
-                } catch {
-                    // Ignore failures when detaching leaves. The delete still runs.
-                }
-            }
-
-            return;
-        }
-
-        // None of the deleted files are in the focused leaf. Close affected background tabs and keep
-        // the current editor leaf unchanged.
-        const emptyViewState: ViewState = { type: 'empty', state: {} };
-        for (const leaf of uniqueLeaves) {
-            try {
-                await leaf.setViewState(emptyViewState);
-            } catch {
-                // Ignore failures when clearing leaf state. The delete still runs.
-            }
-
-            try {
-                leaf.detach();
-            } catch {
-                // Ignore failures when detaching leaves. The delete still runs.
-            }
-        }
-    }
-
-    /**
-     * Smart delete handler for the currently selected file in the Navigator
-     * Automatically selects the next file in the same folder before deletion
-     * Used by both keyboard shortcuts and context menu
-     *
-     * @param file - The file to delete
-     * @param settings - Plugin settings
-     * @param selectionContext - Current selection context (type, folder, tag)
-     * @param selectionDispatch - Selection dispatch function
-     * @param confirmBeforeDelete - Whether to show confirmation dialog
-     */
     async deleteSelectedFile(
         file: TFile,
         settings: NotebookNavigatorSettings,
@@ -1742,69 +838,7 @@ export class FileSystemOperations {
         selectionDispatch: SelectionDispatch,
         confirmBeforeDelete: boolean
     ): Promise<void> {
-        // Get the file list based on selection type
-        // Get current UX preferences for descendant/hidden items when determining next file to select
-        const visibility = this.getVisibilityPreferences();
-        const currentFiles = getFilesForNavigationSelection(
-            {
-                selectionType: selectionContext.selectionType,
-                selectedFolder: selectionContext.selectedFolder ?? null,
-                selectedTag: selectionContext.selectedTag ?? null,
-                selectedProperty: selectionContext.selectedProperty ?? null
-            },
-            settings,
-            visibility,
-            this.app,
-            this.getTagTreeService(),
-            this.getPropertyTreeService()
-        );
-
-        // Find next file to select
-        let nextFileToSelect: TFile | null = null;
-        const currentIndex = currentFiles.findIndex(f => f.path === file.path);
-
-        if (currentIndex !== -1 && currentFiles.length > 1) {
-            // Try next file first
-            if (currentIndex < currentFiles.length - 1) {
-                nextFileToSelect = currentFiles[currentIndex + 1];
-            } else if (currentIndex > 0) {
-                // No next file, use previous
-                nextFileToSelect = currentFiles[currentIndex - 1];
-            }
-        }
-
-        // Perform the delete with pre-selection
-        await this.deleteFile(file, confirmBeforeDelete, undefined, async () => {
-            // Pre-delete action: select next file or close editor
-            if (nextFileToSelect) {
-                // Verify the next file still exists (in case of concurrent deletions)
-                const stillExists = this.app.vault.getFileByPath(nextFileToSelect.path);
-                if (stillExists) {
-                    // Update selection and open the file
-                    await updateSelectionAfterFileOperation(stillExists, selectionDispatch, this.app, { openInEditor: false });
-
-                    // If the file being deleted is currently open in a leaf, open the next file in that
-                    // same leaf before deleting. This keeps the workspace leaf stable during the delete.
-                    await this.replaceOpenLeavesForFileDelete(file, stillExists);
-                } else {
-                    // Next file was deleted, clear selection
-                    await updateSelectionAfterFileOperation(null, selectionDispatch, this.app);
-                }
-            } else {
-                // No other files in folder
-                // Don't detach the leaf - let Obsidian handle it naturally after deletion
-                // Just clear the selection
-                selectionDispatch({ type: 'SET_SELECTED_FILE', file: null });
-            }
-
-            // Try to maintain focus on file list using a more reliable method
-            window.setTimeout(() => {
-                const fileListEl = document.querySelector('.nn-list-pane-scroller');
-                if (fileListEl instanceof HTMLElement) {
-                    fileListEl.focus();
-                }
-            }, TIMEOUTS.FILE_OPERATION_DELAY);
-        });
+        await this.deletionService.deleteSelectedFile(file, settings, selectionContext, selectionDispatch, confirmBeforeDelete);
     }
 
     /**
@@ -1824,425 +858,20 @@ export class FileSystemOperations {
         return false;
     }
 
-    /**
-     * Moves multiple files to a target folder with validation and smart selection
-     * Extracted from useDragAndDrop to enable reuse across drag-drop and context menu
-     *
-     * @param options - Move operation options
-     * @returns Result object with moved count, skipped count, and errors
-     */
     async moveFilesToFolder(options: MoveFilesOptions): Promise<MoveFilesResult> {
-        const { files, targetFolder, selectionContext, showNotifications = true } = options;
-        const result: MoveFilesResult = { movedCount: 0, skippedCount: 0, cancelledCount: 0, errors: [] };
-
-        if (files.length === 0) return result;
-
-        const selectedFileOriginalPath = selectionContext?.selectedFile?.path ?? null;
-
-        const commandQueue = this.getCommandQueue();
-        if (commandQueue) {
-            const moveConflictsSetting = this.resolveMoveFileConflictsSetting();
-            const targetFolderLabel = this.resolveFolderDisplayLabel(targetFolder);
-
-            const performMove = async (): Promise<MoveFilesCommandData> => {
-                let cancelledCount = 0;
-                const movedSourcePaths: string[] = [];
-                const errors: { filePath: string; error: unknown }[] = [];
-
-                const plannedMoves: PlannedFileMove[] = [];
-                const deferredConflicts: DeferredMoveConflict[] = [];
-                const existingDestinationEntries = new Map<string, TAbstractFile>();
-                const reservedPaths = new Set<string>();
-                const suggestionReservedPaths = new Set<string>();
-
-                targetFolder.children.forEach(child => {
-                    const childPath = normalizePath(child.path);
-                    existingDestinationEntries.set(childPath, child);
-                    suggestionReservedPaths.add(childPath);
-                });
-
-                const computeUniqueTargetPath = (file: TFile, additionalReserved: ReadonlySet<string>, useVaultLookup: boolean): string => {
-                    const excalidraw = isExcalidrawFile(file);
-                    const baseName = excalidraw ? stripExcalidrawSuffix(file.basename) : file.basename;
-                    const uniqueFileName = generateUniqueFilename(targetFolder.path, baseName, file.extension, this.app, {
-                        occupiedPaths: additionalReserved,
-                        useVaultLookup,
-                        baseNameSuffix: excalidraw ? EXCALIDRAW_BASENAME_SUFFIX : ''
-                    });
-                    return buildFilePathInFolder(targetFolder.path, uniqueFileName, file.extension);
-                };
-
-                for (const file of files) {
-                    const originalPath = file.path;
-                    const desiredPath = buildPathInFolder(targetFolder.path, file.name);
-
-                    if (desiredPath === originalPath) {
-                        continue;
-                    }
-
-                    const reservedCollision = reservedPaths.has(desiredPath);
-                    const existingEntry = reservedCollision ? null : (existingDestinationEntries.get(desiredPath) ?? null);
-
-                    if (!reservedCollision && !existingEntry) {
-                        plannedMoves.push({ file, originalPath, targetPath: desiredPath, overwrite: false });
-                        reservedPaths.add(desiredPath);
-                        suggestionReservedPaths.add(desiredPath);
-                        continue;
-                    }
-
-                    const suggestedPath = computeUniqueTargetPath(file, suggestionReservedPaths, false);
-                    suggestionReservedPaths.add(suggestedPath);
-                    const canOverwrite = existingEntry instanceof TFile;
-
-                    if (moveConflictsSetting === 'rename') {
-                        plannedMoves.push({ file, originalPath, targetPath: suggestedPath, overwrite: false });
-                        reservedPaths.add(suggestedPath);
-                        continue;
-                    }
-
-                    deferredConflicts.push({
-                        file,
-                        originalPath,
-                        desiredPath,
-                        suggestedPath,
-                        canOverwrite
-                    });
-                }
-
-                if (moveConflictsSetting === 'ask' && deferredConflicts.length > 0) {
-                    const conflictItems: MoveFileConflictItem[] = deferredConflicts.map(conflict => {
-                        const suggestedFileName = conflict.suggestedPath.split('/').pop() ?? conflict.file.name;
-                        return {
-                            sourceFileName: conflict.file.name,
-                            suggestedFileName,
-                            canOverwrite: conflict.canOverwrite
-                        };
-                    });
-
-                    const resolution = await new Promise<MoveFileConflictResolution | null>(resolve => {
-                        const modal = new MoveFileConflictModal(this.app, {
-                            targetFolderName: targetFolderLabel,
-                            conflicts: conflictItems,
-                            onResolve: resolve
-                        });
-                        modal.open();
-                    });
-
-                    if (!resolution) {
-                        cancelledCount = deferredConflicts.length;
-                        return { movedCount: 0, skippedCount: 0, cancelledCount, movedSourcePaths: [], errors: [] };
-                    }
-
-                    for (const conflict of deferredConflicts) {
-                        const shouldOverwrite =
-                            resolution === 'overwrite' && conflict.canOverwrite && !reservedPaths.has(conflict.desiredPath);
-                        let targetPath = shouldOverwrite ? conflict.desiredPath : conflict.suggestedPath;
-
-                        if (!shouldOverwrite && reservedPaths.has(targetPath)) {
-                            targetPath = computeUniqueTargetPath(conflict.file, suggestionReservedPaths, false);
-                            suggestionReservedPaths.add(targetPath);
-                        }
-
-                        plannedMoves.push({
-                            file: conflict.file,
-                            originalPath: conflict.originalPath,
-                            targetPath,
-                            overwrite: shouldOverwrite
-                        });
-                        reservedPaths.add(targetPath);
-                    }
-                }
-
-                let movedCount = 0;
-                let skippedCount = 0;
-
-                const executePlannedMove = async (plan: PlannedFileMove): Promise<PlannedMoveExecutionOutcome> => {
-                    let finalTargetPath = plan.targetPath;
-
-                    if (!plan.overwrite && this.app.vault.getAbstractFileByPath(finalTargetPath)) {
-                        finalTargetPath = computeUniqueTargetPath(plan.file, reservedPaths, true);
-                        reservedPaths.add(finalTargetPath);
-                    }
-
-                    try {
-                        if (plan.overwrite) {
-                            const entryToOverwrite = this.app.vault.getAbstractFileByPath(finalTargetPath);
-                            if (entryToOverwrite instanceof TFile) {
-                                await this.app.fileManager.trashFile(entryToOverwrite);
-                            } else if (entryToOverwrite) {
-                                return { status: 'skipped' };
-                            }
-                        }
-
-                        await this.app.fileManager.renameFile(plan.file, finalTargetPath);
-                        return {
-                            status: 'moved',
-                            originalPath: plan.originalPath
-                        };
-                    } catch (error) {
-                        console.error('Error moving file:', plan.originalPath, error);
-                        return {
-                            status: 'error',
-                            originalPath: plan.originalPath,
-                            error
-                        };
-                    }
-                };
-
-                for (let index = 0; index < plannedMoves.length; index += FILE_MOVE_BATCH_SIZE) {
-                    const batch = plannedMoves.slice(index, index + FILE_MOVE_BATCH_SIZE);
-                    const outcomes = await Promise.all(batch.map(plan => executePlannedMove(plan)));
-
-                    for (const outcome of outcomes) {
-                        if (outcome.status === 'moved') {
-                            movedCount++;
-                            movedSourcePaths.push(outcome.originalPath);
-                            continue;
-                        }
-
-                        if (outcome.status === 'skipped') {
-                            skippedCount++;
-                            continue;
-                        }
-
-                        errors.push({ filePath: outcome.originalPath, error: outcome.error });
-                    }
-                }
-
-                return { movedCount, skippedCount, cancelledCount, movedSourcePaths, errors };
-            };
-
-            const moveResult = await commandQueue.executeMoveFiles(files, targetFolder, performMove);
-            if (!moveResult.success || !moveResult.data) {
-                if (moveResult.error) {
-                    console.error('Error during move operation:', moveResult.error);
-                    throw moveResult.error;
-                }
-                throw new Error('Move operation failed');
-            }
-
-            result.movedCount = moveResult.data.movedCount;
-            result.skippedCount = moveResult.data.skippedCount;
-            result.cancelledCount = moveResult.data.cancelledCount;
-
-            // Handle selection updates if needed
-            if (selectionContext && selectedFileOriginalPath) {
-                const movedPathSet = new Set(moveResult.data.movedSourcePaths);
-                if (movedPathSet.has(selectedFileOriginalPath)) {
-                    const nextFileToSelect = findNextFileAfterRemoval(selectionContext.allFiles, movedPathSet);
-                    await updateSelectionAfterFileOperation(nextFileToSelect, selectionContext.dispatch, this.app);
-                }
-            }
-
-            // Map per-file errors back to TFile where possible for downstream notices
-            if (Array.isArray(moveResult.data.errors) && moveResult.data.errors.length > 0) {
-                for (const err of moveResult.data.errors) {
-                    const f = this.app.vault.getFileByPath(err.filePath);
-                    if (f) {
-                        result.errors.push({ file: f, error: err.error as Error });
-                    } else {
-                        // Fall back to first of the requested files with matching path
-                        const fallback = files.find(x => x.path === err.filePath) || files[0];
-                        result.errors.push({ file: fallback, error: err.error as Error });
-                    }
-                }
-            }
-        }
-
-        // Show notifications if enabled
-        if (showNotifications) {
-            if (result.skippedCount > 0) {
-                const message =
-                    files.length === 1
-                        ? strings.dragDrop.errors.itemAlreadyExists.replace('{name}', files[0].name)
-                        : strings.dragDrop.notifications.filesAlreadyExist.replace('{count}', result.skippedCount.toString());
-                showNotice(message, { timeout: TIMEOUTS.NOTICE_ERROR, variant: 'warning' });
-            }
-
-            if (result.errors.length > 0 && files.length === 1) {
-                const firstError = result.errors[0]?.error as unknown;
-                const msg =
-                    typeof (firstError as { message?: unknown })?.message === 'string' &&
-                    ((firstError as { message?: string }).message?.trim() ?? '')
-                        ? (firstError as { message: string }).message
-                        : strings.common.unknownError;
-                showNotice(strings.dragDrop.errors.failedToMove.replace('{error}', msg), { variant: 'warning' });
-            }
-        }
-
-        return result;
+        return this.moveService.moveFilesToFolder(options);
     }
 
-    /**
-     * Shows a folder selection modal and moves files to the selected folder
-     * Used by context menu and keyboard shortcuts for interactive file moving
-     *
-     * @param files - Files to move
-     * @param selectionContext - Optional selection context for smart selection updates
-     */
-    async moveFilesWithModal(
-        files: TFile[],
-        selectionContext?: {
-            selectedFile: TFile | null;
-            dispatch: SelectionDispatch;
-            allFiles: TFile[];
-        }
-    ): Promise<void> {
-        if (files.length === 0) return;
-
-        // Create a set of paths to exclude (source folders and their parents)
-        const excludePaths = new Set<string>();
-
-        // For single file moves, exclude the parent folder
-        if (files.length === 1 && files[0].parent) {
-            excludePaths.add(files[0].parent.path);
-        }
-
-        const isMultiple = files.length > 1;
-        const placeholderText = this.getMovePlaceholder(this.getMoveTargetLabelForFiles(files), !isMultiple);
-
-        // Show the folder selection modal
-        const modal = new FolderSuggestModal(
-            this.app,
-            async targetFolder => {
-                // Move the files to the selected folder
-                const result = await this.moveFilesToFolder({
-                    files,
-                    targetFolder,
-                    selectionContext,
-                    showNotifications: true
-                });
-
-                // Show summary notification for multiple files
-                if (files.length > 1 && result.movedCount > 0) {
-                    showNotice(
-                        strings.fileSystem.notifications.movedMultipleFiles
-                            .replace('{count}', result.movedCount.toString())
-                            .replace('{folder}', targetFolder.name),
-                        { variant: 'success' }
-                    );
-                }
-            },
-            placeholderText,
-            strings.modals.folderSuggest.instructions.move,
-            excludePaths
-        );
-
-        modal.open();
+    async moveFilesWithModal(files: TFile[], selectionContext?: MoveFilesSelectionContext): Promise<void> {
+        await this.moveService.moveFilesWithModal(files, selectionContext);
     }
 
-    /**
-     * Shows a folder selection modal and moves the specified folder to the chosen destination
-     * Excludes the folder itself and all descendants from the destination list to prevent recursion
-     *
-     * @param folder - Folder to move
-     * @returns Status object describing success with the new location data, a cancel signal, or an error payload
-     */
     async moveFolderWithModal(folder: TFolder): Promise<MoveFolderModalResult> {
-        const folderDisplayName = this.resolveFolderDisplayLabel(folder);
-        const excludePaths = new Set<string>();
-
-        const collectPaths = (current: TFolder) => {
-            excludePaths.add(current.path);
-            current.children.forEach(child => {
-                if (child instanceof TFolder) {
-                    collectPaths(child);
-                }
-            });
-        };
-
-        collectPaths(folder);
-
-        return new Promise(resolve => {
-            let isResolved = false;
-
-            const finish = (result: MoveFolderModalResult) => {
-                if (!isResolved) {
-                    isResolved = true;
-                    resolve(result);
-                }
-            };
-
-            const modal = new CancelAwareFolderSuggestModal(
-                this.app,
-                async targetFolder => {
-                    // Prevent selecting the folder itself or any descendant
-                    if (targetFolder.path === folder.path || targetFolder.path.startsWith(`${folder.path}/`)) {
-                        showNotice(strings.dragDrop.errors.cannotMoveIntoSelf, { variant: 'warning' });
-                        return;
-                    }
-
-                    const newPath = buildPathInFolder(targetFolder.path, folder.name);
-
-                    // No-op if destination equals current location
-                    if (newPath === folder.path) {
-                        modal.close();
-                        finish({ status: 'cancelled' });
-                        return;
-                    }
-
-                    try {
-                        const moveData = await this.moveFolderToTarget(folder, targetFolder);
-                        showNotice(strings.fileSystem.notifications.folderMoved.replace('{name}', folderDisplayName), {
-                            variant: 'success'
-                        });
-                        modal.close();
-                        finish({ status: 'success', data: moveData });
-                    } catch (error) {
-                        if (error instanceof FolderMoveError) {
-                            if (error.code === 'destination-exists') {
-                                showNotice(strings.fileSystem.errors.folderAlreadyExists.replace('{name}', folderDisplayName), {
-                                    variant: 'warning'
-                                });
-                                return;
-                            }
-                            if (error.code === 'invalid-target') {
-                                showNotice(strings.dragDrop.errors.cannotMoveIntoSelf, { variant: 'warning' });
-                                return;
-                            }
-                        }
-                        console.error('Failed to move folder via modal:', error);
-                        showNotice(strings.dragDrop.errors.failedToMoveFolder.replace('{name}', folderDisplayName), { variant: 'warning' });
-                        modal.close();
-                        finish({ status: 'error', error });
-                    }
-                },
-                this.getMovePlaceholder(folderDisplayName, true),
-                strings.modals.folderSuggest.instructions.move,
-                excludePaths,
-                () => finish({ status: 'cancelled' })
-            );
-
-            modal.open();
-        });
+        return this.moveService.moveFolderWithModal(folder);
     }
 
     async moveFolderToTarget(folder: TFolder, targetFolder: TFolder): Promise<MoveFolderResult> {
-        if (targetFolder.path === folder.path || targetFolder.path.startsWith(`${folder.path}/`)) {
-            throw new FolderMoveError('invalid-target');
-        }
-
-        const newPath = buildPathInFolder(targetFolder.path, folder.name);
-        if (newPath === folder.path) {
-            throw new FolderMoveError('invalid-target');
-        }
-
-        const existingEntry = this.app.vault.getAbstractFileByPath(newPath);
-        if (existingEntry) {
-            throw new FolderMoveError('destination-exists');
-        }
-
-        const oldPath = folder.path;
-        await this.app.fileManager.renameFile(folder, newPath);
-
-        const movedEntry = this.app.vault.getAbstractFileByPath(newPath);
-        if (!movedEntry || !(movedEntry instanceof TFolder)) {
-            throw new FolderMoveError('verification-failed');
-        }
-
-        await this.syncHiddenFolderPathChange(oldPath, newPath);
-
-        return { oldPath, newPath, targetFolder };
+        return this.moveService.moveFolderToTarget(folder, targetFolder);
     }
 
     /**
@@ -2559,204 +1188,23 @@ export class FileSystemOperations {
             }
 
             await this.app.vault.copy(folder, newPath);
-            await this.copyFolderDisplayMetadata(folder.path, newPath);
+            await this.folderPathSettingsSync.copyFolderDisplayMetadata(folder.path, newPath);
         } catch (error) {
             this.notifyError(strings.fileSystem.errors.duplicateFolder, error);
         }
     }
 
-    /**
-     * Deletes multiple files with confirmation
-     * @param files - Array of files to delete
-     * @param confirmBeforeDelete - Whether to show confirmation dialog
-     * @param preDeleteAction - Optional action to run BEFORE files are deleted
-     */
     async deleteMultipleFiles(files: TFile[], confirmBeforeDelete = true, preDeleteAction?: () => void | Promise<void>): Promise<void> {
-        if (files.length === 0) return;
-
-        const performDeleteCore = async () => {
-            const sourcePaths = files.map(file => file.path);
-            const attachmentDeletion = this.prepareAttachmentDeletionState(files);
-
-            // Run optional pre-delete action (e.g., to update selection)
-            if (preDeleteAction) {
-                try {
-                    await preDeleteAction();
-                } catch (e) {
-                    // Continue with delete even if pre-delete action throws
-                    console.error('Pre-delete action failed:', e);
-                }
-            }
-
-            // Delete files. When any target file is currently open, delete sequentially.
-            const errors: { file: TFile; error: unknown }[] = [];
-            let deletedCount = 0;
-            const deletedSourcePaths = new Set<string>();
-
-            const targetPathSet = new Set(sourcePaths);
-            let hasOpenLeaf = false;
-
-            try {
-                hasOpenLeaf = getSupportedLeaves(this.app).some(leaf => {
-                    const { view } = leaf;
-                    if (!(view instanceof FileView)) {
-                        return false;
-                    }
-                    const currentFile = view.file;
-                    if (!currentFile) {
-                        return false;
-                    }
-                    return targetPathSet.has(currentFile.path);
-                });
-            } catch {
-                // Unit tests may provide an app mock without workspace leaf helpers.
-                hasOpenLeaf = false;
-            }
-
-            if (hasOpenLeaf) {
-                for (let index = 0; index < files.length; index++) {
-                    const file = files[index];
-                    const sourcePath = sourcePaths[index] ?? file.path;
-
-                    try {
-                        // Ensure no leaf is still displaying the deleted file before the vault operation.
-                        await this.clearOpenLeavesForFileDelete(file);
-
-                        await this.app.fileManager.trashFile(file);
-                        deletedCount++;
-                        deletedSourcePaths.add(sourcePath);
-
-                        // Allow the workspace to process leaf updates between deletes.
-                        if (index < files.length - 1) {
-                            await new Promise<void>(resolve => setTimeout(resolve, 0));
-                        }
-                    } catch (error) {
-                        errors.push({ file, error });
-                        console.error('Error deleting file:', sourcePath, error);
-                    }
-                }
-            } else {
-                const results = await Promise.allSettled(files.map(file => this.app.fileManager.trashFile(file)));
-
-                results.forEach((result, index) => {
-                    const file = files[index];
-                    const sourcePath = sourcePaths[index] ?? file.path;
-
-                    if (result.status === 'fulfilled') {
-                        deletedCount++;
-                        deletedSourcePaths.add(sourcePath);
-                    } else {
-                        errors.push({ file, error: result.reason });
-                        console.error('Error deleting file:', sourcePath, result.reason);
-                    }
-                });
-            }
-
-            await this.maybeDeleteAttachmentsAfterFileDelete(
-                attachmentDeletion.candidatesBySourcePath,
-                deletedSourcePaths,
-                attachmentDeletion.setting
-            );
-
-            // Show appropriate notifications
-            if (deletedCount > 0) {
-                showNotice(strings.fileSystem.notifications.deletedMultipleFiles.replace('{count}', deletedCount.toString()), {
-                    variant: 'success'
-                });
-            }
-
-            if (errors.length > 0) {
-                const errorMsg =
-                    errors.length === 1
-                        ? strings.fileSystem.errors.failedToDeleteFile
-                              .replace('{name}', errors[0].file.name)
-                              .replace('{error}', getErrorMessage(errors[0].error))
-                        : strings.fileSystem.errors.failedToDeleteMultipleFiles.replace('{count}', errors.length.toString());
-                showNotice(errorMsg, { variant: 'warning' });
-            }
-        };
-
-        if (confirmBeforeDelete) {
-            // Import dynamically to avoid circular dependencies
-            const { ConfirmModal } = await import('../modals/ConfirmModal');
-
-            const modal = new ConfirmModal(
-                this.app,
-                strings.fileSystem.confirmations.deleteMultipleFiles.replace('{count}', files.length.toString()),
-                strings.fileSystem.confirmations.deleteConfirmation,
-                async () => {
-                    const commandQueue = this.getCommandQueue();
-                    if (commandQueue) {
-                        await commandQueue.executeDeleteFiles(files, performDeleteCore);
-                    } else {
-                        await performDeleteCore();
-                    }
-                }
-            );
-            modal.open();
-        } else {
-            const commandQueue = this.getCommandQueue();
-            if (commandQueue) {
-                await commandQueue.executeDeleteFiles(files, performDeleteCore);
-            } else {
-                await performDeleteCore();
-            }
-        }
+        await this.deletionService.deleteMultipleFiles(files, confirmBeforeDelete, preDeleteAction);
     }
 
-    /**
-     * Deletes selected files with smart selection of next file
-     * Centralizes the delete logic used by both keyboard shortcuts and context menu
-     * @param selectedFiles - Set of selected file paths
-     * @param allFiles - All files in the current view (for finding next file)
-     * @param selectionDispatch - Selection dispatch function
-     * @param confirmBeforeDelete - Whether to show confirmation dialog
-     */
     async deleteFilesWithSmartSelection(
         selectedFiles: Set<string>,
         allFiles: TFile[],
         selectionDispatch: SelectionDispatch,
         confirmBeforeDelete: boolean
     ): Promise<void> {
-        // Convert selected paths to files
-        const filesToDelete = Array.from(selectedFiles)
-            .map(path => this.app.vault.getFileByPath(path))
-            .filter((f): f is TFile => f !== null);
-
-        if (filesToDelete.length === 0) return;
-
-        // Find next file to select using utility
-        const nextFileToSelect = findNextFileAfterRemoval(allFiles, selectedFiles);
-
-        // Delete the files with a pre-delete action that updates selection only after confirmation
-        await this.deleteMultipleFiles(filesToDelete, confirmBeforeDelete, async () => {
-            if (nextFileToSelect) {
-                // Verify the next file still exists (matching single file deletion)
-                const stillExists = this.app.vault.getFileByPath(nextFileToSelect.path);
-                if (stillExists) {
-                    // Update selection using same params as single file deletion
-                    await updateSelectionAfterFileOperation(stillExists, selectionDispatch, this.app, { openInEditor: false });
-
-                    // If any of the deleted files are currently open in a leaf, open the next file in that
-                    // same leaf before deleting. This keeps the workspace leaf stable during the delete.
-                    await this.replaceOpenLeavesForFilesDelete(filesToDelete, stillExists);
-                } else {
-                    // Next file was deleted, clear selection
-                    await updateSelectionAfterFileOperation(null, selectionDispatch, this.app);
-                }
-            } else {
-                // No files left in folder - clear selection
-                selectionDispatch({ type: 'CLEAR_FILE_SELECTION' });
-            }
-
-            // Focus management (matching single file deletion)
-            window.setTimeout(() => {
-                const fileListEl = document.querySelector('.nn-list-pane-scroller');
-                if (fileListEl instanceof HTMLElement) {
-                    fileListEl.focus();
-                }
-            }, TIMEOUTS.FILE_OPERATION_DELAY);
-        });
+        await this.deletionService.deleteFilesWithSmartSelection(selectedFiles, allFiles, selectionDispatch, confirmBeforeDelete);
     }
 
     /**
