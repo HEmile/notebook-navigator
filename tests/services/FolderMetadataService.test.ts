@@ -712,6 +712,40 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         expect(compareSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('keeps cached folder display data on no-op settings updates when folder style records are empty', () => {
+        getFileMock.mockReturnValue({
+            metadata: {
+                color: '#112233'
+            }
+        });
+
+        service.getFolderDisplayData('Projects', {
+            includeDisplayName: false,
+            includeColor: true,
+            includeBackgroundColor: false,
+            includeIcon: false
+        });
+        service.getFolderDisplayData('Projects', {
+            includeDisplayName: false,
+            includeColor: true,
+            includeBackgroundColor: false,
+            includeIcon: false
+        });
+
+        expect(getFileMock).toHaveBeenCalledTimes(1);
+
+        settingsProvider.notifySettingsUpdate();
+
+        service.getFolderDisplayData('Projects', {
+            includeDisplayName: false,
+            includeColor: true,
+            includeBackgroundColor: false,
+            includeIcon: false
+        });
+
+        expect(getFileMock).toHaveBeenCalledTimes(1);
+    });
+
     it('invalidates folder display cache only for tracked folder note metadata changes', () => {
         getFileMock.mockReturnValue({
             metadata: {
