@@ -69,7 +69,7 @@ import {
     parseStoredPropertySelectionNodeId,
     type PropertySelectionNodeId
 } from '../../utils/propertyTree';
-import { getFilesForNavigationSelection } from '../../utils/selectionUtils';
+import { getAdjacentFile, getFilesForNavigationSelection } from '../../utils/selectionUtils';
 
 /**
  * Reveals the navigator view and focuses whichever pane is currently visible
@@ -256,15 +256,10 @@ async function selectAdjacentFileWithoutNavigatorView(plugin: NotebookNavigatorP
         return false;
     }
 
-    const currentIndex = currentFile ? files.findIndex(f => f.path === currentFile.path) : -1;
-    const targetIndex =
-        currentIndex === -1 ? (direction === 'next' ? 0 : files.length - 1) : direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-
-    if (targetIndex < 0 || targetIndex >= files.length) {
+    const targetFile = getAdjacentFile(files, currentFile, direction);
+    if (!targetFile) {
         return false;
     }
-
-    const targetFile = files[targetIndex];
     const leaf = app.workspace.getLeaf(false);
     if (!leaf) {
         return false;

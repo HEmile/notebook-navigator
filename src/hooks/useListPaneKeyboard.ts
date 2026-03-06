@@ -64,10 +64,10 @@ interface UseListPaneKeyboardProps {
     containerRef: React.RefObject<HTMLDivElement | null>;
     /** Map from file paths to their index in items */
     pathToIndex: Map<string, number>;
-    /** Array of files for multi-selection optimization */
-    files: TFile[];
-    /** Map from file paths to their position in files array */
-    fileIndexMap: Map<string, number>;
+    /** Array of visible files in rendered order */
+    orderedFiles: TFile[];
+    /** Map from file paths to their position in visible file order */
+    orderedFileIndexMap: Map<string, number>;
     /** Handler for selecting a file from keyboard actions */
     onSelectFile: (file: TFile, options?: { markKeyboardNavigation?: boolean; suppressOpen?: boolean; debounceOpen?: boolean }) => void;
     /** Keep debounced open aligned when selection cannot move (e.g. ArrowDown at end of list) */
@@ -87,8 +87,8 @@ export function useListPaneKeyboard({
     virtualizer,
     containerRef,
     pathToIndex,
-    files,
-    fileIndexMap,
+    orderedFiles,
+    orderedFileIndexMap,
     onSelectFile,
     onScheduleKeyboardOpen,
     onScheduleKeyboardOpenForFile,
@@ -141,15 +141,15 @@ export function useListPaneKeyboard({
      */
     const handleRangeSelection = useCallback(
         (direction: 'home' | 'end', currentFileIndex: number) => {
-            const targetIndex = direction === 'home' ? 0 : files.length - 1;
-            const targetFile = files[targetIndex];
+            const targetIndex = direction === 'home' ? 0 : orderedFiles.length - 1;
+            const targetFile = orderedFiles[targetIndex];
             if (!targetFile) return;
 
             // Get files in range
             const filesInRange = getFilesInRange(
-                files,
+                orderedFiles,
                 direction === 'home' ? 0 : currentFileIndex,
-                direction === 'home' ? currentFileIndex : files.length - 1
+                direction === 'home' ? currentFileIndex : orderedFiles.length - 1
             );
 
             // Select all files in range that aren't already selected
@@ -170,7 +170,7 @@ export function useListPaneKeyboard({
             // Scroll to target position
             virtualizer.scrollToIndex(targetIndex, { align: 'auto' });
         },
-        [files, selectionState.selectedFiles, selectionDispatch, virtualizer, openFileInWorkspace, settings.enterToOpenFiles]
+        [orderedFiles, selectionState.selectedFiles, selectionDispatch, virtualizer, openFileInWorkspace, settings.enterToOpenFiles]
     );
 
     /**
@@ -255,11 +255,11 @@ export function useListPaneKeyboard({
             if (matchesShortcut(e, shortcuts, KeyboardShortcutAction.LIST_EXTEND_SELECTION_DOWN)) {
                 e.preventDefault();
                 if (!isMobile && selectionState.selectedFile?.path) {
-                    const currentFileIndex = fileIndexMap.get(selectionState.selectedFile.path);
+                    const currentFileIndex = orderedFileIndexMap.get(selectionState.selectedFile.path);
                     if (currentFileIndex !== undefined && currentFileIndex !== -1) {
                         // Only debounce workspace opens for physical arrow keys so keyup can commit the final selection.
                         const shouldDebounceOpen = e.key === 'ArrowDown';
-                        const finalFileIndex = multiSelection.handleShiftArrowSelection('down', currentFileIndex, files, {
+                        const finalFileIndex = multiSelection.handleShiftArrowSelection('down', currentFileIndex, orderedFiles, {
                             openFile: file => openFileFromShiftSelection(file, shouldDebounceOpen)
                         });
                         if (finalFileIndex === -1 && shouldDebounceOpen) {
@@ -267,7 +267,7 @@ export function useListPaneKeyboard({
                             onScheduleKeyboardOpen?.();
                         }
                         if (finalFileIndex >= 0) {
-                            const finalFile = files[finalFileIndex];
+                            const finalFile = orderedFiles[finalFileIndex];
                             const itemIndex = pathToIndex.get(finalFile.path);
                             if (itemIndex !== undefined) {
                                 helpers.scrollToIndex(itemIndex);
@@ -281,11 +281,11 @@ export function useListPaneKeyboard({
             if (matchesShortcut(e, shortcuts, KeyboardShortcutAction.LIST_EXTEND_SELECTION_UP)) {
                 e.preventDefault();
                 if (!isMobile && selectionState.selectedFile?.path) {
-                    const currentFileIndex = fileIndexMap.get(selectionState.selectedFile.path);
+                    const currentFileIndex = orderedFileIndexMap.get(selectionState.selectedFile.path);
                     if (currentFileIndex !== undefined && currentFileIndex !== -1) {
                         // Only debounce workspace opens for physical arrow keys so keyup can commit the final selection.
                         const shouldDebounceOpen = e.key === 'ArrowUp';
-                        const finalFileIndex = multiSelection.handleShiftArrowSelection('up', currentFileIndex, files, {
+                        const finalFileIndex = multiSelection.handleShiftArrowSelection('up', currentFileIndex, orderedFiles, {
                             openFile: file => openFileFromShiftSelection(file, shouldDebounceOpen)
                         });
                         if (finalFileIndex === -1 && shouldDebounceOpen) {
@@ -293,7 +293,7 @@ export function useListPaneKeyboard({
                             onScheduleKeyboardOpen?.();
                         }
                         if (finalFileIndex >= 0) {
-                            const finalFile = files[finalFileIndex];
+                            const finalFile = orderedFiles[finalFileIndex];
                             const itemIndex = pathToIndex.get(finalFile.path);
                             if (itemIndex !== undefined) {
                                 helpers.scrollToIndex(itemIndex);
@@ -442,7 +442,7 @@ export function useListPaneKeyboard({
             } else if (matchesShortcut(e, shortcuts, KeyboardShortcutAction.LIST_RANGE_TO_START)) {
                 e.preventDefault();
                 if (!isMobile && selectionState.selectedFile?.path) {
-                    const currentFileIndex = fileIndexMap.get(selectionState.selectedFile.path);
+                    const currentFileIndex = orderedFileIndexMap.get(selectionState.selectedFile.path);
                     if (currentFileIndex !== undefined && currentFileIndex !== -1) {
                         handleRangeSelection('home', currentFileIndex);
                     }
@@ -451,7 +451,7 @@ export function useListPaneKeyboard({
             } else if (matchesShortcut(e, shortcuts, KeyboardShortcutAction.LIST_RANGE_TO_END)) {
                 e.preventDefault();
                 if (!isMobile && selectionState.selectedFile?.path) {
-                    const currentFileIndex = fileIndexMap.get(selectionState.selectedFile.path);
+                    const currentFileIndex = orderedFileIndexMap.get(selectionState.selectedFile.path);
                     if (currentFileIndex !== undefined && currentFileIndex !== -1) {
                         handleRangeSelection('end', currentFileIndex);
                     }
@@ -493,9 +493,9 @@ export function useListPaneKeyboard({
             settings,
             isMobile,
             selectionState,
-            fileIndexMap,
+            orderedFileIndexMap,
             multiSelection,
-            files,
+            orderedFiles,
             pathToIndex,
             app,
             commandQueue,

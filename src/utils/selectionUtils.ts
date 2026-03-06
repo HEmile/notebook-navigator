@@ -177,6 +177,26 @@ export function findFileIndex(files: TFile[], targetFile: TFile | null): number 
 }
 
 /**
+ * Resolve the adjacent file in a visible file order.
+ * Returns the first or last file when there is no current selection.
+ */
+export function getAdjacentFile(files: TFile[], targetFile: TFile | null, direction: 'next' | 'previous'): TFile | null {
+    if (files.length === 0) {
+        return null;
+    }
+
+    const currentIndex = findFileIndex(files, targetFile);
+    const targetIndex =
+        currentIndex === -1 ? (direction === 'next' ? 0 : files.length - 1) : direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+    if (targetIndex < 0 || targetIndex >= files.length) {
+        return null;
+    }
+
+    return files[targetIndex] ?? null;
+}
+
+/**
  * Update selection after a file operation (delete, move, etc.)
  * Handles both selection state update and opening the file in editor
  * @param nextFile - The file to select, or null to clear selection
