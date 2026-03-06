@@ -17,9 +17,9 @@
  */
 
 /**
- * OPTIMIZATIONS:
+ * File item architecture:
  *
- * 1. React.memo - Component only re-renders when props actually change
+ * 1. React.memo keeps row renders scoped to prop changes.
  *
  * 2. Memoized values:
  *    - displayName: Cached computation of file display name from frontmatter/filename
@@ -27,21 +27,12 @@
  *    - showExtensionBadge: Cached logic for when to show file extension badges
  *    - className: Cached CSS class string to avoid string concatenation on each render
  *
- * 3. Stable callbacks:
- *    - handleTagClick: Memoized to prevent re-creating function on each render
+ * 3. Extracted subsystems:
+ *    - useFileItemContentState: Cache hydration, content subscriptions, feature-image URL lifecycle
+ *    - useFileItemPills: Tag/property/word-count pill models and rendering
+ *    - listPaneMeasurements helpers: Shared layout rules with the virtualizer
  *
- * 4. Content subscription optimization:
- *    - Single useEffect subscribes to all content changes (preview, tags, feature image)
- *    - Uses file.path as dependency to properly handle file renames
- *    - All data is fetched from RAM cache (MemoryFileCache) for synchronous access
- *    - RAM cache is kept in sync with IndexedDB by StorageContext
- *
- * 5. Data loading pattern:
- *    - Initial load: Synchronously fetch all data from RAM cache
- *    - Updates: Subscribe to cache changes and update state when data changes
- *    - Background: Content providers asynchronously generate preview text and find feature images
- *
- * 6. Image optimization:
+ * 4. Image optimization:
  *    - Feature images use default browser loading behavior
  *    - Resource paths are cached to avoid repeated vault.getResourcePath calls
  */
@@ -49,144 +40,39 @@
 import React, { useRef, useMemo, useEffect, useState, useCallback, useId } from 'react';
 import { TFile, TFolder, setTooltip, setIcon } from 'obsidian';
 import { useServices } from '../context/ServicesContext';
-import type { PropertyItem, FeatureImageStatus, FileContentChange } from '../storage/IndexedDBStorage';
 import { useMetadataService } from '../context/ServicesContext';
-import { useActiveProfile, useSettingsDerived, useSettingsState } from '../context/SettingsContext';
+import { useSettingsDerived, useSettingsState } from '../context/SettingsContext';
 import { useUXPreferences } from '../context/UXPreferencesContext';
 import { useFileCache } from '../context/StorageContext';
 import { useContextMenu } from '../hooks/useContextMenu';
-import { useTagNavigation } from '../hooks/useTagNavigation';
 import { useListPaneAppearance } from '../hooks/useListPaneAppearance';
 import { useShortcuts } from '../context/ShortcutsContext';
 import { strings } from '../i18n';
 import { SortOption } from '../settings';
-import { ItemType } from '../types';
+import { ItemType, type NavigationItemType } from '../types';
 import { DateUtils } from '../utils/dateUtils';
 import { runAsyncAction } from '../utils/async';
 import { getTooltipPlacement } from '../utils/domUtils';
 import { openFileInContext } from '../utils/openFileInContext';
-import { FILE_VISIBILITY, getExtensionSuffix, isImageFile, shouldDisplayFile } from '../utils/fileTypeUtils';
+import { FILE_VISIBILITY, getExtensionSuffix, shouldDisplayFile } from '../utils/fileTypeUtils';
 import { resolveFileDragIconId, resolveFileIconId } from '../utils/fileIconUtils';
-import { naturalCompare, resolveDefaultDateField } from '../utils/sortUtils';
-import { getCachedFileTags, getTagSearchModifierOperator } from '../utils/tagUtils';
+import { resolveDefaultDateField } from '../utils/sortUtils';
 import {
-    arePropertyItemsEqual,
-    clonePropertyItems,
-    isSupportedCssColor,
-    parseStrictWikiLink,
-    type WikiLinkTarget
-} from '../utils/propertyUtils';
-import { shouldShowFeatureImageArea } from '../utils/listPaneMeasurements';
+    getFileItemLayoutState,
+    isListPaneCompactMode,
+    shouldShowFeatureImageArea,
+    shouldShowFileItemParentFolderLine
+} from '../utils/listPaneMeasurements';
 import { getIconService, useIconServiceVersion } from '../services/icons';
 import type { SearchResultMeta } from '../types/search';
-import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
-import { areStringArraysEqual, mergeRanges, NumericRange } from '../utils/arrayUtils';
+import { mergeRanges, NumericRange } from '../utils/arrayUtils';
 import { openAddTagToFilesModal } from '../utils/tagModalHelpers';
-import { casefold } from '../utils/recordUtils';
 import { resolveUXIcon } from '../utils/uxIcons';
 import type { InclusionOperator } from '../utils/filterSearch';
-import {
-    buildPropertyKeyNodeId,
-    buildPropertyValueNodeId,
-    getPropertyKeyNodeIdFromNodeId,
-    isPropertyKeyOnlyValuePath,
-    normalizePropertyNodeId,
-    parsePropertyNodeId,
-    normalizePropertyTreeValuePath
-} from '../utils/propertyTree';
-import { ServiceIcon } from './ServiceIcon';
+import { useFileItemContentState } from './fileItem/useFileItemContentState';
+import { useFileItemPills } from './fileItem/useFileItemPills';
 
 const FEATURE_IMAGE_MAX_ASPECT_RATIO = 16 / 9;
-const FEATURE_IMAGE_REGEN_THROTTLE_MS = 10000;
-const sortTagsAlphabetically = (tags: string[]): void => {
-    tags.sort((firstTag, secondTag) => naturalCompare(firstTag, secondTag));
-};
-
-const sortPropertyPillsAlphabetically = (pills: PropertyPill[]): void => {
-    pills.sort((firstPill, secondPill) => {
-        const labelCompare = naturalCompare(firstPill.label, secondPill.label);
-        if (labelCompare !== 0) {
-            return labelCompare;
-        }
-
-        const valueCompare = naturalCompare(firstPill.value, secondPill.value);
-        if (valueCompare !== 0) {
-            return valueCompare;
-        }
-
-        return naturalCompare(firstPill.fieldKey ?? '', secondPill.fieldKey ?? '');
-    });
-};
-
-const sortPropertyPillGroup = (pills: readonly PropertyPill[], prioritizeColoredPills: boolean): PropertyPill[] => {
-    if (pills.length <= 1) {
-        return [...pills];
-    }
-
-    if (!prioritizeColoredPills) {
-        const sortedPills = [...pills];
-        sortPropertyPillsAlphabetically(sortedPills);
-        return sortedPills;
-    }
-
-    const coloredPills: PropertyPill[] = [];
-    const regularPills: PropertyPill[] = [];
-
-    pills.forEach(pill => {
-        const hasColor = typeof pill.color === 'string' && pill.color.trim().length > 0;
-        const hasBackground = typeof pill.background === 'string' && pill.background.trim().length > 0;
-        if (hasColor || hasBackground) {
-            coloredPills.push(pill);
-            return;
-        }
-
-        regularPills.push(pill);
-    });
-
-    sortPropertyPillsAlphabetically(coloredPills);
-    sortPropertyPillsAlphabetically(regularPills);
-
-    return [...coloredPills, ...regularPills];
-};
-
-type PropertyPill = {
-    value: string;
-    label: string;
-    wikiLink: WikiLinkTarget | null;
-    iconId?: string;
-    fieldKey?: string;
-    propertyKeyNodeId?: string;
-    color?: string;
-    background?: string;
-    propertyNodeId?: string;
-    propertySearchKey?: string;
-    propertySearchValuePath?: string | null;
-    canNavigateToProperty?: boolean;
-};
-
-function resolveNormalizedPropertyKeyNodeId(fieldKey: string | undefined): string | undefined {
-    const trimmedFieldKey = fieldKey?.trim() ?? '';
-    if (!trimmedFieldKey) {
-        return undefined;
-    }
-
-    const rawKeyNodeId = buildPropertyKeyNodeId(trimmedFieldKey);
-    return normalizePropertyNodeId(rawKeyNodeId) ?? rawKeyNodeId;
-}
-
-function hasOwnRecordEntries(record: Record<string, string> | undefined): boolean {
-    if (!record) {
-        return false;
-    }
-
-    for (const key in record) {
-        if (Object.prototype.hasOwnProperty.call(record, key)) {
-            return true;
-        }
-    }
-
-    return false;
-}
 
 interface FileItemProps {
     file: TFile;
@@ -199,7 +85,7 @@ interface FileItemProps {
     sortOption?: SortOption;
     parentFolder?: string | null;
     isPinned?: boolean;
-    selectionType?: ItemType | null;
+    selectionType?: NavigationItemType | null;
     /** Active search query for highlighting matches in the file name */
     searchQuery?: string;
     /** Search metadata from Omnisearch provider */
@@ -407,64 +293,26 @@ export const FileItem = React.memo(function FileItem({
     const { app, isMobile, plugin, commandQueue, tagOperations } = useServices();
     const settings = useSettingsState();
     const { fileNameIconNeedles } = useSettingsDerived();
-    const { hiddenTags } = useActiveProfile();
     const uxPreferences = useUXPreferences();
     const includeDescendantNotes = uxPreferences.includeDescendantNotes;
-    const showHiddenItems = uxPreferences.showHiddenItems;
     const appearanceSettings = useListPaneAppearance();
     const { getFileDisplayName, getDB, getFileTimestamps, hasPreview, regenerateFeatureImageForFile } = useFileCache();
-    const { navigateToTag, navigateToProperty } = useTagNavigation();
     const metadataService = useMetadataService();
     const { addNoteShortcut, hasNoteShortcut, noteShortcutKeysByPath, removeShortcut } = useShortcuts();
-    const hiddenTagVisibility = useMemo(() => createHiddenTagVisibility(hiddenTags, showHiddenItems), [hiddenTags, showHiddenItems]);
-
-    // === Helper functions ===
-    // Load all file metadata from cache
-    const loadFileData = useCallback(() => {
-        const db = getDB();
-
-        const preview = appearanceSettings.showPreview && file.extension === 'md' ? db.getCachedPreviewText(file.path) : '';
-
-        // Pull the feature image key from the cache; blobs load asynchronously.
-        const record = db.getFile(file.path);
-        const tagList = [...getCachedFileTags({ app, file, db, fileData: record })];
-        const featureImageKey = record?.featureImageKey ?? null;
-        const featureImageStatus: FeatureImageStatus = record?.featureImageStatus ?? 'unprocessed';
-        const properties = clonePropertyItems(record?.properties ?? null);
-        const wordCount = record?.wordCount ?? null;
-        const taskUnfinished = record?.taskUnfinished ?? null;
-
-        let imageUrl: string | null = null;
-        if (appearanceSettings.showImage && isImageFile(file)) {
-            try {
-                imageUrl = app.vault.getResourcePath(file);
-            } catch {
-                imageUrl = null;
-            }
-        }
-
-        return { preview, tags: tagList, imageUrl, featureImageKey, featureImageStatus, properties, wordCount, taskUnfinished };
-    }, [appearanceSettings.showImage, appearanceSettings.showPreview, app, file, getDB]);
+    const { previewText, tags, featureImageStatus, featureImageUrl, properties, wordCount, taskUnfinished, metadataVersion } =
+        useFileItemContentState({
+            app,
+            file,
+            showPreview: appearanceSettings.showPreview,
+            showImage: appearanceSettings.showImage,
+            getDB,
+            regenerateFeatureImageForFile
+        });
 
     // === State ===
     const [isHovered, setIsHovered] = React.useState(false);
-
-    // Cache initial data to avoid recomputing on every render
-    const initialDataRef = useRef<ReturnType<typeof loadFileData> | null>(null);
-    const initialData = initialDataRef.current ?? loadFileData();
-    initialDataRef.current = initialData;
-
-    const [previewText, setPreviewText] = useState<string>(initialData.preview);
-    const [tags, setTags] = useState<string[]>(initialData.tags);
-    const [featureImageKey, setFeatureImageKey] = useState<string | null>(initialData.featureImageKey);
-    const [featureImageStatus, setFeatureImageStatus] = useState<FeatureImageStatus>(initialData.featureImageStatus);
-    const [featureImageUrl, setFeatureImageUrl] = useState<string | null>(initialData.imageUrl);
-    const [properties, setProperties] = useState<PropertyItem[] | null>(initialData.properties);
-    const [wordCount, setWordCount] = useState<number | null>(initialData.wordCount);
-    const [taskUnfinished, setTaskUnfinished] = useState<number | null>(initialData.taskUnfinished);
     const [featureImageAspectRatio, setFeatureImageAspectRatio] = useState<number | null>(null);
     const [isFeatureImageHidden, setIsFeatureImageHidden] = useState(false);
-    const [metadataVersion, setMetadataVersion] = useState(0);
 
     // === Refs ===
     const fileRef = useRef<HTMLDivElement>(null);
@@ -474,9 +322,7 @@ export const FileItem = React.memo(function FileItem({
     const pinNoteIconRef = useRef<HTMLDivElement>(null);
     const openInNewTabIconRef = useRef<HTMLDivElement>(null);
     const fileIconRef = useRef<HTMLSpanElement>(null);
-    const featureImageObjectUrlRef = useRef<string | null>(null);
     const featureImageImgRef = useRef<HTMLImageElement | null>(null);
-    const lastFeatureImageRegenRef = useRef<{ key: string; at: number } | null>(null);
     // Unique ID for linking screen reader description to the file item
     const hiddenDescriptionId = useId();
 
@@ -498,7 +344,6 @@ export const FileItem = React.memo(function FileItem({
     const hasUnfinishedTasks = typeof taskUnfinished === 'number' && taskUnfinished > 0;
     const showFileIconUnfinishedTask = settings.showFileIconUnfinishedTask && hasUnfinishedTasks;
     const unfinishedTaskIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'file-unfinished-task'), [settings.interfaceIcons]);
-    const wordCountPillIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'file-word-count'), [settings.interfaceIcons]);
 
     // Get display name from RAM cache (handles frontmatter title)
     const displayName = useMemo(() => {
@@ -574,7 +419,11 @@ export const FileItem = React.memo(function FileItem({
         return resolveFileDragIconId(file, settings.fileTypeIconMap, app.metadataCache, effectiveFileIconId);
     }, [app.metadataCache, effectiveFileIconId, file, metadataVersion, settings.fileTypeIconMap]);
 
-    const isCompactMode = !appearanceSettings.showDate && !appearanceSettings.showPreview && !appearanceSettings.showImage;
+    const isCompactMode = isListPaneCompactMode({
+        showDate: appearanceSettings.showDate,
+        showPreview: appearanceSettings.showPreview,
+        showImage: appearanceSettings.showImage
+    });
 
     // Determines whether to display the file icon based on icon availability
     const shouldShowFileIcon = useMemo(() => {
@@ -610,693 +459,19 @@ export const FileItem = React.memo(function FileItem({
         );
     }, [appearanceSettings.titleRows, extensionSuffix, fileColor, applyColorToName, highlightedName]);
 
-    // === Callbacks ===
-
-    // Handle tag click
-    const handleTagClick = useCallback(
-        (event: React.MouseEvent, tag: string) => {
-            event.stopPropagation();
-
-            if (onModifySearchWithTag) {
-                const operator = getTagSearchModifierOperator(event, settings.multiSelectModifier, isMobile);
-                if (operator) {
-                    event.preventDefault();
-                    onModifySearchWithTag(tag, operator);
-                    return;
-                }
-            }
-
-            navigateToTag(tag, { preserveNavigationFocus: false });
-        },
-        [navigateToTag, onModifySearchWithTag, settings.multiSelectModifier, isMobile]
-    );
-
-    const handlePropertyClick = useCallback(
-        (event: React.MouseEvent, pill: PropertyPill) => {
-            const propertyNodeId = pill.propertyNodeId;
-            const propertySearchKey = pill.propertySearchKey;
-            const canNavigateToProperty = pill.canNavigateToProperty === true;
-            event.stopPropagation();
-
-            if (canNavigateToProperty && onModifySearchWithProperty && propertySearchKey) {
-                const operator = getTagSearchModifierOperator(event, settings.multiSelectModifier, isMobile);
-                if (operator) {
-                    event.preventDefault();
-                    onModifySearchWithProperty(propertySearchKey, pill.propertySearchValuePath ?? null, operator);
-                    return;
-                }
-            }
-
-            const wikiLinkTarget = pill.wikiLink?.target.trim();
-            if (wikiLinkTarget) {
-                event.preventDefault();
-                runAsyncAction(() => app.workspace.openLinkText(wikiLinkTarget, file.path, false));
-                return;
-            }
-
-            if (!canNavigateToProperty || !propertyNodeId || !propertySearchKey) {
-                return;
-            }
-
-            navigateToProperty(propertyNodeId, { preserveNavigationFocus: false });
-        },
-        [app.workspace, file.path, isMobile, navigateToProperty, onModifySearchWithProperty, settings.multiSelectModifier]
-    );
-
-    const getTagColorData = useCallback(
-        (tag: string): { color?: string; background?: string } => {
-            return metadataService.getTagColorData(tag);
-        },
-        [metadataService]
-    );
-
-    const colorFileTags = settings.colorFileTags;
-    const prioritizeColoredFileTags = settings.prioritizeColoredFileTags;
-
-    const visibleTags = useMemo(() => {
-        if (tags.length === 0) {
-            return tags;
-        }
-        if (!hiddenTagVisibility.shouldFilterHiddenTags) {
-            return tags;
-        }
-
-        return tags.filter(tag => hiddenTagVisibility.isTagVisible(tag));
-    }, [hiddenTagVisibility, tags]);
-
-    // Build color and background map for visible tags
-    const tagColorData = useMemo(() => {
-        void settings.tagColors;
-        void settings.tagBackgroundColors;
-        void settings.inheritTagColors;
-
-        if (!colorFileTags || visibleTags.length === 0) {
-            return new Map<string, { color?: string; background?: string }>();
-        }
-
-        // Cache resolved tag color/background for visible tags to avoid repeated ancestor checks.
-        const entries = new Map<string, { color?: string; background?: string }>();
-        visibleTags.forEach(tag => {
-            const data = getTagColorData(tag);
-            if (data.color || data.background) {
-                entries.set(tag, data);
-            }
-        });
-
-        return entries;
-    }, [colorFileTags, getTagColorData, settings.inheritTagColors, settings.tagBackgroundColors, settings.tagColors, visibleTags]);
-
-    // Sort tags alphabetically and optionally prioritize colored tags
-    const categorizedTags = useMemo(() => {
-        if (visibleTags.length === 0) {
-            return visibleTags;
-        }
-
-        if (!prioritizeColoredFileTags || !colorFileTags) {
-            const sortedTags = [...visibleTags];
-            sortTagsAlphabetically(sortedTags);
-            return sortedTags;
-        }
-
-        const coloredTags: string[] = [];
-        const regularTags: string[] = [];
-
-        visibleTags.forEach(tag => {
-            const tagColors = tagColorData.get(tag);
-            const hasTagColor = Boolean(tagColors?.color);
-            const hasTagBackground = Boolean(tagColors?.background);
-
-            if (hasTagColor || hasTagBackground) {
-                coloredTags.push(tag);
-                return;
-            }
-
-            regularTags.push(tag);
-        });
-
-        sortTagsAlphabetically(coloredTags);
-        sortTagsAlphabetically(regularTags);
-
-        return [...coloredTags, ...regularTags];
-    }, [colorFileTags, prioritizeColoredFileTags, tagColorData, visibleTags]);
-
-    const shouldShowFileTags = useMemo(() => {
-        if (!settings.showTags || !settings.showFileTags) {
-            return false;
-        }
-        if (categorizedTags.length === 0) {
-            return false;
-        }
-        if (isCompactMode && !settings.showFileTagsInCompactMode) {
-            return false;
-        }
-        return true;
-    }, [categorizedTags, isCompactMode, settings.showFileTags, settings.showFileTagsInCompactMode, settings.showTags]);
-
-    const visibleProperties = useMemo(() => {
-        if (!properties || properties.length === 0) {
-            return properties;
-        }
-        if (visiblePropertyKeys.size === 0) {
-            return [];
-        }
-
-        // Includes configured keys with visible values and skips key-only boolean markers.
-        return properties.filter(entry => {
-            const normalizedFieldKey = casefold(entry.fieldKey);
-            if (!visiblePropertyKeys.has(normalizedFieldKey)) {
-                return false;
-            }
-
-            if (entry.valueKind === 'string') {
-                return true;
-            }
-
-            if (entry.valueKind !== undefined) {
-                return false;
-            }
-
-            const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
-            return !isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
-        });
-    }, [properties, visiblePropertyKeys]);
-
-    const propertyColorSignature = useMemo(() => {
-        if (!settings.showFileProperties || !settings.colorFileProperties || !visibleProperties || visibleProperties.length === 0) {
-            return '';
-        }
-
-        const colorRecord = settings.propertyColors;
-        const backgroundRecord = settings.propertyBackgroundColors;
-        const inheritSignature = settings.inheritPropertyColors ? 'inherit:1' : 'inherit:0';
-        const signatures: string[] = [];
-        const seenValueNodeIds = new Set<string>();
-        const seenKeyNodeIds = new Set<string>();
-
-        for (const entry of visibleProperties) {
-            const rawValue = entry.value;
-            if (rawValue.trim().length === 0) {
-                continue;
-            }
-
-            const rawValueNodeId = buildPropertyValueNodeId(entry.fieldKey, rawValue);
-            const valueNodeId = normalizePropertyNodeId(rawValueNodeId) ?? rawValueNodeId;
-            if (!seenValueNodeIds.has(valueNodeId)) {
-                seenValueNodeIds.add(valueNodeId);
-                signatures.push(`v:${valueNodeId}\u0000${colorRecord?.[valueNodeId] ?? ''}\u0000${backgroundRecord?.[valueNodeId] ?? ''}`);
-            }
-
-            const keyNodeId = getPropertyKeyNodeIdFromNodeId(valueNodeId);
-            if (!keyNodeId || seenKeyNodeIds.has(keyNodeId)) {
-                continue;
-            }
-
-            seenKeyNodeIds.add(keyNodeId);
-            signatures.push(`k:${keyNodeId}\u0000${colorRecord?.[keyNodeId] ?? ''}\u0000${backgroundRecord?.[keyNodeId] ?? ''}`);
-        }
-
-        if (signatures.length === 0) {
-            return inheritSignature;
-        }
-
-        if (signatures.length === 1) {
-            return `${inheritSignature}\u0001${signatures[0] ?? ''}`;
-        }
-
-        signatures.sort();
-        return `${inheritSignature}\u0001${signatures.join('\u0001')}`;
-    }, [
-        visibleProperties,
-        settings.colorFileProperties,
-        settings.inheritPropertyColors,
-        settings.propertyBackgroundColors,
-        settings.propertyColors,
-        settings.showFileProperties
-    ]);
-
-    const canShowPropertyPills = useMemo(() => {
-        if (file.extension !== 'md') {
-            return false;
-        }
-
-        if (isCompactMode && !settings.showFilePropertiesInCompactMode) {
-            return false;
-        }
-
-        return true;
-    }, [file.extension, isCompactMode, settings.showFilePropertiesInCompactMode]);
-
-    const wordCountPropertyPill = useMemo<PropertyPill | null>(() => {
-        if (!canShowPropertyPills) {
-            return null;
-        }
-
-        if (appearanceSettings.notePropertyType !== 'wordCount') {
-            return null;
-        }
-
-        // Don't show `0`: it can mean "no words", a huge file (content read skipped), or an Excalidraw document.
-        if (typeof wordCount !== 'number' || !Number.isFinite(wordCount) || wordCount <= 0) {
-            return null;
-        }
-
-        const truncatedWordCount = Math.trunc(wordCount);
-        return {
-            value: truncatedWordCount.toString(),
-            label: truncatedWordCount.toLocaleString(),
-            wikiLink: null,
-            iconId: wordCountPillIconId
-        };
-    }, [appearanceSettings.notePropertyType, canShowPropertyPills, wordCount, wordCountPillIconId]);
-
-    const propertyPills = useMemo<PropertyPill[]>(() => {
-        void propertyColorSignature;
-
-        const pills: PropertyPill[] = [];
-        const frontmatterPills: PropertyPill[] = [];
-        const colorFileProperties = settings.colorFileProperties;
-        const prioritizeColoredFileProperties = settings.prioritizeColoredFileProperties;
-
-        if (!canShowPropertyPills || !settings.showFileProperties) {
-            return pills;
-        }
-
-        if (!visibleProperties || visibleProperties.length === 0) {
-            return pills;
-        }
-
-        // Convert cached property data to renderable pill models.
-        const colorLookupCache = new Map<string, { color?: string; background?: string }>();
-        for (const entry of visibleProperties) {
-            const rawValue = entry.value;
-            if (rawValue.trim().length === 0) {
-                continue;
-            }
-
-            const trimmedFieldKey = entry.fieldKey.trim();
-            const normalizedValuePath = normalizePropertyTreeValuePath(rawValue);
-            const isKeyOnlyValue = isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
-            const wikiLink = isKeyOnlyValue ? null : parseStrictWikiLink(rawValue);
-            const label = wikiLink ? wikiLink.displayText : rawValue;
-
-            // Resolve property colors at render time from field key and raw value.
-            // This keeps persisted property items stable across style rule changes.
-            const cacheKey = `${entry.fieldKey}\u0000${rawValue}`;
-            let colorData = colorLookupCache.get(cacheKey);
-            if (!colorData) {
-                if (colorFileProperties) {
-                    const propertyNodeId = buildPropertyValueNodeId(entry.fieldKey, rawValue);
-                    colorData = metadataService.getPropertyColorData(propertyNodeId);
-                } else {
-                    colorData = {};
-                }
-                colorLookupCache.set(cacheKey, colorData);
-            }
-
-            const propertyNodeId = (() => {
-                if (!trimmedFieldKey) {
-                    return undefined;
-                }
-
-                const rawPropertyNodeId = isKeyOnlyValue
-                    ? buildPropertyKeyNodeId(trimmedFieldKey)
-                    : buildPropertyValueNodeId(trimmedFieldKey, normalizedValuePath);
-                return normalizePropertyNodeId(rawPropertyNodeId) ?? rawPropertyNodeId;
-            })();
-
-            const parsedPropertyNode = propertyNodeId ? parsePropertyNodeId(propertyNodeId) : null;
-            const propertyKeyNodeId = propertyNodeId
-                ? (getPropertyKeyNodeIdFromNodeId(propertyNodeId) ?? resolveNormalizedPropertyKeyNodeId(trimmedFieldKey))
-                : resolveNormalizedPropertyKeyNodeId(trimmedFieldKey);
-            const propertySearchKey = parsedPropertyNode?.key || trimmedFieldKey;
-            const propertySearchValuePath = isKeyOnlyValue ? null : (parsedPropertyNode?.valuePath ?? normalizedValuePath);
-            const normalizedPropertySearchKey = casefold(propertySearchKey);
-            const canNavigateToProperty =
-                propertyNodeId !== undefined &&
-                normalizedPropertySearchKey.length > 0 &&
-                visibleNavigationPropertyKeys.has(normalizedPropertySearchKey);
-
-            frontmatterPills.push({
-                value: rawValue,
-                label,
-                wikiLink,
-                fieldKey: entry.fieldKey,
-                propertyKeyNodeId,
-                color: colorData.color,
-                background: colorData.background,
-                propertyNodeId,
-                propertySearchKey: propertySearchKey.length > 0 ? propertySearchKey : undefined,
-                propertySearchValuePath,
-                canNavigateToProperty
-            });
-        }
-
-        const prioritizeColoredPills = prioritizeColoredFileProperties && colorFileProperties;
-        const groupedPills = new Map<string, PropertyPill[]>();
-        const groupOrder: string[] = [];
-
-        frontmatterPills.forEach(pill => {
-            const key = pill.fieldKey ?? '';
-            const existingGroup = groupedPills.get(key);
-            if (existingGroup) {
-                existingGroup.push(pill);
-                return;
-            }
-
-            groupedPills.set(key, [pill]);
-            groupOrder.push(key);
-        });
-
-        groupOrder.forEach(groupKey => {
-            const group = groupedPills.get(groupKey);
-            if (!group || group.length === 0) {
-                return;
-            }
-
-            pills.push(...sortPropertyPillGroup(group, prioritizeColoredPills));
-        });
-
-        return pills;
-    }, [
-        canShowPropertyPills,
-        metadataService,
-        visibleProperties,
-        propertyColorSignature,
-        settings.colorFileProperties,
-        settings.prioritizeColoredFileProperties,
-        settings.showFileProperties,
-        visibleNavigationPropertyKeys
-    ]);
-
-    const propertyColorData = useMemo(() => {
-        // Precompute per-token styles so each pill render is O(1).
-        const entries = new Map<
-            string,
-            {
-                style?: (React.CSSProperties & { '--nn-file-tag-custom-bg'?: string }) | undefined;
-                hasColor: boolean;
-                hasBackground: boolean;
-            }
-        >();
-
-        if (propertyPills.length === 0) {
-            return entries;
-        }
-
-        for (const pill of propertyPills) {
-            const colorToken = pill.color?.trim() ?? '';
-            const backgroundToken = pill.background?.trim() ?? '';
-            if (!colorToken && !backgroundToken) {
-                continue;
-            }
-
-            const cacheKey = `${colorToken}\u0000${backgroundToken}`;
-            if (entries.has(cacheKey)) {
-                continue;
-            }
-
-            const pillStyle: React.CSSProperties & { '--nn-file-tag-custom-bg'?: string } = {};
-
-            let hasColor = false;
-            let hasBackground = false;
-            if (backgroundToken && isSupportedCssColor(backgroundToken)) {
-                pillStyle['--nn-file-tag-custom-bg'] = backgroundToken;
-                hasBackground = true;
-            }
-            if (colorToken && isSupportedCssColor(colorToken)) {
-                pillStyle.color = colorToken;
-                hasColor = true;
-            }
-
-            entries.set(cacheKey, {
-                style: hasColor || hasBackground ? pillStyle : undefined,
-                hasColor,
-                hasBackground
-            });
-        }
-
-        return entries;
-    }, [propertyPills]);
-
-    const shouldShowProperty = propertyPills.length > 0;
-    const shouldShowWordCountProperty = Boolean(wordCountPropertyPill);
-
-    const propertyRows = useMemo((): PropertyPill[][] => {
-        if (!settings.showPropertiesOnSeparateRows) {
-            return [];
-        }
-
-        const rows: PropertyPill[][] = [];
-        const rowsByKey = new Map<string, PropertyPill[]>();
-        let unkeyedRow: PropertyPill[] | null = null;
-
-        for (const pill of propertyPills) {
-            const fieldKey = pill.fieldKey?.trim() ?? '';
-            if (!fieldKey) {
-                if (!unkeyedRow) {
-                    unkeyedRow = [];
-                    rows.push(unkeyedRow);
-                }
-                unkeyedRow.push(pill);
-                continue;
-            }
-
-            let row = rowsByKey.get(fieldKey);
-            if (!row) {
-                row = [];
-                rowsByKey.set(fieldKey, row);
-                rows.push(row);
-            }
-            row.push(pill);
-        }
-
-        return rows;
-    }, [propertyPills, settings.showPropertiesOnSeparateRows]);
-
-    const getTagDisplayName = useCallback(
-        (tag: string): string => {
-            if (settings.showFileTagAncestors) {
-                return tag;
-            }
-
-            const segments = tag.split('/').filter(segment => segment.length > 0);
-
-            if (segments.length === 0) {
-                return tag;
-            }
-
-            return segments[segments.length - 1];
-        },
-        [settings.showFileTagAncestors]
-    );
-
-    const tagPillIcons = useMemo(() => {
-        const icons = new Map<string, string>();
-        const tagIcons = settings.tagIcons;
-        if (!tagIcons || !hasOwnRecordEntries(tagIcons) || categorizedTags.length === 0) {
-            return icons;
-        }
-
-        categorizedTags.forEach(tag => {
-            const iconId = metadataService.getTagIcon(tag);
-            if (iconId) {
-                icons.set(tag, iconId);
-            }
-        });
-
-        return icons;
-    }, [categorizedTags, metadataService, settings.tagIcons]);
-
-    const propertyPillIcons = useMemo(() => {
-        const icons = new Map<PropertyPill, string>();
-        const propertyIcons = settings.propertyIcons;
-        if (!propertyIcons || !hasOwnRecordEntries(propertyIcons)) {
-            if (wordCountPropertyPill?.iconId) {
-                icons.set(wordCountPropertyPill, wordCountPropertyPill.iconId);
-            }
-            return icons;
-        }
-
-        if (propertyPills.length === 0) {
-            if (wordCountPropertyPill?.iconId) {
-                icons.set(wordCountPropertyPill, wordCountPropertyPill.iconId);
-            }
-            return icons;
-        }
-
-        const resolvePropertyPillIconId = (pill: PropertyPill): string | undefined => {
-            if (pill.iconId) {
-                return pill.iconId;
-            }
-
-            let checkedKeyNodeId: string | null = null;
-            if (pill.propertyNodeId) {
-                const valueIconId = metadataService.getPropertyIcon(pill.propertyNodeId);
-                if (valueIconId) {
-                    return valueIconId;
-                }
-
-                const keyNodeIdFromNode = getPropertyKeyNodeIdFromNodeId(pill.propertyNodeId);
-                if (keyNodeIdFromNode) {
-                    checkedKeyNodeId = keyNodeIdFromNode;
-                    if (keyNodeIdFromNode !== pill.propertyNodeId) {
-                        const keyIconId = metadataService.getPropertyIcon(keyNodeIdFromNode);
-                        if (keyIconId) {
-                            return keyIconId;
-                        }
-                    }
-                }
-            }
-
-            const fallbackKeyNodeId = pill.propertyKeyNodeId;
-            if (!fallbackKeyNodeId) {
-                return undefined;
-            }
-
-            if (checkedKeyNodeId === fallbackKeyNodeId) {
-                return undefined;
-            }
-
-            return metadataService.getPropertyIcon(fallbackKeyNodeId);
-        };
-
-        propertyPills.forEach(pill => {
-            const iconId = resolvePropertyPillIconId(pill);
-            if (iconId) {
-                icons.set(pill, iconId);
-            }
-        });
-
-        if (wordCountPropertyPill?.iconId) {
-            icons.set(wordCountPropertyPill, wordCountPropertyPill.iconId);
-        }
-
-        return icons;
-    }, [metadataService, propertyPills, settings.propertyIcons, wordCountPropertyPill]);
-
-    // Render tags
-    const renderTags = useCallback(() => {
-        if (!shouldShowFileTags) {
-            return null;
-        }
-
-        return (
-            <div className="nn-file-tags">
-                {categorizedTags.map((tag, index) => {
-                    const tagColors = tagColorData.get(tag);
-                    const tagColor = tagColors?.color;
-                    const tagBackground = tagColors?.background;
-                    const displayTag = getTagDisplayName(tag);
-                    const tagIconId = tagPillIcons.get(tag);
-                    const tagStyle: React.CSSProperties & { '--nn-file-tag-custom-bg'?: string } = {};
-
-                    if (tagBackground) {
-                        tagStyle['--nn-file-tag-custom-bg'] = tagBackground;
-                    }
-
-                    if (tagColor) {
-                        tagStyle.color = tagColor;
-                    }
-
-                    return (
-                        <span
-                            key={index}
-                            className="nn-file-tag nn-clickable-tag"
-                            data-has-color={tagColor ? 'true' : undefined}
-                            data-has-background={tagBackground ? 'true' : undefined}
-                            onClick={e => handleTagClick(e, tag)}
-                            role="button"
-                            tabIndex={0}
-                            style={tagColor || tagBackground ? tagStyle : undefined}
-                        >
-                            {tagIconId ? <ServiceIcon iconId={tagIconId} className="nn-file-pill-inline-icon" aria-hidden={true} /> : null}
-                            {displayTag}
-                        </span>
-                    );
-                })}
-            </div>
-        );
-    }, [categorizedTags, getTagDisplayName, handleTagClick, shouldShowFileTags, tagColorData, tagPillIcons]);
-
-    const renderPropertyPill = useCallback(
-        (pill: PropertyPill, index: number) => {
-            const canNavigateToProperty = pill.canNavigateToProperty === true;
-            const isWikiLink = Boolean(pill.wikiLink);
-            const isClickable = canNavigateToProperty || isWikiLink;
-            const className = [
-                'nn-file-tag',
-                'nn-file-property',
-                isClickable ? 'nn-clickable-tag' : '',
-                isWikiLink ? 'nn-file-property-wikilink' : ''
-            ]
-                .filter(classToken => classToken.length > 0)
-                .join(' ');
-            const colorToken = pill.color?.trim() ?? '';
-            const backgroundToken = pill.background?.trim() ?? '';
-            const cacheKey = `${colorToken}\u0000${backgroundToken}`;
-            const resolvedColorData = colorToken || backgroundToken ? propertyColorData.get(cacheKey) : undefined;
-            const hasColor = Boolean(resolvedColorData?.hasColor);
-            const hasBackground = Boolean(resolvedColorData?.hasBackground);
-            const propertyIconId = propertyPillIcons.get(pill);
-
-            return (
-                <span
-                    key={index}
-                    className={className}
-                    data-has-color={hasColor ? 'true' : undefined}
-                    data-has-background={hasBackground ? 'true' : undefined}
-                    onClick={isClickable ? event => handlePropertyClick(event, pill) : undefined}
-                    role={isClickable ? 'button' : undefined}
-                    tabIndex={isClickable ? 0 : undefined}
-                    style={resolvedColorData?.style}
-                >
-                    {propertyIconId ? (
-                        <ServiceIcon iconId={propertyIconId} className="nn-file-pill-inline-icon" aria-hidden={true} />
-                    ) : null}
-                    {pill.label}
-                </span>
-            );
-        },
-        [handlePropertyClick, propertyColorData, propertyPillIcons]
-    );
-
-    const renderProperties = useCallback(() => {
-        if (!shouldShowProperty) {
-            return null;
-        }
-
-        if (!settings.showPropertiesOnSeparateRows) {
-            return <div className="nn-file-property-row">{propertyPills.map(renderPropertyPill)}</div>;
-        }
-
-        return (
-            <>
-                {propertyRows.map((row, rowIndex) => (
-                    <div key={rowIndex} className="nn-file-property-row">
-                        {row.map((pill, index) => renderPropertyPill(pill, index))}
-                    </div>
-                ))}
-            </>
-        );
-    }, [propertyPills, propertyRows, renderPropertyPill, settings.showPropertiesOnSeparateRows, shouldShowProperty]);
-
-    const renderWordCountProperty = useCallback(() => {
-        if (!shouldShowWordCountProperty || !wordCountPropertyPill) {
-            return null;
-        }
-
-        return <div className="nn-file-property-row">{renderPropertyPill(wordCountPropertyPill, 0)}</div>;
-    }, [renderPropertyPill, shouldShowWordCountProperty, wordCountPropertyPill]);
-
-    const renderPillRows = useCallback(() => {
-        return (
-            <>
-                {renderTags()}
-                {renderProperties()}
-                {renderWordCountProperty()}
-            </>
-        );
-    }, [renderProperties, renderTags, renderWordCountProperty]);
+    const { shouldShowFileTags, hasVisiblePillRows, pillRows } = useFileItemPills({
+        file,
+        isCompactMode,
+        tags,
+        properties,
+        wordCount,
+        notePropertyType: appearanceSettings.notePropertyType,
+        settings,
+        visiblePropertyKeys,
+        visibleNavigationPropertyKeys,
+        onModifySearchWithTag,
+        onModifySearchWithProperty
+    });
 
     // Format display date based on current sort
     const displayDate = useMemo(() => {
@@ -1339,12 +514,6 @@ export const FileItem = React.memo(function FileItem({
         localDayReference
     ]);
 
-    // Height optimization settings
-    const heightOptimizationEnabled = settings.optimizeNoteHeight;
-    const heightOptimizationDisabled = !settings.optimizeNoteHeight;
-
-    // Layout decision variables
-    const pinnedItemShouldUseCompactLayout = isPinned && heightOptimizationEnabled; // Pinned items get compact treatment only when optimizing
     const effectivePreviewText = searchMeta?.excerpt ? searchMeta.excerpt : previewText;
     const hasPreviewAccordingToStatus = appearanceSettings.showPreview && file.extension === 'md' ? hasPreview(file.path) : false;
     const hasPreviewContent = hasPreviewAccordingToStatus || effectivePreviewText.length > 0;
@@ -1362,17 +531,37 @@ export const FileItem = React.memo(function FileItem({
         hasFeatureImageUrl: Boolean(featureImageUrl)
     });
 
-    const shouldUseSingleLineForDateAndPreview = pinnedItemShouldUseCompactLayout || appearanceSettings.previewRows < 2;
-    const shouldUseMultiLinePreviewLayout = !pinnedItemShouldUseCompactLayout && appearanceSettings.previewRows >= 2;
-    const shouldCollapseEmptyPreviewSpace = heightOptimizationEnabled && !hasPreviewContent && !showFeatureImageArea; // Optimization: compact layout for empty preview
-    const shouldAlwaysReservePreviewSpace = heightOptimizationDisabled || hasPreviewContent || showFeatureImageArea; // Show full layout when not optimizing OR has content
-    const hasVisiblePillRows = shouldShowFileTags || shouldShowProperty || shouldShowWordCountProperty;
-    const shouldSuppressEmptyPreviewLines = !hasPreviewContent && hasVisiblePillRows;
-    const shouldShowDateForItem = settings.showFileDate && !pinnedItemShouldUseCompactLayout;
-    const shouldShowSingleLineSecondLine = shouldShowDateForItem || (settings.showFilePreview && !shouldSuppressEmptyPreviewLines);
+    const {
+        pinnedItemShouldUseCompactLayout,
+        shouldUseSingleLineForDateAndPreview,
+        shouldUseMultiLinePreviewLayout,
+        shouldCollapseEmptyPreviewSpace,
+        shouldAlwaysReservePreviewSpace,
+        shouldSuppressEmptyPreviewLines,
+        shouldShowDateForItem,
+        shouldShowSingleLineSecondLine
+    } = getFileItemLayoutState({
+        showDate: appearanceSettings.showDate,
+        showPreview: appearanceSettings.showPreview,
+        showImage: appearanceSettings.showImage,
+        previewRows: appearanceSettings.previewRows,
+        optimizeNoteHeight: settings.optimizeNoteHeight,
+        isPinned,
+        hasPreviewContent,
+        showFeatureImageArea,
+        hasVisiblePillRows
+    });
 
     // Determine parent folder display metadata
     const parentFolderSource = file.parent;
+    const shouldShowParentFolderLine = shouldShowFileItemParentFolderLine({
+        showParentFolder: settings.showParentFolder,
+        pinnedItemShouldUseCompactLayout,
+        selectionType,
+        includeDescendantNotes,
+        parentFolder,
+        fileParentPath: parentFolderSource?.path ?? null
+    });
     let parentFolderMeta: {
         name: string;
         iconId: string;
@@ -1380,34 +569,27 @@ export const FileItem = React.memo(function FileItem({
         applyColorToName: boolean;
         showIcon: boolean;
     } | null = null;
-    if (settings.showParentFolder && parentFolderSource instanceof TFolder && !pinnedItemShouldUseCompactLayout) {
-        // Show parent label in tag view or when viewing descendants
-        const shouldShowParentLabel =
-            selectionType === ItemType.TAG || (includeDescendantNotes && parentFolder && parentFolderSource.path !== parentFolder);
+    if (shouldShowParentFolderLine && parentFolderSource instanceof TFolder && parentFolderSource.path !== '/') {
+        const shouldShowParentFolderIcon = settings.showParentFolderIcon;
+        const shouldShowParentFolderColor = settings.showParentFolderColor;
+        const parentFolderDisplayData = metadataService.getFolderDisplayData(parentFolderSource.path, {
+            includeDisplayName: true,
+            includeColor: shouldShowParentFolderColor,
+            includeBackgroundColor: false,
+            includeIcon: shouldShowParentFolderIcon
+        });
+        const customParentIcon = shouldShowParentFolderIcon ? parentFolderDisplayData.icon : undefined;
+        const fallbackParentIcon = 'lucide-folder-closed';
 
-        if (shouldShowParentLabel && parentFolderSource.path !== '/') {
-            // Use custom icon if set, otherwise use default folder icon
-            const shouldShowParentFolderIcon = settings.showParentFolderIcon;
-            const shouldShowParentFolderColor = settings.showParentFolderColor;
-            const parentFolderDisplayData = metadataService.getFolderDisplayData(parentFolderSource.path, {
-                includeDisplayName: true,
-                includeColor: shouldShowParentFolderColor,
-                includeBackgroundColor: false,
-                includeIcon: shouldShowParentFolderIcon
-            });
-            const customParentIcon = shouldShowParentFolderIcon ? parentFolderDisplayData.icon : undefined;
-            const fallbackParentIcon = 'lucide-folder-closed';
-
-            const parentFolderColor = shouldShowParentFolderColor ? parentFolderDisplayData.color : undefined;
-            const shouldApplyParentFolderColor = Boolean(parentFolderColor);
-            parentFolderMeta = {
-                name: parentFolderDisplayData.displayName || parentFolderSource.name,
-                iconId: customParentIcon ?? fallbackParentIcon,
-                color: shouldApplyParentFolderColor ? parentFolderColor : undefined,
-                applyColorToName: shouldApplyParentFolderColor && !settings.colorIconOnly,
-                showIcon: shouldShowParentFolderIcon
-            };
-        }
+        const parentFolderColor = shouldShowParentFolderColor ? parentFolderDisplayData.color : undefined;
+        const shouldApplyParentFolderColor = Boolean(parentFolderColor);
+        parentFolderMeta = {
+            name: parentFolderDisplayData.displayName || parentFolderSource.name,
+            iconId: customParentIcon ?? fallbackParentIcon,
+            color: shouldApplyParentFolderColor ? parentFolderColor : undefined,
+            applyColorToName: shouldApplyParentFolderColor && !settings.colorIconOnly,
+            showIcon: shouldShowParentFolderIcon
+        };
     }
 
     // Render parent folder label if metadata is available
@@ -1496,166 +678,6 @@ export const FileItem = React.memo(function FileItem({
         }
         return strings.listPane.hiddenItemAriaLabel.replace('{name}', displayName);
     }, [isHidden, displayName]);
-
-    // Handle file changes and subscribe to content updates
-    useEffect(() => {
-        const {
-            preview,
-            tags: initialTags,
-            featureImageKey: initialFeatureImageKey,
-            featureImageStatus: initialFeatureImageStatus,
-            properties: initialProperties,
-            wordCount: initialWordCount,
-            taskUnfinished: initialTaskUnfinished
-        } = loadFileData();
-
-        // Only update state if values actually changed to prevent unnecessary re-renders
-        setPreviewText(prev => (prev === preview ? prev : preview));
-        setTags(prev => (areStringArraysEqual(prev, initialTags) ? prev : initialTags));
-        setFeatureImageKey(prev => (prev === initialFeatureImageKey ? prev : initialFeatureImageKey));
-        setFeatureImageStatus(prev => (prev === initialFeatureImageStatus ? prev : initialFeatureImageStatus));
-        setProperties(prev => (arePropertyItemsEqual(prev, initialProperties) ? prev : initialProperties));
-        setWordCount(prev => (prev === initialWordCount ? prev : initialWordCount));
-        setTaskUnfinished(prev => (prev === initialTaskUnfinished ? prev : initialTaskUnfinished));
-
-        const db = getDB();
-        const unsubscribe = db.onFileContentChange(file.path, (changes: FileContentChange['changes']) => {
-            let shouldRefreshFrontmatterState = false;
-
-            // Update preview text when it changes
-            if (changes.preview !== undefined && appearanceSettings.showPreview && file.extension === 'md') {
-                const nextPreview = changes.preview || '';
-                setPreviewText(prev => (prev === nextPreview ? prev : nextPreview));
-            }
-            // Update feature image key when it changes
-            if (changes.featureImageKey !== undefined) {
-                setFeatureImageKey(prev => (prev === changes.featureImageKey ? prev : (changes.featureImageKey ?? null)));
-            }
-            if (changes.featureImageStatus !== undefined) {
-                const nextStatus = changes.featureImageStatus;
-                setFeatureImageStatus(prev => (prev === nextStatus ? prev : nextStatus));
-            }
-            // Update tags when they change
-            if (changes.tags !== undefined) {
-                const nextTags = [...(changes.tags ?? [])];
-                setTags(prev => (areStringArraysEqual(prev, nextTags) ? prev : nextTags));
-            }
-            if (changes.wordCount !== undefined) {
-                const nextWordCount = changes.wordCount ?? null;
-                setWordCount(prev => (prev === nextWordCount ? prev : nextWordCount));
-            }
-            if (changes.taskUnfinished !== undefined) {
-                const nextTaskUnfinished = changes.taskUnfinished ?? null;
-                setTaskUnfinished(prev => (prev === nextTaskUnfinished ? prev : nextTaskUnfinished));
-            }
-            // Update properties when they change
-            if (changes.properties !== undefined) {
-                const nextProperties = clonePropertyItems(changes.properties ?? null);
-                setProperties(prev => (arePropertyItemsEqual(prev, nextProperties) ? prev : nextProperties));
-                shouldRefreshFrontmatterState = true;
-            }
-            // Trigger metadata refresh when frontmatter changes
-            if (changes.metadata !== undefined) {
-                shouldRefreshFrontmatterState = true;
-            }
-
-            if (shouldRefreshFrontmatterState) {
-                setMetadataVersion(v => v + 1);
-            }
-        });
-
-        if (appearanceSettings.showPreview && file.extension === 'md') {
-            void db.ensurePreviewTextLoaded(file.path);
-        }
-
-        return () => {
-            unsubscribe();
-        };
-        // NOTE: include file.path because Obsidian reuses TFile instance on rename
-    }, [file, file.path, appearanceSettings.showPreview, appearanceSettings.showImage, getDB, app, loadFileData]);
-
-    useEffect(() => {
-        return () => {
-            if (featureImageObjectUrlRef.current) {
-                URL.revokeObjectURL(featureImageObjectUrlRef.current);
-                featureImageObjectUrlRef.current = null;
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        let isActive = true;
-
-        // Clear any previous object URL before loading a new one.
-        if (featureImageObjectUrlRef.current) {
-            URL.revokeObjectURL(featureImageObjectUrlRef.current);
-            featureImageObjectUrlRef.current = null;
-        }
-
-        if (!appearanceSettings.showImage) {
-            // Hide feature images when the setting is disabled.
-            setFeatureImageUrl(null);
-            return () => {
-                isActive = false;
-            };
-        }
-
-        if (isImageFile(file)) {
-            // Image files render directly from the vault resource path.
-            try {
-                const url = app.vault.getResourcePath(file);
-                setFeatureImageUrl(url);
-            } catch {
-                setFeatureImageUrl(null);
-            }
-            return () => {
-                isActive = false;
-            };
-        }
-
-        if (featureImageStatus !== 'has') {
-            // Skip blob fetch when no thumbnail blob is recorded.
-            setFeatureImageUrl(null);
-            return () => {
-                isActive = false;
-            };
-        }
-
-        if (!featureImageKey || featureImageKey === '') {
-            // Skip blob fetch when no key is recorded.
-            setFeatureImageUrl(null);
-            return () => {
-                isActive = false;
-            };
-        }
-
-        const db = getDB();
-        const expectedKey = featureImageKey;
-        void db.getFeatureImageBlob(file.path, expectedKey).then(blob => {
-            if (!isActive) {
-                return;
-            }
-            if (!blob) {
-                setFeatureImageUrl(null);
-                const now = Date.now();
-                const last = lastFeatureImageRegenRef.current;
-                const shouldTrigger = !last || last.key !== expectedKey || now - last.at >= FEATURE_IMAGE_REGEN_THROTTLE_MS;
-                if (shouldTrigger) {
-                    lastFeatureImageRegenRef.current = { key: expectedKey, at: now };
-                    void regenerateFeatureImageForFile(file);
-                }
-                return;
-            }
-            // Create an object URL for the blob and store it for cleanup.
-            const url = URL.createObjectURL(blob);
-            featureImageObjectUrlRef.current = url;
-            setFeatureImageUrl(url);
-        });
-
-        return () => {
-            isActive = false;
-        };
-    }, [appearanceSettings.showImage, app, featureImageKey, featureImageStatus, file, getDB, regenerateFeatureImageForFile]);
 
     useEffect(() => {
         if (!featureImageUrl || settings.forceSquareFeatureImage) {
@@ -2024,7 +1046,7 @@ export const FileItem = React.memo(function FileItem({
                                     </div>
                                 ) : null}
                             </div>
-                            {renderPillRows()}
+                            {pillRows}
                         </div>
                     ) : (
                         // ========== NORMAL MODE ==========
@@ -2042,7 +1064,7 @@ export const FileItem = React.memo(function FileItem({
                                         {shouldShowSingleLineSecondLine ? (
                                             <div className="nn-file-second-line">
                                                 {shouldShowDateForItem && <div className="nn-file-date">{displayDate}</div>}
-                                                {settings.showFilePreview && !shouldSuppressEmptyPreviewLines && (
+                                                {appearanceSettings.showPreview && !shouldSuppressEmptyPreviewLines && (
                                                     <div className="nn-file-preview" style={{ '--preview-rows': 1 } as React.CSSProperties}>
                                                         {highlightedPreview}
                                                     </div>
@@ -2051,7 +1073,7 @@ export const FileItem = React.memo(function FileItem({
                                         ) : null}
 
                                         {/* Pills */}
-                                        {renderPillRows()}
+                                        {pillRows}
 
                                         {/* Parent folder - gets its own line */}
                                         {renderParentFolder()}
@@ -2069,7 +1091,7 @@ export const FileItem = React.memo(function FileItem({
                                         {shouldCollapseEmptyPreviewSpace && (
                                             <>
                                                 {/* Pills (show even when no preview text) */}
-                                                {renderPillRows()}
+                                                {pillRows}
                                                 {/* Date + Parent folder share the second line (compact layout) */}
                                                 <div className="nn-file-second-line">
                                                     {shouldShowDateForItem && <div className="nn-file-date">{displayDate}</div>}
@@ -2084,7 +1106,7 @@ export const FileItem = React.memo(function FileItem({
                                         {shouldAlwaysReservePreviewSpace && (
                                             <>
                                                 {/* Multi-row preview - show preview text spanning multiple rows */}
-                                                {settings.showFilePreview && !shouldSuppressEmptyPreviewLines && (
+                                                {appearanceSettings.showPreview && !shouldSuppressEmptyPreviewLines && (
                                                     <div
                                                         className="nn-file-preview"
                                                         style={{ '--preview-rows': appearanceSettings.previewRows } as React.CSSProperties}
@@ -2094,7 +1116,7 @@ export const FileItem = React.memo(function FileItem({
                                                 )}
 
                                                 {/* Pills */}
-                                                {renderPillRows()}
+                                                {pillRows}
 
                                                 {/* Date + Parent folder share the metadata line */}
                                                 <div className="nn-file-second-line">

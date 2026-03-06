@@ -17,6 +17,7 @@
  */
 
 import type { TFile } from 'obsidian';
+import type { NavigationItemType } from '../types';
 import type { FeatureImageStatus, FileData } from '../storage/IndexedDBStorage';
 import type { NotePropertyType } from '../settings/types';
 import { isImageFile } from './fileTypeUtils';
@@ -74,6 +75,103 @@ const MOBILE_MEASUREMENTS: ListPaneMeasurements = Object.freeze({
  */
 export function getListPaneMeasurements(isMobile: boolean): ListPaneMeasurements {
     return isMobile ? MOBILE_MEASUREMENTS : DESKTOP_MEASUREMENTS;
+}
+
+export function isListPaneCompactMode({
+    showDate,
+    showPreview,
+    showImage
+}: {
+    showDate: boolean;
+    showPreview: boolean;
+    showImage: boolean;
+}): boolean {
+    return !showDate && !showPreview && !showImage;
+}
+
+export interface FileItemLayoutState {
+    isCompactMode: boolean;
+    pinnedItemShouldUseCompactLayout: boolean;
+    shouldUseSingleLineForDateAndPreview: boolean;
+    shouldUseMultiLinePreviewLayout: boolean;
+    shouldCollapseEmptyPreviewSpace: boolean;
+    shouldAlwaysReservePreviewSpace: boolean;
+    shouldSuppressEmptyPreviewLines: boolean;
+    shouldShowDateForItem: boolean;
+    shouldShowSingleLineSecondLine: boolean;
+    multilinePreviewRowCount: number;
+}
+
+export function getFileItemLayoutState({
+    showDate,
+    showPreview,
+    showImage,
+    previewRows,
+    optimizeNoteHeight,
+    isPinned,
+    hasPreviewContent,
+    showFeatureImageArea,
+    hasVisiblePillRows
+}: {
+    showDate: boolean;
+    showPreview: boolean;
+    showImage: boolean;
+    previewRows: number;
+    optimizeNoteHeight: boolean;
+    isPinned: boolean;
+    hasPreviewContent: boolean;
+    showFeatureImageArea: boolean;
+    hasVisiblePillRows: boolean;
+}): FileItemLayoutState {
+    const isCompactMode = isListPaneCompactMode({ showDate, showPreview, showImage });
+    const pinnedItemShouldUseCompactLayout = isPinned && optimizeNoteHeight;
+    const shouldUseSingleLineForDateAndPreview = pinnedItemShouldUseCompactLayout || previewRows < 2;
+    const shouldUseMultiLinePreviewLayout = !pinnedItemShouldUseCompactLayout && previewRows >= 2;
+    const shouldCollapseEmptyPreviewSpace = optimizeNoteHeight && !hasPreviewContent && !showFeatureImageArea;
+    const shouldAlwaysReservePreviewSpace = !optimizeNoteHeight || hasPreviewContent || showFeatureImageArea;
+    const shouldSuppressEmptyPreviewLines = !hasPreviewContent && hasVisiblePillRows;
+    const shouldShowDateForItem = showDate && !pinnedItemShouldUseCompactLayout;
+    const shouldShowSingleLineSecondLine = shouldShowDateForItem || (showPreview && !shouldSuppressEmptyPreviewLines);
+    const multilinePreviewRowCount = showPreview && shouldAlwaysReservePreviewSpace && !shouldSuppressEmptyPreviewLines ? previewRows : 0;
+
+    return {
+        isCompactMode,
+        pinnedItemShouldUseCompactLayout,
+        shouldUseSingleLineForDateAndPreview,
+        shouldUseMultiLinePreviewLayout,
+        shouldCollapseEmptyPreviewSpace,
+        shouldAlwaysReservePreviewSpace,
+        shouldSuppressEmptyPreviewLines,
+        shouldShowDateForItem,
+        shouldShowSingleLineSecondLine,
+        multilinePreviewRowCount
+    };
+}
+
+export function shouldShowFileItemParentFolderLine({
+    showParentFolder,
+    pinnedItemShouldUseCompactLayout,
+    selectionType,
+    includeDescendantNotes,
+    parentFolder,
+    fileParentPath
+}: {
+    showParentFolder: boolean;
+    pinnedItemShouldUseCompactLayout: boolean;
+    selectionType: NavigationItemType | null | undefined;
+    includeDescendantNotes: boolean;
+    parentFolder: string | null | undefined;
+    fileParentPath: string | null | undefined;
+}): boolean {
+    if (!showParentFolder || pinnedItemShouldUseCompactLayout || !fileParentPath || fileParentPath === '/') {
+        return false;
+    }
+
+    if (selectionType === 'tag') {
+        return true;
+    }
+
+    return includeDescendantNotes && Boolean(parentFolder) && fileParentPath !== parentFolder;
 }
 
 /**

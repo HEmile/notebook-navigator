@@ -57,7 +57,14 @@ import type { NotePropertyType } from '../settings/types';
 import type { SelectionState } from '../context/SelectionContext';
 import { getEffectiveSortOption } from '../utils/sortUtils';
 import { calculateCompactListMetrics } from '../utils/listPaneMetrics';
-import { getPropertyRowCount, getListPaneMeasurements, shouldShowFeatureImageArea } from '../utils/listPaneMeasurements';
+import {
+    getFileItemLayoutState,
+    getListPaneMeasurements,
+    getPropertyRowCount,
+    isListPaneCompactMode,
+    shouldShowFeatureImageArea,
+    shouldShowFileItemParentFolderLine
+} from '../utils/listPaneMeasurements';
 import type { PropertySelectionNodeId } from '../utils/propertyTree';
 
 /**
@@ -211,7 +218,11 @@ export function useListPaneScroll({
     const contextIndexVersionRef = useRef<{ key: string; version: number } | null>(null);
 
     // Check if we're in compact mode
-    const isCompactMode = !folderSettings.showDate && !folderSettings.showPreview && !folderSettings.showImage;
+    const isCompactMode = isListPaneCompactMode({
+        showDate: folderSettings.showDate,
+        showPreview: folderSettings.showPreview,
+        showImage: folderSettings.showImage
+    });
     const revealFileOnListChanges = settings.revealFileOnListChanges;
     const hasSelectedFile = Boolean(selectedFile);
 
@@ -262,10 +273,6 @@ export function useListPaneScroll({
             const shouldShowFileTags = settings.showTags && settings.showFileTags && (!isCompactMode || settings.showFileTagsInCompactMode);
             const hasTagRow = Boolean(shouldShowFileTags && item.type === ListPaneItemType.FILE && item.hasTags);
 
-            // Height optimization settings
-            const heightOptimizationEnabled = settings.optimizeNoteHeight;
-            const heightOptimizationDisabled = !settings.optimizeNoteHeight;
-
             // Get actual preview status for accurate height calculation
             let hasPreviewText = false;
             let hasOmnisearchExcerpt = false;
@@ -304,22 +311,30 @@ export function useListPaneScroll({
             });
 
             const hasVisiblePillRows = hasTagRow || propertyRowCount > 0;
-            const shouldSuppressEmptyPreviewLines = !hasPreviewContent && hasVisiblePillRows;
-
-            // Note: Preview rows are calculated differently based on context
-
-            // Layout decision variables (matching FileItem.tsx logic)
-            const pinnedItemShouldUseCompactLayout = item.isPinned && heightOptimizationEnabled; // Pinned items get compact treatment only when optimizing
-            const shouldShowDateForItem = folderSettings.showDate && !pinnedItemShouldUseCompactLayout;
-            const shouldUseSingleLineForDateAndPreview = pinnedItemShouldUseCompactLayout || folderSettings.previewRows < 2;
-            const shouldUseMultiLinePreviewLayout = !pinnedItemShouldUseCompactLayout && folderSettings.previewRows >= 2;
-            const shouldCollapseEmptyPreviewSpace = heightOptimizationEnabled && !hasPreviewContent && !showFeatureImageArea; // Optimization: compact layout for empty preview
-            const shouldAlwaysReservePreviewSpace = heightOptimizationDisabled || hasPreviewContent || showFeatureImageArea; // Show full layout when not optimizing OR has content
+            const layoutState = getFileItemLayoutState({
+                showDate: folderSettings.showDate,
+                showPreview: folderSettings.showPreview,
+                showImage: folderSettings.showImage,
+                previewRows: folderSettings.previewRows,
+                optimizeNoteHeight: settings.optimizeNoteHeight,
+                isPinned: Boolean(item.isPinned),
+                hasPreviewContent,
+                showFeatureImageArea,
+                hasVisiblePillRows
+            });
+            const showParentFolderLine = shouldShowFileItemParentFolderLine({
+                showParentFolder: settings.showParentFolder,
+                pinnedItemShouldUseCompactLayout: layoutState.pinnedItemShouldUseCompactLayout,
+                selectionType: selectionState.selectionType,
+                includeDescendantNotes,
+                parentFolder: item.parentFolder,
+                fileParentPath: file?.parent?.path ?? null
+            });
 
             // Start with base padding
             let textContentHeight = 0;
 
-            if (isCompactMode) {
+            if (layoutState.isCompactMode) {
                 // Compact mode: only shows file name
                 textContentHeight = heights.titleLineHeight * (folderSettings.titleRows || 1);
             } else {
@@ -327,58 +342,26 @@ export function useListPaneScroll({
                 textContentHeight += heights.titleLineHeight * (folderSettings.titleRows || 1); // File name
 
                 // Single row mode - show date+preview, tags, and parent folder
-                // Pinned items are treated as single row mode when optimization is enabled (unless using full height)
-                if (shouldUseSingleLineForDateAndPreview) {
+                if (layoutState.shouldUseSingleLineForDateAndPreview) {
                     // Date and preview share one line
-                    if (shouldShowDateForItem || (folderSettings.showPreview && !shouldSuppressEmptyPreviewLines)) {
+                    if (layoutState.shouldShowSingleLineSecondLine) {
                         textContentHeight += heights.singleTextLineHeight;
                     }
 
-                    // Parent folder gets its own line (not when pinned is in compact layout)
-                    if (!pinnedItemShouldUseCompactLayout && settings.showParentFolder) {
-                        const file = item.data instanceof TFile ? item.data : null;
-                        const isInDescendant = file && item.parentFolder && file.parent && file.parent.path !== item.parentFolder;
-                        const showParentFolderLine = selectionState.selectionType === 'tag' || (includeDescendantNotes && isInDescendant);
-                        if (showParentFolderLine) {
-                            textContentHeight += heights.singleTextLineHeight;
-                        }
+                    if (showParentFolderLine) {
+                        textContentHeight += heights.singleTextLineHeight;
                     }
-                } else if (shouldUseMultiLinePreviewLayout) {
-                    // Multi-row mode - only when not (optimization enabled AND pinned) AND preview rows >= 2
-                    if (shouldCollapseEmptyPreviewSpace) {
-                        // Optimization enabled and empty preview: compact layout
-                        const file = item.data instanceof TFile ? item.data : null;
-                        const isInDescendant = file && item.parentFolder && file.parent && file.parent.path !== item.parentFolder;
-                        const showParentFolder =
-                            settings.showParentFolder &&
-                            !pinnedItemShouldUseCompactLayout &&
-                            (selectionState.selectionType === 'tag' || (includeDescendantNotes && isInDescendant));
-
-                        if (folderSettings.showDate || showParentFolder) {
+                } else if (layoutState.shouldUseMultiLinePreviewLayout) {
+                    if (layoutState.shouldCollapseEmptyPreviewSpace) {
+                        if (layoutState.shouldShowDateForItem || showParentFolderLine) {
                             textContentHeight += heights.singleTextLineHeight;
                         }
-                    } else if (shouldAlwaysReservePreviewSpace) {
-                        // Has preview text OR using full height: show full layout
-                        if (folderSettings.showPreview) {
-                            const previewRows = shouldSuppressEmptyPreviewLines
-                                ? 0
-                                : heightOptimizationDisabled || showFeatureImageArea
-                                  ? folderSettings.previewRows
-                                  : hasPreviewContent
-                                    ? folderSettings.previewRows
-                                    : 0;
-                            if (previewRows > 0) {
-                                textContentHeight += heights.multilineTextLineHeight * previewRows;
-                            }
+                    } else if (layoutState.shouldAlwaysReservePreviewSpace) {
+                        if (layoutState.multilinePreviewRowCount > 0) {
+                            textContentHeight += heights.multilineTextLineHeight * layoutState.multilinePreviewRowCount;
                         }
-                        // Only add metadata line if date is shown OR parent folder is shown
-                        const isInDescendant = file && item.parentFolder && file.parent && file.parent.path !== item.parentFolder;
-                        const showParentFolder =
-                            settings.showParentFolder &&
-                            !pinnedItemShouldUseCompactLayout &&
-                            (selectionState.selectionType === 'tag' || (includeDescendantNotes && isInDescendant));
 
-                        if (folderSettings.showDate || showParentFolder) {
+                        if (layoutState.shouldShowDateForItem || showParentFolderLine) {
                             textContentHeight += heights.singleTextLineHeight;
                         }
                     }
