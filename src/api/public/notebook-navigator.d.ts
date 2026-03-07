@@ -18,7 +18,7 @@
 
 /**
  * Notebook Navigator Plugin API Type Definitions
- * Version: 1.3.0
+ * Version: 2.0.0
  *
  * Download this file to your Obsidian plugin project to get TypeScript support
  * for the Notebook Navigator API.
@@ -54,10 +54,26 @@ export type IconProviderId =
     | 'simple-icons';
 
 /**
- * Icon string format for type-safe icon specifications
+ * Canonical icon input format
  * Must be provider-prefixed (e.g., 'phosphor:folder') or an emoji literal
  */
 export type IconString = `${IconProviderId}:${string}` | `emoji:${string}`;
+
+/**
+ * Icon input type accepted by public API setters.
+ * Use `IconString` when you want canonical provider-prefixed or emoji input.
+ */
+export type IconInput = string;
+
+/**
+ * Icon value returned by public API getters and events
+ */
+export type IconValue = string;
+
+/**
+ * Aggregate tag collection ids used by the navigator for virtual tag rows.
+ */
+export type TagCollectionId = '__tagged__' | '__untagged__';
 
 /**
  * Metadata associated with a folder
@@ -67,8 +83,8 @@ export interface FolderMetadata {
     color?: string;
     /** CSS background color value */
     backgroundColor?: string;
-    /** Icon identifier in format 'lucide:<name>' or 'emoji:<unicode>' */
-    icon?: IconString;
+    /** Normalized icon identifier stored by the plugin */
+    icon?: IconValue;
 }
 
 /**
@@ -79,8 +95,8 @@ export interface TagMetadata {
     color?: string;
     /** CSS background color value */
     backgroundColor?: string;
-    /** Icon identifier in format 'lucide:<name>' or 'emoji:<unicode>' */
-    icon?: IconString;
+    /** Normalized icon identifier stored by the plugin */
+    icon?: IconValue;
 }
 
 /**
@@ -91,8 +107,44 @@ export interface PropertyMetadata {
     color?: string;
     /** CSS background color value */
     backgroundColor?: string;
-    /** Icon identifier in format 'lucide:<name>' or 'emoji:<unicode>' */
-    icon?: IconString;
+    /** Normalized icon identifier stored by the plugin */
+    icon?: IconValue;
+}
+
+/**
+ * Metadata update payload for folders
+ */
+export interface FolderMetadataUpdate {
+    /** CSS color value. Use null to clear the stored value. */
+    color?: string | null;
+    /** CSS background color value. Use null to clear the stored value. */
+    backgroundColor?: string | null;
+    /** Canonical icon input. Use null to clear the stored value. */
+    icon?: IconInput | null;
+}
+
+/**
+ * Metadata update payload for tags
+ */
+export interface TagMetadataUpdate {
+    /** CSS color value. Use null to clear the stored value. */
+    color?: string | null;
+    /** CSS background color value. Use null to clear the stored value. */
+    backgroundColor?: string | null;
+    /** Canonical icon input. Use null to clear the stored value. */
+    icon?: IconInput | null;
+}
+
+/**
+ * Metadata update payload for property nodes
+ */
+export interface PropertyMetadataUpdate {
+    /** CSS color value. Use null to clear the stored value. */
+    color?: string | null;
+    /** CSS background color value. Use null to clear the stored value. */
+    backgroundColor?: string | null;
+    /** Canonical icon input. Use null to clear the stored value. */
+    icon?: IconInput | null;
 }
 
 /**
@@ -101,11 +153,36 @@ export interface PropertyMetadata {
  * `property` uses the property tree node id (`properties-root` for the section root,
  * or `key:<normalizedKey>` / `key:<normalizedKey>=<normalizedValuePath>` for key/value nodes).
  */
+export type NavItemType = 'folder' | 'tag' | 'property' | 'none';
+
 export type NavItem =
-    | { folder: TFolder; tag: null; property: null }
-    | { folder: null; tag: string; property: null }
-    | { folder: null; tag: null; property: string }
-    | { folder: null; tag: null; property: null };
+    | { type: 'folder'; folder: TFolder; tag: null; property: null }
+    | { type: 'tag'; folder: null; tag: string; property: null }
+    | { type: 'property'; folder: null; tag: null; property: string }
+    | { type: 'none'; folder: null; tag: null; property: null };
+
+export type PropertyNodeParts =
+    | {
+          /** Root node returned for `propertyNodes.rootId` */
+          kind: 'root';
+          key: null;
+          valuePath: null;
+      }
+    | {
+          /** Key node without a value path */
+          kind: 'key';
+          /** Normalized property key */
+          key: string;
+          valuePath: null;
+      }
+    | {
+          /** Key/value node */
+          kind: 'value';
+          /** Normalized property key */
+          key: string;
+          /** Normalized value path */
+          valuePath: string;
+      };
 
 /**
  * Current file selection state in the navigator
@@ -143,6 +220,20 @@ export interface FolderMenuExtensionContext {
     addItem(cb: (item: MenuItem) => void): void;
     /** The folder the menu was opened on */
     folder: TFolder;
+}
+
+export interface TagMenuExtensionContext {
+    /** Add a menu item (must be called synchronously during menu construction) */
+    addItem(cb: (item: MenuItem) => void): void;
+    /** Canonical tag path, or a tag collection id for aggregate tag rows */
+    tag: string;
+}
+
+export interface PropertyMenuExtensionContext {
+    /** Add a menu item (must be called synchronously during menu construction) */
+    addItem(cb: (item: MenuItem) => void): void;
+    /** Property node id for the menu target */
+    nodeId: string;
 }
 
 /** Dispose function returned by menu registration methods */
@@ -204,32 +295,34 @@ export interface NotebookNavigatorEvents {
     /** Fired when folder metadata changes */
     'folder-changed': {
         folder: TFolder;
-        metadata: FolderMetadata;
+        metadata: FolderMetadata | null;
     };
 
     /** Fired when tag metadata changes */
     'tag-changed': {
         tag: string;
-        metadata: TagMetadata;
+        metadata: TagMetadata | null;
     };
 
     /** Fired when property metadata changes */
     'property-changed': {
         nodeId: string;
-        metadata: PropertyMetadata;
+        metadata: PropertyMetadata | null;
     };
 }
 
 /**
  * Main Notebook Navigator API interface
- * @version 1.3.0
+ * @version 2.0.0
  */
 export interface NotebookNavigatorAPI {
     /** Get the API version string */
     getVersion(): string;
 
-    /** Check if storage system is ready for metadata operations */
+    /** Check if the initial storage bootstrap has completed */
     isStorageReady(): boolean;
+    /** Resolve when the initial storage bootstrap completes */
+    whenReady(): Promise<void>;
 
     /** Metadata operations for folders, tags, property nodes, and pinned files */
     metadata: {
@@ -237,19 +330,19 @@ export interface NotebookNavigatorAPI {
         /** Get all metadata for a folder */
         getFolderMeta(folder: TFolder): FolderMetadata | null;
         /** Set folder metadata (color and/or icon). Pass null to clear a property */
-        setFolderMeta(folder: TFolder, meta: Partial<FolderMetadata>): Promise<void>;
+        setFolderMeta(folder: TFolder, meta: FolderMetadataUpdate): Promise<void>;
 
         // Tag metadata
         /** Get all metadata for a tag */
         getTagMeta(tag: string): TagMetadata | null;
         /** Set tag metadata (color and/or icon). Pass null to clear a property */
-        setTagMeta(tag: string, meta: Partial<TagMetadata>): Promise<void>;
+        setTagMeta(tag: string, meta: TagMetadataUpdate): Promise<void>;
 
         // Property metadata
         /** Get all metadata for a property node */
         getPropertyMeta(nodeId: string): PropertyMetadata | null;
         /** Set property metadata (color and/or icon). Pass null to clear a property */
-        setPropertyMeta(nodeId: string, meta: Partial<PropertyMetadata>): Promise<void>;
+        setPropertyMeta(nodeId: string, meta: PropertyMetadataUpdate): Promise<void>;
 
         // Pinned files
         /** Get all pinned files with their context information as a Map */
@@ -265,13 +358,13 @@ export interface NotebookNavigatorAPI {
     /** Navigation operations */
     navigation: {
         /** Reveal and select a file in the navigator */
-        reveal(file: TFile): Promise<void>;
+        reveal(file: TFile | string): Promise<boolean>;
         /** Select a folder in the navigator navigation pane */
-        navigateToFolder(folder: TFolder): Promise<void>;
+        navigateToFolder(folder: TFolder | string): Promise<boolean>;
         /** Select a tag in the navigator navigation pane (e.g. '#work' or 'work'). Requires tag data to be available (`storage-ready`). */
-        navigateToTag(tag: string): Promise<void>;
+        navigateToTag(tag: string): Promise<boolean>;
         /** Select a property node in the navigator navigation pane (e.g. 'key:status' or 'key:status=done'). */
-        navigateToProperty(nodeId: string): Promise<void>;
+        navigateToProperty(nodeId: string): Promise<boolean>;
     };
 
     /** Query current selection state */
@@ -282,12 +375,42 @@ export interface NotebookNavigatorAPI {
         getCurrent(): SelectionState;
     };
 
+    /** Helpers for aggregate tag rows used by tag menus and navigation */
+    tagCollections: {
+        /** Aggregate row id for notes with at least one tag */
+        readonly taggedId: TagCollectionId;
+        /** Aggregate row id for notes without tags */
+        readonly untaggedId: TagCollectionId;
+        /** Check whether a tag target is an aggregate row id */
+        isCollection(tag: string | null | undefined): tag is TagCollectionId;
+        /** Current localized label for an aggregate row id */
+        getLabel(tag: TagCollectionId): string;
+    };
+
+    /** Helpers for building and parsing public property node ids */
+    propertyNodes: {
+        /** Property root node id used by navigation APIs */
+        readonly rootId: 'properties-root';
+        /** Build a canonical key node id */
+        buildKey(key: string): string | null;
+        /** Build a canonical key/value node id */
+        buildValue(key: string, valuePath: string): string | null;
+        /** Parse a property node id into normalized parts */
+        parse(nodeId: string): PropertyNodeParts | null;
+        /** Normalize a property node id to canonical form */
+        normalize(nodeId: string): string | null;
+    };
+
     /** Menu extensions for Notebook Navigator context menus (callbacks run synchronously during menu construction) */
     menus: {
         /** Register items for the file context menu */
         registerFileMenu(callback: (context: FileMenuExtensionContext) => void): MenuExtensionDispose;
         /** Register items for the folder context menu */
         registerFolderMenu(callback: (context: FolderMenuExtensionContext) => void): MenuExtensionDispose;
+        /** Register items for the tag context menu */
+        registerTagMenu(callback: (context: TagMenuExtensionContext) => void): MenuExtensionDispose;
+        /** Register items for the property context menu */
+        registerPropertyMenu(callback: (context: PropertyMenuExtensionContext) => void): MenuExtensionDispose;
     };
 
     // Event subscription
@@ -298,25 +421,3 @@ export interface NotebookNavigatorAPI {
     /** Unsubscribe from an event */
     off(ref: EventRef): void;
 }
-
-/**
- * API Changelog
- *
- * Version 1.3.0 (2026-02-14)
- * - Added metadata.getPropertyMeta(nodeId)
- * - Added metadata.setPropertyMeta(nodeId, meta)
- * - Added navigation.navigateToProperty(nodeId)
- * - Added property-changed event
- *
- * Version 1.2.0 (2025-12-22)
- * - Added navigation.navigateToFolder(folder)
- * - Added navigation.navigateToTag(tag)
- * - Added menus.registerFileMenu(callback)
- * - Added menus.registerFolderMenu(callback)
- *
- * Version 1.0.1 (2025-09-16)
- * - Added backgroundColor property to FolderMetadata and TagMetadata interfaces
- *
- * Version 1.0.0 (2025-09-15)
- * - Initial public API release
- */

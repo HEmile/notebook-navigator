@@ -21,7 +21,7 @@ import type { RefObject } from 'react';
 import { App, TFile, TFolder } from 'obsidian';
 import { getFilesForFolder, getFilesForProperty, getFilesForTag } from '../../utils/fileFinder';
 import { localStorage } from '../../utils/localStorage';
-import type { NotebookNavigatorAPI } from '../../api/NotebookNavigatorAPI';
+import { INTERNAL_NOTEBOOK_NAVIGATOR_API, type NotebookNavigatorAPI } from '../../api/NotebookNavigatorAPI';
 import type { NotebookNavigatorSettings } from '../../settings';
 import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, STORAGE_KEYS, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../../types';
 import type { IPropertyTreeProvider } from '../../interfaces/IPropertyTreeProvider';
@@ -600,12 +600,14 @@ export function useSelectionPersistence({ api, app, state }: UseSelectionPersist
             'Failed to save selected files to localStorage:'
         );
 
-        if (api?.selection) {
-            api.selection.updateFileState(state.selectedFiles, state.selectedFile);
-        }
+        api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].selection.updateFileState(state.selectedFiles, state.selectedFile);
     }, [api, state.selectedFile, state.selectedFiles]);
 
     useEffect(() => {
-        api?.selection?.updateNavigationState(state.selectedFolder, state.selectedTag, state.selectedProperty);
+        api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].selection.updateNavigationState(
+            state.selectedFolder,
+            state.selectedTag,
+            state.selectedProperty
+        );
     }, [api, state.selectedFolder, state.selectedProperty, state.selectedTag]);
 }

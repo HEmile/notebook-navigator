@@ -82,7 +82,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
         showOnUpdate: false,
         new: [
             'New feature: ==Rainbow colors==! You can now set rainbow colors for shortcuts, folders, tags or properties. Pick custom colors, choose between Hue (color wheel) and RGB (direct blend), and much more. There are lots of configuration settings, so just head to Settings > Navigation > Rainbow colors to check it out!',
-            'New command: ==Toggle dual pane orientation== to quickly change orientation between horizontal and vertical dual panes.'
+            'New command: ==Toggle dual pane orientation== to quickly change orientation between horizontal and vertical dual panes.',
+            '==New API 2.0==: Added whenReady(), tag collection helpers, property node helpers, new tag and property context menu hooks and many other improvements.'
         ],
         improved: [
             'The ==properties tree now supports custom appearance and sort order== in list pane.',

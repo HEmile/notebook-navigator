@@ -18,12 +18,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MetadataAPI } from '../../src/api/modules/MetadataAPI';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
-import type { NotebookNavigatorAPI } from '../../src/api/NotebookNavigatorAPI';
 import type { NotebookNavigatorSettings } from '../../src/settings';
 import type { IconString } from '../../src/api/types';
 import { TFolder } from 'obsidian';
 
 describe('MetadataAPI icon normalization', () => {
+    let foldersByPath: Map<string, TFolder>;
     let plugin: {
         settings: NotebookNavigatorSettings;
         saveSettingsAndUpdate: ReturnType<typeof vi.fn>;
@@ -33,10 +33,11 @@ describe('MetadataAPI icon normalization', () => {
             isFolderStyleEventBridgeEnabled?: ReturnType<typeof vi.fn>;
         } | null;
     };
-    let api: NotebookNavigatorAPI;
+    let api: ConstructorParameters<typeof MetadataAPI>[0];
     let triggerMock: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
+        foldersByPath = new Map();
         plugin = {
             settings: structuredClone(DEFAULT_SETTINGS),
             saveSettingsAndUpdate: vi.fn().mockResolvedValue(undefined),
@@ -45,21 +46,22 @@ describe('MetadataAPI icon normalization', () => {
         triggerMock = vi.fn();
 
         api = {
-            getPlugin: () => plugin,
+            getPlugin: () => plugin as never,
             getApp: () =>
                 ({
                     vault: {
-                        getFolderByPath: () => null
+                        getFolderByPath: (path: string) => foldersByPath.get(path) ?? null
                     }
-                }) as unknown,
+                }) as never,
             trigger: triggerMock
-        } as unknown as NotebookNavigatorAPI;
+        };
     });
 
     it('normalizes legacy lucide identifiers provided through the API', async () => {
         const metadataAPI = new MetadataAPI(api);
         const folder = new TFolder();
         folder.path = 'Folder';
+        foldersByPath.set(folder.path, folder);
 
         await metadataAPI.setFolderMeta(folder, {
             icon: 'lucide-sun' as unknown as IconString
@@ -73,6 +75,7 @@ describe('MetadataAPI icon normalization', () => {
         const metadataAPI = new MetadataAPI(api);
         const folder = new TFolder();
         folder.path = 'Folder';
+        foldersByPath.set(folder.path, folder);
 
         await metadataAPI.setFolderMeta(folder, {
             icon: 'phosphor:ph-apple-logo' as IconString
@@ -162,6 +165,21 @@ describe('MetadataAPI icon normalization', () => {
         });
     });
 
+    it('emits property-changed events with null metadata when metadata is cleared', () => {
+        plugin.settings.propertyColors['key:status'] = '#334455';
+        const metadataAPI = new MetadataAPI(api);
+
+        const updatedSettings = structuredClone(plugin.settings);
+        delete updatedSettings.propertyColors['key:status'];
+
+        metadataAPI.updateFromSettings(updatedSettings);
+
+        expect(triggerMock).toHaveBeenCalledWith('property-changed', {
+            nodeId: 'key:status',
+            metadata: null
+        });
+    });
+
     it('routes folder metadata writes through metadata service when available', async () => {
         const getFolderDisplayDataMock = vi
             .fn()
@@ -184,6 +202,7 @@ describe('MetadataAPI icon normalization', () => {
         const metadataAPI = new MetadataAPI(api);
         const folder = new TFolder();
         folder.path = 'Folder';
+        foldersByPath.set(folder.path, folder);
 
         await metadataAPI.setFolderMeta(folder, {
             icon: 'phosphor:ph-apple-logo' as IconString,
@@ -230,6 +249,7 @@ describe('MetadataAPI icon normalization', () => {
         const metadataAPI = new MetadataAPI(api);
         const folder = new TFolder();
         folder.path = 'Folder';
+        foldersByPath.set(folder.path, folder);
 
         await metadataAPI.setFolderMeta(folder, {
             color: '#112233'
@@ -254,6 +274,7 @@ describe('MetadataAPI icon normalization', () => {
         const metadataAPI = new MetadataAPI(api);
         const folder = new TFolder();
         folder.path = 'Folder';
+        foldersByPath.set(folder.path, folder);
 
         await metadataAPI.setFolderMeta(folder, {
             color: '#112233'
@@ -279,12 +300,46 @@ describe('MetadataAPI icon normalization', () => {
         const metadataAPI = new MetadataAPI(api);
         const folder = new TFolder();
         folder.path = 'Folder';
+        foldersByPath.set(folder.path, folder);
 
         await metadataAPI.setFolderMeta(folder, {
             color: '#112233'
         });
 
         expect(triggerMock).not.toHaveBeenCalled();
+    });
+
+    it('emits folder-changed events with null metadata when metadata is cleared', () => {
+        const folder = new TFolder();
+        folder.path = 'Folder';
+        foldersByPath.set(folder.path, folder);
+        plugin.settings.folderColors.Folder = '#112233';
+        const metadataAPI = new MetadataAPI(api);
+
+        const updatedSettings = structuredClone(plugin.settings);
+        delete updatedSettings.folderColors.Folder;
+
+        metadataAPI.updateFromSettings(updatedSettings);
+
+        expect(triggerMock).toHaveBeenCalledWith('folder-changed', {
+            folder,
+            metadata: null
+        });
+    });
+
+    it('emits tag-changed events with null metadata when metadata is cleared', () => {
+        plugin.settings.tagColors.status = '#112233';
+        const metadataAPI = new MetadataAPI(api);
+
+        const updatedSettings = structuredClone(plugin.settings);
+        delete updatedSettings.tagColors.status;
+
+        metadataAPI.updateFromSettings(updatedSettings);
+
+        expect(triggerMock).toHaveBeenCalledWith('tag-changed', {
+            tag: 'status',
+            metadata: null
+        });
     });
 
     it('reads folder metadata through metadata service when frontmatter metadata is enabled', () => {
@@ -301,6 +356,7 @@ describe('MetadataAPI icon normalization', () => {
         const metadataAPI = new MetadataAPI(api);
         const folder = new TFolder();
         folder.path = 'Folder';
+        foldersByPath.set(folder.path, folder);
 
         expect(metadataAPI.getFolderMeta(folder)).toEqual({
             color: '#112233',

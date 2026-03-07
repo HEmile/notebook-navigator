@@ -196,7 +196,9 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
      */
     const revealFileInActualFolder = useCallback(
         (file: TFile, options?: RevealFileOptions) => {
-            if (!file?.parent) return;
+            if (!file?.parent) {
+                return false;
+            }
 
             const parentFolder = file.parent;
             // Determine which folder the navigator should display after reveal
@@ -249,6 +251,8 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
                 // Scroll navigation pane so the resolved folder stays in view for manual reveals
                 navigationPaneRef.current.requestScroll(resolvedFolder.path, { align: 'auto', itemType: ItemType.FOLDER });
             }
+
+            return true;
         },
         [
             expansionState.expandedFolders,
@@ -666,7 +670,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
         (folderOrPath: TFolder | string, options?: NavigateToFolderOptions) => {
             const folder = typeof folderOrPath === 'string' ? app.vault.getFolderByPath(folderOrPath) : folderOrPath;
             if (!folder) {
-                return;
+                return false;
             }
 
             // Expand all ancestors to make the folder visible
@@ -708,6 +712,8 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
             if (!shouldSkipScroll && navigationPaneRef.current) {
                 navigationPaneRef.current.requestScroll(folder.path, { align: 'auto', itemType: ItemType.FOLDER });
             }
+
+            return true;
         },
         [
             app,
@@ -726,7 +732,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
      */
     const navigateToTag = useCallback(
         (tagPath: string, options?: NavigateToTagOptions) => {
-            navigateToTagInternal(
+            return navigateToTagInternal(
                 {
                     showTags: settings.showTags,
                     showAllTagsFolder: settings.showAllTagsFolder,

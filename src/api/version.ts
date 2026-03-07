@@ -30,8 +30,8 @@ function formatApiVersion(version: { major: number; minor: number; patch: number
 }
 
 export const API_VERSION = {
-    major: 1,
-    minor: 3,
+    major: 2,
+    minor: 0,
     patch: 0,
     toString(): string {
         return formatApiVersion(API_VERSION);

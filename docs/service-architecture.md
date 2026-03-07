@@ -572,7 +572,7 @@ Provides the typed public API surface for external integrations and internal cro
 
 - Sub-APIs: `navigation`, `metadata`, `selection`, `menus` (`src/api/modules/*`)
 - Event bus: `on(...)`, `once(...)`, `off(...)` (`src/api/NotebookNavigatorAPI.ts`)
-- Storage readiness: `isStorageReady()` and `setStorageReady(...)` gates API calls that require IndexedDB mirrors
+- Storage readiness: `isStorageReady()` and `whenReady()` are public; internal readiness updates use the internal API bridge
 
 ## Supporting Services
 

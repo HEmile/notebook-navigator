@@ -30,6 +30,7 @@ import { resolveUXIconForMenu } from '../uxIcons';
 import { getVirtualTagCollection, isVirtualTagCollectionId } from '../virtualTagCollections';
 import { getActiveHiddenTags, getActiveVaultProfile } from '../vaultProfiles';
 import { resolveDisplayTagPath } from '../../services/tagOperations/TagOperationUtils';
+import { INTERNAL_NOTEBOOK_NAVIGATOR_API } from '../../api/NotebookNavigatorAPI';
 
 /**
  * Builds the context menu for a tag
@@ -311,8 +312,18 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
     const canHideTag = tagPath !== UNTAGGED_TAG_ID;
     const activeProfile = getActiveVaultProfile(plugin.settings);
     const hiddenTags = getActiveHiddenTags(plugin.settings);
-    if (canHideTag || !isVirtualTag) {
+    const hasTrailingTagActions = canHideTag || !isVirtualTag;
+    const addedMenuExtensions =
+        services.plugin.api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].menus.applyTagMenuExtensions({ menu, tag: normalizedTagPath ?? tagPath }) ??
+        0;
+    if (addedMenuExtensions > 0 && hasTrailingTagActions) {
         menu.addSeparator();
+    }
+
+    if (canHideTag || !isVirtualTag) {
+        if (addedMenuExtensions === 0) {
+            menu.addSeparator();
+        }
 
         if (canHideTag) {
             const hiddenMatcher = createHiddenTagMatcher(hiddenTags);

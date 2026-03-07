@@ -1,6 +1,6 @@
 /**
  * Notebook Navigator API Test Suite
- * Version: 1.2.0 - Updated with complete API coverage
+ * Version: 2.0.0 - Updated with complete API coverage
  *
  * A comprehensive test suite for the Notebook Navigator API.
  * Paste this entire script into the Obsidian developer console to run tests.
@@ -275,6 +275,32 @@
                     this.assertExists(this.api.isStorageReady, 'isStorageReady method not found');
                     const isReady = this.api.isStorageReady();
                     this.assertTrue(typeof isReady === 'boolean', 'isStorageReady should return a boolean');
+                },
+
+                'Should have whenReady method': async function () {
+                    this.assertExists(this.api.whenReady, 'whenReady method not found');
+                    const readyPromise = this.api.whenReady();
+                    this.assertTrue(typeof readyPromise?.then === 'function', 'whenReady should return a Promise');
+                },
+
+                'Should expose tagCollections helpers': async function () {
+                    this.assertExists(this.api.tagCollections, 'tagCollections helper not found');
+                    this.assertEqual(this.api.tagCollections.taggedId, '__tagged__', 'taggedId should match the public constant');
+                    this.assertEqual(this.api.tagCollections.untaggedId, '__untagged__', 'untaggedId should match the public constant');
+                    this.assertTrue(this.api.tagCollections.isCollection('__tagged__'), 'Should detect tagged aggregate id');
+                    this.assertFalse(this.api.tagCollections.isCollection('work'), 'Normal tags should not be treated as aggregate ids');
+                    this.assertTrue(
+                        typeof this.api.tagCollections.getLabel(this.api.tagCollections.taggedId) === 'string',
+                        'getLabel should return a string'
+                    );
+                },
+
+                'Should expose propertyNodes helpers': async function () {
+                    this.assertExists(this.api.propertyNodes, 'propertyNodes helper not found');
+                    this.assertEqual(this.api.propertyNodes.rootId, 'properties-root', 'rootId should match the public constant');
+                    const rootParts = this.api.propertyNodes.parse(this.api.propertyNodes.rootId);
+                    this.assertExists(rootParts, 'parse(rootId) should return a descriptor');
+                    this.assertEqual(rootParts.kind, 'root', 'Root descriptor should use kind=root');
                 }
             };
         }
@@ -300,14 +326,8 @@
 
                 'Should handle navigation to non-existent file gracefully': async function () {
                     const fakeFile = { path: 'fake-file-that-does-not-exist.md' };
-
-                    try {
-                        await this.api.navigation.reveal(fakeFile);
-                        // Should throw an error for non-existent file
-                        this.assertTrue(false, 'Should have thrown an error for non-existent file');
-                    } catch (error) {
-                        this.assertTrue(true, 'Correctly threw error for non-existent file');
-                    }
+                    const revealed = await this.api.navigation.reveal(fakeFile);
+                    this.assertFalse(revealed, 'Should return false for non-existent file');
                 }
             };
         }
@@ -504,6 +524,7 @@
                 'Should get selected navigation item': async function () {
                     const navItem = this.api.selection.getNavItem();
                     this.assertExists(navItem, 'Should return NavItem object');
+                    this.assertExists(navItem.type, 'NavItem should have type field');
                     this.assertExists(navItem.folder !== undefined, 'NavItem should have folder property');
                     this.assertExists(navItem.tag !== undefined, 'NavItem should have tag property');
                     this.assertExists(navItem.property !== undefined, 'NavItem should have property field');
@@ -515,18 +536,18 @@
                     }
 
                     // If a folder is selected, it should be a valid TFolder
-                    if (navItem.folder) {
+                    if (navItem.type === 'folder') {
                         this.assertExists(navItem.folder.path, 'Selected folder should have a path');
                         this.assertTrue(typeof navItem.folder.path === 'string', 'Folder path should be a string');
                     }
 
                     // If a tag is selected, it should be a string
-                    if (navItem.tag) {
+                    if (navItem.type === 'tag') {
                         this.assertTrue(typeof navItem.tag === 'string', 'Tag should be a string');
                     }
 
                     // If a property is selected, it should be a string id
-                    if (navItem.property) {
+                    if (navItem.type === 'property') {
                         this.assertTrue(typeof navItem.property === 'string', 'Property should be a string');
                     }
                 },
@@ -674,8 +695,10 @@
                     // If an event was captured, verify structure
                     if (eventData) {
                         this.assertExists(eventData.folder, 'Should have folder');
-                        this.assertExists(eventData.metadata, 'Should have metadata');
-                        this.assertTrue(typeof eventData.metadata === 'object', 'Metadata should be an object');
+                        this.assertTrue(
+                            eventData.metadata === null || typeof eventData.metadata === 'object',
+                            'Metadata should be null or an object'
+                        );
                     }
 
                     // Clean up
@@ -694,8 +717,10 @@
                     // If an event was captured, verify structure
                     if (eventData) {
                         this.assertExists(eventData.tag, 'Should have tag');
-                        this.assertExists(eventData.metadata, 'Should have metadata');
-                        this.assertTrue(typeof eventData.metadata === 'object', 'Metadata should be an object');
+                        this.assertTrue(
+                            eventData.metadata === null || typeof eventData.metadata === 'object',
+                            'Metadata should be null or an object'
+                        );
                     }
 
                     // Clean up
@@ -753,7 +778,8 @@
                         'selection-changed',
                         'pinned-files-changed',
                         'folder-changed',
-                        'tag-changed'
+                        'tag-changed',
+                        'property-changed'
                     ];
 
                     const refs = [];

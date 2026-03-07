@@ -18,7 +18,6 @@
 
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { debounce, type TFile } from 'obsidian';
-import type { NotebookNavigatorAPI } from '../../api/NotebookNavigatorAPI';
 import type { FileContentType } from '../../interfaces/IContentProvider';
 import type { ContentProviderRegistry } from '../../services/content/ContentProviderRegistry';
 import type { NotebookNavigatorSettings } from '../../settings';
@@ -49,7 +48,6 @@ interface PropertyTreeServiceLike {
  * then restores the previous value on completion.
  */
 export function useStorageCacheRebuild(params: {
-    api: NotebookNavigatorAPI | null;
     contentRegistryRef: RefObject<ContentProviderRegistry | null>;
     pendingSyncTimeoutIdRef: RefObject<number | null>;
     rebuildFileCacheRef: RefObject<ReturnType<typeof debounce> | null>;
@@ -72,7 +70,6 @@ export function useStorageCacheRebuild(params: {
     getIndexableFiles: () => TFile[];
 }): { rebuildCache: () => Promise<void> } {
     const {
-        api,
         contentRegistryRef,
         pendingSyncTimeoutIdRef,
         rebuildFileCacheRef,
@@ -152,7 +149,6 @@ export function useStorageCacheRebuild(params: {
 
         isStorageReadyRef.current = false;
         setIsStorageReady(false);
-        api?.setStorageReady(false);
         hasBuiltInitialCacheRef.current = false;
 
         const buildCache = buildFileCacheFnRef.current;
@@ -187,7 +183,6 @@ export function useStorageCacheRebuild(params: {
 
         stoppedRef.current = previousStopped;
     }, [
-        api,
         buildFileCacheFnRef,
         cancelPropertyTreeRebuildDebouncer,
         cancelTagTreeRebuildDebouncer,

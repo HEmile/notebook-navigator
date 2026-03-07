@@ -17,8 +17,8 @@
  */
 
 import { TFolder, TFile } from 'obsidian';
-import type { NotebookNavigatorAPI } from '../NotebookNavigatorAPI';
-import type { SelectionState, NavItem } from '../types';
+import type NotebookNavigatorPlugin from '../../main';
+import type { SelectionState, NavItem, NotebookNavigatorEventType, NotebookNavigatorEvents } from '../types';
 import { STORAGE_KEYS } from '../../types';
 import { localStorage } from '../../utils/localStorage';
 import {
@@ -26,6 +26,20 @@ import {
     parseStoredPropertySelectionNodeId,
     type PropertySelectionNodeId
 } from '../../utils/propertyTree';
+
+type SelectionAPIHost = {
+    app: {
+        vault: {
+            getFolderByPath: (path: string) => TFolder | null;
+            getFileByPath: (path: string) => TFile | null;
+        };
+    };
+    getPlugin: () => NotebookNavigatorPlugin;
+    trigger: <T extends NotebookNavigatorEventType>(
+        event: T,
+        ...args: NotebookNavigatorEvents[T] extends void ? [] : [data: NotebookNavigatorEvents[T]]
+    ) => void;
+};
 
 /**
  * Selection API - Manage and query selection state in the navigator
@@ -54,7 +68,7 @@ export class SelectionAPI {
     // selection content changes (even if the count stays the same)
     private lastSelectionSignature = '';
 
-    constructor(private api: NotebookNavigatorAPI) {
+    constructor(private api: SelectionAPIHost) {
         // Initialize navigation state from localStorage
         this.initializeNavigationState();
     }
@@ -110,24 +124,28 @@ export class SelectionAPI {
     getNavItem(): NavItem {
         if (this.selectionState.navigationProperty) {
             return {
+                type: 'property',
                 folder: null,
                 tag: null,
                 property: this.selectionState.navigationProperty
             };
         } else if (this.selectionState.navigationTag) {
             return {
+                type: 'tag',
                 folder: null,
                 tag: this.selectionState.navigationTag,
                 property: null
             };
         } else if (this.selectionState.navigationFolder) {
             return {
+                type: 'folder',
                 folder: this.selectionState.navigationFolder,
                 tag: null,
                 property: null
             };
         }
         return {
+            type: 'none',
             folder: null,
             tag: null,
             property: null

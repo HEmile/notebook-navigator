@@ -19,7 +19,7 @@
 import { useEffect, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { App, EventRef, TAbstractFile, TFile, debounce } from 'obsidian';
 import { TIMEOUTS } from '../../types/obsidian-extended';
-import type { NotebookNavigatorAPI } from '../../api/NotebookNavigatorAPI';
+import { INTERNAL_NOTEBOOK_NAVIGATOR_API, type NotebookNavigatorAPI } from '../../api/NotebookNavigatorAPI';
 import type { NotebookNavigatorSettings } from '../../settings';
 import type { ContentProviderType, FileContentType } from '../../interfaces/IContentProvider';
 import type { ContentProviderRegistry } from '../../services/content/ContentProviderRegistry';
@@ -145,9 +145,7 @@ export function useStorageVaultSync(params: {
                     isStorageReadyRef.current = true;
                     setIsStorageReady(true);
 
-                    if (api) {
-                        api.setStorageReady(true);
-                    }
+                    api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].setStorageReady(true);
 
                     const metadataDependentTypes = getMetadataDependentTypes(settings);
                     const contentEnabled = metadataDependentTypes.length > 0;

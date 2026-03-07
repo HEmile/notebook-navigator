@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { TFile, TFolder } from 'obsidian';
+import { MenuItem, TFile, TFolder } from 'obsidian';
 
 /**
  * Notebook Navigator Public API Types
@@ -43,10 +43,26 @@ export type IconProviderId =
     | 'simple-icons';
 
 /**
- * Icon string format for type-safe icon specifications
+ * Canonical icon input format
  * Must be provider-prefixed (e.g. 'phosphor:folder') or an emoji literal
  */
 export type IconString = `${IconProviderId}:${string}` | `emoji:${string}`;
+
+/**
+ * Icon input type accepted by public API setters.
+ * Use IconString when you want canonical provider-prefixed or emoji input.
+ */
+export type IconInput = string;
+
+/**
+ * Icon value returned by public API getters and events
+ */
+export type IconValue = string;
+
+/**
+ * Aggregate tag collection ids used by the navigator for virtual tag rows.
+ */
+export type TagCollectionId = '__tagged__' | '__untagged__';
 
 // ============================================================================
 // METADATA TYPES
@@ -60,8 +76,8 @@ export interface FolderMetadata {
     color?: string;
     /** CSS background color value */
     backgroundColor?: string;
-    /** Icon identifier (e.g., 'lucide:folder' or 'emoji:📁') */
-    icon?: IconString;
+    /** Normalized icon identifier stored by the plugin */
+    icon?: IconValue;
 }
 
 /**
@@ -72,8 +88,8 @@ export interface TagMetadata {
     color?: string;
     /** CSS background color value */
     backgroundColor?: string;
-    /** Icon identifier (e.g., 'lucide:tag' or 'emoji:🏷️') */
-    icon?: IconString;
+    /** Normalized icon identifier stored by the plugin */
+    icon?: IconValue;
 }
 
 /**
@@ -84,8 +100,44 @@ export interface PropertyMetadata {
     color?: string;
     /** CSS background color value */
     backgroundColor?: string;
-    /** Icon identifier (e.g., 'lucide:hash' or 'emoji:🔖') */
-    icon?: IconString;
+    /** Normalized icon identifier stored by the plugin */
+    icon?: IconValue;
+}
+
+/**
+ * Metadata update payload for folders
+ */
+export interface FolderMetadataUpdate {
+    /** CSS color value. Use null to clear the stored value. */
+    color?: string | null;
+    /** CSS background color value. Use null to clear the stored value. */
+    backgroundColor?: string | null;
+    /** Canonical icon input. Use null to clear the stored value. */
+    icon?: IconInput | null;
+}
+
+/**
+ * Metadata update payload for tags
+ */
+export interface TagMetadataUpdate {
+    /** CSS color value. Use null to clear the stored value. */
+    color?: string | null;
+    /** CSS background color value. Use null to clear the stored value. */
+    backgroundColor?: string | null;
+    /** Canonical icon input. Use null to clear the stored value. */
+    icon?: IconInput | null;
+}
+
+/**
+ * Metadata update payload for property nodes
+ */
+export interface PropertyMetadataUpdate {
+    /** CSS color value. Use null to clear the stored value. */
+    color?: string | null;
+    /** CSS background color value. Use null to clear the stored value. */
+    backgroundColor?: string | null;
+    /** Canonical icon input. Use null to clear the stored value. */
+    icon?: IconInput | null;
 }
 
 // ============================================================================
@@ -152,25 +204,27 @@ export interface NotebookNavigatorEvents {
     /** Fired when folder metadata changes */
     'folder-changed': {
         folder: TFolder;
-        metadata: FolderMetadata;
+        metadata: FolderMetadata | null;
     };
 
     /** Fired when tag metadata changes */
     'tag-changed': {
         tag: string;
-        metadata: TagMetadata;
+        metadata: TagMetadata | null;
     };
 
     /** Fired when property metadata changes */
     'property-changed': {
         nodeId: string;
-        metadata: PropertyMetadata;
+        metadata: PropertyMetadata | null;
     };
 }
 
 // ============================================================================
 // SELECTION STATE
 // ============================================================================
+
+export type NavItemType = 'folder' | 'tag' | 'property' | 'none';
 
 /**
  * Currently selected navigation item (folder, tag, property, or none).
@@ -179,10 +233,10 @@ export interface NotebookNavigatorEvents {
  * or `key:<normalizedKey>` / `key:<normalizedKey>=<normalizedValuePath>` for key/value nodes).
  */
 export type NavItem =
-    | { folder: TFolder; tag: null; property: null }
-    | { folder: null; tag: string; property: null }
-    | { folder: null; tag: null; property: string }
-    | { folder: null; tag: null; property: null };
+    | { type: 'folder'; folder: TFolder; tag: null; property: null }
+    | { type: 'tag'; folder: null; tag: string; property: null }
+    | { type: 'property'; folder: null; tag: null; property: string }
+    | { type: 'none'; folder: null; tag: null; property: null };
 
 /**
  * Current file selection state
@@ -193,3 +247,62 @@ export interface SelectionState {
     /** The file that has keyboard focus (can be null) */
     focused: TFile | null;
 }
+
+export type FileMenuSelectionMode = 'single' | 'multiple';
+
+export interface FileMenuExtensionContext {
+    /** Add a menu item (must be called synchronously during menu construction) */
+    addItem: (cb: (item: MenuItem) => void) => void;
+    /** The file the menu was opened on */
+    file: TFile;
+    selection: {
+        /** Effective selection mode for this menu */
+        mode: FileMenuSelectionMode;
+        /** Snapshot of files for this menu */
+        files: readonly TFile[];
+    };
+}
+
+export interface FolderMenuExtensionContext {
+    /** Add a menu item (must be called synchronously during menu construction) */
+    addItem: (cb: (item: MenuItem) => void) => void;
+    /** The folder the menu was opened on */
+    folder: TFolder;
+}
+
+export interface TagMenuExtensionContext {
+    /** Add a menu item (must be called synchronously during menu construction) */
+    addItem: (cb: (item: MenuItem) => void) => void;
+    /** Canonical tag path, or a tag collection id for aggregate tag rows */
+    tag: string;
+}
+
+export interface PropertyMenuExtensionContext {
+    /** Add a menu item (must be called synchronously during menu construction) */
+    addItem: (cb: (item: MenuItem) => void) => void;
+    /** Property node id for the menu target */
+    nodeId: string;
+}
+
+export type PropertyNodeParts =
+    | {
+          /** Root node returned for `propertyNodes.rootId` */
+          kind: 'root';
+          key: null;
+          valuePath: null;
+      }
+    | {
+          /** Key node without a value path */
+          kind: 'key';
+          /** Normalized property key */
+          key: string;
+          valuePath: null;
+      }
+    | {
+          /** Key/value node */
+          kind: 'value';
+          /** Normalized property key */
+          key: string;
+          /** Normalized value path */
+          valuePath: string;
+      };

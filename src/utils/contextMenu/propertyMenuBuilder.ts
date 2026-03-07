@@ -25,6 +25,7 @@ import { addShortcutRenameMenuItem } from './shortcutRenameMenuItem';
 import { addStyleMenu } from './styleMenuBuilder';
 import { resolveUXIconForMenu } from '../uxIcons';
 import { normalizePropertyNodeId, parsePropertyNodeId } from '../propertyTree';
+import { INTERNAL_NOTEBOOK_NAVIGATOR_API } from '../../api/NotebookNavigatorAPI';
 
 function resolvePropertyMenuLabel(params: { propertyNodeId: string; propertyNodeName?: string; keyNodeName?: string }): string {
     const { propertyNodeId, propertyNodeName, keyNodeName } = params;
@@ -106,6 +107,15 @@ export function buildPropertyMenu(params: PropertyMenuBuilderParams): void {
             menu.addItem((item: MenuItem) => {
                 item.setTitle(label).setIsLabel(true);
             });
+            menu.addSeparator();
+        }
+
+        const addedMenuExtensions =
+            services.plugin.api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].menus.applyPropertyMenuExtensions({
+                menu,
+                nodeId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
+            }) ?? 0;
+        if (addedMenuExtensions > 0 && services.shortcuts) {
             menu.addSeparator();
         }
 
@@ -354,8 +364,16 @@ export function buildPropertyMenu(params: PropertyMenuBuilderParams): void {
     }
 
     const canManagePropertyKey = propertyNode?.kind === 'key' && propertyNode.notesWithValue.size > 0;
-    if (propertyKey && canManagePropertyKey) {
+    const addedMenuExtensions =
+        services.plugin.api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].menus.applyPropertyMenuExtensions({ menu, nodeId: normalizedNodeId }) ?? 0;
+    if (addedMenuExtensions > 0 && canManagePropertyKey) {
         menu.addSeparator();
+    }
+
+    if (propertyKey && canManagePropertyKey) {
+        if (addedMenuExtensions === 0) {
+            menu.addSeparator();
+        }
 
         menu.addItem((item: MenuItem) => {
             setAsyncOnClick(item.setTitle(strings.contextMenu.property.renameKey).setIcon('lucide-pencil'), async () => {

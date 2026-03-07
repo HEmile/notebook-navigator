@@ -230,7 +230,6 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
     });
 
     const { rebuildCache } = useStorageCacheRebuild({
-        api,
         contentRegistryRef: contentRegistry,
         pendingSyncTimeoutIdRef: pendingSyncTimeoutId,
         rebuildFileCacheRef,

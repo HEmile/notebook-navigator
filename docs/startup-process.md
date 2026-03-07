@@ -247,7 +247,7 @@ tag extraction and markdown pipeline processing:
        processed mtime fields (`markdownPipelineMtime`, `tagsMtime`, `metadataMtime`, `fileThumbnailsMtime`) against
        `file.stat.mtime` to detect stale content.
 4. Rebuild tag and property trees via `rebuildTagTree()` and `rebuildPropertyTree()`.
-5. Mark storage as ready (`setIsStorageReady(true)` and `NotebookNavigatorAPI.setStorageReady(true)`).
+5. Mark storage as ready (`setIsStorageReady(true)` and the internal Notebook Navigator API readiness bridge).
 6. Queue content generation:
    - Determine metadata-dependent provider types with `getMetadataDependentTypes(settings)`:
      - Always includes `markdownPipeline` (word count, task counters, preview/property/feature image pipelines).

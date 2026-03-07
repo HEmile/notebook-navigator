@@ -39,6 +39,7 @@ import { resolveIconForMenu, resolveUXIconForMenu } from '../uxIcons';
 import { isFolderNote } from '../../utils/folderNotes';
 import { getFilesForNavigationSelection, getNavigatorPinContext } from '../selectionUtils';
 import { collectFileMenuPropertyActions, type FileMenuPropertyAction } from '../../utils/propertyMenuActions';
+import { INTERNAL_NOTEBOOK_NAVIGATOR_API } from '../../api/NotebookNavigatorAPI';
 
 type FileStyleTarget = { type: 'folder'; folderPath: string } | { type: 'files'; files: TFile[] };
 
@@ -335,7 +336,7 @@ export function buildFileMenu(params: FileMenuBuilderParams): void {
         menu.addSeparator();
 
         const addedMenuExtensions =
-            services.plugin.api?.menus?.applyFileMenuExtensions({
+            services.plugin.api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].menus.applyFileMenuExtensions({
                 menu,
                 file,
                 selection: { mode: 'multiple', files: [...cachedSelectedFiles] }
@@ -452,7 +453,7 @@ export function buildFileMenu(params: FileMenuBuilderParams): void {
 
     if (!shouldShowMultiOptions) {
         const addedMenuExtensions =
-            services.plugin.api?.menus?.applyFileMenuExtensions({
+            services.plugin.api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].menus.applyFileMenuExtensions({
                 menu,
                 file,
                 selection: { mode: 'single', files: [file] }

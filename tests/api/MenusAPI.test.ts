@@ -121,6 +121,39 @@ describe('MenusAPI', () => {
         consoleSpy.mockRestore();
     });
 
+    it('registers and applies tag and property menu extensions with item counts', () => {
+        const menusAPI = new MenusAPI();
+        const { menu, addItem } = createMenuStub();
+
+        const disposeTag = menusAPI.registerTagMenu(({ addItem: addMenuItem, tag }) => {
+            expect(tag).toBe('work');
+            addMenuItem(() => undefined);
+        });
+        const disposeProperty = menusAPI.registerPropertyMenu(({ addItem: addMenuItem, nodeId }) => {
+            expect(nodeId).toBe('key:status');
+            addMenuItem(() => undefined);
+        });
+
+        expect(
+            menusAPI.applyTagMenuExtensions({
+                menu: menu as unknown as Menu,
+                tag: 'work'
+            })
+        ).toBe(1);
+
+        expect(
+            menusAPI.applyPropertyMenuExtensions({
+                menu: menu as unknown as Menu,
+                nodeId: 'key:status'
+            })
+        ).toBe(1);
+
+        expect(addItem).toHaveBeenCalledTimes(2);
+
+        disposeTag();
+        disposeProperty();
+    });
+
     it('warns when a menu extension returns a promise', () => {
         const menusAPI = new MenusAPI();
         const file = createTestTFile('Note.md');

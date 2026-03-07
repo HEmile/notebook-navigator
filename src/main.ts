@@ -46,7 +46,7 @@ import ReleaseCheckService, { type ReleaseUpdateNotice } from './services/Releas
 import { NotebookNavigatorView } from './view/NotebookNavigatorView';
 import { NotebookNavigatorCalendarView } from './view/NotebookNavigatorCalendarView';
 import { localStorage } from './utils/localStorage';
-import { NotebookNavigatorAPI } from './api/NotebookNavigatorAPI';
+import { INTERNAL_NOTEBOOK_NAVIGATOR_API, NotebookNavigatorAPI } from './api/NotebookNavigatorAPI';
 import { initializeDatabase, shutdownDatabase } from './storage/fileOperations';
 import { ExtendedApp } from './types/obsidian-extended';
 import { getLeafSplitLocation } from './utils/workspaceSplit';
@@ -425,7 +425,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
                 return;
             }
 
-            this.api.metadata.emitFolderChangedForPath(folderPath);
+            this.api[INTERNAL_NOTEBOOK_NAVIGATOR_API].metadata.emitFolderChangedForPath(folderPath);
         });
         this.releaseCheckService = new ReleaseCheckService(this);
 
@@ -846,6 +846,10 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             throw new Error('Notebook Navigator view not found');
         }
 
+        if (!(await view.whenReady())) {
+            throw new Error('Notebook Navigator view not ready');
+        }
+
         await view.rebuildCache();
     }
 
@@ -1140,9 +1144,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
 
         // Update API caches with new settings
         if (this.api) {
-            if (this.api.metadata) {
-                this.api.metadata.updateFromSettings(this.settings);
-            }
+            this.api[INTERNAL_NOTEBOOK_NAVIGATOR_API].metadata.updateFromSettings(this.settings);
         }
 
         // Create a copy of listeners to avoid issues if a callback modifies the map

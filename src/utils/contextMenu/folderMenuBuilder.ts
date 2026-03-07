@@ -35,6 +35,7 @@ import { EXCALIDRAW_PLUGIN_ID, TLDRAW_PLUGIN_ID } from '../../constants/pluginId
 import { addFolderStyleChangeActions, addFolderStyleMenu } from './styleMenuBuilder';
 import { getTemplaterCreateNewNoteFromTemplate } from '../templaterIntegration';
 import { resolveFolderDisplayName } from '../folderDisplayName';
+import { INTERNAL_NOTEBOOK_NAVIGATOR_API } from '../../api/NotebookNavigatorAPI';
 
 /**
  * Adds folder creation commands (new note/folder/canvas/base/drawing) to a menu.
@@ -435,7 +436,8 @@ export function buildFolderMenu(params: FolderMenuBuilderParams): void {
         menu.addSeparator();
     }
 
-    const addedMenuExtensions = services.plugin.api?.menus?.applyFolderMenuExtensions({ menu, folder }) ?? 0;
+    const addedMenuExtensions =
+        services.plugin.api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].menus.applyFolderMenuExtensions({ menu, folder }) ?? 0;
     if (addedMenuExtensions > 0) {
         menu.addSeparator();
     }

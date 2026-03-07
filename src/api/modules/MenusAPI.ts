@@ -17,31 +17,32 @@
  */
 
 import { Menu, MenuItem, TFile, TFolder } from 'obsidian';
+import type {
+    FileMenuExtensionContext,
+    FolderMenuExtensionContext,
+    TagMenuExtensionContext,
+    PropertyMenuExtensionContext,
+    FileMenuSelectionMode
+} from '../types';
 
 export type MenuExtensionDispose = () => void;
-
-export type FileMenuSelectionMode = 'single' | 'multiple';
 
 function isPromiseLike(value: unknown): value is Promise<unknown> {
     return value instanceof Promise;
 }
 
-export interface FileMenuExtensionContext {
-    addItem: (cb: (item: MenuItem) => void) => void;
-    file: TFile;
-    selection: {
-        mode: FileMenuSelectionMode;
-        files: readonly TFile[];
-    };
-}
-
-export interface FolderMenuExtensionContext {
-    addItem: (cb: (item: MenuItem) => void) => void;
-    folder: TFolder;
-}
+export type {
+    FileMenuExtensionContext,
+    FolderMenuExtensionContext,
+    TagMenuExtensionContext,
+    PropertyMenuExtensionContext,
+    FileMenuSelectionMode
+};
 
 export type FileMenuExtension = (context: FileMenuExtensionContext) => void;
 export type FolderMenuExtension = (context: FolderMenuExtensionContext) => void;
+export type TagMenuExtension = (context: TagMenuExtensionContext) => void;
+export type PropertyMenuExtension = (context: PropertyMenuExtensionContext) => void;
 
 type FileMenuExtensionApplyContext = {
     menu: Menu;
@@ -57,25 +58,105 @@ type FolderMenuExtensionApplyContext = {
     folder: TFolder;
 };
 
+type TagMenuExtensionApplyContext = {
+    menu: Menu;
+    tag: string;
+};
+
+type PropertyMenuExtensionApplyContext = {
+    menu: Menu;
+    nodeId: string;
+};
+
+type MenuExtensionContextBase = {
+    addItem: (cb: (item: MenuItem) => void) => void;
+};
+
 /**
  * Menu extension API - Allow other plugins to add items to Notebook Navigator context menus.
  */
 export class MenusAPI {
     private fileMenuExtensions = new Set<FileMenuExtension>();
     private folderMenuExtensions = new Set<FolderMenuExtension>();
+    private tagMenuExtensions = new Set<TagMenuExtension>();
+    private propertyMenuExtensions = new Set<PropertyMenuExtension>();
 
     registerFileMenu(callback: FileMenuExtension): MenuExtensionDispose {
-        this.fileMenuExtensions.add(callback);
-        return () => {
-            this.fileMenuExtensions.delete(callback);
-        };
+        return this.registerExtension(this.fileMenuExtensions, callback);
     }
 
     registerFolderMenu(callback: FolderMenuExtension): MenuExtensionDispose {
-        this.folderMenuExtensions.add(callback);
+        return this.registerExtension(this.folderMenuExtensions, callback);
+    }
+
+    registerTagMenu(callback: TagMenuExtension): MenuExtensionDispose {
+        return this.registerExtension(this.tagMenuExtensions, callback);
+    }
+
+    registerPropertyMenu(callback: PropertyMenuExtension): MenuExtensionDispose {
+        return this.registerExtension(this.propertyMenuExtensions, callback);
+    }
+
+    private registerExtension<T>(extensions: Set<T>, callback: T): MenuExtensionDispose {
+        extensions.add(callback);
         return () => {
-            this.folderMenuExtensions.delete(callback);
+            extensions.delete(callback);
         };
+    }
+
+    private applyExtensions<TContext extends MenuExtensionContextBase, TExtension extends (context: TContext) => void>(
+        extensions: ReadonlySet<TExtension>,
+        menu: Menu,
+        errorPrefix: string,
+        buildContext: (addItem: (cb: (item: MenuItem) => void) => void) => TContext
+    ): number {
+        if (extensions.size === 0) {
+            return 0;
+        }
+
+        let addedItems = 0;
+        let isBuildingMenu = true;
+
+        const addItem = (cb: (item: MenuItem) => void) => {
+            if (!isBuildingMenu) {
+                console.error(
+                    `Notebook Navigator ${errorPrefix} menu extension attempted to add menu items asynchronously. Add menu items synchronously and do async work in onClick handlers.`
+                );
+                return;
+            }
+            try {
+                menu.addItem(item => {
+                    try {
+                        cb(item);
+                    } catch (error) {
+                        console.error(`Notebook Navigator ${errorPrefix} menu extension item failed`, error);
+                    }
+                });
+                addedItems += 1;
+            } catch (error) {
+                console.error(`Notebook Navigator ${errorPrefix} menu extension addItem failed`, error);
+            }
+        };
+
+        const extensionContext = buildContext(addItem);
+        for (const extension of Array.from(extensions)) {
+            try {
+                const result: unknown = extension(extensionContext);
+                if (isPromiseLike(result)) {
+                    console.error(
+                        `Notebook Navigator ${errorPrefix} menu extension returned a Promise. Add menu items synchronously and do async work in onClick handlers.`
+                    );
+                    void result.catch(error => {
+                        console.error(`Notebook Navigator ${errorPrefix} menu extension failed`, error);
+                    });
+                }
+            } catch (error) {
+                console.error(`Notebook Navigator ${errorPrefix} menu extension failed`, error);
+            }
+        }
+
+        isBuildingMenu = false;
+        return addedItems;
     }
 
     /**
@@ -83,63 +164,17 @@ export class MenusAPI {
      * @internal
      */
     applyFileMenuExtensions(context: FileMenuExtensionApplyContext): number {
-        if (this.fileMenuExtensions.size === 0) {
-            return 0;
-        }
-
         const { menu, file, selection } = context;
-        let addedItems = 0;
-        let isBuildingMenu = true;
-
         const frozenSelection = Object.freeze({
             mode: selection.mode,
             files: Object.freeze([...selection.files])
         });
 
-        const extensionContext: FileMenuExtensionContext = {
-            addItem: cb => {
-                if (!isBuildingMenu) {
-                    console.error(
-                        'Notebook Navigator file menu extension attempted to add menu items asynchronously. Add menu items synchronously and do async work in onClick handlers.'
-                    );
-                    return;
-                }
-                try {
-                    menu.addItem(item => {
-                        try {
-                            cb(item);
-                        } catch (error) {
-                            console.error('Notebook Navigator file menu extension item failed', error);
-                        }
-                    });
-                    addedItems += 1;
-                } catch (error) {
-                    console.error('Notebook Navigator file menu extension addItem failed', error);
-                }
-            },
+        return this.applyExtensions(this.fileMenuExtensions, menu, 'file', addItem => ({
+            addItem,
             file,
             selection: frozenSelection
-        };
-
-        const extensions = Array.from(this.fileMenuExtensions);
-        for (const extension of extensions) {
-            try {
-                const result: unknown = extension(extensionContext);
-                if (isPromiseLike(result)) {
-                    console.error(
-                        'Notebook Navigator file menu extension returned a Promise. Add menu items synchronously and do async work in onClick handlers.'
-                    );
-                    void result.catch(error => {
-                        console.error('Notebook Navigator file menu extension failed', error);
-                    });
-                }
-            } catch (error) {
-                console.error('Notebook Navigator file menu extension failed', error);
-            }
-        }
-
-        isBuildingMenu = false;
-        return addedItems;
+        }));
     }
 
     /**
@@ -147,56 +182,34 @@ export class MenusAPI {
      * @internal
      */
     applyFolderMenuExtensions(context: FolderMenuExtensionApplyContext): number {
-        if (this.folderMenuExtensions.size === 0) {
-            return 0;
-        }
-
         const { menu, folder } = context;
-        let addedItems = 0;
-        let isBuildingMenu = true;
-
-        const extensionContext: FolderMenuExtensionContext = {
-            addItem: cb => {
-                if (!isBuildingMenu) {
-                    console.error(
-                        'Notebook Navigator folder menu extension attempted to add menu items asynchronously. Add menu items synchronously and do async work in onClick handlers.'
-                    );
-                    return;
-                }
-                try {
-                    menu.addItem(item => {
-                        try {
-                            cb(item);
-                        } catch (error) {
-                            console.error('Notebook Navigator folder menu extension item failed', error);
-                        }
-                    });
-                    addedItems += 1;
-                } catch (error) {
-                    console.error('Notebook Navigator folder menu extension addItem failed', error);
-                }
-            },
+        return this.applyExtensions(this.folderMenuExtensions, menu, 'folder', addItem => ({
+            addItem,
             folder
-        };
+        }));
+    }
 
-        const extensions = Array.from(this.folderMenuExtensions);
-        for (const extension of extensions) {
-            try {
-                const result: unknown = extension(extensionContext);
-                if (isPromiseLike(result)) {
-                    console.error(
-                        'Notebook Navigator folder menu extension returned a Promise. Add menu items synchronously and do async work in onClick handlers.'
-                    );
-                    void result.catch(error => {
-                        console.error('Notebook Navigator folder menu extension failed', error);
-                    });
-                }
-            } catch (error) {
-                console.error('Notebook Navigator folder menu extension failed', error);
-            }
-        }
+    /**
+     * Calls registered tag menu extensions and returns number of items added.
+     * @internal
+     */
+    applyTagMenuExtensions(context: TagMenuExtensionApplyContext): number {
+        const { menu, tag } = context;
+        return this.applyExtensions(this.tagMenuExtensions, menu, 'tag', addItem => ({
+            addItem,
+            tag
+        }));
+    }
 
-        isBuildingMenu = false;
-        return addedItems;
+    /**
+     * Calls registered property menu extensions and returns number of items added.
+     * @internal
+     */
+    applyPropertyMenuExtensions(context: PropertyMenuExtensionApplyContext): number {
+        const { menu, nodeId } = context;
+        return this.applyExtensions(this.propertyMenuExtensions, menu, 'property', addItem => ({
+            addItem,
+            nodeId
+        }));
     }
 }

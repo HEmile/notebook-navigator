@@ -93,7 +93,7 @@ const arraysEqual = (a: string[], b: string[]): boolean => {
 
 export interface NotebookNavigatorHandle {
     // Navigates to a file by revealing it in its actual parent folder
-    navigateToFile: (file: TFile, options?: RevealFileOptions) => void;
+    navigateToFile: (file: TFile, options?: RevealFileOptions) => boolean;
     // Reveals a file while preserving the current navigation context when possible
     revealFileInNearestFolder: (file: TFile, options?: RevealFileOptions) => void;
     focusVisiblePane: () => void;
@@ -103,9 +103,9 @@ export interface NotebookNavigatorHandle {
     createNoteFromTemplateInSelectedFolder: () => Promise<void>;
     moveSelectedFiles: () => Promise<void>;
     addShortcutForCurrentSelection: () => Promise<void>;
-    navigateToFolder: (folder: TFolder, options?: NavigateToFolderOptions) => void;
-    navigateToTag: (tagPath: string) => void;
-    navigateToProperty: (propertyNodeId: string) => void;
+    navigateToFolder: (folder: TFolder | string, options?: NavigateToFolderOptions) => boolean;
+    navigateToTag: (tagPath: string) => string | null;
+    navigateToProperty: (propertyNodeId: string) => string | null;
     addDateFilterToSearch: (dateToken: string) => void;
     navigateToFolderWithModal: () => void;
     navigateToTagWithModal: () => void;
@@ -615,7 +615,7 @@ export const NotebookNavigatorComponent = React.memo(
             return {
                 // Forward to the manual reveal implementation
                 navigateToFile: (file: TFile, options?: RevealFileOptions) => {
-                    revealFileInActualFolder(file, options);
+                    return revealFileInActualFolder(file, options);
                 },
                 // Forward to the auto reveal implementation
                 revealFileInNearestFolder: (file: TFile, options?: RevealFileOptions) => {

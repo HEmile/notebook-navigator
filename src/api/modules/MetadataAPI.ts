@@ -17,8 +17,21 @@
  */
 
 import { TFile, TFolder } from 'obsidian';
-import type { NotebookNavigatorAPI } from '../NotebookNavigatorAPI';
-import type { FolderMetadata, TagMetadata, PropertyMetadata, IconString, PinContext, Pinned } from '../types';
+import type NotebookNavigatorPlugin from '../../main';
+import type {
+    FolderMetadata,
+    FolderMetadataUpdate,
+    TagMetadata,
+    TagMetadataUpdate,
+    PropertyMetadata,
+    PropertyMetadataUpdate,
+    IconInput,
+    IconValue,
+    NotebookNavigatorEventType,
+    NotebookNavigatorEvents,
+    PinContext,
+    Pinned
+} from '../types';
 import type { NotebookNavigatorSettings } from '../../settings';
 import { PinnedNotes } from '../../types';
 import { normalizeCanonicalIconId } from '../../utils/iconizeFormat';
@@ -28,7 +41,16 @@ import { clonePinnedNotesRecord, normalizePinnedNoteContext } from '../../utils/
 type MetadataUpdate = {
     color?: string | null;
     backgroundColor?: string | null;
-    icon?: IconString | null;
+    icon?: IconInput | null;
+};
+
+type MetadataAPIHost = {
+    getApp: () => { vault: { getFolderByPath: (path: string) => TFolder | null } };
+    getPlugin: () => NotebookNavigatorPlugin;
+    trigger: <T extends NotebookNavigatorEventType>(
+        event: T,
+        ...args: NotebookNavigatorEvents[T] extends void ? [] : [data: NotebookNavigatorEvents[T]]
+    ) => void;
 };
 
 /**
@@ -95,7 +117,7 @@ export class MetadataAPI {
         initialized: false
     };
 
-    constructor(private api: NotebookNavigatorAPI) {
+    constructor(private api: MetadataAPIHost) {
         this.initializeFromSettings();
     }
 
@@ -242,7 +264,7 @@ export class MetadataAPI {
                 const metadata = this.getFolderMeta(folder);
                 this.api.trigger('folder-changed', {
                     folder,
-                    metadata: metadata || { color: undefined, backgroundColor: undefined, icon: undefined }
+                    metadata
                 });
             }
         }
@@ -258,7 +280,7 @@ export class MetadataAPI {
             const metadata = this.getTagMeta(tag);
             this.api.trigger('tag-changed', {
                 tag,
-                metadata: metadata || { color: undefined, backgroundColor: undefined, icon: undefined }
+                metadata
             });
         }
 
@@ -276,7 +298,7 @@ export class MetadataAPI {
             const metadata = this.getPropertyMeta(nodeId);
             this.api.trigger('property-changed', {
                 nodeId,
-                metadata: metadata || { color: undefined, backgroundColor: undefined, icon: undefined }
+                metadata
             });
         }
 
@@ -390,7 +412,7 @@ export class MetadataAPI {
         return {
             color: folderDisplayData.color,
             backgroundColor: folderDisplayData.backgroundColor,
-            icon: folderDisplayData.icon as IconString | undefined
+            icon: folderDisplayData.icon
         };
     }
 
@@ -413,11 +435,7 @@ export class MetadataAPI {
             const metadata = this.getFolderMetadataFromService(folder);
             this.api.trigger('folder-changed', {
                 folder,
-                metadata: {
-                    color: metadata?.color,
-                    backgroundColor: metadata?.backgroundColor,
-                    icon: metadata?.icon
-                }
+                metadata
             });
             return;
         }
@@ -425,7 +443,7 @@ export class MetadataAPI {
         const metadata = this.getFolderMeta(folder);
         this.api.trigger('folder-changed', {
             folder,
-            metadata: metadata || { color: undefined, backgroundColor: undefined, icon: undefined }
+            metadata
         });
     }
 
@@ -461,7 +479,7 @@ export class MetadataAPI {
         return {
             color,
             backgroundColor,
-            icon: icon as IconString | undefined
+            icon: icon as IconValue | undefined
         };
     }
 
@@ -470,7 +488,7 @@ export class MetadataAPI {
      * @param folder - Folder to set metadata for
      * @param meta - Partial metadata object with properties to update
      */
-    async setFolderMeta(folder: TFolder, meta: Partial<FolderMetadata>): Promise<void> {
+    async setFolderMeta(folder: TFolder, meta: FolderMetadataUpdate): Promise<void> {
         const plugin = this.api.getPlugin();
         if (!plugin) return;
 
@@ -552,7 +570,7 @@ export class MetadataAPI {
         return {
             color,
             backgroundColor,
-            icon: icon as IconString | undefined
+            icon: icon as IconValue | undefined
         };
     }
 
@@ -561,7 +579,7 @@ export class MetadataAPI {
      * @param tag - Tag string (with or without '#' prefix)
      * @param meta - Partial metadata object with properties to update
      */
-    async setTagMeta(tag: string, meta: Partial<TagMetadata>): Promise<void> {
+    async setTagMeta(tag: string, meta: TagMetadataUpdate): Promise<void> {
         const plugin = this.api.getPlugin();
         if (!plugin) return;
 
@@ -600,7 +618,7 @@ export class MetadataAPI {
         return {
             color,
             backgroundColor,
-            icon: icon as IconString | undefined
+            icon: icon as IconValue | undefined
         };
     }
 
@@ -609,7 +627,7 @@ export class MetadataAPI {
      * @param nodeId - Property node id (key or key=value)
      * @param meta - Partial metadata object with properties to update
      */
-    async setPropertyMeta(nodeId: string, meta: Partial<PropertyMetadata>): Promise<void> {
+    async setPropertyMeta(nodeId: string, meta: PropertyMetadataUpdate): Promise<void> {
         const plugin = this.api.getPlugin();
         if (!plugin) return;
 
