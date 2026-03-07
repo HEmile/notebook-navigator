@@ -23,14 +23,17 @@ import type { NotebookNavigatorSettings, VaultProfile } from '../../src/settings
 import type { VisibilityPreferences } from '../../src/types';
 import type { ITagTreeProvider } from '../../src/interfaces/ITagTreeProvider';
 import type { TagTreeNode } from '../../src/types/storage';
+import type { PropertyItem } from '../../src/storage/IndexedDBStorage';
 import { FILE_VISIBILITY } from '../../src/utils/fileTypeUtils';
-import { getFilesForTag } from '../../src/utils/fileFinder';
+import { getFilesForProperty, getFilesForTag } from '../../src/utils/fileFinder';
+import { buildPropertyKeyNodeId } from '../../src/utils/propertyTree';
+import { setActivePropertyFields } from '../../src/utils/vaultProfiles';
 import { createTestTFile } from './createTestTFile';
 
-const fileDataByPath = new Map<string, { tags: readonly string[] | null }>();
+const fileDataByPath = new Map<string, { tags: readonly string[] | null; properties: PropertyItem[] | null }>();
 
 const db = {
-    getFile(path: string): { tags: readonly string[] | null } | null {
+    getFile(path: string): { tags: readonly string[] | null; properties: PropertyItem[] | null } | null {
         return fileDataByPath.get(path) ?? null;
     }
 };
@@ -100,7 +103,19 @@ function createTagNode(path: string, displayPath: string): TagTreeNode {
 }
 
 function setFileTags(file: TFile, tags: readonly string[]): void {
-    fileDataByPath.set(file.path, { tags: [...tags] });
+    const existing = fileDataByPath.get(file.path);
+    fileDataByPath.set(file.path, {
+        tags: [...tags],
+        properties: existing?.properties ?? null
+    });
+}
+
+function setFileProperties(file: TFile, properties: PropertyItem[]): void {
+    const existing = fileDataByPath.get(file.path);
+    fileDataByPath.set(file.path, {
+        tags: existing?.tags ?? null,
+        properties: [...properties]
+    });
 }
 
 function toSortedPaths(files: TFile[]): string[] {
@@ -234,5 +249,71 @@ describe('fileFinder getFilesForTag', () => {
         const files = getFilesForTag('projects', createSettings(), visibility, app, tagTreeService);
 
         expect(toSortedPaths(files)).toEqual([rootTagFile.path]);
+    });
+
+    it('keeps descendant tag pins in normal sort order when limited to the direct tag', () => {
+        const rootTagFile = createTestTFile('notes/root.md');
+        rootTagFile.stat.mtime = 20;
+        rootTagFile.stat.ctime = 20;
+        setFileTags(rootTagFile, ['projects']);
+
+        const childTagFile = createTestTFile('notes/child.md');
+        childTagFile.stat.mtime = 10;
+        childTagFile.stat.ctime = 10;
+        setFileTags(childTagFile, ['projects/client']);
+
+        const settings = createSettings();
+        settings.filterPinnedByFolder = true;
+        settings.pinnedNotes = {
+            [childTagFile.path]: { folder: false, tag: true, property: false }
+        };
+
+        const app = createAppWithFiles([rootTagFile, childTagFile]);
+        const projectsNode = createTagNode('projects', 'Projects');
+        const tagTreeService = createTagTreeService({
+            hasNodes: () => true,
+            findTagNode: () => projectsNode,
+            collectTagFilePaths: () => [rootTagFile.path, childTagFile.path]
+        });
+
+        const files = getFilesForTag('projects', settings, { includeDescendantNotes: true, showHiddenItems: false }, app, tagTreeService);
+
+        expect(files.map(file => file.path)).toEqual([rootTagFile.path, childTagFile.path]);
+    });
+});
+
+describe('fileFinder getFilesForProperty', () => {
+    beforeEach(() => {
+        fileDataByPath.clear();
+    });
+
+    it('keeps value-node pins in normal sort order when limited to the direct property node', () => {
+        const keyOnlyFile = createTestTFile('notes/key-only.md');
+        keyOnlyFile.stat.mtime = 20;
+        keyOnlyFile.stat.ctime = 20;
+        setFileProperties(keyOnlyFile, [{ fieldKey: 'status', value: '', valueKind: 'string' }]);
+
+        const valueFile = createTestTFile('notes/value.md');
+        valueFile.stat.mtime = 10;
+        valueFile.stat.ctime = 10;
+        setFileProperties(valueFile, [{ fieldKey: 'status', value: 'work/anthropic', valueKind: 'string' }]);
+
+        const settings = createSettings();
+        setActivePropertyFields(settings, 'status');
+        settings.filterPinnedByFolder = true;
+        settings.pinnedNotes = {
+            [valueFile.path]: { folder: false, tag: false, property: true }
+        };
+
+        const app = createAppWithFiles([keyOnlyFile, valueFile]);
+        const files = getFilesForProperty(
+            buildPropertyKeyNodeId('status'),
+            settings,
+            { includeDescendantNotes: true, showHiddenItems: false },
+            app,
+            null
+        );
+
+        expect(files.map(file => file.path)).toEqual([keyOnlyFile.path, valueFile.path]);
     });
 });

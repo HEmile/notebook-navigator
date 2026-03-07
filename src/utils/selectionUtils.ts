@@ -18,7 +18,7 @@
 
 import { TFile, App } from 'obsidian';
 import { SelectionDispatch, SelectionState } from '../context/SelectionContext';
-import { ItemType, type NavigationItemType, type VisibilityPreferences } from '../types';
+import { ItemType, type NavigationItemType, type NavigatorContext, type VisibilityPreferences } from '../types';
 import { NotebookNavigatorSettings } from '../settings';
 import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
 import type { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
@@ -83,6 +83,18 @@ export interface NavigationSelectionScope {
     selectedFolder?: SelectionState['selectedFolder'];
     selectedTag?: SelectionState['selectedTag'];
     selectedProperty?: SelectionState['selectedProperty'];
+}
+
+export function getNavigatorPinContext(selectionType: NavigationSelectionScope['selectionType']): NavigatorContext {
+    if (selectionType === ItemType.TAG) {
+        return ItemType.TAG;
+    }
+
+    if (selectionType === ItemType.PROPERTY) {
+        return ItemType.PROPERTY;
+    }
+
+    return ItemType.FOLDER;
 }
 
 export function getFilesForNavigationSelection(

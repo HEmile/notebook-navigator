@@ -37,7 +37,7 @@ import { confirmRemoveAllTagsFromFiles, openAddTagToFilesModal, removeTagFromFil
 import { addFolderStyleChangeActions, addFolderStyleMenu, addStyleMenu } from './styleMenuBuilder';
 import { resolveIconForMenu, resolveUXIconForMenu } from '../uxIcons';
 import { isFolderNote } from '../../utils/folderNotes';
-import { getFilesForNavigationSelection } from '../selectionUtils';
+import { getFilesForNavigationSelection, getNavigatorPinContext } from '../selectionUtils';
 import { collectFileMenuPropertyActions, type FileMenuPropertyAction } from '../../utils/propertyMenuActions';
 
 type FileStyleTarget = { type: 'folder'; folderPath: string } | { type: 'files'; files: TFile[] };
@@ -317,12 +317,7 @@ export function buildFileMenu(params: FileMenuBuilderParams): void {
             });
         }
 
-        const pinContext: NavigatorContext =
-            selectionState.selectionType === ItemType.TAG
-                ? 'tag'
-                : selectionState.selectionType === ItemType.PROPERTY
-                  ? 'property'
-                  : 'folder';
+        const pinContext = getNavigatorPinContext(selectionState.selectionType);
         addSingleFilePinOption(menu, file, metadataService, pinContext);
 
         menu.addSeparator();
@@ -334,12 +329,7 @@ export function buildFileMenu(params: FileMenuBuilderParams): void {
             addMultipleFilesShortcutOption(menu, cachedSelectedFiles, selectionState, app, settings, services.shortcuts);
         }
 
-        const pinContext: NavigatorContext =
-            selectionState.selectionType === ItemType.TAG
-                ? 'tag'
-                : selectionState.selectionType === ItemType.PROPERTY
-                  ? 'property'
-                  : 'folder';
+        const pinContext = getNavigatorPinContext(selectionState.selectionType);
         addMultipleFilesPinOption(menu, cachedSelectedFiles, metadataService, pinContext);
 
         menu.addSeparator();

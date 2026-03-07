@@ -25,7 +25,7 @@ import { strings } from '../../i18n';
 import { FILE_VISIBILITY, type FileVisibility } from '../../utils/fileTypeUtils';
 import { compareByAlphaSortOrder, getDateField, isDateSortOption, resolveFolderChildSortOrder } from '../../utils/sortUtils';
 import { resolveListGrouping } from '../../utils/listGrouping';
-import { collectPinnedPaths } from '../../utils/fileFinder';
+import { partitionPinnedFiles } from '../../utils/fileFinder';
 import { createHiddenTagVisibility } from '../../utils/tagPrefixMatcher';
 import { getCachedFileTags } from '../../utils/tagUtils';
 import { DateUtils } from '../../utils/dateUtils';
@@ -100,17 +100,17 @@ export function buildListItems({
               : selectionType === ItemType.PROPERTY
                 ? ItemType.PROPERTY
                 : undefined;
-    const restrictToFolderPath =
-        listConfig.filterPinnedByFolder && selectionType === ItemType.FOLDER && selectedFolder ? selectedFolder.path : undefined;
-    const pinnedPaths = collectPinnedPaths(
-        listConfig.pinnedNotes,
-        contextFilter,
-        restrictToFolderPath !== undefined ? { restrictToFolderPath } : undefined
-    );
-
-    const pinnedFiles = files.filter(file => pinnedPaths.has(file.path));
-    const unpinnedFiles = files.filter(file => !pinnedPaths.has(file.path));
     const db = getDB();
+    const pinnedDisplayScope = listConfig.filterPinnedByFolder
+        ? selectionType === ItemType.FOLDER && selectedFolder
+            ? { restrictToFolderPath: selectedFolder.path }
+            : selectionType === ItemType.TAG && selectedTag
+              ? { restrictToTagPath: selectedTag, app, db }
+              : selectionType === ItemType.PROPERTY && selectedProperty
+                ? { restrictToPropertyNodeId: selectedProperty, db }
+                : undefined
+        : undefined;
+    const { pinnedFiles, unpinnedFiles } = partitionPinnedFiles(files, listConfig.pinnedNotes, contextFilter, pinnedDisplayScope);
     const shouldDetectTags = listConfig.showTags && listConfig.showFileTags;
     const hiddenTagVisibility = shouldDetectTags ? createHiddenTagVisibility(hiddenTags, showHiddenItems) : null;
     const fileHasTags = shouldDetectTags

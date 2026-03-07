@@ -909,8 +909,8 @@ export const STRINGS_EN = {
                 desc: 'Include notes from nested subfolders and tag descendants when viewing a folder or tag.'
             },
             limitPinnedToCurrentFolder: {
-                name: 'Limit pinned notes to their folder',
-                desc: 'Pinned notes appear only when viewing the folder or tag where they were pinned.'
+                name: 'Scope pinned notes to their location',
+                desc: 'Pinned notes appear pinned only in the folder, tag, or property where they were pinned, not in ancestor views.'
             },
             separateNoteCounts: {
                 name: 'Show current and descendant counts separately',

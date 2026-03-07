@@ -906,8 +906,8 @@ export const STRINGS_ZH_CN = {
                 desc: '在查看文件夹或标签时包含嵌套子文件夹和标签后代中的笔记。'
             },
             limitPinnedToCurrentFolder: {
-                name: '将固定笔记限制在其文件夹',
-                desc: '固定笔记仅在查看其固定的文件夹或标签时显示。'
+                name: '将固定笔记限制在其位置',
+                desc: '固定笔记仅在其固定的文件夹、标签或属性中显示为固定，不在上级视图中显示。'
             },
             separateNoteCounts: {
                 name: '分别显示当前和后代计数',

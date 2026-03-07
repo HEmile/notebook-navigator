@@ -914,8 +914,8 @@ export const STRINGS_ES = {
                 desc: 'Incluir notas de subcarpetas y descendientes de etiquetas al ver una carpeta o etiqueta.'
             },
             limitPinnedToCurrentFolder: {
-                name: 'Limitar notas fijadas a su carpeta',
-                desc: 'Las notas fijadas aparecen solo al ver la carpeta o etiqueta donde fueron fijadas.'
+                name: 'Limitar notas fijadas a su ubicación',
+                desc: 'Las notas fijadas aparecen fijadas solo en la carpeta, etiqueta o propiedad donde fueron fijadas, no en vistas superiores.'
             },
             separateNoteCounts: {
                 name: 'Mostrar conteos actuales y descendientes por separado',

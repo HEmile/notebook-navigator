@@ -914,8 +914,8 @@ export const STRINGS_VI = {
                 desc: 'Bao gồm ghi chú từ thư mục con lồng nhau và phần tử con của thẻ khi xem thư mục hoặc thẻ.'
             },
             limitPinnedToCurrentFolder: {
-                name: 'Giới hạn ghi chú đã ghim trong thư mục của chúng',
-                desc: 'Ghi chú đã ghim chỉ xuất hiện khi xem thư mục hoặc thẻ nơi chúng được ghim.'
+                name: 'Giới hạn ghi chú đã ghim theo vị trí của chúng',
+                desc: 'Ghi chú đã ghim chỉ hiển thị là đã ghim trong thư mục, thẻ hoặc thuộc tính nơi chúng được ghim, không hiển thị trong các chế độ xem cấp trên.'
             },
             separateNoteCounts: {
                 name: 'Hiện số lượng hiện tại và con riêng biệt',

@@ -914,8 +914,8 @@ export const STRINGS_NL = {
                 desc: 'Notities uit geneste submappen en tag-afstammelingen opnemen bij het bekijken van een map of tag.'
             },
             limitPinnedToCurrentFolder: {
-                name: 'Vastgepinde notities beperken tot hun map',
-                desc: 'Vastgepinde notities verschijnen alleen bij het bekijken van de map of tag waar ze zijn vastgepind.'
+                name: 'Vastgepinde notities beperken tot hun locatie',
+                desc: 'Vastgepinde notities verschijnen alleen vastgepind in de map, tag of eigenschap waar ze zijn vastgepind, niet in bovenliggende weergaven.'
             },
             separateNoteCounts: {
                 name: 'Huidige en afstammeling-tellingen apart tonen',

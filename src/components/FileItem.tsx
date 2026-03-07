@@ -69,6 +69,7 @@ import { mergeRanges, NumericRange } from '../utils/arrayUtils';
 import { openAddTagToFilesModal } from '../utils/tagModalHelpers';
 import { resolveUXIcon } from '../utils/uxIcons';
 import type { InclusionOperator } from '../utils/filterSearch';
+import { getNavigatorPinContext } from '../utils/selectionUtils';
 import { useFileItemContentState } from './fileItem/useFileItemContentState';
 import { useFileItemPills } from './fileItem/useFileItemPills';
 
@@ -768,6 +769,9 @@ export const FileItem = React.memo(function FileItem({
         });
     };
 
+    const pinContext = getNavigatorPinContext(selectionType ?? null);
+    const isPinnedInCurrentContext = metadataService.isFilePinned(file.path, pinContext);
+
     // Quick action handlers - these don't need memoization because:
     // 1. They're only attached to DOM elements that appear on hover
     // 2. They're not passed as props to child components
@@ -783,9 +787,11 @@ export const FileItem = React.memo(function FileItem({
         e.stopPropagation();
         e.preventDefault();
         runAsyncAction(async () => {
-            const context =
-                selectionType === ItemType.TAG ? ItemType.TAG : selectionType === ItemType.PROPERTY ? ItemType.PROPERTY : ItemType.FOLDER;
-            await metadataService.togglePin(file.path, context);
+            if (!file.parent) {
+                return;
+            }
+
+            await metadataService.togglePin(file.path, pinContext);
         });
     };
 
@@ -888,7 +894,7 @@ export const FileItem = React.memo(function FileItem({
                     className="nn-quick-action-item"
                     onClick={handlePinClick}
                     title={
-                        isPinned
+                        isPinnedInCurrentContext
                             ? file.extension === 'md'
                                 ? strings.contextMenu.file.unpinNote
                                 : strings.contextMenu.file.unpinFile
@@ -950,7 +956,7 @@ export const FileItem = React.memo(function FileItem({
                 setIcon(addShortcutIconRef.current, hasShortcut ? 'lucide-star-off' : 'lucide-star');
             }
             if (pinNoteIconRef.current && shouldShowPinNote) {
-                setIcon(pinNoteIconRef.current, isPinned ? 'lucide-pin-off' : 'lucide-pin');
+                setIcon(pinNoteIconRef.current, isPinnedInCurrentContext ? 'lucide-pin-off' : 'lucide-pin');
             }
             if (openInNewTabIconRef.current && shouldShowOpenInNewTab) {
                 setIcon(openInNewTabIconRef.current, 'lucide-file-plus');
@@ -965,7 +971,7 @@ export const FileItem = React.memo(function FileItem({
         shouldShowAddTagAction,
         shouldShowShortcutAction,
         hasShortcut,
-        isPinned
+        isPinnedInCurrentContext
     ]);
 
     // Enable context menu

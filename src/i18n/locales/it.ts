@@ -909,8 +909,8 @@ export const STRINGS_IT = {
                 desc: 'Includi note da sottocartelle nidificate e tag discendenti quando visualizzi una cartella o tag.'
             },
             limitPinnedToCurrentFolder: {
-                name: 'Limita note fissate alla loro cartella',
-                desc: 'Le note fissate appaiono solo quando visualizzi la cartella o il tag dove sono state fissate.'
+                name: 'Limita note fissate alla loro posizione',
+                desc: 'Le note fissate appaiono fissate solo nella cartella, tag o proprietà dove sono state fissate, non nelle viste superiori.'
             },
             separateNoteCounts: {
                 name: 'Mostra conteggi correnti e discendenti separatamente',

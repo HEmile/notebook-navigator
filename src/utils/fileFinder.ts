@@ -63,8 +63,12 @@ import {
 import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
 import type { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
 
-interface CollectPinnedPathsOptions {
+interface PinnedDisplayScope {
     restrictToFolderPath?: string;
+    restrictToTagPath?: string | null;
+    restrictToPropertyNodeId?: PropertySelectionNodeId | null;
+    app?: App;
+    db?: ReturnType<typeof getDBInstanceOrNull>;
 }
 
 function matchesPathSelection(candidatePath: string, selectedPath: string, includeDescendants: boolean): boolean {
@@ -287,29 +291,15 @@ function sortNavigationFiles(
 /**
  * Collects all pinned note paths from settings
  */
-export function collectPinnedPaths(
-    pinnedNotes: PinnedNotes,
-    contextFilter?: NavigatorContext,
-    options: CollectPinnedPathsOptions = {}
-): Set<string> {
+function collectPinnedPaths(pinnedNotes: PinnedNotes, contextFilter?: NavigatorContext): Set<string> {
     const allPinnedPaths = new Set<string>();
 
     if (!pinnedNotes || typeof pinnedNotes !== 'object') {
         return allPinnedPaths;
     }
 
-    const restrictToFolderPath = options.restrictToFolderPath;
-    const shouldRestrictFolderContext = contextFilter === 'folder' && restrictToFolderPath !== undefined;
-
     for (const [path, contexts] of Object.entries(pinnedNotes)) {
         const normalizedContexts = normalizePinnedNoteContext(contexts);
-
-        if (shouldRestrictFolderContext) {
-            const parentPath = getParentFolderPath(path);
-            if (parentPath !== restrictToFolderPath) {
-                continue;
-            }
-        }
 
         if (!contextFilter) {
             // Include all pinned notes
@@ -323,27 +313,133 @@ export function collectPinnedPaths(
     return allPinnedPaths;
 }
 
-// Reorders files to place pinned files first, preserving relative order within each group
-function applyPinnedOrdering(
+function matchesPinnedTagSelection(file: TFile, selectedTagPath: string, app: App, db: ReturnType<typeof getDBInstanceOrNull>): boolean {
+    const tags = getCachedFileTags({ app, file, db });
+    if (selectedTagPath === UNTAGGED_TAG_ID) {
+        return tags.length === 0;
+    }
+
+    if (selectedTagPath === TAGGED_TAG_ID) {
+        return false;
+    }
+
+    const normalizedSelectedTagPath = normalizeTagPathValue(selectedTagPath);
+    if (!normalizedSelectedTagPath) {
+        return false;
+    }
+
+    return tags.some(tagValue => normalizeTagPathValue(tagValue) === normalizedSelectedTagPath);
+}
+
+function matchesPinnedPropertySelection(
+    file: TFile,
+    selectedPropertyNodeId: PropertySelectionNodeId,
+    db: ReturnType<typeof getDBInstanceOrNull>
+): boolean {
+    if (selectedPropertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
+        return false;
+    }
+
+    const parsedSelection = parsePropertyNodeId(selectedPropertyNodeId);
+    if (!parsedSelection) {
+        return false;
+    }
+
+    const fileData = db?.getFile(file.path) ?? null;
+    const properties = fileData?.properties;
+    if (!properties || properties.length === 0) {
+        return false;
+    }
+
+    for (const entry of properties) {
+        if (casefold(entry.fieldKey) !== parsedSelection.key) {
+            continue;
+        }
+
+        const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
+        if (parsedSelection.valuePath === null) {
+            if (isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind)) {
+                return true;
+            }
+            continue;
+        }
+
+        if (!normalizedValuePath) {
+            continue;
+        }
+
+        if (matchesPropertyValuePath(normalizedValuePath, parsedSelection.valuePath)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function matchesPinnedDisplayScope(file: TFile, context: NavigatorContext | undefined, scope: PinnedDisplayScope | undefined): boolean {
+    if (!context || !scope) {
+        return true;
+    }
+
+    if (context === 'folder') {
+        if (scope.restrictToFolderPath === undefined) {
+            return true;
+        }
+
+        return getParentFolderPath(file.path) === scope.restrictToFolderPath;
+    }
+
+    if (context === 'tag') {
+        if (scope.restrictToTagPath === undefined || scope.restrictToTagPath === null || !scope.app) {
+            return true;
+        }
+
+        return matchesPinnedTagSelection(file, scope.restrictToTagPath, scope.app, scope.db ?? null);
+    }
+
+    if (scope.restrictToPropertyNodeId === undefined || scope.restrictToPropertyNodeId === null) {
+        return true;
+    }
+
+    return matchesPinnedPropertySelection(file, scope.restrictToPropertyNodeId, scope.db ?? null);
+}
+
+export function partitionPinnedFiles(
     files: TFile[],
-    settings: NotebookNavigatorSettings,
-    context: NavigatorContext,
-    options?: CollectPinnedPathsOptions
-): TFile[] {
-    const pinnedPaths = collectPinnedPaths(settings.pinnedNotes, context, options);
+    pinnedNotes: PinnedNotes,
+    context?: NavigatorContext,
+    scope?: PinnedDisplayScope
+): { pinnedFiles: TFile[]; unpinnedFiles: TFile[] } {
+    const pinnedPaths = collectPinnedPaths(pinnedNotes, context);
     if (pinnedPaths.size === 0) {
-        return files;
+        return { pinnedFiles: [], unpinnedFiles: files };
     }
 
     const pinnedFiles: TFile[] = [];
     const unpinnedFiles: TFile[] = [];
 
     for (const file of files) {
-        if (pinnedPaths.has(file.path)) {
-            pinnedFiles.push(file);
-        } else {
+        if (!pinnedPaths.has(file.path) || !matchesPinnedDisplayScope(file, context, scope)) {
             unpinnedFiles.push(file);
+            continue;
         }
+
+        pinnedFiles.push(file);
+    }
+
+    return { pinnedFiles, unpinnedFiles };
+}
+
+// Reorders files to place pinned files first, preserving relative order within each group
+function applyPinnedOrdering(
+    files: TFile[],
+    settings: NotebookNavigatorSettings,
+    context: NavigatorContext,
+    scope?: PinnedDisplayScope
+): TFile[] {
+    const { pinnedFiles, unpinnedFiles } = partitionPinnedFiles(files, settings.pinnedNotes, context, scope);
+    if (pinnedFiles.length === 0) {
+        return files;
     }
 
     return [...pinnedFiles, ...unpinnedFiles];
@@ -449,8 +545,8 @@ export function getFilesForFolder(
     const sortOption = getEffectiveSortOption(settings, 'folder', folder);
     sortNavigationFiles(allFiles, settings, app, sortOption);
 
-    const pinnedOrderingOptions = settings.filterPinnedByFolder ? { restrictToFolderPath: folder.path } : undefined;
-    return applyPinnedOrdering(allFiles, settings, 'folder', pinnedOrderingOptions);
+    const pinnedDisplayScope = settings.filterPinnedByFolder ? { restrictToFolderPath: folder.path } : undefined;
+    return applyPinnedOrdering(allFiles, settings, 'folder', pinnedDisplayScope);
 }
 
 /**
@@ -588,7 +684,18 @@ export function getFilesForTag(
     const sortOption = getEffectiveSortOption(settings, 'tag', null, tag);
     sortNavigationFiles(filteredFiles, settings, app, sortOption);
 
-    return applyPinnedOrdering(filteredFiles, settings, 'tag');
+    const pinnedDisplayScope = settings.filterPinnedByFolder
+        ? {
+              restrictToTagPath:
+                  tag === TAGGED_TAG_ID || tag === UNTAGGED_TAG_ID
+                      ? tag
+                      : (tagTreeService?.findTagNode(tag)?.path ?? normalizeTagPathValue(tag)),
+              app,
+              db
+          }
+        : undefined;
+
+    return applyPinnedOrdering(filteredFiles, settings, 'tag', pinnedDisplayScope);
 }
 
 /**
@@ -746,5 +853,12 @@ export function getFilesForProperty(
     const sortOption = getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, propertyNodeId);
     sortNavigationFiles(matchedFiles, settings, app, sortOption);
 
-    return applyPinnedOrdering(matchedFiles, settings, 'property');
+    const pinnedDisplayScope = settings.filterPinnedByFolder
+        ? {
+              restrictToPropertyNodeId: propertyNodeId,
+              db
+          }
+        : undefined;
+
+    return applyPinnedOrdering(matchedFiles, settings, 'property', pinnedDisplayScope);
 }

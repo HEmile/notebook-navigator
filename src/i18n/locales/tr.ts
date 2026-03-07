@@ -913,8 +913,8 @@ export const STRINGS_TR = {
                 desc: 'Klasör veya etiket görüntülerken iç içe alt klasörlerden ve etiket alt öğelerinden notları dahil et.'
             },
             limitPinnedToCurrentFolder: {
-                name: 'Sabitlenmiş notları klasörleriyle sınırla',
-                desc: 'Sabitlenmiş notlar yalnızca sabitlendikleri klasör veya etiket görüntülenirken görünür.'
+                name: 'Sabitlenmiş notları konumlarıyla sınırla',
+                desc: 'Sabitlenmiş notlar yalnızca sabitlendikleri klasör, etiket veya özelliklerde sabitlenmiş olarak görünür, üst görünümlerde görünmez.'
             },
             separateNoteCounts: {
                 name: 'Mevcut ve alt öğe sayılarını ayrı göster',

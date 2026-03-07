@@ -915,8 +915,8 @@ export const STRINGS_FR = {
                 desc: "Inclure les notes des sous-dossiers imbriqués et des descendants d'étiquettes lors de l'affichage d'un dossier ou d'une étiquette."
             },
             limitPinnedToCurrentFolder: {
-                name: 'Limiter les notes épinglées à leur dossier',
-                desc: "Les notes épinglées apparaissent uniquement lors de la visualisation du dossier ou de l'étiquette où elles ont été épinglées."
+                name: 'Limiter les notes épinglées à leur emplacement',
+                desc: "Les notes épinglées apparaissent épinglées uniquement dans le dossier, l'étiquette ou la propriété où elles ont été épinglées, pas dans les vues parentes."
             },
             separateNoteCounts: {
                 name: 'Afficher les comptes actuels et descendants séparément',

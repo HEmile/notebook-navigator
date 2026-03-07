@@ -906,8 +906,8 @@ export const STRINGS_ZH_TW = {
                 desc: '在檢視資料夾或標籤時包含巢狀子資料夾和標籤後代中的筆記。'
             },
             limitPinnedToCurrentFolder: {
-                name: '將釘選筆記限制在其資料夾',
-                desc: '釘選筆記僅在檢視其釘選的資料夾或標籤時顯示。'
+                name: '將釘選筆記限制在其位置',
+                desc: '釘選筆記僅在其釘選的資料夾、標籤或屬性中顯示為釘選，不在上層檢視中顯示。'
             },
             separateNoteCounts: {
                 name: '分別顯示目前和後代計數',

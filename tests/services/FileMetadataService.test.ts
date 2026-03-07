@@ -125,6 +125,18 @@ describe('FileMetadataService frontmatter integration', () => {
         expect(settingsProvider.settings.pinnedNotes?.['Vault/Two.md']).toEqual({ folder: true, tag: false, property: false });
     });
 
+    it('counts only newly pinned notes in folder context', async () => {
+        settingsProvider.settings.pinnedNotes = {
+            'Vault/One.md': { folder: true, tag: false, property: false }
+        };
+
+        const pinnedCount = await service.pinNotes(['Vault/One.md', 'Vault/Two.md'], 'folder');
+
+        expect(pinnedCount).toBe(1);
+        expect(settingsProvider.settings.pinnedNotes?.['Vault/One.md']).toEqual({ folder: true, tag: false, property: false });
+        expect(settingsProvider.settings.pinnedNotes?.['Vault/Two.md']).toEqual({ folder: true, tag: false, property: false });
+    });
+
     it('pins notes in property context', async () => {
         settingsProvider.settings.pinnedNotes = {};
 

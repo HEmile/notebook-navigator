@@ -913,8 +913,8 @@ export const STRINGS_PT = {
                 desc: 'Incluir notas de subpastas aninhadas e descendentes de etiquetas ao visualizar uma pasta ou etiqueta.'
             },
             limitPinnedToCurrentFolder: {
-                name: 'Limitar notas fixadas à sua pasta',
-                desc: 'As notas fixadas aparecem apenas ao visualizar a pasta ou etiqueta onde foram fixadas.'
+                name: 'Limitar notas fixadas à sua localização',
+                desc: 'As notas fixadas aparecem fixadas apenas na pasta, etiqueta ou propriedade onde foram fixadas, não em vistas superiores.'
             },
             separateNoteCounts: {
                 name: 'Mostrar contagens atuais e descendentes separadamente',
