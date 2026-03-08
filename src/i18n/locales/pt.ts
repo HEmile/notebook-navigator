@@ -1523,6 +1523,24 @@ export const STRINGS_PT = {
                 desc: 'Lista separada por vírgulas de propriedades frontmatter. Notas contendo qualquer uma destas propriedades não armazenam imagens de destaque.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'Tamanho de exibição da imagem de destaque',
+                desc: 'Tamanho máximo de renderização para imagens de destaque em listas de notas.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'Tamanho em pixels da imagem de destaque',
+                desc: 'Resolução utilizada ao gerar miniaturas armazenadas de imagens de destaque. Aumente este valor se as pré-visualizações maiores parecerem desfocadas.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'Transferir imagens externas',

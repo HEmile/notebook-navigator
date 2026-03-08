@@ -1526,6 +1526,24 @@ export const STRINGS_FR = {
                 desc: "Liste de propriétés frontmatter séparées par des virgules. Les notes contenant l'une de ces propriétés ne stockent pas d'images principales.",
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: "Taille d'affichage de l'image à la une",
+                desc: 'Taille maximale de rendu pour les images à la une dans les listes de notes.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: "Taille en pixels de l'image à la une",
+                desc: 'Résolution utilisée lors de la génération des vignettes stockées des images à la une. Augmentez cette valeur si les aperçus plus grands semblent flous.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'Télécharger les images externes',

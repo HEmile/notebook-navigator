@@ -1521,6 +1521,24 @@ export const STRINGS_JA = {
                 desc: 'フロントマタープロパティのカンマ区切りリスト。これらのプロパティを含むノートはフィーチャー画像を保存しません。',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'フィーチャー画像の表示サイズ',
+                desc: 'ノートリストでのフィーチャー画像の最大レンダリングサイズ。',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'フィーチャー画像のピクセルサイズ',
+                desc: '保存されるフィーチャー画像サムネイルの生成時に使用される解像度。大きなプレビューがぼやける場合はこの値を上げてください。',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: '外部画像をダウンロード',

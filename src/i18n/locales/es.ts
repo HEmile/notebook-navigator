@@ -1523,6 +1523,24 @@ export const STRINGS_ES = {
                 desc: 'Lista separada por comas de propiedades del frontmatter. Las notas que contengan cualquiera de estas propiedades no almacenan imágenes destacadas.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'Tamaño de visualización de imagen destacada',
+                desc: 'Tamaño máximo de renderizado para imágenes destacadas en listas de notas.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'Tamaño en píxeles de imagen destacada',
+                desc: 'Resolución utilizada al generar miniaturas almacenadas de imágenes destacadas. Aumente este valor si las previsualizaciones grandes se ven borrosas.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'Descargar imágenes externas',

@@ -1524,6 +1524,24 @@ export const STRINGS_PL = {
                 desc: 'Lista atrybutów rozdzielonych przecinkami. Notatki zawierające którykolwiek z tych atrybutów nie wyświetlają wyróżnionych obrazów.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'Rozmiar wyświetlania obrazu wyróżniającego',
+                desc: 'Maksymalny rozmiar renderowania obrazów wyróżniających na listach notatek.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'Rozmiar pikseli obrazu wyróżniającego',
+                desc: 'Rozdzielczość używana podczas generowania przechowywanych miniatur obrazów wyróżniających. Zwiększ tę wartość, jeśli większe podglądy wyglądają na rozmyte.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'Pobierz obrazy zewnętrzne',

@@ -31,6 +31,10 @@ class TestFileThumbnailsProvider extends FeatureImageContentProvider {
         return this.thumbnailCalls;
     }
 
+    getThumbnailDimensionsForTest(settings: NotebookNavigatorSettings) {
+        return this.getThumbnailDimensions(settings.featureImagePixelSize);
+    }
+
     async runProcessFile(file: TFile, fileData: FileData | null, settings: NotebookNavigatorSettings) {
         return await this.processFile({ file, path: file.path }, fileData, settings);
     }
@@ -65,6 +69,37 @@ function createFileData(overrides: Partial<FileData>): FileData {
 }
 
 describe('FeatureImageContentProvider PDF forced regeneration', () => {
+    it('tracks featureImagePixelSize as a regeneration setting', () => {
+        const app = new App();
+        const provider = new TestFileThumbnailsProvider(app);
+
+        expect(provider.getRelevantSettings()).toContain('featureImagePixelSize');
+        expect(
+            provider.shouldRegenerate(
+                { ...DEFAULT_SETTINGS, featureImagePixelSize: '256' },
+                { ...DEFAULT_SETTINGS, featureImagePixelSize: '512' }
+            )
+        ).toBe(true);
+    });
+
+    it('maps pixel size settings to thumbnail dimensions', () => {
+        const app = new App();
+        const provider = new TestFileThumbnailsProvider(app);
+
+        expect(provider.getThumbnailDimensionsForTest({ ...DEFAULT_SETTINGS, featureImagePixelSize: '256' })).toEqual({
+            width: 256,
+            height: 144
+        });
+        expect(provider.getThumbnailDimensionsForTest({ ...DEFAULT_SETTINGS, featureImagePixelSize: '384' })).toEqual({
+            width: 384,
+            height: 216
+        });
+        expect(provider.getThumbnailDimensionsForTest({ ...DEFAULT_SETTINGS, featureImagePixelSize: '512' })).toEqual({
+            width: 512,
+            height: 288
+        });
+    });
+
     it('re-renders PDFs when fileThumbnailsMtime is stale even if featureImageKey matches', async () => {
         const app = new App();
         const provider = new TestFileThumbnailsProvider(app);

@@ -22,7 +22,9 @@ import { showNotice } from '../../utils/noticeUtils';
 import type { SettingsTabContext } from './SettingsTabContext';
 import { runAsyncAction } from '../../utils/async';
 import { createSettingGroupFactory } from '../settingGroups';
+import { addSettingSyncModeToggle } from '../syncModeToggle';
 import { setElementVisible, wireToggleSettingWithSubSettings } from '../subSettings';
+import type { FeatureImagePixelSizeSetting, FeatureImageSizeSetting } from '../types';
 import {
     normalizeFileNameIconMapKey,
     normalizeFileTypeIconMapKey,
@@ -366,6 +368,38 @@ export function renderNotesTab(context: SettingsTabContext): void {
         }
     );
     featureExcludePropertiesSetting.controlEl.addClass('nn-setting-wide-input');
+
+    const featureImageSizeSetting = new Setting(featureImageSettingsEl)
+        .setName(strings.settings.items.featureImageSize.name)
+        .setDesc(strings.settings.items.featureImageSize.desc)
+        .addDropdown(dropdown =>
+            dropdown
+                .addOption('64', strings.settings.items.featureImageSize.options.standard)
+                .addOption('96', strings.settings.items.featureImageSize.options.large)
+                .addOption('128', strings.settings.items.featureImageSize.options.extraLarge)
+                .setValue(plugin.settings.featureImageSize)
+                .onChange(async (value: FeatureImageSizeSetting) => {
+                    plugin.settings.featureImageSize = value;
+                    await plugin.saveSettingsAndUpdate();
+                })
+        );
+    addSettingSyncModeToggle({ setting: featureImageSizeSetting, plugin, settingId: 'featureImageSize' });
+
+    const featureImagePixelSizeSetting = new Setting(featureImageSettingsEl)
+        .setName(strings.settings.items.featureImagePixelSize.name)
+        .setDesc(strings.settings.items.featureImagePixelSize.desc)
+        .addDropdown(dropdown =>
+            dropdown
+                .addOption('256', strings.settings.items.featureImagePixelSize.options.standard)
+                .addOption('384', strings.settings.items.featureImagePixelSize.options.large)
+                .addOption('512', strings.settings.items.featureImagePixelSize.options.extraLarge)
+                .setValue(plugin.settings.featureImagePixelSize)
+                .onChange(async (value: FeatureImagePixelSizeSetting) => {
+                    plugin.settings.featureImagePixelSize = value;
+                    await plugin.saveSettingsAndUpdate();
+                })
+        );
+    addSettingSyncModeToggle({ setting: featureImagePixelSizeSetting, plugin, settingId: 'featureImagePixelSize' });
 
     new Setting(featureImageSettingsEl)
         .setName(strings.settings.items.forceSquareFeatureImage.name)

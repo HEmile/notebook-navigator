@@ -81,7 +81,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-03-05',
         showOnUpdate: false,
         new: [
-            'New feature: ==Rainbow colors==! You can now set rainbow colors for shortcuts, folders, tags or properties. Pick custom colors, choose between Hue (color wheel) and RGB (direct blend), and much more. There are lots of configuration settings, so just head to Settings > Navigation > Rainbow colors to check it out!',
+            'New feature: ==Rainbow colors==! You can now set rainbow colors for shortcuts, folders, tags or properties. Pick custom colors, choose between Hue (color wheel) and RGB (direct blend), and much more. There are lots of configuration settings, so just head to **Settings > Navigation > Rainbow colors** to check it out!',
+            'New setting: List > Notes > ==Feature image display size==. You can now increase the max vertical size of feature images from 64px to 128px in list pane.',
+            'New setting: List > Notes > ==Feature image pixel size==. You can now set the max thumbnail width from 256 pixels (default) up to 512 pixels for higher-resolution thumbnails in calendar overlays and list pane.',
             'New command: ==Toggle dual pane orientation== to quickly change orientation between horizontal and vertical dual panes.',
             '==New API 2.0==: Added whenReady(), tag collection helpers, property node helpers, new tag and property context menu hooks and many other improvements.'
         ],

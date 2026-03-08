@@ -1519,6 +1519,24 @@ export const STRINGS_IT = {
                 desc: 'Lista di proprietà frontmatter separate da virgola. Le note contenenti una di queste proprietà non memorizzano immagini di copertina.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: "Dimensione di visualizzazione dell'immagine in evidenza",
+                desc: 'Dimensione massima di rendering per le immagini in evidenza nelle liste di note.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: "Dimensione in pixel dell'immagine in evidenza",
+                desc: 'Risoluzione utilizzata per generare le miniature memorizzate delle immagini in evidenza. Aumenta questo valore se le anteprime più grandi appaiono sfocate.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'Scarica immagini esterne',

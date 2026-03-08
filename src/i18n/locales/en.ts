@@ -1515,6 +1515,24 @@ export const STRINGS_EN = {
                 desc: 'Comma-separated list of frontmatter properties. Notes containing any of these properties do not store feature images.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'Feature image display size',
+                desc: 'Maximum rendered size for feature images in note lists.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'Feature image pixel size',
+                desc: 'Resolution used when generating stored feature-image thumbnails. Increase this if larger previews look blurry.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
             downloadExternalFeatureImages: {
                 name: 'Download external images',
                 desc: 'Download remote images and YouTube thumbnails for feature images.'

@@ -741,6 +741,8 @@ export type {
     ItemScope,
     MultiSelectModifier,
     DeleteAttachmentsSetting,
+    FeatureImagePixelSizeSetting,
+    FeatureImageSizeSetting,
     ListPaneTitleOption,
     PropertySortSecondaryOption,
     AlphabeticalDateMode,

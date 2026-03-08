@@ -1521,6 +1521,24 @@ export const STRINGS_VI = {
                 desc: 'Danh sách thuộc tính frontmatter phân cách bằng dấu phẩy. Ghi chú chứa bất kỳ thuộc tính nào trong số này không lưu trữ ảnh nổi bật.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'Kích thước hiển thị ảnh nổi bật',
+                desc: 'Kích thước hiển thị tối đa cho ảnh nổi bật trong danh sách ghi chú.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'Kích thước pixel ảnh nổi bật',
+                desc: 'Độ phân giải được sử dụng khi tạo hình thu nhỏ ảnh nổi bật đã lưu. Tăng giá trị này nếu bản xem trước lớn hơn bị mờ.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'Tải hình ảnh bên ngoài',

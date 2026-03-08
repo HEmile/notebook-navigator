@@ -50,6 +50,22 @@ export function resolveMoveFileConflictsSetting(value: unknown, fallback: MoveFi
     return isMoveFileConflictsSetting(value) ? value : fallback;
 }
 
+const FEATURE_IMAGE_DISPLAY_SIZE_OPTIONS = ['64', '96', '128'] as const;
+
+const FEATURE_IMAGE_PIXEL_SIZE_OPTIONS = ['256', '384', '512'] as const;
+
+export type FeatureImageSizeSetting = (typeof FEATURE_IMAGE_DISPLAY_SIZE_OPTIONS)[number];
+
+export type FeatureImagePixelSizeSetting = (typeof FEATURE_IMAGE_PIXEL_SIZE_OPTIONS)[number];
+
+export function isFeatureImageSizeSetting(value: unknown): value is FeatureImageSizeSetting {
+    return typeof value === 'string' && FEATURE_IMAGE_DISPLAY_SIZE_OPTIONS.includes(value as FeatureImageSizeSetting);
+}
+
+export function isFeatureImagePixelSizeSetting(value: unknown): value is FeatureImagePixelSizeSetting {
+    return typeof value === 'string' && FEATURE_IMAGE_PIXEL_SIZE_OPTIONS.includes(value as FeatureImagePixelSizeSetting);
+}
+
 /** Identifiers for settings that can be switched between synced and local storage. */
 export const SYNC_MODE_SETTING_IDS = [
     'vaultProfile',
@@ -71,6 +87,8 @@ export const SYNC_MODE_SETTING_IDS = [
     'calendarWeeksToShow',
     'compactItemHeight',
     'compactItemHeightScaleText',
+    'featureImageSize',
+    'featureImagePixelSize',
     'uiScale'
 ] as const;
 
@@ -451,6 +469,8 @@ export interface NotebookNavigatorSettings {
     showFeatureImage: boolean;
     featureImageProperties: string[];
     featureImageExcludeProperties: string[];
+    featureImageSize: FeatureImageSizeSetting;
+    featureImagePixelSize: FeatureImagePixelSizeSetting;
     forceSquareFeatureImage: boolean;
     downloadExternalFeatureImages: boolean;
     showFileTags: boolean;

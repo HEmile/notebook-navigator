@@ -1523,6 +1523,24 @@ export const STRINGS_NL = {
                 desc: 'Kommagescheiden lijst van frontmatter-eigenschappen. Notities met een van deze eigenschappen slaan geen uitgelichte afbeeldingen op.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'Weergavegrootte uitgelichte afbeelding',
+                desc: 'Maximale weergavegrootte voor uitgelichte afbeeldingen in notitie-overzichten.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'Pixelgrootte uitgelichte afbeelding',
+                desc: 'Resolutie voor opgeslagen miniaturen van uitgelichte afbeeldingen. Verhoog deze waarde als grotere voorbeelden wazig lijken.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'Externe afbeeldingen downloaden',

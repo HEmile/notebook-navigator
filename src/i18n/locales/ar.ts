@@ -1518,6 +1518,24 @@ export const STRINGS_AR = {
                 desc: 'قائمة مفصولة بفاصلة من خصائص البيانات الأمامية. الملاحظات التي تحتوي على أي من هذه الخصائص لا تخزن صور العرض.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'حجم عرض صورة الميزة',
+                desc: 'الحجم الأقصى المعروض لصور الميزة في قوائم الملاحظات.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'دقة بكسل صورة الميزة',
+                desc: 'الدقة المستخدمة عند إنشاء صور مصغرة محفوظة لصور الميزة. قم بزيادتها إذا بدت المعاينات الأكبر ضبابية.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'تنزيل الصور الخارجية',

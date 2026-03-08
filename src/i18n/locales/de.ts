@@ -1523,6 +1523,24 @@ export const STRINGS_DE = {
                 desc: 'Kommagetrennte Liste von Frontmatter-Eigenschaften. Notizen mit einer dieser Eigenschaften speichern keine Feature-Bilder.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'Anzeigegröße des Feature-Bildes',
+                desc: 'Maximale Darstellungsgröße für Feature-Bilder in Notizlisten.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'Pixelgröße des Feature-Bildes',
+                desc: 'Auflösung für gespeicherte Feature-Bild-Vorschaubilder. Erhöhen Sie diesen Wert, wenn größere Vorschauen unscharf aussehen.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
             downloadExternalFeatureImages: {
                 name: 'Externe Bilder herunterladen',
                 desc: 'Remote-Bilder und YouTube-Vorschaubilder für Feature-Bilder herunterladen.'

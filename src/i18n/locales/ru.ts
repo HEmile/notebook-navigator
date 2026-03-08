@@ -1518,6 +1518,24 @@ export const STRINGS_RU = {
                 desc: 'Список свойств frontmatter через запятую. Заметки, содержащие любое из этих свойств, не сохраняют главные изображения.',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'Размер отображения изображения-обложки',
+                desc: 'Максимальный размер отображения изображений-обложек в списках заметок.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'Пиксельный размер изображения-обложки',
+                desc: 'Разрешение, используемое при создании сохранённых миниатюр изображений-обложек. Увеличьте это значение, если крупные превью выглядят размытыми.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'Загружать внешние изображения',

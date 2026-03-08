@@ -285,6 +285,8 @@ export interface LocalStorageKeys {
     calendarWeeksToShowKey: string;
     compactItemHeightKey: string;
     compactItemHeightScaleTextKey: string;
+    featureImageSizeKey: string;
+    featureImagePixelSizeKey: string;
 }
 
 /**
@@ -337,7 +339,9 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     calendarLeftPlacementKey: 'notebook-navigator-calendar-left-placement',
     calendarWeeksToShowKey: 'notebook-navigator-calendar-weeks-to-show',
     compactItemHeightKey: 'notebook-navigator-compact-item-height',
-    compactItemHeightScaleTextKey: 'notebook-navigator-compact-item-height-scale-text'
+    compactItemHeightScaleTextKey: 'notebook-navigator-compact-item-height-scale-text',
+    featureImageSizeKey: 'notebook-navigator-feature-image-size',
+    featureImagePixelSizeKey: 'notebook-navigator-feature-image-pixel-size'
 };
 
 export interface UXPreferences {

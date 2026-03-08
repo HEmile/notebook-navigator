@@ -1513,6 +1513,24 @@ export const STRINGS_ZH_TW = {
                 desc: '逗號分隔的前置中繼資料屬性列表。包含這些屬性的筆記不會儲存特色圖片。',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: '特色圖片顯示大小',
+                desc: '筆記列表中特色圖片的最大渲染大小。',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: '特色圖片像素大小',
+                desc: '產生儲存的特色圖片縮圖時使用的解析度。如果較大的預覽看起來模糊，請增大此值。',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: '下載外部圖片',

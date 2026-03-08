@@ -1516,6 +1516,24 @@ export const STRINGS_TH = {
                 desc: 'รายการคุณสมบัติ frontmatter คั่นด้วยเครื่องหมายจุลภาค โน้ตที่มีคุณสมบัติใดๆ เหล่านี้จะไม่เก็บภาพเด่น',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: 'ขนาดการแสดงภาพเด่น',
+                desc: 'ขนาดสูงสุดในการแสดงผลภาพเด่นในรายการโน้ต',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: 'ขนาดพิกเซลของภาพเด่น',
+                desc: 'ความละเอียดที่ใช้ในการสร้างภาพขนาดย่อที่จัดเก็บของภาพเด่น เพิ่มค่านี้หากภาพตัวอย่างขนาดใหญ่ดูเบลอ',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: 'ดาวน์โหลดรูปภาพภายนอก',

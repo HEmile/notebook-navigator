@@ -72,7 +72,7 @@ import type { SearchShortcut } from '../types/shortcuts';
 import { UpdateNoticeBanner } from './UpdateNoticeBanner';
 import { showNotice } from '../utils/noticeUtils';
 import { EMPTY_SEARCH_NAV_FILTER_STATE, type SearchNavFilterState } from '../types/search';
-import { getListPaneMeasurements } from '../utils/listPaneMeasurements';
+import { getFeatureImageDisplayMeasurements, getListPaneMeasurements } from '../utils/listPaneMeasurements';
 import type { InclusionOperator } from '../utils/filterSearch';
 
 // Checks if two string arrays have identical content in the same order
@@ -1076,6 +1076,11 @@ export const NotebookNavigatorComponent = React.memo(
                 containerRef.current.style.setProperty('--nn-setting-nav-indent', `${settings.navIndent}px`);
                 containerRef.current.style.setProperty('--nn-nav-root-spacing', `${settings.rootLevelSpacing}px`);
 
+                const featureImageDisplayMeasurements = getFeatureImageDisplayMeasurements(settings.featureImageSize);
+                // This is only the rendered image ceiling.
+                // The image still scales with the row height and content layout until it reaches this max.
+                containerRef.current.style.setProperty('--nn-feature-image-max-size', `${featureImageDisplayMeasurements.listMaxSize}px`);
+
                 // Calculate compact list padding and font sizes based on configured item height
                 const { titleLineHeight } = getListPaneMeasurements(isMobile);
                 const compactMetrics = calculateCompactListMetrics({
@@ -1099,6 +1104,7 @@ export const NotebookNavigatorComponent = React.memo(
             settings.navItemHeightScaleText,
             settings.navIndent,
             settings.rootLevelSpacing,
+            settings.featureImageSize,
             settings.compactItemHeight,
             settings.compactItemHeightScaleText,
             isMobile

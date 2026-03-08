@@ -19,6 +19,7 @@
 import { App, Platform, RequestUrlParam, RequestUrlResponse, requestUrl, TFile } from 'obsidian';
 import { type ContentProviderType } from '../../interfaces/IContentProvider';
 import { NotebookNavigatorSettings } from '../../settings';
+import type { FeatureImagePixelSizeSetting } from '../../settings/types';
 import { FileData } from '../../storage/IndexedDBStorage';
 import { getDBInstance } from '../../storage/fileOperations';
 import { isPdfFile } from '../../utils/fileTypeUtils';
@@ -32,8 +33,17 @@ import { detectImageMimeTypeFromBuffer, getImageDimensionsPairFromBuffer, normal
 import { createOnceLogger, createRenderBudgetLimiter, createRenderLimiter } from './thumbnail/thumbnailRuntimeUtils';
 import { LIMITS } from '../../constants/limits';
 
-const MAX_THUMBNAIL_WIDTH = LIMITS.thumbnails.featureImage.maxWidth;
-const MAX_THUMBNAIL_HEIGHT = LIMITS.thumbnails.featureImage.maxHeight;
+type FeatureImageThumbnailDimensions = {
+    width: number;
+    height: number;
+};
+
+const FEATURE_IMAGE_THUMBNAIL_DIMENSIONS: Readonly<Record<FeatureImagePixelSizeSetting, FeatureImageThumbnailDimensions>> = Object.freeze({
+    '256': Object.freeze({ width: 256, height: 144 }),
+    '384': Object.freeze({ width: 384, height: 216 }),
+    '512': Object.freeze({ width: 512, height: 288 })
+});
+
 const THUMBNAIL_OUTPUT_MIME = LIMITS.thumbnails.featureImage.output.mimeType;
 // iOS Safari has issues with WebP encoding in some contexts, so use PNG as fallback
 const IOS_THUMBNAIL_OUTPUT_MIME = LIMITS.thumbnails.featureImage.output.iosMimeType;
@@ -163,10 +173,14 @@ export class FeatureImageContentProvider extends BaseContentProvider {
     }
 
     getRelevantSettings(): (keyof NotebookNavigatorSettings)[] {
-        return ['showFeatureImage'];
+        return ['showFeatureImage', 'featureImagePixelSize'];
     }
 
     shouldRegenerate(oldSettings: NotebookNavigatorSettings, newSettings: NotebookNavigatorSettings): boolean {
+        if (oldSettings.featureImagePixelSize !== newSettings.featureImagePixelSize) {
+            return true;
+        }
+
         // Clear if feature image is disabled
         if (!newSettings.showFeatureImage && oldSettings.showFeatureImage) {
             return true;
@@ -274,7 +288,13 @@ export class FeatureImageContentProvider extends BaseContentProvider {
         try {
             const mimeType = pngBlob.type || 'image/png';
             const buffer = await pngBlob.arrayBuffer();
-            const thumbnail = await this.createThumbnailBlobFromBuffer(buffer, mimeType, file.path, 'local');
+            const thumbnail = await this.createThumbnailBlobFromBuffer(
+                buffer,
+                mimeType,
+                file.path,
+                'local',
+                this.getThumbnailDimensions(this.currentBatchSettings?.featureImagePixelSize)
+            );
             return thumbnail ?? pngBlob;
         } catch {
             return pngBlob;
@@ -297,11 +317,13 @@ export class FeatureImageContentProvider extends BaseContentProvider {
     }
 
     protected async createThumbnailBlob(reference: FeatureImageReference, settings: NotebookNavigatorSettings): Promise<Blob | null> {
+        const thumbnailDimensions = this.getThumbnailDimensions(settings.featureImagePixelSize);
+
         if (reference.kind === 'local') {
             if (isPdfFile(reference.file)) {
                 return await renderPdfCoverThumbnail(this.app, reference.file, {
-                    maxWidth: MAX_THUMBNAIL_WIDTH,
-                    maxHeight: MAX_THUMBNAIL_HEIGHT,
+                    maxWidth: thumbnailDimensions.width,
+                    maxHeight: thumbnailDimensions.height,
                     mimeType: Platform.isIosApp ? IOS_THUMBNAIL_OUTPUT_MIME : THUMBNAIL_OUTPUT_MIME,
                     quality: THUMBNAIL_OUTPUT_QUALITY
                 });
@@ -312,7 +334,13 @@ export class FeatureImageContentProvider extends BaseContentProvider {
                 return null;
             }
 
-            return await this.createThumbnailBlobFromBuffer(imageData.buffer, imageData.mimeType, reference.file.path, 'local');
+            return await this.createThumbnailBlobFromBuffer(
+                imageData.buffer,
+                imageData.mimeType,
+                reference.file.path,
+                'local',
+                thumbnailDimensions
+            );
         }
 
         if (reference.kind === 'external') {
@@ -323,7 +351,13 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             if (!imageData) {
                 return null;
             }
-            return await this.createThumbnailBlobFromBuffer(imageData.buffer, imageData.mimeType, reference.url, 'external');
+            return await this.createThumbnailBlobFromBuffer(
+                imageData.buffer,
+                imageData.mimeType,
+                reference.url,
+                'external',
+                thumbnailDimensions
+            );
         }
 
         if (!settings.downloadExternalFeatureImages) {
@@ -333,7 +367,13 @@ export class FeatureImageContentProvider extends BaseContentProvider {
         if (!imageData) {
             return null;
         }
-        return await this.createThumbnailBlobFromBuffer(imageData.buffer, imageData.mimeType, `youtube:${reference.videoId}`, 'external');
+        return await this.createThumbnailBlobFromBuffer(
+            imageData.buffer,
+            imageData.mimeType,
+            `youtube:${reference.videoId}`,
+            'external',
+            thumbnailDimensions
+        );
     }
 
     private async readLocalImage(file: TFile): Promise<ImageBuffer | null> {
@@ -574,7 +614,8 @@ export class FeatureImageContentProvider extends BaseContentProvider {
         buffer: ArrayBuffer,
         mimeType: string,
         source: string,
-        sourceKind: ThumbnailSourceKind
+        sourceKind: ThumbnailSourceKind,
+        thumbnailDimensions: FeatureImageThumbnailDimensions
     ): Promise<Blob | null> {
         const normalizedMimeType = normalizeImageMimeType(mimeType);
         const detectedMimeType = detectImageMimeTypeFromBuffer(buffer);
@@ -618,7 +659,8 @@ export class FeatureImageContentProvider extends BaseContentProvider {
 
         const { width: targetWidth, height: targetHeight } = this.calculateThumbnailDimensions(
             displayDimensions.width,
-            displayDimensions.height
+            displayDimensions.height,
+            thumbnailDimensions
         );
 
         const shouldSkipDecode =
@@ -640,7 +682,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
 
             const releaseDecodeBudget = await this.thumbnailRuntime.imageDecodeLimiter.acquire(pixelCount);
             try {
-                const reencoded = await this.tryCreateThumbnailFromBitmap(sourceBlob, true);
+                const reencoded = await this.tryCreateThumbnailFromBitmap(sourceBlob, thumbnailDimensions, true);
                 return reencoded ?? sourceBlob;
             } finally {
                 releaseDecodeBudget();
@@ -666,7 +708,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
                 return null;
             }
 
-            const bitmapResult = await this.tryCreateThumbnailFromBitmap(sourceBlob);
+            const bitmapResult = await this.tryCreateThumbnailFromBitmap(sourceBlob, thumbnailDimensions);
             if (bitmapResult) {
                 return bitmapResult;
             }
@@ -679,7 +721,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
                     return null;
                 }
 
-                const { width, height } = this.calculateThumbnailDimensions(sourceWidth, sourceHeight);
+                const { width, height } = this.calculateThumbnailDimensions(sourceWidth, sourceHeight, thumbnailDimensions);
                 if (width === sourceWidth && height === sourceHeight) {
                     // Skip re-encoding when the image is already within thumbnail limits.
                     return sourceBlob;
@@ -722,7 +764,11 @@ export class FeatureImageContentProvider extends BaseContentProvider {
     }
 
     // Decodes a blob to an ImageBitmap and resizes it to thumbnail dimensions
-    private async tryCreateThumbnailFromBitmap(blob: Blob, forceReencode = false): Promise<Blob | null> {
+    private async tryCreateThumbnailFromBitmap(
+        blob: Blob,
+        thumbnailDimensions: FeatureImageThumbnailDimensions,
+        forceReencode = false
+    ): Promise<Blob | null> {
         if (typeof createImageBitmap === 'undefined') {
             return null;
         }
@@ -742,7 +788,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
                 return null;
             }
 
-            const { width, height } = this.calculateThumbnailDimensions(sourceWidth, sourceHeight);
+            const { width, height } = this.calculateThumbnailDimensions(sourceWidth, sourceHeight, thumbnailDimensions);
             if (!forceReencode && width === sourceWidth && height === sourceHeight) {
                 // Skip re-encoding when the image is already within thumbnail limits.
                 return blob;
@@ -838,19 +884,27 @@ export class FeatureImageContentProvider extends BaseContentProvider {
         return canvas;
     }
 
-    private calculateThumbnailDimensions(srcWidth: number, srcHeight: number): { width: number; height: number } {
+    protected getThumbnailDimensions(featureImagePixelSize: FeatureImagePixelSizeSetting | undefined): FeatureImageThumbnailDimensions {
+        return FEATURE_IMAGE_THUMBNAIL_DIMENSIONS[featureImagePixelSize ?? '256'];
+    }
+
+    private calculateThumbnailDimensions(
+        srcWidth: number,
+        srcHeight: number,
+        thumbnailDimensions: FeatureImageThumbnailDimensions
+    ): { width: number; height: number } {
         let width = srcWidth;
         let height = srcHeight;
 
         // Constrain the thumbnail to the max dimensions while preserving aspect ratio.
-        if (srcWidth > MAX_THUMBNAIL_WIDTH || srcHeight > MAX_THUMBNAIL_HEIGHT) {
+        if (srcWidth > thumbnailDimensions.width || srcHeight > thumbnailDimensions.height) {
             const aspectRatio = srcWidth / srcHeight;
 
-            if (MAX_THUMBNAIL_WIDTH / MAX_THUMBNAIL_HEIGHT > aspectRatio) {
-                height = MAX_THUMBNAIL_HEIGHT;
+            if (thumbnailDimensions.width / thumbnailDimensions.height > aspectRatio) {
+                height = thumbnailDimensions.height;
                 width = Math.round(height * aspectRatio);
             } else {
-                width = MAX_THUMBNAIL_WIDTH;
+                width = thumbnailDimensions.width;
                 height = Math.round(width / aspectRatio);
             }
         }

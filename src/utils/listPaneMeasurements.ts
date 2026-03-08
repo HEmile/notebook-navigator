@@ -19,7 +19,7 @@
 import type { TFile } from 'obsidian';
 import type { NavigationItemType } from '../types';
 import type { FeatureImageStatus, FileData } from '../storage/IndexedDBStorage';
-import type { NotePropertyType } from '../settings/types';
+import { type FeatureImageSizeSetting, type NotePropertyType } from '../settings/types';
 import { isImageFile } from './fileTypeUtils';
 import { isPropertyKeyOnlyValuePath, normalizePropertyTreeValuePath } from './propertyTree';
 import { casefold } from './recordUtils';
@@ -41,6 +41,16 @@ export interface ListPaneMeasurements {
     topSpacer: number;
     bottomSpacer: number;
 }
+
+export interface FeatureImageDisplayMeasurements {
+    listMaxSize: number;
+}
+
+const FEATURE_IMAGE_DISPLAY_MEASUREMENTS: Readonly<Record<FeatureImageSizeSetting, FeatureImageDisplayMeasurements>> = Object.freeze({
+    '64': { listMaxSize: 64 },
+    '96': { listMaxSize: 96 },
+    '128': { listMaxSize: 128 }
+});
 
 const DESKTOP_MEASUREMENTS: ListPaneMeasurements = Object.freeze({
     basePadding: 16, // 8px padding on each side
@@ -73,6 +83,10 @@ const MOBILE_MEASUREMENTS: ListPaneMeasurements = Object.freeze({
 /**
  * Returns the static measurement set for the current platform.
  */
+export function getFeatureImageDisplayMeasurements(featureImageSize: FeatureImageSizeSetting): FeatureImageDisplayMeasurements {
+    return FEATURE_IMAGE_DISPLAY_MEASUREMENTS[featureImageSize];
+}
+
 export function getListPaneMeasurements(isMobile: boolean): ListPaneMeasurements {
     return isMobile ? MOBILE_MEASUREMENTS : DESKTOP_MEASUREMENTS;
 }

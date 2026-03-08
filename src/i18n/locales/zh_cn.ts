@@ -1514,6 +1514,24 @@ export const STRINGS_ZH_CN = {
                 desc: '逗号分隔的前置元数据属性列表。包含这些属性的笔记不会存储特色图片。',
                 placeholder: 'private, confidential'
             },
+            featureImageSize: {
+                name: '特色图片显示大小',
+                desc: '笔记列表中特色图片的最大渲染大小。',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: '特色图片像素大小',
+                desc: '生成存储的特色图片缩略图时使用的分辨率。如果较大的预览看起来模糊，请增大此值。',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
 
             downloadExternalFeatureImages: {
                 name: '下载外部图片',

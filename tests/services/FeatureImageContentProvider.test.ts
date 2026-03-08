@@ -179,6 +179,19 @@ function setMarkdownContent(
 }
 
 describe('FeatureImageContentProvider scanning', () => {
+    it('treats featureImagePixelSize as a markdown regeneration setting', () => {
+        const { app } = createApp();
+        const provider = new TestFeatureImageContentProvider(app);
+
+        expect(provider.getRelevantSettings()).toContain('featureImagePixelSize');
+        expect(
+            provider.shouldRegenerate(
+                { ...DEFAULT_SETTINGS, featureImagePixelSize: '256' },
+                { ...DEFAULT_SETTINGS, featureImagePixelSize: '384' }
+            )
+        ).toBe(true);
+    });
+
     it('uses the first embedded YouTube link in the document', () => {
         const { app, resolvedFiles } = createApp();
         const settings = createSettings({ downloadExternalFeatureImages: true });

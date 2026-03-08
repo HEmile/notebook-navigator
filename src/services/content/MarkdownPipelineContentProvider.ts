@@ -364,6 +364,7 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
             'showFeatureImage',
             'featureImageProperties',
             'featureImageExcludeProperties',
+            'featureImagePixelSize',
             'downloadExternalFeatureImages'
         ];
     }
@@ -415,6 +416,7 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
 
         const shouldClearFeatureImage =
             featureImageExcludePropertiesChanged ||
+            oldSettings.featureImagePixelSize !== newSettings.featureImagePixelSize ||
             (oldSettings.showFeatureImage && !newSettings.showFeatureImage) ||
             (newSettings.showFeatureImage &&
                 (featureImagePropertiesChanged || oldSettings.downloadExternalFeatureImages !== newSettings.downloadExternalFeatureImages));

@@ -49,6 +49,8 @@ import {
     isCalendarLeftPlacement,
     isCalendarPlacement,
     isCalendarWeekendDays,
+    isFeatureImagePixelSizeSetting,
+    isFeatureImageSizeSetting,
     isNavRainbowColorMode,
     isNavRainbowScope,
     isNavRainbowTransitionStyle,
@@ -313,6 +315,14 @@ export class PluginSettingsController {
 
         if (!isCalendarWeekendDays(this.currentSettings.calendarWeekendDays)) {
             this.currentSettings.calendarWeekendDays = DEFAULT_SETTINGS.calendarWeekendDays;
+        }
+
+        if (!isFeatureImageSizeSetting(this.currentSettings.featureImageSize)) {
+            this.currentSettings.featureImageSize = DEFAULT_SETTINGS.featureImageSize;
+        }
+
+        if (!isFeatureImagePixelSizeSetting(this.currentSettings.featureImagePixelSize)) {
+            this.currentSettings.featureImagePixelSize = DEFAULT_SETTINGS.featureImagePixelSize;
         }
 
         if (!isAlphaSortOrder(this.currentSettings.folderSortOrder)) {
@@ -667,6 +677,14 @@ export class PluginSettingsController {
         return this.sanitizeBoundedIntegerSetting(value, { min: 20, max: 28, fallback: DEFAULT_SETTINGS.compactItemHeight });
     }
 
+    private sanitizeFeatureImageSizeSetting(value: unknown): NotebookNavigatorSettings['featureImageSize'] {
+        return isFeatureImageSizeSetting(value) ? value : DEFAULT_SETTINGS.featureImageSize;
+    }
+
+    private sanitizeFeatureImagePixelSizeSetting(value: unknown): NotebookNavigatorSettings['featureImagePixelSize'] {
+        return isFeatureImagePixelSizeSetting(value) ? value : DEFAULT_SETTINGS.featureImagePixelSize;
+    }
+
     private sanitizeTagSortOrderSetting(value: unknown): TagSortOrder {
         return typeof value === 'string' && isTagSortOrder(value) ? value : DEFAULT_SETTINGS.tagSortOrder;
     }
@@ -795,6 +813,8 @@ export class PluginSettingsController {
             sanitizeCalendarPlacementSetting: value => this.sanitizeCalendarPlacementSetting(value),
             sanitizeCalendarLeftPlacementSetting: value => this.sanitizeCalendarLeftPlacementSetting(value),
             sanitizeCompactItemHeightSetting: value => this.sanitizeCompactItemHeightSetting(value),
+            sanitizeFeatureImageSizeSetting: value => this.sanitizeFeatureImageSizeSetting(value),
+            sanitizeFeatureImagePixelSizeSetting: value => this.sanitizeFeatureImagePixelSizeSetting(value),
             defaultUXPreferences: getDefaultUXPreferences(),
             isUXPreferencesRecord,
             mirrorUXPreferences: update => {

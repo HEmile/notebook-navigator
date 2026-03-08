@@ -74,6 +74,8 @@ interface CreateSyncModeRegistryParams {
     sanitizeCalendarLeftPlacementSetting: (value: unknown) => NotebookNavigatorSettings['calendarLeftPlacement'];
     sanitizeCalendarWeeksToShowSetting: (value: unknown) => NotebookNavigatorSettings['calendarWeeksToShow'];
     sanitizeCompactItemHeightSetting: (value: unknown) => number;
+    sanitizeFeatureImageSizeSetting: (value: unknown) => NotebookNavigatorSettings['featureImageSize'];
+    sanitizeFeatureImagePixelSizeSetting: (value: unknown) => NotebookNavigatorSettings['featureImagePixelSize'];
 
     defaultUXPreferences: UXPreferences;
     isUXPreferencesRecord: (value: unknown) => value is Partial<UXPreferences>;
@@ -415,6 +417,30 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
                     params.getSettings().compactItemHeightScaleText,
                     params.defaultSettings.compactItemHeightScaleText
                 )
+        }),
+        featureImageSize: createResolvedLocalStorageSettingEntry({
+            settingId: 'featureImageSize',
+            loadPhase: 'preProfiles',
+            localStorageKey: params.keys.featureImageSizeKey,
+            resolveDeviceLocal: () => {
+                const storedLocal = localStorage.get<unknown>(params.keys.featureImageSizeKey);
+                const resolved = params.sanitizeFeatureImageSizeSetting(storedLocal);
+                setLocalStorage(params.keys.featureImageSizeKey, resolved);
+                return { value: resolved, migrated: false };
+            },
+            sanitizeSynced: () => params.sanitizeFeatureImageSizeSetting(params.getSettings().featureImageSize)
+        }),
+        featureImagePixelSize: createResolvedLocalStorageSettingEntry({
+            settingId: 'featureImagePixelSize',
+            loadPhase: 'preProfiles',
+            localStorageKey: params.keys.featureImagePixelSizeKey,
+            resolveDeviceLocal: () => {
+                const storedLocal = localStorage.get<unknown>(params.keys.featureImagePixelSizeKey);
+                const resolved = params.sanitizeFeatureImagePixelSizeSetting(storedLocal);
+                setLocalStorage(params.keys.featureImagePixelSizeKey, resolved);
+                return { value: resolved, migrated: false };
+            },
+            sanitizeSynced: () => params.sanitizeFeatureImagePixelSizeSetting(params.getSettings().featureImagePixelSize)
         }),
         uiScale: createEntry({
             persistedKeys: ['desktopScale', 'mobileScale'],
