@@ -5803,10 +5803,16 @@ body.nn-resizing {
     gap: var(--size-2-2);
     padding-left: var(--size-2-2);
     padding-right: var(--size-2-2);
+    border-radius: var(--radius-s);
+    transition: background-color 120ms ease;
 }
 
 .is-mobile .modal.nn-property-keys-modal .nn-property-keys-row {
     gap: var(--size-2-3);
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-list .nn-property-keys-row:hover {
+    background: var(--nn-theme-foreground-faint);
 }
 
 .nn-property-keys-label {

@@ -95,6 +95,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         improved: [
             'The ==properties tree now supports custom appearance and sort order== in list pane.',
             'The setting ==Scope pinned notes to their location== (previously called "Limit pinned notes") now also applies to tags and properties.',
+            'You can now click directly on property keys in the "Property key visibility modal" to quickly toggle visibility in all three places: navigation pane, list pane, and file menus.',
             'Shortcut rows no longer reserve trailing badge space when Shortcut badge is None.'
         ],
         fixed: [

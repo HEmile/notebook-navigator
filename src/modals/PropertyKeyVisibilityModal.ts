@@ -369,6 +369,14 @@ export class PropertyKeyVisibilityModal extends Modal {
             const controls = { rowEl, navigationButton, listButton, fileMenuButton };
             this.rowControls.set(row.normalizedKey, controls);
             this.updateRowControls(row, controls);
+            this.rowDisposers.push(
+                addAsyncEventListener(rowEl, 'click', event => {
+                    if (event.target instanceof Element && event.target.closest('button')) {
+                        return;
+                    }
+                    this.toggleEntireRow(row.normalizedKey);
+                })
+            );
             this.registerToggleButtonHandler(navigationButton, () => {
                 this.toggleRow(row.normalizedKey, 'navigation');
             });
@@ -450,6 +458,28 @@ export class PropertyKeyVisibilityModal extends Modal {
         } else {
             row.showInFileMenu = !row.showInFileMenu;
         }
+
+        const controls = this.rowControls.get(normalizedKey);
+        if (controls) {
+            this.updateRowControls(row, controls);
+        }
+
+        this.updateSelectAllControls();
+        this.updateApplyButtonState();
+    }
+
+    private toggleEntireRow(normalizedKey: string): void {
+        const row = this.rowsByKey.get(normalizedKey);
+        if (!row) {
+            return;
+        }
+
+        const selectedCount = Number(row.showInNavigation) + Number(row.showInList) + Number(row.showInFileMenu);
+        const nextChecked = selectedCount < 3;
+
+        row.showInNavigation = nextChecked;
+        row.showInList = nextChecked;
+        row.showInFileMenu = nextChecked;
 
         const controls = this.rowControls.get(normalizedKey);
         if (controls) {
