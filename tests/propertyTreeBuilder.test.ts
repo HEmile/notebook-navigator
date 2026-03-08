@@ -128,6 +128,25 @@ describe('buildPropertyTreeFromDatabase', () => {
         expect(valueNode?.displayPath).toBe('Tech Insights 2026 Week 7');
     });
 
+    it('uses markdown-link display text for external value node labels', () => {
+        const rawValue = '[GitHub issue](https://github.com/johansan/notebook-navigator/issues/935)';
+        const db = createMockDb([
+            {
+                path: 'notes/a.md',
+                properties: [{ fieldKey: 'Status', value: rawValue }]
+            }
+        ]);
+
+        const tree = buildPropertyTreeFromDatabase(db, {
+            includedPropertyKeys: new Set(['status'])
+        });
+        const keyNode = tree.get('status');
+        const valueNode = keyNode?.children.get(buildPropertyValueNodeId('status', normalizePropertyTreeValuePath(rawValue)));
+
+        expect(valueNode?.name).toBe('GitHub issue');
+        expect(valueNode?.displayPath).toBe('GitHub issue');
+    });
+
     it('treats plain text and strict wiki-link aliases as the same canonical value', () => {
         const plainValue = 'Tech Insights 2026 Week 7';
         const wikiLinkValue = '[[Tech Insights/2026/Tech Insights 2026 Week 7|Tech Insights 2026 Week 7]]';

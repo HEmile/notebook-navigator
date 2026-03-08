@@ -1424,15 +1424,6 @@ export const STRINGS_EN = {
                 name: 'Show properties in compact mode',
                 desc: 'Display properties when compact mode is active.'
             },
-            notePropertyType: {
-                name: 'Note property',
-                desc: 'Select the note property to display in file items.',
-                options: {
-                    frontmatter: 'Frontmatter property',
-                    wordCount: 'Word count',
-                    none: 'None'
-                }
-            },
             propertyFields: {
                 name: 'Property keys (vault profile)',
                 desc: 'Frontmatter property keys, with per-key visibility for navigation and file list.',
@@ -1444,6 +1435,23 @@ export const STRINGS_EN = {
             showPropertiesOnSeparateRows: {
                 name: 'Show properties on separate rows',
                 desc: 'Display each property on its own row.'
+            },
+            enablePropertyInternalLinks: {
+                name: 'Link property pills to notes',
+                desc: 'Click a property pill to open the linked note.'
+            },
+            enablePropertyExternalLinks: {
+                name: 'Link property pills to URLs',
+                desc: 'Click a property pill to open the linked URL.'
+            },
+            notePropertyType: {
+                name: 'Note property',
+                desc: 'Select the note property to display in file items.',
+                options: {
+                    frontmatter: 'Frontmatter property',
+                    wordCount: 'Word count',
+                    none: 'None'
+                }
             },
             dateFormat: {
                 name: 'Date format',

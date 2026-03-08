@@ -1451,6 +1451,14 @@ export const STRINGS_ID = {
                 name: 'Tampilkan properti pada baris terpisah',
                 desc: 'Tampilkan setiap properti pada barisnya sendiri.'
             },
+            enablePropertyInternalLinks: {
+                name: 'Tautkan pil properti ke catatan',
+                desc: 'Klik pil properti untuk membuka catatan yang ditautkan.'
+            },
+            enablePropertyExternalLinks: {
+                name: 'Tautkan pil properti ke URL',
+                desc: 'Klik pil properti untuk membuka URL yang ditautkan.'
+            },
             dateFormat: {
                 name: 'Format tanggal',
                 desc: 'Format untuk menampilkan tanggal (menggunakan format Moment).',

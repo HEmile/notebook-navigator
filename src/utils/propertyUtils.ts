@@ -25,7 +25,9 @@ import { naturalCompare } from './sortUtils';
 import { isRecord } from './typeGuards';
 import { getActivePropertyFields } from './vaultProfiles';
 
-export type WikiLinkTarget = { target: string; displayText: string };
+type WikiLinkTarget = { kind: 'internal'; target: string; displayText: string };
+type MarkdownLinkTarget = { kind: 'external'; target: string; displayText: string };
+export type PropertyLinkTarget = WikiLinkTarget | MarkdownLinkTarget;
 export interface PropertyKeySuggestion {
     key: string;
     noteCount: number;
@@ -148,7 +150,7 @@ export function normalizePropertyTreeValuePath(rawValue: string): string {
     return casefold(rawValue);
 }
 
-export function parseStrictWikiLink(value: string): WikiLinkTarget | null {
+function parseStrictWikiLink(value: string): WikiLinkTarget | null {
     // Property pills are clickable only when the full value is a single wiki link token.
     const trimmed = value.trim();
     if (!trimmed.startsWith('[[') || !trimmed.endsWith(']]')) {
@@ -170,9 +172,81 @@ export function parseStrictWikiLink(value: string): WikiLinkTarget | null {
     const displayText = rawDisplayText.length > 0 ? rawDisplayText : rawTarget;
 
     return {
+        kind: 'internal',
         target: rawTarget,
         displayText: displayText.startsWith('#') ? displayText.slice(1) : displayText
     };
+}
+
+function parseStrictMarkdownLink(value: string): MarkdownLinkTarget | null {
+    const trimmed = value.trim();
+    if (!trimmed.startsWith('[') || trimmed.startsWith('![') || !trimmed.endsWith(')')) {
+        return null;
+    }
+
+    if (trimmed.includes('\n') || trimmed.includes('\r')) {
+        return null;
+    }
+
+    const dividerIndex = trimmed.indexOf('](');
+    if (dividerIndex <= 1) {
+        return null;
+    }
+
+    const rawDisplayText = trimmed.slice(1, dividerIndex).trim();
+    if (rawDisplayText.length === 0) {
+        return null;
+    }
+
+    let rawTarget = trimmed.slice(dividerIndex + 2, -1).trim();
+    if (rawTarget.startsWith('<') && rawTarget.endsWith('>')) {
+        rawTarget = rawTarget.slice(1, -1).trim();
+    }
+
+    if (rawTarget.length === 0) {
+        return null;
+    }
+
+    return {
+        kind: 'external',
+        target: rawTarget,
+        displayText: rawDisplayText
+    };
+}
+
+function parsePlainExternalUrl(value: string): MarkdownLinkTarget | null {
+    const trimmed = value.trim();
+    if (trimmed.length < 8) {
+        return null;
+    }
+
+    const lower = trimmed.toLowerCase();
+    if (!lower.startsWith('http://') && !lower.startsWith('https://')) {
+        return null;
+    }
+
+    try {
+        const url = new URL(trimmed);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+            return null;
+        }
+    } catch {
+        return null;
+    }
+
+    return {
+        kind: 'external',
+        target: trimmed,
+        displayText: trimmed
+    };
+}
+
+export function parsePropertyLinkTarget(value: string): PropertyLinkTarget | null {
+    return parseStrictWikiLink(value) ?? parseStrictMarkdownLink(value) ?? parsePlainExternalUrl(value);
+}
+
+export function resolvePropertyDisplayText(rawValue: string): string {
+    return parsePropertyLinkTarget(rawValue)?.displayText ?? rawValue.trim();
 }
 
 export function isSupportedCssColor(value: string): boolean {

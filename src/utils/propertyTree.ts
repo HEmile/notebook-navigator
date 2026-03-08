@@ -23,7 +23,7 @@ import type { NotebookNavigatorSettings } from '../settings';
 import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
 import { isPathInExcludedFolder } from './fileFilters';
 import { getCachedCommaSeparatedList } from './commaSeparatedListUtils';
-import { normalizePropertyTreeValuePath, parseStrictWikiLink } from './propertyUtils';
+import { normalizePropertyTreeValuePath, resolvePropertyDisplayText } from './propertyUtils';
 import { casefold } from './recordUtils';
 import { naturalCompare } from './sortUtils';
 import { isRecord } from './typeGuards';
@@ -740,12 +740,7 @@ function normalizePropertyTreeDisplayValuePath(rawValue: string): string {
         return '';
     }
 
-    const wikiLink = parseStrictWikiLink(trimmedValue);
-    if (wikiLink) {
-        return wikiLink.displayText;
-    }
-
-    return trimmedValue;
+    return resolvePropertyDisplayText(trimmedValue);
 }
 
 function getSelectedPropertyNodeId(selection: PropertySelectionValue | null): PropertySelectionNodeId | null {

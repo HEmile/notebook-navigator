@@ -483,9 +483,11 @@ export interface NotebookNavigatorSettings {
     showFileProperties: boolean;
     colorFileProperties: boolean;
     prioritizeColoredFileProperties: boolean;
-    notePropertyType: NotePropertyType;
     showFilePropertiesInCompactMode: boolean;
     showPropertiesOnSeparateRows: boolean;
+    enablePropertyInternalLinks: boolean;
+    enablePropertyExternalLinks: boolean;
+    notePropertyType: NotePropertyType;
     showFileDate: boolean;
     alphabeticalDateMode: AlphabeticalDateMode;
     showParentFolder: boolean;

@@ -311,9 +311,11 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showFileProperties: true,
     colorFileProperties: true,
     prioritizeColoredFileProperties: true,
-    notePropertyType: 'none',
     showFilePropertiesInCompactMode: false,
     showPropertiesOnSeparateRows: false,
+    enablePropertyInternalLinks: true,
+    enablePropertyExternalLinks: true,
+    notePropertyType: 'none',
     showFileDate: true,
     // Default to showing modified date when sorting alphabetically
     alphabeticalDateMode: 'modified',

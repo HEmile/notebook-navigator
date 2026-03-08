@@ -27,7 +27,7 @@ import type { NotePropertyType, NotebookNavigatorSettings } from '../../settings
 import { runAsyncAction } from '../../utils/async';
 import { naturalCompare } from '../../utils/sortUtils';
 import { getTagSearchModifierOperator } from '../../utils/tagUtils';
-import { isSupportedCssColor, parseStrictWikiLink, type WikiLinkTarget } from '../../utils/propertyUtils';
+import { isSupportedCssColor, parsePropertyLinkTarget, type PropertyLinkTarget } from '../../utils/propertyUtils';
 import { createHiddenTagVisibility } from '../../utils/tagPrefixMatcher';
 import { casefold } from '../../utils/recordUtils';
 import { resolveUXIcon } from '../../utils/uxIcons';
@@ -46,7 +46,7 @@ import { ServiceIcon } from '../ServiceIcon';
 type PropertyPill = {
     value: string;
     label: string;
-    wikiLink: WikiLinkTarget | null;
+    linkTarget: PropertyLinkTarget | null;
     iconId?: string;
     fieldKey?: string;
     propertyKeyNodeId?: string;
@@ -81,6 +81,7 @@ export interface FileItemPillsState {
 }
 
 const EMPTY_COLOR_MAP = new Map<string, { color?: string; background?: string }>();
+const EXTERNAL_PROPERTY_LINK_ICON_ID = 'external-link';
 
 function sortTagsAlphabetically(tags: string[]): void {
     tags.sort((firstTag, secondTag) => naturalCompare(firstTag, secondTag));
@@ -215,10 +216,16 @@ export function useFileItemPills({
                 }
             }
 
-            const wikiLinkTarget = pill.wikiLink?.target.trim();
-            if (wikiLinkTarget) {
+            const linkTarget = pill.linkTarget;
+            if (linkTarget?.kind === 'internal' && settings.enablePropertyInternalLinks) {
                 event.preventDefault();
-                runAsyncAction(() => app.workspace.openLinkText(wikiLinkTarget, file.path, false));
+                runAsyncAction(() => app.workspace.openLinkText(linkTarget.target, file.path, false));
+                return;
+            }
+
+            if (linkTarget?.kind === 'external' && settings.enablePropertyExternalLinks) {
+                event.preventDefault();
+                window.open(linkTarget.target);
                 return;
             }
 
@@ -228,7 +235,16 @@ export function useFileItemPills({
 
             navigateToProperty(propertyNodeId, { preserveNavigationFocus: false });
         },
-        [app.workspace, file.path, isMobile, navigateToProperty, onModifySearchWithProperty, settings.multiSelectModifier]
+        [
+            app.workspace,
+            file.path,
+            isMobile,
+            navigateToProperty,
+            onModifySearchWithProperty,
+            settings.enablePropertyExternalLinks,
+            settings.enablePropertyInternalLinks,
+            settings.multiSelectModifier
+        ]
     );
 
     const getTagColorData = useCallback(
@@ -425,7 +441,7 @@ export function useFileItemPills({
         return {
             value: truncatedWordCount.toString(),
             label: truncatedWordCount.toLocaleString(),
-            wikiLink: null,
+            linkTarget: null,
             iconId: wordCountPillIconId
         };
     }, [canShowPropertyPills, notePropertyType, wordCount, wordCountPillIconId]);
@@ -450,8 +466,8 @@ export function useFileItemPills({
             const trimmedFieldKey = entry.fieldKey.trim();
             const normalizedValuePath = normalizePropertyTreeValuePath(rawValue);
             const isKeyOnlyValue = isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
-            const wikiLink = isKeyOnlyValue ? null : parseStrictWikiLink(rawValue);
-            const label = wikiLink ? wikiLink.displayText : rawValue;
+            const linkTarget = isKeyOnlyValue ? null : parsePropertyLinkTarget(rawValue);
+            const label = linkTarget ? linkTarget.displayText : rawValue;
 
             const cacheKey = `${entry.fieldKey}\u0000${rawValue}`;
             let colorData = colorLookupCache.get(cacheKey);
@@ -488,7 +504,7 @@ export function useFileItemPills({
             frontmatterPills.push({
                 value: rawValue,
                 label,
-                wikiLink,
+                linkTarget,
                 fieldKey: entry.fieldKey,
                 propertyKeyNodeId,
                 color: colorData.color,
@@ -656,16 +672,17 @@ export function useFileItemPills({
 
     const propertyPillIcons = useMemo(() => {
         const icons = new Map<PropertyPill, string>();
-        if (!settings.propertyIcons || !hasOwnRecordEntries(settings.propertyIcons)) {
-            if (wordCountPropertyPill?.iconId) {
-                icons.set(wordCountPropertyPill, wordCountPropertyPill.iconId);
-            }
-            return icons;
-        }
-
         const resolvePropertyPillIconId = (pill: PropertyPill): string | undefined => {
+            if (pill.linkTarget?.kind === 'external' && settings.enablePropertyExternalLinks) {
+                return EXTERNAL_PROPERTY_LINK_ICON_ID;
+            }
+
             if (pill.iconId) {
                 return pill.iconId;
+            }
+
+            if (!settings.propertyIcons || !hasOwnRecordEntries(settings.propertyIcons)) {
+                return undefined;
             }
 
             let checkedKeyNodeId: string | null = null;
@@ -707,18 +724,20 @@ export function useFileItemPills({
         }
 
         return icons;
-    }, [metadataService, propertyPills, settings.propertyIcons, wordCountPropertyPill]);
+    }, [metadataService, propertyPills, settings.enablePropertyExternalLinks, settings.propertyIcons, wordCountPropertyPill]);
 
     const renderPropertyPill = useCallback(
         (pill: PropertyPill, index: number) => {
             const canNavigateToProperty = pill.canNavigateToProperty === true;
-            const isWikiLink = Boolean(pill.wikiLink);
-            const isClickable = canNavigateToProperty || isWikiLink;
+            const isPropertyLink =
+                (pill.linkTarget?.kind === 'internal' && settings.enablePropertyInternalLinks) ||
+                (pill.linkTarget?.kind === 'external' && settings.enablePropertyExternalLinks);
+            const isClickable = canNavigateToProperty || isPropertyLink;
             const className = [
                 'nn-file-tag',
                 'nn-file-property',
                 isClickable ? 'nn-clickable-tag' : '',
-                isWikiLink ? 'nn-file-property-wikilink' : ''
+                isPropertyLink ? 'nn-file-property-link' : ''
             ]
                 .filter(classToken => classToken.length > 0)
                 .join(' ');
@@ -748,7 +767,13 @@ export function useFileItemPills({
                 </span>
             );
         },
-        [handlePropertyClick, propertyColorData, propertyPillIcons]
+        [
+            handlePropertyClick,
+            propertyColorData,
+            propertyPillIcons,
+            settings.enablePropertyExternalLinks,
+            settings.enablePropertyInternalLinks
+        ]
     );
 
     const tagRows = useMemo(() => {

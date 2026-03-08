@@ -1451,6 +1451,14 @@ export const STRINGS_VI = {
                 name: 'Hiển thị thuộc tính trên các dòng riêng',
                 desc: 'Hiển thị mỗi thuộc tính trên một dòng riêng.'
             },
+            enablePropertyInternalLinks: {
+                name: 'Liên kết nhãn thuộc tính với ghi chú',
+                desc: 'Nhấp vào nhãn thuộc tính để mở ghi chú được liên kết.'
+            },
+            enablePropertyExternalLinks: {
+                name: 'Liên kết nhãn thuộc tính với URL',
+                desc: 'Nhấp vào nhãn thuộc tính để mở URL được liên kết.'
+            },
             dateFormat: {
                 name: 'Định dạng ngày',
                 desc: 'Định dạng hiển thị ngày (dùng định dạng Moment).',

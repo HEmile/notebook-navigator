@@ -1444,6 +1444,14 @@ export const STRINGS_ZH_CN = {
                 name: '在单独的行中显示属性',
                 desc: '将每个属性显示在单独的行中。'
             },
+            enablePropertyInternalLinks: {
+                name: '将属性标签链接到笔记',
+                desc: '点击属性标签以打开链接的笔记。'
+            },
+            enablePropertyExternalLinks: {
+                name: '将属性标签链接到 URL',
+                desc: '点击属性标签以打开链接的 URL。'
+            },
             dateFormat: {
                 name: '日期格式',
                 desc: '用于显示日期的格式（使用 Moment 格式）。',

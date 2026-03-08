@@ -236,6 +236,14 @@ export function migrateLegacySyncedSettings(params: {
         settings.showAllPropertiesFolder = defaultSettings.showAllPropertiesFolder;
     }
 
+    if (typeof settings.enablePropertyInternalLinks !== 'boolean') {
+        settings.enablePropertyInternalLinks = defaultSettings.enablePropertyInternalLinks;
+    }
+
+    if (typeof settings.enablePropertyExternalLinks !== 'boolean') {
+        settings.enablePropertyExternalLinks = defaultSettings.enablePropertyExternalLinks;
+    }
+
     if (!isTagSortOrder(settings.propertySortOrder)) {
         settings.propertySortOrder = defaultSettings.propertySortOrder;
     }

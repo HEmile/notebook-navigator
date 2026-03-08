@@ -1451,6 +1451,14 @@ export const STRINGS_JA = {
                 name: 'プロパティを別の行に表示',
                 desc: '各プロパティを個別の行に表示します。'
             },
+            enablePropertyInternalLinks: {
+                name: 'プロパティピルをノートにリンク',
+                desc: 'プロパティピルをクリックしてリンク先のノートを開きます。'
+            },
+            enablePropertyExternalLinks: {
+                name: 'プロパティピルをURLにリンク',
+                desc: 'プロパティピルをクリックしてリンク先のURLを開きます。'
+            },
             dateFormat: {
                 name: '日付形式',
                 desc: '日付表示の形式（Moment形式を使用）。',

@@ -1454,6 +1454,14 @@ export const STRINGS_PL = {
                 name: 'Pokaż atrybuty w osobnych wierszach',
                 desc: 'Wyświetl każdy atrybut w osobnym wierszu.'
             },
+            enablePropertyInternalLinks: {
+                name: 'Połącz etykiety atrybutów z notatkami',
+                desc: 'Kliknij etykietę atrybutu, aby otworzyć powiązaną notatkę.'
+            },
+            enablePropertyExternalLinks: {
+                name: 'Połącz etykiety atrybutów z adresami URL',
+                desc: 'Kliknij etykietę atrybutu, aby otworzyć powiązany adres URL.'
+            },
             dateFormat: {
                 name: 'Format daty',
                 desc: 'Format widocznych dat (format Moment).',

@@ -1453,6 +1453,14 @@ export const STRINGS_ES = {
                 name: 'Mostrar propiedades en filas separadas',
                 desc: 'Mostrar cada propiedad en su propia fila.'
             },
+            enablePropertyInternalLinks: {
+                name: 'Vincular etiquetas de propiedad a notas',
+                desc: 'Haz clic en una etiqueta de propiedad para abrir la nota vinculada.'
+            },
+            enablePropertyExternalLinks: {
+                name: 'Vincular etiquetas de propiedad a URLs',
+                desc: 'Haz clic en una etiqueta de propiedad para abrir la URL vinculada.'
+            },
             dateFormat: {
                 name: 'Formato de fecha',
                 desc: 'Formato para mostrar fechas (usa formato Moment).',

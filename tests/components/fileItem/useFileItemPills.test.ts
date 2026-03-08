@@ -64,6 +64,11 @@ vi.mock('../../../src/hooks/useTagNavigation', () => ({
     })
 }));
 
+vi.mock('../../../src/components/ServiceIcon', () => ({
+    ServiceIcon: ({ iconId, className }: { iconId: string; className?: string }) =>
+        React.createElement('span', { 'data-icon-id': iconId, className })
+}));
+
 function renderPillRows(params: UseFileItemPillsParams): string {
     function Host() {
         const state = useFileItemPills(params);
@@ -148,5 +153,153 @@ describe('useFileItemPills', () => {
 
         expect(markup).toContain('data-show-word-count="true"');
         expect(markup).toContain('1,234');
+    });
+
+    it('renders external property links using their display text', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: '[GitHub issue](https://github.com/johansan/notebook-navigator/issues/935)',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: true
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('GitHub issue');
+        expect(markup).not.toContain('https://github.com/johansan/notebook-navigator/issues/935');
+        expect(markup).toContain('nn-file-property-link');
+        expect(markup).toContain('nn-clickable-tag');
+        expect(markup).toContain('data-icon-id="external-link"');
+    });
+
+    it('renders bare external URLs as clickable property links', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: 'https://github.com/johansan/notebook-navigator/issues/935',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: true
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('https://github.com/johansan/notebook-navigator/issues/935');
+        expect(markup).toContain('nn-file-property-link');
+        expect(markup).toContain('nn-clickable-tag');
+        expect(markup).toContain('data-icon-id="external-link"');
+    });
+
+    it('renders internal property links as plain property values when link opening is disabled', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: '[[Tech Insights/Tech Insights 2026 Week 11|Tech Insights 2026 Week 11]]',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyInternalLinks: false
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('Tech Insights 2026 Week 11');
+        expect(markup).not.toContain('nn-file-property-link');
+        expect(markup).not.toContain('nn-clickable-tag');
+    });
+
+    it('uses the external link icon instead of custom property icons for external links', () => {
+        mockMetadataService.getPropertyIcon.mockImplementation(() => 'star');
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: '[GitHub issue](https://github.com/johansan/notebook-navigator/issues/935)',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                propertyIcons: { reference: 'star' }
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('data-icon-id="external-link"');
+        expect(markup).not.toContain('data-icon-id="star"');
+        expect(mockMetadataService.getPropertyIcon).not.toHaveBeenCalled();
+    });
+
+    it('does not show the external link icon when external links are disabled', () => {
+        mockMetadataService.getPropertyIcon.mockImplementation(() => 'star');
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: '[GitHub issue](https://github.com/johansan/notebook-navigator/issues/935)',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: false,
+                propertyIcons: { reference: 'star' }
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).not.toContain('data-icon-id="external-link"');
+        expect(markup).toContain('data-icon-id="star"');
+        expect(mockMetadataService.getPropertyIcon).toHaveBeenCalled();
     });
 });

@@ -1456,6 +1456,14 @@ export const STRINGS_FR = {
                 name: 'Afficher les propriétés sur des lignes séparées',
                 desc: 'Afficher chaque propriété sur sa propre ligne.'
             },
+            enablePropertyInternalLinks: {
+                name: 'Lier les pastilles de propriété aux notes',
+                desc: 'Cliquer sur une pastille de propriété pour ouvrir la note liée.'
+            },
+            enablePropertyExternalLinks: {
+                name: 'Lier les pastilles de propriété aux URLs',
+                desc: "Cliquer sur une pastille de propriété pour ouvrir l'URL liée."
+            },
             dateFormat: {
                 name: 'Format de date',
                 desc: 'Format pour afficher les dates (utilise le format Moment).',

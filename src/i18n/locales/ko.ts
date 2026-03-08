@@ -1449,6 +1449,14 @@ export const STRINGS_KO = {
                 name: '속성을 별도 행에 표시',
                 desc: '각 속성을 개별 행에 표시합니다.'
             },
+            enablePropertyInternalLinks: {
+                name: '속성 필을 노트에 연결',
+                desc: '속성 필을 클릭하여 연결된 노트를 엽니다.'
+            },
+            enablePropertyExternalLinks: {
+                name: '속성 필을 URL에 연결',
+                desc: '속성 필을 클릭하여 연결된 URL을 엽니다.'
+            },
             dateFormat: {
                 name: '날짜 형식',
                 desc: '날짜 표시 형식 (Moment 형식 사용).',

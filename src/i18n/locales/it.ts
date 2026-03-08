@@ -1449,6 +1449,14 @@ export const STRINGS_IT = {
                 name: 'Mostra proprietà su righe separate',
                 desc: 'Mostra ogni proprietà sulla propria riga.'
             },
+            enablePropertyInternalLinks: {
+                name: 'Collega le etichette proprietà alle note',
+                desc: "Fai clic su un'etichetta proprietà per aprire la nota collegata."
+            },
+            enablePropertyExternalLinks: {
+                name: 'Collega le etichette proprietà agli URL',
+                desc: "Fai clic su un'etichetta proprietà per aprire l'URL collegato."
+            },
             dateFormat: {
                 name: 'Formato data',
                 desc: 'Formato per visualizzare le date (usa formato Moment).',

@@ -21,7 +21,7 @@ import { Platform } from 'obsidian';
 import { DEFAULT_SETTINGS } from '../../settings/defaultSettings';
 import type { UXPreferences } from '../../types';
 
-export const UX_PREFERENCES_DEFAULTS = {
+const UX_PREFERENCES_DEFAULTS = {
     base: {
         searchActive: false,
         showCalendar: false,
@@ -41,9 +41,9 @@ export const UX_PREFERENCES_DEFAULTS = {
     };
 };
 
-export type UXPreferenceKey = keyof typeof UX_PREFERENCES_DEFAULTS.base;
+type UXPreferenceKey = keyof typeof UX_PREFERENCES_DEFAULTS.base;
 
-export const UX_PREFERENCE_KEYS = Object.keys(UX_PREFERENCES_DEFAULTS.base).filter((key): key is UXPreferenceKey => {
+const UX_PREFERENCE_KEYS = Object.keys(UX_PREFERENCES_DEFAULTS.base).filter((key): key is UXPreferenceKey => {
     return key in UX_PREFERENCES_DEFAULTS.base;
 });
 

@@ -1450,6 +1450,14 @@ export const STRINGS_TR = {
                 name: 'Özellikleri ayrı satırlarda göster',
                 desc: 'Her özelliği kendi satırında göster.'
             },
+            enablePropertyInternalLinks: {
+                name: 'Özellik etiketlerini notlara bağla',
+                desc: 'Bağlantılı notu açmak için bir özellik etiketine tıklayın.'
+            },
+            enablePropertyExternalLinks: {
+                name: "Özellik etiketlerini URL'lere bağla",
+                desc: "Bağlantılı URL'yi açmak için bir özellik etiketine tıklayın."
+            },
             dateFormat: {
                 name: 'Tarih formatı',
                 desc: 'Tarihleri görüntüleme formatı (Moment formatı kullanır).',

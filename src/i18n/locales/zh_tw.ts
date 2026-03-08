@@ -1443,6 +1443,14 @@ export const STRINGS_ZH_TW = {
                 name: '在個別行中顯示屬性',
                 desc: '將每個屬性顯示在個別行中。'
             },
+            enablePropertyInternalLinks: {
+                name: '將屬性標籤連結到筆記',
+                desc: '點擊屬性標籤以開啟連結的筆記。'
+            },
+            enablePropertyExternalLinks: {
+                name: '將屬性標籤連結到 URL',
+                desc: '點擊屬性標籤以開啟連結的 URL。'
+            },
             dateFormat: {
                 name: '日期格式',
                 desc: '用於顯示日期的格式（使用 Moment 格式）。',

@@ -636,6 +636,26 @@ export function renderNotesTab(context: SettingsTabContext): void {
             })
         );
 
+    new Setting(filePropertiesSubSettingsEl)
+        .setName(strings.settings.items.enablePropertyInternalLinks.name)
+        .setDesc(strings.settings.items.enablePropertyInternalLinks.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.enablePropertyInternalLinks).onChange(async value => {
+                plugin.settings.enablePropertyInternalLinks = value;
+                await plugin.saveSettingsAndUpdate();
+            })
+        );
+
+    new Setting(filePropertiesSubSettingsEl)
+        .setName(strings.settings.items.enablePropertyExternalLinks.name)
+        .setDesc(strings.settings.items.enablePropertyExternalLinks.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.enablePropertyExternalLinks).onChange(async value => {
+                plugin.settings.enablePropertyExternalLinks = value;
+                await plugin.saveSettingsAndUpdate();
+            })
+        );
+
     notePropertyGroup.addSetting(setting => {
         setting.setName(strings.settings.items.notePropertyType.name).setDesc(strings.settings.items.notePropertyType.desc);
         setting.addDropdown(dropdown =>

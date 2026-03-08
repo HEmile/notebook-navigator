@@ -87,6 +87,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
             'New setting: List > Notes > ==Unfinished task background==. This makes it super easy to find notes with unfinished tasks in the list pane.',
             'New setting: List > Notes > ==Feature image display size==. You can now increase the max vertical size of feature images from 64px to 128px in list pane.',
             'New setting: List > Notes > ==Feature image pixel size==. You can now set the max thumbnail width from 256 pixels (default) up to 512 pixels for higher-resolution thumbnails in calendar overlays and list pane.',
+            'New setting: List > Notes > ==Link property pills to notes==. When enabled (default), properties that are file links can be clicked to open that file.',
+            'New setting: List > Notes > ==Link property pills to URLs==. When enabled (default), properties that are URLs can be clicked to open the URL. Very handy if you keep web references in your notes.',
             'New command: ==Toggle dual pane orientation== to quickly change orientation between horizontal and vertical dual panes.',
             '==New API 2.0==: Added whenReady(), tag collection helpers, property node helpers, new tag and property context menu hooks and many other improvements.'
         ],

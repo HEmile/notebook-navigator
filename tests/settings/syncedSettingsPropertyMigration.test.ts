@@ -69,6 +69,24 @@ describe('migrateLegacySyncedSettings property key migration', () => {
         expect(Object.prototype.hasOwnProperty.call(settingsRecord, 'showCustomPropertiesOnSeparateRows')).toBe(false);
     });
 
+    it('defaults property link settings when missing', () => {
+        const settings = createSettings();
+        const settingsRecord = settings as unknown as Record<string, unknown>;
+
+        delete settingsRecord['enablePropertyInternalLinks'];
+        delete settingsRecord['enablePropertyExternalLinks'];
+
+        migrateLegacySyncedSettings({
+            settings,
+            storedData: null,
+            keys: STORAGE_KEYS,
+            defaultSettings: DEFAULT_SETTINGS
+        });
+
+        expect(settings.enablePropertyInternalLinks).toBe(true);
+        expect(settings.enablePropertyExternalLinks).toBe(true);
+    });
+
     it('migrates legacy folder appearance customPropertyType override', () => {
         const settings = createSettings();
         settings.folderAppearances = { Inbox: {} };

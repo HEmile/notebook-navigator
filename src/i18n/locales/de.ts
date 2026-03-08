@@ -1453,6 +1453,14 @@ export const STRINGS_DE = {
                 name: 'Eigenschaften in separaten Zeilen anzeigen',
                 desc: 'Jede Eigenschaft in einer eigenen Zeile anzeigen.'
             },
+            enablePropertyInternalLinks: {
+                name: 'Eigenschafts-Pills mit Notizen verknüpfen',
+                desc: 'Auf ein Eigenschafts-Pill klicken, um die verknüpfte Notiz zu öffnen.'
+            },
+            enablePropertyExternalLinks: {
+                name: 'Eigenschafts-Pills mit URLs verknüpfen',
+                desc: 'Auf ein Eigenschafts-Pill klicken, um die verknüpfte URL zu öffnen.'
+            },
             dateFormat: {
                 name: 'Datumsformat',
                 desc: 'Format für die Datumsanzeige (verwendet Moment-Format).',

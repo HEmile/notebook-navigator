@@ -100,8 +100,8 @@
     cursor: pointer;
 }
 
-/* Underline property pills that render wiki-link values */
-.nn-file-tag.nn-file-property.nn-file-property-wikilink {
+/* Underline property pills that render clickable link values */
+.nn-file-tag.nn-file-property.nn-file-property-link {
     text-decoration: underline;
     text-underline-offset: 2px;
 }

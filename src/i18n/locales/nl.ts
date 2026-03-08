@@ -1453,6 +1453,14 @@ export const STRINGS_NL = {
                 name: 'Eigenschappen op afzonderlijke regels tonen',
                 desc: 'Toon elke eigenschap op een eigen regel.'
             },
+            enablePropertyInternalLinks: {
+                name: 'Eigenschap-pills koppelen aan notities',
+                desc: 'Klik op een eigenschap-pill om de gekoppelde notitie te openen.'
+            },
+            enablePropertyExternalLinks: {
+                name: "Eigenschap-pills koppelen aan URL's",
+                desc: 'Klik op een eigenschap-pill om de gekoppelde URL te openen.'
+            },
             dateFormat: {
                 name: 'Datumformaat',
                 desc: 'Formaat voor het weergeven van datums (gebruikt Moment-formaat).',

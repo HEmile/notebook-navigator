@@ -1448,6 +1448,14 @@ export const STRINGS_AR = {
                 name: 'إظهار الخصائص في صفوف منفصلة',
                 desc: 'عرض كل خاصية في صف منفصل.'
             },
+            enablePropertyInternalLinks: {
+                name: 'ربط شارات الخصائص بالملاحظات',
+                desc: 'انقر على شارة خاصية لفتح الملاحظة المرتبطة.'
+            },
+            enablePropertyExternalLinks: {
+                name: 'ربط شارات الخصائص بالروابط',
+                desc: 'انقر على شارة خاصية لفتح الرابط المرتبط.'
+            },
             dateFormat: {
                 name: 'تنسيق التاريخ',
                 desc: 'تنسيق عرض التواريخ (يستخدم تنسيق Moment).',
