@@ -845,6 +845,7 @@ export const STRINGS_PL = {
             },
             notes: {
                 frontmatter: 'Metadane',
+                tasks: 'Zadania',
                 icon: 'Ikonka',
                 title: 'Tytuł',
                 previewText: 'Tekst podglądu',
@@ -952,8 +953,16 @@ export const STRINGS_PL = {
                 desc: 'Wyświetla ikonki plików z wyrównaniem do lewej strony. Wyłączenie tej opcji powoduje usunięcie zarówno ikonek, jak i wcięć. Priorytet: ikonka nieukończonych zadań > ikonka niestandardowa > ikonka nazwy pliku > ikonka typu pliku > ikonka domyślna.'
             },
             showFileIconUnfinishedTask: {
-                name: 'Ikonka nieukończonych zadań',
+                name: 'Ikona nieukończonych zadań',
                 desc: 'Wyświetla ikonkę, gdy notatka zawiera niezakończone zadania.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Tło nieukończonych zadań',
+                desc: 'Zastosuj kolor tła, gdy notatka zawiera nieukończone zadania.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Kolor tła',
+                desc: 'Ustaw kolor tła używany, gdy notatka zawiera nieukończone zadania.'
             },
             showFilenameMatchIcons: {
                 name: 'Ikonki na podstawie nazwy pliku',

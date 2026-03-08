@@ -363,7 +363,10 @@ export const FileItem = React.memo(function FileItem({
     const extensionSuffix = useMemo(() => getExtensionSuffix(file), [file]);
     const fileIconId = metadataService.getFileIcon(file.path);
     const fileColor = metadataService.getFileColor(file.path);
-    const fileBackgroundColor = metadataService.getFileBackgroundColor(file.path);
+    const customFileBackgroundColor = metadataService.getFileBackgroundColor(file.path);
+    const unfinishedTaskBackgroundColor =
+        settings.showFileBackgroundUnfinishedTask && hasUnfinishedTasks ? settings.unfinishedTaskBackgroundColor : undefined;
+    const fileBackgroundColor = unfinishedTaskBackgroundColor ?? customFileBackgroundColor;
     const fileExtension = file.extension.toLowerCase();
     const isBaseFile = fileExtension === 'base';
     const isCanvasFile = fileExtension === 'canvas';

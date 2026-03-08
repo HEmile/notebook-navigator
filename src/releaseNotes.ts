@@ -78,12 +78,13 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.4.4',
-        date: '2026-03-08',
+        date: '2026-03-09',
         showOnUpdate: true,
         bannerUrl: true,
         new: [
             'New feature: ==Rainbow colors==! You can now set individual rainbow colors for shortcuts, recent files, folders, tags or properties! Pick custom colors, choose between Hue (color wheel) and RGB (direct blend). There are lots of configuration settings, so just head over to **Settings > Navigation > Rainbow colors** to check it out!',
             'You can now set ==background colors for files== in the list pane. Great to make individual files stand out! Background colors can be set in menus or frontmatter.',
+            'New setting: List > Notes > ==Unfinished task background==. This makes it super easy to find notes with unfinished tasks in the list pane.',
             'New setting: List > Notes > ==Feature image display size==. You can now increase the max vertical size of feature images from 64px to 128px in list pane.',
             'New setting: List > Notes > ==Feature image pixel size==. You can now set the max thumbnail width from 256 pixels (default) up to 512 pixels for higher-resolution thumbnails in calendar overlays and list pane.',
             'New command: ==Toggle dual pane orientation== to quickly change orientation between horizontal and vertical dual panes.',

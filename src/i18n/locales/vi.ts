@@ -844,6 +844,7 @@ export const STRINGS_VI = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Nhiệm vụ',
                 icon: 'Biểu tượng',
                 title: 'Tiêu đề',
                 previewText: 'Văn bản xem trước',
@@ -953,6 +954,14 @@ export const STRINGS_VI = {
             showFileIconUnfinishedTask: {
                 name: 'Biểu tượng nhiệm vụ chưa hoàn thành',
                 desc: 'Hiển thị biểu tượng nhiệm vụ khi ghi chú có nhiệm vụ chưa hoàn thành.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Nền nhiệm vụ chưa hoàn thành',
+                desc: 'Áp dụng màu nền khi ghi chú có nhiệm vụ chưa hoàn thành.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Màu nền',
+                desc: 'Đặt màu nền được sử dụng khi ghi chú có nhiệm vụ chưa hoàn thành.'
             },
             showFilenameMatchIcons: {
                 name: 'Biểu tượng theo tên tệp',

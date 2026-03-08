@@ -118,6 +118,19 @@ function resolveRainbowColor(value: unknown, fallback: string): string {
     return trimmed;
 }
 
+function resolveTaskBackgroundColor(value: unknown, fallback: string): string {
+    if (typeof value !== 'string') {
+        return fallback;
+    }
+
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+        return fallback;
+    }
+
+    return trimmed;
+}
+
 function normalizeNavRainbowBaseSection(value: unknown, defaults: NavRainbowSettings['shortcuts']): NavRainbowSettings['shortcuts'] {
     const section = isRecord(value) ? value : null;
     return {
@@ -401,6 +414,7 @@ export class PluginSettingsController {
         applyLegacyShortcutsMigration({ settings: this.currentSettings, legacyShortcuts });
         const migratedShortcutNegationSyntax = migrateSearchShortcutNegationSyntax({ settings: this.currentSettings });
         this.normalizeIconSettings();
+        this.normalizeTaskSettings();
         this.normalizeFileIconMapSettings();
         this.normalizeInterfaceIconsSettings();
         syncModeRegistry.vaultProfile.resolveOnLoad({ storedData });
@@ -876,6 +890,21 @@ export class PluginSettingsController {
         this.currentSettings.pinnedNotes = clonePinnedNotesRecord(this.currentSettings.pinnedNotes);
     }
 
+    private normalizeTaskSettings(): void {
+        if (typeof this.currentSettings.showFileIconUnfinishedTask !== 'boolean') {
+            this.currentSettings.showFileIconUnfinishedTask = DEFAULT_SETTINGS.showFileIconUnfinishedTask;
+        }
+
+        if (typeof this.currentSettings.showFileBackgroundUnfinishedTask !== 'boolean') {
+            this.currentSettings.showFileBackgroundUnfinishedTask = DEFAULT_SETTINGS.showFileBackgroundUnfinishedTask;
+        }
+
+        this.currentSettings.unfinishedTaskBackgroundColor = resolveTaskBackgroundColor(
+            this.currentSettings.unfinishedTaskBackgroundColor,
+            DEFAULT_SETTINGS.unfinishedTaskBackgroundColor
+        );
+    }
+
     private normalizeIconSettings(): void {
         const normalizeRecord = (record?: Record<string, string>): Record<string, string> => {
             const sanitized = sanitizeRecord(record, isStringRecordValue);
@@ -917,10 +946,6 @@ export class PluginSettingsController {
 
         if (typeof this.currentSettings.showCategoryIcons !== 'boolean') {
             this.currentSettings.showCategoryIcons = DEFAULT_SETTINGS.showCategoryIcons;
-        }
-
-        if (typeof this.currentSettings.showFileIconUnfinishedTask !== 'boolean') {
-            this.currentSettings.showFileIconUnfinishedTask = DEFAULT_SETTINGS.showFileIconUnfinishedTask;
         }
 
         if (typeof this.currentSettings.showFilenameMatchIcons !== 'boolean') {

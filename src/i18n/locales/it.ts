@@ -839,6 +839,7 @@ export const STRINGS_IT = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Attività',
                 icon: 'Icona',
                 title: 'Titolo',
                 previewText: 'Testo anteprima',
@@ -948,6 +949,14 @@ export const STRINGS_IT = {
             showFileIconUnfinishedTask: {
                 name: 'Icona attività incomplete',
                 desc: "Mostra un'icona di attività quando una nota ha attività incomplete."
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Sfondo attività incomplete',
+                desc: 'Applica un colore di sfondo quando una nota ha attività incomplete.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Colore di sfondo',
+                desc: 'Imposta il colore di sfondo usato quando una nota ha attività incomplete.'
             },
             showFilenameMatchIcons: {
                 name: 'Icone per nome file',

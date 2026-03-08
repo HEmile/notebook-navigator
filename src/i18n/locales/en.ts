@@ -839,6 +839,7 @@ export const STRINGS_EN = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Tasks',
                 icon: 'Icon',
                 title: 'Title',
                 previewText: 'Preview text',
@@ -946,8 +947,16 @@ export const STRINGS_EN = {
                 desc: 'Display file icons with left-aligned spacing. Disabling removes both icons and indentation. Priority: unfinished tasks icon > custom icon > file name icon > file type icon > default icon.'
             },
             showFileIconUnfinishedTask: {
-                name: 'Unfinished tasks icon',
+                name: 'Unfinished task icon',
                 desc: 'Display a task icon when a note has unfinished tasks.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Unfinished task background',
+                desc: 'Apply a background color when a note has unfinished tasks.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Background color',
+                desc: 'Set the background color used when a note has unfinished tasks.'
             },
             showFilenameMatchIcons: {
                 name: 'Icons by file name',

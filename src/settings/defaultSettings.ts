@@ -39,6 +39,7 @@ SYNC_MODE_SETTING_IDS.forEach(settingId => {
 
 const NAV_RAINBOW_FIRST_COLOR_DEFAULT = '#ef4444';
 const NAV_RAINBOW_LAST_COLOR_DEFAULT = '#8b5cf6';
+const UNFINISHED_TASK_BACKGROUND_COLOR_DEFAULT = '#ef000050';
 
 const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
     mode: 'none',
@@ -279,8 +280,10 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     frontmatterDateFormat: '',
 
     // Notes tab
-    showFileIcons: true,
     showFileIconUnfinishedTask: false,
+    showFileBackgroundUnfinishedTask: false,
+    unfinishedTaskBackgroundColor: UNFINISHED_TASK_BACKGROUND_COLOR_DEFAULT,
+    showFileIcons: true,
     showFilenameMatchIcons: false,
     fileNameIconMap: sanitizeRecord<string>(undefined),
     showCategoryIcons: false,

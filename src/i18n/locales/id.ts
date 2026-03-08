@@ -843,6 +843,7 @@ export const STRINGS_ID = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Tugas',
                 icon: 'Ikon',
                 title: 'Judul',
                 previewText: 'Teks pratinjau',
@@ -952,6 +953,14 @@ export const STRINGS_ID = {
             showFileIconUnfinishedTask: {
                 name: 'Ikon tugas belum selesai',
                 desc: 'Tampilkan ikon tugas saat catatan memiliki tugas yang belum selesai.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Latar belakang tugas belum selesai',
+                desc: 'Terapkan warna latar belakang saat catatan memiliki tugas yang belum selesai.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Warna latar belakang',
+                desc: 'Atur warna latar belakang yang digunakan saat catatan memiliki tugas yang belum selesai.'
             },
             showFilenameMatchIcons: {
                 name: 'Ikon berdasarkan nama file',

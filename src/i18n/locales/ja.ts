@@ -842,6 +842,7 @@ export const STRINGS_JA = {
             },
             notes: {
                 frontmatter: 'フロントマター',
+                tasks: 'タスク',
                 icon: 'アイコン',
                 title: 'タイトル',
                 previewText: 'プレビューテキスト',
@@ -951,6 +952,14 @@ export const STRINGS_JA = {
             showFileIconUnfinishedTask: {
                 name: '未完了タスクアイコン',
                 desc: 'ノートに未完了のタスクがある場合にタスクアイコンを表示します。'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: '未完了タスク背景',
+                desc: 'ノートに未完了のタスクがある場合に背景色を適用します。'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: '背景色',
+                desc: 'ノートに未完了のタスクがある場合に使用する背景色を設定します。'
             },
             showFilenameMatchIcons: {
                 name: 'ファイル名でアイコン設定',

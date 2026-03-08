@@ -839,6 +839,7 @@ export const STRINGS_TH = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'งาน',
                 icon: 'ไอคอน',
                 title: 'ชื่อเรื่อง',
                 previewText: 'ข้อความตัวอย่าง',
@@ -948,6 +949,14 @@ export const STRINGS_TH = {
             showFileIconUnfinishedTask: {
                 name: 'ไอคอนงานที่ยังไม่เสร็จ',
                 desc: 'แสดงไอคอนงานเมื่อโน้ตมีงานที่ยังไม่เสร็จ'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'พื้นหลังงานที่ยังไม่เสร็จ',
+                desc: 'ใช้สีพื้นหลังเมื่อโน้ตมีงานที่ยังไม่เสร็จ'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'สีพื้นหลัง',
+                desc: 'ตั้งค่าสีพื้นหลังที่ใช้เมื่อโน้ตมีงานที่ยังไม่เสร็จ'
             },
             showFilenameMatchIcons: {
                 name: 'ไอคอนตามชื่อไฟล์',

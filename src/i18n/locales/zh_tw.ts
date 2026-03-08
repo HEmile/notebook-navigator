@@ -836,6 +836,7 @@ export const STRINGS_ZH_TW = {
             },
             notes: {
                 frontmatter: '前置中繼資料',
+                tasks: '任務',
                 icon: '圖示',
                 title: '標題',
                 previewText: '預覽文字',
@@ -945,6 +946,14 @@ export const STRINGS_ZH_TW = {
             showFileIconUnfinishedTask: {
                 name: '未完成任務圖示',
                 desc: '當筆記包含未完成任務時顯示任務圖示。'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: '未完成任務背景',
+                desc: '當筆記包含未完成任務時套用背景顏色。'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: '背景顏色',
+                desc: '設定筆記包含未完成任務時使用的背景顏色。'
             },
             showFilenameMatchIcons: {
                 name: '按檔名設定圖示',

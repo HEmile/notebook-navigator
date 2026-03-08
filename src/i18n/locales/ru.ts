@@ -840,6 +840,7 @@ export const STRINGS_RU = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Задачи',
                 icon: 'Иконка',
                 title: 'Заголовок',
                 previewText: 'Текст превью',
@@ -949,6 +950,14 @@ export const STRINGS_RU = {
             showFileIconUnfinishedTask: {
                 name: 'Значок незавершённых задач',
                 desc: 'Отображать значок задачи, когда заметка содержит незавершённые задачи.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Фон незавершённых задач',
+                desc: 'Применять цвет фона, когда заметка содержит незавершённые задачи.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Цвет фона',
+                desc: 'Задать цвет фона, используемый когда заметка содержит незавершённые задачи.'
             },
             showFilenameMatchIcons: {
                 name: 'Иконки по имени файла',

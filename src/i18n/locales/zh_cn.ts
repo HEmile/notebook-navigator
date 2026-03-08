@@ -836,6 +836,7 @@ export const STRINGS_ZH_CN = {
             },
             notes: {
                 frontmatter: '前置元数据',
+                tasks: '任务',
                 icon: '图标',
                 title: '标题',
                 previewText: '预览文本',
@@ -945,6 +946,14 @@ export const STRINGS_ZH_CN = {
             showFileIconUnfinishedTask: {
                 name: '未完成任务图标',
                 desc: '当笔记包含未完成任务时显示任务图标。'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: '未完成任务背景',
+                desc: '当笔记包含未完成任务时应用背景颜色。'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: '背景颜色',
+                desc: '设置笔记包含未完成任务时使用的背景颜色。'
             },
             showFilenameMatchIcons: {
                 name: '按文件名设置图标',

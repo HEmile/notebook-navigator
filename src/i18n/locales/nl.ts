@@ -844,6 +844,7 @@ export const STRINGS_NL = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Taken',
                 icon: 'Icoon',
                 title: 'Titel',
                 previewText: 'Voorbeeldtekst',
@@ -951,8 +952,16 @@ export const STRINGS_NL = {
                 desc: 'Bestandspictogrammen tonen met links uitgelijnde ruimte. Uitschakelen verwijdert zowel pictogrammen als inspringing. Prioriteit: onvoltooide taken-pictogram > aangepast pictogram > bestandsnaam-pictogram > bestandstype-pictogram > standaardpictogram.'
             },
             showFileIconUnfinishedTask: {
-                name: 'Pictogram voor onvoltooide taken',
+                name: 'Onvoltooide taken-pictogram',
                 desc: 'Een taakpictogram weergeven wanneer een notitie onvoltooide taken bevat.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Onvoltooide taken-achtergrond',
+                desc: 'Een achtergrondkleur toepassen wanneer een notitie onvoltooide taken bevat.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Achtergrondkleur',
+                desc: 'De achtergrondkleur instellen die wordt gebruikt wanneer een notitie onvoltooide taken bevat.'
             },
             showFilenameMatchIcons: {
                 name: 'Pictogrammen op bestandsnaam',

@@ -843,6 +843,7 @@ export const STRINGS_TR = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Görevler',
                 icon: 'Simge',
                 title: 'Başlık',
                 previewText: 'Önizleme metni',
@@ -952,6 +953,14 @@ export const STRINGS_TR = {
             showFileIconUnfinishedTask: {
                 name: 'Tamamlanmamış görev simgesi',
                 desc: 'Bir notta tamamlanmamış görevler olduğunda görev simgesi gösterir.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Tamamlanmamış görev arka planı',
+                desc: 'Bir notta tamamlanmamış görevler olduğunda arka plan rengi uygular.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Arka plan rengi',
+                desc: 'Bir notta tamamlanmamış görevler olduğunda kullanılacak arka plan rengini ayarlar.'
             },
             showFilenameMatchIcons: {
                 name: 'Dosya adına göre simgeler',

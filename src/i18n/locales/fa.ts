@@ -843,6 +843,7 @@ export const STRINGS_FA = {
             },
             notes: {
                 frontmatter: 'فرانت‌متر',
+                tasks: 'وظایف',
                 icon: 'آیکون',
                 title: 'عنوان',
                 previewText: 'متن پیش‌نمایش',
@@ -952,6 +953,14 @@ export const STRINGS_FA = {
             showFileIconUnfinishedTask: {
                 name: 'نماد وظایف ناتمام',
                 desc: 'نمایش نماد وظیفه زمانی که یادداشت وظایف ناتمام دارد.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'پس‌زمینه وظایف ناتمام',
+                desc: 'اعمال رنگ پس‌زمینه زمانی که یادداشت وظایف ناتمام دارد.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'رنگ پس‌زمینه',
+                desc: 'تنظیم رنگ پس‌زمینه مورد استفاده زمانی که یادداشت وظایف ناتمام دارد.'
             },
             showFilenameMatchIcons: {
                 name: 'آیکون بر اساس نام فایل',

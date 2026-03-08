@@ -844,6 +844,7 @@ export const STRINGS_DE = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Aufgaben',
                 icon: 'Symbol',
                 title: 'Titel',
                 previewText: 'Vorschautext',
@@ -951,8 +952,16 @@ export const STRINGS_DE = {
                 desc: 'Dateisymbole mit linksbündigem Abstand anzeigen. Deaktivierung entfernt sowohl Symbole als auch Einrückung. Priorität: Unerledigte-Aufgaben-Symbol > Benutzerdefiniertes Symbol > Dateiname-Symbol > Dateityp-Symbol > Standard-Symbol.'
             },
             showFileIconUnfinishedTask: {
-                name: 'Symbol für unerledigte Aufgaben',
+                name: 'Unerledigte-Aufgaben-Symbol',
                 desc: 'Ein Aufgabensymbol anzeigen, wenn eine Notiz unerledigte Aufgaben enthält.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Unerledigte-Aufgaben-Hintergrund',
+                desc: 'Eine Hintergrundfarbe anwenden, wenn eine Notiz unerledigte Aufgaben enthält.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Hintergrundfarbe',
+                desc: 'Die Hintergrundfarbe festlegen, die verwendet wird, wenn eine Notiz unerledigte Aufgaben enthält.'
             },
             showFilenameMatchIcons: {
                 name: 'Symbole nach Dateiname',

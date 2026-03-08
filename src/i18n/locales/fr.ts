@@ -845,6 +845,7 @@ export const STRINGS_FR = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Tâches',
                 icon: 'Icône',
                 title: 'Titre',
                 previewText: "Texte d'aperçu",
@@ -952,8 +953,16 @@ export const STRINGS_FR = {
                 desc: "Afficher les icônes de fichier avec espacement aligné à gauche. La désactivation supprime les icônes et l'indentation. Priorité : icône de tâches inachevées > icône personnalisée > icône de nom de fichier > icône de type de fichier > icône par défaut."
             },
             showFileIconUnfinishedTask: {
-                name: 'Icône des tâches inachevées',
+                name: 'Icône de tâches inachevées',
                 desc: "Afficher une icône de tâche lorsqu'une note contient des tâches inachevées."
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Fond de tâches inachevées',
+                desc: "Appliquer une couleur de fond lorsqu'une note contient des tâches inachevées."
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Couleur de fond',
+                desc: "Définir la couleur de fond utilisée lorsqu'une note contient des tâches inachevées."
             },
             showFilenameMatchIcons: {
                 name: 'Icônes par nom de fichier',

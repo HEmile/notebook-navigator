@@ -452,8 +452,10 @@ export interface NotebookNavigatorSettings {
     frontmatterDateFormat: string;
 
     // Notes tab
-    showFileIcons: boolean;
     showFileIconUnfinishedTask: boolean;
+    showFileBackgroundUnfinishedTask: boolean;
+    unfinishedTaskBackgroundColor: string;
+    showFileIcons: boolean;
     showFilenameMatchIcons: boolean;
     fileNameIconMap: Record<string, string>;
     showCategoryIcons: boolean;

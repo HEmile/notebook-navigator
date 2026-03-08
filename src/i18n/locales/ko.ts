@@ -842,6 +842,7 @@ export const STRINGS_KO = {
             },
             notes: {
                 frontmatter: '프런트매터',
+                tasks: '작업',
                 icon: '아이콘',
                 title: '제목',
                 previewText: '미리보기 텍스트',
@@ -951,6 +952,14 @@ export const STRINGS_KO = {
             showFileIconUnfinishedTask: {
                 name: '미완료 작업 아이콘',
                 desc: '노트에 미완료 작업이 있을 때 작업 아이콘을 표시합니다.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: '미완료 작업 배경',
+                desc: '노트에 미완료 작업이 있을 때 배경색을 적용합니다.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: '배경색',
+                desc: '노트에 미완료 작업이 있을 때 사용할 배경색을 설정합니다.'
             },
             showFilenameMatchIcons: {
                 name: '파일 이름으로 아이콘 설정',

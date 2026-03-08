@@ -24,6 +24,7 @@ import { runAsyncAction } from '../../utils/async';
 import { createSettingGroupFactory } from '../settingGroups';
 import { addSettingSyncModeToggle } from '../syncModeToggle';
 import { setElementVisible, wireToggleSettingWithSubSettings } from '../subSettings';
+import { DEFAULT_SETTINGS } from '../defaultSettings';
 import type { FeatureImagePixelSizeSetting, FeatureImageSizeSetting } from '../types';
 import {
     normalizeFileNameIconMapKey,
@@ -42,11 +43,18 @@ function parseFileNameIconMapText(value: string): IconMapParseResult {
     return parseIconMapText(value, normalizeFileNameIconMapKey);
 }
 
+interface ColorSettingAccess {
+    getValue: () => string;
+    setValue: (value: string) => void;
+    defaultValue: string;
+}
+
 /** Renders the notes settings tab */
 export function renderNotesTab(context: SettingsTabContext): void {
     const { app, containerEl, plugin } = context;
 
     const createGroup = createSettingGroupFactory(containerEl);
+    const tasksGroup = createGroup(strings.settings.groups.notes.tasks);
     const iconGroup = createGroup(strings.settings.groups.notes.icon);
     const titleGroup = createGroup(strings.settings.groups.notes.title);
     const previewTextGroup = createGroup(strings.settings.groups.notes.previewText);
@@ -65,6 +73,112 @@ export function renderNotesTab(context: SettingsTabContext): void {
         }
     };
 
+    const createColorSetting = (params: { containerEl: HTMLElement; name: string; desc: string; access: ColorSettingAccess }): void => {
+        const setting = new Setting(params.containerEl).setName(params.name).setDesc(params.desc);
+
+        const previewEl = setting.controlEl.createDiv({ cls: 'nn-setting-color-preview' });
+        const swatchButtonEl = previewEl.createEl('button', {
+            cls: 'nn-setting-color-swatch-button',
+            attr: {
+                type: 'button',
+                'aria-label': params.name
+            }
+        });
+        const swatchEl = swatchButtonEl.createDiv({ cls: 'nn-setting-color-swatch' });
+
+        const renderValue = () => {
+            const current = params.access.getValue();
+            swatchEl.style.backgroundColor = current;
+            swatchButtonEl.setAttribute('title', current);
+        };
+
+        const openColorPicker = () => {
+            runAsyncAction(async () => {
+                if (!plugin.metadataService) {
+                    showNotice(strings.common.unknownError, { variant: 'warning' });
+                    return;
+                }
+
+                const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
+                const modal = new ColorPickerModal(app, {
+                    title: params.name,
+                    initialColor: params.access.getValue(),
+                    settingsProvider: plugin.metadataService.getSettingsProvider(),
+                    onChooseColor: async color => {
+                        const nextValue = typeof color === 'string' && color.trim().length > 0 ? color.trim() : params.access.defaultValue;
+                        params.access.setValue(nextValue);
+                        await plugin.saveSettingsAndUpdate();
+                        renderValue();
+                    }
+                });
+
+                modal.open();
+            });
+        };
+
+        swatchButtonEl.addEventListener('click', openColorPicker);
+
+        renderValue();
+
+        setting.addExtraButton(button => {
+            button
+                .setIcon('lucide-rotate-ccw')
+                .setTooltip(`${strings.common.restoreDefault} (${params.access.defaultValue})`)
+                .onClick(() => {
+                    runAsyncAction(async () => {
+                        const current = params.access.getValue();
+                        if (current === params.access.defaultValue) {
+                            return;
+                        }
+
+                        params.access.setValue(params.access.defaultValue);
+                        await plugin.saveSettingsAndUpdate();
+                        renderValue();
+                    });
+                });
+        });
+    };
+
+    tasksGroup.addSetting(setting => {
+        setting
+            .setName(strings.settings.items.showFileIconUnfinishedTask.name)
+            .setDesc(strings.settings.items.showFileIconUnfinishedTask.desc)
+            .addToggle(toggle =>
+                toggle.setValue(plugin.settings.showFileIconUnfinishedTask).onChange(async value => {
+                    plugin.settings.showFileIconUnfinishedTask = value;
+                    await plugin.saveSettingsAndUpdate();
+                })
+            );
+    });
+
+    const showFileBackgroundUnfinishedTaskSetting = tasksGroup.addSetting(setting => {
+        setting
+            .setName(strings.settings.items.showFileBackgroundUnfinishedTask.name)
+            .setDesc(strings.settings.items.showFileBackgroundUnfinishedTask.desc);
+    });
+
+    const unfinishedTaskBackgroundSettingsEl = wireToggleSettingWithSubSettings(
+        showFileBackgroundUnfinishedTaskSetting,
+        () => plugin.settings.showFileBackgroundUnfinishedTask,
+        async value => {
+            plugin.settings.showFileBackgroundUnfinishedTask = value;
+            await plugin.saveSettingsAndUpdate();
+        }
+    );
+
+    createColorSetting({
+        containerEl: unfinishedTaskBackgroundSettingsEl,
+        name: strings.settings.items.unfinishedTaskBackgroundColor.name,
+        desc: strings.settings.items.unfinishedTaskBackgroundColor.desc,
+        access: {
+            getValue: () => plugin.settings.unfinishedTaskBackgroundColor,
+            setValue: value => {
+                plugin.settings.unfinishedTaskBackgroundColor = value;
+            },
+            defaultValue: DEFAULT_SETTINGS.unfinishedTaskBackgroundColor
+        }
+    });
+
     const showFileIconsSetting = iconGroup.addSetting(setting => {
         setting.setName(strings.settings.items.showFileIcons.name).setDesc(strings.settings.items.showFileIcons.desc);
     });
@@ -77,16 +191,6 @@ export function renderNotesTab(context: SettingsTabContext): void {
             await plugin.saveSettingsAndUpdate();
         }
     );
-
-    new Setting(fileIconSubSettingsEl)
-        .setName(strings.settings.items.showFileIconUnfinishedTask.name)
-        .setDesc(strings.settings.items.showFileIconUnfinishedTask.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showFileIconUnfinishedTask).onChange(async value => {
-                plugin.settings.showFileIconUnfinishedTask = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
 
     let updateFileNameIconMapVisibility: (() => void) | null = null;
     let updateFileTypeIconMapVisibility: (() => void) | null = null;

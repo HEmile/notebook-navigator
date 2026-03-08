@@ -844,6 +844,7 @@ export const STRINGS_ES = {
             },
             notes: {
                 frontmatter: 'Frontmatter',
+                tasks: 'Tareas',
                 icon: 'Icono',
                 title: 'Título',
                 previewText: 'Texto de vista previa',
@@ -953,6 +954,14 @@ export const STRINGS_ES = {
             showFileIconUnfinishedTask: {
                 name: 'Icono de tareas pendientes',
                 desc: 'Mostrar un icono de tarea cuando una nota tiene tareas pendientes.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'Fondo de tareas pendientes',
+                desc: 'Aplicar un color de fondo cuando una nota tiene tareas pendientes.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'Color de fondo',
+                desc: 'Establecer el color de fondo usado cuando una nota tiene tareas pendientes.'
             },
             showFilenameMatchIcons: {
                 name: 'Iconos por nombre de archivo',

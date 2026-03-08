@@ -841,6 +841,7 @@ export const STRINGS_AR = {
             },
             notes: {
                 frontmatter: 'البيانات الأمامية',
+                tasks: 'المهام',
                 icon: 'الأيقونة',
                 title: 'العنوان',
                 previewText: 'نص المعاينة',
@@ -950,6 +951,14 @@ export const STRINGS_AR = {
             showFileIconUnfinishedTask: {
                 name: 'أيقونة المهام غير المكتملة',
                 desc: 'عرض أيقونة مهمة عندما تحتوي الملاحظة على مهام غير مكتملة.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: 'خلفية المهام غير المكتملة',
+                desc: 'تطبيق لون خلفية عندما تحتوي الملاحظة على مهام غير مكتملة.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: 'لون الخلفية',
+                desc: 'تعيين لون الخلفية المستخدم عندما تحتوي الملاحظة على مهام غير مكتملة.'
             },
             showFilenameMatchIcons: {
                 name: 'أيقونات حسب اسم الملف',
