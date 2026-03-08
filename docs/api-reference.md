@@ -224,7 +224,7 @@ When calling `reveal(file)`:
 - **Selects and focuses the file** in the file list
 - **Switches to file list view** if in single-pane mode
 - **Returns `false`** if the file path cannot be resolved
-- **Rejects** if the navigator view cannot be opened
+- **Returns `false`** if the navigator view cannot be opened or does not become ready
 
 ```typescript
 // Navigate to active file
@@ -245,7 +245,7 @@ When calling `navigateToFolder(folder)`:
 - Preserves navigation focus in single-pane mode
 - Accepts either a `TFolder` or a folder path string
 - Returns `false` if the folder path cannot be resolved
-- Rejects if the navigator view cannot be opened
+- Returns `false` if the navigator view cannot be opened or does not become ready
 
 ### Tag Navigation Behavior
 
@@ -257,7 +257,7 @@ When calling `navigateToTag(tag)`:
 - Expands parent tags for hierarchical tags (e.g. `'parent/child'`)
 - Preserves navigation focus in single-pane mode
 - Returns `false` if the tag is not present in the current tag tree
-- Rejects if the navigator view cannot be opened
+- Returns `false` if the navigator view cannot be opened or does not become ready
 
 ### Property Navigation Behavior
 
@@ -269,7 +269,7 @@ When calling `navigateToProperty(nodeId)`:
 - Expands the parent key node for key/value selections when needed
 - Preserves navigation focus in single-pane mode
 - Returns `false` if the target node is not present in the current property tree
-- Rejects if the navigator view cannot be opened
+- Returns `false` if the navigator view cannot be opened or does not become ready
 
 ```typescript
 // Wait for storage if needed, then navigate

@@ -189,6 +189,61 @@ describe('NavigationAPI', () => {
         expect(view.navigateToProperty).toHaveBeenCalledWith('key:status=done');
     });
 
+    it('returns false when the navigator view cannot be opened', async () => {
+        const activateView = vi.fn(async () => null);
+
+        const api: ConstructorParameters<typeof NavigationAPI>[0] = {
+            app: {
+                vault: {
+                    getFileByPath: () => null,
+                    getFolderByPath: () => null
+                },
+                workspace: {
+                    getLeavesOfType: () => []
+                }
+            },
+            getPlugin: () => ({
+                activateView
+            })
+        };
+
+        const navigationAPI = new NavigationAPI(api);
+        await expect(navigationAPI.navigateToTag('#work')).resolves.toBe(false);
+        await expect(navigationAPI.navigateToProperty('key:status=done')).resolves.toBe(false);
+
+        expect(activateView).toHaveBeenCalledTimes(2);
+    });
+
+    it('returns false for reveal and folder navigation when the navigator view cannot be opened', async () => {
+        const activateView = vi.fn(async () => null);
+        const file = createTestTFile('Projects/Note.md');
+        const folder = new TFolder();
+        folder.path = 'Projects';
+        const resolvedFolder = new TFolder();
+        resolvedFolder.path = 'Projects';
+
+        const api: ConstructorParameters<typeof NavigationAPI>[0] = {
+            app: {
+                vault: {
+                    getFileByPath: (path: string) => (path === file.path ? file : null),
+                    getFolderByPath: (path: string) => (path === folder.path ? resolvedFolder : null)
+                },
+                workspace: {
+                    getLeavesOfType: () => []
+                }
+            },
+            getPlugin: () => ({
+                activateView
+            })
+        };
+
+        const navigationAPI = new NavigationAPI(api);
+        await expect(navigationAPI.reveal(file)).resolves.toBe(false);
+        await expect(navigationAPI.navigateToFolder(folder)).resolves.toBe(false);
+
+        expect(activateView).toHaveBeenCalledTimes(2);
+    });
+
     it('reveals a file by object or path and reports missing files', async () => {
         const view = createView();
         const file = createTestTFile('Projects/Note.md');
@@ -245,5 +300,62 @@ describe('NavigationAPI', () => {
         await expect(navigationAPI.navigateToTag('#work')).resolves.toBe(true);
 
         expect(whenReady).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns false when the navigator view does not become ready', async () => {
+        const view = createView();
+        view.whenReady = vi.fn(async () => false);
+
+        const api: ConstructorParameters<typeof NavigationAPI>[0] = {
+            app: {
+                vault: {
+                    getFileByPath: () => null,
+                    getFolderByPath: () => null
+                },
+                workspace: {
+                    getLeavesOfType: () => [{ view }]
+                }
+            },
+            getPlugin: () => ({
+                activateView: vi.fn(async () => null)
+            })
+        };
+
+        const navigationAPI = new NavigationAPI(api);
+        await expect(navigationAPI.navigateToTag('#work')).resolves.toBe(false);
+
+        expect(view.navigateToTag).not.toHaveBeenCalled();
+    });
+
+    it('returns false for reveal and folder navigation when the navigator view does not become ready', async () => {
+        const view = createView();
+        view.whenReady = vi.fn(async () => false);
+        const file = createTestTFile('Projects/Note.md');
+        const folder = new TFolder();
+        folder.path = 'Projects';
+        const resolvedFolder = new TFolder();
+        resolvedFolder.path = 'Projects';
+
+        const api: ConstructorParameters<typeof NavigationAPI>[0] = {
+            app: {
+                vault: {
+                    getFileByPath: (path: string) => (path === file.path ? file : null),
+                    getFolderByPath: (path: string) => (path === folder.path ? resolvedFolder : null)
+                },
+                workspace: {
+                    getLeavesOfType: () => [{ view }]
+                }
+            },
+            getPlugin: () => ({
+                activateView: vi.fn(async () => null)
+            })
+        };
+
+        const navigationAPI = new NavigationAPI(api);
+        await expect(navigationAPI.reveal(file)).resolves.toBe(false);
+        await expect(navigationAPI.navigateToFolder(folder)).resolves.toBe(false);
+
+        expect(view.navigateToFile).not.toHaveBeenCalled();
+        expect(view.navigateToFolder).not.toHaveBeenCalled();
     });
 });

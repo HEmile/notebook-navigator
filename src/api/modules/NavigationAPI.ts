@@ -55,7 +55,7 @@ export class NavigationAPI {
 
         const view = await this.ensureViewOpen();
         if (!view) {
-            throw new Error('Could not open navigator view');
+            return false;
         }
 
         return view.navigateToFile(resolvedFile);
@@ -73,7 +73,7 @@ export class NavigationAPI {
 
         const view = await this.ensureViewOpen();
         if (!view) {
-            throw new Error('Could not open navigator view');
+            return false;
         }
 
         return view.navigateToFolder(resolvedFolder, { preserveNavigationFocus: true });
@@ -86,7 +86,7 @@ export class NavigationAPI {
     async navigateToTag(tag: string): Promise<boolean> {
         const view = await this.ensureViewOpen();
         if (!view) {
-            throw new Error('Could not open navigator view');
+            return false;
         }
 
         return view.navigateToTag(tag) !== null;
@@ -99,7 +99,7 @@ export class NavigationAPI {
     async navigateToProperty(nodeId: string): Promise<boolean> {
         const view = await this.ensureViewOpen();
         if (!view) {
-            throw new Error('Could not open navigator view');
+            return false;
         }
 
         return view.navigateToProperty(nodeId) !== null;

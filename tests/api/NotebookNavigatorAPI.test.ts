@@ -110,6 +110,7 @@ describe('NotebookNavigatorAPI', () => {
     });
 
     it('exposes public tag collection helpers', () => {
+        const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
         const api = new NotebookNavigatorAPI(
             {
                 settings: structuredClone(DEFAULT_SETTINGS),
@@ -131,6 +132,8 @@ describe('NotebookNavigatorAPI', () => {
         expect(api.tagCollections.isCollection('__tagged__')).toBe(true);
         expect(api.tagCollections.isCollection('work')).toBe(false);
         expect(typeof api.tagCollections.getLabel(api.tagCollections.taggedId)).toBe('string');
+        expect(consoleLogSpy).not.toHaveBeenCalled();
+        consoleLogSpy.mockRestore();
     });
 
     it('does not throw when tag collection labels are requested with invalid runtime input', () => {

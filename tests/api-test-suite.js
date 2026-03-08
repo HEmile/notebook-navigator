@@ -311,17 +311,10 @@
                     this.assertExists(this.api.navigation, 'Navigation API not found');
                 },
 
-                'Should navigate to a file': async function () {
+                'Should resolve file navigation to a boolean': async function () {
                     const testFile = await this.createTestFile('test-navigation.md', '# Test Navigation');
-
-                    try {
-                        await this.api.navigation.reveal(testFile);
-                        // If successful, navigation completed
-                        this.assertTrue(true, 'Navigation completed successfully');
-                    } catch (error) {
-                        // View might not be open, which is okay
-                        this.assertTrue(error.message.includes('view'), 'Error should mention view not being open');
-                    }
+                    const revealed = await this.api.navigation.reveal(testFile);
+                    this.assertTrue(typeof revealed === 'boolean', 'Navigation should resolve to a boolean');
                 },
 
                 'Should handle navigation to non-existent file gracefully': async function () {

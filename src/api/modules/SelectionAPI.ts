@@ -67,9 +67,16 @@ export class SelectionAPI {
     // Snapshot signature of last-emitted selection to ensure events fire when
     // selection content changes (even if the count stays the same)
     private lastSelectionSignature = '';
+    private navigationStateInitialized = false;
 
-    constructor(private api: SelectionAPIHost) {
-        // Initialize navigation state from localStorage
+    constructor(private api: SelectionAPIHost) {}
+
+    private ensureNavigationStateInitialized(): void {
+        if (this.navigationStateInitialized || !localStorage.isInitialized()) {
+            return;
+        }
+
+        this.navigationStateInitialized = true;
         this.initializeNavigationState();
     }
 
@@ -122,6 +129,8 @@ export class SelectionAPI {
      * @returns Object with one selected navigation target (folder, tag, property, or none)
      */
     getNavItem(): NavItem {
+        this.ensureNavigationStateInitialized();
+
         if (this.selectionState.navigationProperty) {
             return {
                 type: 'property',
@@ -158,6 +167,8 @@ export class SelectionAPI {
      * @internal
      */
     updateNavigationState(folder: TFolder | null, tag: string | null, property: PropertySelectionNodeId | null): void {
+        this.navigationStateInitialized = true;
+
         if (property) {
             this.selectionState.navigationFolder = null;
             this.selectionState.navigationTag = null;

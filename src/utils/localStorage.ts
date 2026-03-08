@@ -37,6 +37,14 @@ export const localStorage = {
         // Use localStorage object literal directly to ensure proper this binding (eslint @typescript-eslint/unbound-method)
         localStorage._app = app;
     },
+
+    /**
+     * Returns true when vault-scoped localStorage access is ready.
+     */
+    isInitialized(): boolean {
+        return localStorage._app !== null;
+    },
+
     /**
      * Safely retrieves a value from localStorage with error handling
      * Obsidian automatically deserializes the stored value
