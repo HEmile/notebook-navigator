@@ -200,6 +200,7 @@ export function useListPaneTitle(): UseListPaneTitleResult {
         return JSON.stringify({
             folderIcons: settings.folderIcons || {},
             tagIcons: settings.tagIcons || {},
+            propertyIcons: settings.propertyIcons || {},
             enableFolderNotes: settings.enableFolderNotes,
             folderNoteName: settings.folderNoteName,
             folderNoteNamePattern: settings.folderNoteNamePattern,
@@ -252,11 +253,17 @@ export function useListPaneTitle(): UseListPaneTitleResult {
                 return '';
             }
 
-            if (selectionState.selectedProperty === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
+            const selectedPropertyNodeId = selectionState.selectedProperty;
+            if (selectedPropertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
                 return resolveUXIcon(settings.interfaceIcons, 'nav-properties');
             }
 
-            const parsedPropertyNode = parsePropertyNodeId(selectionState.selectedProperty);
+            const customIcon = metadataService.getPropertyIcon(selectedPropertyNodeId);
+            if (customIcon) {
+                return customIcon;
+            }
+
+            const parsedPropertyNode = parsePropertyNodeId(selectedPropertyNodeId);
             if (parsedPropertyNode?.valuePath) {
                 return resolveUXIcon(settings.interfaceIcons, 'nav-property-value');
             }
