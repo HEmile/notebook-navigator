@@ -854,6 +854,7 @@ export class PluginSettingsController {
         this.currentSettings.folderColors = sanitizeStringMap(this.currentSettings.folderColors);
         this.currentSettings.folderBackgroundColors = sanitizeStringMap(this.currentSettings.folderBackgroundColors);
         this.currentSettings.fileColors = sanitizeStringMap(this.currentSettings.fileColors);
+        this.currentSettings.fileBackgroundColors = sanitizeStringMap(this.currentSettings.fileBackgroundColors);
         this.currentSettings.tagColors = sanitizeStringMap(this.currentSettings.tagColors);
         this.currentSettings.tagBackgroundColors = sanitizeStringMap(this.currentSettings.tagBackgroundColors);
         this.currentSettings.propertyColors = sanitizeStringMap(this.currentSettings.propertyColors);

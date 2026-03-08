@@ -39,6 +39,7 @@ type MetadataFields = {
     folderAppearances: Record<string, FolderAppearance>;
     fileIcons: Record<string, string>;
     fileColors: Record<string, string>;
+    fileBackgroundColors: Record<string, string>;
     tagColors: Record<string, string>;
     tagIcons: Record<string, string>;
     tagBackgroundColors: Record<string, string>;
@@ -60,7 +61,8 @@ type ColorRecordKey =
     | 'folderBackgroundColors'
     | 'tagBackgroundColors'
     | 'propertyBackgroundColors'
-    | 'fileColors';
+    | 'fileColors'
+    | 'fileBackgroundColors';
 type ColorVariant = 'color' | 'background';
 
 type MetadataKey = keyof MetadataFields;
@@ -225,7 +227,7 @@ export abstract class BaseMetadataService {
         if (entityType === ItemType.PROPERTY) {
             return variant === 'color' ? 'propertyColors' : 'propertyBackgroundColors';
         }
-        return 'fileColors';
+        return variant === 'color' ? 'fileColors' : 'fileBackgroundColors';
     }
 
     // Ensures a color record exists in settings and returns it

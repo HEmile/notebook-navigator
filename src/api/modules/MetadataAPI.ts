@@ -85,6 +85,7 @@ export class MetadataAPI {
         // File metadata
         fileIcons: {} as Record<string, string>,
         fileColors: {} as Record<string, string>,
+        fileBackgroundColors: {} as Record<string, string>,
 
         // Pinned files
         pinnedNotes: {} as PinnedNotes
@@ -105,6 +106,7 @@ export class MetadataAPI {
         propertyIcons: Record<string, string>;
         fileIcons: Record<string, string>;
         fileColors: Record<string, string>;
+        fileBackgroundColors: Record<string, string>;
         pinnedNotes: PinnedNotes;
         initialized: boolean;
     } = {
@@ -119,6 +121,7 @@ export class MetadataAPI {
         propertyIcons: {},
         fileIcons: {},
         fileColors: {},
+        fileBackgroundColors: {},
         pinnedNotes: {},
         initialized: false
     };
@@ -226,6 +229,7 @@ export class MetadataAPI {
             propertyIcons: settings.propertyIcons || {},
             fileIcons: settings.fileIcons || {},
             fileColors: settings.fileColors || {},
+            fileBackgroundColors: settings.fileBackgroundColors || {},
             pinnedNotes: clonePinnedNotesRecord(settings.pinnedNotes)
         };
 
@@ -242,6 +246,7 @@ export class MetadataAPI {
             propertyIcons: { ...current.propertyIcons },
             fileIcons: { ...current.fileIcons },
             fileColors: { ...current.fileColors },
+            fileBackgroundColors: { ...current.fileBackgroundColors },
             pinnedNotes: clonePinnedNotesRecord(current.pinnedNotes)
         };
 
@@ -259,6 +264,7 @@ export class MetadataAPI {
                 propertyIcons: { ...current.propertyIcons },
                 fileIcons: { ...current.fileIcons },
                 fileColors: { ...current.fileColors },
+                fileBackgroundColors: { ...current.fileBackgroundColors },
                 pinnedNotes: clonePinnedNotesRecord(current.pinnedNotes),
                 initialized: true
             };
@@ -335,6 +341,7 @@ export class MetadataAPI {
             propertyIcons: { ...current.propertyIcons },
             fileIcons: { ...current.fileIcons },
             fileColors: { ...current.fileColors },
+            fileBackgroundColors: { ...current.fileBackgroundColors },
             pinnedNotes: clonePinnedNotesRecord(current.pinnedNotes),
             initialized: true
         };

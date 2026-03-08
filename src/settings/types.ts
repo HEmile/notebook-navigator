@@ -526,6 +526,7 @@ export interface NotebookNavigatorSettings {
     pinnedNotes: PinnedNotes;
     fileIcons: Record<string, string>;
     fileColors: Record<string, string>;
+    fileBackgroundColors: Record<string, string>;
     folderIcons: Record<string, string>;
     folderColors: Record<string, string>;
     folderBackgroundColors: Record<string, string>;

@@ -363,6 +363,7 @@ export const FileItem = React.memo(function FileItem({
     const extensionSuffix = useMemo(() => getExtensionSuffix(file), [file]);
     const fileIconId = metadataService.getFileIcon(file.path);
     const fileColor = metadataService.getFileColor(file.path);
+    const fileBackgroundColor = metadataService.getFileBackgroundColor(file.path);
     const fileExtension = file.extension.toLowerCase();
     const isBaseFile = fileExtension === 'base';
     const isCanvasFile = fileExtension === 'canvas';
@@ -667,10 +668,21 @@ export const FileItem = React.memo(function FileItem({
         if (isCompactMode) classes.push('nn-compact');
         if (isSelected && hasSelectedAbove) classes.push('nn-has-selected-above');
         if (isSelected && hasSelectedBelow) classes.push('nn-has-selected-below');
+        if (fileBackgroundColor) classes.push('nn-has-custom-background');
         // Apply muted style when file is normally hidden but shown via "show hidden items"
         if (isHidden) classes.push('nn-hidden-file');
         return classes.join(' ');
-    }, [isSelected, isCompactMode, hasSelectedAbove, hasSelectedBelow, isHidden]);
+    }, [isSelected, isCompactMode, hasSelectedAbove, hasSelectedBelow, fileBackgroundColor, isHidden]);
+
+    const fileRowStyle = useMemo(() => {
+        if (!fileBackgroundColor) {
+            return undefined;
+        }
+
+        return {
+            '--nn-file-custom-bg-color': fileBackgroundColor
+        } as React.CSSProperties;
+    }, [fileBackgroundColor]);
 
     // Screen reader description for files shown via "show hidden items" toggle
     const hiddenDescription = useMemo(() => {
@@ -1007,6 +1019,7 @@ export const FileItem = React.memo(function FileItem({
             onMouseEnter={() => !isMobile && setIsHovered(true)}
             onMouseLeave={() => !isMobile && setIsHovered(false)}
             aria-describedby={hiddenDescription ? hiddenDescriptionId : undefined}
+            style={fileRowStyle}
         >
             <div className="nn-file-content">
                 {/* Quick actions panel - appears on hover */}

@@ -79,6 +79,7 @@ interface FolderStyleActionsParams {
 interface FileStyleRemovalAvailability {
     hasRemovableIcon: boolean;
     hasRemovableColor: boolean;
+    hasRemovableBackground: boolean;
 }
 
 /**
@@ -571,8 +572,9 @@ function addFileStyleActionsForFileContext(params: FileStyleActionsParams): void
     const { menu, app, metadataService, settings, file, targetFiles } = params;
     const fileIcon = metadataService.getFileIcon(file.path);
     const fileColor = metadataService.getFileColor(file.path);
+    const fileBackground = metadataService.getFileBackgroundColor(file.path);
     const removableStyleAvailability = resolveFileStyleRemovalAvailability(targetFiles, metadataService);
-    const { hasRemovableIcon, hasRemovableColor } = removableStyleAvailability;
+    const { hasRemovableIcon, hasRemovableColor, hasRemovableBackground } = removableStyleAvailability;
 
     if (settings.showFileIcons) {
         menu.addItem((item: MenuItem) => {
@@ -617,16 +619,38 @@ function addFileStyleActionsForFileContext(params: FileStyleActionsParams): void
         });
     });
 
+    menu.addItem((item: MenuItem) => {
+        setAsyncOnClick(item.setTitle(strings.contextMenu.folder.changeBackground).setIcon('lucide-paint-bucket'), async () => {
+            const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
+            const modal = new ColorPickerModal(app, {
+                title: file.basename,
+                initialColor: metadataService.getFileBackgroundColor(file.path) ?? null,
+                settingsProvider: metadataService.getSettingsProvider(),
+                onChooseColor: async color => {
+                    const actions = targetFiles.map(selectedFile =>
+                        color === null
+                            ? metadataService.removeFileBackgroundColor(selectedFile.path)
+                            : metadataService.setFileBackgroundColor(selectedFile.path, color)
+                    );
+                    await Promise.all(actions);
+                }
+            });
+            modal.open();
+        });
+    });
+
     addStyleMenu({
         menu,
         styleData: {
             icon: fileIcon,
-            color: fileColor
+            color: fileColor,
+            background: fileBackground
         },
         hasIcon: settings.showFileIcons,
         hasColor: true,
+        hasBackground: true,
         applyStyle: async clipboard => {
-            const { icon, color } = clipboard;
+            const { icon, color, background } = clipboard;
             const actions: Promise<void>[] = [];
 
             targetFiles.forEach(selectedFile => {
@@ -635,6 +659,9 @@ function addFileStyleActionsForFileContext(params: FileStyleActionsParams): void
                 }
                 if (color) {
                     actions.push(metadataService.setFileColor(selectedFile.path, color));
+                }
+                if (background) {
+                    actions.push(metadataService.setFileBackgroundColor(selectedFile.path, background));
                 }
             });
 
@@ -655,6 +682,14 @@ function addFileStyleActionsForFileContext(params: FileStyleActionsParams): void
                       .map(selectedFile => metadataService.removeFileColor(selectedFile.path));
                   await Promise.all(actions);
               }
+            : undefined,
+        removeBackground: hasRemovableBackground
+            ? async () => {
+                  const actions = targetFiles
+                      .filter(selectedFile => metadataService.getFileBackgroundColor(selectedFile.path))
+                      .map(selectedFile => metadataService.removeFileBackgroundColor(selectedFile.path));
+                  await Promise.all(actions);
+              }
             : undefined
     });
 }
@@ -662,6 +697,7 @@ function addFileStyleActionsForFileContext(params: FileStyleActionsParams): void
 function resolveFileStyleRemovalAvailability(targetFiles: TFile[], metadataService: MetadataService): FileStyleRemovalAvailability {
     let hasRemovableIcon = false;
     let hasRemovableColor = false;
+    let hasRemovableBackground = false;
 
     for (const selectedFile of targetFiles) {
         if (!hasRemovableIcon && metadataService.getFileIcon(selectedFile.path)) {
@@ -672,14 +708,19 @@ function resolveFileStyleRemovalAvailability(targetFiles: TFile[], metadataServi
             hasRemovableColor = true;
         }
 
-        if (hasRemovableIcon && hasRemovableColor) {
+        if (!hasRemovableBackground && metadataService.getFileBackgroundColor(selectedFile.path)) {
+            hasRemovableBackground = true;
+        }
+
+        if (hasRemovableIcon && hasRemovableColor && hasRemovableBackground) {
             break;
         }
     }
 
     return {
         hasRemovableIcon,
-        hasRemovableColor
+        hasRemovableColor,
+        hasRemovableBackground
     };
 }
 

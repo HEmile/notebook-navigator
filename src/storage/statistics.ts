@@ -121,7 +121,8 @@ export async function calculateMetadataParsingStatistics(
             }
 
             const hasValidColor = typeof metadata.color === 'string' && metadata.color.trim().length > 0;
-            if (hasValidColor) {
+            const hasValidBackground = typeof metadata.background === 'string' && metadata.background.trim().length > 0;
+            if (hasValidColor || hasValidBackground) {
                 stats.itemsWithMetadataColor++;
             }
 
@@ -264,8 +265,10 @@ export async function calculateCacheStatistics(
                     fileData.metadata.modified !== METADATA_SENTINEL.FIELD_NOT_CONFIGURED;
                 const hasValidIcon = typeof fileData.metadata.icon === 'string' && fileData.metadata.icon.trim().length > 0;
                 const hasValidColor = typeof fileData.metadata.color === 'string' && fileData.metadata.color.trim().length > 0;
+                const hasValidBackground =
+                    typeof fileData.metadata.background === 'string' && fileData.metadata.background.trim().length > 0;
 
-                if (hasValidName || hasValidCreated || hasValidModified || hasValidIcon || hasValidColor) {
+                if (hasValidName || hasValidCreated || hasValidModified || hasValidIcon || hasValidColor || hasValidBackground) {
                     stats.itemsWithMetadata++;
                 }
 
@@ -278,7 +281,7 @@ export async function calculateCacheStatistics(
                     stats.itemsWithMetadataIcon++;
                 }
 
-                if (hasValidColor) {
+                if (hasValidColor || hasValidBackground) {
                     stats.itemsWithMetadataColor++;
                 }
 

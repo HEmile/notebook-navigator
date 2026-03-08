@@ -122,6 +122,7 @@ export function renderFrontmatterTab(context: SettingsTabContext): void {
         () => plugin.settings.frontmatterBackgroundField,
         value => {
             plugin.settings.frontmatterBackgroundField = value || '';
+            updateMigrationDescription?.();
         },
         undefined,
         () => context.requestStatisticsRefresh()
@@ -187,11 +188,14 @@ export function renderFrontmatterTab(context: SettingsTabContext): void {
         descriptionEl.empty();
 
         const iconsBefore = countMarkdownMetadataEntries(plugin.settings.fileIcons, app);
-        const colorsBefore = countMarkdownMetadataEntries(plugin.settings.fileColors, app);
+        const colorsBefore =
+            countMarkdownMetadataEntries(plugin.settings.fileColors, app) +
+            countMarkdownMetadataEntries(plugin.settings.fileBackgroundColors, app);
         const noMigrationsPending = iconsBefore === 0 && colorsBefore === 0;
         const hasIconField = plugin.settings.frontmatterIconField.trim().length > 0;
         const hasColorField = plugin.settings.frontmatterColorField.trim().length > 0;
-        const canMigrateMetadata = hasIconField || hasColorField;
+        const hasBackgroundField = plugin.settings.frontmatterBackgroundField.trim().length > 0;
+        const canMigrateMetadata = hasIconField || hasColorField || hasBackgroundField;
         const isFrontmatterMetadataEnabled = plugin.settings.useFrontmatterMetadata;
 
         const descriptionText = strings.settings.items.frontmatterMigration.desc

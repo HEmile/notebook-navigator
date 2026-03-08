@@ -453,6 +453,14 @@ export class MetadataService {
         return this.fileService.removeFileColor(filePath);
     }
 
+    async setFileBackgroundColor(filePath: string, color: string): Promise<void> {
+        return this.fileService.setFileBackgroundColor(filePath, color);
+    }
+
+    async removeFileBackgroundColor(filePath: string): Promise<void> {
+        return this.fileService.removeFileBackgroundColor(filePath);
+    }
+
     /**
      * Gets the color for a file, checking frontmatter first if enabled
      * @param filePath - Path to the file
@@ -471,6 +479,25 @@ export class MetadataService {
         }
         // Fall back to settings-based storage
         return this.fileService.getFileColor(filePath);
+    }
+
+    /**
+     * Gets the background color for a file, checking frontmatter first if enabled
+     * @param filePath - Path to the file
+     * @returns Background color value if found, undefined otherwise
+     */
+    getFileBackgroundColor(filePath: string): string | undefined {
+        const settings = this.settingsProvider.settings;
+        if (settings.useFrontmatterMetadata) {
+            const db = getDBInstance();
+            const record = db.getFile(filePath);
+            const frontmatterBackground = record?.metadata?.background?.trim();
+            if (frontmatterBackground) {
+                return frontmatterBackground;
+            }
+        }
+
+        return this.fileService.getFileBackgroundColor(filePath);
     }
 
     async migrateFileMetadataToFrontmatter(): Promise<FileMetadataMigrationResult> {
@@ -574,7 +601,7 @@ export class MetadataService {
             settings.tagAppearances
         ]);
 
-        const fileKeys = MetadataService.collectUniqueKeys([settings.fileIcons, settings.fileColors]);
+        const fileKeys = MetadataService.collectUniqueKeys([settings.fileIcons, settings.fileColors, settings.fileBackgroundColors]);
         const propertyKeys = MetadataService.collectUniqueKeys([
             settings.propertyColors,
             settings.propertyBackgroundColors,
