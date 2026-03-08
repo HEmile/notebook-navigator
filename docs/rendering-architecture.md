@@ -19,9 +19,9 @@ The Notebook Navigator plugin renders React applications inside two Obsidian `It
 `NotebookNavigatorView` (main navigator) and `NotebookNavigatorCalendarView` (calendar right sidebar). Both trees are
 mounted with `createRoot` and wrapped in `React.StrictMode`.
 
-The main navigator UI is a two-pane layout (`NavigationPane` and `ListPane`). Each pane uses a single scroll container
-that contains a sticky “chrome” overlay (headers, toolbars, pinned sections) and a virtualized list below it. Both
-panes use `@tanstack/react-virtual` to mount only the rows required for the viewport plus overscan.
+The main navigator UI is a two-pane layout (`NavigationPane` and `ListPane`). Each pane combines pane-level chrome
+(headers, toolbars, pinned sections, overlays) with a virtualized scroll region for rows. Both panes use
+`@tanstack/react-virtual` to mount only the rows required for the viewport plus overscan.
 
 The calendar right-sidebar view renders `CalendarRightSidebar`, which hosts `Calendar` in sidebar mode and forwards
 date-filter actions to the main navigator view.
@@ -43,8 +43,9 @@ the scroll container refs, gate scroll execution on physical container visibilit
 rebuilds, and queue scroll intents (reveal requests, navigation jumps, configuration changes) so they run only after the
 corresponding virtual items exist.
 
-Both virtualizers use `scrollMargin` and `scrollPaddingStart`/`scrollPaddingEnd` so `scrollToIndex` aligns rows below the
-sticky chrome and keeps the target row above bottom overlays (calendar, iOS toolbars).
+Both virtualizers use `scrollMargin`, and the list pane also uses `scrollPaddingStart`. Both panes use
+`scrollPaddingEnd` so `scrollToIndex` aligns rows below the pane chrome and keeps the target row above bottom overlays
+(calendar, iOS toolbars).
 
 ### 2. Synchronous Storage Mirror
 
@@ -78,7 +79,7 @@ Nine providers wrap the primary navigator React tree:
   shortcuts, calendar visibility)
 - `RecentDataContext` – recent notes list and recent icon history sourced from local storage
 - `ServicesContext` – Obsidian app handles plus file system operations, command queue, metadata service, tag operations,
-  tag tree service, property tree service, Omnisearch integration, and release check service
+  property operations, tag tree service, property tree service, Omnisearch integration, and release check service
 - `ShortcutsContext` – pinned shortcut hydration, add/remove/reorder operations, and lookup maps
 - `StorageContext` – IndexedDB mirror, tag/property trees, synchronous metadata accessors, cache rebuild entry points
 - `ExpansionContext` – expanded folders, tags, properties, shortcuts, recent notes, and virtual folders
@@ -396,12 +397,11 @@ graph TD
 
 ### Navigation Pane Virtualization
 
-- `useNavigationPaneData` returns `items: CombinedNavigationItem[]` plus lookup maps (`pathToIndex`, `shortcutIndex`) and
-  pinned-section arrays (`shortcutItems`, `pinnedRecentNotesItems`) used by the chrome overlay.
+- `useNavigationPaneData` returns `items: CombinedNavigationItem[]` plus lookup maps (`pathToIndex`) and pinned-section
+  arrays (`shortcutItems`, `pinnedRecentNotesItems`) used by the pane chrome.
 - `NavigationPane` measures sticky chrome height, unpinned banner height, and bottom overlay height via
   `useMeasuredElementHeight`, then passes:
   - `scrollMargin` (chrome + unpinned banner),
-  - `scrollPaddingStart` (sticky chrome),
   - `scrollPaddingEnd` (calendar + iOS bottom toolbar),
   into `useNavigationPaneScroll`.
 - `useNavigationPaneScroll` initializes the virtualizer with `NAVPANE_MEASUREMENTS` and exposes `requestScroll` for reveal
@@ -415,7 +415,7 @@ graph TD
 - `pathToIndex` is passed to `useNavigationPaneScroll` so scroll targets resolve to indices at execution time.
 
 ```typescript
-const { items, pathToIndex, shortcutIndex, shortcutItems } = useNavigationPaneData({
+const { items, pathToIndex, shortcutItems } = useNavigationPaneData({
   settings,
   activeProfile,
   isVisible: navigationVisible,
@@ -431,7 +431,6 @@ const { rowVirtualizer, scrollContainerRefCallback, requestScroll } = useNavigat
   isVisible: navigationVisible,
   activeShortcutKey,
   scrollMargin: navigationScrollMargin,
-  scrollPaddingStart: navigationOverlayHeight,
   scrollPaddingEnd: calendarOverlayHeight + bottomToolbarHeight
 });
 ```

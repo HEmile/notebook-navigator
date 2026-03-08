@@ -278,10 +278,11 @@ The selection is stored in `settings.syncModes` and resolved during `loadSetting
 Local-sync-mode settings are sourced from local storage keys (in `STORAGE_KEYS`) and mirrored back to local storage even when
 the setting is synced so the rest of the UI can read a single source.
 
-See `SYNC_MODE_SETTING_IDS` in `src/settings/types.ts` for the full list (includes: `vaultProfile`, `tagSortOrder`, `searchProvider`,
-`includeDescendantNotes`, `dualPane`, `dualPaneOrientation`, `paneTransitionDuration`, `toolbarVisibility`, `pinNavigationBanner`,
-`showCalendar`, `navIndent`, `navItemHeight`, `navItemHeightScaleText`, `calendarWeeksToShow`, `compactItemHeight`,
-`compactItemHeightScaleText`, `uiScale`).
+See `SYNC_MODE_SETTING_IDS` in `src/settings/types.ts` for the full list (currently: `vaultProfile`, `folderSortOrder`,
+`tagSortOrder`, `propertySortOrder`, `includeDescendantNotes`, `useFloatingToolbars`, `dualPane`, `dualPaneOrientation`,
+`paneTransitionDuration`, `toolbarVisibility`, `pinNavigationBanner`, `navIndent`, `navItemHeight`,
+`navItemHeightScaleText`, `calendarPlacement`, `calendarLeftPlacement`, `calendarWeeksToShow`, `compactItemHeight`,
+`compactItemHeightScaleText`, `featureImageSize`, `featureImagePixelSize`, `uiScale`).
 
 **Implementation**: `src/settings.ts`, `src/settings/types.ts`, `src/services/settings/syncModeRegistry.ts`
 
@@ -367,8 +368,10 @@ export interface IconAssetRecord {
 3. `IndexedDBStorage.init()` compares local schema/content version markers with `DB_SCHEMA_VERSION` / `DB_CONTENT_VERSION` and clears the cache when a rebuild is required.
 4. Settings are loaded from `data.json`, and sync-mode settings are resolved/mirrored via the sync-mode registry.
 5. When a navigator view mounts, `StorageContext` waits for `useIndexedDBReady()` before doing cache work.
-6. If `IndexedDBStorage` marked a pending rebuild notice (schema downgrade/content version mismatch), `useStorageVaultSync` starts a rebuild progress notice.
-7. `useStorageVaultSync` diffs indexable vault files (`markdown` plus PDFs when enabled) against the in-memory cache (`calculateFileDiff()`),
+6. If `IndexedDBStorage` marked a pending rebuild notice (schema downgrade, content version mismatch, or IndexedDB open recovery),
+   `useStorageVaultSync` starts a rebuild progress notice.
+7. `useStorageVaultSync` diffs indexable vault files (markdown plus PDFs that pass the current visibility/profile filters)
+   against the in-memory cache (`calculateFileDiff()`),
    then writes additions/updates/removals to IndexedDB (`recordFileChanges()`, `removeFilesFromCache()`).
 8. Tag and property trees are rebuilt from database records (`buildTagTreeFromDatabase()`, `buildPropertyTreeFromDatabase()`), filtered to currently visible markdown paths.
 9. Content providers queue derived content work (previews, tags, metadata, task counters, properties, feature images, PDF thumbnails for PDF files) while the UI renders from the in-memory cache.
@@ -554,7 +557,7 @@ Initialization behavior:
 
 When IndexedDB schema changes:
 
-1. Increment `DB_SCHEMA_VERSION` in `src/storage/IndexedDBStorage.ts`.
+1. Increment `DB_SCHEMA_VERSION` in `src/storage/indexeddb/constants.ts`.
 2. Schema upgrades run via `onupgradeneeded` (may clear stores when legacy payloads cannot be migrated).
 3. Schema downgrades delete and recreate the database.
 
@@ -562,7 +565,7 @@ When IndexedDB schema changes:
 
 When derived content format changes:
 
-1. Increment `DB_CONTENT_VERSION` in `src/storage/IndexedDBStorage.ts`.
+1. Increment `DB_CONTENT_VERSION` in `src/storage/indexeddb/constants.ts`.
 2. Stores are cleared (`IndexedDBStorage.clear()`).
 3. Content providers regenerate derived content for all files during background processing.
 

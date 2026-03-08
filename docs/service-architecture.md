@@ -1,6 +1,6 @@
 # Notebook Navigator Service Architecture
 
-Updated: February 18, 2026
+Updated: March 8, 2026
 
 ## Table of Contents
 
@@ -25,6 +25,7 @@ a mobile flag, and the plugin-managed singletons:
 
 - `fileSystemOps` (`FileSystemOperations`)
 - `metadataService` (`MetadataService`)
+- `propertyOperations` (`PropertyOperations`)
 - `tagOperations` (`TagOperations`)
 - `tagTreeService` (`TagTreeService`)
 - `propertyTreeService` (`PropertyTreeService`)
@@ -36,7 +37,7 @@ Convenience hooks wrap `ServicesContext` access:
 
 - `useServices()` returns the full context
 - `useFileSystemOps()` returns `fileSystemOps`
-- `useMetadataService()`, `useTagOperations()`, `useCommandQueue()` throw when the service is `null`
+- `useMetadataService()`, `useTagOperations()`, `usePropertyOperations()`, and `useCommandQueue()` throw when the service is `null`
 
 These instances are created during plugin startup and remain singletons for the lifetime of the plugin.
 `ServicesProvider` throws if `fileSystemOps` is not initialized; other services are nullable until the plugin finishes
@@ -77,6 +78,7 @@ graph TB
         PropertyTreeService["PropertyTreeService<br/>Property tree state"]
         CommandQueue["CommandQueueService<br/>Operation tracking"]
         TagOperations["TagOperations<br/>Tag workflows"]
+        PropertyOperations["PropertyOperations<br/>Property key workflows"]
         Omnisearch["OmnisearchService<br/>Omnisearch bridge"]
         ReleaseCheck["ReleaseCheckService<br/>Update notices"]
     end
@@ -87,6 +89,7 @@ graph TB
     ServicesContext --> PropertyTreeService
     ServicesContext --> CommandQueue
     ServicesContext --> TagOperations
+    ServicesContext --> PropertyOperations
     ServicesContext --> Omnisearch
     ServicesContext --> ReleaseCheck
 ```
@@ -101,6 +104,7 @@ graph TB
         MetadataService["MetadataService<br/>Metadata coordination"]
         FileSystemOperations["FileSystemOperations<br/>Vault actions"]
         TagOperations["TagOperations<br/>Tag workflows"]
+        PropertyOperations["PropertyOperations<br/>Property key workflows"]
         TagTreeService["TagTreeService<br/>Tag tree snapshot"]
         PropertyTreeService["PropertyTreeService<br/>Property tree snapshot"]
         CommandQueue["CommandQueueService<br/>Operation tracking"]
@@ -111,7 +115,8 @@ graph TB
     subgraph "Other plugin services"
         RecentNotes["RecentNotesService<br/>Vault-local recents"]
         RecentData["RecentDataManager<br/>Vault-local persistence"]
-        SyncModeRegistry["Sync mode registry<br/>Local/synced resolution"]
+        SettingsController["PluginSettingsController<br/>Settings load + sync-mode resolution"]
+        PreferencesController["PluginPreferencesController<br/>UX prefs + recent data"]
         WorkspaceCoordinator["WorkspaceCoordinator<br/>Navigator + calendar leaves"]
         HomepageController["HomepageController<br/>Homepage opening"]
         ExternalIcons["ExternalIconProviderController<br/>External icon packs"]
@@ -121,6 +126,7 @@ graph TB
     Plugin --> MetadataService
     Plugin --> FileSystemOperations
     Plugin --> TagOperations
+    Plugin --> PropertyOperations
     Plugin --> TagTreeService
     Plugin --> PropertyTreeService
     Plugin --> CommandQueue
@@ -129,7 +135,8 @@ graph TB
 
     Plugin --> RecentNotes
     Plugin --> RecentData
-    Plugin --> SyncModeRegistry
+    Plugin --> SettingsController
+    Plugin --> PreferencesController
     Plugin --> WorkspaceCoordinator
     Plugin --> HomepageController
     Plugin --> ExternalIcons
@@ -165,7 +172,7 @@ graph TB
 
     subgraph "Content Providers"
         MarkdownPipelineProvider["MarkdownPipelineContentProvider<br/>Preview + word count + task counters + property pills + markdown feature images"]
-        FileThumbnailsProvider["FeatureImageContentProvider<br/>Non-markdown thumbnails (images, PDFs, Excalidraw)"]
+        FileThumbnailsProvider["FeatureImageContentProvider<br/>PDF thumbnails + non-markdown processed markers"]
         MetadataProvider["MetadataContentProvider<br/>Frontmatter fields + hidden state"]
         TagProvider["TagContentProvider<br/>Tag extraction"]
     end
@@ -429,7 +436,7 @@ stopAllProcessing(): void
   - Uses Obsidian's metadata cache for frontmatter and frontmatter position offsets.
 
 - **FeatureImageContentProvider** (`src/services/content/FeatureImageContentProvider.ts`)
-  - Generates thumbnails for non-markdown files (images, PDFs, Excalidraw).
+  - Generates PDF thumbnails and records processed markers for other non-markdown files.
   - Provides thumbnail helpers used by `MarkdownPipelineContentProvider` (local images, external URLs, YouTube).
 
 - **MetadataContentProvider** (`src/services/content/MetadataContentProvider.ts`)
@@ -485,18 +492,20 @@ setRecentIcons(recentIcons: Record<string, string[]>): void
 flushPendingPersists(): void
 ```
 
-### SyncModeRegistry
+### PluginSettingsController and PluginPreferencesController
 
-**Location:** `src/services/settings/syncModeRegistry.ts`
+**Location:** `src/services/settings/PluginSettingsController.ts`, `src/services/settings/PluginPreferencesController.ts`
 
 **Responsibilities:**
 
-- Defines per-setting rules for resolving "local" vs "synced" settings.
-- Applies load phases (`preProfiles` vs `postProfiles`) during `NotebookNavigatorPlugin.loadSettings()`.
-- Mirrors resolved values into `localStorage` and cleans up legacy persisted values.
+- `PluginSettingsController` loads `data.json`, runs synced/local preference migrations, owns sync-mode resolution through the
+  internal `syncModeRegistry`, and persists normalized settings.
+- `PluginPreferencesController` manages vault-local UX preferences, dual-pane state mirrors, and `RecentDataManager`
+  lifecycle/listeners.
 
-`NotebookNavigatorPlugin` builds the registry via `createSyncModeRegistry(...)` and caches it on the plugin instance.
-Each entry provides `resolveOnLoad(...)` and `mirrorToLocalStorage()` helpers keyed by `SyncModeSettingId`.
+`NotebookNavigatorPlugin` owns both controllers as long-lived instances. The sync-mode registry still lives in
+`src/services/settings/syncModeRegistry.ts`, but it is created and cached inside `PluginSettingsController`, not on the
+plugin instance directly.
 
 ### ExternalIconProviderController
 
@@ -712,6 +721,27 @@ renameTagByDrag(sourceTagPath: string, targetTagPath: string): Promise<void>
 promptDeleteTag(tagPath: string): Promise<void>
 ```
 
+### PropertyOperations
+
+Facade for property key rename/delete workflows across the vault.
+
+**Location:** `src/services/PropertyOperations.ts`
+
+**Responsibilities:**
+
+- Renames and deletes property keys through modal workflows and batched frontmatter mutations.
+- Updates settings-backed property metadata records and active-profile property field lists after successful changes.
+- Emits property rename/delete events to listeners used by the React layer and other services.
+
+**Key Methods:**
+
+```typescript
+addPropertyKeyRenameListener(listener: (payload: PropertyKeyRenameEventPayload) => void): () => void
+addPropertyKeyDeleteListener(listener: (payload: PropertyKeyDeleteEventPayload) => void): () => void
+promptRenamePropertyKey(normalizedKey: string): Promise<void>
+promptDeletePropertyKey(normalizedKey: string): Promise<void>
+```
+
 ### OmnisearchService
 
 Optional integration with the community Omnisearch plugin.
@@ -857,11 +887,12 @@ interface IContentProvider {
 
 ## Service Initialization
 
-Services are instantiated during plugin startup (see `docs/startup-process.md`, phase 1):
+Services are instantiated during plugin startup (see `docs/startup-process.md`, phase 1). The current initialization
+sequence in `src/main.ts` is:
 
 ```typescript
 // Database and settings load happen before this block
-this.initializeRecentDataManager();
+this.preferencesController.initializeRecentDataManager();
 this.recentNotesService = new RecentNotesService(this);
 
 // Initialize workspace and homepage coordination
@@ -883,7 +914,13 @@ this.tagOperations = new TagOperations(
   () => this.tagTreeService,
   () => this.metadataService
 );
-this.commandQueue = new CommandQueueService(this.app);
+this.propertyOperations = new PropertyOperations(
+  this.app,
+  () => this.settings,
+  () => this.saveSettingsAndUpdate(),
+  () => this.propertyTreeService
+);
+this.commandQueue = new CommandQueueService();
 this.fileSystemOps = new FileSystemOperations(
   this.app,
   () => this.tagTreeService,
@@ -891,16 +928,20 @@ this.fileSystemOps = new FileSystemOperations(
   () => this.commandQueue,
   () => this.metadataService,
   (): VisibilityPreferences => ({
-    includeDescendantNotes: this.uxPreferences.includeDescendantNotes,
-    showHiddenItems: this.uxPreferences.showHiddenItems
+    includeDescendantNotes: this.preferencesController.getUXPreferences().includeDescendantNotes,
+    showHiddenItems: this.preferencesController.getUXPreferences().showHiddenItems
   }),
   this
 );
 this.omnisearchService = new OmnisearchService(this.app);
+if (this.settings.searchProvider === 'omnisearch' && !this.omnisearchService.isAvailable()) {
+  this.setSearchProvider('internal');
+}
 this.api = new NotebookNavigatorAPI(this, this.app);
 this.releaseCheckService = new ReleaseCheckService(this);
 
 const iconService = getIconService();
+iconService.registerProvider(new VaultIconProvider(this.app));
 this.externalIconController = new ExternalIconProviderController(this.app, iconService, this);
 const iconController = this.externalIconController;
 if (iconController) {
@@ -1018,5 +1059,5 @@ Triggered manually from **Settings → Notebook Navigator → Advanced → Clean
 - **Delegation**: `MetadataService` delegates specialized work to folder/tag/property/file/separator sub-services.
 - **Bridge**: `TagTreeService` and `PropertyTreeService` bridge StorageContext data to non-React consumers.
 - **Observer**: `CommandQueueService`, `IconService`, recent data listeners, and `subscribeToNavigationSeparatorChanges()` publish state changes to the UI.
-- **Facade**: `TagOperations` wraps tag workflows (batch operations, rename/delete workflows, shortcut updates).
+- **Facade**: `TagOperations` and `PropertyOperations` wrap vault-wide rename/delete workflows.
 - **Controller**: `WorkspaceCoordinator`, `HomepageController`, and `ExternalIconProviderController` coordinate multi-step plugin flows.
