@@ -249,20 +249,10 @@ export type MenuExtensionDispose = () => void;
 export type PinContext = 'folder' | 'tag' | 'property' | 'all';
 
 /**
- * Pinned file with context information
- */
-export interface PinnedFile {
-    /** The pinned file */
-    file: TFile;
-    /** Which context the file is pinned in */
-    context: { folder: boolean; tag: boolean; property: boolean };
-}
-
-/**
  * Type alias for the Map structure returned by the API for pinned notes
  * Maps file paths to their pinning context states
  */
-export type Pinned = Map<string, { folder: boolean; tag: boolean; property: boolean }>;
+export type Pinned = Map<string, Readonly<{ folder: boolean; tag: boolean; property: boolean }>>;
 
 /**
  * All available event types that can be subscribed to

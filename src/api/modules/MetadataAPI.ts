@@ -53,6 +53,12 @@ type MetadataAPIHost = {
     ) => void;
 };
 
+type PinnedContextSnapshot = Pinned extends Map<string, infer TValue> ? TValue : never;
+
+function freezePinnedContext(context: PinnedNotes[string]): PinnedContextSnapshot {
+    return Object.freeze({ ...normalizePinnedNoteContext(context) }) as PinnedContextSnapshot;
+}
+
 /**
  * Metadata API - Manage folder, tag, and property appearance, icons, colors, and pinned files
  */
@@ -194,6 +200,14 @@ export class MetadataAPI {
         return false;
     }
 
+    private getPinnedSnapshot(): Readonly<Pinned> {
+        const entries = Object.entries(this.metadataState.pinnedNotes).map(([path, context]) => {
+            return [path, freezePinnedContext(context)] as const;
+        });
+
+        return new Map(entries);
+    }
+
     /**
      * Update internal cache when settings change and trigger events
      * Called by the plugin when settings are modified
@@ -304,7 +318,7 @@ export class MetadataAPI {
 
         // Check pinned notes
         if (this.pinnedNotesChanged(this.previousState.pinnedNotes, current.pinnedNotes)) {
-            const pinnedMap = this.getPinned();
+            const pinnedMap = this.getPinnedSnapshot();
             this.api.trigger('pinned-files-changed', { files: pinnedMap });
         }
 
@@ -778,6 +792,6 @@ export class MetadataAPI {
      * @returns Map of file paths to PinnedContext objects
      */
     getPinned(): Readonly<Pinned> {
-        return new Map(Object.entries(this.metadataState.pinnedNotes));
+        return this.getPinnedSnapshot();
     }
 }
