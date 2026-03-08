@@ -135,33 +135,37 @@ Priority order: folder note styles override custom color styles, which override 
 
 Border variables apply to navigation rows, file rows, count badges, and file pills.
 
-#### Border widths
+#### Navigation borders
 
-| Variable                              | Default | Description                                                       |
-| ------------------------------------- | ------- | ----------------------------------------------------------------- |
-| `--nn-theme-navitem-border-width`     | `0px`   | Border width for navigation custom backgrounds, hover, and selection |
-| `--nn-theme-navitem-count-border-width` | `0px` | Border width for navigation file count badges                     |
-| `--nn-theme-file-border-width`        | `0px`   | Border width for file item hover and selection                    |
-| `--nn-theme-file-pill-border-width`   | `1px`   | Border width for tag and property pills                           |
-
-#### Border colors
-
-| Variable                                                  | Default                                           | Description                                                      |
-| --------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------- |
-| `--nn-theme-navitem-custom-border-color`                  | `transparent`                                     | Border color for rows with custom backgrounds                   |
-| `--nn-theme-navitem-hover-border-color`                   | `transparent`                                     | Border color for hovered navigation rows                        |
-| `--nn-theme-navitem-selected-border-color`                | `transparent`                                     | Border color for selected navigation rows                       |
-| `--nn-theme-navitem-selected-inactive-border-color`       | `var(--nn-theme-navitem-selected-border-color)`   | Border color for selected navigation rows when pane is inactive |
-| `--nn-theme-navitem-count-border-color`                   | `transparent`                                     | Border color for navigation file count badges                   |
-| `--nn-theme-navitem-selected-count-border-color`          | `var(--nn-theme-navitem-count-border-color)`      | Border color for selected navigation file count badges          |
+| Variable                                            | Default                                         | Description                                                      |
+| --------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| `--nn-theme-navitem-border-width`                   | `0px`                                           | Border width for navigation custom backgrounds, hover, and selection |
+| `--nn-theme-navitem-custom-border-color`            | `transparent`                                   | Border color for rows with custom backgrounds                    |
+| `--nn-theme-navitem-hover-border-color`             | `transparent`                                   | Border color for hovered navigation rows                         |
+| `--nn-theme-navitem-selected-border-color`          | `transparent`                                   | Border color for selected navigation rows                        |
+| `--nn-theme-navitem-selected-inactive-border-color` | `var(--nn-theme-navitem-selected-border-color)` | Border color for selected navigation rows when pane is inactive  |
+| `--nn-theme-navitem-count-border-width`             | `0px`                                           | Border width for navigation file count badges                    |
+| `--nn-theme-navitem-count-border-color`             | `transparent`                                   | Border color for navigation file count badges                    |
+| `--nn-theme-navitem-selected-count-border-color`    | `var(--nn-theme-navitem-count-border-color)`    | Border color for selected navigation file count badges           |
 | `--nn-theme-navitem-selected-inactive-count-border-color` | `var(--nn-theme-navitem-selected-count-border-color)` | Border color for selected navigation file count badges when pane is inactive |
-| `--nn-theme-file-hover-border-color`                      | `transparent`                                     | Border color for hovered file rows                              |
-| `--nn-theme-file-selected-border-color`                   | `transparent`                                     | Border color for selected file rows                             |
-| `--nn-theme-file-selected-inactive-border-color`          | `var(--nn-theme-file-selected-border-color)`      | Border color for selected file rows when pane is inactive       |
-| `--nn-theme-file-tag-border-color`                        | `color-mix(in srgb, var(--nn-theme-foreground) 30%, transparent)` | Border color for tag pills                                      |
-| `--nn-theme-file-property-border-color`                   | `var(--nn-theme-file-tag-border-color)`           | Border color for property pills                                 |
-| `--nn-theme-file-selected-tag-border-color`               | `var(--nn-theme-file-tag-border-color)`           | Border color for tag pills in selected file rows                |
-| `--nn-theme-file-selected-property-border-color`          | `var(--nn-theme-file-property-border-color)`      | Border color for property pills in selected file rows           |
+
+#### File item borders
+
+| Variable                                     | Default                                      | Description                                                |
+| -------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| `--nn-theme-file-border-width`               | `0px`                                        | Border width for selected file rows                        |
+| `--nn-theme-file-selected-border-color`      | `transparent`                                | Border color for selected file rows                        |
+| `--nn-theme-file-selected-inactive-border-color` | `var(--nn-theme-file-selected-border-color)` | Border color for selected file rows when pane is inactive  |
+
+#### Pill borders
+
+| Variable                                     | Default                                                             | Description                                       |
+| -------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------- |
+| `--nn-theme-file-pill-border-width`          | `1px`                                                               | Border width for tag and property pills           |
+| `--nn-theme-file-tag-border-color`           | `color-mix(in srgb, var(--nn-theme-foreground) 30%, transparent)`   | Border color for tag pills                        |
+| `--nn-theme-file-property-border-color`      | `var(--nn-theme-file-tag-border-color)`                             | Border color for property pills                   |
+| `--nn-theme-file-selected-tag-border-color`  | `var(--nn-theme-file-tag-border-color)`                             | Border color for tag pills in selected file rows  |
+| `--nn-theme-file-selected-property-border-color` | `var(--nn-theme-file-property-border-color)`                     | Border color for property pills in selected file rows |
 
 ### Pane divider (desktop only)
 

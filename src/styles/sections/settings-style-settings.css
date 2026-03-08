@@ -58,8 +58,8 @@ settings:
         level: 1
         collapsed: true
     -
-        id: nn-border-widths-heading
-        title: Border widths
+        id: nn-border-nav-heading
+        title: Navigation borders
         type: heading
         level: 2
         collapsed: false
@@ -73,42 +73,6 @@ settings:
         min: 0
         max: 4
         step: 1
-    -
-        id: nn-theme-navitem-count-border-width
-        title: File count border width
-        description: Border width on navigation file count badges.
-        type: variable-number-slider
-        default: 0
-        format: px
-        min: 0
-        max: 4
-        step: 1
-    -
-        id: nn-theme-file-border-width
-        title: File item border width
-        description: Border width on selected file items.
-        type: variable-number-slider
-        default: 0
-        format: px
-        min: 0
-        max: 4
-        step: 1
-    -
-        id: nn-theme-file-pill-border-width
-        title: Pill border width
-        description: Border width on tag and custom property pills.
-        type: variable-number-slider
-        default: 1
-        format: px
-        min: 0
-        max: 4
-        step: 1
-    -
-        id: nn-border-nav-heading
-        title: Navigation borders
-        type: heading
-        level: 2
-        collapsed: false
     -
         id: nn-theme-navitem-custom-border-color
         title: Custom background border color
@@ -146,6 +110,16 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
+        id: nn-theme-navitem-count-border-width
+        title: File count border width
+        description: Border width on navigation file count badges.
+        type: variable-number-slider
+        default: 0
+        format: px
+        min: 0
+        max: 4
+        step: 1
+    -
         id: nn-theme-navitem-count-border-color
         title: File count border color
         description: Border color on navigation file count badges.
@@ -179,6 +153,16 @@ settings:
         level: 2
         collapsed: false
     -
+        id: nn-theme-file-border-width
+        title: Selection border width
+        description: Border width on selected file items.
+        type: variable-number-slider
+        default: 0
+        format: px
+        min: 0
+        max: 4
+        step: 1
+    -
         id: nn-theme-file-selected-border-color
         title: Selection border color
         description: Border color on selected file items.
@@ -202,6 +186,16 @@ settings:
         type: heading
         level: 2
         collapsed: false
+    -
+        id: nn-theme-file-pill-border-width
+        title: Pill border width
+        description: Border width on tag and custom property pills.
+        type: variable-number-slider
+        default: 1
+        format: px
+        min: 0
+        max: 4
+        step: 1
     -
         id: nn-theme-file-tag-border-color
         title: Tag pill border color
