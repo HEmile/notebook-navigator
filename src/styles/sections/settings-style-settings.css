@@ -86,7 +86,7 @@ settings:
     -
         id: nn-theme-file-border-width
         title: File item border width
-        description: Border width on file item hover and selection states.
+        description: Border width on selected file items.
         type: variable-number-slider
         default: 0
         format: px
@@ -178,15 +178,6 @@ settings:
         type: heading
         level: 2
         collapsed: false
-    -
-        id: nn-theme-file-hover-border-color
-        title: Hover border color
-        description: Border color on hovered file items.
-        type: variable-themed-color
-        opacity: true
-        format: rgb
-        default-light: '#'
-        default-dark: '#'
     -
         id: nn-theme-file-selected-border-color
         title: Selection border color

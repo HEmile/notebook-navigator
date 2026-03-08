@@ -4,13 +4,4 @@
    Hover States
    ======================================================================== */
 
-/* File hover states - maintains transparency - desktop only */
-.nn-desktop .nn-file:not(.nn-selected):hover .nn-file-content {
-    background-color: transparent;
-    box-shadow: inset 0 0 0 var(--nn-theme-file-border-width) var(--nn-theme-file-hover-border-color);
-}
-
-.nn-desktop .nn-file.nn-selected:hover .nn-file-content {
-    background-color: transparent;
-    box-shadow: none;
-}
+/* File rows intentionally keep their existing styling on hover. */

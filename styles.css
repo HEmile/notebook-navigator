@@ -282,7 +282,6 @@ body {
     --nn-theme-file-border-radius: 8px;
     --nn-theme-file-border-width: 0px;
     --nn-theme-file-pill-border-width: 1px;
-    --nn-theme-file-hover-border-color: transparent;
     --nn-theme-file-selected-border-color: transparent;
     --nn-theme-file-selected-inactive-border-color: var(--nn-theme-file-selected-border-color);
     --nn-theme-file-selected-bg: var(--text-selection);
@@ -4414,16 +4413,7 @@ body {
    Hover States
    ======================================================================== */
 
-/* File hover states - maintains transparency - desktop only */
-.nn-desktop .nn-file:not(.nn-selected):hover .nn-file-content {
-    background-color: transparent;
-    box-shadow: inset 0 0 0 var(--nn-theme-file-border-width) var(--nn-theme-file-hover-border-color);
-}
-
-.nn-desktop .nn-file.nn-selected:hover .nn-file-content {
-    background-color: transparent;
-    box-shadow: none;
-}
+/* File rows intentionally keep their existing styling on hover. */
 /* Source: src/styles/sections/state-drag-and-drop.css */
 
 /* ========================================================================
@@ -7898,7 +7888,7 @@ settings:
     -
         id: nn-theme-file-border-width
         title: File item border width
-        description: Border width on file item hover and selection states.
+        description: Border width on selected file items.
         type: variable-number-slider
         default: 0
         format: px
@@ -7990,15 +7980,6 @@ settings:
         type: heading
         level: 2
         collapsed: false
-    -
-        id: nn-theme-file-hover-border-color
-        title: Hover border color
-        description: Border color on hovered file items.
-        type: variable-themed-color
-        opacity: true
-        format: rgb
-        default-light: '#'
-        default-dark: '#'
     -
         id: nn-theme-file-selected-border-color
         title: Selection border color
