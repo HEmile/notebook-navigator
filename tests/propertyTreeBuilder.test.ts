@@ -353,7 +353,7 @@ describe('buildPropertyTreeFromDatabase', () => {
         expect(keyNode?.children.size).toBe(0);
     });
 
-    it('keeps key nodes for boolean values without creating value nodes', () => {
+    it('creates value nodes for boolean values', () => {
         const db = createMockDb([
             {
                 path: 'notes/true.md',
@@ -371,7 +371,12 @@ describe('buildPropertyTreeFromDatabase', () => {
 
         const keyNode = tree.get('status');
         expect(keyNode?.notesWithValue).toEqual(new Set(['notes/true.md', 'notes/false.md']));
-        expect(keyNode?.children.size).toBe(0);
+
+        const trueNode = keyNode?.children.get(buildPropertyValueNodeId('status', normalizePropertyTreeValuePath('true')));
+        expect(trueNode?.notesWithValue).toEqual(new Set(['notes/true.md']));
+
+        const falseNode = keyNode?.children.get(buildPropertyValueNodeId('status', normalizePropertyTreeValuePath('false')));
+        expect(falseNode?.notesWithValue).toEqual(new Set(['notes/false.md']));
     });
 
     it('keeps string literals "true" and "false" as value nodes', () => {
@@ -444,6 +449,7 @@ describe('property value matching', () => {
 
         expect(getTotalPropertyNoteCount(keyNode, normalizePropertyTreeValuePath('Work'))).toBe(1);
         expect(getTotalPropertyNoteCount(keyNode, normalizePropertyTreeValuePath('Work/Done'))).toBe(2);
+        expect(getTotalPropertyNoteCount(keyNode, normalizePropertyTreeValuePath('true'))).toBe(1);
 
         const directPaths = collectPropertyValueFilePaths(keyNode, normalizePropertyTreeValuePath('Work'));
         expect(directPaths).toEqual(new Set(['notes/c.md']));
@@ -452,8 +458,8 @@ describe('property value matching', () => {
         expect(withDescendants).toEqual(new Set(['notes/c.md']));
 
         const directKeyPaths = collectPropertyKeyFilePaths(keyNode, false);
-        expect(directKeyPaths).toEqual(new Set(['notes/e.md', 'notes/f.md']));
-        expect(getDirectPropertyKeyNoteCount(keyNode)).toBe(2);
+        expect(directKeyPaths).toEqual(new Set(['notes/e.md']));
+        expect(getDirectPropertyKeyNoteCount(keyNode)).toBe(1);
 
         const allKeyPaths = collectPropertyKeyFilePaths(keyNode, true);
         expect(allKeyPaths).toEqual(new Set(['notes/a.md', 'notes/b.md', 'notes/c.md', 'notes/d.md', 'notes/e.md', 'notes/f.md']));
@@ -512,7 +518,7 @@ describe('property node id encoding', () => {
 });
 
 describe('property selection resolution', () => {
-    it('falls back from a missing value node to the key node', () => {
+    it('keeps selected boolean value nodes when the tree contains them', () => {
         const db = createMockDb([
             {
                 path: 'notes/a.md',
@@ -523,9 +529,9 @@ describe('property selection resolution', () => {
             includedPropertyKeys: new Set(['status'])
         });
 
-        const missingValueSelection = buildPropertyValueNodeId('status', normalizePropertyTreeValuePath('true'));
-        const resolved = resolvePropertySelectionNodeId(tree, missingValueSelection);
-        expect(resolved).toBe(buildPropertyKeyNodeId('status'));
+        const valueSelection = buildPropertyValueNodeId('status', normalizePropertyTreeValuePath('true'));
+        const resolved = resolvePropertySelectionNodeId(tree, valueSelection);
+        expect(resolved).toBe(valueSelection);
     });
 
     it('falls back to properties root when selected key does not exist', () => {
@@ -618,5 +624,22 @@ describe('property reveal selection', () => {
         const selection = buildPropertyKeyNodeId('hidefeature');
         const resolved = determinePropertyToReveal([], selection, settings, false);
         expect(resolved).toBeNull();
+    });
+
+    it('reveals boolean value nodes instead of collapsing them to the key node', () => {
+        const settings = {
+            ...DEFAULT_SETTINGS,
+            showProperties: true
+        };
+        setActivePropertyFields(settings, 'finished');
+
+        const resolved = determinePropertyToReveal(
+            [{ fieldKey: 'finished', value: 'false', valueKind: 'boolean' }],
+            buildPropertyKeyNodeId('finished'),
+            settings,
+            false
+        );
+
+        expect(resolved).toBe(buildPropertyValueNodeId('finished', normalizePropertyTreeValuePath('false')));
     });
 });

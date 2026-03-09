@@ -148,6 +148,14 @@ export function isPropertyKeyOnlyValuePath(valuePath: string, valueKind?: Proper
 }
 
 /**
+ * Checks whether a normalized property value should stay at the key level in the property tree.
+ * The tree uses value nodes for boolean literals so `true` and `false` can be selected separately.
+ */
+function isPropertyTreeKeyOnlyValuePath(valuePath: string): boolean {
+    return valuePath.length === 0;
+}
+
+/**
  * Registers direct key-level note paths for a property key node.
  */
 export function registerPropertyKeyDirectPaths(keyNode: PropertyTreeNode, directPaths: Iterable<string> = []): void {
@@ -266,7 +274,7 @@ export function determinePropertyToReveal(
         }
 
         const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
-        if (isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind)) {
+        if (isPropertyTreeKeyOnlyValuePath(normalizedValuePath)) {
             keyCandidate.hasKeyOnlyValue = true;
             registerCandidate(keyCandidate.keyNodeId);
             continue;
@@ -449,7 +457,7 @@ function buildConfiguredPropertyNodeIdSet(
             nodeIds.add(buildPropertyKeyNodeId(normalizedKey));
 
             const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
-            if (!normalizedValuePath || isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind)) {
+            if (isPropertyTreeKeyOnlyValuePath(normalizedValuePath)) {
                 return;
             }
 
@@ -877,7 +885,7 @@ export function buildPropertyTreeFromDatabase(
             keyNode.notesWithValue.add(path);
 
             const normalizedValuePath = normalizePropertyTreeValuePath(propertyEntry.value);
-            if (isPropertyKeyOnlyValuePath(normalizedValuePath, propertyEntry.valueKind)) {
+            if (isPropertyTreeKeyOnlyValuePath(normalizedValuePath)) {
                 getOrBuildDirectPropertyKeyPaths(keyNode).add(path);
                 continue;
             }

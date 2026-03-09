@@ -77,6 +77,15 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '2.5.1',
+        date: '2026-03-16',
+        showOnUpdate: true,
+        improved: [
+            'Property tree now shows frontmatter boolean values ()`true` and `false`).',
+            'Property tree now treats frontmatter `null` values as unassigned instead of converting them to `true`.'
+        ]
+    },
+    {
         version: '2.5.0',
         date: '2026-03-09',
         showOnUpdate: true,

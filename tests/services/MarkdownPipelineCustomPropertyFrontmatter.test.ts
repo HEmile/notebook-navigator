@@ -136,7 +136,7 @@ describe('MarkdownPipelineContentProvider frontmatter custom properties', () => 
         ]);
     });
 
-    it('treats null frontmatter values as boolean true', async () => {
+    it('treats null frontmatter values as unassigned', async () => {
         const context = createApp();
         const settings = createSettings({ propertyFields: 'status, type' });
         const provider = new TestMarkdownPipelineContentProvider(context.app);
@@ -146,7 +146,7 @@ describe('MarkdownPipelineContentProvider frontmatter custom properties', () => 
         const result = await provider.runCustomProperty(file, settings);
 
         expect(result).toEqual([
-            { fieldKey: 'status', value: 'true', valueKind: 'boolean' },
+            { fieldKey: 'status', value: '' },
             { fieldKey: 'type', value: 'Project', valueKind: 'string' }
         ]);
     });

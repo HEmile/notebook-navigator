@@ -209,14 +209,14 @@ function countMarkdownTasks(content: string, bodyStartIndex: number): { taskTota
 
 type ExtractedPropertyValue = {
     value: string;
-    valueKind: PropertyValueKind;
+    valueKind?: PropertyValueKind;
 };
 
 // Converts frontmatter values into a list of pill strings.
-// Supports scalars and nested arrays; skips empty strings and non-finite numbers.
+// Supports scalars and nested arrays; treats null as unassigned; skips empty strings and non-finite numbers.
 function extractFrontmatterValues(value: unknown): ExtractedPropertyValue[] {
     if (value === null) {
-        return [{ value: 'true', valueKind: 'boolean' }];
+        return [{ value: '' }];
     }
 
     if (typeof value === 'string') {
