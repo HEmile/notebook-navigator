@@ -17,7 +17,15 @@
  */
 
 import type { NotebookNavigatorSettings } from '../settings';
-import type { VaultProfile, VaultProfilePropertyKey } from '../settings/types';
+import { NAV_RAINBOW_DEFAULTS } from '../settings/defaultSettings';
+import {
+    isNavRainbowColorMode,
+    isNavRainbowScope,
+    isNavRainbowTransitionStyle,
+    type NavRainbowSettings,
+    type VaultProfile,
+    type VaultProfilePropertyKey
+} from '../settings/types';
 import { isSearchShortcut, type ShortcutEntry } from '../types/shortcuts';
 import { strings } from '../i18n';
 import { normalizeCalendarCustomRootFolder } from './calendarCustomNotePatterns';
@@ -55,6 +63,7 @@ interface VaultProfileInitOptions {
     periodicNotesFolder?: string;
     propertyKeys?: VaultProfilePropertyKey[];
     shortcuts?: ShortcutEntry[];
+    navRainbow?: NavRainbowSettings;
 }
 
 // Hidden folder pattern rules (all patterns must be absolute with a leading "/"):
@@ -246,6 +255,107 @@ const clonePropertyKeyEntry = (entry: VaultProfilePropertyKey): VaultProfileProp
         showInNavigation: entry.showInNavigation,
         showInList: entry.showInList,
         showInFileMenu: entry.showInFileMenu
+    };
+};
+
+const resolveRainbowColor = (value: unknown, fallback: string): string => {
+    if (typeof value !== 'string') {
+        return fallback;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+};
+
+const cloneNavRainbowBaseSection = <TSection extends NavRainbowSettings['shortcuts']>(section: TSection): TSection => {
+    return { ...section };
+};
+
+export const cloneNavRainbowSettings = (settings: NavRainbowSettings): NavRainbowSettings => {
+    return {
+        mode: settings.mode,
+        shortcuts: cloneNavRainbowBaseSection(settings.shortcuts),
+        recent: cloneNavRainbowBaseSection(settings.recent),
+        folders: cloneNavRainbowBaseSection(settings.folders),
+        tags: cloneNavRainbowBaseSection(settings.tags),
+        properties: cloneNavRainbowBaseSection(settings.properties)
+    };
+};
+
+export const areNavRainbowSettingsEqual = (previous?: NavRainbowSettings | null, next?: NavRainbowSettings | null): boolean => {
+    if (previous === next) {
+        return true;
+    }
+    if (!previous || !next) {
+        return false;
+    }
+
+    return (
+        previous.mode === next.mode &&
+        previous.shortcuts.enabled === next.shortcuts.enabled &&
+        previous.shortcuts.firstColor === next.shortcuts.firstColor &&
+        previous.shortcuts.lastColor === next.shortcuts.lastColor &&
+        previous.shortcuts.transitionStyle === next.shortcuts.transitionStyle &&
+        previous.recent.enabled === next.recent.enabled &&
+        previous.recent.firstColor === next.recent.firstColor &&
+        previous.recent.lastColor === next.recent.lastColor &&
+        previous.recent.transitionStyle === next.recent.transitionStyle &&
+        previous.folders.enabled === next.folders.enabled &&
+        previous.folders.firstColor === next.folders.firstColor &&
+        previous.folders.lastColor === next.folders.lastColor &&
+        previous.folders.transitionStyle === next.folders.transitionStyle &&
+        previous.folders.scope === next.folders.scope &&
+        previous.tags.enabled === next.tags.enabled &&
+        previous.tags.firstColor === next.tags.firstColor &&
+        previous.tags.lastColor === next.tags.lastColor &&
+        previous.tags.transitionStyle === next.tags.transitionStyle &&
+        previous.tags.scope === next.tags.scope &&
+        previous.properties.enabled === next.properties.enabled &&
+        previous.properties.firstColor === next.properties.firstColor &&
+        previous.properties.lastColor === next.properties.lastColor &&
+        previous.properties.transitionStyle === next.properties.transitionStyle &&
+        previous.properties.scope === next.properties.scope
+    );
+};
+
+const normalizeNavRainbowBaseSection = (value: unknown, defaults: NavRainbowSettings['shortcuts']): NavRainbowSettings['shortcuts'] => {
+    const section = isRecord(value) ? value : null;
+    return {
+        enabled: typeof section?.enabled === 'boolean' ? section.enabled : defaults.enabled,
+        firstColor: resolveRainbowColor(section?.firstColor, defaults.firstColor),
+        lastColor: resolveRainbowColor(section?.lastColor, defaults.lastColor),
+        transitionStyle: isNavRainbowTransitionStyle(section?.transitionStyle) ? section.transitionStyle : defaults.transitionStyle
+    };
+};
+
+export const normalizeNavRainbowSettings = (value: unknown, defaults: NavRainbowSettings = NAV_RAINBOW_DEFAULTS): NavRainbowSettings => {
+    const navRainbow = isRecord(value) ? value : null;
+    const shortcuts = isRecord(navRainbow?.shortcuts) ? navRainbow.shortcuts : null;
+    const recent = isRecord(navRainbow?.recent) ? navRainbow.recent : null;
+    const folders = isRecord(navRainbow?.folders) ? navRainbow.folders : null;
+    const tags = isRecord(navRainbow?.tags) ? navRainbow.tags : null;
+    const properties = isRecord(navRainbow?.properties) ? navRainbow.properties : null;
+
+    const foldersBase = normalizeNavRainbowBaseSection(folders, defaults.folders);
+    const tagsBase = normalizeNavRainbowBaseSection(tags, defaults.tags);
+    const propertiesBase = normalizeNavRainbowBaseSection(properties, defaults.properties);
+
+    return {
+        mode: isNavRainbowColorMode(navRainbow?.mode) ? navRainbow.mode : defaults.mode,
+        shortcuts: normalizeNavRainbowBaseSection(shortcuts, defaults.shortcuts),
+        recent: normalizeNavRainbowBaseSection(recent, defaults.recent),
+        folders: {
+            ...foldersBase,
+            scope: isNavRainbowScope(folders?.scope) ? folders.scope : defaults.folders.scope
+        },
+        tags: {
+            ...tagsBase,
+            scope: isNavRainbowScope(tags?.scope) ? tags.scope : defaults.tags.scope
+        },
+        properties: {
+            ...propertiesBase,
+            scope: isNavRainbowScope(properties?.scope) ? properties.scope : defaults.properties.scope
+        }
     };
 };
 
@@ -501,7 +611,8 @@ export function createVaultProfile(name: string, options: VaultProfileInitOption
             typeof options.periodicNotesFolder === 'string' ? options.periodicNotesFolder : ''
         ),
         propertyKeys: clonePropertyKeys(options.propertyKeys),
-        shortcuts: cloneShortcuts(options.shortcuts)
+        shortcuts: cloneShortcuts(options.shortcuts),
+        navRainbow: normalizeNavRainbowSettings(options.navRainbow)
     };
 }
 
@@ -524,7 +635,8 @@ function createVaultProfileFromTemplate(name: string, template: VaultProfileTemp
         navigationBanner: source?.navigationBanner,
         periodicNotesFolder: source?.periodicNotesFolder,
         propertyKeys: source?.propertyKeys,
-        shortcuts: source?.shortcuts
+        shortcuts: source?.shortcuts,
+        navRainbow: source?.navRainbow
     });
 }
 
@@ -688,6 +800,7 @@ export function ensureVaultProfiles(settings: NotebookNavigatorSettings): void {
         profile.periodicNotesFolder = normalizeCalendarCustomRootFolder(profileRecordPeriodicNotesFolder ?? '');
         profile.propertyKeys = clonePropertyKeys(profile.propertyKeys);
         profile.shortcuts = cloneShortcuts(profile.shortcuts);
+        profile.navRainbow = normalizeNavRainbowSettings(profile.navRainbow);
     });
 
     const hasActiveProfile = settings.vaultProfiles.some(profile => profile.id === settings.vaultProfile);
@@ -759,6 +872,10 @@ export function setActivePropertyFields(settings: NotebookNavigatorSettings, pro
 
 export function getActiveFileVisibility(settings: NotebookNavigatorSettings): FileVisibility {
     return getActiveVaultProfile(settings).fileVisibility;
+}
+
+export function getActiveNavRainbowSettings(settings: NotebookNavigatorSettings): NavRainbowSettings {
+    return getActiveVaultProfile(settings).navRainbow;
 }
 
 export function hasHiddenTagMatch(settings: NotebookNavigatorSettings, normalizedPath: string): boolean {

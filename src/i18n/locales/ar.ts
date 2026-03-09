@@ -1596,7 +1596,7 @@ export const STRINGS_AR = {
                 desc: 'عند التمكين، تطبق الألوان المخصصة على الأيقونات فقط. عند التعطيل، تطبق الألوان على الأيقونات وتسميات النص.'
             },
             navRainbowMode: {
-                name: 'وضع ألوان قوس قزح',
+                name: 'وضع ألوان قوس قزح (ملف الخزنة)',
                 desc: 'تطبيق ألوان قوس قزح في لوحة التنقل.',
                 options: {
                     none: 'إيقاف',
@@ -1623,6 +1623,10 @@ export const STRINGS_AR = {
             navRainbowApplyToShortcuts: {
                 name: 'تطبيق على الاختصارات',
                 desc: 'تطبيق ألوان قوس قزح على الاختصارات.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'تطبيق على العناصر الأخيرة',
+                desc: 'تطبيق ألوان قوس قزح على العناصر الأخيرة.'
             },
             navRainbowApplyToFolders: {
                 name: 'تطبيق على المجلدات',

@@ -20,7 +20,7 @@ import { TFile } from 'obsidian';
 import type { App } from 'obsidian';
 
 import { RECENT_NOTES_VIRTUAL_FOLDER_ID, SHORTCUTS_VIRTUAL_FOLDER_ID } from '../../../types';
-import type { NotebookNavigatorSettings } from '../../../settings/types';
+import type { NavRainbowSettings, NotebookNavigatorSettings } from '../../../settings/types';
 import type { MetadataService } from '../../../services/MetadataService';
 import { shouldDisplayFile, FILE_VISIBILITY } from '../../../utils/fileTypeUtils';
 import {
@@ -38,24 +38,25 @@ import {
     type ShortcutRainbowColors,
     type TagRainbowColors
 } from '../../../utils/navigationRainbow';
+import { getActiveNavRainbowSettings } from '../../../utils/vaultProfiles';
 
 interface FolderRainbowContext {
     isEnabled: boolean;
-    scope: NotebookNavigatorSettings['navRainbow']['folders']['scope'];
+    scope: NavRainbowSettings['folders']['scope'];
     rootLevel: number;
     colors: FolderRainbowColors;
 }
 
 interface TagRainbowContext {
     isEnabled: boolean;
-    scope: NotebookNavigatorSettings['navRainbow']['tags']['scope'];
+    scope: NavRainbowSettings['tags']['scope'];
     rootLevel: number;
     colors: TagRainbowColors;
 }
 
 interface PropertyRainbowContext {
     isEnabled: boolean;
-    scope: NotebookNavigatorSettings['navRainbow']['properties']['scope'];
+    scope: NavRainbowSettings['properties']['scope'];
     rootLevel: number;
     colors: PropertyRainbowColors;
 }
@@ -71,7 +72,7 @@ interface RecentRainbowContext {
 }
 
 interface NavigationRainbowContext {
-    mode: NotebookNavigatorSettings['navRainbow']['mode'];
+    mode: NavRainbowSettings['mode'];
     isEnabled: boolean;
     folder: FolderRainbowContext;
     tag: TagRainbowContext;
@@ -125,6 +126,7 @@ export function createNavigationItemDecorationContext(params: {
         navRainbowPalettes,
         navRainbowColors
     } = params;
+    const navRainbow = getActiveNavRainbowSettings(settings);
 
     const folderDisplayDataByPath = new Map<string, ReturnType<MetadataService['getFolderDisplayData']>>();
     const getFolderDisplayData = (folderPath: string): ReturnType<MetadataService['getFolderDisplayData']> => {
@@ -152,7 +154,7 @@ export function createNavigationItemDecorationContext(params: {
         return getFileDisplayName(file);
     };
 
-    const rainbowMode = settings.navRainbow.mode;
+    const rainbowMode = navRainbow.mode;
     const isRainbowEnabled = rainbowMode !== 'none';
 
     const folderRootLevel = settings.showRootFolder ? 1 : 0;
@@ -182,19 +184,19 @@ export function createNavigationItemDecorationContext(params: {
             isEnabled: isRainbowEnabled,
             folder: {
                 isEnabled: Boolean(folderPalette),
-                scope: settings.navRainbow.folders.scope,
+                scope: navRainbow.folders.scope,
                 rootLevel: folderRootLevel,
                 colors: navRainbowColors.folder
             },
             tag: {
                 isEnabled: Boolean(tagPalette),
-                scope: settings.navRainbow.tags.scope,
+                scope: navRainbow.tags.scope,
                 rootLevel: tagRootLevel,
                 colors: navRainbowColors.tag
             },
             property: {
                 isEnabled: Boolean(propertyPalette),
-                scope: settings.navRainbow.properties.scope,
+                scope: navRainbow.properties.scope,
                 rootLevel: propertyRootLevel,
                 colors: navRainbowColors.property
             },

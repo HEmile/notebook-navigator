@@ -1597,7 +1597,7 @@ export const STRINGS_KO = {
                 desc: '활성화하면 사용자 지정 색상이 아이콘에만 적용됩니다. 비활성화하면 아이콘과 텍스트 레이블 모두에 색상이 적용됩니다.'
             },
             navRainbowMode: {
-                name: '무지개 색상 모드',
+                name: '무지개 색상 모드 (보관소 프로필)',
                 desc: '탐색 창에 무지개 색상을 적용합니다.',
                 options: {
                     none: '끄기',
@@ -1624,6 +1624,10 @@ export const STRINGS_KO = {
             navRainbowApplyToShortcuts: {
                 name: '바로가기에 적용',
                 desc: '무지개 색상을 바로가기에 적용합니다.'
+            },
+            navRainbowApplyToRecent: {
+                name: '최근 항목에 적용',
+                desc: '무지개 색상을 최근 항목에 적용합니다.'
             },
             navRainbowApplyToFolders: {
                 name: '폴더에 적용',

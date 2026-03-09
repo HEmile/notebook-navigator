@@ -61,7 +61,7 @@ import { collectAllTagPaths } from '../../utils/tagTree';
 import type { TagTreeNode } from '../../types/storage';
 import { normalizeNavigationSectionOrderInput } from '../../utils/navigationSections';
 import { compositeWithBase } from '../../utils/colorUtils';
-import { getActiveVaultProfile } from '../../utils/vaultProfiles';
+import { areNavRainbowSettingsEqual, getActiveNavRainbowSettings, getActiveVaultProfile } from '../../utils/vaultProfiles';
 import { PropertyKeyVisibilityModal } from '../../modals/PropertyKeyVisibilityModal';
 import type { NavigateToFolderOptions, RevealPropertyOptions, RevealTagOptions } from '../../hooks/useNavigatorReveal';
 import { NAVIGATION_PANE_SURFACE_COLOR_MAPPINGS } from '../../constants/surfaceColorMappings';
@@ -483,10 +483,20 @@ export const NavigationPane = React.memo(
             rootContainerRef,
             variables: NAVIGATION_PANE_SURFACE_COLOR_MAPPINGS
         });
+        const previousNavRainbowRef = useRef<ReturnType<typeof getActiveNavRainbowSettings> | null>(null);
+        const activeNavRainbow = useMemo(() => {
+            const nextNavRainbow = getActiveNavRainbowSettings(settings);
+            const previousNavRainbow = previousNavRainbowRef.current;
+            if (previousNavRainbow && areNavRainbowSettingsEqual(previousNavRainbow, nextNavRainbow)) {
+                return previousNavRainbow;
+            }
+            previousNavRainbowRef.current = nextNavRainbow;
+            return nextNavRainbow;
+        }, [settings]);
         const solidBackgroundCacheRef = useRef<Map<string, string | undefined>>(new Map());
         useEffect(() => {
             solidBackgroundCacheRef.current.clear();
-        }, [navSurfaceColor, navSurfaceVersion, settings.navRainbow]);
+        }, [activeNavRainbow, navSurfaceColor, navSurfaceVersion]);
 
         const getSolidBackground = useCallback(
             (color?: string | null) => {

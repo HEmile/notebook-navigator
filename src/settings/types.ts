@@ -287,6 +287,7 @@ export interface VaultProfile {
     navigationBanner: string | null;
     periodicNotesFolder: string;
     shortcuts: ShortcutEntry[];
+    navRainbow: NavRainbowSettings;
 }
 
 /**
@@ -365,9 +366,6 @@ export interface NotebookNavigatorSettings {
     navIndent: number;
     navItemHeight: number;
     navItemHeightScaleText: boolean;
-
-    // Navigation pane tab - Rainbow colors
-    navRainbow: NavRainbowSettings;
 
     // Navigation pane tab - Behavior
     collapseBehavior: ItemScope;

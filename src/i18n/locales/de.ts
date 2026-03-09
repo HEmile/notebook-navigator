@@ -1600,7 +1600,7 @@ export const STRINGS_DE = {
                 desc: 'Wenn aktiviert, werden benutzerdefinierte Farben nur auf Symbole angewendet. Wenn deaktiviert, werden Farben sowohl auf Symbole als auch auf Textbeschriftungen angewendet.'
             },
             navRainbowMode: {
-                name: 'Regenbogen-Farbmodus',
+                name: 'Regenbogen-Farbmodus (Tresorprofil)',
                 desc: 'Regenbogenfarben im Navigationsbereich anwenden.',
                 options: {
                     none: 'Aus',
@@ -1627,6 +1627,10 @@ export const STRINGS_DE = {
             navRainbowApplyToShortcuts: {
                 name: 'Auf Verknüpfungen anwenden',
                 desc: 'Regenbogenfarben auf Verknüpfungen anwenden.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Auf zuletzt verwendete Elemente anwenden',
+                desc: 'Regenbogenfarben auf zuletzt verwendete Elemente anwenden.'
             },
             navRainbowApplyToFolders: {
                 name: 'Auf Ordner anwenden',

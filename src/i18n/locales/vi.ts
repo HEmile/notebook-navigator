@@ -1599,7 +1599,7 @@ export const STRINGS_VI = {
                 desc: 'Khi bật, màu tùy chỉnh chỉ áp dụng cho biểu tượng. Khi tắt, màu áp dụng cho cả biểu tượng và nhãn văn bản.'
             },
             navRainbowMode: {
-                name: 'Chế độ màu cầu vồng',
+                name: 'Chế độ màu cầu vồng (hồ sơ vault)',
                 desc: 'Áp dụng màu cầu vồng trong bảng điều hướng.',
                 options: {
                     none: 'Tắt',
@@ -1626,6 +1626,10 @@ export const STRINGS_VI = {
             navRainbowApplyToShortcuts: {
                 name: 'Áp dụng cho lối tắt',
                 desc: 'Áp dụng màu cầu vồng cho lối tắt.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Áp dụng cho mục gần đây',
+                desc: 'Áp dụng màu cầu vồng cho mục gần đây.'
             },
             navRainbowApplyToFolders: {
                 name: 'Áp dụng cho thư mục',

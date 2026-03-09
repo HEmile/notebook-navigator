@@ -1603,7 +1603,7 @@ export const STRINGS_PT_BR = {
                 desc: 'Quando ativado, cores personalizadas são aplicadas apenas aos ícones. Quando desativado, as cores são aplicadas aos ícones e aos rótulos de texto.'
             },
             navRainbowMode: {
-                name: 'Modo de cores arco-íris',
+                name: 'Modo de cores arco-íris (perfil do cofre)',
                 desc: 'Aplicar cores arco-íris no painel de navegação.',
                 options: {
                     none: 'Desativado',
@@ -1630,6 +1630,10 @@ export const STRINGS_PT_BR = {
             navRainbowApplyToShortcuts: {
                 name: 'Aplicar aos atalhos',
                 desc: 'Aplicar cores arco-íris aos atalhos.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Aplicar aos itens recentes',
+                desc: 'Aplicar cores arco-íris aos itens recentes.'
             },
             navRainbowApplyToFolders: {
                 name: 'Aplicar às pastas',

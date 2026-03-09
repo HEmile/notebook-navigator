@@ -38,7 +38,6 @@ import {
     type CalendarLeftPlacement,
     type CalendarPlacement,
     type CalendarWeeksToShow,
-    type NavRainbowSettings,
     SYNC_MODE_SETTING_IDS,
     type SettingSyncMode,
     type SortOption,
@@ -51,9 +50,6 @@ import {
     isCalendarWeekendDays,
     isFeatureImagePixelSizeSetting,
     isFeatureImageSizeSetting,
-    isNavRainbowColorMode,
-    isNavRainbowScope,
-    isNavRainbowTransitionStyle,
     isPropertySortSecondaryOption,
     isRecentNotesHideMode,
     isSettingSyncMode,
@@ -105,19 +101,6 @@ interface PluginSettingsControllerOptions {
     mirrorUXPreferences: (update: Partial<UXPreferences>) => void;
 }
 
-function resolveRainbowColor(value: unknown, fallback: string): string {
-    if (typeof value !== 'string') {
-        return fallback;
-    }
-
-    const trimmed = value.trim();
-    if (trimmed.length === 0) {
-        return fallback;
-    }
-
-    return trimmed;
-}
-
 function resolveTaskBackgroundColor(value: unknown, fallback: string): string {
     if (typeof value !== 'string') {
         return fallback;
@@ -129,47 +112,6 @@ function resolveTaskBackgroundColor(value: unknown, fallback: string): string {
     }
 
     return trimmed;
-}
-
-function normalizeNavRainbowBaseSection(value: unknown, defaults: NavRainbowSettings['shortcuts']): NavRainbowSettings['shortcuts'] {
-    const section = isRecord(value) ? value : null;
-    return {
-        enabled: typeof section?.enabled === 'boolean' ? section.enabled : defaults.enabled,
-        firstColor: resolveRainbowColor(section?.firstColor, defaults.firstColor),
-        lastColor: resolveRainbowColor(section?.lastColor, defaults.lastColor),
-        transitionStyle: isNavRainbowTransitionStyle(section?.transitionStyle) ? section.transitionStyle : defaults.transitionStyle
-    };
-}
-
-function normalizeNavRainbowSettings(value: unknown, defaults: NavRainbowSettings): NavRainbowSettings {
-    const navRainbow = isRecord(value) ? value : null;
-    const shortcuts = isRecord(navRainbow?.shortcuts) ? navRainbow.shortcuts : null;
-    const recent = isRecord(navRainbow?.recent) ? navRainbow.recent : null;
-    const folders = isRecord(navRainbow?.folders) ? navRainbow.folders : null;
-    const tags = isRecord(navRainbow?.tags) ? navRainbow.tags : null;
-    const properties = isRecord(navRainbow?.properties) ? navRainbow.properties : null;
-
-    const foldersBase = normalizeNavRainbowBaseSection(folders, defaults.folders);
-    const tagsBase = normalizeNavRainbowBaseSection(tags, defaults.tags);
-    const propertiesBase = normalizeNavRainbowBaseSection(properties, defaults.properties);
-
-    return {
-        mode: isNavRainbowColorMode(navRainbow?.mode) ? navRainbow.mode : defaults.mode,
-        shortcuts: normalizeNavRainbowBaseSection(shortcuts, defaults.shortcuts),
-        recent: normalizeNavRainbowBaseSection(recent, defaults.recent),
-        folders: {
-            ...foldersBase,
-            scope: isNavRainbowScope(folders?.scope) ? folders.scope : defaults.folders.scope
-        },
-        tags: {
-            ...tagsBase,
-            scope: isNavRainbowScope(tags?.scope) ? tags.scope : defaults.tags.scope
-        },
-        properties: {
-            ...propertiesBase,
-            scope: isNavRainbowScope(properties?.scope) ? properties.scope : defaults.properties.scope
-        }
-    };
 }
 
 const LEGACY_LOCAL_SYNC_MODE_SETTING_IDS = new Set<SyncModeSettingId>([
@@ -341,8 +283,6 @@ export class PluginSettingsController {
         if (!isAlphaSortOrder(this.currentSettings.folderSortOrder)) {
             this.currentSettings.folderSortOrder = DEFAULT_SETTINGS.folderSortOrder;
         }
-
-        this.currentSettings.navRainbow = normalizeNavRainbowSettings(this.currentSettings.navRainbow, DEFAULT_SETTINGS.navRainbow);
 
         this.currentSettings.deleteAttachments = resolveDeleteAttachmentsSetting(
             this.currentSettings.deleteAttachments,

@@ -1591,7 +1591,7 @@ export const STRINGS_ZH_TW = {
                 desc: '啟用時，自訂顏色僅套用於圖示。停用時，顏色將同時套用於圖示和文字標籤。'
             },
             navRainbowMode: {
-                name: '彩虹顏色模式',
+                name: '彩虹顏色模式（保險庫設定檔）',
                 desc: '在導覽窗格中套用彩虹顏色。',
                 options: {
                     none: '關閉',
@@ -1618,6 +1618,10 @@ export const STRINGS_ZH_TW = {
             navRainbowApplyToShortcuts: {
                 name: '套用到捷徑',
                 desc: '將彩虹顏色套用到捷徑。'
+            },
+            navRainbowApplyToRecent: {
+                name: '套用到最近項目',
+                desc: '將彩虹顏色套用到最近項目。'
             },
             navRainbowApplyToFolders: {
                 name: '套用到資料夾',

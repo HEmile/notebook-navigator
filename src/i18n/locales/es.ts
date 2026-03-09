@@ -1601,7 +1601,7 @@ export const STRINGS_ES = {
                 desc: 'Cuando está habilitado, los colores personalizados se aplican solo a los iconos. Cuando está deshabilitado, los colores se aplican tanto a los iconos como a las etiquetas de texto.'
             },
             navRainbowMode: {
-                name: 'Modo de colores arcoíris',
+                name: 'Modo de colores arcoíris (perfil de bóveda)',
                 desc: 'Aplicar colores arcoíris en el panel de navegación.',
                 options: {
                     none: 'Desactivado',
@@ -1628,6 +1628,10 @@ export const STRINGS_ES = {
             navRainbowApplyToShortcuts: {
                 name: 'Aplicar a accesos directos',
                 desc: 'Aplicar colores arcoíris a los accesos directos.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Aplicar a elementos recientes',
+                desc: 'Aplicar colores arcoíris a los elementos recientes.'
             },
             navRainbowApplyToFolders: {
                 name: 'Aplicar a carpetas',

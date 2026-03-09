@@ -1363,8 +1363,7 @@ export const STRINGS_FR = {
             excludedFolders: {
                 name: 'Masquer les dossiers (profil du coffre)',
                 desc: 'Liste de dossiers à masquer séparés par des virgules. Modèles de nom : assets* (dossiers commençant par assets), *_temp (finissant par _temp). Modèles de chemin : /archive (archive racine uniquement), /res* (dossiers racine commençant par res), /*/temp (dossiers temp un niveau plus bas), /projects/* (tous les dossiers dans projects).',
-                placeholder: 'templates, assets*, /archive, /res*',
-                info: "Nettoyage automatique : Lors de l'exclusion par clic droit, les modèles redondants sont supprimés (par exemple, si vous excluez /projects et que /projects/app existe déjà dans la liste, il sera supprimé)."
+                placeholder: 'templates, assets*, /archive, /res*'
             },
             fileVisibility: {
                 name: 'Afficher les types de fichiers (profil du coffre)',
@@ -1604,7 +1603,7 @@ export const STRINGS_FR = {
                 desc: "Lorsqu'activé, les couleurs personnalisées sont appliquées uniquement aux icônes. Lorsque désactivé, les couleurs sont appliquées aux icônes et aux étiquettes de texte."
             },
             navRainbowMode: {
-                name: 'Mode couleurs arc-en-ciel',
+                name: 'Mode couleurs arc-en-ciel (profil du coffre)',
                 desc: 'Appliquer les couleurs arc-en-ciel dans le volet de navigation.',
                 options: {
                     none: 'Désactivé',
@@ -1631,6 +1630,10 @@ export const STRINGS_FR = {
             navRainbowApplyToShortcuts: {
                 name: 'Appliquer aux raccourcis',
                 desc: 'Appliquer les couleurs arc-en-ciel aux raccourcis.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Appliquer aux éléments récents',
+                desc: 'Appliquer les couleurs arc-en-ciel aux éléments récents.'
             },
             navRainbowApplyToFolders: {
                 name: 'Appliquer aux dossiers',

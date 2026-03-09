@@ -1592,7 +1592,7 @@ export const STRINGS_EN = {
                 desc: 'When enabled, custom colors are applied only to icons. When disabled, colors are applied to both icons and text labels.'
             },
             navRainbowMode: {
-                name: 'Rainbow color mode',
+                name: 'Rainbow color mode (vault profile)',
                 desc: 'Apply rainbow colors in the navigation pane.',
                 options: {
                     none: 'Off',

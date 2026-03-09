@@ -1601,7 +1601,7 @@ export const STRINGS_NL = {
                 desc: 'Indien ingeschakeld, worden aangepaste kleuren alleen op pictogrammen toegepast. Indien uitgeschakeld, worden kleuren toegepast op zowel pictogrammen als tekstlabels.'
             },
             navRainbowMode: {
-                name: 'Regenboogkleurmodus',
+                name: 'Regenboogkleurmodus (kluis profiel)',
                 desc: 'Regenboogkleuren toepassen in het navigatievenster.',
                 options: {
                     none: 'Uit',
@@ -1628,6 +1628,10 @@ export const STRINGS_NL = {
             navRainbowApplyToShortcuts: {
                 name: 'Toepassen op snelkoppelingen',
                 desc: 'Regenboogkleuren toepassen op snelkoppelingen.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Toepassen op recente items',
+                desc: 'Regenboogkleuren toepassen op recente items.'
             },
             navRainbowApplyToFolders: {
                 name: 'Toepassen op mappen',

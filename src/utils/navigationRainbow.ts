@@ -18,7 +18,7 @@
 
 import { NavigationPaneItemType } from '../types';
 import type { CombinedNavigationItem } from '../types/virtualization';
-import { DEFAULT_SETTINGS } from '../settings/defaultSettings';
+import { NAV_RAINBOW_DEFAULTS } from '../settings/defaultSettings';
 import type { NavRainbowColorMode, NavRainbowScope, NavRainbowSettings } from '../settings/types';
 import {
     assignRainbowColorsFromPalette,
@@ -29,8 +29,8 @@ import {
 } from './colorUtils';
 import { getParentFolderPath } from './pathUtils';
 
-const navRainbowDefaultStart = parseCssColor(DEFAULT_SETTINGS.navRainbow.folders.firstColor);
-const navRainbowDefaultEnd = parseCssColor(DEFAULT_SETTINGS.navRainbow.folders.lastColor);
+const navRainbowDefaultStart = parseCssColor(NAV_RAINBOW_DEFAULTS.folders.firstColor);
+const navRainbowDefaultEnd = parseCssColor(NAV_RAINBOW_DEFAULTS.folders.lastColor);
 
 if (!navRainbowDefaultStart || !navRainbowDefaultEnd) {
     throw new Error('[Notebook Navigator] Invalid nav rainbow default colors.');

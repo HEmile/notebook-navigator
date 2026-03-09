@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ButtonComponent, Platform, Setting, SliderComponent } from 'obsidian';
+import { ButtonComponent, DropdownComponent, Platform, Setting, SliderComponent, ToggleComponent } from 'obsidian';
 import { strings } from '../../i18n';
 import { NavigationBannerModal } from '../../modals/NavigationBannerModal';
 import { NavRainbowSectionModal } from '../../modals/NavRainbowSectionModal';
@@ -289,27 +289,39 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
     });
 
     const rainbowSubSettingsEl = createSubSettingsContainer(rainbowModeSetting);
-    setElementVisible(rainbowSubSettingsEl, plugin.settings.navRainbow.mode !== 'none');
+    let navRainbowModeDropdown: DropdownComponent | null = null;
+    const refreshRainbowSectionControls: (() => void)[] = [];
 
     const updateNavRainbow = async (updater: (settings: NavRainbowSettings) => NavRainbowSettings): Promise<void> => {
-        plugin.settings.navRainbow = updater(plugin.settings.navRainbow);
+        const activeProfile = getActiveProfile();
+        activeProfile.navRainbow = updater(activeProfile.navRainbow);
         await plugin.saveSettingsAndUpdate();
     };
 
-    rainbowModeSetting.addDropdown(dropdown =>
-        dropdown
-            .addOption('none', strings.settings.items.navRainbowMode.options.none)
-            .addOption('foreground', strings.settings.items.navRainbowMode.options.foreground)
-            .addOption('background', strings.settings.items.navRainbowMode.options.background)
-            .setValue(plugin.settings.navRainbow.mode)
-            .onChange(async value => {
-                if (!isNavRainbowColorMode(value)) {
-                    return;
-                }
+    const refreshNavRainbowControls = (): void => {
+        const navRainbow = getActiveProfile().navRainbow;
+        setElementVisible(rainbowSubSettingsEl, navRainbow.mode !== 'none');
+        navRainbowModeDropdown?.setValue(navRainbow.mode);
+        refreshRainbowSectionControls.forEach(refresh => {
+            refresh();
+        });
+    };
 
-                await updateNavRainbow(settings => ({ ...settings, mode: value }));
-                setElementVisible(rainbowSubSettingsEl, value !== 'none');
-            })
+    rainbowModeSetting.addDropdown(
+        dropdown =>
+            (navRainbowModeDropdown = dropdown
+                .addOption('none', strings.settings.items.navRainbowMode.options.none)
+                .addOption('foreground', strings.settings.items.navRainbowMode.options.foreground)
+                .addOption('background', strings.settings.items.navRainbowMode.options.background)
+                .setValue(getActiveProfile().navRainbow.mode)
+                .onChange(async value => {
+                    if (!isNavRainbowColorMode(value)) {
+                        return;
+                    }
+
+                    await updateNavRainbow(settings => ({ ...settings, mode: value }));
+                    setElementVisible(rainbowSubSettingsEl, value !== 'none');
+                }))
     );
 
     const createRainbowSectionSetting = (params: {
@@ -320,11 +332,19 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
         onConfigure: () => void;
     }): void => {
         const setting = new Setting(rainbowSubSettingsEl).setName(params.name).setDesc(params.desc);
+        let toggleComponent: ToggleComponent | null = null;
 
-        setting.addToggle(toggle =>
-            toggle.setValue(params.getEnabled()).onChange(async value => {
-                await params.setEnabled(value);
-            })
+        const refreshToggle = (): void => {
+            toggleComponent?.setValue(params.getEnabled());
+        };
+
+        refreshRainbowSectionControls.push(refreshToggle);
+
+        setting.addToggle(
+            toggle =>
+                (toggleComponent = toggle.setValue(params.getEnabled()).onChange(async value => {
+                    await params.setEnabled(value);
+                }))
         );
 
         setting.addButton(button => {
@@ -336,7 +356,7 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
     createRainbowSectionSetting({
         name: strings.settings.items.navRainbowApplyToShortcuts.name,
         desc: strings.settings.items.navRainbowApplyToShortcuts.desc,
-        getEnabled: () => plugin.settings.navRainbow.shortcuts.enabled,
+        getEnabled: () => getActiveProfile().navRainbow.shortcuts.enabled,
         setEnabled: async value => {
             await updateNavRainbow(settings => ({ ...settings, shortcuts: { ...settings.shortcuts, enabled: value } }));
         },
@@ -348,7 +368,7 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
     createRainbowSectionSetting({
         name: strings.settings.items.navRainbowApplyToRecent.name,
         desc: strings.settings.items.navRainbowApplyToRecent.desc,
-        getEnabled: () => plugin.settings.navRainbow.recent.enabled,
+        getEnabled: () => getActiveProfile().navRainbow.recent.enabled,
         setEnabled: async value => {
             await updateNavRainbow(settings => ({ ...settings, recent: { ...settings.recent, enabled: value } }));
         },
@@ -360,7 +380,7 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
     createRainbowSectionSetting({
         name: strings.settings.items.navRainbowApplyToFolders.name,
         desc: strings.settings.items.navRainbowApplyToFolders.desc,
-        getEnabled: () => plugin.settings.navRainbow.folders.enabled,
+        getEnabled: () => getActiveProfile().navRainbow.folders.enabled,
         setEnabled: async value => {
             await updateNavRainbow(settings => ({ ...settings, folders: { ...settings.folders, enabled: value } }));
         },
@@ -372,7 +392,7 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
     createRainbowSectionSetting({
         name: strings.settings.items.navRainbowApplyToTags.name,
         desc: strings.settings.items.navRainbowApplyToTags.desc,
-        getEnabled: () => plugin.settings.navRainbow.tags.enabled,
+        getEnabled: () => getActiveProfile().navRainbow.tags.enabled,
         setEnabled: async value => {
             await updateNavRainbow(settings => ({ ...settings, tags: { ...settings.tags, enabled: value } }));
         },
@@ -384,13 +404,18 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
     createRainbowSectionSetting({
         name: strings.settings.items.navRainbowApplyToProperties.name,
         desc: strings.settings.items.navRainbowApplyToProperties.desc,
-        getEnabled: () => plugin.settings.navRainbow.properties.enabled,
+        getEnabled: () => getActiveProfile().navRainbow.properties.enabled,
         setEnabled: async value => {
             await updateNavRainbow(settings => ({ ...settings, properties: { ...settings.properties, enabled: value } }));
         },
         onConfigure: () => {
             new NavRainbowSectionModal(context.app, plugin, 'properties').open();
         }
+    });
+
+    refreshNavRainbowControls();
+    context.registerSettingsUpdateListener('navigation-pane-nav-rainbow', () => {
+        refreshNavRainbowControls();
     });
 
     const behaviorGroup = createGroup(strings.settings.groups.general.behavior);

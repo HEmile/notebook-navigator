@@ -25,9 +25,11 @@ import {
     isNavRainbowTransitionStyle,
     type NavRainbowScope,
     type NavRainbowSettings,
-    type NavRainbowTransitionStyle
+    type NavRainbowTransitionStyle,
+    type VaultProfile
 } from '../settings/types';
-import { DEFAULT_SETTINGS } from '../settings/defaultSettings';
+import { NAV_RAINBOW_DEFAULTS } from '../settings/defaultSettings';
+import { getActiveVaultProfile } from '../utils/vaultProfiles';
 
 type NavRainbowSectionId = 'shortcuts' | 'recent' | 'folders' | 'tags' | 'properties';
 
@@ -75,11 +77,13 @@ interface LevelScopeConfig<TSection extends NavRainbowSettings['shortcuts']> {
 
 export class NavRainbowSectionModal extends Modal {
     private readonly plugin: NotebookNavigatorPlugin;
+    private readonly profileId: string;
     private readonly section: NavRainbowSectionId;
 
     constructor(app: App, plugin: NotebookNavigatorPlugin, section: NavRainbowSectionId) {
         super(app);
         this.plugin = plugin;
+        this.profileId = getActiveVaultProfile(plugin.settings).id;
         this.section = section;
     }
 
@@ -148,13 +152,22 @@ export class NavRainbowSectionModal extends Modal {
         this.contentEl.empty();
     }
 
+    private getBoundProfile(): VaultProfile | null {
+        const profiles = this.plugin.settings.vaultProfiles;
+        if (!Array.isArray(profiles)) {
+            return null;
+        }
+
+        return profiles.find(profile => profile.id === this.profileId) ?? null;
+    }
+
     private getSectionSettingsAccess(): NavRainbowSectionSettingsAccess {
         if (this.section === 'shortcuts') {
             return this.createSectionAccess({
                 sectionLabel: strings.settings.items.navRainbowApplyToShortcuts.name,
                 getSection: settings => settings.shortcuts,
                 setSection: (settings, section) => ({ ...settings, shortcuts: section }),
-                defaultSection: DEFAULT_SETTINGS.navRainbow.shortcuts
+                defaultSection: NAV_RAINBOW_DEFAULTS.shortcuts
             });
         }
 
@@ -163,7 +176,7 @@ export class NavRainbowSectionModal extends Modal {
                 sectionLabel: strings.settings.items.navRainbowApplyToRecent.name,
                 getSection: settings => settings.recent,
                 setSection: (settings, section) => ({ ...settings, recent: section }),
-                defaultSection: DEFAULT_SETTINGS.navRainbow.recent
+                defaultSection: NAV_RAINBOW_DEFAULTS.recent
             });
         }
 
@@ -172,7 +185,7 @@ export class NavRainbowSectionModal extends Modal {
                 sectionLabel: strings.settings.items.navRainbowApplyToFolders.name,
                 getSection: settings => settings.folders,
                 setSection: (settings, section) => ({ ...settings, folders: section }),
-                defaultSection: DEFAULT_SETTINGS.navRainbow.folders,
+                defaultSection: NAV_RAINBOW_DEFAULTS.folders,
                 levelScope: {
                     getValue: section => section.scope,
                     setValue: (section, value) => ({ ...section, scope: value }),
@@ -191,7 +204,7 @@ export class NavRainbowSectionModal extends Modal {
                 sectionLabel: strings.settings.items.navRainbowApplyToTags.name,
                 getSection: settings => settings.tags,
                 setSection: (settings, section) => ({ ...settings, tags: section }),
-                defaultSection: DEFAULT_SETTINGS.navRainbow.tags,
+                defaultSection: NAV_RAINBOW_DEFAULTS.tags,
                 levelScope: {
                     getValue: section => section.scope,
                     setValue: (section, value) => ({ ...section, scope: value }),
@@ -209,7 +222,7 @@ export class NavRainbowSectionModal extends Modal {
             sectionLabel: strings.settings.items.navRainbowApplyToProperties.name,
             getSection: settings => settings.properties,
             setSection: (settings, section) => ({ ...settings, properties: section }),
-            defaultSection: DEFAULT_SETTINGS.navRainbow.properties,
+            defaultSection: NAV_RAINBOW_DEFAULTS.properties,
             levelScope: {
                 getValue: section => section.scope,
                 setValue: (section, value) => ({ ...section, scope: value }),
@@ -230,31 +243,40 @@ export class NavRainbowSectionModal extends Modal {
         defaultSection: TSection;
         levelScope?: LevelScopeConfig<TSection>;
     }): NavRainbowSectionSettingsAccess {
-        const getNavRainbow = (): NavRainbowSettings => this.plugin.settings.navRainbow;
+        const getNavRainbow = (): NavRainbowSettings | null => this.getBoundProfile()?.navRainbow ?? null;
         const updateSection = (updater: (section: TSection) => TSection): void => {
-            const current = getNavRainbow();
+            const profile = this.getBoundProfile();
+            if (!profile) {
+                return;
+            }
+            const current = profile.navRainbow;
             const nextSection = updater(params.getSection(current));
-            this.plugin.settings.navRainbow = params.setSection(current, nextSection);
+            profile.navRainbow = params.setSection(current, nextSection);
+        };
+
+        const getSection = (): TSection => {
+            const navRainbow = getNavRainbow();
+            return navRainbow ? params.getSection(navRainbow) : params.defaultSection;
         };
 
         const access: NavRainbowSectionSettingsAccess = {
             sectionLabel: params.sectionLabel,
             firstColor: {
-                getValue: () => params.getSection(getNavRainbow()).firstColor,
+                getValue: () => getSection().firstColor,
                 setValue: value => {
                     updateSection(section => ({ ...section, firstColor: value }));
                 },
                 defaultValue: params.defaultSection.firstColor
             },
             lastColor: {
-                getValue: () => params.getSection(getNavRainbow()).lastColor,
+                getValue: () => getSection().lastColor,
                 setValue: value => {
                     updateSection(section => ({ ...section, lastColor: value }));
                 },
                 defaultValue: params.defaultSection.lastColor
             },
             transitionStyle: {
-                getValue: () => params.getSection(getNavRainbow()).transitionStyle,
+                getValue: () => getSection().transitionStyle,
                 setValue: value => {
                     updateSection(section => ({ ...section, transitionStyle: value }));
                 },
@@ -265,7 +287,7 @@ export class NavRainbowSectionModal extends Modal {
         if (params.levelScope) {
             const levelScope = params.levelScope;
             access.levelScope = {
-                getValue: () => levelScope.getValue(params.getSection(getNavRainbow())),
+                getValue: () => levelScope.getValue(getSection()),
                 setValue: value => {
                     updateSection(section => levelScope.setValue(section, value));
                 },

@@ -1358,8 +1358,7 @@ export const STRINGS_JA = {
             excludedFolders: {
                 name: 'フォルダを非表示 (ボルトプロファイル)',
                 desc: '非表示にするフォルダのカンマ区切りリスト。名前パターン: assets*（assetsで始まるフォルダ）、*_temp（_tempで終わる）。パスパターン: /archive（ルートのアーカイブのみ）、/res*（resで始まるルートフォルダ）、/*/temp（1階層下のtempフォルダ）、/projects/*（projects内のすべてのフォルダ）。',
-                placeholder: 'templates, assets*, /archive, /res*',
-                info: '自動クリーンアップ：右クリックで除外する際、重複するパターンが削除されます（例：/projectsを除外し、/projects/appが既にリストにある場合、削除されます）。'
+                placeholder: 'templates, assets*, /archive, /res*'
             },
             fileVisibility: {
                 name: 'ファイルタイプを表示 (ボルトプロファイル)',
@@ -1599,7 +1598,7 @@ export const STRINGS_JA = {
                 desc: '有効にすると、カスタムカラーはアイコンのみに適用されます。無効にすると、アイコンとテキストラベルの両方に色が適用されます。'
             },
             navRainbowMode: {
-                name: 'レインボーカラーモード',
+                name: 'レインボーカラーモード（保管庫プロファイル）',
                 desc: 'ナビゲーションペインにレインボーカラーを適用します。',
                 options: {
                     none: 'オフ',
@@ -1626,6 +1625,10 @@ export const STRINGS_JA = {
             navRainbowApplyToShortcuts: {
                 name: 'ショートカットに適用',
                 desc: 'レインボーカラーをショートカットに適用します。'
+            },
+            navRainbowApplyToRecent: {
+                name: '最近の項目に適用',
+                desc: 'レインボーカラーを最近の項目に適用します。'
             },
             navRainbowApplyToFolders: {
                 name: 'フォルダーに適用',

@@ -1598,7 +1598,7 @@ export const STRINGS_TR = {
                 desc: 'Etkinleştirildiğinde, özel renkler yalnızca simgelere uygulanır. Devre dışı bırakıldığında, renkler hem simgelere hem de metin etiketlerine uygulanır.'
             },
             navRainbowMode: {
-                name: 'Gökkuşağı renk modu',
+                name: 'Gökkuşağı renk modu (kasa profili)',
                 desc: 'Gezinme panelinde gökkuşağı renkleri uygula.',
                 options: {
                     none: 'Kapalı',
@@ -1625,6 +1625,10 @@ export const STRINGS_TR = {
             navRainbowApplyToShortcuts: {
                 name: 'Kısayollara uygula',
                 desc: 'Gökkuşağı renklerini kısayollara uygula.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Son öğelere uygula',
+                desc: 'Gökkuşağı renklerini son öğelere uygula.'
             },
             navRainbowApplyToFolders: {
                 name: 'Klasörlere uygula',

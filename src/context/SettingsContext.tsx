@@ -31,7 +31,13 @@ import {
     isTagShortcut,
     isPropertyShortcut
 } from '../types/shortcuts';
-import { clonePropertyKeys, cloneShortcuts, getActiveVaultProfile } from '../utils/vaultProfiles';
+import {
+    areNavRainbowSettingsEqual,
+    cloneNavRainbowSettings,
+    clonePropertyKeys,
+    cloneShortcuts,
+    getActiveVaultProfile
+} from '../utils/vaultProfiles';
 import { clonePinnedNotesRecord, isStringRecordValue, sanitizeRecord } from '../utils/recordUtils';
 import { areStringArraysEqual } from '../utils/arrayUtils';
 import type { FolderAppearance } from '../hooks/useListPaneAppearance';
@@ -261,7 +267,8 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
                 hiddenTags: Array.isArray(profile.hiddenTags) ? [...profile.hiddenTags] : [],
                 hiddenFileTags: Array.isArray(profile.hiddenFileTags) ? [...profile.hiddenFileTags] : [],
                 propertyKeys: clonePropertyKeys(profile.propertyKeys),
-                shortcuts: cloneShortcuts(profile.shortcuts)
+                shortcuts: cloneShortcuts(profile.shortcuts),
+                navRainbow: cloneNavRainbowSettings(profile.navRainbow)
             }));
         }
         void version; // Keep dependency so settings snapshot recreates when updates are published
@@ -307,6 +314,7 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
         const nameEqual = previous?.profile.name === profile.name;
         const propertyKeysEqual = arePropertyKeysEqual(previous?.profile.propertyKeys, profile.propertyKeys);
         const shortcutsEqual = areShortcutsEqual(previous?.profile.shortcuts, profile.shortcuts);
+        const navRainbowEqual = areNavRainbowSettingsEqual(previous?.profile.navRainbow, profile.navRainbow);
 
         if (
             isSameProfile &&
@@ -321,6 +329,7 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
             nameEqual &&
             propertyKeysEqual &&
             shortcutsEqual &&
+            navRainbowEqual &&
             previous
         ) {
             return previous;

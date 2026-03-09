@@ -1351,8 +1351,7 @@ export const STRINGS_ZH_CN = {
             excludedFolders: {
                 name: '隐藏文件夹 (库配置)',
                 desc: '逗号分隔的要隐藏的文件夹列表。名称模式：assets*（以assets开头的文件夹），*_temp（以_temp结尾）。路径模式：/archive（仅根目录archive），/res*（以res开头的根文件夹），/*/temp（一级目录下的temp文件夹），/projects/*（projects内的所有文件夹）。',
-                placeholder: 'templates, assets*, /archive, /res*',
-                info: '自动清理：通过右键排除时，冗余的模式会被移除（例如，如果您排除/projects且/projects/app已在列表中，它将被移除）。'
+                placeholder: 'templates, assets*, /archive, /res*'
             },
             fileVisibility: {
                 name: '显示文件类型 (库配置)',
@@ -1592,7 +1591,7 @@ export const STRINGS_ZH_CN = {
                 desc: '启用时，自定义颜色仅应用于图标。禁用时，颜色将同时应用于图标和文本标签。'
             },
             navRainbowMode: {
-                name: '彩虹颜色模式',
+                name: '彩虹颜色模式（仓库配置文件）',
                 desc: '在导航窗格中应用彩虹颜色。',
                 options: {
                     none: '关闭',
@@ -1619,6 +1618,10 @@ export const STRINGS_ZH_CN = {
             navRainbowApplyToShortcuts: {
                 name: '应用到快捷方式',
                 desc: '将彩虹颜色应用到快捷方式。'
+            },
+            navRainbowApplyToRecent: {
+                name: '应用到最近项目',
+                desc: '将彩虹颜色应用到最近项目。'
             },
             navRainbowApplyToFolders: {
                 name: '应用到文件夹',

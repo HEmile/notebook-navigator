@@ -41,7 +41,7 @@ const NAV_RAINBOW_FIRST_COLOR_DEFAULT = '#ef4444';
 const NAV_RAINBOW_LAST_COLOR_DEFAULT = '#8b5cf6';
 const UNFINISHED_TASK_BACKGROUND_COLOR_DEFAULT = '#ef000050';
 
-const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
+export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
     mode: 'none',
 
     shortcuts: {
@@ -83,6 +83,17 @@ const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
     }
 };
 
+function createDefaultNavRainbowSettings(): NavRainbowSettings {
+    return {
+        mode: NAV_RAINBOW_DEFAULTS.mode,
+        shortcuts: { ...NAV_RAINBOW_DEFAULTS.shortcuts },
+        recent: { ...NAV_RAINBOW_DEFAULTS.recent },
+        folders: { ...NAV_RAINBOW_DEFAULTS.folders },
+        tags: { ...NAV_RAINBOW_DEFAULTS.tags },
+        properties: { ...NAV_RAINBOW_DEFAULTS.properties }
+    };
+}
+
 /**
  * Default settings for the plugin
  * Used when plugin is first installed or settings are reset
@@ -102,7 +113,8 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
             hiddenFileProperties: [],
             navigationBanner: null,
             periodicNotesFolder: '',
-            shortcuts: []
+            shortcuts: [],
+            navRainbow: createDefaultNavRainbowSettings()
         }
     ],
     vaultProfile: 'default',
@@ -193,9 +205,6 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     navIndent: NAVPANE_MEASUREMENTS.defaultIndent,
     navItemHeight: NAVPANE_MEASUREMENTS.defaultItemHeight,
     navItemHeightScaleText: true,
-
-    // Navigation pane tab - Rainbow colors
-    navRainbow: NAV_RAINBOW_DEFAULTS,
 
     // Navigation pane tab - Behavior
     collapseBehavior: 'all',

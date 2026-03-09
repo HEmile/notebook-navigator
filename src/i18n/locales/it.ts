@@ -1597,7 +1597,7 @@ export const STRINGS_IT = {
                 desc: 'Quando abilitato, i colori personalizzati sono applicati solo alle icone. Quando disabilitato, i colori sono applicati sia alle icone che alle etichette testo.'
             },
             navRainbowMode: {
-                name: 'Modalità colori arcobaleno',
+                name: 'Modalità colori arcobaleno (profilo vault)',
                 desc: 'Applica colori arcobaleno nel pannello di navigazione.',
                 options: {
                     none: 'Disattivato',
@@ -1624,6 +1624,10 @@ export const STRINGS_IT = {
             navRainbowApplyToShortcuts: {
                 name: 'Applica alle scorciatoie',
                 desc: 'Applica colori arcobaleno alle scorciatoie.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Applica agli elementi recenti',
+                desc: 'Applica colori arcobaleno agli elementi recenti.'
             },
             navRainbowApplyToFolders: {
                 name: 'Applica alle cartelle',

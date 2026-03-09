@@ -1599,7 +1599,7 @@ export const STRINGS_ID = {
                 desc: 'Saat diaktifkan, warna kustom hanya diterapkan ke ikon. Saat dinonaktifkan, warna diterapkan ke ikon dan label teks.'
             },
             navRainbowMode: {
-                name: 'Mode warna pelangi',
+                name: 'Mode warna pelangi (profil vault)',
                 desc: 'Terapkan warna pelangi di panel navigasi.',
                 options: {
                     none: 'Mati',
@@ -1626,6 +1626,10 @@ export const STRINGS_ID = {
             navRainbowApplyToShortcuts: {
                 name: 'Terapkan ke pintasan',
                 desc: 'Terapkan warna pelangi ke pintasan.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Terapkan ke item terbaru',
+                desc: 'Terapkan warna pelangi ke item terbaru.'
             },
             navRainbowApplyToFolders: {
                 name: 'Terapkan ke folder',

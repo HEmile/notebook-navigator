@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { App, TFile } from 'obsidian';
 import type { MetadataService } from '../../../services/MetadataService';
 import type { NotebookNavigatorSettings } from '../../../settings/types';
@@ -46,6 +46,7 @@ import {
     parseNavigationSeparatorKey
 } from '../../../utils/navigationSeparators';
 import { normalizePropertyNodeId } from '../../../utils/propertyTree';
+import { areNavRainbowSettingsEqual, getActiveNavRainbowSettings } from '../../../utils/vaultProfiles';
 import type { FileNameIconNeedle } from '../../../utils/fileIconUtils';
 import { createNavigationItemDecorator, type NavigationRainbowColors } from './decorateNavigationItems';
 import { insertRootSpacing, SPACER_ITEM_TYPES } from './rootSpacing';
@@ -126,6 +127,7 @@ export function useNavigationPaneItemPipeline({
     parsedExcludedFolders,
     metadataDecorationVersion
 }: UseNavigationPaneItemPipelineParams): NavigationPaneItemPipelineResult {
+    const previousNavRainbowRef = useRef<ReturnType<typeof getActiveNavRainbowSettings> | null>(null);
     const normalizedSectionOrder = useMemo(() => sanitizeNavigationSectionOrder(sectionOrder), [sectionOrder]);
 
     const { items, sectionSpacerMap, firstSectionId } = useMemo(() => {
@@ -392,7 +394,16 @@ export function useNavigationPaneItemPipeline({
         return result;
     }, [firstSectionId, items, parsedNavigationSeparators, pinShortcuts, sectionSpacerMap, showHiddenItems]);
 
-    const navRainbowPalettes = useMemo(() => buildNavigationRainbowPalettes(settings.navRainbow), [settings.navRainbow]);
+    const navRainbow = useMemo(() => {
+        const nextNavRainbow = getActiveNavRainbowSettings(settings);
+        const previousNavRainbow = previousNavRainbowRef.current;
+        if (previousNavRainbow && areNavRainbowSettingsEqual(previousNavRainbow, nextNavRainbow)) {
+            return previousNavRainbow;
+        }
+        previousNavRainbowRef.current = nextNavRainbow;
+        return nextNavRainbow;
+    }, [settings]);
+    const navRainbowPalettes = useMemo(() => buildNavigationRainbowPalettes(navRainbow), [navRainbow]);
 
     const folderRainbowColors = useMemo(() => {
         const palette = navRainbowPalettes.folder;
@@ -403,12 +414,12 @@ export function useNavigationPaneItemPipeline({
         return buildFolderRainbowColors({
             items: folderItems,
             palette,
-            scope: settings.navRainbow.folders.scope,
+            scope: navRainbow.folders.scope,
             showRootFolder: settings.showRootFolder,
             rootLevel: settings.showRootFolder ? 1 : 0,
             inheritColors: settings.inheritFolderColors
         });
-    }, [folderItems, navRainbowPalettes.folder, settings.inheritFolderColors, settings.navRainbow.folders.scope, settings.showRootFolder]);
+    }, [folderItems, navRainbow.folders.scope, navRainbowPalettes.folder, settings.inheritFolderColors, settings.showRootFolder]);
 
     const tagRainbowColors = useMemo(() => {
         const palette = navRainbowPalettes.tag;
@@ -419,12 +430,12 @@ export function useNavigationPaneItemPipeline({
         return buildTagRainbowColors({
             items: tagItems,
             palette,
-            scope: settings.navRainbow.tags.scope,
+            scope: navRainbow.tags.scope,
             rootLevel: settings.showAllTagsFolder ? 1 : 0,
             showAllTagsFolder: settings.showAllTagsFolder,
             inheritColors: settings.inheritTagColors
         });
-    }, [navRainbowPalettes.tag, settings.inheritTagColors, settings.navRainbow.tags.scope, settings.showAllTagsFolder, tagItems]);
+    }, [navRainbow.tags.scope, navRainbowPalettes.tag, settings.inheritTagColors, settings.showAllTagsFolder, tagItems]);
 
     const propertyRainbowColors = useMemo(() => {
         const palette = navRainbowPalettes.property;
@@ -435,10 +446,10 @@ export function useNavigationPaneItemPipeline({
         return buildPropertyRainbowColors({
             items: propertyItems,
             palette,
-            scope: settings.navRainbow.properties.scope,
+            scope: navRainbow.properties.scope,
             showAllPropertiesFolder: settings.showAllPropertiesFolder
         });
-    }, [navRainbowPalettes.property, propertyItems, settings.navRainbow.properties.scope, settings.showAllPropertiesFolder]);
+    }, [navRainbow.properties.scope, navRainbowPalettes.property, propertyItems, settings.showAllPropertiesFolder]);
 
     const shortcutRainbowColors = useMemo(() => {
         const palette = navRainbowPalettes.shortcut;

@@ -1594,7 +1594,7 @@ export const STRINGS_TH = {
                 desc: 'เมื่อเปิดใช้งาน สีกำหนดเองจะใช้กับไอคอนเท่านั้น เมื่อปิดใช้งาน สีจะใช้กับทั้งไอคอนและป้ายข้อความ'
             },
             navRainbowMode: {
-                name: 'โหมดสีรุ้ง',
+                name: 'โหมดสีรุ้ง (โปรไฟล์ห้องนิรภัย)',
                 desc: 'ใช้สีรุ้งในแผงนำทาง',
                 options: {
                     none: 'ปิด',
@@ -1621,6 +1621,10 @@ export const STRINGS_TH = {
             navRainbowApplyToShortcuts: {
                 name: 'ใช้กับทางลัด',
                 desc: 'ใช้สีรุ้งกับทางลัด'
+            },
+            navRainbowApplyToRecent: {
+                name: 'ใช้กับรายการล่าสุด',
+                desc: 'ใช้สีรุ้งกับรายการล่าสุด'
             },
             navRainbowApplyToFolders: {
                 name: 'ใช้กับโฟลเดอร์',

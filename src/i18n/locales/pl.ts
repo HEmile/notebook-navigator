@@ -1089,9 +1089,9 @@ export const STRINGS_PL = {
                 name: 'Wyłącz automatyczne przewijanie skrótów',
                 desc: 'Nie przewijaj panelu nawigacji podczas klikania elementów w skrótach.'
             },
-            autoExpandFoldersTags: {
+            autoExpandNavItems: {
                 name: 'Rozwiń podczas zaznaczania',
-                desc: 'Rozwija foldery i tagi po zaznaczeniu. W trybie pojedynczego panelu pierwsze zaznaczenie powoduje rozwinięcie, drugie zaznaczenie powoduje wyświetlenie plików.'
+                desc: 'Rozwija foldery, tagi i właściwości po zaznaczeniu. W trybie pojedynczego panelu pierwsze zaznaczenie powoduje rozwinięcie, drugie zaznaczenie powoduje wyświetlenie plików.'
             },
             springLoadedFolders: {
                 name: 'Rozwiń podczas przeciągania',
@@ -1602,7 +1602,7 @@ export const STRINGS_PL = {
                 desc: 'Po włączeniu niestandardowe kolory są stosowane tylko do ikonek. Po wyłączeniu kolory są stosowane zarówno do ikonek, jak i etykiet tekstowych.'
             },
             navRainbowMode: {
-                name: 'Tryb kolorów tęczy',
+                name: 'Tryb kolorów tęczy (profil sejfu)',
                 desc: 'Zastosuj kolory tęczy w panelu nawigacji.',
                 options: {
                     none: 'Wyłączone',
@@ -1629,6 +1629,10 @@ export const STRINGS_PL = {
             navRainbowApplyToShortcuts: {
                 name: 'Zastosuj do skrótów',
                 desc: 'Zastosuj kolory tęczy do skrótów.'
+            },
+            navRainbowApplyToRecent: {
+                name: 'Zastosuj do ostatnich elementów',
+                desc: 'Zastosuj kolory tęczy do ostatnich elementów.'
             },
             navRainbowApplyToFolders: {
                 name: 'Zastosuj do folderów',
