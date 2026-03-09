@@ -39,26 +39,27 @@ async function updateConfigVersion(configPath: string, newVersion: string): Prom
 
 async function processIconPack(pack: IconPackConfig): Promise<void> {
     const configPath = path.join(__dirname, 'config', `${pack.id}.ts`);
+    const currentVersion = pack.version;
 
     // Check for updates
-    const latestVersion = pack.checkVersion ? await pack.checkVersion() : pack.version;
-    const needsUpdate = compareVersions(pack.version, latestVersion);
+    const latestVersion = pack.checkVersion ? await pack.checkVersion() : currentVersion;
+    const needsUpdate = compareVersions(currentVersion, latestVersion);
 
     if (checkOnly) {
         if (needsUpdate) {
-            console.log(`[${pack.id}] Update available: ${pack.version} → ${latestVersion}`);
+            console.log(`[${pack.id}] Update available: ${currentVersion} → ${latestVersion}`);
         } else {
-            console.log(`[${pack.id}] Up to date: ${pack.version}`);
+            console.log(`[${pack.id}] Up to date: ${currentVersion}`);
         }
         return;
     }
 
     if (!needsUpdate && !forceUpdate) {
-        console.log(`[${pack.id}] Already up to date: ${pack.version}`);
+        console.log(`[${pack.id}] Already up to date: ${currentVersion}`);
         return;
     }
 
-    const targetVersion = needsUpdate ? latestVersion : pack.version;
+    const targetVersion = needsUpdate ? latestVersion : currentVersion;
     console.log(`[${pack.id}] ${needsUpdate ? 'Updating' : 'Processing'} version ${targetVersion}`);
 
     // Update config file if needed
@@ -113,7 +114,7 @@ async function processIconPack(pack: IconPackConfig): Promise<void> {
     await fs.writeFile(path.join(packDir, 'latest.json'), `${JSON.stringify(latestManifest, null, 2)}\n`);
 
     if (needsUpdate) {
-        console.log(`[${pack.id}] Successfully updated from ${pack.version} to ${latestVersion}`);
+        console.log(`[${pack.id}] Successfully updated from ${currentVersion} to ${latestVersion}`);
     } else {
         console.log(`[${pack.id}] Successfully processed version ${targetVersion}`);
     }
