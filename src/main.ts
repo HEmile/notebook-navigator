@@ -642,20 +642,6 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     }
 
     /**
-     * Returns the latest known release version discovered by this device.
-     */
-    public getLatestKnownRelease(): string {
-        return this.preferencesController.getLatestKnownRelease();
-    }
-
-    /**
-     * Persists the latest known release version to local storage.
-     */
-    public setLatestKnownRelease(version: string): void {
-        this.preferencesController.setLatestKnownRelease(version);
-    }
-
-    /**
      * Retrieves recent colors history from vault-local storage.
      */
     public getRecentColors(): string[] {

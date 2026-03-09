@@ -305,19 +305,6 @@ export class PluginPreferencesController {
         localStorage.set(this.options.keys.releaseCheckTimestampKey, timestamp);
     }
 
-    public getLatestKnownRelease(): string {
-        const value = localStorage.get<unknown>(this.options.keys.latestKnownReleaseKey);
-        return typeof value === 'string' ? value : '';
-    }
-
-    public setLatestKnownRelease(version: string): void {
-        if (!version) {
-            return;
-        }
-
-        localStorage.set(this.options.keys.latestKnownReleaseKey, version);
-    }
-
     public getRecentColors(): string[] {
         const stored = localStorage.get<unknown>(this.options.keys.recentColorsKey);
         if (!Array.isArray(stored)) {

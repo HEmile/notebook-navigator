@@ -156,7 +156,8 @@ function parseCompactItemHeight(value: unknown): number | null {
 }
 
 /**
- * Migrates release check metadata from synced settings to vault-local storage.
+ * Migrates the release check timestamp from synced settings to vault-local storage.
+ * Removes the legacy synced release fields from persisted settings.
  */
 export function migrateReleaseCheckState(params: {
     settings: NotebookNavigatorSettings;
@@ -169,24 +170,16 @@ export function migrateReleaseCheckState(params: {
         typeof storedData?.['lastReleaseCheckAt'] === 'number' && Number.isFinite(storedData.lastReleaseCheckAt)
             ? storedData.lastReleaseCheckAt
             : null;
-    const storedKnownRelease = typeof storedData?.['latestKnownRelease'] === 'string' ? storedData.latestKnownRelease : '';
 
     const localTimestamp = localStorage.get<unknown>(keys.releaseCheckTimestampKey);
-    const localKnownRelease = localStorage.get<unknown>(keys.latestKnownReleaseKey);
 
     // Prefer local values, falling back to legacy synced values if local storage is unset.
     const resolvedTimestamp =
         typeof localTimestamp === 'number' && Number.isFinite(localTimestamp) ? localTimestamp : (storedTimestamp ?? null);
-    const resolvedKnownRelease =
-        typeof localKnownRelease === 'string' && localKnownRelease.length > 0 ? localKnownRelease : storedKnownRelease;
 
     // Write back only if the resolved value differs from the stored local value.
     if (resolvedTimestamp && resolvedTimestamp !== localTimestamp) {
         localStorage.set(keys.releaseCheckTimestampKey, resolvedTimestamp);
-    }
-
-    if (resolvedKnownRelease && resolvedKnownRelease !== localKnownRelease) {
-        localStorage.set(keys.latestKnownReleaseKey, resolvedKnownRelease);
     }
 
     delete (settings as unknown as Record<string, unknown>).lastReleaseCheckAt;

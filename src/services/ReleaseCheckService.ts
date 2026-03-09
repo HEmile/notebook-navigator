@@ -42,7 +42,7 @@ const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Checks GitHub releases to determine if a newer plugin version exists.
- * Persists metadata about the latest known release and check timestamps.
+ * Persists metadata about release check timestamps.
  */
 export default class ReleaseCheckService {
     private plugin: NotebookNavigatorPlugin;
@@ -69,7 +69,7 @@ export default class ReleaseCheckService {
 
     /**
      * Checks for a newer release if the minimum interval has passed.
-     * Returns the pending notice when a new version is available.
+     * Returns the pending notice when a fresh check finds a newer version.
      */
     public async checkForUpdates(force = false): Promise<ReleaseUpdateNotice | null> {
         // Prevent concurrent checks
@@ -81,20 +81,16 @@ export default class ReleaseCheckService {
         const now = Date.now();
         const lastCheck = this.plugin.getReleaseCheckTimestamp() ?? 0;
         if (!force && lastCheck && now - lastCheck < CHECK_INTERVAL_MS) {
-            this.pendingNotice = this.buildNoticeFromKnownRelease();
+            this.pendingNotice = null;
             return this.pendingNotice;
         }
 
         this.isChecking = true;
         try {
             const release = await this.fetchLatestRelease();
-            const previousKnownRelease = this.plugin.getLatestKnownRelease();
 
-            // Update last check timestamp and track new releases
+            // Update last check timestamp after a fresh check attempt
             this.plugin.setReleaseCheckTimestamp(now);
-            if (release && previousKnownRelease !== release.version) {
-                this.plugin.setLatestKnownRelease(release.version);
-            }
 
             // Compare versions if we have a release payload
             if (release) {
@@ -112,37 +108,16 @@ export default class ReleaseCheckService {
                     this.pendingNotice = null;
                 }
             } else {
-                this.pendingNotice = this.buildNoticeFromKnownRelease();
+                this.pendingNotice = null;
             }
 
             return this.pendingNotice;
         } catch {
-            this.pendingNotice = this.buildNoticeFromKnownRelease();
+            this.pendingNotice = null;
             return this.pendingNotice;
         } finally {
             this.isChecking = false;
         }
-    }
-
-    /**
-     * Builds a notice from the cached latest known release when it is newer than the current plugin version.
-     */
-    private buildNoticeFromKnownRelease(): ReleaseUpdateNotice | null {
-        const latestKnownRelease = this.plugin.getLatestKnownRelease();
-        if (!latestKnownRelease) {
-            return null;
-        }
-
-        const currentVersion = this.plugin.manifest.version;
-        if (compareVersions(latestKnownRelease, currentVersion) <= 0) {
-            return null;
-        }
-
-        return {
-            version: latestKnownRelease,
-            publishedAt: '',
-            url: ''
-        };
     }
 
     /**
