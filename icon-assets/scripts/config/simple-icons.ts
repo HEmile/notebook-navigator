@@ -3,7 +3,7 @@ import { IconPackConfig, ProcessContext, checkGitHubVersion, sortObject } from '
 export const simpleIcons: IconPackConfig = {
     id: 'simple-icons',
     name: 'Simple Icons',
-    version: '15.20.0',
+    version: '16.11.0',
     githubRepo: 'simple-icons/simple-icons',
 
     files: {

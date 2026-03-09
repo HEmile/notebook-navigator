@@ -98,6 +98,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
             'You can now click directly on property keys in the "Property key visibility modal" to quickly toggle visibility in all three places: navigation pane, list pane, and file menus.',
             'Shortcut rows no longer reserve trailing badge space when Shortcut badge is None.'
         ],
+        changed: [
+            'Updated fontawesome icons 7.1 to 7.2 and simple-icons 15.20 to 16.11. ==Important, this is a breaking change!==. Simple-icons removed 44 icons such as canva, openai and slack. If you used these icons you need to reassign them to new icons.'
+        ],
         fixed: [
             'Fixed an issue where deleting the active note could trigger "file not found" errors in Linter when "Lint on Focused File Change" is enabled.',
             'Fixed an issue where disabling "Show icons for shortcuts and recent items" also disabled the icon for the Properties root virtual folder.',

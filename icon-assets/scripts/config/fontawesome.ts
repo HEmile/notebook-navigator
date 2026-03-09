@@ -3,7 +3,7 @@ import { IconPackConfig, ProcessContext, checkGitHubVersion, sortObject, titleCa
 export const fontAwesome: IconPackConfig = {
     id: 'fontawesome',
     name: 'FontAwesome',
-    version: '7.1.0',
+    version: '7.2.0',
     githubRepo: 'FortAwesome/Font-Awesome',
 
     files: {
