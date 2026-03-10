@@ -26,6 +26,7 @@ import { addAsyncEventListener } from '../utils/domEventListeners';
 import type { MetadataService } from '../services/MetadataService';
 import { ItemType } from '../types';
 import { isStringRecordValue, sanitizeRecord } from '../utils/recordUtils';
+import { resolveFolderDisplayName } from '../utils/folderDisplayName';
 
 interface UXIconMapModalOptions {
     metadataService: MetadataService;
@@ -47,9 +48,12 @@ interface RowControls {
 }
 
 export class UXIconMapModal extends Modal {
+    private static readonly ROOT_FOLDER_PATH = '/';
+
     private iconService = getIconService();
     private rows: UXIconRow[];
     private initialMap: Record<string, string>;
+    private initialRootFolderIconId: string | null;
     private listEl: HTMLDivElement | null = null;
     private rowDisposers: (() => void)[] = [];
     private footerDisposers: (() => void)[] = [];
@@ -62,8 +66,23 @@ export class UXIconMapModal extends Modal {
         private options: UXIconMapModalOptions
     ) {
         super(app);
-        this.initialMap = sanitizeRecord(options.initialMap, isStringRecordValue);
+        this.initialMap = this.normalizeInterfaceIconMap(options.initialMap);
+        this.initialRootFolderIconId = this.normalizeMetadataIconId(options.metadataService.getFolderIcon(UXIconMapModal.ROOT_FOLDER_PATH));
         this.rows = this.deserializeRows(this.initialMap);
+    }
+
+    private isRootFolderRow(id: UXIconId): boolean {
+        return id === 'nav-folder-root';
+    }
+
+    private normalizeInterfaceIconMap(map: Record<string, string>): Record<string, string> {
+        const normalizedMap = sanitizeRecord(map, isStringRecordValue);
+        delete normalizedMap['nav-folder-root'];
+        return normalizedMap;
+    }
+
+    private normalizeMetadataIconId(iconId: string | undefined): string | null {
+        return iconId ? normalizeCanonicalIconId(iconId) : null;
     }
 
     onOpen(): void {
@@ -89,6 +108,17 @@ export class UXIconMapModal extends Modal {
     }
 
     private resolveRowLabel(id: UXIconId): string {
+        if (id === 'nav-folder-root') {
+            const settings = this.options.metadataService.getSettingsProvider().settings;
+            return resolveFolderDisplayName({
+                app: this.app,
+                metadataService: this.options.metadataService,
+                settings,
+                folderPath: UXIconMapModal.ROOT_FOLDER_PATH,
+                fallbackName: this.app.vault.getRoot().name
+            });
+        }
+
         const label = strings.modals.interfaceIcons.items[id];
         return typeof label === 'string' ? label : '';
     }
@@ -97,6 +127,12 @@ export class UXIconMapModal extends Modal {
         switch (category) {
             case 'navigationPane':
                 return strings.settings.items.startView.options.navigation;
+            case 'folders':
+                return strings.settings.sections.folders;
+            case 'tags':
+                return strings.settings.sections.tags;
+            case 'properties':
+                return strings.navigationPane.properties;
             case 'listPane':
                 return strings.settings.items.startView.options.files;
             case 'fileItems':
@@ -109,9 +145,13 @@ export class UXIconMapModal extends Modal {
     private deserializeRows(map: Record<string, string>): UXIconRow[] {
         return UX_ICON_DEFINITIONS.map(definition => {
             const defaultIconId = normalizeCanonicalIconId(definition.defaultIconId);
-            const stored = map[definition.id];
-            const overrideCandidate = stored ? deserializeIconFromFrontmatter(stored) : null;
-            const overrideIconId = overrideCandidate ? normalizeCanonicalIconId(overrideCandidate) : null;
+            const overrideIconId = this.isRootFolderRow(definition.id)
+                ? this.initialRootFolderIconId
+                : (() => {
+                      const stored = map[definition.id];
+                      const overrideCandidate = stored ? deserializeIconFromFrontmatter(stored) : null;
+                      return overrideCandidate ? normalizeCanonicalIconId(overrideCandidate) : null;
+                  })();
 
             return {
                 id: definition.id,
@@ -145,7 +185,7 @@ export class UXIconMapModal extends Modal {
         this.rowControls.clear();
         this.listEl.empty();
 
-        const categories: UXIconCategory[] = ['navigationPane', 'listPane', 'fileItems'];
+        const categories: UXIconCategory[] = ['navigationPane', 'folders', 'tags', 'properties', 'listPane', 'fileItems'];
         const rowsByCategory = new Map<UXIconCategory, UXIconRow[]>();
         this.rows.forEach(row => {
             const existing = rowsByCategory.get(row.category);
@@ -224,12 +264,18 @@ export class UXIconMapModal extends Modal {
 
         runAsyncAction(async () => {
             const { IconPickerModal } = await import('./IconPickerModal');
-            const picker = new IconPickerModal(this.app, this.options.metadataService, '', ItemType.FILE, {
-                titleOverride: row.label,
-                currentIconId: this.getEffectiveIconId(row),
-                showRemoveButton: true,
-                disableMetadataUpdates: true
-            });
+            const picker = new IconPickerModal(
+                this.app,
+                this.options.metadataService,
+                this.isRootFolderRow(iconKey) ? UXIconMapModal.ROOT_FOLDER_PATH : '',
+                this.isRootFolderRow(iconKey) ? ItemType.FOLDER : ItemType.FILE,
+                {
+                    titleOverride: row.label,
+                    currentIconId: this.getEffectiveIconId(row),
+                    showRemoveButton: true,
+                    disableMetadataUpdates: true
+                }
+            );
 
             picker.onChooseIcon = async iconId => {
                 this.setRowIcon(iconKey, iconId);
@@ -247,8 +293,12 @@ export class UXIconMapModal extends Modal {
         }
 
         const nextOverride = iconId ? normalizeCanonicalIconId(iconId) : null;
-        const defaultIcon = normalizeCanonicalIconId(row.defaultIconId);
-        row.overrideIconId = nextOverride && nextOverride !== defaultIcon ? nextOverride : null;
+        if (this.isRootFolderRow(iconKey)) {
+            row.overrideIconId = nextOverride;
+        } else {
+            const defaultIcon = normalizeCanonicalIconId(row.defaultIconId);
+            row.overrideIconId = nextOverride && nextOverride !== defaultIcon ? nextOverride : null;
+        }
 
         const controls = this.rowControls.get(iconKey);
         if (controls) {
@@ -314,6 +364,9 @@ export class UXIconMapModal extends Modal {
     private buildOverrideMap(): Record<string, string> {
         const map = sanitizeRecord<string>(undefined);
         this.rows.forEach(row => {
+            if (this.isRootFolderRow(row.id)) {
+                return;
+            }
             if (!row.overrideIconId) {
                 return;
             }
@@ -346,18 +399,35 @@ export class UXIconMapModal extends Modal {
         return true;
     }
 
+    private hasRootFolderIconChanged(): boolean {
+        const rootRow = this.rows.find(row => this.isRootFolderRow(row.id));
+        if (!rootRow) {
+            return false;
+        }
+
+        return rootRow.overrideIconId !== this.initialRootFolderIconId;
+    }
+
     private updateApplyButtonState(): void {
         if (!this.applyButton) {
             return;
         }
 
         const nextMap = this.buildOverrideMap();
-        this.applyButton.disabled = this.areMapsEqual(nextMap, this.initialMap);
+        this.applyButton.disabled = this.areMapsEqual(nextMap, this.initialMap) && !this.hasRootFolderIconChanged();
     }
 
     private applyChanges(): void {
         const nextMap = this.buildOverrideMap();
+        const rootRow = this.rows.find(row => this.isRootFolderRow(row.id));
         runAsyncAction(async () => {
+            if (rootRow) {
+                if (rootRow.overrideIconId) {
+                    await this.options.metadataService.setFolderIcon(UXIconMapModal.ROOT_FOLDER_PATH, rootRow.overrideIconId);
+                } else {
+                    await this.options.metadataService.removeFolderIcon(UXIconMapModal.ROOT_FOLDER_PATH);
+                }
+            }
             await this.options.onSave(nextMap);
             this.close();
         });

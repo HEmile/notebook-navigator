@@ -33,6 +33,7 @@ export type UXIconId =
     | 'nav-recent-files'
     | 'nav-tree-expand'
     | 'nav-tree-collapse'
+    | 'nav-folder-root'
     | 'nav-folder-open'
     | 'nav-folder-closed'
     | 'nav-tags'
@@ -50,7 +51,7 @@ export type UXIconId =
     | 'file-unfinished-task'
     | 'file-word-count';
 
-export type UXIconCategory = 'navigationPane' | 'listPane' | 'fileItems';
+export type UXIconCategory = 'navigationPane' | 'folders' | 'tags' | 'properties' | 'listPane' | 'fileItems';
 
 export interface UXIconDefinition {
     id: UXIconId;
@@ -72,13 +73,14 @@ export const UX_ICON_DEFINITIONS: UXIconDefinition[] = [
     { id: 'nav-recent-files', category: 'navigationPane', defaultIconId: 'history' },
     { id: 'nav-tree-expand', category: 'navigationPane', defaultIconId: 'chevron-right' },
     { id: 'nav-tree-collapse', category: 'navigationPane', defaultIconId: 'chevron-down' },
-    { id: 'nav-folder-open', category: 'navigationPane', defaultIconId: 'folder-open' },
-    { id: 'nav-folder-closed', category: 'navigationPane', defaultIconId: 'folder-closed' },
-    { id: 'nav-tags', category: 'navigationPane', defaultIconId: 'tags' },
-    { id: 'nav-tag', category: 'navigationPane', defaultIconId: 'tag' },
-    { id: 'nav-properties', category: 'navigationPane', defaultIconId: 'file-code' },
-    { id: 'nav-property', category: 'navigationPane', defaultIconId: 'align-left' },
-    { id: 'nav-property-value', category: 'navigationPane', defaultIconId: 'equal' },
+    { id: 'nav-folder-root', category: 'folders', defaultIconId: 'vault' },
+    { id: 'nav-folder-open', category: 'folders', defaultIconId: 'folder-open' },
+    { id: 'nav-folder-closed', category: 'folders', defaultIconId: 'folder-closed' },
+    { id: 'nav-tags', category: 'tags', defaultIconId: 'tags' },
+    { id: 'nav-tag', category: 'tags', defaultIconId: 'tag' },
+    { id: 'nav-properties', category: 'properties', defaultIconId: 'file-code' },
+    { id: 'nav-property', category: 'properties', defaultIconId: 'align-left' },
+    { id: 'nav-property-value', category: 'properties', defaultIconId: 'equal' },
     { id: 'list-search', category: 'listPane', defaultIconId: 'search' },
     { id: 'list-descendants', category: 'listPane', defaultIconId: 'layers' },
     { id: 'list-sort-ascending', category: 'listPane', defaultIconId: 'sort-asc' },
