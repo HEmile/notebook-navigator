@@ -33,8 +33,8 @@ import {App, CachedMetadata, MetadataCache, TFile} from 'obsidian';
 // Cache for note counts to avoid recalculation
 let noteCountCache: WeakMap<TopicNode, number> | null = null;
 
-export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw", "maand", "stroming", "festival", "genre"]
-export const HAS_TOPIC_RELATIONS = SUBSET_RELATIONS.concat(["hasTopic", "isA", "for", 'with', "voor", "author", "publishedIn", "by", "artiest", "live", "adres"])
+export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw", "maand", "stroming", "festival", "genre", "voor", "project"]
+export const HAS_TOPIC_RELATIONS = SUBSET_RELATIONS.concat(["hasTopic", "isA", "for", 'with', "author", "publishedIn", "by", "artiest", "live", "adres", "gerecht", "at"])
 export const TOPIC_TAGS = ["topic", "jaar", "decennium", "maand"]
 
 /**
@@ -133,6 +133,12 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
     }
     
     for (const parentTopic of topics) {
+        if (typeof parentTopic !== "string" || parentTopic.length === 0) {
+            continue;
+        }
+        if (!(parentTopic.startsWith('[[') && parentTopic.endsWith(']]'))) {
+            continue;
+        }
         // Use Obsidian API to resolve the parentTopic as a file path
         const parentFile = app.metadataCache.getFirstLinkpathDest(parentTopic.slice(2, -2).split("|")[0], "");
         if (!parentFile) {

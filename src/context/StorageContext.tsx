@@ -919,11 +919,14 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         const unsubscribe = db.onContentChange(changes => {
             if (stoppedRef.current) return;
             // Check if any changes include tags
-            const hasStructureChanges = changes.some(change => change.changes.tags !== undefined || change.changes.metadata !== undefined);
+            const hasStructureChanges = changes.some(change => change.changes.tags !== undefined);
 
             if (hasStructureChanges) {
-                // Rebuild topic tree when topics change
-                rebuildTopicTree();
+                // Set a timeout of 2 minutes (120000 ms) to rebuild topic tree
+                setTimeout(() => {
+                    console.log('rebuilding topic tree');
+                    rebuildTopicTree();
+                }, 120000);
             }
         });
 
