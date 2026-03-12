@@ -30,6 +30,8 @@ export const STRINGS_RU = {
         restoreDefault: 'Восстановить по умолчанию', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Отправить', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Настроить', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Светлый режим', // Label for light theme mode (English: Light mode)
+        darkMode: 'Тёмный режим', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Ничего не выбрано', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Без тегов', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Изображение', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1658,6 +1660,15 @@ export const STRINGS_RU = {
                 name: 'Применить к свойствам',
                 desc: 'Применить цвета радуги к свойствам.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Равномерная яркость между оттенками', // (English: Consistent brightness across hues)
+                desc: 'Интерполирует яркость между начальным и конечным цветами при переходах оттенков.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Раздельные цвета для светлого и тёмного режимов', // (English: Separate light and dark mode colors)
+                desc: 'Использовать разные цвета радуги для светлого и тёмного режимов.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Копировать цвет светлого режима в тёмный режим', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Область свойств',
                 desc: 'Выбрать уровни свойств для начала назначения цветов.',

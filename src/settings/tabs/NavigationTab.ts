@@ -413,6 +413,38 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
         }
     });
 
+    let navRainbowBalanceHueLuminanceToggle: ToggleComponent | null = null;
+    refreshRainbowSectionControls.push(() => {
+        navRainbowBalanceHueLuminanceToggle?.setValue(getActiveProfile().navRainbow.balanceHueLuminance);
+    });
+
+    new Setting(rainbowSubSettingsEl)
+        .setName(strings.settings.items.navRainbowBalanceHueLuminance.name)
+        .setDesc(strings.settings.items.navRainbowBalanceHueLuminance.desc)
+        .addToggle(toggle => {
+            navRainbowBalanceHueLuminanceToggle = toggle
+                .setValue(getActiveProfile().navRainbow.balanceHueLuminance)
+                .onChange(async value => {
+                    await updateNavRainbow(settings => ({ ...settings, balanceHueLuminance: value }));
+                });
+        });
+
+    let navRainbowSeparateThemeColorsToggle: ToggleComponent | null = null;
+    refreshRainbowSectionControls.push(() => {
+        navRainbowSeparateThemeColorsToggle?.setValue(getActiveProfile().navRainbow.separateThemeColors);
+    });
+
+    new Setting(rainbowSubSettingsEl)
+        .setName(strings.settings.items.navRainbowSeparateThemeColors.name)
+        .setDesc(strings.settings.items.navRainbowSeparateThemeColors.desc)
+        .addToggle(toggle => {
+            navRainbowSeparateThemeColorsToggle = toggle
+                .setValue(getActiveProfile().navRainbow.separateThemeColors)
+                .onChange(async value => {
+                    await updateNavRainbow(settings => ({ ...settings, separateThemeColors: value }));
+                });
+        });
+
     refreshNavRainbowControls();
     context.registerSettingsUpdateListener('navigation-pane-nav-rainbow', () => {
         refreshNavRainbowControls();

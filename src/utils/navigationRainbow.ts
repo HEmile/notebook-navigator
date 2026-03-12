@@ -57,6 +57,8 @@ interface NavRainbowPaletteSource {
     enabled: boolean;
     firstColor: string;
     lastColor: string;
+    darkFirstColor: string;
+    darkLastColor: string;
     transitionStyle: 'hue' | 'rgb';
 }
 
@@ -197,28 +199,66 @@ function resolveRainbowColorEndpoints(firstColor: string, lastColor: string): { 
     };
 }
 
-function buildSectionPalette(mode: NavRainbowColorMode, section: NavRainbowPaletteSource): string[] | null {
+/** Builds a section palette, selecting light or dark endpoint colors based on theme settings. */
+function buildSectionPaletteWithThemeSplit(params: {
+    mode: NavRainbowColorMode;
+    section: NavRainbowPaletteSource;
+    isDarkTheme: boolean;
+    balanceHueLuminance: boolean;
+    separateThemeColors: boolean;
+}): string[] | null {
+    const { mode, section, isDarkTheme, balanceHueLuminance, separateThemeColors } = params;
     if (mode === 'none' || !section.enabled) {
         return null;
     }
 
-    const { start, end } = resolveRainbowColorEndpoints(section.firstColor, section.lastColor);
+    const useDarkThemeColors = separateThemeColors && isDarkTheme;
+    const firstColor = useDarkThemeColors ? section.darkFirstColor : section.firstColor;
+    const lastColor = useDarkThemeColors ? section.darkLastColor : section.lastColor;
+    const { start, end } = resolveRainbowColorEndpoints(firstColor, lastColor);
     return buildRainbowPalette({
         steps: NAV_RAINBOW_PALETTE_SIZE,
         start,
         end,
-        style: section.transitionStyle
+        style: section.transitionStyle,
+        balanceHueLuminance
     });
 }
 
-export function buildNavigationRainbowPalettes(navRainbow: NavRainbowSettings): NavigationRainbowPalettes {
+export function buildNavigationRainbowPalettes(navRainbow: NavRainbowSettings, isDarkTheme: boolean): NavigationRainbowPalettes {
     const mode = navRainbow.mode;
+    const balanceHueLuminance = navRainbow.balanceHueLuminance;
+    const separateThemeColors = navRainbow.separateThemeColors;
     return {
-        folder: buildSectionPalette(mode, navRainbow.folders),
-        tag: buildSectionPalette(mode, navRainbow.tags),
-        property: buildSectionPalette(mode, navRainbow.properties),
-        shortcut: buildSectionPalette(mode, navRainbow.shortcuts),
-        recent: buildSectionPalette(mode, navRainbow.recent)
+        folder: buildSectionPaletteWithThemeSplit({
+            mode,
+            section: navRainbow.folders,
+            isDarkTheme,
+            balanceHueLuminance,
+            separateThemeColors
+        }),
+        tag: buildSectionPaletteWithThemeSplit({ mode, section: navRainbow.tags, isDarkTheme, balanceHueLuminance, separateThemeColors }),
+        property: buildSectionPaletteWithThemeSplit({
+            mode,
+            section: navRainbow.properties,
+            isDarkTheme,
+            balanceHueLuminance,
+            separateThemeColors
+        }),
+        shortcut: buildSectionPaletteWithThemeSplit({
+            mode,
+            section: navRainbow.shortcuts,
+            isDarkTheme,
+            balanceHueLuminance,
+            separateThemeColors
+        }),
+        recent: buildSectionPaletteWithThemeSplit({
+            mode,
+            section: navRainbow.recent,
+            isDarkTheme,
+            balanceHueLuminance,
+            separateThemeColors
+        })
     };
 }
 

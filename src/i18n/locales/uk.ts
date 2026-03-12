@@ -30,6 +30,8 @@ export const STRINGS_UK = {
         restoreDefault: 'Відновити за замовчуванням', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Надіслати', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Налаштувати', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Світлий режим', // Label for light theme mode (English: Light mode)
+        darkMode: 'Темний режим', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Нічого не вибрано', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Без тегів', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Головне зображення', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1658,6 +1660,15 @@ export const STRINGS_UK = {
                 name: 'Застосувати до властивостей',
                 desc: 'Застосувати кольори веселки до властивостей.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Рівномірна яскравість між відтінками', // (English: Consistent brightness across hues)
+                desc: 'Інтерполює яскравість між початковим і кінцевим кольорами під час переходів відтінків.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Окремі кольори для світлого і темного режимів', // (English: Separate light and dark mode colors)
+                desc: 'Використовувати різні кольори веселки для світлого і темного режимів.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Копіювати колір світлого режиму в темний режим', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Область властивостей',
                 desc: 'Вибрати рівні властивостей для початку призначення кольорів.',

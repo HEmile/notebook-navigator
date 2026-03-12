@@ -80,6 +80,10 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.5.1',
         date: '2026-03-16',
         showOnUpdate: true,
+        new: [
+            'New setting: Navigation > Rainbow colors > ==Consistent brightness across hues==. If enabled (default), hue transitions use the same brightness levels.',
+            'New setting: Navigation > Rainbow colors > ==Separate light and dark mode colors==. Configure different colors for light and dark mode. Default disabled.'
+        ],
         improved: [
             'Property tree now shows the values for boolean `true` and `false`.',
             'Property tree now treats frontmatter `null` values as unassigned instead of converting them to `true`.'

@@ -30,6 +30,8 @@ export const STRINGS_KO = {
         restoreDefault: '기본값 복원', // Button text for restoring values to defaults (English: Restore default)
         submit: '제출', // Button text for submitting forms and dialogs (English: Submit)
         configure: '구성', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: '라이트 모드', // Label for light theme mode (English: Light mode)
+        darkMode: '다크 모드', // Label for dark theme mode (English: Dark mode)
         noSelection: '선택 없음', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: '태그 없음', // Label for notes without any tags (English: Untagged)
         featureImageAlt: '대표 이미지', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1659,6 +1661,15 @@ export const STRINGS_KO = {
                 name: '속성에 적용',
                 desc: '무지개 색상을 속성에 적용합니다.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: '색상 간 일관된 밝기', // (English: Consistent brightness across hues)
+                desc: '색상 전환 중 시작 색상과 끝 색상 사이의 밝기를 보간합니다.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: '라이트 및 다크 모드 색상 분리', // (English: Separate light and dark mode colors)
+                desc: '라이트 모드와 다크 모드에서 서로 다른 레인보우 색상을 사용합니다.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: '라이트 모드 색상을 다크 모드로 복사', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: '속성 범위',
                 desc: '색상 할당을 시작할 속성 수준을 선택합니다.',

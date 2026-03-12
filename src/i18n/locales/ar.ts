@@ -30,6 +30,8 @@ export const STRINGS_AR = {
         restoreDefault: 'استعادة الافتراضي', // Button text for restoring values to defaults (English: Restore default)
         submit: 'إرسال', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'تكوين', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'الوضع الفاتح', // Label for light theme mode (English: Light mode)
+        darkMode: 'الوضع الداكن', // Label for dark theme mode (English: Dark mode)
         noSelection: 'لا يوجد تحديد', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'بدون وسم', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'صورة مميزة', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1658,6 +1660,15 @@ export const STRINGS_AR = {
                 name: 'تطبيق على الخصائص',
                 desc: 'تطبيق ألوان قوس قزح على الخصائص.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'سطوع متسق عبر الألوان', // (English: Consistent brightness across hues)
+                desc: 'يُقحم السطوع بين ألوان البداية والنهاية أثناء انتقالات الألوان.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'فصل ألوان الوضع الفاتح والداكن', // (English: Separate light and dark mode colors)
+                desc: 'استخدام ألوان قوس قزح مختلفة للوضع الفاتح والوضع الداكن.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'نسخ لون الوضع الفاتح إلى الوضع الداكن', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'نطاق الخصائص',
                 desc: 'تحديد مستويات الخصائص التي تبدأ تعيينات الألوان.',

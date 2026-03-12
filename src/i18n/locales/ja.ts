@@ -30,6 +30,8 @@ export const STRINGS_JA = {
         restoreDefault: 'デフォルトに戻す', // Button text for restoring values to defaults (English: Restore default)
         submit: '送信', // Button text for submitting forms and dialogs (English: Submit)
         configure: '設定', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'ライトモード', // Label for light theme mode (English: Light mode)
+        darkMode: 'ダークモード', // Label for dark theme mode (English: Dark mode)
         noSelection: '選択なし', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'タグなし', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'アイキャッチ画像', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1660,6 +1662,15 @@ export const STRINGS_JA = {
                 name: 'プロパティに適用',
                 desc: 'レインボーカラーをプロパティに適用します。'
             },
+            navRainbowBalanceHueLuminance: {
+                name: '色相間で一貫した明るさ', // (English: Consistent brightness across hues)
+                desc: '色相の遷移中に開始色と終了色の間で明るさを補間します。' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'ライトモードとダークモードの色を分離', // (English: Separate light and dark mode colors)
+                desc: 'ライトモードとダークモードで異なるレインボーカラーを使用します。' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'ライトモードの色をダークモードにコピー', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'プロパティ範囲',
                 desc: 'カラー割り当てを開始するプロパティレベルを選択します。',

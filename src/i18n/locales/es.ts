@@ -30,6 +30,8 @@ export const STRINGS_ES = {
         restoreDefault: 'Restaurar predeterminado', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Enviar', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Configurar', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Modo claro', // Label for light theme mode (English: Light mode)
+        darkMode: 'Modo oscuro', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Sin selección', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Sin etiquetas', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Imagen destacada', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1663,6 +1665,15 @@ export const STRINGS_ES = {
                 name: 'Aplicar a propiedades',
                 desc: 'Aplicar colores arcoíris a las propiedades.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Brillo uniforme entre tonos', // (English: Consistent brightness across hues)
+                desc: 'Interpola el brillo entre los colores de inicio y fin durante las transiciones de tono.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Colores separados para modo claro y oscuro', // (English: Separate light and dark mode colors)
+                desc: 'Usar colores de arcoíris diferentes para el modo claro y el modo oscuro.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Copiar color del modo claro al modo oscuro', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Alcance de propiedades',
                 desc: 'Seleccionar qué niveles de propiedad inician asignaciones de color.',

@@ -30,6 +30,8 @@ export const STRINGS_TR = {
         restoreDefault: 'Varsayılana geri yükle', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Gönder', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Yapılandır', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Açık mod', // Label for light theme mode (English: Light mode)
+        darkMode: 'Koyu mod', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Seçim yok', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Etiketsiz', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Öne çıkan görsel', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1660,6 +1662,15 @@ export const STRINGS_TR = {
                 name: 'Özelliklere uygula',
                 desc: 'Gökkuşağı renklerini özelliklere uygula.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Tonlar arasında tutarlı parlaklık', // (English: Consistent brightness across hues)
+                desc: 'Ton geçişleri sırasında başlangıç ve bitiş renkleri arasındaki parlaklığı enterpolasyon yapar.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Açık ve koyu mod için ayrı renkler', // (English: Separate light and dark mode colors)
+                desc: 'Açık mod ve koyu mod için farklı gökkuşağı renkleri kullanın.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Açık mod rengini koyu moda kopyala', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Özellik kapsamı',
                 desc: 'Renk atamalarını hangi özellik düzeylerinin başlatacağını seçin.',

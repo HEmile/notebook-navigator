@@ -24,6 +24,7 @@ import type { PropertyTreeNode, TagTreeNode } from '../../src/types/storage';
 import { buildRainbowPalette, parseCssColor } from '../../src/utils/colorUtils';
 import {
     applyRainbowOverlay,
+    buildNavigationRainbowPalettes,
     buildFolderRainbowColors,
     buildPropertyRainbowColors,
     buildTagRainbowColors
@@ -320,5 +321,172 @@ describe('navigationRainbow', () => {
         expect(propertyRainbow.colorsByNodeId.has('key:status')).toBe(false);
         expect(propertyRainbow.colorsByNodeId.has('key:status=todo')).toBe(true);
         expect(propertyRainbow.colorsByNodeId.has('key:status=done')).toBe(true);
+    });
+
+    it('reuses light rainbow colors in dark mode when separate theme colors are disabled', () => {
+        const navRainbow = {
+            mode: 'foreground' as const,
+            balanceHueLuminance: true,
+            separateThemeColors: false,
+            shortcuts: {
+                enabled: true,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const
+            },
+            recent: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const
+            },
+            folders: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const,
+                scope: 'root' as const
+            },
+            tags: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const,
+                scope: 'root' as const
+            },
+            properties: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const,
+                scope: 'root' as const
+            }
+        };
+
+        const darkPalettes = buildNavigationRainbowPalettes(navRainbow, true);
+        const lightPalettes = buildNavigationRainbowPalettes(navRainbow, false);
+
+        expect(darkPalettes.shortcut?.[0]).toBe(lightPalettes.shortcut?.[0]);
+    });
+
+    it('uses dark rainbow colors in dark mode when separate theme colors are enabled', () => {
+        const navRainbow = {
+            mode: 'foreground' as const,
+            balanceHueLuminance: true,
+            separateThemeColors: true,
+            shortcuts: {
+                enabled: true,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const
+            },
+            recent: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const
+            },
+            folders: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const,
+                scope: 'root' as const
+            },
+            tags: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const,
+                scope: 'root' as const
+            },
+            properties: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#aaaaaa',
+                darkLastColor: '#bbbbbb',
+                transitionStyle: 'rgb' as const,
+                scope: 'root' as const
+            }
+        };
+
+        const darkPalettes = buildNavigationRainbowPalettes(navRainbow, true);
+        const lightPalettes = buildNavigationRainbowPalettes(navRainbow, false);
+
+        expect(darkPalettes.shortcut?.[0]).not.toBe(lightPalettes.shortcut?.[0]);
+    });
+
+    it('changes hue palettes when luminance balancing is disabled', () => {
+        const baseNavRainbow = {
+            mode: 'foreground' as const,
+            separateThemeColors: false,
+            shortcuts: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#111111',
+                darkLastColor: '#222222',
+                transitionStyle: 'rgb' as const
+            },
+            recent: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#111111',
+                darkLastColor: '#222222',
+                transitionStyle: 'rgb' as const
+            },
+            folders: {
+                enabled: true,
+                firstColor: '#ff0000',
+                lastColor: '#0000ff',
+                darkFirstColor: '#ff0000',
+                darkLastColor: '#0000ff',
+                transitionStyle: 'hue' as const,
+                scope: 'root' as const
+            },
+            tags: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#111111',
+                darkLastColor: '#222222',
+                transitionStyle: 'rgb' as const,
+                scope: 'root' as const
+            },
+            properties: {
+                enabled: false,
+                firstColor: '#111111',
+                lastColor: '#222222',
+                darkFirstColor: '#111111',
+                darkLastColor: '#222222',
+                transitionStyle: 'rgb' as const,
+                scope: 'root' as const
+            }
+        };
+
+        const balancedPalettes = buildNavigationRainbowPalettes({ ...baseNavRainbow, balanceHueLuminance: true }, false);
+        const simplePalettes = buildNavigationRainbowPalettes({ ...baseNavRainbow, balanceHueLuminance: false }, false);
+
+        expect(balancedPalettes.folder?.[512]).not.toBe(simplePalettes.folder?.[512]);
     });
 });

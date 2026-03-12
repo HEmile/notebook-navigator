@@ -39,15 +39,21 @@ SYNC_MODE_SETTING_IDS.forEach(settingId => {
 
 const NAV_RAINBOW_FIRST_COLOR_DEFAULT = '#ef4444';
 const NAV_RAINBOW_LAST_COLOR_DEFAULT = '#8b5cf6';
+const NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT = '#fb7185';
+const NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT = '#c084fc';
 const UNFINISHED_TASK_BACKGROUND_COLOR_DEFAULT = '#ef000050';
 
 export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
     mode: 'none',
+    balanceHueLuminance: true,
+    separateThemeColors: false,
 
     shortcuts: {
         enabled: false,
         firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
         lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
         transitionStyle: 'rgb'
     },
 
@@ -55,6 +61,8 @@ export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
         enabled: false,
         firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
         lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
         transitionStyle: 'rgb'
     },
 
@@ -62,6 +70,8 @@ export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
         enabled: true,
         firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
         lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT,
         transitionStyle: 'hue',
         scope: 'root'
     },
@@ -70,6 +80,8 @@ export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
         enabled: false,
         firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
         lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT,
         transitionStyle: 'hue',
         scope: 'root'
     },
@@ -78,6 +90,8 @@ export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
         enabled: false,
         firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
         lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT,
         transitionStyle: 'hue',
         scope: 'root'
     }
@@ -86,6 +100,8 @@ export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
 function createDefaultNavRainbowSettings(): NavRainbowSettings {
     return {
         mode: NAV_RAINBOW_DEFAULTS.mode,
+        balanceHueLuminance: NAV_RAINBOW_DEFAULTS.balanceHueLuminance,
+        separateThemeColors: NAV_RAINBOW_DEFAULTS.separateThemeColors,
         shortcuts: { ...NAV_RAINBOW_DEFAULTS.shortcuts },
         recent: { ...NAV_RAINBOW_DEFAULTS.recent },
         folders: { ...NAV_RAINBOW_DEFAULTS.folders },

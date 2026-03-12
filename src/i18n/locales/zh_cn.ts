@@ -30,6 +30,8 @@ export const STRINGS_ZH_CN = {
         restoreDefault: '恢复默认', // Button text for restoring values to defaults (English: Restore default)
         submit: '提交', // Button text for submitting forms and dialogs (English: Submit)
         configure: '配置', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: '浅色模式', // Label for light theme mode (English: Light mode)
+        darkMode: '深色模式', // Label for dark theme mode (English: Dark mode)
         noSelection: '未选择', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: '无标签', // Label for notes without any tags (English: Untagged)
         featureImageAlt: '特色图片', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1653,6 +1655,15 @@ export const STRINGS_ZH_CN = {
                 name: '应用到属性',
                 desc: '将彩虹颜色应用到属性。'
             },
+            navRainbowBalanceHueLuminance: {
+                name: '色相间一致的亮度', // (English: Consistent brightness across hues)
+                desc: '在色相过渡期间在起始颜色和结束颜色之间插值亮度。' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: '分别设置浅色和深色模式颜色', // (English: Separate light and dark mode colors)
+                desc: '为浅色模式和深色模式使用不同的彩虹颜色。' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: '将浅色模式颜色复制到深色模式', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: '属性范围',
                 desc: '选择哪些属性级别开始颜色分配。',

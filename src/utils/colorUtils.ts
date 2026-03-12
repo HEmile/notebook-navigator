@@ -571,6 +571,89 @@ function interpolateRgb(start: RGBA, end: RGBA, t: number): RGBA {
     };
 }
 
+interface HSLA {
+    h: number;
+    s: number;
+    l: number;
+    a: number;
+}
+
+/** Converts an RGBA color to HSLA. */
+function rgbaToHsla(color: RGBA): HSLA {
+    const r = clampChannel(color.r) / 255;
+    const g = clampChannel(color.g) / 255;
+    const b = clampChannel(color.b) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+    const l = (max + min) / 2;
+
+    if (delta === 0) {
+        return { h: 0, s: 0, l, a: clampAlpha(color.a) };
+    }
+
+    const s = delta / (1 - Math.abs(2 * l - 1));
+    let h = 0;
+
+    if (max === r) {
+        h = ((g - b) / delta) % 6;
+    } else if (max === g) {
+        h = (b - r) / delta + 2;
+    } else {
+        h = (r - g) / delta + 4;
+    }
+
+    return {
+        h: (h * 60 + 360) % 360,
+        s,
+        l,
+        a: clampAlpha(color.a)
+    };
+}
+
+/** Converts a hue sector value to an RGB channel. */
+function hueToRgb(p: number, q: number, t: number): number {
+    let normalizedT = t;
+    if (normalizedT < 0) {
+        normalizedT += 1;
+    }
+    if (normalizedT > 1) {
+        normalizedT -= 1;
+    }
+    if (normalizedT < 1 / 6) {
+        return p + (q - p) * 6 * normalizedT;
+    }
+    if (normalizedT < 1 / 2) {
+        return q;
+    }
+    if (normalizedT < 2 / 3) {
+        return p + (q - p) * (2 / 3 - normalizedT) * 6;
+    }
+    return p;
+}
+
+/** Converts an HSLA color to RGBA. */
+function hslaToRgba(color: HSLA): RGBA {
+    const h = (((color.h % 360) + 360) % 360) / 360;
+    const s = clampUnit(color.s);
+    const l = clampUnit(color.l);
+    const a = clampAlpha(color.a);
+
+    if (s === 0) {
+        const channel = clampChannel(l * 255);
+        return { r: channel, g: channel, b: channel, a };
+    }
+
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    return {
+        r: clampChannel(hueToRgb(p, q, h + 1 / 3) * 255),
+        g: clampChannel(hueToRgb(p, q, h) * 255),
+        b: clampChannel(hueToRgb(p, q, h - 1 / 3) * 255),
+        a
+    };
+}
+
 /**
  * Builds a hue interpolator in OKLCH space and keeps luminance aligned with the end-point ramp.
  */
@@ -603,14 +686,51 @@ export function createHueInterpolator(start: RGBA, end: RGBA): (t: number) => RG
     };
 }
 
+/** Builds a hue interpolator in HSL space without OKLCH luminance balancing. */
+function createSimpleHueInterpolator(start: RGBA, end: RGBA): (t: number) => RGBA {
+    const startHsl = rgbaToHsla(start);
+    const endHsl = rgbaToHsla(end);
+
+    let hueDelta = endHsl.h - startHsl.h;
+    if (hueDelta < 0) {
+        hueDelta += 360;
+    }
+
+    return (t: number) => {
+        const clampedT = clampUnit(t);
+        if (clampedT <= 0) {
+            return start;
+        }
+        if (clampedT >= 1) {
+            return end;
+        }
+
+        return hslaToRgba({
+            h: (startHsl.h + hueDelta * clampedT) % 360,
+            s: lerp(startHsl.s, endHsl.s, clampedT),
+            l: lerp(startHsl.l, endHsl.l, clampedT),
+            a: lerp(startHsl.a, endHsl.a, clampedT)
+        });
+    };
+}
+
 /** Builds a fixed-size palette for a start/end gradient and a transition style. */
-export function buildRainbowPalette(params: { steps: number; start: RGBA; end: RGBA; style: 'hue' | 'rgb' }): string[] {
+export function buildRainbowPalette(params: {
+    steps: number;
+    start: RGBA;
+    end: RGBA;
+    style: 'hue' | 'rgb';
+    balanceHueLuminance?: boolean;
+}): string[] {
     const steps = Math.max(2, Math.floor(params.steps));
     const maxIndex = steps - 1;
 
     const palette = new Array<string>(steps);
     if (params.style === 'hue') {
-        const interpolate = createHueInterpolator(params.start, params.end);
+        const interpolate =
+            params.balanceHueLuminance === false
+                ? createSimpleHueInterpolator(params.start, params.end)
+                : createHueInterpolator(params.start, params.end);
         for (let i = 0; i < steps; i++) {
             palette[i] = toCssRgba(interpolate(i / maxIndex));
         }

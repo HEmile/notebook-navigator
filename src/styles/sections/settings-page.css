@@ -222,6 +222,7 @@
 .nn-setting-color-preview {
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     margin-inline-end: var(--size-2-2);
 }
 
@@ -241,6 +242,33 @@
 
 .nn-setting-color-swatch-button:hover {
     border-color: var(--text-muted);
+}
+
+.nn-setting-color-swatch-button.nn-setting-color-swatch-button-dark {
+    background: #111827;
+    border-color: #374151;
+}
+
+.nn-setting-color-swatch-button.nn-setting-color-swatch-button-dark:hover {
+    border-color: #4b5563;
+}
+
+.nn-setting-color-copy-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.nn-setting-color-copy-button:hover {
+    color: var(--text-normal);
 }
 
 .nn-setting-color-swatch {

@@ -30,6 +30,8 @@ export const STRINGS_EN = {
         restoreDefault: 'Restore default', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Submit', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Configure', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Light mode',
+        darkMode: 'Dark mode',
         noSelection: 'No selection', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Untagged', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Feature image', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1654,6 +1656,15 @@ export const STRINGS_EN = {
                 name: 'Apply to properties',
                 desc: 'Apply rainbow colors to properties.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Consistent brightness across hues',
+                desc: 'Interpolates brightness between the start and end colors during hue transitions.'
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Separate light and dark mode colors',
+                desc: 'Use different rainbow colors for light mode and dark mode.'
+            },
+            navRainbowCopyLightToDark: 'Copy light mode color to dark mode',
             navRainbowPropertyScope: {
                 name: 'Property scope',
                 desc: 'Select which property levels start color assignments.',

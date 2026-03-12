@@ -30,6 +30,8 @@ export const STRINGS_TH = {
         restoreDefault: 'คืนค่าเริ่มต้น', // Button text for restoring values to defaults (English: Restore default)
         submit: 'ส่ง',
         configure: 'กำหนดค่า', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'โหมดสว่าง', // Label for light theme mode (English: Light mode)
+        darkMode: 'โหมดมืด', // Label for dark theme mode (English: Dark mode)
         noSelection: 'ไม่มีการเลือก',
         untagged: 'ไม่มีแท็ก',
         featureImageAlt: 'รูปภาพประกอบ',
@@ -1656,6 +1658,15 @@ export const STRINGS_TH = {
                 name: 'ใช้กับคุณสมบัติ',
                 desc: 'ใช้สีรุ้งกับคุณสมบัติ'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'ความสว่างสม่ำเสมอข้ามเฉดสี', // (English: Consistent brightness across hues)
+                desc: 'ประมาณค่าความสว่างระหว่างสีเริ่มต้นและสีสุดท้ายระหว่างการเปลี่ยนเฉดสี' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'แยกสีโหมดสว่างและโหมดมืด', // (English: Separate light and dark mode colors)
+                desc: 'ใช้สีรุ้งที่แตกต่างกันสำหรับโหมดสว่างและโหมดมืด' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'คัดลอกสีโหมดสว่างไปยังโหมดมืด', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'ขอบเขตคุณสมบัติ',
                 desc: 'เลือกระดับคุณสมบัติที่เริ่มกำหนดสี',

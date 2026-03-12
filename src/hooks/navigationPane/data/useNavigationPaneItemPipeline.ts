@@ -108,6 +108,10 @@ const isRecentNavigationItem = (item: CombinedNavigationItem): boolean => {
     return item.type === NavigationPaneItemType.RECENT_NOTE;
 };
 
+const isDarkThemeActive = (): boolean => {
+    return document.body?.classList.contains('theme-dark') ?? false;
+};
+
 export function useNavigationPaneItemPipeline({
     app,
     settings,
@@ -128,7 +132,36 @@ export function useNavigationPaneItemPipeline({
     metadataDecorationVersion
 }: UseNavigationPaneItemPipelineParams): NavigationPaneItemPipelineResult {
     const previousNavRainbowRef = useRef<ReturnType<typeof getActiveNavRainbowSettings> | null>(null);
+    const [isDarkTheme, setIsDarkTheme] = useState(() => isDarkThemeActive());
     const normalizedSectionOrder = useMemo(() => sanitizeNavigationSectionOrder(sectionOrder), [sectionOrder]);
+
+    // Track dark/light theme changes via body class observation and Obsidian's css-change event
+    useEffect(() => {
+        const syncTheme = () => {
+            setIsDarkTheme(previousTheme => {
+                const nextTheme = isDarkThemeActive();
+                return previousTheme === nextTheme ? previousTheme : nextTheme;
+            });
+        };
+
+        const bodyObserver = document.body
+            ? new MutationObserver(() => {
+                  syncTheme();
+              })
+            : null;
+        bodyObserver?.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        const cssChangeRef = app.workspace.on('css-change', syncTheme);
+        syncTheme();
+
+        return () => {
+            bodyObserver?.disconnect();
+            app.workspace.offref(cssChangeRef);
+        };
+    }, [app]);
 
     const { items, sectionSpacerMap, firstSectionId } = useMemo(() => {
         const allItems: CombinedNavigationItem[] = [];
@@ -403,7 +436,7 @@ export function useNavigationPaneItemPipeline({
         previousNavRainbowRef.current = nextNavRainbow;
         return nextNavRainbow;
     }, [settings]);
-    const navRainbowPalettes = useMemo(() => buildNavigationRainbowPalettes(navRainbow), [navRainbow]);
+    const navRainbowPalettes = useMemo(() => buildNavigationRainbowPalettes(navRainbow, isDarkTheme), [isDarkTheme, navRainbow]);
 
     const folderRainbowColors = useMemo(() => {
         const palette = navRainbowPalettes.folder;

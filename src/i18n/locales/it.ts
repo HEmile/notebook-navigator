@@ -30,6 +30,8 @@ export const STRINGS_IT = {
         restoreDefault: 'Ripristina predefinito', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Invia', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Configura', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Modalità chiara', // Label for light theme mode (English: Light mode)
+        darkMode: 'Modalità scura', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Nessuna selezione', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Senza tag', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Immagine in evidenza', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1659,6 +1661,15 @@ export const STRINGS_IT = {
                 name: 'Applica alle proprietà',
                 desc: 'Applica colori arcobaleno alle proprietà.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Luminosità uniforme tra le tonalità', // (English: Consistent brightness across hues)
+                desc: 'Interpola la luminosità tra i colori iniziale e finale durante le transizioni di tonalità.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Colori separati per modalità chiara e scura', // (English: Separate light and dark mode colors)
+                desc: 'Usa colori arcobaleno diversi per la modalità chiara e la modalità scura.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Copia il colore della modalità chiara nella modalità scura', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Ambito proprietà',
                 desc: 'Seleziona quali livelli di proprietà avviano le assegnazioni di colore.',

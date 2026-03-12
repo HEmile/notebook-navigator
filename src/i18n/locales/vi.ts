@@ -30,6 +30,8 @@ export const STRINGS_VI = {
         restoreDefault: 'Khôi phục mặc định', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Gửi', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Cấu hình', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Chế độ sáng', // Label for light theme mode (English: Light mode)
+        darkMode: 'Chế độ tối', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Chưa chọn gì', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Không có thẻ', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Ảnh nổi bật', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1661,6 +1663,15 @@ export const STRINGS_VI = {
                 name: 'Áp dụng cho thuộc tính',
                 desc: 'Áp dụng màu cầu vồng cho thuộc tính.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Độ sáng đồng nhất giữa các sắc độ', // (English: Consistent brightness across hues)
+                desc: 'Nội suy độ sáng giữa màu bắt đầu và màu kết thúc trong quá trình chuyển đổi sắc độ.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Tách riêng màu chế độ sáng và tối', // (English: Separate light and dark mode colors)
+                desc: 'Sử dụng màu cầu vồng khác nhau cho chế độ sáng và chế độ tối.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Sao chép màu chế độ sáng sang chế độ tối', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Phạm vi thuộc tính',
                 desc: 'Chọn cấp thuộc tính bắt đầu gán màu.',

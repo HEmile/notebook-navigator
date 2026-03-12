@@ -30,6 +30,8 @@ export const STRINGS_PL = {
         restoreDefault: 'Przywróć domyślne', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Wyślij', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Konfiguruj', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Tryb jasny', // Label for light theme mode (English: Light mode)
+        darkMode: 'Tryb ciemny', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Nie wybrano', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Bez tagów', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Wyróżniony obraz', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1664,6 +1666,15 @@ export const STRINGS_PL = {
                 name: 'Zastosuj do właściwości',
                 desc: 'Zastosuj kolory tęczy do właściwości.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Spójna jasność dla odcieni', // (English: Consistent brightness across hues)
+                desc: 'Interpoluje jasność między kolorami początkowymi i końcowymi podczas przejść odcieni.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Oddzielne kolory dla trybu jasnego i ciemnego', // (English: Separate light and dark mode colors)
+                desc: 'Użyj różnych kolorów tęczy dla trybu jasnego i trybu ciemnego.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Kopiuj kolor trybu jasnego do trybu ciemnego', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Zakres właściwości',
                 desc: 'Wybierz, które poziomy właściwości rozpoczynają przypisywanie kolorów.',

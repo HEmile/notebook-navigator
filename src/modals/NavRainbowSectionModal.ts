@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, Modal, Setting } from 'obsidian';
+import { App, Modal, Setting, setIcon } from 'obsidian';
 import NotebookNavigatorPlugin from '../main';
 import { strings } from '../i18n';
 import { runAsyncAction } from '../utils/async';
@@ -34,15 +34,17 @@ import { getActiveVaultProfile } from '../utils/vaultProfiles';
 type NavRainbowSectionId = 'shortcuts' | 'recent' | 'folders' | 'tags' | 'properties';
 
 interface ColorSettingAccess {
-    getValue: () => string;
-    setValue: (value: string) => void;
-    defaultValue: string;
+    getLightValue: () => string;
+    setLightValue: (value: string) => void;
+    lightDefaultValue: string;
+    getDarkValue: () => string;
+    setDarkValue: (value: string) => void;
+    darkDefaultValue: string;
 }
 
 interface TransitionStyleSettingAccess {
     getValue: () => NavRainbowTransitionStyle;
     setValue: (value: NavRainbowTransitionStyle) => void;
-    defaultValue: NavRainbowTransitionStyle;
 }
 
 interface LevelScopeSettingAccess {
@@ -58,6 +60,9 @@ interface LevelScopeSettingAccess {
 
 interface NavRainbowSectionSettingsAccess {
     sectionLabel: string;
+    separateThemeColors: {
+        getValue: () => boolean;
+    };
     firstColor: ColorSettingAccess;
     lastColor: ColorSettingAccess;
     transitionStyle: TransitionStyleSettingAccess;
@@ -98,14 +103,16 @@ export class NavRainbowSectionModal extends Modal {
             containerEl: contentEl,
             name: strings.settings.items.navRainbowFirstColor.name,
             desc: strings.settings.items.navRainbowFirstColor.desc,
-            access: access.firstColor
+            access: access.firstColor,
+            separateThemeColors: access.separateThemeColors.getValue()
         });
 
         this.createColorSetting({
             containerEl: contentEl,
             name: strings.settings.items.navRainbowLastColor.name,
             desc: strings.settings.items.navRainbowLastColor.desc,
-            access: access.lastColor
+            access: access.lastColor,
+            separateThemeColors: access.separateThemeColors.getValue()
         });
 
         new Setting(contentEl)
@@ -261,26 +268,38 @@ export class NavRainbowSectionModal extends Modal {
 
         const access: NavRainbowSectionSettingsAccess = {
             sectionLabel: params.sectionLabel,
+            separateThemeColors: {
+                getValue: () => getNavRainbow()?.separateThemeColors ?? NAV_RAINBOW_DEFAULTS.separateThemeColors
+            },
             firstColor: {
-                getValue: () => getSection().firstColor,
-                setValue: value => {
+                getLightValue: () => getSection().firstColor,
+                setLightValue: value => {
                     updateSection(section => ({ ...section, firstColor: value }));
                 },
-                defaultValue: params.defaultSection.firstColor
+                lightDefaultValue: params.defaultSection.firstColor,
+                getDarkValue: () => getSection().darkFirstColor,
+                setDarkValue: value => {
+                    updateSection(section => ({ ...section, darkFirstColor: value }));
+                },
+                darkDefaultValue: params.defaultSection.darkFirstColor
             },
             lastColor: {
-                getValue: () => getSection().lastColor,
-                setValue: value => {
+                getLightValue: () => getSection().lastColor,
+                setLightValue: value => {
                     updateSection(section => ({ ...section, lastColor: value }));
                 },
-                defaultValue: params.defaultSection.lastColor
+                lightDefaultValue: params.defaultSection.lastColor,
+                getDarkValue: () => getSection().darkLastColor,
+                setDarkValue: value => {
+                    updateSection(section => ({ ...section, darkLastColor: value }));
+                },
+                darkDefaultValue: params.defaultSection.darkLastColor
             },
             transitionStyle: {
                 getValue: () => getSection().transitionStyle,
                 setValue: value => {
                     updateSection(section => ({ ...section, transitionStyle: value }));
-                },
-                defaultValue: params.defaultSection.transitionStyle
+                }
             }
         };
 
@@ -303,20 +322,59 @@ export class NavRainbowSectionModal extends Modal {
         return access;
     }
 
-    private createColorSetting(params: { containerEl: HTMLElement; name: string; desc: string; access: ColorSettingAccess }): void {
+    private createColorSetting(params: {
+        containerEl: HTMLElement;
+        name: string;
+        desc: string;
+        access: ColorSettingAccess;
+        separateThemeColors: boolean;
+    }): void {
         const setting = new Setting(params.containerEl).setName(params.name).setDesc(params.desc);
-
         const previewEl = setting.controlEl.createDiv({ cls: 'nn-setting-color-preview' });
-        const swatchButtonEl = previewEl.createEl('button', {
-            cls: 'nn-setting-color-swatch-button',
-            attr: {
-                type: 'button',
-                'aria-label': params.name
-            }
-        });
-        const swatchEl = swatchButtonEl.createDiv({ cls: 'nn-setting-color-swatch' });
+        const createThemedSwatchButton = (theme: 'light' | 'dark'): { buttonEl: HTMLButtonElement; swatchEl: HTMLDivElement } => {
+            const isDark = theme === 'dark';
+            const themeLabel = isDark ? strings.common.darkMode : strings.common.lightMode;
+            const buttonEl = previewEl.createEl('button', {
+                cls: `nn-setting-color-swatch-button${isDark ? ' nn-setting-color-swatch-button-dark' : ''}`,
+                attr: {
+                    type: 'button',
+                    'aria-label': `${params.name} (${themeLabel})`
+                }
+            });
+            const swatchEl = buttonEl.createDiv({ cls: 'nn-setting-color-swatch' });
+            return { buttonEl, swatchEl };
+        };
+        const createSingleSwatchButton = (): { buttonEl: HTMLButtonElement; swatchEl: HTMLDivElement } => {
+            const buttonEl = previewEl.createEl('button', {
+                cls: 'nn-setting-color-swatch-button',
+                attr: {
+                    type: 'button',
+                    'aria-label': params.name
+                }
+            });
+            const swatchEl = buttonEl.createDiv({ cls: 'nn-setting-color-swatch' });
+            return { buttonEl, swatchEl };
+        };
+        const lightSwatch = params.separateThemeColors ? createThemedSwatchButton('light') : null;
+        const copyLightToDarkButton =
+            params.separateThemeColors && lightSwatch
+                ? previewEl.createEl('button', {
+                      cls: 'clickable-icon nn-setting-color-copy-button',
+                      attr: {
+                          type: 'button',
+                          'aria-label': strings.settings.items.navRainbowCopyLightToDark,
+                          title: strings.settings.items.navRainbowCopyLightToDark
+                      }
+                  })
+                : null;
+        const darkSwatch = params.separateThemeColors ? createThemedSwatchButton('dark') : null;
+        const singleSwatch = params.separateThemeColors ? null : createSingleSwatchButton();
 
-        const openColorPicker = () => {
+        if (copyLightToDarkButton) {
+            setIcon(copyLightToDarkButton, 'arrow-right');
+        }
+
+        const openColorPicker = (theme: 'light' | 'dark' | 'single') => {
             runAsyncAction(async () => {
                 if (!this.plugin.metadataService) {
                     return;
@@ -324,13 +382,22 @@ export class NavRainbowSectionModal extends Modal {
 
                 const metadataService = this.plugin.metadataService;
                 const { ColorPickerModal } = await import('./ColorPickerModal');
+                const isDark = theme === 'dark';
+                const isSingle = theme === 'single';
+                const themeLabel = isDark ? strings.common.darkMode : strings.common.lightMode;
+                const initialColor = isDark ? params.access.getDarkValue() : params.access.getLightValue();
+                const defaultValue = isDark ? params.access.darkDefaultValue : params.access.lightDefaultValue;
                 const modal = new ColorPickerModal(this.app, {
-                    title: params.name,
-                    initialColor: params.access.getValue(),
+                    title: isSingle ? params.name : `${params.name} (${themeLabel})`,
+                    initialColor,
                     settingsProvider: metadataService.getSettingsProvider(),
                     onChooseColor: async color => {
-                        const nextValue = typeof color === 'string' && color.trim().length > 0 ? color.trim() : params.access.defaultValue;
-                        params.access.setValue(nextValue);
+                        const nextValue = typeof color === 'string' && color.trim().length > 0 ? color.trim() : defaultValue;
+                        if (isDark) {
+                            params.access.setDarkValue(nextValue);
+                        } else {
+                            params.access.setLightValue(nextValue);
+                        }
                         await this.plugin.saveSettingsAndUpdate();
                         renderValue();
                     }
@@ -339,32 +406,46 @@ export class NavRainbowSectionModal extends Modal {
                 modal.open();
             });
         };
-        swatchButtonEl.addEventListener('click', openColorPicker);
+
+        if (singleSwatch) {
+            singleSwatch.buttonEl.addEventListener('click', () => openColorPicker('single'));
+        } else {
+            lightSwatch?.buttonEl.addEventListener('click', () => openColorPicker('light'));
+            darkSwatch?.buttonEl.addEventListener('click', () => openColorPicker('dark'));
+            copyLightToDarkButton?.addEventListener('click', () => {
+                runAsyncAction(async () => {
+                    const lightColor = params.access.getLightValue();
+                    if (params.access.getDarkValue() === lightColor) {
+                        return;
+                    }
+
+                    params.access.setDarkValue(lightColor);
+                    await this.plugin.saveSettingsAndUpdate();
+                    renderValue();
+                });
+            });
+        }
 
         const renderValue = () => {
-            const current = params.access.getValue();
-            swatchEl.style.backgroundColor = current;
-            swatchButtonEl.setAttribute('title', current);
+            const lightColor = params.access.getLightValue();
+            if (singleSwatch) {
+                singleSwatch.swatchEl.style.backgroundColor = lightColor;
+                singleSwatch.buttonEl.setAttribute('title', lightColor);
+                return;
+            }
+
+            if (!lightSwatch || !darkSwatch) {
+                return;
+            }
+
+            lightSwatch.swatchEl.style.backgroundColor = lightColor;
+            lightSwatch.buttonEl.setAttribute('title', `${strings.common.lightMode}: ${lightColor}`);
+
+            const darkColor = params.access.getDarkValue();
+            darkSwatch.swatchEl.style.backgroundColor = darkColor;
+            darkSwatch.buttonEl.setAttribute('title', `${strings.common.darkMode}: ${darkColor}`);
         };
 
         renderValue();
-
-        setting.addExtraButton(button => {
-            button
-                .setIcon('lucide-rotate-ccw')
-                .setTooltip(`${strings.common.restoreDefault} (${params.access.defaultValue})`)
-                .onClick(() => {
-                    runAsyncAction(async () => {
-                        const current = params.access.getValue();
-                        if (current === params.access.defaultValue) {
-                            return;
-                        }
-
-                        params.access.setValue(params.access.defaultValue);
-                        await this.plugin.saveSettingsAndUpdate();
-                        renderValue();
-                    });
-                });
-        });
     }
 }

@@ -30,6 +30,8 @@ export const STRINGS_DE = {
         restoreDefault: 'Standard wiederherstellen', // Button text for restoring values to defaults (English: Restore default)
         submit: 'OK', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Konfigurieren', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Heller Modus', // Label for light theme mode (English: Light mode)
+        darkMode: 'Dunkler Modus', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Keine Auswahl', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Ohne Tag', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Vorschaubild', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1662,6 +1664,15 @@ export const STRINGS_DE = {
                 name: 'Auf Eigenschaften anwenden',
                 desc: 'Regenbogenfarben auf Eigenschaften anwenden.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Gleichmäßige Helligkeit über Farbtöne', // (English: Consistent brightness across hues)
+                desc: 'Interpoliert die Helligkeit zwischen den Start- und Endfarben bei Farbtonübergängen.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Separate Farben für hellen und dunklen Modus', // (English: Separate light and dark mode colors)
+                desc: 'Verschiedene Regenbogenfarben für den hellen und dunklen Modus verwenden.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Farbe des hellen Modus in den dunklen Modus kopieren', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Eigenschaftsbereich',
                 desc: 'Auswählen, welche Eigenschaftsebenen Farbzuweisungen starten.',

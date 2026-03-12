@@ -175,11 +175,15 @@ export interface NavRainbowSectionSettings {
     enabled: boolean;
     firstColor: string;
     lastColor: string;
+    darkFirstColor: string;
+    darkLastColor: string;
     transitionStyle: NavRainbowTransitionStyle;
 }
 
 export interface NavRainbowSettings {
     mode: NavRainbowColorMode;
+    balanceHueLuminance: boolean;
+    separateThemeColors: boolean;
     shortcuts: NavRainbowSectionSettings;
     recent: NavRainbowSectionSettings;
     folders: NavRainbowSectionSettings & { scope: NavRainbowScope };

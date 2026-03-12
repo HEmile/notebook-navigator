@@ -30,6 +30,8 @@ export const STRINGS_ID = {
         restoreDefault: 'Pulihkan default', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Kirim',
         configure: 'Konfigurasi', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Mode terang', // Label for light theme mode (English: Light mode)
+        darkMode: 'Mode gelap', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Tidak ada pilihan',
         untagged: 'Tanpa tag',
         featureImageAlt: 'Gambar unggulan',
@@ -1661,6 +1663,15 @@ export const STRINGS_ID = {
                 name: 'Terapkan ke properti',
                 desc: 'Terapkan warna pelangi ke properti.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Kecerahan konsisten di seluruh warna', // (English: Consistent brightness across hues)
+                desc: 'Menginterpolasi kecerahan antara warna awal dan akhir selama transisi warna.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Pisahkan warna mode terang dan gelap', // (English: Separate light and dark mode colors)
+                desc: 'Gunakan warna pelangi yang berbeda untuk mode terang dan mode gelap.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Salin warna mode terang ke mode gelap', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Cakupan properti',
                 desc: 'Pilih level properti mana yang memulai penetapan warna.',

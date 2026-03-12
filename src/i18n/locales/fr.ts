@@ -30,6 +30,8 @@ export const STRINGS_FR = {
         restoreDefault: 'Restaurer la valeur par défaut', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Soumettre', // Button text for submitting forms and dialogs (English: Submit)
         configure: 'Configurer', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Mode clair', // Label for light theme mode (English: Light mode)
+        darkMode: 'Mode sombre', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Aucune sélection', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: 'Sans étiquette', // Label for notes without any tags (English: Untagged)
         featureImageAlt: 'Image vedette', // Alt text for thumbnail/preview images (English: Feature image)
@@ -1665,6 +1667,15 @@ export const STRINGS_FR = {
                 name: 'Appliquer aux propriétés',
                 desc: 'Appliquer les couleurs arc-en-ciel aux propriétés.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Luminosité uniforme entre les teintes', // (English: Consistent brightness across hues)
+                desc: 'Interpole la luminosité entre les couleurs de début et de fin lors des transitions de teinte.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Couleurs séparées pour les modes clair et sombre', // (English: Separate light and dark mode colors)
+                desc: 'Utiliser des couleurs arc-en-ciel différentes pour le mode clair et le mode sombre.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Copier la couleur du mode clair vers le mode sombre', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Portée des propriétés',
                 desc: 'Sélectionner les niveaux de propriété qui démarrent les attributions de couleur.',

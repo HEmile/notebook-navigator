@@ -30,6 +30,8 @@ export const STRINGS_FA = {
         restoreDefault: 'بازگردانی پیش‌فرض', // Button text for restoring values to defaults (English: Restore default)
         submit: 'ارسال',
         configure: 'پیکربندی', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'حالت روشن', // Label for light theme mode (English: Light mode)
+        darkMode: 'حالت تاریک', // Label for dark theme mode (English: Dark mode)
         noSelection: 'بدون انتخاب',
         untagged: 'بدون برچسب',
         featureImageAlt: 'تصویر ویژه',
@@ -1660,6 +1662,15 @@ export const STRINGS_FA = {
                 name: 'اعمال بر ویژگی‌ها',
                 desc: 'اعمال رنگ‌های رنگین‌کمان بر ویژگی‌ها.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'روشنایی یکنواخت در بین رنگ‌ها', // (English: Consistent brightness across hues)
+                desc: 'روشنایی را بین رنگ‌های شروع و پایان در طول انتقال‌های رنگی درون‌یابی می‌کند.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'جداسازی رنگ‌های حالت روشن و تاریک', // (English: Separate light and dark mode colors)
+                desc: 'استفاده از رنگ‌های رنگین‌کمان متفاوت برای حالت روشن و حالت تاریک.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'کپی رنگ حالت روشن به حالت تاریک', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'محدوده ویژگی‌ها',
                 desc: 'انتخاب سطوح ویژگی که تخصیص رنگ از آن‌ها شروع می‌شود.',

@@ -274,6 +274,8 @@ const cloneNavRainbowBaseSection = <TSection extends NavRainbowSettings['shortcu
 export const cloneNavRainbowSettings = (settings: NavRainbowSettings): NavRainbowSettings => {
     return {
         mode: settings.mode,
+        balanceHueLuminance: settings.balanceHueLuminance,
+        separateThemeColors: settings.separateThemeColors,
         shortcuts: cloneNavRainbowBaseSection(settings.shortcuts),
         recent: cloneNavRainbowBaseSection(settings.recent),
         folders: cloneNavRainbowBaseSection(settings.folders),
@@ -292,27 +294,39 @@ export const areNavRainbowSettingsEqual = (previous?: NavRainbowSettings | null,
 
     return (
         previous.mode === next.mode &&
+        previous.balanceHueLuminance === next.balanceHueLuminance &&
+        previous.separateThemeColors === next.separateThemeColors &&
         previous.shortcuts.enabled === next.shortcuts.enabled &&
         previous.shortcuts.firstColor === next.shortcuts.firstColor &&
         previous.shortcuts.lastColor === next.shortcuts.lastColor &&
+        previous.shortcuts.darkFirstColor === next.shortcuts.darkFirstColor &&
+        previous.shortcuts.darkLastColor === next.shortcuts.darkLastColor &&
         previous.shortcuts.transitionStyle === next.shortcuts.transitionStyle &&
         previous.recent.enabled === next.recent.enabled &&
         previous.recent.firstColor === next.recent.firstColor &&
         previous.recent.lastColor === next.recent.lastColor &&
+        previous.recent.darkFirstColor === next.recent.darkFirstColor &&
+        previous.recent.darkLastColor === next.recent.darkLastColor &&
         previous.recent.transitionStyle === next.recent.transitionStyle &&
         previous.folders.enabled === next.folders.enabled &&
         previous.folders.firstColor === next.folders.firstColor &&
         previous.folders.lastColor === next.folders.lastColor &&
+        previous.folders.darkFirstColor === next.folders.darkFirstColor &&
+        previous.folders.darkLastColor === next.folders.darkLastColor &&
         previous.folders.transitionStyle === next.folders.transitionStyle &&
         previous.folders.scope === next.folders.scope &&
         previous.tags.enabled === next.tags.enabled &&
         previous.tags.firstColor === next.tags.firstColor &&
         previous.tags.lastColor === next.tags.lastColor &&
+        previous.tags.darkFirstColor === next.tags.darkFirstColor &&
+        previous.tags.darkLastColor === next.tags.darkLastColor &&
         previous.tags.transitionStyle === next.tags.transitionStyle &&
         previous.tags.scope === next.tags.scope &&
         previous.properties.enabled === next.properties.enabled &&
         previous.properties.firstColor === next.properties.firstColor &&
         previous.properties.lastColor === next.properties.lastColor &&
+        previous.properties.darkFirstColor === next.properties.darkFirstColor &&
+        previous.properties.darkLastColor === next.properties.darkLastColor &&
         previous.properties.transitionStyle === next.properties.transitionStyle &&
         previous.properties.scope === next.properties.scope
     );
@@ -320,10 +334,15 @@ export const areNavRainbowSettingsEqual = (previous?: NavRainbowSettings | null,
 
 const normalizeNavRainbowBaseSection = (value: unknown, defaults: NavRainbowSettings['shortcuts']): NavRainbowSettings['shortcuts'] => {
     const section = isRecord(value) ? value : null;
+    const firstColor = resolveRainbowColor(section?.firstColor, defaults.firstColor);
+    const lastColor = resolveRainbowColor(section?.lastColor, defaults.lastColor);
+
     return {
         enabled: typeof section?.enabled === 'boolean' ? section.enabled : defaults.enabled,
-        firstColor: resolveRainbowColor(section?.firstColor, defaults.firstColor),
-        lastColor: resolveRainbowColor(section?.lastColor, defaults.lastColor),
+        firstColor,
+        lastColor,
+        darkFirstColor: resolveRainbowColor(section?.darkFirstColor, defaults.darkFirstColor),
+        darkLastColor: resolveRainbowColor(section?.darkLastColor, defaults.darkLastColor),
         transitionStyle: isNavRainbowTransitionStyle(section?.transitionStyle) ? section.transitionStyle : defaults.transitionStyle
     };
 };
@@ -342,6 +361,10 @@ export const normalizeNavRainbowSettings = (value: unknown, defaults: NavRainbow
 
     return {
         mode: isNavRainbowColorMode(navRainbow?.mode) ? navRainbow.mode : defaults.mode,
+        balanceHueLuminance:
+            typeof navRainbow?.balanceHueLuminance === 'boolean' ? navRainbow.balanceHueLuminance : defaults.balanceHueLuminance,
+        separateThemeColors:
+            typeof navRainbow?.separateThemeColors === 'boolean' ? navRainbow.separateThemeColors : defaults.separateThemeColors,
         shortcuts: normalizeNavRainbowBaseSection(shortcuts, defaults.shortcuts),
         recent: normalizeNavRainbowBaseSection(recent, defaults.recent),
         folders: {

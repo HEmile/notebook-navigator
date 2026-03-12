@@ -30,6 +30,8 @@ export const STRINGS_PT_BR = {
         restoreDefault: 'Restaurar padrão', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Enviar',
         configure: 'Configurar', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Modo claro', // Label for light theme mode (English: Light mode)
+        darkMode: 'Modo escuro', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Nenhuma seleção',
         untagged: 'Sem tags',
         featureImageAlt: 'Imagem destacada',
@@ -1665,6 +1667,15 @@ export const STRINGS_PT_BR = {
                 name: 'Aplicar às propriedades',
                 desc: 'Aplicar cores arco-íris às propriedades.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Brilho consistente entre matizes', // (English: Consistent brightness across hues)
+                desc: 'Interpola o brilho entre as cores inicial e final durante as transições de matiz.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Cores separadas para modo claro e escuro', // (English: Separate light and dark mode colors)
+                desc: 'Usar cores de arco-íris diferentes para o modo claro e o modo escuro.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Copiar cor do modo claro para o modo escuro', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Escopo de propriedades',
                 desc: 'Selecionar quais níveis de propriedade iniciam atribuições de cor.',

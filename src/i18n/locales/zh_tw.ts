@@ -30,6 +30,8 @@ export const STRINGS_ZH_TW = {
         restoreDefault: '恢復預設', // Button text for restoring values to defaults (English: Restore default)
         submit: '提交',
         configure: '設定', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: '淺色模式', // Label for light theme mode (English: Light mode)
+        darkMode: '深色模式', // Label for dark theme mode (English: Dark mode)
         noSelection: '未選擇',
         untagged: '無標籤',
         featureImageAlt: '特色圖片',
@@ -1653,6 +1655,15 @@ export const STRINGS_ZH_TW = {
                 name: '套用到屬性',
                 desc: '將彩虹顏色套用到屬性。'
             },
+            navRainbowBalanceHueLuminance: {
+                name: '色相間一致的亮度', // (English: Consistent brightness across hues)
+                desc: '在色相過渡期間在起始顏色和結束顏色之間插值亮度。' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: '分別設定淺色和深色模式顏色', // (English: Separate light and dark mode colors)
+                desc: '為淺色模式和深色模式使用不同的彩虹顏色。' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: '將淺色模式顏色複製到深色模式', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: '屬性範圍',
                 desc: '選擇哪些屬性層級開始顏色指派。',

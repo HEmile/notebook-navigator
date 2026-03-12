@@ -30,6 +30,8 @@ export const STRINGS_NL = {
         restoreDefault: 'Standaard herstellen', // Button text for restoring values to defaults (English: Restore default)
         submit: 'Verzenden',
         configure: 'Configureren', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: 'Lichte modus', // Label for light theme mode (English: Light mode)
+        darkMode: 'Donkere modus', // Label for dark theme mode (English: Dark mode)
         noSelection: 'Geen selectie',
         untagged: 'Zonder tags',
         featureImageAlt: 'Uitgelichte afbeelding',
@@ -1663,6 +1665,15 @@ export const STRINGS_NL = {
                 name: 'Toepassen op eigenschappen',
                 desc: 'Regenboogkleuren toepassen op eigenschappen.'
             },
+            navRainbowBalanceHueLuminance: {
+                name: 'Consistente helderheid over kleurtonen', // (English: Consistent brightness across hues)
+                desc: 'Interpoleert de helderheid tussen de begin- en eindkleuren tijdens kleurtoenovergangen.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: 'Aparte kleuren voor lichte en donkere modus', // (English: Separate light and dark mode colors)
+                desc: 'Gebruik verschillende regenboogkleuren voor de lichte en donkere modus.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: 'Kleur van lichte modus naar donkere modus kopiëren', // (English: Copy light mode color to dark mode)
             navRainbowPropertyScope: {
                 name: 'Eigenschappenbereik',
                 desc: 'Selecteer welke eigenschapsniveaus kleurtoewijzingen starten.',
