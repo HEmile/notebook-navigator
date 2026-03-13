@@ -90,7 +90,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
             'Property tree now treats frontmatter `null` values as unassigned instead of converting them to `true`.',
             'Calendar now indicates the currently selected day with a thin border.'
         ],
-        fixed: ['Fixed so the "new version available" popup only shows at most once per day, not on every startup.']
+        fixed: [
+            'Fixed an issue with "Featured image pixel size" where it would not save the resolution if the setting was set to non-synced.',
+            'Fixed so the "new version available" popup only shows at most once per day, not on every startup.']
     },
     {
         version: '2.5.0',
