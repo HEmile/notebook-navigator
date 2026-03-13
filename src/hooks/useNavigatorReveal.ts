@@ -924,6 +924,9 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
 
         let pendingIgnoreNavigatorPreviewOpen: boolean | undefined = undefined;
 
+        // Keep this block in sync with src/components/calendar/Calendar.tsx. The scheduling below and
+        // the `handleFileOpen` background-open check intentionally mirror the calendar tracking path
+        // because Obsidian can emit `file-open` and `active-leaf-change` in different turns.
         const scheduleDetectActiveFileChange = (candidateFile?: TFile | null, ignoreNavigatorPreviewOpen?: boolean) => {
             if (candidateFile !== undefined) {
                 pendingCandidateFile = candidateFile;

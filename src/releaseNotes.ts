@@ -86,11 +86,10 @@ const RELEASE_NOTES: ReleaseNote[] = [
         ],
         improved: [
             'Property tree now shows the values for boolean `true` and `false`.',
-            'Property tree now treats frontmatter `null` values as unassigned instead of converting them to `true`.'
+            'Property tree now treats frontmatter `null` values as unassigned instead of converting them to `true`.',
+            'Calendar now indicates the currently selected day with a thin border.'
         ],
-        fixed: [
-            'Fixed so the "new version available" popup only shows at most once per day, not on every startup.'
-        ]
+        fixed: ['Fixed so the "new version available" popup only shows at most once per day, not on every startup.']
     },
     {
         version: '2.5.0',

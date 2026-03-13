@@ -17,7 +17,7 @@
  */
 
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { TFile } from 'obsidian';
+import { FileView, TFile, type Workspace } from 'obsidian';
 import { getCurrentLanguage, strings } from '../../i18n';
 import { InfoModal } from '../../modals/InfoModal';
 import { useServices } from '../../context/ServicesContext';
@@ -31,6 +31,7 @@ import { getMomentApi, resolveMomentLocale, type MomentInstance } from '../../ut
 import { useFileOpener } from '../../hooks/useFileOpener';
 import { useLocalDayKey } from '../../hooks/useLocalDayKey';
 import { extractFrontmatterName } from '../../utils/metadataExtractor';
+import { TIMEOUTS } from '../../types/obsidian-extended';
 import { type CalendarNoteKind } from '../../utils/calendarNotes';
 import { getActiveVaultProfile } from '../../utils/vaultProfiles';
 import type { CalendarWeeksToShow } from '../../settings/types';
@@ -62,6 +63,23 @@ export interface CalendarProps {
 
 type HeaderPeriodKind = Extract<CalendarNoteKind, 'month' | 'quarter' | 'year'>;
 
+function getWorkspaceActiveFile(workspace: Workspace): TFile | null {
+    const activeView = workspace.getActiveViewOfType(FileView);
+    const activeFile = activeView?.file;
+    return activeFile instanceof TFile ? activeFile : null;
+}
+
+function resolveActiveEditorFilePath(workspace: Workspace, candidateFile?: TFile | null): string | null {
+    const activeViewFile = getWorkspaceActiveFile(workspace);
+    const file = candidateFile instanceof TFile ? candidateFile : activeViewFile;
+
+    if (file) {
+        return file.path;
+    }
+
+    return null;
+}
+
 export function Calendar({
     onWeekCountChange,
     onNavigationAction,
@@ -69,7 +87,7 @@ export function Calendar({
     onAddDateFilter,
     isRightSidebar = false
 }: CalendarProps) {
-    const { app, fileSystemOps, isMobile } = useServices();
+    const { app, commandQueue, fileSystemOps, isMobile } = useServices();
     const settings = useSettingsState();
     const periodicNotesFolder = getActiveVaultProfile(settings).periodicNotesFolder;
     const customCalendarRootFolderSettings = useMemo(() => ({ calendarCustomRootFolder: periodicNotesFolder }), [periodicNotesFolder]);
@@ -83,6 +101,9 @@ export function Calendar({
     const momentApi = getMomentApi();
     const [cursorDate, setCursorDate] = useState<MomentInstance | null>(() => (momentApi ? momentApi().startOf('day') : null));
     const todayIso = useLocalDayKey();
+    const [activeEditorFilePath, setActiveEditorFilePath] = useState<string | null>(
+        () => resolveActiveEditorFilePath(app.workspace) ?? null
+    );
 
     const [vaultVersion, setVaultVersion] = useState(0);
     const [featureImageVersion, setFeatureImageVersion] = useState(0);
@@ -110,6 +131,13 @@ export function Calendar({
             setVaultVersion(v => v + 1);
         }, 120);
     }, []);
+    const syncActiveEditorFilePath = useCallback(
+        (candidateFile?: TFile | null) => {
+            const nextFilePath = resolveActiveEditorFilePath(app.workspace, candidateFile);
+            setActiveEditorFilePath(previousFilePath => (previousFilePath === nextFilePath ? previousFilePath : nextFilePath));
+        },
+        [app.workspace]
+    );
     const shouldTrackCalendarVaultChange = useCallback((file: unknown): boolean => {
         if (!(file instanceof TFile)) {
             return true;
@@ -165,6 +193,62 @@ export function Calendar({
             isActive = false;
         };
     }, [dbFallback, fileCache]);
+
+    useEffect(() => {
+        let pendingSyncTimer: number | null = null;
+        let pendingCandidateFile: TFile | null | undefined = undefined;
+        let pendingIgnoreBackgroundOpen: boolean | undefined = undefined;
+
+        // Keep this block in sync with src/hooks/useNavigatorReveal.ts. The scheduling below and the
+        // `handleFileOpen` background-open check intentionally mirror that hook because Obsidian can
+        // emit `file-open` and `active-leaf-change` in different turns.
+        const scheduleSyncActiveEditorFilePath = (candidateFile?: TFile | null, ignoreBackgroundOpen?: boolean) => {
+            if (candidateFile !== undefined) {
+                pendingCandidateFile = candidateFile;
+                pendingIgnoreBackgroundOpen = ignoreBackgroundOpen ?? false;
+            }
+
+            if (typeof window === 'undefined') {
+                syncActiveEditorFilePath(candidateFile);
+                return;
+            }
+
+            if (pendingSyncTimer !== null) {
+                window.clearTimeout(pendingSyncTimer);
+            }
+
+            // Yield to the event loop so workspace state reflects the new active file before reading it.
+            pendingSyncTimer = window.setTimeout(() => {
+                pendingSyncTimer = null;
+                const file = pendingIgnoreBackgroundOpen === true ? undefined : pendingCandidateFile;
+                pendingCandidateFile = undefined;
+                pendingIgnoreBackgroundOpen = undefined;
+                syncActiveEditorFilePath(file);
+            }, TIMEOUTS.YIELD_TO_EVENT_LOOP);
+        };
+
+        const handleActiveLeafChange = () => {
+            scheduleSyncActiveEditorFilePath();
+        };
+
+        const handleFileOpen = (file: TFile | null) => {
+            // Ignore preview opens (`active: false`) and fall back to the actual active view file.
+            const ignoreBackgroundOpen = file instanceof TFile && commandQueue?.isOpeningActiveFileInBackground(file.path) === true;
+            scheduleSyncActiveEditorFilePath(file, ignoreBackgroundOpen);
+        };
+
+        const activeLeafChangeRef = app.workspace.on('active-leaf-change', handleActiveLeafChange);
+        const fileOpenRef = app.workspace.on('file-open', handleFileOpen);
+        syncActiveEditorFilePath();
+
+        return () => {
+            if (pendingSyncTimer !== null) {
+                window.clearTimeout(pendingSyncTimer);
+            }
+            app.workspace.offref(activeLeafChangeRef);
+            app.workspace.offref(fileOpenRef);
+        };
+    }, [app.workspace, commandQueue, syncActiveEditorFilePath]);
 
     useEffect(() => {
         const onVaultUpdate = (file: unknown) => {
@@ -1037,6 +1121,7 @@ export function Calendar({
                 />
 
                 <CalendarGrid
+                    activeEditorFilePath={activeEditorFilePath}
                     showWeekNumbers={showWeekNumbers}
                     weekdays={weekdays}
                     weekStartsOn={weekStartsOn}
