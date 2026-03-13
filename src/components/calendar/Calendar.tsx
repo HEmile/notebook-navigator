@@ -17,7 +17,7 @@
  */
 
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FileView, Menu, TFile, type Workspace } from 'obsidian';
+import { FileView, Menu, TFile, type Workspace, type WorkspaceLeaf } from 'obsidian';
 import { getCurrentLanguage, strings } from '../../i18n';
 import { InfoModal } from '../../modals/InfoModal';
 import { useServices } from '../../context/ServicesContext';
@@ -81,6 +81,31 @@ function resolveActiveEditorFilePath(workspace: Workspace, candidateFile?: TFile
     return null;
 }
 
+function isFileOpenInWorkspace(workspace: Workspace, filePath: string): boolean {
+    if (typeof workspace.iterateAllLeaves !== 'function') {
+        return false;
+    }
+
+    let isOpen = false;
+    workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
+        if (isOpen) {
+            return;
+        }
+
+        const view = leaf.view;
+        if (!(view instanceof FileView)) {
+            return;
+        }
+
+        const file = view.file;
+        if (file instanceof TFile && file.path === filePath) {
+            isOpen = true;
+        }
+    });
+
+    return isOpen;
+}
+
 export function Calendar({
     onWeekCountChange,
     onNavigationAction,
@@ -137,7 +162,21 @@ export function Calendar({
     const syncActiveEditorFilePath = useCallback(
         (candidateFile?: TFile | null) => {
             const nextFilePath = resolveActiveEditorFilePath(app.workspace, candidateFile);
-            setActiveEditorFilePath(previousFilePath => (previousFilePath === nextFilePath ? previousFilePath : nextFilePath));
+            setActiveEditorFilePath(previousFilePath => {
+                if (previousFilePath === nextFilePath) {
+                    return previousFilePath;
+                }
+
+                if (nextFilePath !== null) {
+                    return nextFilePath;
+                }
+
+                if (previousFilePath && isFileOpenInWorkspace(app.workspace, previousFilePath)) {
+                    return previousFilePath;
+                }
+
+                return null;
+            });
         },
         [app.workspace]
     );
@@ -1240,6 +1279,7 @@ export function Calendar({
     }
 
     const selectedYearValue = cursorDate.year();
+    const currentMonthKey = todayIso ? todayIso.slice(0, 7) : null;
     const monthYearHeaderDate = cursorDate.clone().locale(displayLocale);
     const monthLabel = monthYearHeaderDate.format('MMMM');
     const yearLabel = monthYearHeaderDate.format('YYYY');
@@ -1322,6 +1362,7 @@ export function Calendar({
 
                 <CalendarYearPanel
                     showYearCalendar={showYearCalendar}
+                    currentMonthKey={currentMonthKey}
                     selectedYearValue={selectedYearValue}
                     selectedMonthIndex={cursorDate.month()}
                     hasYearPeriodNote={Boolean(headerPeriodNoteFiles.year)}

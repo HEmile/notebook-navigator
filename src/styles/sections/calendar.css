@@ -466,14 +466,18 @@
 }
 
 .nn-navigation-calendar-year-month.is-selected-month {
-    background-color: var(--nn-theme-calendar-day-today-bg) !important;
-    color: var(--nn-theme-calendar-day-today-color);
+    box-shadow: inset 0 0 0 2px var(--nn-calendar-active-editor-border-color) !important;
+    color: var(--nn-theme-calendar-day-in-month-color);
 }
 
 .nn-navigation-calendar-year-month.is-selected-month.has-feature-image {
-    background-color: transparent !important;
-    box-shadow: inset 0 0 0 2px var(--nn-theme-calendar-day-today-bg) !important;
+    --nn-calendar-active-editor-border-color: var(--nn-theme-foreground-muted);
     color: var(--nn-theme-calendar-day-has-feature-image-color);
+}
+
+.nn-navigation-calendar[data-highlight-today='true'] .nn-navigation-calendar-year-month.is-current-month:not(.has-feature-image) {
+    background-color: var(--nn-theme-calendar-day-today-bg) !important;
+    color: var(--nn-theme-calendar-day-today-color);
 }
 
 .nn-navigation-calendar button.nn-navigation-calendar-year-month {
@@ -485,11 +489,20 @@
 }
 
 .nn-navigation-calendar button.nn-navigation-calendar-year-month.is-selected-month {
-    color: var(--nn-theme-calendar-day-today-color);
+    color: var(--nn-theme-calendar-day-in-month-color);
 }
 
 .nn-navigation-calendar button.nn-navigation-calendar-year-month.is-selected-month.has-feature-image {
     color: var(--nn-theme-calendar-day-has-feature-image-color);
+}
+
+.nn-navigation-calendar[data-highlight-today='true'] button.nn-navigation-calendar-year-month.is-current-month:not(.has-feature-image) {
+    color: var(--nn-theme-calendar-day-today-color);
+}
+
+.nn-navigation-calendar[data-highlight-today='true']
+    button.nn-navigation-calendar-year-month.is-current-month.is-selected-month:not(.has-feature-image) {
+    color: var(--nn-theme-calendar-day-today-color);
 }
 
 /* Calendar month navigation icon sizing (ServiceIcon renders an SVG). */

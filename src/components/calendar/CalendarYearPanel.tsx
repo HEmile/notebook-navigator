@@ -23,6 +23,7 @@ import type { CalendarYearMonthEntry } from './types';
 
 interface CalendarYearPanelProps {
     showYearCalendar: boolean;
+    currentMonthKey: string | null;
     selectedYearValue: number;
     selectedMonthIndex: number;
     hasYearPeriodNote: boolean;
@@ -38,6 +39,7 @@ interface CalendarYearPanelProps {
 
 export const CalendarYearPanel = React.memo(function CalendarYearPanel({
     showYearCalendar,
+    currentMonthKey,
     selectedYearValue,
     selectedMonthIndex,
     hasYearPeriodNote,
@@ -93,6 +95,7 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
             <div className="nn-navigation-calendar-year-grid">
                 {yearMonthEntries.map(entry => {
                     const isSelectedMonth = entry.monthIndex === selectedMonthIndex;
+                    const isCurrentMonth = entry.key === currentMonthKey;
                     const isHighlightedMonth = highlightedMonthKeys.has(entry.key);
                     const featureImageUrl = highlightedMonthImageUrls[entry.key] ?? null;
                     const monthLabelText = entry.noteCount > 0 ? `${entry.shortLabel} (${entry.noteCount})` : entry.shortLabel;
@@ -110,6 +113,7 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                             type="button"
                             className={[
                                 'nn-navigation-calendar-year-month',
+                                isCurrentMonth ? 'is-current-month' : '',
                                 isSelectedMonth ? 'is-selected-month' : '',
                                 featureImageUrl ? 'has-feature-image' : ''
                             ]
