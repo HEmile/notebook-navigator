@@ -482,9 +482,8 @@ export function renderNotesTab(context: SettingsTabContext): void {
                 .addOption('96', strings.settings.items.featureImageSize.options.large)
                 .addOption('128', strings.settings.items.featureImageSize.options.extraLarge)
                 .setValue(plugin.settings.featureImageSize)
-                .onChange(async (value: FeatureImageSizeSetting) => {
-                    plugin.settings.featureImageSize = value;
-                    await plugin.saveSettingsAndUpdate();
+                .onChange((value: FeatureImageSizeSetting) => {
+                    plugin.setFeatureImageSize(value);
                 })
         );
     addSettingSyncModeToggle({ setting: featureImageSizeSetting, plugin, settingId: 'featureImageSize' });
@@ -498,9 +497,8 @@ export function renderNotesTab(context: SettingsTabContext): void {
                 .addOption('384', strings.settings.items.featureImagePixelSize.options.large)
                 .addOption('512', strings.settings.items.featureImagePixelSize.options.extraLarge)
                 .setValue(plugin.settings.featureImagePixelSize)
-                .onChange(async (value: FeatureImagePixelSizeSetting) => {
-                    plugin.settings.featureImagePixelSize = value;
-                    await plugin.saveSettingsAndUpdate();
+                .onChange((value: FeatureImagePixelSizeSetting) => {
+                    plugin.setFeatureImagePixelSize(value);
                 })
         );
     addSettingSyncModeToggle({ setting: featureImagePixelSizeSetting, plugin, settingId: 'featureImagePixelSize' });

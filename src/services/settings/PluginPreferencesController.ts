@@ -25,6 +25,8 @@ import type {
     CalendarLeftPlacement,
     CalendarPlacement,
     CalendarWeeksToShow,
+    FeatureImagePixelSizeSetting,
+    FeatureImageSizeSetting,
     NotebookNavigatorSettings,
     SyncModeSettingId,
     TagSortOrder
@@ -454,6 +456,22 @@ export class PluginPreferencesController {
             settingId: 'compactItemHeightScaleText',
             localStorageKey: this.options.keys.compactItemHeightScaleTextKey,
             nextValue: enabled
+        });
+    }
+
+    public setFeatureImageSize(size: FeatureImageSizeSetting): void {
+        this.updateSettingAndMirrorToLocalStorage({
+            settingId: 'featureImageSize',
+            localStorageKey: this.options.keys.featureImageSizeKey,
+            nextValue: size
+        });
+    }
+
+    public setFeatureImagePixelSize(size: FeatureImagePixelSizeSetting): void {
+        this.updateSettingAndMirrorToLocalStorage({
+            settingId: 'featureImagePixelSize',
+            localStorageKey: this.options.keys.featureImagePixelSizeKey,
+            nextValue: size
         });
     }
 

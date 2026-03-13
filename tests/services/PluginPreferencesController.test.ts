@@ -53,22 +53,35 @@ import { STORAGE_KEYS } from '../../src/types';
 
 describe('PluginPreferencesController', () => {
     let controller: PluginPreferencesController;
+    let settings: typeof DEFAULT_SETTINGS;
     let isShuttingDown = false;
+    let isLocal = false;
+    let persistSyncModeSettingUpdate: ReturnType<typeof vi.fn>;
+    let notifySettingsUpdate: ReturnType<typeof vi.fn>;
+    let saveSettings: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         vi.useFakeTimers();
         mockLocalStorageStore.clear();
         vi.clearAllMocks();
         isShuttingDown = false;
+        isLocal = false;
+        settings = {
+            ...DEFAULT_SETTINGS,
+            syncModes: { ...DEFAULT_SETTINGS.syncModes }
+        };
+        persistSyncModeSettingUpdate = vi.fn();
+        notifySettingsUpdate = vi.fn();
+        saveSettings = vi.fn(async () => undefined);
 
         controller = new PluginPreferencesController({
             keys: STORAGE_KEYS,
-            getSettings: () => DEFAULT_SETTINGS,
-            notifySettingsUpdate: vi.fn(),
-            saveSettings: vi.fn(async () => undefined),
+            getSettings: () => settings,
+            notifySettingsUpdate,
+            saveSettings,
             isShuttingDown: () => isShuttingDown,
-            isLocal: vi.fn(() => false),
-            persistSyncModeSettingUpdate: vi.fn(),
+            isLocal: vi.fn(() => isLocal),
+            persistSyncModeSettingUpdate,
             persistSyncModeSettingUpdateAsync: vi.fn(async () => undefined),
             isOmnisearchAvailable: vi.fn(() => true),
             refreshMatcherCachesIfNeeded: vi.fn()
@@ -94,5 +107,29 @@ describe('PluginPreferencesController', () => {
         expect(localStorageSet).toHaveBeenCalledWith(STORAGE_KEYS.recentNotesKey, {
             [DEFAULT_SETTINGS.vaultProfile]: ['note-a.md']
         });
+    });
+
+    it('mirrors feature image pixel size updates to local storage', () => {
+        isLocal = true;
+
+        controller.setFeatureImagePixelSize('512');
+
+        expect(settings.featureImagePixelSize).toBe('512');
+        expect(localStorageSet).toHaveBeenCalledWith(STORAGE_KEYS.featureImagePixelSizeKey, '512');
+        expect(persistSyncModeSettingUpdate).toHaveBeenCalledWith('featureImagePixelSize');
+        expect(saveSettings).not.toHaveBeenCalled();
+        expect(notifySettingsUpdate).not.toHaveBeenCalled();
+    });
+
+    it('mirrors feature image display size updates to local storage', () => {
+        isLocal = true;
+
+        controller.setFeatureImageSize('128');
+
+        expect(settings.featureImageSize).toBe('128');
+        expect(localStorageSet).toHaveBeenCalledWith(STORAGE_KEYS.featureImageSizeKey, '128');
+        expect(persistSyncModeSettingUpdate).toHaveBeenCalledWith('featureImageSize');
+        expect(saveSettings).not.toHaveBeenCalled();
+        expect(notifySettingsUpdate).not.toHaveBeenCalled();
     });
 });

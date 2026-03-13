@@ -62,6 +62,8 @@ import {
     type CalendarLeftPlacement,
     type CalendarWeeksToShow,
     type AlphaSortOrder,
+    type FeatureImagePixelSizeSetting,
+    type FeatureImageSizeSetting,
     isSettingSyncMode,
     type SettingSyncMode,
     type SyncModeSettingId,
@@ -745,6 +747,20 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
      */
     public setCompactItemHeightScaleText(enabled: boolean): void {
         this.preferencesController.setCompactItemHeightScaleText(enabled);
+    }
+
+    /**
+     * Updates the feature image display size and persists to local storage.
+     */
+    public setFeatureImageSize(size: FeatureImageSizeSetting): void {
+        this.preferencesController.setFeatureImageSize(size);
+    }
+
+    /**
+     * Updates the feature image thumbnail pixel size and persists to local storage.
+     */
+    public setFeatureImagePixelSize(size: FeatureImagePixelSizeSetting): void {
+        this.preferencesController.setFeatureImagePixelSize(size);
     }
 
     /**
