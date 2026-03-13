@@ -356,6 +356,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     calendarWeekendDays: 'sat-sun',
     calendarHighlightToday: true,
     calendarShowFeatureImage: true,
+    calendarMonthHighlights: sanitizeRecord<string>(undefined),
     calendarShowWeekNumber: false,
     calendarShowQuarter: false,
     calendarShowYearCalendar: true,

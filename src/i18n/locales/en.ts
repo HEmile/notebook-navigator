@@ -288,6 +288,8 @@ export const STRINGS_EN = {
             renameFile: 'Rename file',
             deleteNote: 'Delete note',
             deleteFile: 'Delete file',
+            setCalendarHighlight: 'Set highlight',
+            removeCalendarHighlight: 'Remove highlight',
             deleteMultipleNotes: 'Delete {count} notes',
             deleteMultipleFiles: 'Delete {count} files',
             moveNoteToFolder: 'Move note to...',

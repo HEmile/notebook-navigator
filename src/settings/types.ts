@@ -504,6 +504,7 @@ export interface NotebookNavigatorSettings {
     calendarWeekendDays: CalendarWeekendDays;
     calendarHighlightToday: boolean;
     calendarShowFeatureImage: boolean;
+    calendarMonthHighlights: Record<string, string>;
     calendarShowWeekNumber: boolean;
     calendarShowQuarter: boolean;
     calendarShowYearCalendar: boolean;

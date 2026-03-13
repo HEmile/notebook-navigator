@@ -49,6 +49,8 @@ interface UseCalendarNoteActionsOptions {
     openFile: (file: TFile | null, options?: { active?: boolean }) => void;
     clearHoverTooltip: () => void;
     onVaultChange: () => void;
+    setCalendarMonthHighlight: (monthKey: string, dayIso: string) => Promise<void>;
+    removeCalendarMonthHighlight: (monthKey: string) => Promise<void>;
 }
 
 interface UseCalendarNoteActionsResult {
@@ -70,7 +72,9 @@ export function useCalendarNoteActions({
     customCalendarRootFolderSettings,
     openFile,
     clearHoverTooltip,
-    onVaultChange
+    onVaultChange,
+    setCalendarMonthHighlight,
+    removeCalendarMonthHighlight
 }: UseCalendarNoteActionsOptions): UseCalendarNoteActionsResult {
     const collapseNavigationIfMobile = useCallback(() => {
         if (!isMobile || !app.workspace.leftSplit) {
@@ -240,9 +244,39 @@ export function useCalendarNoteActions({
             clearHoverTooltip();
 
             const menu = new Menu();
+            const isCurrentMonthHighlight = target.currentMonthHighlightDayIso === target.dayIso;
+            let hasHighlightMenuItem = false;
+
+            if (target.kind === 'day' && target.hasFeatureImage && target.monthKey && target.dayIso) {
+                const { monthKey, dayIso } = target;
+                if (!isCurrentMonthHighlight) {
+                    hasHighlightMenuItem = true;
+                    menu.addItem(item => {
+                        item.setTitle(strings.contextMenu.file.setCalendarHighlight)
+                            .setIcon('lucide-image')
+                            .onClick(() => {
+                                runAsyncAction(() => setCalendarMonthHighlight(monthKey, dayIso));
+                            });
+                    });
+                }
+
+                if (isCurrentMonthHighlight) {
+                    hasHighlightMenuItem = true;
+                    menu.addItem(item => {
+                        item.setTitle(strings.contextMenu.file.removeCalendarHighlight)
+                            .setIcon('lucide-image-off')
+                            .onClick(() => {
+                                runAsyncAction(() => removeCalendarMonthHighlight(monthKey));
+                            });
+                    });
+                }
+            }
 
             const existingFile = target.existingFile;
             if (existingFile) {
+                if (hasHighlightMenuItem) {
+                    menu.addSeparator();
+                }
                 menu.addItem(item => {
                     item.setTitle(strings.contextMenu.file.deleteNote)
                         .setIcon('lucide-trash')
@@ -284,6 +318,8 @@ export function useCalendarNoteActions({
             onVaultChange,
             openOrCreateCustomCalendarNote,
             openOrCreateDailyNote,
+            removeCalendarMonthHighlight,
+            setCalendarMonthHighlight,
             settings.confirmBeforeDelete,
             settings.interfaceIcons
         ]

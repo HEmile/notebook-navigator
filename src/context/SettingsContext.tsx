@@ -230,6 +230,7 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
         const virtualFolderBackgroundColors = sanitizeRecord(plugin.settings.virtualFolderBackgroundColors);
         const tagIcons = sanitizeRecord(plugin.settings.tagIcons, isStringRecordValue);
         const propertyIcons = sanitizeRecord(plugin.settings.propertyIcons, isStringRecordValue);
+        const calendarMonthHighlights = sanitizeRecord(plugin.settings.calendarMonthHighlights, isStringRecordValue);
         const rawInterfaceIcons = plugin.settings.interfaceIcons;
         const interfaceIconsCache = previousInterfaceIconsRef.current;
         const interfaceIcons =
@@ -250,6 +251,7 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
             virtualFolderBackgroundColors,
             tagIcons,
             propertyIcons,
+            calendarMonthHighlights,
             interfaceIcons,
             folderAppearances: cloneAppearanceMap(plugin.settings.folderAppearances),
             tagAppearances: cloneAppearanceMap(plugin.settings.tagAppearances),

@@ -20,13 +20,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TFile } from 'obsidian';
 import type { IndexedDBStorage } from '../../storage/IndexedDBStorage';
 import { runAsyncAction } from '../../utils/async';
-import type { CalendarWeek } from './types';
 
 interface UseCalendarFeatureImagesOptions {
     db: IndexedDBStorage | null;
     showFeatureImages: boolean;
-    featureImageKeysByIso: Map<string, string>;
-    weeks: CalendarWeek[];
+    targets: CalendarFeatureImageTarget[];
     maxConcurrentLoads: number;
 }
 
@@ -35,11 +33,16 @@ interface FeatureImageUrlEntry {
     url: string;
 }
 
+export interface CalendarFeatureImageTarget {
+    id: string;
+    file: TFile;
+    key: string;
+}
+
 export function useCalendarFeatureImages({
     db,
     showFeatureImages,
-    featureImageKeysByIso,
-    weeks,
+    targets,
     maxConcurrentLoads
 }: UseCalendarFeatureImagesOptions): Record<string, string> {
     const featureImageUrlMapRef = useRef<Map<string, FeatureImageUrlEntry>>(new Map());
@@ -81,35 +84,17 @@ export function useCalendarFeatureImages({
             };
         }
 
-        // Only days with a daily note and a computed feature-image key participate in background image loading.
-        const noteDays: { iso: string; file: TFile; key: string }[] = [];
-
-        for (const week of weeks) {
-            for (const day of week.days) {
-                if (!day.file) {
-                    continue;
-                }
-
-                const featureKey = featureImageKeysByIso.get(day.iso);
-                if (!featureKey) {
-                    continue;
-                }
-
-                noteDays.push({ iso: day.iso, file: day.file, key: featureKey });
-            }
-        }
-
         const previousMap = featureImageUrlMapRef.current;
         const nextMap = new Map<string, FeatureImageUrlEntry>();
         const createdUrls: string[] = [];
 
         const fetchUrls = async () => {
             try {
-                const resolveEntry = async (entry: { iso: string; file: TFile; key: string }) => {
-                    // Reuse existing object URLs when the feature image key is unchanged for that day.
-                    const existing = previousMap.get(entry.iso);
+                const resolveEntry = async (entry: CalendarFeatureImageTarget) => {
+                    // Reuse existing object URLs when the feature image key is unchanged for that target.
+                    const existing = previousMap.get(entry.id);
                     if (existing && existing.key === entry.key) {
-                        nextMap.set(entry.iso, existing);
+                        nextMap.set(entry.id, existing);
                         return;
                     }
 
@@ -126,10 +111,10 @@ export function useCalendarFeatureImages({
 
                     const url = URL.createObjectURL(blob);
                     createdUrls.push(url);
-                    nextMap.set(entry.iso, { key: entry.key, url });
+                    nextMap.set(entry.id, { key: entry.key, url });
                 };
 
-                const workerCount = Math.min(Math.max(1, maxConcurrentLoads), noteDays.length || 1);
+                const workerCount = Math.min(Math.max(1, maxConcurrentLoads), targets.length || 1);
                 let nextIndex = 0;
                 const workers: Promise<void>[] = [];
                 for (let workerIndex = 0; workerIndex < workerCount; workerIndex++) {
@@ -138,11 +123,11 @@ export function useCalendarFeatureImages({
                             while (true) {
                                 const currentIndex = nextIndex;
                                 nextIndex += 1;
-                                if (currentIndex >= noteDays.length) {
+                                if (currentIndex >= targets.length) {
                                     return;
                                 }
 
-                                await resolveEntry(noteDays[currentIndex]);
+                                await resolveEntry(targets[currentIndex]);
                             }
                         })()
                     );
@@ -179,7 +164,7 @@ export function useCalendarFeatureImages({
         return () => {
             isActive = false;
         };
-    }, [clearFeatureImageUrls, db, featureImageKeysByIso, maxConcurrentLoads, showFeatureImages, weeks]);
+    }, [clearFeatureImageUrls, db, maxConcurrentLoads, showFeatureImages, targets]);
 
     return featureImageUrls;
 }

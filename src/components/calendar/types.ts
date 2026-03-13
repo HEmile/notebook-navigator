@@ -67,6 +67,10 @@ export interface CalendarNoteContextMenuTarget {
     date: MomentInstance;
     existingFile: TFile | null;
     canCreate: boolean;
+    monthKey?: string | null;
+    dayIso?: string | null;
+    hasFeatureImage?: boolean;
+    currentMonthHighlightDayIso?: string | null;
 }
 
 export type CustomCalendarNoteKind = CalendarNoteKind;
