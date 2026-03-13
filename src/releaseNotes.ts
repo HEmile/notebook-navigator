@@ -78,7 +78,7 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.5.1',
-        date: '2026-03-16',
+        date: '2026-03-13',
         showOnUpdate: true,
         new: [
             'New setting: Navigation > Rainbow colors > ==Consistent brightness across hues==. If enabled (default), hue transitions use the same brightness levels.',
@@ -87,6 +87,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
         improved: [
             'Property tree now shows the values for boolean `true` and `false`.',
             'Property tree now treats frontmatter `null` values as unassigned instead of converting them to `true`.'
+        ],
+        fixed: [
+            'Fixed so the "new version available" popup only shows at most once per day, not on every startup.'
         ]
     },
     {
