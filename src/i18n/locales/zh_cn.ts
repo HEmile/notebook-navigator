@@ -299,6 +299,8 @@ export const STRINGS_ZH_CN = {
             duplicateMultipleFiles: '复制 {count} 个文件',
             renameFile: '重命名文件',
             deleteFile: '删除文件',
+            setCalendarHighlight: '设置高亮',
+            removeCalendarHighlight: '移除高亮',
             deleteMultipleFiles: '删除 {count} 个文件'
         },
         folder: {

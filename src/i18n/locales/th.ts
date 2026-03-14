@@ -288,6 +288,8 @@ export const STRINGS_TH = {
             renameFile: 'เปลี่ยนชื่อไฟล์',
             deleteNote: 'ลบโน้ต',
             deleteFile: 'ลบไฟล์',
+            setCalendarHighlight: 'ตั้งค่าไฮไลต์',
+            removeCalendarHighlight: 'ลบไฮไลต์',
             deleteMultipleNotes: 'ลบ {count} โน้ต',
             deleteMultipleFiles: 'ลบ {count} ไฟล์',
             moveNoteToFolder: 'ย้ายโน้ตไปยัง...',

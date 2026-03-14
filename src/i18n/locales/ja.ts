@@ -299,6 +299,8 @@ export const STRINGS_JA = {
             duplicateMultipleFiles: '{count}個のファイルを複製',
             renameFile: 'ファイルの名前を変更',
             deleteFile: 'ファイルを削除',
+            setCalendarHighlight: 'ハイライトを設定',
+            removeCalendarHighlight: 'ハイライトを解除',
             deleteMultipleFiles: '{count}個のファイルを削除'
         },
         folder: {

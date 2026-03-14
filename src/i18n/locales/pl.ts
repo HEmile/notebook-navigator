@@ -288,6 +288,8 @@ export const STRINGS_PL = {
             renameFile: 'Zmień nazwę pliku',
             deleteNote: 'Usuń notatkę',
             deleteFile: 'Usuń plik',
+            setCalendarHighlight: 'Ustaw podświetlenie',
+            removeCalendarHighlight: 'Usuń podświetlenie',
             deleteMultipleNotes: 'Usuń notatki: {count}',
             deleteMultipleFiles: 'Usuń pliki: {count}',
             moveNoteToFolder: 'Przenieś notatkę do...',

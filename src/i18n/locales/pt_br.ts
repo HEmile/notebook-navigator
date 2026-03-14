@@ -290,6 +290,8 @@ export const STRINGS_PT_BR = {
             renameFile: 'Renomear arquivo',
             deleteNote: 'Excluir nota',
             deleteFile: 'Excluir arquivo',
+            setCalendarHighlight: 'Definir destaque',
+            removeCalendarHighlight: 'Remover destaque',
             deleteMultipleNotes: 'Excluir {count} notas',
             deleteMultipleFiles: 'Excluir {count} arquivos',
             moveNoteToFolder: 'Mover nota para...',

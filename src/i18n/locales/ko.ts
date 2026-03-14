@@ -287,6 +287,8 @@ export const STRINGS_KO = {
             renameFile: '파일 이름 변경',
             deleteNote: '노트 삭제',
             deleteFile: '파일 삭제',
+            setCalendarHighlight: '하이라이트 설정',
+            removeCalendarHighlight: '하이라이트 제거',
             deleteMultipleNotes: '{count}개의 노트 삭제',
             deleteMultipleFiles: '{count}개의 파일 삭제',
             moveNoteToFolder: '노트 이동...',

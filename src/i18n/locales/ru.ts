@@ -289,6 +289,8 @@ export const STRINGS_RU = {
             renameFile: 'Переименовать файл',
             deleteNote: 'Удалить заметку',
             deleteFile: 'Удалить файл',
+            setCalendarHighlight: 'Установить выделение',
+            removeCalendarHighlight: 'Убрать выделение',
             deleteMultipleNotes: 'Удалить {count} заметок',
             deleteMultipleFiles: 'Удалить {count} файлов',
             moveNoteToFolder: 'Переместить заметку в...',

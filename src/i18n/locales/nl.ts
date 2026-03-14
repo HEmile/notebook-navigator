@@ -290,6 +290,8 @@ export const STRINGS_NL = {
             renameFile: 'Bestand hernoemen',
             deleteNote: 'Notitie verwijderen',
             deleteFile: 'Bestand verwijderen',
+            setCalendarHighlight: 'Markering instellen',
+            removeCalendarHighlight: 'Markering verwijderen',
             deleteMultipleNotes: '{count} notities verwijderen',
             deleteMultipleFiles: '{count} bestanden verwijderen',
             moveNoteToFolder: 'Notitie verplaatsen naar...',

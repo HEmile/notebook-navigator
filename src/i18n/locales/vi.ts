@@ -288,6 +288,8 @@ export const STRINGS_VI = {
             renameFile: 'Đổi tên tệp',
             deleteNote: 'Xóa ghi chú',
             deleteFile: 'Xóa tệp',
+            setCalendarHighlight: 'Đặt đánh dấu',
+            removeCalendarHighlight: 'Xóa đánh dấu',
             deleteMultipleNotes: 'Xóa {count} ghi chú',
             deleteMultipleFiles: 'Xóa {count} tệp',
             moveNoteToFolder: 'Di chuyển ghi chú...',

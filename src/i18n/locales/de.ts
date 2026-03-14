@@ -300,6 +300,8 @@ export const STRINGS_DE = {
             duplicateMultipleFiles: '{count} Dateien duplizieren',
             renameFile: 'Datei umbenennen',
             deleteFile: 'Datei löschen',
+            setCalendarHighlight: 'Hervorhebung setzen',
+            removeCalendarHighlight: 'Hervorhebung entfernen',
             deleteMultipleFiles: '{count} Dateien löschen'
         },
         folder: {

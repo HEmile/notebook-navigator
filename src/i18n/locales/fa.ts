@@ -288,6 +288,8 @@ export const STRINGS_FA = {
             renameFile: 'تغییر نام فایل',
             deleteNote: 'حذف یادداشت',
             deleteFile: 'حذف فایل',
+            setCalendarHighlight: 'تنظیم برجسته‌سازی',
+            removeCalendarHighlight: 'حذف برجسته‌سازی',
             deleteMultipleNotes: 'حذف {count} یادداشت',
             deleteMultipleFiles: 'حذف {count} فایل',
             moveNoteToFolder: 'انتقال یادداشت به...',

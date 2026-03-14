@@ -289,6 +289,8 @@ export const STRINGS_TR = {
             renameFile: 'Dosyayı yeniden adlandır',
             deleteNote: 'Notu sil',
             deleteFile: 'Dosyayı sil',
+            setCalendarHighlight: 'Vurgulamayı ayarla',
+            removeCalendarHighlight: 'Vurgulamayı kaldır',
             deleteMultipleNotes: '{count} notu sil',
             deleteMultipleFiles: '{count} dosyayı sil',
             moveNoteToFolder: 'Notu taşı...',

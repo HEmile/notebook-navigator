@@ -288,6 +288,8 @@ export const STRINGS_AR = {
             renameFile: 'إعادة تسمية الملف',
             deleteNote: 'حذف الملاحظة',
             deleteFile: 'حذف الملف',
+            setCalendarHighlight: 'تعيين التمييز',
+            removeCalendarHighlight: 'إزالة التمييز',
             deleteMultipleNotes: 'حذف {count} ملاحظة',
             deleteMultipleFiles: 'حذف {count} ملف',
             moveNoteToFolder: 'نقل الملاحظة إلى...',

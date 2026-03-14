@@ -289,6 +289,8 @@ export const STRINGS_ID = {
             renameFile: 'Ubah nama file',
             deleteNote: 'Hapus catatan',
             deleteFile: 'Hapus file',
+            setCalendarHighlight: 'Atur sorotan',
+            removeCalendarHighlight: 'Hapus sorotan',
             deleteMultipleNotes: 'Hapus {count} catatan',
             deleteMultipleFiles: 'Hapus {count} file',
             moveNoteToFolder: 'Pindahkan catatan ke...',
