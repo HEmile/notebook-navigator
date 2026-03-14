@@ -918,8 +918,8 @@ export const STRINGS_ID = {
                 desc: 'Sertakan catatan dari subfolder bersarang dan turunan tag saat melihat folder atau tag.'
             },
             limitPinnedToCurrentFolder: {
-                name: 'Batasi catatan yang disematkan ke lokasinya',
-                desc: 'Catatan yang disematkan hanya muncul disematkan di folder, tag, atau properti tempat mereka disematkan, bukan di tampilan induk.'
+                name: 'Sematkan catatan hanya di foldernya',
+                desc: 'Catatan yang disematkan hanya tampil disematkan di folder miliknya sendiri. Berguna untuk catatan folder atau jika Anda memiliki banyak catatan yang disematkan. Tidak memengaruhi tampilan tag atau properti.'
             },
             separateNoteCounts: {
                 name: 'Tampilkan jumlah saat ini dan turunan secara terpisah',

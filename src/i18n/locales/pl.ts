@@ -920,8 +920,8 @@ export const STRINGS_PL = {
                 desc: 'Podczas przeglądania folderu lub tagu uwzględnij notatki z podfolderów i tagów podrzędnych.'
             },
             limitPinnedToCurrentFolder: {
-                name: 'Ogranicz przypięte notatki do ich lokalizacji',
-                desc: 'Przypięte notatki pojawiają się jako przypięte tylko w folderze, tagu lub właściwości, gdzie zostały przypięte, nie w widokach nadrzędnych.'
+                name: 'Przypinaj notatki tylko w ich folderze',
+                desc: 'Przypięte notatki są wyświetlane jako przypięte tylko w swoim własnym folderze. Przydatne dla notatek folderów lub jeśli masz wiele przypiętych notatek. Nie wpływa na widoki tagów ani właściwości.'
             },
             separateNoteCounts: {
                 name: 'Pokaż liczbę elementów nadrzędnych i podrzędnych oddzielnie',

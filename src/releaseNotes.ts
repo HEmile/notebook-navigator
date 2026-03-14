@@ -85,6 +85,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
             'New setting: Navigation > Rainbow colors > ==Consistent brightness across hues==. If enabled (default), hue transitions use the same brightness levels.',
             'New setting: Navigation > Rainbow colors > ==Separate light and dark mode colors==. Configure different colors for light and dark mode. Default disabled.'
         ],
+        changed: [
+            'After many many hours of work I decided that the feature "Scope pinned notes to their location" that only shows files pinned "where they were pinned" will only work for folders. The complexities involved with branching in tags and properties makes this too complex to be useful. I also renamed it to "Only pin notes in their folder" to make it extra clear what it does. This feature is useful for folder notes or if you have many pinned notes, to avoid them stacking up when you show notes from subfolders.'
+        ],
         improved: [
             'Property tree now shows the values for boolean `true` and `false`.',
             'Property tree now treats frontmatter `null` values as unassigned instead of converting them to `true`.',
@@ -113,7 +116,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         ],
         improved: [
             'The ==properties tree now supports custom appearance and sort order== in list pane.',
-            'The setting ==Scope pinned notes to their location== (previously called "Limit pinned notes") now also applies to tags and properties.',
+            'The setting ==Only pin notes in their folder== (previously called "Limit pinned notes") only affects folder views.',
             'You can now click directly on property keys in the "Property key visibility modal" to quickly toggle visibility in all three places: navigation pane, list pane, and file menus.',
             'Shortcut rows no longer reserve trailing badge space when Shortcut badge is None.'
         ],

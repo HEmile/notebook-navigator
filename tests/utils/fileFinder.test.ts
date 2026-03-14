@@ -251,7 +251,7 @@ describe('fileFinder getFilesForTag', () => {
         expect(toSortedPaths(files)).toEqual([rootTagFile.path]);
     });
 
-    it('keeps descendant tag pins in normal sort order when limited to the direct tag', () => {
+    it('keeps tag pins visible in tag views when folder pin scoping is enabled', () => {
         const rootTagFile = createTestTFile('notes/root.md');
         rootTagFile.stat.mtime = 20;
         rootTagFile.stat.ctime = 20;
@@ -278,7 +278,7 @@ describe('fileFinder getFilesForTag', () => {
 
         const files = getFilesForTag('projects', settings, { includeDescendantNotes: true, showHiddenItems: false }, app, tagTreeService);
 
-        expect(files.map(file => file.path)).toEqual([rootTagFile.path, childTagFile.path]);
+        expect(files.map(file => file.path)).toEqual([childTagFile.path, rootTagFile.path]);
     });
 });
 
@@ -287,7 +287,7 @@ describe('fileFinder getFilesForProperty', () => {
         fileDataByPath.clear();
     });
 
-    it('keeps value-node pins in normal sort order when limited to the direct property node', () => {
+    it('keeps property pins visible in property views when folder pin scoping is enabled', () => {
         const keyOnlyFile = createTestTFile('notes/key-only.md');
         keyOnlyFile.stat.mtime = 20;
         keyOnlyFile.stat.ctime = 20;
@@ -314,6 +314,6 @@ describe('fileFinder getFilesForProperty', () => {
             null
         );
 
-        expect(files.map(file => file.path)).toEqual([keyOnlyFile.path, valueFile.path]);
+        expect(files.map(file => file.path)).toEqual([valueFile.path, keyOnlyFile.path]);
     });
 });

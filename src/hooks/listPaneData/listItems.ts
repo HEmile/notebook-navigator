@@ -101,15 +101,10 @@ export function buildListItems({
                 ? ItemType.PROPERTY
                 : undefined;
     const db = getDB();
-    const pinnedDisplayScope = listConfig.filterPinnedByFolder
-        ? selectionType === ItemType.FOLDER && selectedFolder
+    const pinnedDisplayScope =
+        listConfig.filterPinnedByFolder && selectionType === ItemType.FOLDER && selectedFolder
             ? { restrictToFolderPath: selectedFolder.path }
-            : selectionType === ItemType.TAG && selectedTag
-              ? { restrictToTagPath: selectedTag, app, db }
-              : selectionType === ItemType.PROPERTY && selectedProperty
-                ? { restrictToPropertyNodeId: selectedProperty, db }
-                : undefined
-        : undefined;
+            : undefined;
     const { pinnedFiles, unpinnedFiles } = partitionPinnedFiles(files, listConfig.pinnedNotes, contextFilter, pinnedDisplayScope);
     const shouldDetectTags = listConfig.showTags && listConfig.showFileTags;
     const hiddenTagVisibility = shouldDetectTags ? createHiddenTagVisibility(hiddenTags, showHiddenItems) : null;

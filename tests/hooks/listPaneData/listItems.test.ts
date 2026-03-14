@@ -85,7 +85,7 @@ function getFileItems(items: ReturnType<typeof buildListItems>): { path: string;
 }
 
 describe('buildListItems pinned display scope', () => {
-    it('keeps descendant tag pins in the normal section for ancestor tag selections', () => {
+    it('keeps tag pins in the pinned section when folder pin scoping is enabled', () => {
         const app = createApp();
         const rootFile = createTestTFile('notes/root.md');
         const childFile = createTestTFile('notes/child.md');
@@ -115,10 +115,10 @@ describe('buildListItems pinned display scope', () => {
             sortOption: 'modified-desc'
         });
 
-        expect(items.some(item => item.key === PINNED_SECTION_HEADER_KEY)).toBe(false);
+        expect(items.some(item => item.key === PINNED_SECTION_HEADER_KEY)).toBe(true);
         expect(getFileItems(items)).toEqual([
-            { path: rootFile.path, isPinned: false },
-            { path: childFile.path, isPinned: false }
+            { path: childFile.path, isPinned: true },
+            { path: rootFile.path, isPinned: false }
         ]);
     });
 
@@ -159,7 +159,7 @@ describe('buildListItems pinned display scope', () => {
         ]);
     });
 
-    it('keeps property value pins in the normal section for ancestor key selections', () => {
+    it('keeps property pins in the pinned section when folder pin scoping is enabled', () => {
         const app = createApp();
         const keyOnlyFile = createTestTFile('notes/key-only.md');
         const valueFile = createTestTFile('notes/value.md');
@@ -195,10 +195,10 @@ describe('buildListItems pinned display scope', () => {
             sortOption: 'modified-desc'
         });
 
-        expect(items.some(item => item.key === PINNED_SECTION_HEADER_KEY)).toBe(false);
+        expect(items.some(item => item.key === PINNED_SECTION_HEADER_KEY)).toBe(true);
         expect(getFileItems(items)).toEqual([
-            { path: keyOnlyFile.path, isPinned: false },
-            { path: valueFile.path, isPinned: false }
+            { path: valueFile.path, isPinned: true },
+            { path: keyOnlyFile.path, isPinned: false }
         ]);
     });
 

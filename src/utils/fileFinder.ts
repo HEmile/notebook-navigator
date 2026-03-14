@@ -65,10 +65,6 @@ import type { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
 
 interface PinnedDisplayScope {
     restrictToFolderPath?: string;
-    restrictToTagPath?: string | null;
-    restrictToPropertyNodeId?: PropertySelectionNodeId | null;
-    app?: App;
-    db?: ReturnType<typeof getDBInstanceOrNull>;
 }
 
 function matchesPathSelection(candidatePath: string, selectedPath: string, includeDescendants: boolean): boolean {
@@ -313,95 +309,16 @@ function collectPinnedPaths(pinnedNotes: PinnedNotes, contextFilter?: NavigatorC
     return allPinnedPaths;
 }
 
-function matchesPinnedTagSelection(file: TFile, selectedTagPath: string, app: App, db: ReturnType<typeof getDBInstanceOrNull>): boolean {
-    const tags = getCachedFileTags({ app, file, db });
-    if (selectedTagPath === UNTAGGED_TAG_ID) {
-        return tags.length === 0;
-    }
-
-    if (selectedTagPath === TAGGED_TAG_ID) {
-        return false;
-    }
-
-    const normalizedSelectedTagPath = normalizeTagPathValue(selectedTagPath);
-    if (!normalizedSelectedTagPath) {
-        return false;
-    }
-
-    return tags.some(tagValue => normalizeTagPathValue(tagValue) === normalizedSelectedTagPath);
-}
-
-function matchesPinnedPropertySelection(
-    file: TFile,
-    selectedPropertyNodeId: PropertySelectionNodeId,
-    db: ReturnType<typeof getDBInstanceOrNull>
-): boolean {
-    if (selectedPropertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
-        return false;
-    }
-
-    const parsedSelection = parsePropertyNodeId(selectedPropertyNodeId);
-    if (!parsedSelection) {
-        return false;
-    }
-
-    const fileData = db?.getFile(file.path) ?? null;
-    const properties = fileData?.properties;
-    if (!properties || properties.length === 0) {
-        return false;
-    }
-
-    for (const entry of properties) {
-        if (casefold(entry.fieldKey) !== parsedSelection.key) {
-            continue;
-        }
-
-        const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
-        if (parsedSelection.valuePath === null) {
-            if (isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind)) {
-                return true;
-            }
-            continue;
-        }
-
-        if (!normalizedValuePath) {
-            continue;
-        }
-
-        if (matchesPropertyValuePath(normalizedValuePath, parsedSelection.valuePath)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 function matchesPinnedDisplayScope(file: TFile, context: NavigatorContext | undefined, scope: PinnedDisplayScope | undefined): boolean {
-    if (!context || !scope) {
+    if (context !== 'folder' || !scope) {
         return true;
     }
 
-    if (context === 'folder') {
-        if (scope.restrictToFolderPath === undefined) {
-            return true;
-        }
-
-        return getParentFolderPath(file.path) === scope.restrictToFolderPath;
-    }
-
-    if (context === 'tag') {
-        if (scope.restrictToTagPath === undefined || scope.restrictToTagPath === null || !scope.app) {
-            return true;
-        }
-
-        return matchesPinnedTagSelection(file, scope.restrictToTagPath, scope.app, scope.db ?? null);
-    }
-
-    if (scope.restrictToPropertyNodeId === undefined || scope.restrictToPropertyNodeId === null) {
+    if (scope.restrictToFolderPath === undefined) {
         return true;
     }
 
-    return matchesPinnedPropertySelection(file, scope.restrictToPropertyNodeId, scope.db ?? null);
+    return getParentFolderPath(file.path) === scope.restrictToFolderPath;
 }
 
 export function partitionPinnedFiles(
@@ -684,18 +601,7 @@ export function getFilesForTag(
     const sortOption = getEffectiveSortOption(settings, 'tag', null, tag);
     sortNavigationFiles(filteredFiles, settings, app, sortOption);
 
-    const pinnedDisplayScope = settings.filterPinnedByFolder
-        ? {
-              restrictToTagPath:
-                  tag === TAGGED_TAG_ID || tag === UNTAGGED_TAG_ID
-                      ? tag
-                      : (tagTreeService?.findTagNode(tag)?.path ?? normalizeTagPathValue(tag)),
-              app,
-              db
-          }
-        : undefined;
-
-    return applyPinnedOrdering(filteredFiles, settings, 'tag', pinnedDisplayScope);
+    return applyPinnedOrdering(filteredFiles, settings, 'tag');
 }
 
 /**
@@ -853,12 +759,5 @@ export function getFilesForProperty(
     const sortOption = getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, propertyNodeId);
     sortNavigationFiles(matchedFiles, settings, app, sortOption);
 
-    const pinnedDisplayScope = settings.filterPinnedByFolder
-        ? {
-              restrictToPropertyNodeId: propertyNodeId,
-              db
-          }
-        : undefined;
-
-    return applyPinnedOrdering(matchedFiles, settings, 'property', pinnedDisplayScope);
+    return applyPinnedOrdering(matchedFiles, settings, 'property');
 }
