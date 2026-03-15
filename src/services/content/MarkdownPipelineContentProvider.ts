@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Platform, type CachedMetadata, type FrontMatterCache, type TFile } from 'obsidian';
+import { Platform, parseYaml, type CachedMetadata, type FrontMatterCache, type TFile } from 'obsidian';
 import { LIMITS } from '../../constants/limits';
 import { type ContentProviderType } from '../../interfaces/IContentProvider';
 import { NotebookNavigatorSettings } from '../../settings';
@@ -26,6 +26,7 @@ import { getCachedCommaSeparatedList } from '../../utils/commaSeparatedListUtils
 import { areStringArraysEqual } from '../../utils/arrayUtils';
 import { arePropertyItemsEqual, hasPropertyFrontmatterFields } from '../../utils/propertyUtils';
 import { getActivePropertyFields } from '../../utils/vaultProfiles';
+import { hasExcalidrawFrontmatterFlagValue } from '../../utils/fileNameUtils';
 import {
     type FenceMarkerChar,
     isFenceClose,
@@ -92,6 +93,52 @@ function resolveMarkdownBodyStartIndex(metadata: CachedMetadata, content: string
     }
 
     return index;
+}
+
+function extractYamlFrontmatter(content: string): string | null {
+    // Parse only the leading YAML block so Excalidraw frontmatter can be recovered from fresh file content.
+    const firstLineEnd = content.indexOf('\n');
+    const firstLine = firstLineEnd === -1 ? content : content.slice(0, firstLineEnd);
+    const normalizedFirstLine = firstLine.charCodeAt(0) === 0xfeff ? firstLine.slice(1) : firstLine;
+
+    if (normalizedFirstLine.trim() !== '---' || firstLineEnd === -1) {
+        return null;
+    }
+
+    const yamlStart = firstLineEnd + 1;
+    let lineStart = yamlStart;
+    while (lineStart <= content.length) {
+        const nextLineEnd = content.indexOf('\n', lineStart);
+        const lineEnd = nextLineEnd === -1 ? content.length : nextLineEnd;
+        const line = content.slice(lineStart, lineEnd);
+        const trimmed = line.trim();
+
+        if (trimmed === '---' || trimmed === '...') {
+            return content.slice(yamlStart, lineStart).trim();
+        }
+
+        if (nextLineEnd === -1) {
+            break;
+        }
+
+        lineStart = lineEnd + 1;
+    }
+
+    return null;
+}
+
+function frontmatterMarksExcalidraw(content: string): boolean {
+    const yamlText = extractYamlFrontmatter(content);
+    if (!yamlText) {
+        return false;
+    }
+
+    try {
+        const parsed: unknown = parseYaml(yamlText);
+        return hasExcalidrawFrontmatterFlagValue(parsed);
+    } catch {
+        return false;
+    }
 }
 
 type MarkdownTaskMarker = 'complete' | 'unfinished';
@@ -489,6 +536,8 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
         const propertyNameFields = getCachedCommaSeparatedList(getActivePropertyFields(settings));
         const propertiesEnabled = propertyNameFields.length > 0;
         const previewPropertiesEnabled = settings.showFilePreview && settings.previewProperties.length > 0;
+        const featureImagePropertiesEnabled = settings.showFeatureImage && settings.featureImageProperties.length > 0;
+        const featureImageExcludePropertiesEnabled = settings.showFeatureImage && settings.featureImageExcludeProperties.length > 0;
 
         const cachedMetadata = this.app.metadataCache.getFileCache(job.file);
         if (!cachedMetadata) {
@@ -497,12 +546,19 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
         }
 
         const frontmatter = cachedMetadata.frontmatter ?? null;
-        const needsPreviewPropertyFrontmatter =
-            previewPropertiesEnabled &&
-            (fileData === null || fileData.previewStatus === 'unprocessed') &&
-            !PreviewTextUtils.isExcalidrawFile(job.file.name, frontmatter ?? undefined);
-        const needsPropertyFrontmatter = propertiesEnabled && (fileData === null || fileData.properties === null);
-        if (frontmatter === null && (needsPropertyFrontmatter || needsPreviewPropertyFrontmatter)) {
+        let isExcalidraw = PreviewTextUtils.isExcalidrawFile(job.file.name, frontmatter ?? undefined);
+        const fileModified = fileData !== null && fileData.markdownPipelineMtime !== job.file.stat.mtime;
+        const needsPreview =
+            settings.showFilePreview && (!fileData || fileModified || fileData.previewStatus === 'unprocessed') && !isExcalidraw;
+        const needsPreviewPropertyFrontmatter = previewPropertiesEnabled && needsPreview;
+        const needsPropertyFrontmatter = propertiesEnabled && (fileData === null || fileModified || fileData.properties === null);
+        const needsFeatureImage =
+            settings.showFeatureImage &&
+            (!fileData || fileModified || fileData.featureImageKey === null || fileData.featureImageStatus === 'unprocessed') &&
+            !isExcalidraw;
+        const needsFeatureImageFrontmatter = needsFeatureImage && (featureImagePropertiesEnabled || featureImageExcludePropertiesEnabled);
+        // Delay processing recent files while metadata cache catches up with frontmatter-backed preview/property/image inputs.
+        if (frontmatter === null && (needsPropertyFrontmatter || needsPreviewPropertyFrontmatter || needsFeatureImageFrontmatter)) {
             const attempts = this.emptyFrontmatterRetryCounts.get(job.path) ?? 0;
             const isRecent = Date.now() - job.file.stat.mtime <= LIMITS.contentProvider.metadataCache.recentFileWindowMs;
             if (isRecent && attempts < LIMITS.contentProvider.metadataCache.emptyValueRetryLimit) {
@@ -510,23 +566,12 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
                 return { update: null, processed: false };
             }
         }
-        this.emptyFrontmatterRetryCounts.delete(job.path);
-        const isExcalidraw = PreviewTextUtils.isExcalidrawFile(job.file.name, frontmatter ?? undefined);
-
-        const fileModified = fileData !== null && fileData.markdownPipelineMtime !== job.file.stat.mtime;
         const featureImageExcludeMatcher = createCaseInsensitiveKeyMatcher(settings.featureImageExcludeProperties);
         const featureImageExcluded = settings.showFeatureImage && frontmatter !== null && featureImageExcludeMatcher.matches(frontmatter);
-
-        const needsPreview =
-            settings.showFilePreview && (!fileData || fileModified || fileData.previewStatus === 'unprocessed') && !isExcalidraw;
         const needsWordCount = !fileData || fileModified || fileData.wordCount === null;
         const needsWordCountContent = needsWordCount && !isExcalidraw;
         const needsTasks = !fileData || fileModified || fileData.taskTotal === null || fileData.taskUnfinished === null;
         const needsTasksContent = needsTasks && !isExcalidraw;
-        const needsFeatureImage =
-            settings.showFeatureImage &&
-            (!fileData || fileModified || fileData.featureImageKey === null || fileData.featureImageStatus === 'unprocessed') &&
-            !isExcalidraw;
 
         const frontmatterFeatureImageReference =
             needsFeatureImage && frontmatter && !featureImageExcluded
@@ -560,6 +605,20 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
         if (needsContent) {
             const maxMarkdownReadBytes = Platform.isMobile ? LIMITS.markdown.maxReadBytes.mobile : LIMITS.markdown.maxReadBytes.desktop;
             if (job.file.stat.size > maxMarkdownReadBytes) {
+                // Large files stay on the metadata-only path, so recent frontmatter-only Excalidraw notes need the same retry window.
+                const needsExcalidrawFrontmatterForFeatureImage =
+                    frontmatter === null && !isExcalidraw && needsFeatureImage && job.file.name.toLowerCase().endsWith('.md');
+                if (needsExcalidrawFrontmatterForFeatureImage) {
+                    const attempts = this.emptyFrontmatterRetryCounts.get(job.path) ?? 0;
+                    const isRecent = Date.now() - job.file.stat.mtime <= LIMITS.contentProvider.metadataCache.recentFileWindowMs;
+                    if (isRecent && attempts < LIMITS.contentProvider.metadataCache.emptyValueRetryLimit) {
+                        this.emptyFrontmatterRetryCounts.set(job.path, attempts + 1);
+                        return { update: null, processed: false };
+                    }
+                }
+
+                this.emptyFrontmatterRetryCounts.delete(job.path);
+
                 // Avoid reading full markdown content for large files; only apply updates derived from cached metadata/frontmatter.
                 let hasSafeUpdate = false;
 
@@ -625,6 +684,8 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
                 return { update: null, processed: true };
             }
         }
+
+        this.emptyFrontmatterRetryCounts.delete(job.path);
 
         let content: string;
         let hasContent = false;
@@ -733,6 +794,11 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
             }
 
             return { update: null, processed: shouldFallback };
+        }
+
+        if (!isExcalidraw && frontmatter === null && frontmatterMarksExcalidraw(content)) {
+            // Metadata cache can lag behind file reads right after save; recover frontmatter-only Excalidraw detection from content.
+            isExcalidraw = true;
         }
 
         const context: MarkdownPipelineContext = {

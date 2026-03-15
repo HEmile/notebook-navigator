@@ -82,7 +82,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         showOnUpdate: true,
         bannerUrl: true,
         new: [
-            '==The monthly calendar view now shows feature images for each month==. By default it shows the image for the first day of the month, but you can change this by right-clicking a day and choose "Set highlight".',
+            '==The monthly calendar view now shows feature images for each month==. By default it shows the image for the first note of the month, but you can change this by right-clicking a day and choose "Set highlight".',
             'New setting: Navigation > Rainbow colors > ==Consistent brightness across hues==. If enabled (default), hue transitions use the same brightness levels.',
             'New setting: Navigation > Rainbow colors > ==Separate light and dark mode colors==. Configure different colors for light and dark mode. Default disabled.',
             'New setting: ==Calendar > Enable calendar==. Simple switch to disable all calendar functionality in Notebook Navigator.',

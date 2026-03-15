@@ -104,14 +104,21 @@ function isTruthyExcalidrawFrontmatterFlag(value: ExcalidrawFrontmatterFlagValue
 }
 
 /**
- * Checks if a frontmatter record marks the file as an Excalidraw drawing.
+ * Checks whether an unknown object contains an Excalidraw frontmatter flag.
  */
-export function hasExcalidrawFrontmatterFlag(frontmatter?: Record<string, ExcalidrawFrontmatterFlagValue> | null): boolean {
-    if (!frontmatter) {
+export function hasExcalidrawFrontmatterFlagValue(frontmatter: unknown): boolean {
+    if (!frontmatter || typeof frontmatter !== 'object' || Array.isArray(frontmatter)) {
         return false;
     }
 
-    return isTruthyExcalidrawFrontmatterFlag(frontmatter[EXCALIDRAW_FRONTMATTER_KEY]);
+    return isTruthyExcalidrawFrontmatterFlag((frontmatter as Record<string, ExcalidrawFrontmatterFlagValue>)[EXCALIDRAW_FRONTMATTER_KEY]);
+}
+
+/**
+ * Checks if a frontmatter record marks the file as an Excalidraw drawing.
+ */
+export function hasExcalidrawFrontmatterFlag(frontmatter?: Record<string, ExcalidrawFrontmatterFlagValue> | null): boolean {
+    return hasExcalidrawFrontmatterFlagValue(frontmatter);
 }
 
 /**
