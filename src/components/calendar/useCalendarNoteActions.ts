@@ -49,6 +49,7 @@ interface UseCalendarNoteActionsOptions {
     openFile: (file: TFile | null, options?: { active?: boolean }) => void;
     clearHoverTooltip: () => void;
     onVaultChange: () => void;
+    showMonthHighlightActions: boolean;
     setCalendarMonthHighlight: (monthKey: string, dayIso: string) => Promise<void>;
     removeCalendarMonthHighlight: (monthKey: string) => Promise<void>;
 }
@@ -73,6 +74,7 @@ export function useCalendarNoteActions({
     openFile,
     clearHoverTooltip,
     onVaultChange,
+    showMonthHighlightActions,
     setCalendarMonthHighlight,
     removeCalendarMonthHighlight
 }: UseCalendarNoteActionsOptions): UseCalendarNoteActionsResult {
@@ -247,7 +249,7 @@ export function useCalendarNoteActions({
             const isCurrentMonthHighlight = target.currentMonthHighlightDayIso === target.dayIso;
             let hasHighlightMenuItem = false;
 
-            if (target.kind === 'day' && target.hasFeatureImage && target.monthKey && target.dayIso) {
+            if (showMonthHighlightActions && target.kind === 'day' && target.hasFeatureImage && target.monthKey && target.dayIso) {
                 const { monthKey, dayIso } = target;
                 if (!isCurrentMonthHighlight) {
                     hasHighlightMenuItem = true;
@@ -320,6 +322,7 @@ export function useCalendarNoteActions({
             openOrCreateDailyNote,
             removeCalendarMonthHighlight,
             setCalendarMonthHighlight,
+            showMonthHighlightActions,
             settings.confirmBeforeDelete,
             settings.interfaceIcons
         ]

@@ -851,6 +851,7 @@ export function Calendar({
         },
         [updateSettings]
     );
+    const showMonthHighlightActions = settings.calendarShowFeatureImage && showYearCalendar;
 
     const { getExistingCustomCalendarNoteFile, openOrCreateCustomCalendarNote, openOrCreateDailyNote, showCalendarNoteContextMenu } =
         useCalendarNoteActions({
@@ -866,6 +867,7 @@ export function Calendar({
             openFile,
             clearHoverTooltip,
             onVaultChange,
+            showMonthHighlightActions,
             setCalendarMonthHighlight,
             removeCalendarMonthHighlight
         });
