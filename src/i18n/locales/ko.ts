@@ -1692,14 +1692,15 @@ export const STRINGS_KO = {
                 name: '항목 접기',
                 desc: '모두 펼치기/접기 버튼이 영향을 미치는 항목을 선택하세요.',
                 options: {
-                    all: '모든 폴더 및 태그',
+                    all: '모두',
                     foldersOnly: '폴더만',
-                    tagsOnly: '태그만'
+                    tagsOnly: '태그만',
+                    propertiesOnly: '속성만'
                 }
             },
             smartCollapse: {
                 name: '선택한 항목 펼친 상태 유지',
-                desc: '접을 때 현재 선택한 폴더나 태그와 상위 항목을 펼친 상태로 유지합니다.'
+                desc: '접을 때 선택한 항목과 상위 항목을 펼친 상태로 유지합니다.'
             },
             navIndent: {
                 name: '트리 들여쓰기',

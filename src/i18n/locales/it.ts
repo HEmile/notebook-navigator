@@ -1692,14 +1692,15 @@ export const STRINGS_IT = {
                 name: 'Comprimi elementi',
                 desc: 'Scegli cosa influenza il pulsante espandi/comprimi tutto.',
                 options: {
-                    all: 'Tutte cartelle e tag',
+                    all: 'Tutto',
                     foldersOnly: 'Solo cartelle',
-                    tagsOnly: 'Solo tag'
+                    tagsOnly: 'Solo tag',
+                    propertiesOnly: 'Solo proprietà'
                 }
             },
             smartCollapse: {
                 name: 'Mantieni elemento selezionato espanso',
-                desc: 'Quando comprimi, mantieni la cartella o tag attualmente selezionato e i suoi genitori espansi.'
+                desc: "Quando comprimi, mantieni l'elemento selezionato e i suoi genitori espansi."
             },
             navIndent: {
                 name: 'Indentazione albero',

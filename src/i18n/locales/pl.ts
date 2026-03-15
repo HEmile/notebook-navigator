@@ -1697,14 +1697,15 @@ export const STRINGS_PL = {
                 name: 'Zwiń elementy',
                 desc: 'Wybierz na co wpływa przycisk służący do zwijania i rozwijania elementów.',
                 options: {
-                    all: 'Wszystkie foldery i tagi',
+                    all: 'Wszystko',
                     foldersOnly: 'Tylko foldery',
-                    tagsOnly: 'Tylko tagi'
+                    tagsOnly: 'Tylko tagi',
+                    propertiesOnly: 'Tylko właściwości'
                 }
             },
             smartCollapse: {
                 name: 'Zachowaj wybrany element rozwinięty',
-                desc: 'Podczas zwijania, zachowaj aktywny folder lub tag oraz elementy nadrzędne rozwinięte.'
+                desc: 'Podczas zwijania, zachowaj wybrany element oraz elementy nadrzędne rozwinięte.'
             },
             navIndent: {
                 name: 'Wcięcie w strukturze',

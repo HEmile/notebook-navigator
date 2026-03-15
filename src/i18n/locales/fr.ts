@@ -1698,14 +1698,15 @@ export const STRINGS_FR = {
                 name: 'Replier les éléments',
                 desc: 'Choisissez ce que le bouton déplier/replier tout affecte.',
                 options: {
-                    all: 'Tous les dossiers et étiquettes',
+                    all: 'Tout',
                     foldersOnly: 'Dossiers uniquement',
-                    tagsOnly: 'Étiquettes uniquement'
+                    tagsOnly: 'Étiquettes uniquement',
+                    propertiesOnly: 'Propriétés uniquement'
                 }
             },
             smartCollapse: {
                 name: "Garder l'élément sélectionné déplié",
-                desc: "Lors du repliement, garde le dossier ou l'étiquette actuellement sélectionné et ses parents dépliés."
+                desc: "Lors du repliement, garde l'élément sélectionné et ses parents dépliés."
             },
             navIndent: {
                 name: "Indentation de l'arbre",

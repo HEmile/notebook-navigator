@@ -1687,14 +1687,15 @@ export const STRINGS_EN = {
                 name: 'Collapse items',
                 desc: 'Choose what the expand/collapse all button affects.',
                 options: {
-                    all: 'All folders and tags',
+                    all: 'All',
                     foldersOnly: 'Folders only',
-                    tagsOnly: 'Tags only'
+                    tagsOnly: 'Tags only',
+                    propertiesOnly: 'Properties only'
                 }
             },
             smartCollapse: {
                 name: 'Keep selected item expanded',
-                desc: 'When collapsing, keep the currently selected folder or tag and its parents expanded.'
+                desc: 'When collapsing, keep the selected item and its parents expanded.'
             },
             navIndent: {
                 name: 'Tree indentation',

@@ -1694,14 +1694,15 @@ export const STRINGS_VI = {
                 name: 'Thu gọn mục',
                 desc: 'Chọn nút mở rộng/thu gọn tất cả ảnh hưởng đến gì.',
                 options: {
-                    all: 'Tất cả thư mục và thẻ',
+                    all: 'Tất cả',
                     foldersOnly: 'Chỉ thư mục',
-                    tagsOnly: 'Chỉ thẻ'
+                    tagsOnly: 'Chỉ thẻ',
+                    propertiesOnly: 'Chỉ thuộc tính'
                 }
             },
             smartCollapse: {
                 name: 'Giữ mục đã chọn mở rộng',
-                desc: 'Khi thu gọn, giữ thư mục hoặc thẻ đang chọn và cha của nó mở rộng.'
+                desc: 'Khi thu gọn, giữ mục đã chọn và cha của nó mở rộng.'
             },
             navIndent: {
                 name: 'Thụt lề cây',

@@ -1696,14 +1696,15 @@ export const STRINGS_PT = {
                 name: 'Recolher itens',
                 desc: 'Escolha o que o botão expandir/recolher tudo afeta.',
                 options: {
-                    all: 'Todas as pastas e etiquetas',
+                    all: 'Tudo',
                     foldersOnly: 'Apenas pastas',
-                    tagsOnly: 'Apenas etiquetas'
+                    tagsOnly: 'Apenas etiquetas',
+                    propertiesOnly: 'Apenas propriedades'
                 }
             },
             smartCollapse: {
                 name: 'Manter item selecionado expandido',
-                desc: 'Ao recolher, manter a pasta ou etiqueta selecionada e os seus pais expandidos.'
+                desc: 'Ao recolher, manter o item selecionado e os seus pais expandidos.'
             },
             navIndent: {
                 name: 'Indentação da árvore',

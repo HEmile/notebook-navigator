@@ -151,7 +151,7 @@ export function isTagSortOrder(value: string): value is TagSortOrder {
 }
 
 /** Scope of items that button actions affect */
-export type ItemScope = 'all' | 'folders-only' | 'tags-only';
+export type ItemScope = 'all' | 'folders-only' | 'tags-only' | 'properties-only';
 
 export type NavRainbowColorMode = 'none' | 'foreground' | 'background';
 

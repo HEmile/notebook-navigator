@@ -1693,14 +1693,15 @@ export const STRINGS_TR = {
                 name: 'Öğeleri daralt',
                 desc: 'Tümünü genişlet/daralt düğmesinin neyi etkilediğini seçin.',
                 options: {
-                    all: 'Tüm klasörler ve etiketler',
+                    all: 'Tümü',
                     foldersOnly: 'Yalnızca klasörler',
-                    tagsOnly: 'Yalnızca etiketler'
+                    tagsOnly: 'Yalnızca etiketler',
+                    propertiesOnly: 'Yalnızca özellikler'
                 }
             },
             smartCollapse: {
                 name: 'Seçili öğeyi genişletilmiş tut',
-                desc: 'Daraltırken seçili klasör veya etiketi ve üst öğelerini genişletilmiş tut.'
+                desc: 'Daraltırken seçili öğeyi ve üst öğelerini genişletilmiş tut.'
             },
             navIndent: {
                 name: 'Ağaç girintisi',

@@ -461,6 +461,7 @@ export function renderNavigationPaneTab(context: SettingsTabContext): void {
                     .addOption('all', strings.settings.items.collapseBehavior.options.all)
                     .addOption('folders-only', strings.settings.items.collapseBehavior.options.foldersOnly)
                     .addOption('tags-only', strings.settings.items.collapseBehavior.options.tagsOnly)
+                    .addOption('properties-only', strings.settings.items.collapseBehavior.options.propertiesOnly)
                     .setValue(plugin.settings.collapseBehavior)
                     .onChange(async (value: ItemScope) => {
                         plugin.settings.collapseBehavior = value;

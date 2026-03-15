@@ -1686,14 +1686,15 @@ export const STRINGS_ZH_CN = {
                 name: '折叠项目',
                 desc: '选择展开/折叠全部按钮影响的内容。',
                 options: {
-                    all: '所有文件夹和标签',
+                    all: '全部',
                     foldersOnly: '仅文件夹',
-                    tagsOnly: '仅标签'
+                    tagsOnly: '仅标签',
+                    propertiesOnly: '仅属性'
                 }
             },
             smartCollapse: {
                 name: '保持选中项展开',
-                desc: '折叠时，保持当前选中的文件夹或标签及其父级展开。'
+                desc: '折叠时，保持选中项及其父级展开。'
             },
             navIndent: {
                 name: '树形缩进',

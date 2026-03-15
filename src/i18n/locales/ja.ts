@@ -1693,14 +1693,15 @@ export const STRINGS_JA = {
                 name: '項目を折りたたむ',
                 desc: '展開/折りたたみボタンが影響する項目を選択します。',
                 options: {
-                    all: 'すべてのフォルダとタグ',
+                    all: 'すべて',
                     foldersOnly: 'フォルダのみ',
-                    tagsOnly: 'タグのみ'
+                    tagsOnly: 'タグのみ',
+                    propertiesOnly: 'プロパティのみ'
                 }
             },
             smartCollapse: {
                 name: '選択中の項目を展開したままにする',
-                desc: '折りたたむ時、現在選択されているフォルダまたはタグとその親を展開したままにします。'
+                desc: '折りたたむ時、選択中の項目とその親を展開したままにします。'
             },
             navIndent: {
                 name: 'ツリーインデント',

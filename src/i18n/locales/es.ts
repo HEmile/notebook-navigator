@@ -1696,14 +1696,15 @@ export const STRINGS_ES = {
                 name: 'Contraer elementos',
                 desc: 'Elige qué afecta el botón de expandir/contraer todo.',
                 options: {
-                    all: 'Todas las carpetas y etiquetas',
+                    all: 'Todo',
                     foldersOnly: 'Solo carpetas',
-                    tagsOnly: 'Solo etiquetas'
+                    tagsOnly: 'Solo etiquetas',
+                    propertiesOnly: 'Solo propiedades'
                 }
             },
             smartCollapse: {
                 name: 'Mantener elemento seleccionado expandido',
-                desc: 'Al contraer, mantiene la carpeta o etiqueta seleccionada actualmente y sus elementos principales expandidos.'
+                desc: 'Al contraer, mantiene el elemento seleccionado y sus elementos principales expandidos.'
             },
             navIndent: {
                 name: 'Sangría del árbol',

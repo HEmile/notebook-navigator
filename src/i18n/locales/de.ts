@@ -1695,14 +1695,15 @@ export const STRINGS_DE = {
                 name: 'Elemente einklappen',
                 desc: 'Wählen Sie, was die Schaltfläche zum Ein-/Ausklappen beeinflusst.',
                 options: {
-                    all: 'Alle Ordner und Tags',
+                    all: 'Alle',
                     foldersOnly: 'Nur Ordner',
-                    tagsOnly: 'Nur Tags'
+                    tagsOnly: 'Nur Tags',
+                    propertiesOnly: 'Nur Eigenschaften'
                 }
             },
             smartCollapse: {
                 name: 'Ausgewähltes Element erweitert halten',
-                desc: 'Beim Einklappen bleiben der aktuell ausgewählte Ordner oder Tag und seine übergeordneten Elemente erweitert.'
+                desc: 'Beim Einklappen bleibt das ausgewählte Element und seine übergeordneten Elemente erweitert.'
             },
             navIndent: {
                 name: 'Baum-Einrückung',

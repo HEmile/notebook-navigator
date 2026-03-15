@@ -1686,14 +1686,15 @@ export const STRINGS_ZH_TW = {
                 name: '摺疊項目',
                 desc: '選擇展開/摺疊全部按鈕影響的內容。',
                 options: {
-                    all: '所有資料夾和標籤',
+                    all: '全部',
                     foldersOnly: '僅資料夾',
-                    tagsOnly: '僅標籤'
+                    tagsOnly: '僅標籤',
+                    propertiesOnly: '僅屬性'
                 }
             },
             smartCollapse: {
                 name: '保持選取項展開',
-                desc: '摺疊時，保持目前選取的資料夾或標籤及其父級展開。'
+                desc: '摺疊時，保持選取項及其父級展開。'
             },
             navIndent: {
                 name: '樹狀縮排',

@@ -1694,14 +1694,15 @@ export const STRINGS_ID = {
                 name: 'Ciutkan item',
                 desc: 'Pilih apa yang dipengaruhi tombol luaskan/ciutkan semua.',
                 options: {
-                    all: 'Semua folder dan tag',
+                    all: 'Semua',
                     foldersOnly: 'Folder saja',
-                    tagsOnly: 'Tag saja'
+                    tagsOnly: 'Tag saja',
+                    propertiesOnly: 'Properti saja'
                 }
             },
             smartCollapse: {
                 name: 'Pertahankan item yang dipilih tetap terbuka',
-                desc: 'Saat menciutkan, pertahankan folder atau tag yang dipilih saat ini dan induknya tetap terbuka.'
+                desc: 'Saat menciutkan, pertahankan item yang dipilih dan induknya tetap terbuka.'
             },
             navIndent: {
                 name: 'Indentasi pohon',

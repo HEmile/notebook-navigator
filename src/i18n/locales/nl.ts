@@ -1696,14 +1696,15 @@ export const STRINGS_NL = {
                 name: 'Items inklappen',
                 desc: 'Kies wat de uitklappen/inklappen alle knop beïnvloedt.',
                 options: {
-                    all: 'Alle mappen en tags',
+                    all: 'Alles',
                     foldersOnly: 'Alleen mappen',
-                    tagsOnly: 'Alleen tags'
+                    tagsOnly: 'Alleen tags',
+                    propertiesOnly: 'Alleen eigenschappen'
                 }
             },
             smartCollapse: {
                 name: 'Geselecteerd item uitgeklapt houden',
-                desc: 'Bij het inklappen de momenteel geselecteerde map of tag en de bovenliggende items uitgeklapt houden.'
+                desc: 'Bij het inklappen het geselecteerde item en de bovenliggende items uitgeklapt houden.'
             },
             navIndent: {
                 name: 'Structuurinspringing',
