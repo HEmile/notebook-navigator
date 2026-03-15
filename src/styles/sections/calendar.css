@@ -931,6 +931,8 @@
 
 .nn-navigation-calendar-year-month.has-feature-image .nn-navigation-calendar-year-month-label {
     font-weight: 600;
+    overflow: visible;
+    text-overflow: clip;
     text-shadow:
         0 1px 2px rgba(0, 0, 0, 0.75),
         0 2px 8px rgba(0, 0, 0, 0.45);

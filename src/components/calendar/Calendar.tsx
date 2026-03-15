@@ -942,25 +942,51 @@ export function Calendar({
             return filesByKey;
         }
 
+        void featureImageVersion;
+
         for (const entry of yearMonthEntries) {
-            const highlightedDayIso = settings.calendarMonthHighlights[entry.key];
-            if (!highlightedDayIso) {
+            const highlightedDayIso = settings.calendarMonthHighlights[entry.key] ?? null;
+            if (highlightedDayIso) {
+                const highlightedDay = momentApi(highlightedDayIso, 'YYYY-MM-DD', true);
+                if (highlightedDay.isValid() && highlightedDay.format('YYYY-MM') === entry.key) {
+                    const file = getExistingDayNoteFile(highlightedDay.startOf('day'));
+                    if (file) {
+                        filesByKey.set(entry.key, file);
+                    }
+                }
                 continue;
             }
 
-            const highlightedDay = momentApi(highlightedDayIso, 'YYYY-MM-DD', true);
-            if (!highlightedDay.isValid() || highlightedDay.format('YYYY-MM') !== entry.key) {
+            if (entry.noteCount === 0) {
                 continue;
             }
 
-            const file = getExistingDayNoteFile(highlightedDay.startOf('day'));
-            if (file) {
+            if (!db) {
+                continue;
+            }
+
+            const daysInMonth = new Date(entry.date.year(), entry.monthIndex + 1, 0).getDate();
+            for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
+                const dayDate = entry.date.clone().set({ date: dayNumber });
+                const file = getExistingDayNoteFile(dayDate);
+                if (!file) {
+                    continue;
+                }
+
+                const record = db.getFile(file.path);
+                const featureKey = record?.featureImageKey ?? null;
+                const featureStatus = record?.featureImageStatus ?? null;
+                if (featureStatus !== 'has' || !featureKey || featureKey === '') {
+                    continue;
+                }
+
                 filesByKey.set(entry.key, file);
+                break;
             }
         }
 
         return filesByKey;
-    }, [getExistingDayNoteFile, momentApi, settings.calendarMonthHighlights, showYearCalendar, yearMonthEntries]);
+    }, [db, featureImageVersion, getExistingDayNoteFile, momentApi, settings.calendarMonthHighlights, showYearCalendar, yearMonthEntries]);
 
     const highlightedMonthFeatureImageTargets = useMemo<CalendarFeatureImageTarget[]>(() => {
         void featureImageVersion;
