@@ -80,6 +80,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.5.1',
         date: '2026-03-15',
         showOnUpdate: true,
+        bannerUrl: true,
         new: [
             '==The monthly calendar view now shows feature images for each month==. By default it shows the image for the first day of the month, but you can change this by right-clicking a day and choose "Set highlight".',
             'New setting: Navigation > Rainbow colors > ==Consistent brightness across hues==. If enabled (default), hue transitions use the same brightness levels.',
