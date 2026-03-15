@@ -78,10 +78,10 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.5.1',
-        date: '2026-03-13',
+        date: '2026-03-15',
         showOnUpdate: true,
         new: [
-            'New feature: ==Calendar month - highlight images==. You can now right click a day with feature image in the calendar and pick "Set highlight" so set this image as a month highlight.',
+            '==The monthly calendar view now shows feature images for each month==. By default it shows the image for the first day of the month, but you can change this by right-clicking a day and choose "Set highlight".',
             'New setting: Navigation > Rainbow colors > ==Consistent brightness across hues==. If enabled (default), hue transitions use the same brightness levels.',
             'New setting: Navigation > Rainbow colors > ==Separate light and dark mode colors==. Configure different colors for light and dark mode. Default disabled.'
         ],
