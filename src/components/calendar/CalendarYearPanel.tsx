@@ -29,12 +29,10 @@ interface CalendarYearPanelProps {
     hasYearPeriodNote: boolean;
     yearMonthEntries: CalendarYearMonthEntry[];
     highlightedMonthImageUrls: Record<string, string>;
-    highlightedMonthKeys: ReadonlySet<string>;
     onNavigateYear: (delta: number) => void;
     onYearPeriodClick: (event: React.MouseEvent<HTMLElement>) => void;
     onYearPeriodContextMenu: (event: React.MouseEvent<HTMLElement>) => void;
     onSelectYearMonth: (event: React.MouseEvent<HTMLButtonElement>, date: CalendarYearMonthEntry['date']) => void;
-    onYearMonthContextMenu: (event: React.MouseEvent<HTMLButtonElement>, date: CalendarYearMonthEntry['date']) => void;
 }
 
 export const CalendarYearPanel = React.memo(function CalendarYearPanel({
@@ -45,12 +43,10 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
     hasYearPeriodNote,
     yearMonthEntries,
     highlightedMonthImageUrls,
-    highlightedMonthKeys,
     onNavigateYear,
     onYearPeriodClick,
     onYearPeriodContextMenu,
-    onSelectYearMonth,
-    onYearMonthContextMenu
+    onSelectYearMonth
 }: CalendarYearPanelProps) {
     if (!showYearCalendar) {
         return null;
@@ -96,7 +92,6 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                 {yearMonthEntries.map(entry => {
                     const isSelectedMonth = entry.monthIndex === selectedMonthIndex;
                     const isCurrentMonth = entry.key === currentMonthKey;
-                    const isHighlightedMonth = highlightedMonthKeys.has(entry.key);
                     const featureImageUrl = highlightedMonthImageUrls[entry.key] ?? null;
                     const monthLabelText = entry.noteCount > 0 ? `${entry.shortLabel} (${entry.noteCount})` : entry.shortLabel;
                     const monthAriaLabel =
@@ -122,7 +117,6 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                             aria-label={monthAriaLabel}
                             style={style}
                             onClick={event => onSelectYearMonth(event, entry.date)}
-                            onContextMenu={isHighlightedMonth ? event => onYearMonthContextMenu(event, entry.date) : undefined}
                         >
                             <span className="nn-navigation-calendar-year-month-label">{monthLabelText}</span>
                         </button>

@@ -95,7 +95,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
             'Property tree now shows the values for boolean `true` and `false`.',
             'Property tree now treats frontmatter `null` values as unassigned instead of converting them to `true`.',
             'Calendar now indicates the currently selected day with a border. You can customize this color in style settings or using the CSS variable --nn-theme-calendar-day-active-border-color.',
-            'Expand / Collaps all now collapses down to root items (vault, Tags, Properties), and the setting Navigation > Collapse items now also supports properties.',
+            'Expand / Collapse all now collapses down to root items (Vault, Tags, Properties), and the setting Navigation > "Collapse items" now also supports properties.',
             'Option+click chevrons now also works with tags and properties to expand or collaps all siblings in the tree. Previously it only worked for folders.'
         ],
         fixed: [

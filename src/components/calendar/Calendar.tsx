@@ -17,7 +17,7 @@
  */
 
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FileView, Menu, TFile, type Workspace, type WorkspaceLeaf } from 'obsidian';
+import { FileView, TFile, type Workspace, type WorkspaceLeaf } from 'obsidian';
 import { getCurrentLanguage, strings } from '../../i18n';
 import { InfoModal } from '../../modals/InfoModal';
 import { useServices } from '../../context/ServicesContext';
@@ -1023,16 +1023,6 @@ export function Calendar({
         return paths;
     }, [highlightedMonthFilesByKey]);
 
-    const highlightedMonthKeys = useMemo(() => {
-        const keys = new Set<string>();
-        yearMonthEntries.forEach(entry => {
-            if (settings.calendarMonthHighlights[entry.key]) {
-                keys.add(entry.key);
-            }
-        });
-        return keys;
-    }, [settings.calendarMonthHighlights, yearMonthEntries]);
-
     const highlightedMonthImageUrls = useCalendarFeatureImages({
         db,
         showFeatureImages: settings.calendarShowFeatureImage && showYearCalendar,
@@ -1276,30 +1266,6 @@ export function Calendar({
         [featureImageKeysByIso, settings.calendarMonthHighlights, showCalendarNoteContextMenu]
     );
 
-    const handleYearMonthContextMenu = useCallback(
-        (event: React.MouseEvent<HTMLButtonElement>, date: MomentInstance) => {
-            const monthKey = date.format('YYYY-MM');
-            if (!settings.calendarMonthHighlights[monthKey]) {
-                return;
-            }
-
-            event.preventDefault();
-            event.stopPropagation();
-            clearHoverTooltip();
-
-            const menu = new Menu();
-            menu.addItem(item => {
-                item.setTitle(strings.contextMenu.file.removeCalendarHighlight)
-                    .setIcon('lucide-image-off')
-                    .onClick(() => {
-                        runAsyncAction(() => removeCalendarMonthHighlight(monthKey));
-                    });
-            });
-            menu.showAtMouseEvent(event.nativeEvent);
-        },
-        [clearHoverTooltip, removeCalendarMonthHighlight, settings.calendarMonthHighlights]
-    );
-
     if (!momentApi || !cursorDate) {
         return null;
     }
@@ -1394,12 +1360,10 @@ export function Calendar({
                     hasYearPeriodNote={Boolean(headerPeriodNoteFiles.year)}
                     yearMonthEntries={yearMonthEntries}
                     highlightedMonthImageUrls={highlightedMonthImageUrls}
-                    highlightedMonthKeys={highlightedMonthKeys}
                     onNavigateYear={handleNavigateYear}
                     onYearPeriodClick={event => handleHeaderPeriodClick(event, 'year')}
                     onYearPeriodContextMenu={event => handleHeaderPeriodContextMenu(event, 'year')}
                     onSelectYearMonth={handleSelectYearMonth}
-                    onYearMonthContextMenu={handleYearMonthContextMenu}
                 />
             </div>
         </>
