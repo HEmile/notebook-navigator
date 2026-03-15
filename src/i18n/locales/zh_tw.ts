@@ -1143,6 +1143,10 @@ export const STRINGS_ZH_TW = {
                 name: '將最近筆記與捷徑一起釘選',
                 desc: '釘選捷徑時包含最近筆記。'
             },
+            calendarEnabled: {
+                name: '啟用日曆',
+                desc: '啟用 Notebook Navigator 的日曆功能。'
+            },
             calendarPlacement: {
                 name: '日曆位置',
                 desc: '在左側邊欄或右側邊欄中顯示。',

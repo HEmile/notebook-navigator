@@ -1150,6 +1150,10 @@ export const STRINGS_ID = {
                 name: 'Sematkan catatan terbaru bersama pintasan',
                 desc: 'Sertakan catatan terbaru saat pintasan disematkan.'
             },
+            calendarEnabled: {
+                name: 'Aktifkan kalender',
+                desc: 'Aktifkan fitur kalender Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'Penempatan kalender',
                 desc: 'Tampilkan di sidebar kiri atau kanan.',

@@ -350,6 +350,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showParentFolderIcon: false,
 
     // Calendar tab - Calendar
+    calendarEnabled: true,
     calendarPlacement: 'left-sidebar',
     calendarConfirmBeforeCreate: true,
     calendarLocale: 'system-default',

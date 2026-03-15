@@ -1150,6 +1150,10 @@ export const STRINGS_FA = {
                 name: 'سنجاق کردن یادداشت‌های اخیر با میانبرها',
                 desc: 'هنگام سنجاق کردن میانبرها، یادداشت‌های اخیر را نیز شامل شود.'
             },
+            calendarEnabled: {
+                name: 'فعال‌سازی تقویم',
+                desc: 'فعال‌سازی ویژگی‌های تقویم در Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'محل قرارگیری تقویم',
                 desc: 'نمایش در نوار کناری راست یا چپ.', // RTL: right↔left flipped to match visual layout

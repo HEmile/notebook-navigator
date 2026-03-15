@@ -1149,6 +1149,10 @@ export const STRINGS_KO = {
                 name: '바로가기와 함께 최근 노트 고정',
                 desc: '바로가기를 고정할 때 최근 노트를 포함합니다.'
             },
+            calendarEnabled: {
+                name: '캘린더 활성화',
+                desc: 'Notebook Navigator의 캘린더 기능을 활성화합니다.'
+            },
             calendarPlacement: {
                 name: '캘린더 위치',
                 desc: '왼쪽 또는 오른쪽 사이드바에 표시합니다.',

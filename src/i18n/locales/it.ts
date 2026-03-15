@@ -1146,6 +1146,10 @@ export const STRINGS_IT = {
                 name: 'Fissa note recenti con scorciatoie',
                 desc: 'Includi le note recenti quando le scorciatoie sono fissate.'
             },
+            calendarEnabled: {
+                name: 'Attiva calendario',
+                desc: 'Attivare le funzionalità del calendario di Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'Posizione del calendario',
                 desc: 'Visualizza nella barra laterale sinistra o destra.',

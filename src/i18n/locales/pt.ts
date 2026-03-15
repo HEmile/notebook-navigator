@@ -1150,6 +1150,10 @@ export const STRINGS_PT = {
                 name: 'Fixar notas recentes com atalhos',
                 desc: 'Incluir notas recentes quando os atalhos estão fixos.'
             },
+            calendarEnabled: {
+                name: 'Ativar calendário',
+                desc: 'Ativar funcionalidades de calendário do Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'Posição do calendário',
                 desc: 'Exibir na barra lateral esquerda ou direita.',

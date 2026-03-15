@@ -1110,6 +1110,10 @@ function renderToolbarVisibilitySetting(
     addSetting: (createSetting: (setting: Setting) => void) => Setting,
     plugin: NotebookNavigatorPlugin
 ): void {
+    const navigationToolbarButtons = plugin.settings.calendarEnabled
+        ? NAVIGATION_TOOLBAR_BUTTONS
+        : NAVIGATION_TOOLBAR_BUTTONS.filter(button => button.id !== 'calendar');
+
     const setting = addSetting(setting => {
         setting.setName(strings.settings.items.toolbarButtons.name).setDesc(strings.settings.items.toolbarButtons.desc);
     });
@@ -1120,7 +1124,7 @@ function renderToolbarVisibilitySetting(
     createToolbarButtonGroup({
         containerEl: sectionsEl,
         label: strings.settings.items.toolbarButtons.navigationLabel,
-        buttons: NAVIGATION_TOOLBAR_BUTTONS,
+        buttons: navigationToolbarButtons,
         interfaceIcons: plugin.settings.interfaceIcons,
         state: plugin.settings.toolbarVisibility.navigation,
         onToggle: () => {

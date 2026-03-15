@@ -1151,6 +1151,10 @@ export const STRINGS_DE = {
                 name: 'Neueste Notizen mit Lesezeichen anheften',
                 desc: 'Neueste Notizen beim Anheften von Lesezeichen einbeziehen.'
             },
+            calendarEnabled: {
+                name: 'Kalender aktivieren',
+                desc: 'Kalenderfunktionen von Notebook Navigator aktivieren.'
+            },
             calendarPlacement: {
                 name: 'Kalenderposition',
                 desc: 'Anzeige in der linken oder rechten Seitenleiste.',

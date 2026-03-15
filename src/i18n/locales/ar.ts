@@ -1148,6 +1148,10 @@ export const STRINGS_AR = {
                 name: 'تثبيت الملاحظات الحديثة مع الاختصارات',
                 desc: 'تضمين الملاحظات الحديثة عند تثبيت الاختصارات.'
             },
+            calendarEnabled: {
+                name: 'تفعيل التقويم',
+                desc: 'تفعيل ميزات التقويم في Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'موضع التقويم',
                 desc: 'العرض في الشريط الجانبي الأيمن أو الأيسر.', // RTL: right↔left flipped to match visual layout

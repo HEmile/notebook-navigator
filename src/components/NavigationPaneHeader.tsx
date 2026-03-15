@@ -65,7 +65,7 @@ export function NavigationPaneHeader({
     const navigationVisibility = settings.toolbarVisibility.navigation;
     const showToggleDualPaneButton = navigationVisibility.toggleDualPane;
     const showExpandCollapseButton = navigationVisibility.expandCollapse;
-    const showCalendarButton = navigationVisibility.calendar && settings.calendarPlacement !== 'right-sidebar';
+    const showCalendarButton = navigationVisibility.calendar && settings.calendarEnabled && settings.calendarPlacement !== 'right-sidebar';
     const showHiddenItemsButton = navigationVisibility.hiddenItems && hasHiddenItems;
     const showRootReorderButton = navigationVisibility.rootReorder;
     const showNewFolderButton = navigationVisibility.newFolder;

@@ -799,6 +799,10 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
         name: strings.commands.toggleCalendar,
         callback: () => {
             runAsyncAction(async () => {
+                if (!plugin.settings.calendarEnabled) {
+                    return;
+                }
+
                 await plugin.activateView();
                 plugin.toggleShowCalendar();
             });

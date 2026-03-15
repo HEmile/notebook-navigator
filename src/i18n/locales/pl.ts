@@ -1152,6 +1152,10 @@ export const STRINGS_PL = {
                 name: 'Przypnij ostatnie notatki razem ze skrótami',
                 desc: 'Dołącz ostatnie notatki podczas przypinania skrótów.'
             },
+            calendarEnabled: {
+                name: 'Włącz kalendarz',
+                desc: 'Włącz funkcje kalendarza w Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'Położenie kalendarza',
                 desc: 'Umieść kalendarz w lewym lub prawym panelu bocznym.',

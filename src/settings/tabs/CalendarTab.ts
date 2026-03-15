@@ -71,6 +71,17 @@ export function renderCalendarTab(context: SettingsTabContext): void {
 
     const topGroup = createGroup(undefined);
 
+    topGroup
+        .addSetting(setting => {
+            setting.setName(strings.settings.items.calendarEnabled.name).setDesc(strings.settings.items.calendarEnabled.desc);
+        })
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.calendarEnabled).onChange(async value => {
+                plugin.settings.calendarEnabled = value;
+                await plugin.saveSettingsAndUpdate();
+            })
+        );
+
     const calendarPlacementSetting = topGroup.addSetting(setting => {
         setting.setName(strings.settings.items.calendarPlacement.name).setDesc(strings.settings.items.calendarPlacement.desc);
     });

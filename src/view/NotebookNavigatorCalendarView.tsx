@@ -70,6 +70,11 @@ export class NotebookNavigatorCalendarView extends ItemView {
     }
 
     async onOpen() {
+        if (!this.plugin.settings.calendarEnabled) {
+            this.leaf.detach();
+            return;
+        }
+
         const container = this.containerEl.children[1];
         if (!(container instanceof HTMLElement)) {
             return;

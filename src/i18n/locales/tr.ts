@@ -1150,6 +1150,10 @@ export const STRINGS_TR = {
                 name: 'Son notları kısayollarla birlikte sabitle',
                 desc: 'Kısayollar sabitlendiğinde son notları dahil et.'
             },
+            calendarEnabled: {
+                name: 'Takvimi etkinleştir',
+                desc: 'Notebook Navigator takvim özelliklerini etkinleştir.'
+            },
             calendarPlacement: {
                 name: 'Takvim konumu',
                 desc: 'Sol veya sağ kenar çubuğunda görüntüle.',

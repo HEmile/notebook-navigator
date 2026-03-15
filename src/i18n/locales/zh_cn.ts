@@ -1143,6 +1143,10 @@ export const STRINGS_ZH_CN = {
                 name: '将最近笔记与快捷方式一起固定',
                 desc: '固定快捷方式时包含最近笔记。'
             },
+            calendarEnabled: {
+                name: '启用日历',
+                desc: '启用 Notebook Navigator 的日历功能。'
+            },
             calendarPlacement: {
                 name: '日历位置',
                 desc: '在左侧边栏或右侧边栏中显示。',

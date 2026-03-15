@@ -1146,6 +1146,10 @@ export const STRINGS_EN = {
                 name: 'Pin recent notes with shortcuts',
                 desc: 'Include recent notes when shortcuts are pinned.'
             },
+            calendarEnabled: {
+                name: 'Enable calendar',
+                desc: 'Enable calendar features of Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'Calendar placement',
                 desc: 'Display in the left or right sidebar.',

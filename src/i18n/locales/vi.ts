@@ -1151,6 +1151,10 @@ export const STRINGS_VI = {
                 name: 'Ghim ghi chú gần đây cùng lối tắt',
                 desc: 'Bao gồm ghi chú gần đây khi lối tắt được ghim.'
             },
+            calendarEnabled: {
+                name: 'Bật lịch',
+                desc: 'Bật các tính năng lịch của Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'Vị trí lịch',
                 desc: 'Hiển thị trong thanh bên trái hoặc phải.',

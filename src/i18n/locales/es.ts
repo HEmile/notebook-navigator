@@ -1151,6 +1151,10 @@ export const STRINGS_ES = {
                 name: 'Fijar notas recientes con accesos directos',
                 desc: 'Incluir notas recientes cuando se fijan los accesos directos.'
             },
+            calendarEnabled: {
+                name: 'Activar calendario',
+                desc: 'Activar las funciones de calendario de Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'Ubicación del calendario',
                 desc: 'Mostrar en la barra lateral izquierda o derecha.',

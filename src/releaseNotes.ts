@@ -83,10 +83,11 @@ const RELEASE_NOTES: ReleaseNote[] = [
         new: [
             '==The monthly calendar view now shows feature images for each month==. By default it shows the image for the first day of the month, but you can change this by right-clicking a day and choose "Set highlight".',
             'New setting: Navigation > Rainbow colors > ==Consistent brightness across hues==. If enabled (default), hue transitions use the same brightness levels.',
-            'New setting: Navigation > Rainbow colors > ==Separate light and dark mode colors==. Configure different colors for light and dark mode. Default disabled.'
+            'New setting: Navigation > Rainbow colors > ==Separate light and dark mode colors==. Configure different colors for light and dark mode. Default disabled.',
+            'New setting: ==Calendar > Enable calendar==. Simple switch to disable all calendar functionality in Notebook Navigator.'
         ],
         changed: [
-            'After many many hours of work I decided that the feature "Scope pinned notes to their location" that only shows files pinned "where they were pinned" will only work for folders. The complexities involved with branching in tags and properties makes this too complex to be useful. I also renamed it to "Only pin notes in their folder" to make it extra clear what it does. This feature is useful for folder notes or if you have many pinned notes, to avoid them stacking up when you show notes from subfolders.'
+            'After many many hours of work I decided that the feature "Scope pinned notes to their location" used to show files pinned in their own folder will only work for folders. The complexities involved with branching in tags and properties makes this too complex to be useful. I also renamed it to "Only pin notes in their folder" to make it extra clear what it does. This feature is useful for folder notes or if you have many pinned notes, to avoid them stacking up when you show notes from subfolders.'
         ],
         improved: [
             'Property tree now shows the values for boolean `true` and `false`.',

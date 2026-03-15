@@ -1149,6 +1149,10 @@ export const STRINGS_JA = {
                 name: '最近のノートをショートカットと一緒に固定',
                 desc: 'ショートカットを固定するときに最近のノートを含める。'
             },
+            calendarEnabled: {
+                name: 'カレンダーを有効化',
+                desc: 'Notebook Navigatorのカレンダー機能を有効にします。'
+            },
             calendarPlacement: {
                 name: 'カレンダーの配置',
                 desc: '左または右サイドバーに表示します。',

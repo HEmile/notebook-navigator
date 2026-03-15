@@ -1146,6 +1146,10 @@ export const STRINGS_TH = {
                 name: 'ปักหมุดโน้ตล่าสุดพร้อมทางลัด',
                 desc: 'รวมโน้ตล่าสุดเมื่อปักหมุดทางลัด'
             },
+            calendarEnabled: {
+                name: 'เปิดใช้งานปฏิทิน',
+                desc: 'เปิดใช้งานฟีเจอร์ปฏิทินของ Notebook Navigator'
+            },
             calendarPlacement: {
                 name: 'ตำแหน่งปฏิทิน',
                 desc: 'แสดงในแถบด้านซ้ายหรือขวา',

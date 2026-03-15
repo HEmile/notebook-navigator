@@ -1132,6 +1132,7 @@ export const NotebookNavigatorComponent = React.memo(
 
         const shouldRenderSinglePaneCalendar =
             uiState.singlePane &&
+            settings.calendarEnabled &&
             uxPreferences.showCalendar &&
             settings.calendarPlacement === 'left-sidebar' &&
             settings.calendarLeftPlacement === 'below';

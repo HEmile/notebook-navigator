@@ -1152,6 +1152,10 @@ export const STRINGS_FR = {
                 name: 'Épingler les notes récentes avec les raccourcis',
                 desc: "Inclure les notes récentes lors de l'épinglage des raccourcis."
             },
+            calendarEnabled: {
+                name: 'Activer le calendrier',
+                desc: 'Activer les fonctionnalités de calendrier de Notebook Navigator.'
+            },
             calendarPlacement: {
                 name: 'Emplacement du calendrier',
                 desc: 'Afficher dans la barre latérale gauche ou droite.',

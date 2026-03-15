@@ -498,6 +498,7 @@ export interface NotebookNavigatorSettings {
     showParentFolderIcon: boolean;
 
     // Calendar tab - Calendar
+    calendarEnabled: boolean;
     calendarPlacement: CalendarPlacement;
     calendarConfirmBeforeCreate: boolean;
     calendarLocale: string;

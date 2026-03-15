@@ -1079,7 +1079,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             return;
         }
 
-        const nextPlacement = this.settings.calendarPlacement;
+        const nextPlacement = this.settings.calendarEnabled ? this.settings.calendarPlacement : null;
         const previousPlacement = this.lastCalendarPlacement;
         const force = options.force ?? false;
 
@@ -1101,6 +1101,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
                         !this.isUnloading &&
                         this.hasWorkspaceLayoutReady &&
                         this.calendarPlacementRequestId === requestId &&
+                        this.settings.calendarEnabled &&
                         this.settings.calendarPlacement === 'right-sidebar'
                 })
             );
@@ -1160,7 +1161,9 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         });
 
         const shouldRevealCalendarView =
-            this.lastCalendarPlacement !== 'right-sidebar' && this.settings.calendarPlacement === 'right-sidebar';
+            this.lastCalendarPlacement !== 'right-sidebar' &&
+            this.settings.calendarEnabled &&
+            this.settings.calendarPlacement === 'right-sidebar';
         const shouldActivateCalendarView = shouldRevealCalendarView && !this.isObsidianSettingsModalOpen();
         this.applyCalendarPlacementView({ reveal: shouldRevealCalendarView, activate: shouldActivateCalendarView });
     }

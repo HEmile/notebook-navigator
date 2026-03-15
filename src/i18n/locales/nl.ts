@@ -1151,6 +1151,10 @@ export const STRINGS_NL = {
                 name: 'Recente notities met snelkoppelingen vastpinnen',
                 desc: 'Recente notities opnemen wanneer snelkoppelingen zijn vastgepind.'
             },
+            calendarEnabled: {
+                name: 'Kalender inschakelen',
+                desc: 'Kalenderfuncties van Notebook Navigator inschakelen.'
+            },
             calendarPlacement: {
                 name: 'Kalenderpositie',
                 desc: 'Weergeven in de linker of rechter zijbalk.',
