@@ -1506,8 +1506,11 @@ export const STRINGS_VI = {
             previewProperties: {
                 name: 'Thuộc tính xem trước',
                 desc: 'Danh sách thuộc tính frontmatter phân cách bằng dấu phẩy để kiểm tra văn bản xem trước. Thuộc tính đầu tiên có văn bản sẽ được dùng.',
-                placeholder: 'summary, description, abstract',
-                info: 'Nếu không tìm thấy văn bản xem trước trong các thuộc tính đã chỉ định, xem trước sẽ được tạo từ nội dung ghi chú.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Quay lại nội dung ghi chú',
+                desc: 'Hiển thị nội dung ghi chú làm xem trước khi không có thuộc tính nào được chỉ định chứa văn bản.'
             },
             previewRows: {
                 name: 'Dòng xem trước',

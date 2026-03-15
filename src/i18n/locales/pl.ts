@@ -1509,8 +1509,11 @@ export const STRINGS_PL = {
             previewProperties: {
                 name: 'Podgląd atrybutów',
                 desc: 'Lista atrybutów rozdzielonych przecinkami do sprawdzenia dla tekstu podglądu. Zostanie użyty pierwszy atrybut z tekstem.',
-                placeholder: 'summary, description, abstract',
-                info: 'Jeśli nie znaleziono tekstu podglądu we wskazanych atrybutach, podgląd zostanie wygenerowany z treści notatki.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Użyj treści notatki zastępczo',
+                desc: 'Wyświetl treść notatki jako podgląd, gdy żaden ze wskazanych atrybutów nie zawiera tekstu.'
             },
             previewRows: {
                 name: 'Wiersze podglądu',

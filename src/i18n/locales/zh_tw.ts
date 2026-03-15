@@ -1498,8 +1498,11 @@ export const STRINGS_ZH_TW = {
             previewProperties: {
                 name: '預覽屬性',
                 desc: '用於尋找預覽文字的前置屬性的逗號分隔列表。將使用第一個包含文字的屬性。',
-                placeholder: 'summary, description, abstract',
-                info: '如果在指定的屬性中找不到預覽文字，預覽將從筆記內容中產生。'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: '回退到筆記內容',
+                desc: '當指定的屬性都不包含文字時，顯示筆記內容作為預覽。'
             },
             previewRows: {
                 name: '預覽行數',

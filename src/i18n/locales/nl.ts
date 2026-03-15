@@ -1508,8 +1508,11 @@ export const STRINGS_NL = {
             previewProperties: {
                 name: 'Voorbeeldeigenschappen',
                 desc: 'Kommagescheiden lijst van frontmatter-eigenschappen om te controleren op voorbeeldtekst. De eerste eigenschap met tekst wordt gebruikt.',
-                placeholder: 'summary, description, abstract',
-                info: 'Als er geen voorbeeldtekst wordt gevonden in de opgegeven eigenschappen, wordt het voorbeeld gegenereerd uit de notitie-inhoud.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Terugvallen op notitie-inhoud',
+                desc: 'Toon notitie-inhoud als voorbeeld wanneer geen van de opgegeven eigenschappen tekst bevat.'
             },
             previewRows: {
                 name: 'Voorbeeldrijen',

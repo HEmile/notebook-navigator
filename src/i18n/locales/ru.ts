@@ -1503,8 +1503,11 @@ export const STRINGS_RU = {
             previewProperties: {
                 name: 'Свойства превью',
                 desc: 'Список свойств frontmatter через запятую для проверки текста превью. Используется первое свойство с текстом.',
-                placeholder: 'summary, description, abstract',
-                info: 'Если текст превью не найден в указанных свойствах, превью будет сгенерировано из содержимого заметки.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Использовать содержимое заметки',
+                desc: 'Показывать содержимое заметки как превью, когда ни одно из указанных свойств не содержит текста.'
             },
             previewRows: {
                 name: 'Строки превью',

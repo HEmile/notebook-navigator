@@ -632,6 +632,22 @@ describe('PreviewTextUtils.extractPreviewText', () => {
         expect(preview).toBe('Fallback content');
     });
 
+    it('returns empty preview when previewProperties fallback is disabled and property value becomes empty', () => {
+        const settings = createSettings({
+            previewProperties: ['summary'],
+            previewPropertiesFallback: false
+        });
+        const frontmatter = { summary: '![[image.png]]' };
+        const preview = PreviewTextUtils.extractPreviewText('Fallback content', settings, frontmatter);
+        expect(preview).toBe('');
+    });
+
+    it('uses note content when previewProperties fallback is disabled and no preview properties are configured', () => {
+        const settings = createSettings({ previewPropertiesFallback: false });
+        const preview = PreviewTextUtils.extractPreviewText('Fallback content', settings);
+        expect(preview).toBe('Fallback content');
+    });
+
     it('keeps text separated when removing wiki embeds unwrapped by formatting', () => {
         const preview = PreviewTextUtils.extractPreviewText('Alpha**![[image.png]]**Beta', skipCodeSettings);
         expect(preview).toBe('Alpha Beta');

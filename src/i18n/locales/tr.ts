@@ -1505,8 +1505,11 @@ export const STRINGS_TR = {
             previewProperties: {
                 name: 'Önizleme özellikleri',
                 desc: 'Önizleme metni için kontrol edilecek virgülle ayrılmış frontmatter özellikleri listesi. Metni olan ilk özellik kullanılacak.',
-                placeholder: 'summary, description, abstract',
-                info: 'Belirtilen özelliklerde önizleme metni bulunamazsa, önizleme not içeriğinden oluşturulacak.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Not içeriğine geri dön',
+                desc: 'Belirtilen özelliklerin hiçbiri metin içermediğinde not içeriğini önizleme olarak göster.'
             },
             previewRows: {
                 name: 'Önizleme satırları',

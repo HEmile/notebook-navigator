@@ -1510,8 +1510,11 @@ export const STRINGS_FR = {
             previewProperties: {
                 name: "Propriétés d'aperçu",
                 desc: "Liste séparée par des virgules de propriétés frontmatter pour le texte d'aperçu. La première propriété avec du texte sera utilisée.",
-                placeholder: 'summary, description, abstract',
-                info: "Si aucun texte d'aperçu n'est trouvé dans les propriétés spécifiées, l'aperçu sera généré à partir du contenu de la note."
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Revenir au contenu de la note',
+                desc: "Afficher le contenu de la note en aperçu lorsqu'aucune des propriétés spécifiées ne contient de texte."
             },
             previewRows: {
                 name: "Lignes d'aperçu",

@@ -222,4 +222,29 @@ describe('Content provider retry-later semantics', () => {
         expect(result.processed).toBe(false);
         expect(result.update).toBeNull();
     });
+
+    it('MarkdownPipelineContentProvider defers preview extraction until preview-property frontmatter is ready', async () => {
+        const app = new App();
+        app.metadataCache.getFileCache = () => ({});
+
+        const provider = new TestMarkdownPipelineContentProvider(app);
+        const file = new TFile();
+        file.path = 'notes/recent.md';
+        file.extension = 'md';
+        file.name = 'recent.md';
+        file.stat.mtime = Date.now();
+        app.vault.cachedRead = async () => 'Body fallback';
+
+        const settings: NotebookNavigatorSettings = {
+            ...DEFAULT_SETTINGS,
+            showFilePreview: true,
+            previewProperties: ['summary'],
+            previewPropertiesFallback: false
+        };
+
+        const result = await provider.runProcessFile(file, null, settings);
+
+        expect(result.processed).toBe(false);
+        expect(result.update).toBeNull();
+    });
 });

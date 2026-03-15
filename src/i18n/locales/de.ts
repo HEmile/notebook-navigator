@@ -1508,8 +1508,11 @@ export const STRINGS_DE = {
             previewProperties: {
                 name: 'Vorschau-Eigenschaften',
                 desc: 'Kommagetrennte Liste von Frontmatter-Eigenschaften für Vorschautext. Die erste Eigenschaft mit Text wird verwendet.',
-                placeholder: 'summary, description, abstract',
-                info: 'Wenn kein Vorschautext in den angegebenen Eigenschaften gefunden wird, wird die Vorschau aus dem Notizinhalt generiert.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Auf Notizinhalt zurückgreifen',
+                desc: 'Notizinhalt als Vorschau anzeigen, wenn keine der angegebenen Eigenschaften Text enthält.'
             },
             previewRows: {
                 name: 'Vorschauzeilen',

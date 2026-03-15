@@ -1498,8 +1498,11 @@ export const STRINGS_ZH_CN = {
             previewProperties: {
                 name: '预览属性',
                 desc: '用于查找预览文本的前置属性的逗号分隔列表。将使用第一个包含文本的属性。',
-                placeholder: 'summary, description, abstract',
-                info: '如果在指定的属性中找不到预览文本，预览将从笔记内容中生成。'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: '回退到笔记内容',
+                desc: '当指定的属性都不包含文本时，显示笔记内容作为预览。'
             },
             previewRows: {
                 name: '预览行数',

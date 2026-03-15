@@ -1503,8 +1503,11 @@ export const STRINGS_AR = {
             previewProperties: {
                 name: 'خصائص المعاينة',
                 desc: 'قائمة مفصولة بفاصلة من خصائص البيانات الأمامية للتحقق من نص المعاينة. سيتم استخدام أول خاصية تحتوي على نص.',
-                placeholder: 'summary, description, abstract',
-                info: 'إذا لم يتم العثور على نص معاينة في الخصائص المحددة، سيتم إنشاء المعاينة من محتوى الملاحظة.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'الرجوع إلى محتوى الملاحظة',
+                desc: 'عرض محتوى الملاحظة كمعاينة عندما لا تحتوي أي من الخصائص المحددة على نص.'
             },
             previewRows: {
                 name: 'صفوف المعاينة',

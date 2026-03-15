@@ -1510,8 +1510,11 @@ export const STRINGS_PT_BR = {
             previewProperties: {
                 name: 'Propriedades de visualização',
                 desc: 'Lista separada por vírgulas de propriedades do frontmatter para verificar texto de visualização. A primeira propriedade com texto será usada.',
-                placeholder: 'summary, description, abstract',
-                info: 'Se nenhum texto de visualização for encontrado nas propriedades especificadas, a visualização será gerada a partir do conteúdo da nota.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Recorrer ao conteúdo da nota',
+                desc: 'Mostrar o conteúdo da nota como visualização quando nenhuma das propriedades especificadas contém texto.'
             },
             previewRows: {
                 name: 'Linhas de visualização',

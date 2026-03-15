@@ -1500,8 +1500,11 @@ export const STRINGS_EN = {
             previewProperties: {
                 name: 'Preview properties',
                 desc: 'Comma-separated list of frontmatter properties to check for preview text. The first property with text will be used.',
-                placeholder: 'summary, description, abstract',
-                info: 'If no preview text is found in the specified properties, the preview will be generated from the note content.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Fall back to note content',
+                desc: 'Show note content as preview when none of the specified properties contain text.'
             },
             previewRows: {
                 name: 'Preview rows',

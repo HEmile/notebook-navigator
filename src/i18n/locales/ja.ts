@@ -1505,8 +1505,11 @@ export const STRINGS_JA = {
             previewProperties: {
                 name: 'プレビュープロパティ',
                 desc: 'プレビューテキストを検索するフロントマタープロパティのカンマ区切りリスト。テキストがある最初のプロパティが使用されます。',
-                placeholder: 'summary, description, abstract',
-                info: '指定されたプロパティにプレビューテキストが見つからない場合、プレビューはノートの内容から生成されます。'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'ノート内容にフォールバック',
+                desc: '指定されたプロパティにテキストが含まれていない場合、ノート内容をプレビューとして表示します。'
             },
             previewRows: {
                 name: 'プレビュー行数',

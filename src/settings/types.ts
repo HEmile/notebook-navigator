@@ -470,6 +470,7 @@ export interface NotebookNavigatorSettings {
     stripLatexInPreview: boolean;
     previewRows: number;
     previewProperties: string[];
+    previewPropertiesFallback: boolean;
     showFeatureImage: boolean;
     featureImageProperties: string[];
     featureImageExcludeProperties: string[];

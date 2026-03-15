@@ -1504,8 +1504,11 @@ export const STRINGS_IT = {
             previewProperties: {
                 name: 'Proprietà anteprima',
                 desc: 'Lista di proprietà frontmatter separate da virgola da controllare per testo anteprima. La prima proprietà con testo sarà usata.',
-                placeholder: 'summary, description, abstract',
-                info: "Se nessun testo anteprima viene trovato nelle proprietà specificate, l'anteprima sarà generata dal contenuto nota."
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Ricorri al contenuto della nota',
+                desc: 'Mostra il contenuto della nota come anteprima quando nessuna delle proprietà specificate contiene testo.'
             },
             previewRows: {
                 name: 'Righe anteprima',

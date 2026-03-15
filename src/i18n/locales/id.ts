@@ -1506,8 +1506,11 @@ export const STRINGS_ID = {
             previewProperties: {
                 name: 'Properti pratinjau',
                 desc: 'Daftar properti frontmatter yang dipisahkan koma untuk memeriksa teks pratinjau. Properti pertama dengan teks akan digunakan.',
-                placeholder: 'summary, description, abstract',
-                info: 'Jika tidak ada teks pratinjau yang ditemukan di properti yang ditentukan, pratinjau akan dihasilkan dari konten catatan.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Kembali ke konten catatan',
+                desc: 'Tampilkan konten catatan sebagai pratinjau saat tidak ada properti yang ditentukan berisi teks.'
             },
             previewRows: {
                 name: 'Baris pratinjau',

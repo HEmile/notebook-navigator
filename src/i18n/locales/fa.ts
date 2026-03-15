@@ -1505,8 +1505,11 @@ export const STRINGS_FA = {
             previewProperties: {
                 name: 'ویژگی‌های پیش‌نمایش',
                 desc: 'لیست ویژگی‌های فرانت‌متر جدا شده با کاما برای بررسی متن پیش‌نمایش. اولین ویژگی با متن استفاده می‌شود.',
-                placeholder: 'summary, description, abstract',
-                info: 'اگر متن پیش‌نمایش در ویژگی‌های مشخص‌شده یافت نشود، پیش‌نمایش از محتوای یادداشت تولید می‌شود.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'بازگشت به محتوای یادداشت',
+                desc: 'نمایش محتوای یادداشت به عنوان پیش‌نمایش وقتی هیچ‌کدام از ویژگی‌های مشخص‌شده حاوی متن نیستند.'
             },
             previewRows: {
                 name: 'ردیف‌های پیش‌نمایش',

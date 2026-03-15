@@ -361,6 +361,7 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
             'stripHtmlInPreview',
             'stripLatexInPreview',
             'previewProperties',
+            'previewPropertiesFallback',
             'showFeatureImage',
             'featureImageProperties',
             'featureImageExcludeProperties',
@@ -400,7 +401,8 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
             oldSettings.skipCodeBlocksInPreview !== newSettings.skipCodeBlocksInPreview ||
             oldSettings.stripHtmlInPreview !== newSettings.stripHtmlInPreview ||
             oldSettings.stripLatexInPreview !== newSettings.stripLatexInPreview ||
-            !areStringArraysEqual(oldSettings.previewProperties, newSettings.previewProperties);
+            !areStringArraysEqual(oldSettings.previewProperties, newSettings.previewProperties) ||
+            oldSettings.previewPropertiesFallback !== newSettings.previewPropertiesFallback;
         const shouldClearPreview =
             previewExtractionSettingsChanged ||
             // Enabling preview requires regenerated text because files may have changed while preview extraction was disabled.
@@ -486,6 +488,7 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
 
         const propertyNameFields = getCachedCommaSeparatedList(getActivePropertyFields(settings));
         const propertiesEnabled = propertyNameFields.length > 0;
+        const previewPropertiesEnabled = settings.showFilePreview && settings.previewProperties.length > 0;
 
         const cachedMetadata = this.app.metadataCache.getFileCache(job.file);
         if (!cachedMetadata) {
@@ -494,7 +497,12 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
         }
 
         const frontmatter = cachedMetadata.frontmatter ?? null;
-        if (frontmatter === null && propertiesEnabled && (fileData === null || fileData.properties === null)) {
+        const needsPreviewPropertyFrontmatter =
+            previewPropertiesEnabled &&
+            (fileData === null || fileData.previewStatus === 'unprocessed') &&
+            !PreviewTextUtils.isExcalidrawFile(job.file.name, frontmatter ?? undefined);
+        const needsPropertyFrontmatter = propertiesEnabled && (fileData === null || fileData.properties === null);
+        if (frontmatter === null && (needsPropertyFrontmatter || needsPreviewPropertyFrontmatter)) {
             const attempts = this.emptyFrontmatterRetryCounts.get(job.path) ?? 0;
             const isRecent = Date.now() - job.file.stat.mtime <= LIMITS.contentProvider.metadataCache.recentFileWindowMs;
             if (isRecent && attempts < LIMITS.contentProvider.metadataCache.emptyValueRetryLimit) {

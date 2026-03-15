@@ -1508,8 +1508,11 @@ export const STRINGS_ES = {
             previewProperties: {
                 name: 'Propiedades de vista previa',
                 desc: 'Lista separada por comas de propiedades de frontmatter para buscar texto de vista previa. Se usará la primera propiedad con texto.',
-                placeholder: 'summary, description, abstract',
-                info: 'Si no se encuentra texto de vista previa en las propiedades especificadas, la vista previa se generará a partir del contenido de la nota.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'Recurrir al contenido de la nota',
+                desc: 'Mostrar el contenido de la nota como vista previa cuando ninguna de las propiedades especificadas contiene texto.'
             },
             previewRows: {
                 name: 'Filas de vista previa',

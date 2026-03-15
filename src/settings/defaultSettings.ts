@@ -321,6 +321,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     stripLatexInPreview: true,
     previewRows: 2,
     previewProperties: [],
+    previewPropertiesFallback: true,
     showFeatureImage: true,
     featureImageProperties: [],
     featureImageExcludeProperties: [],

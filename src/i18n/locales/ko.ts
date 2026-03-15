@@ -1504,8 +1504,11 @@ export const STRINGS_KO = {
             previewProperties: {
                 name: '미리보기 속성',
                 desc: '미리보기 텍스트를 확인할 frontmatter 속성의 쉼표로 구분된 목록입니다. 텍스트가 있는 첫 번째 속성이 사용됩니다.',
-                placeholder: 'summary, description, abstract',
-                info: '지정된 속성에서 미리보기 텍스트를 찾을 수 없으면 노트 내용에서 미리보기가 생성됩니다.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: '노트 내용으로 대체',
+                desc: '지정된 속성에 텍스트가 없을 때 노트 내용을 미리보기로 표시합니다.'
             },
             previewRows: {
                 name: '미리보기 행',

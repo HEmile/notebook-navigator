@@ -1501,8 +1501,11 @@ export const STRINGS_TH = {
             previewProperties: {
                 name: 'คุณสมบัติตัวอย่าง',
                 desc: 'รายการคุณสมบัติ frontmatter คั่นด้วยเครื่องหมายจุลภาคเพื่อตรวจสอบข้อความตัวอย่าง คุณสมบัติแรกที่มีข้อความจะถูกใช้',
-                placeholder: 'summary, description, abstract',
-                info: 'หากไม่พบข้อความตัวอย่างในคุณสมบัติที่ระบุ ตัวอย่างจะถูกสร้างจากเนื้อหาโน้ต'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: 'ใช้เนื้อหาโน้ตแทน',
+                desc: 'แสดงเนื้อหาโน้ตเป็นตัวอย่างเมื่อไม่มีคุณสมบัติที่ระบุมีข้อความ'
             },
             previewRows: {
                 name: 'แถวตัวอย่าง',

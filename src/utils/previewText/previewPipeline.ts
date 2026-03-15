@@ -154,8 +154,10 @@ export function normalizeExcerpt(excerpt: string, options?: { stripHtml?: boolea
 export function extractPreviewText(content: string, settings: NotebookNavigatorSettings, frontmatter?: FrontMatterCache): string {
     const targetLength = MAX_PREVIEW_TEXT_LENGTH + PREVIEW_SOURCE_SLACK;
     const maxExtension = PREVIEW_EXTENSION_LIMIT;
+    const hasPreviewProperties = settings.previewProperties.length > 0;
+    const shouldFallbackToNoteContent = settings.previewPropertiesFallback;
 
-    if (frontmatter && settings.previewProperties && settings.previewProperties.length > 0) {
+    if (frontmatter && hasPreviewProperties) {
         for (const property of settings.previewProperties) {
             const value = getRecordValue(frontmatter, property);
             const propertyValue = resolvePreviewPropertyValue(value);
@@ -178,6 +180,10 @@ export function extractPreviewText(content: string, settings: NotebookNavigatorS
             }
             return preview;
         }
+    }
+
+    if (hasPreviewProperties && !shouldFallbackToNoteContent) {
+        return '';
     }
 
     if (!content) {

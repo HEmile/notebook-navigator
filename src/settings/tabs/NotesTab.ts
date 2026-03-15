@@ -362,6 +362,23 @@ export function renderNotesTab(context: SettingsTabContext): void {
     );
 
     new Setting(previewSettingsEl)
+        .setName(strings.settings.items.previewRows.name)
+        .setDesc(strings.settings.items.previewRows.desc)
+        .addDropdown(dropdown =>
+            dropdown
+                .addOption('1', strings.settings.items.previewRows.options['1'])
+                .addOption('2', strings.settings.items.previewRows.options['2'])
+                .addOption('3', strings.settings.items.previewRows.options['3'])
+                .addOption('4', strings.settings.items.previewRows.options['4'])
+                .addOption('5', strings.settings.items.previewRows.options['5'])
+                .setValue(plugin.settings.previewRows.toString())
+                .onChange(async value => {
+                    plugin.settings.previewRows = parseInt(value, 10);
+                    await plugin.saveSettingsAndUpdate();
+                })
+        );
+
+    new Setting(previewSettingsEl)
         .setName(strings.settings.items.skipHeadingsInPreview.name)
         .setDesc(strings.settings.items.skipHeadingsInPreview.desc)
         .addToggle(toggle =>
@@ -401,23 +418,6 @@ export function renderNotesTab(context: SettingsTabContext): void {
             })
         );
 
-    new Setting(previewSettingsEl)
-        .setName(strings.settings.items.previewRows.name)
-        .setDesc(strings.settings.items.previewRows.desc)
-        .addDropdown(dropdown =>
-            dropdown
-                .addOption('1', strings.settings.items.previewRows.options['1'])
-                .addOption('2', strings.settings.items.previewRows.options['2'])
-                .addOption('3', strings.settings.items.previewRows.options['3'])
-                .addOption('4', strings.settings.items.previewRows.options['4'])
-                .addOption('5', strings.settings.items.previewRows.options['5'])
-                .setValue(plugin.settings.previewRows.toString())
-                .onChange(async value => {
-                    plugin.settings.previewRows = parseInt(value, 10);
-                    await plugin.saveSettingsAndUpdate();
-                })
-        );
-
     const previewPropertiesSetting = context.createDebouncedTextSetting(
         previewSettingsEl,
         strings.settings.items.previewProperties.name,
@@ -426,15 +426,28 @@ export function renderNotesTab(context: SettingsTabContext): void {
         () => formatCommaSeparatedList(plugin.settings.previewProperties),
         value => {
             plugin.settings.previewProperties = parseCommaSeparatedList(value);
+        },
+        undefined,
+        () => {
+            updatePreviewFallbackVisibility();
         }
     );
     previewPropertiesSetting.controlEl.addClass('nn-setting-wide-input');
 
-    const previewInfoContainer = previewSettingsEl.createDiv('nn-setting-info-container');
-    const previewInfoDiv = previewInfoContainer.createEl('div', {
-        cls: 'setting-item-description'
-    });
-    previewInfoDiv.createSpan({ text: strings.settings.items.previewProperties.info });
+    const previewFallbackSetting = new Setting(previewSettingsEl)
+        .setName(strings.settings.items.previewPropertiesFallback.name)
+        .setDesc(strings.settings.items.previewPropertiesFallback.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.previewPropertiesFallback).onChange(async value => {
+                plugin.settings.previewPropertiesFallback = value;
+                await plugin.saveSettingsAndUpdate();
+            })
+        );
+
+    const updatePreviewFallbackVisibility = () => {
+        setElementVisible(previewFallbackSetting.settingEl, plugin.settings.previewProperties.length > 0);
+    };
+    updatePreviewFallbackVisibility();
 
     const showFeatureImageSetting = featureImageGroup.addSetting(setting => {
         setting.setName(strings.settings.items.showFeatureImage.name).setDesc(strings.settings.items.showFeatureImage.desc);
