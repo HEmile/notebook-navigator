@@ -200,6 +200,7 @@ body {
     --nn-theme-calendar-day-has-feature-image-color: white;
     --nn-theme-calendar-day-today-color: var(--nn-theme-calendar-day-in-month-color);
     --nn-theme-calendar-day-today-bg: var(--text-selection);
+    --nn-theme-calendar-day-active-border-color: var(--nn-theme-foreground-faded);
 
     /* -- Folder & Tag Items -- */
     --nn-theme-navitem-chevron-color: var(--nn-theme-foreground-muted);
@@ -2480,7 +2481,7 @@ body {
     --nn-calendar-header-chip-bg: var(--nn-theme-nav-bg);
     --nn-calendar-note-indicator-color: var(--nn-theme-calendar-day-has-note-bg);
     --nn-calendar-task-indicator-color: var(--nn-theme-calendar-day-has-unfinished-task-color);
-    --nn-calendar-active-editor-border-color: var(--nn-theme-foreground-faded);
+    --nn-calendar-active-editor-border-color: var(--nn-theme-calendar-day-active-border-color);
 }
 
 .notebook-navigator-mobile :is(.nn-navigation-pane, .nn-list-pane, .nn-single-pane-calendar) {
@@ -2905,7 +2906,6 @@ body {
 }
 
 .nn-navigation-calendar-year-month.is-selected-month.has-feature-image {
-    --nn-calendar-active-editor-border-color: var(--nn-theme-foreground-muted);
     color: var(--nn-theme-calendar-day-has-feature-image-color);
 }
 
@@ -3296,11 +3296,6 @@ body {
 
 .nn-navigation-calendar-day.is-active-editor-file {
     box-shadow: inset 0 0 0 2px var(--nn-calendar-active-editor-border-color) !important;
-}
-
-.nn-navigation-calendar-day.is-active-editor-file.has-feature-image,
-.nn-navigation-calendar-day.is-active-editor-file.has-feature-image-key {
-    --nn-calendar-active-editor-border-color: var(--nn-theme-foreground-muted);
 }
 
 .nn-navigation-calendar[data-highlight-today='true']
@@ -8308,6 +8303,15 @@ settings:
         description: Background color for today's date highlight.
         type: variable-themed-color
         format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: nn-theme-calendar-day-active-border-color
+        title: Active day outline color
+        description: Border color for the outline shown on the active day in the calendar.
+        type: variable-themed-color
+        opacity: true
+        format: rgb
         default-light: '#'
         default-dark: '#'
     -

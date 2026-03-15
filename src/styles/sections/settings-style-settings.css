@@ -389,6 +389,15 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
+        id: nn-theme-calendar-day-active-border-color
+        title: Active day outline color
+        description: Border color for the outline shown on the active day in the calendar.
+        type: variable-themed-color
+        opacity: true
+        format: rgb
+        default-light: '#'
+        default-dark: '#'
+    -
         id: nn-nav-pane-heading
         title: Navigation pane (folders, tags, shortcuts)
         description: Customize the background and items within the navigation pane.

@@ -46,7 +46,7 @@
     --nn-calendar-header-chip-bg: var(--nn-theme-nav-bg);
     --nn-calendar-note-indicator-color: var(--nn-theme-calendar-day-has-note-bg);
     --nn-calendar-task-indicator-color: var(--nn-theme-calendar-day-has-unfinished-task-color);
-    --nn-calendar-active-editor-border-color: var(--nn-theme-foreground-faded);
+    --nn-calendar-active-editor-border-color: var(--nn-theme-calendar-day-active-border-color);
 }
 
 .notebook-navigator-mobile :is(.nn-navigation-pane, .nn-list-pane, .nn-single-pane-calendar) {
@@ -471,7 +471,6 @@
 }
 
 .nn-navigation-calendar-year-month.is-selected-month.has-feature-image {
-    --nn-calendar-active-editor-border-color: var(--nn-theme-foreground-muted);
     color: var(--nn-theme-calendar-day-has-feature-image-color);
 }
 
@@ -862,11 +861,6 @@
 
 .nn-navigation-calendar-day.is-active-editor-file {
     box-shadow: inset 0 0 0 2px var(--nn-calendar-active-editor-border-color) !important;
-}
-
-.nn-navigation-calendar-day.is-active-editor-file.has-feature-image,
-.nn-navigation-calendar-day.is-active-editor-file.has-feature-image-key {
-    --nn-calendar-active-editor-border-color: var(--nn-theme-foreground-muted);
 }
 
 .nn-navigation-calendar[data-highlight-today='true']

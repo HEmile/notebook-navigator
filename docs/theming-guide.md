@@ -1,6 +1,6 @@
 # Notebook Navigator Theming Guide
 
-Updated: February 24, 2026
+Updated: March 15, 2026
 
 ## Table of Contents
 
@@ -70,6 +70,7 @@ Most variables are colors and should resolve to a computed color (some are used 
 | `--nn-theme-calendar-day-has-feature-image-color` | `white`                             | Text color for dates with feature images        |
 | `--nn-theme-calendar-day-today-color`         | `var(--nn-theme-calendar-day-in-month-color)` | Text color for today's date                |
 | `--nn-theme-calendar-day-today-bg`            | `var(--text-selection)`                | Background color for today's date highlight     |
+| `--nn-theme-calendar-day-active-border-color` | `var(--nn-theme-foreground-faded)` | Border color for the outline shown on the active day in the calendar |
 
 ### Navigation pane
 
@@ -315,6 +316,7 @@ body {
   --nn-theme-calendar-day-has-feature-image-color: #ffffff;
   --nn-theme-calendar-day-today-color: #ffffff;
   --nn-theme-calendar-day-today-bg: #4a78c8;
+  --nn-theme-calendar-day-active-border-color: rgba(169, 183, 198, 0.5);
 
   /* Navigation items */
   --nn-theme-navitem-chevron-color: #6e6e6e;
