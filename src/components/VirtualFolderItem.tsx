@@ -78,6 +78,7 @@ interface VirtualFolderItemProps {
     isExpanded: boolean; // From ExpansionContext via NavigationPane
     hasChildren: boolean; // Computed by NavigationPane from tag tree
     onToggle: () => void; // Expansion toggle handler
+    onToggleAllSiblings?: () => void; // Optional recursive toggle handler for modifier-click on the chevron
     onSelect?: (event: React.MouseEvent<HTMLDivElement>) => void; // Optional selection handler
     isSelected?: boolean; // Selection state for virtual folders that act as collections
     showFileCount?: boolean; // Whether to render note count badge
@@ -120,6 +121,7 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
     indentGuideLevels,
     isExpanded,
     hasChildren,
+    onToggleAllSiblings,
     onSelect,
     isSelected = false,
     showFileCount = false,
@@ -226,9 +228,18 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
     const handleChevronClick = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation();
-            if (hasChildren) onToggle();
+            if (!hasChildren) {
+                return;
+            }
+
+            if (e.altKey && onToggleAllSiblings) {
+                onToggleAllSiblings();
+                return;
+            }
+
+            onToggle();
         },
-        [hasChildren, onToggle]
+        [hasChildren, onToggle, onToggleAllSiblings]
     );
 
     const handleChevronDoubleClick = useCallback((e: React.MouseEvent) => {

@@ -90,7 +90,9 @@ export interface NavigationPaneTreeInteractionsResult {
     handlePropertyToggle: (nodeId: string) => void;
     handleVirtualFolderToggle: (folderId: string) => void;
     getAllDescendantFolders: (folder: TFolder) => string[];
+    getAllTagPaths: () => string[];
     getAllDescendantTags: (tagPath: string) => string[];
+    getAllPropertyNodeIds: () => string[];
     getAllDescendantPropertyNodeIds: (propertyNode: PropertyTreeNode) => string[];
     handleTagClick: (tagPath: string, event?: React.MouseEvent, options?: { fromShortcut?: boolean }) => void;
     handleTagCollectionClick: (tagCollectionId: string, event: React.MouseEvent<HTMLDivElement>) => void;
@@ -279,6 +281,23 @@ export function useNavigationPaneTreeInteractions({
         return descendants;
     }, []);
 
+    const getAllTagPaths = useCallback((): string[] => {
+        const tagPaths: string[] = [];
+        const visited = new Set<TagTreeNode>();
+
+        const collectPaths = (node: TagTreeNode) => {
+            if (visited.has(node)) {
+                return;
+            }
+            visited.add(node);
+            tagPaths.push(node.path);
+            node.children.forEach(child => collectPaths(child));
+        };
+
+        tagTree.forEach(node => collectPaths(node));
+        return tagPaths;
+    }, [tagTree]);
+
     const getAllDescendantTags = useCallback(
         (tagPath: string): string[] => {
             if (tagTreeService) {
@@ -303,6 +322,23 @@ export function useNavigationPaneTreeInteractions({
         },
         [tagTree, tagTreeService]
     );
+
+    const getAllPropertyNodeIds = useCallback((): string[] => {
+        const nodeIds: string[] = [];
+        const visited = new Set<PropertyTreeNode>();
+
+        const collectIds = (node: PropertyTreeNode) => {
+            if (visited.has(node)) {
+                return;
+            }
+            visited.add(node);
+            nodeIds.push(node.id);
+            node.children.forEach(child => collectIds(child));
+        };
+
+        propertyTree.forEach(node => collectIds(node));
+        return nodeIds;
+    }, [propertyTree]);
 
     const getAllDescendantPropertyNodeIds = useCallback(
         (propertyNode: PropertyTreeNode): string[] => {
@@ -529,7 +565,9 @@ export function useNavigationPaneTreeInteractions({
         handlePropertyToggle,
         handleVirtualFolderToggle,
         getAllDescendantFolders,
+        getAllTagPaths,
         getAllDescendantTags,
+        getAllPropertyNodeIds,
         getAllDescendantPropertyNodeIds,
         handleTagClick,
         handleTagCollectionClick,

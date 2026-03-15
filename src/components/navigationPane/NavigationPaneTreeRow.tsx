@@ -154,6 +154,7 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
                           onSectionContextMenu(event, sectionId, { allowSeparator: allowSeparatorActions })
                     : undefined;
             const isPropertiesGroup = virtualFolder.id === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
+            const isTagsGroup = virtualFolder.id === TAGS_ROOT_VIRTUAL_FOLDER_ID;
             const trailingAction: VirtualFolderTrailingAction | undefined = isShortcutsGroup
                 ? shortcuts.shortcutHeaderTrailingAction
                 : isPropertiesGroup
@@ -182,6 +183,35 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
                               : undefined
                     }
                     onToggle={() => tree.handleVirtualFolderToggle(virtualFolder.id)}
+                    onToggleAllSiblings={
+                        isTagsGroup
+                            ? () => {
+                                  const isCurrentlyExpanded = expansionState.expandedVirtualFolders.has(virtualFolder.id);
+                                  tree.handleVirtualFolderToggle(virtualFolder.id);
+                                  const descendantPaths = tree.getAllTagPaths();
+                                  if (descendantPaths.length > 0) {
+                                      expansionDispatch({
+                                          type: 'TOGGLE_DESCENDANT_TAGS',
+                                          descendantPaths,
+                                          expand: !isCurrentlyExpanded
+                                      });
+                                  }
+                              }
+                            : isPropertiesGroup
+                              ? () => {
+                                    const isCurrentlyExpanded = expansionState.expandedVirtualFolders.has(virtualFolder.id);
+                                    tree.handleVirtualFolderToggle(virtualFolder.id);
+                                    const descendantNodeIds = tree.getAllPropertyNodeIds();
+                                    if (descendantNodeIds.length > 0) {
+                                        expansionDispatch({
+                                            type: 'TOGGLE_DESCENDANT_PROPERTIES',
+                                            descendantNodeIds,
+                                            expand: !isCurrentlyExpanded
+                                        });
+                                    }
+                                }
+                              : undefined
+                    }
                     onDragOver={isShortcutsGroup && shortcuts.allowEmptyShortcutDrop ? shortcuts.handleShortcutRootDragOver : undefined}
                     onDrop={isShortcutsGroup && shortcuts.allowEmptyShortcutDrop ? shortcuts.handleShortcutRootDrop : undefined}
                     dropConfig={dropConfig}
