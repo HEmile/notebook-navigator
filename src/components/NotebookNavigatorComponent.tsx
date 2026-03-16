@@ -74,6 +74,7 @@ import { showNotice } from '../utils/noticeUtils';
 import { EMPTY_SEARCH_NAV_FILTER_STATE, type SearchNavFilterState } from '../types/search';
 import { getFeatureImageDisplayMeasurements, getListPaneMeasurements } from '../utils/listPaneMeasurements';
 import type { InclusionOperator } from '../utils/filterSearch';
+import { useFolderDecorationState } from '../hooks/useFolderDecorationState';
 
 // Checks if two string arrays have identical content in the same order
 const arraysEqual = (a: string[], b: string[]): boolean => {
@@ -1136,6 +1137,7 @@ export const NotebookNavigatorComponent = React.memo(
             uxPreferences.showCalendar &&
             settings.calendarPlacement === 'left-sidebar' &&
             settings.calendarLeftPlacement === 'below';
+        const { folderNavigationSource, folderDecorationModel, navRainbowState } = useFolderDecorationState();
 
         return (
             <div className="nn-scale-wrapper" data-ui-scale={scaleWrapperDataAttr} style={scaleWrapperStyle}>
@@ -1165,6 +1167,9 @@ export const NotebookNavigatorComponent = React.memo(
                         style={navigationPaneStyle}
                         uiScale={uiScale}
                         rootContainerRef={containerRef}
+                        folderNavigationSource={folderNavigationSource}
+                        folderDecorationModel={folderDecorationModel}
+                        navRainbowState={navRainbowState}
                         searchNavFilters={searchNavFilters}
                         onExecuteSearchShortcut={handleSearchShortcutExecution}
                         onNavigateToFolder={navigateToFolder}
@@ -1179,6 +1184,7 @@ export const NotebookNavigatorComponent = React.memo(
                     <ListPane
                         ref={listPaneRef}
                         rootContainerRef={containerRef}
+                        folderDecorationModel={folderDecorationModel}
                         onSearchTokensChange={handleSearchTokensChange}
                         onNavigateToFolder={navigateToFolder}
                         onRevealTag={revealTag}

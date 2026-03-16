@@ -41,12 +41,15 @@ import { PropertyTreeNode, TagTreeNode } from '../../types/storage';
 import type { CombinedNavigationItem } from '../../types/virtualization';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { NoteCountInfo } from '../../types/noteCounts';
+import type { NavigationRainbowState } from '../useNavigationRainbowState';
 import { useSettingsDerived, type ActiveProfileState } from '../../context/SettingsContext';
 import { useNavigationNoteCounts } from './data/useNavigationNoteCounts';
 import { useNavigationPaneItemPipeline } from './data/useNavigationPaneItemPipeline';
 import { useNavigationPaneListSections } from './data/useNavigationPaneListSections';
 import { useNavigationPaneSourceState } from './data/useNavigationPaneSourceState';
 import { useNavigationPaneTreeSections } from './data/useNavigationPaneTreeSections';
+import type { FolderDecorationModel } from '../../utils/folderDecoration';
+import type { FolderNavigationSourceState } from '../useFolderNavigationSourceState';
 
 /**
  * Parameters for the useNavigationPaneData hook
@@ -58,6 +61,12 @@ interface UseNavigationPaneDataParams {
     activeProfile: ActiveProfileState;
     /** Whether the navigation pane is currently visible */
     isVisible: boolean;
+    /** Shared folder ordering and exclusion state */
+    folderNavigationSource: FolderNavigationSourceState;
+    /** Shared folder decoration model */
+    folderDecorationModel: FolderDecorationModel;
+    /** Shared navigation rainbow state */
+    navRainbowState: NavigationRainbowState;
     /** Whether the shortcuts virtual folder is expanded */
     shortcutsExpanded: boolean;
     /** Whether the recent notes virtual folder is expanded */
@@ -133,6 +142,9 @@ export function useNavigationPaneData({
     settings,
     activeProfile,
     isVisible,
+    folderNavigationSource,
+    folderDecorationModel,
+    navRainbowState,
     shortcutsExpanded,
     recentNotesExpanded,
     pinShortcuts,
@@ -152,7 +164,7 @@ export function useNavigationPaneData({
         app,
         settings,
         activeProfile,
-        metadataService,
+        folderNavigationSource,
         fileData,
         hydratedShortcuts,
         showHiddenItems,
@@ -229,6 +241,8 @@ export function useNavigationPaneData({
         metadataService,
         fileNameIconNeedles,
         getFileDisplayName,
+        folderDecorationModel,
+        navRainbowState,
         sectionOrder,
         showHiddenItems,
         pinShortcuts,

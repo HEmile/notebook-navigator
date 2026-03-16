@@ -78,7 +78,7 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.5.1',
-        date: '2026-03-15',
+        date: '2026-03-16',
         showOnUpdate: true,
         bannerUrl: true,
         new: [
@@ -100,6 +100,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         ],
         fixed: [
             'Fixed an issue with "Featured image pixel size" where it would not save the resolution if the setting was set to non-synced.',
+            'Fixed so rainbow colors are shown in the list pane if List > Notes > "Show parent folder color" is enabled.',
             'Fixed so the "new version available" popup only shows at most once per day, not on every startup.'
         ]
     },

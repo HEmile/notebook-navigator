@@ -31,21 +31,13 @@ import {
 } from '../../../utils/fileIconUtils';
 import {
     applyRainbowOverlay,
-    type FolderRainbowColors,
     type NavigationRainbowPalettes,
     type PropertyRainbowColors,
     type RecentRainbowColors,
     type ShortcutRainbowColors,
     type TagRainbowColors
 } from '../../../utils/navigationRainbow';
-import { getActiveNavRainbowSettings } from '../../../utils/vaultProfiles';
-
-interface FolderRainbowContext {
-    isEnabled: boolean;
-    scope: NavRainbowSettings['folders']['scope'];
-    rootLevel: number;
-    colors: FolderRainbowColors;
-}
+import { resolveFolderDecorationColors, type FolderDecorationModel } from '../../../utils/folderDecoration';
 
 interface TagRainbowContext {
     isEnabled: boolean;
@@ -74,7 +66,6 @@ interface RecentRainbowContext {
 interface NavigationRainbowContext {
     mode: NavRainbowSettings['mode'];
     isEnabled: boolean;
-    folder: FolderRainbowContext;
     tag: TagRainbowContext;
     property: PropertyRainbowContext;
     shortcut: ShortcutRainbowContext;
@@ -94,12 +85,12 @@ export interface NavigationItemDecorationContext {
     metadataService: MetadataService;
     parsedExcludedFolders: string[];
     getFolderDisplayData: (folderPath: string) => ReturnType<MetadataService['getFolderDisplayData']>;
+    folderDecorationModel: FolderDecorationModel;
     fileIcons: NavigationFileIconContext;
     rainbow: NavigationRainbowContext;
 }
 
 export interface NavigationRainbowColors {
-    folder: FolderRainbowColors;
     tag: TagRainbowColors;
     property: PropertyRainbowColors;
     shortcut: ShortcutRainbowColors;
@@ -109,24 +100,27 @@ export interface NavigationRainbowColors {
 export function createNavigationItemDecorationContext(params: {
     app: App;
     settings: NotebookNavigatorSettings;
+    navRainbow: NavRainbowSettings;
     fileNameIconNeedles: readonly FileNameIconNeedle[];
     getFileDisplayName: (file: TFile) => string;
     metadataService: MetadataService;
     parsedExcludedFolders: string[];
+    folderDecorationModel: NavigationItemDecorationContext['folderDecorationModel'];
     navRainbowPalettes: NavigationRainbowPalettes;
     navRainbowColors: NavigationRainbowColors;
 }): NavigationItemDecorationContext {
     const {
         app,
         settings,
+        navRainbow,
         fileNameIconNeedles,
         getFileDisplayName,
         metadataService,
         parsedExcludedFolders,
+        folderDecorationModel,
         navRainbowPalettes,
         navRainbowColors
     } = params;
-    const navRainbow = getActiveNavRainbowSettings(settings);
 
     const folderDisplayDataByPath = new Map<string, ReturnType<MetadataService['getFolderDisplayData']>>();
     const getFolderDisplayData = (folderPath: string): ReturnType<MetadataService['getFolderDisplayData']> => {
@@ -157,11 +151,9 @@ export function createNavigationItemDecorationContext(params: {
     const rainbowMode = navRainbow.mode;
     const isRainbowEnabled = rainbowMode !== 'none';
 
-    const folderRootLevel = settings.showRootFolder ? 1 : 0;
     const tagRootLevel = settings.showAllTagsFolder ? 1 : 0;
     const propertyRootLevel = settings.showAllPropertiesFolder ? 1 : 0;
 
-    const folderPalette = navRainbowPalettes.folder;
     const tagPalette = navRainbowPalettes.tag;
     const propertyPalette = navRainbowPalettes.property;
     const shortcutPalette = navRainbowPalettes.shortcut;
@@ -173,6 +165,7 @@ export function createNavigationItemDecorationContext(params: {
         metadataService,
         parsedExcludedFolders,
         getFolderDisplayData,
+        folderDecorationModel,
         fileIcons: {
             settings: fileIconSettings,
             fallbackMode: fileIconFallbackMode,
@@ -182,12 +175,6 @@ export function createNavigationItemDecorationContext(params: {
         rainbow: {
             mode: rainbowMode,
             isEnabled: isRainbowEnabled,
-            folder: {
-                isEnabled: Boolean(folderPalette),
-                scope: navRainbow.folders.scope,
-                rootLevel: folderRootLevel,
-                colors: navRainbowColors.folder
-            },
             tag: {
                 isEnabled: Boolean(tagPalette),
                 scope: navRainbow.tags.scope,
@@ -209,6 +196,21 @@ export function createNavigationItemDecorationContext(params: {
 export interface DecorationColors {
     color: string | undefined;
     backgroundColor: string | undefined;
+}
+
+export function resolveFolderItemDecorationColors(params: {
+    ctx: NavigationItemDecorationContext;
+    folderPath: string;
+    color: string | undefined;
+    backgroundColor: string | undefined;
+}): DecorationColors {
+    const { ctx, folderPath, color, backgroundColor } = params;
+    return resolveFolderDecorationColors({
+        model: ctx.folderDecorationModel,
+        folderPath,
+        color,
+        backgroundColor
+    });
 }
 
 function applyRainbowOverlayToColors(params: {

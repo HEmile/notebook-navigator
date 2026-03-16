@@ -71,6 +71,8 @@ export class FolderMetadataService extends BaseMetadataService {
     private folderDisplayCacheSettingsListenerProvider: SettingsUpdateListenerProvider | null = null;
     private readonly folderDisplayCacheSettingsListenerId: string;
     private folderDisplayCacheUnsubscribe: (() => void) | null = null;
+    private folderDisplayVersion = 0;
+    private readonly folderDisplayListeners = new Set<(version: number) => void>();
     private folderDisplayNameVersion = 0;
     private readonly folderDisplayNameListeners = new Set<(version: number) => void>();
     private static folderDisplayCacheSettingsListenerCounter = 0;
@@ -134,6 +136,8 @@ export class FolderMetadataService extends BaseMetadataService {
         }
         if (folderDisplayNameSettingsChanged) {
             this.markFolderDisplayNamesChanged();
+        } else if (shouldClear) {
+            this.markFolderDisplayChanged();
         }
     }
 
@@ -153,15 +157,24 @@ export class FolderMetadataService extends BaseMetadataService {
         this.folderDisplayCacheSettingsListenerProvider = provider;
     }
 
-    private invalidateFolderDisplayCacheForContentChanges(changes: FileContentChange[]): boolean {
+    private invalidateFolderDisplayCacheForContentChanges(changes: FileContentChange[]): {
+        hasFolderDisplayChanges: boolean;
+        hasFolderDisplayNameChanges: boolean;
+    } {
         const settings = this.settingsProvider.settings;
         if (!settings.useFrontmatterMetadata || !settings.enableFolderNotes) {
-            return false;
+            return {
+                hasFolderDisplayChanges: false,
+                hasFolderDisplayNameChanges: false
+            };
         }
 
         const hasFolderDisplayNameChange = this.hasFolderDisplayNameMetadataChanges(changes);
         if (!this.folderDisplayCache.hasEntries()) {
-            return hasFolderDisplayNameChange;
+            return {
+                hasFolderDisplayChanges: hasFolderDisplayNameChange,
+                hasFolderDisplayNameChanges: hasFolderDisplayNameChange
+            };
         }
 
         const affectedFolderPaths = new Set<string>();
@@ -180,7 +193,10 @@ export class FolderMetadataService extends BaseMetadataService {
             this.folderDisplayCache.invalidateFolderAndDescendants(folderPath);
         });
 
-        return hasFolderDisplayNameChange;
+        return {
+            hasFolderDisplayChanges: affectedFolderPaths.size > 0 || hasFolderDisplayNameChange,
+            hasFolderDisplayNameChanges: hasFolderDisplayNameChange
+        };
     }
 
     hasFolderDisplayNameMetadataChanges(changes: FileContentChange[]): boolean {
@@ -272,9 +288,12 @@ export class FolderMetadataService extends BaseMetadataService {
             const db = getDBInstanceOrNull();
             if (db) {
                 this.folderDisplayCacheUnsubscribe = db.onContentChange(changes => {
-                    const hasFolderDisplayNameChanges = this.invalidateFolderDisplayCacheForContentChanges(changes);
+                    const { hasFolderDisplayChanges, hasFolderDisplayNameChanges } =
+                        this.invalidateFolderDisplayCacheForContentChanges(changes);
                     if (hasFolderDisplayNameChanges) {
                         this.markFolderDisplayNamesChanged();
+                    } else if (hasFolderDisplayChanges) {
+                        this.markFolderDisplayChanged();
                     }
                 });
             }
@@ -283,9 +302,24 @@ export class FolderMetadataService extends BaseMetadataService {
         this.ensureFolderDisplayCacheVaultListeners();
     }
 
+    private markFolderDisplayChanged(): void {
+        this.folderDisplayVersion += 1;
+        this.folderDisplayListeners.forEach(listener => listener(this.folderDisplayVersion));
+    }
+
     private markFolderDisplayNamesChanged(): void {
+        this.markFolderDisplayChanged();
         this.folderDisplayNameVersion += 1;
         this.folderDisplayNameListeners.forEach(listener => listener(this.folderDisplayNameVersion));
+    }
+
+    getFolderDisplayVersion(): number {
+        return this.folderDisplayVersion;
+    }
+
+    subscribeToFolderDisplayChanges(listener: (version: number) => void): () => void {
+        this.folderDisplayListeners.add(listener);
+        return () => this.folderDisplayListeners.delete(listener);
     }
 
     getFolderDisplayNameVersion(): number {
@@ -301,6 +335,10 @@ export class FolderMetadataService extends BaseMetadataService {
         if (this.folderDisplayCacheUnsubscribe) {
             this.folderDisplayCacheUnsubscribe();
             this.folderDisplayCacheUnsubscribe = null;
+        }
+
+        if (this.folderDisplayListeners.size > 0) {
+            this.folderDisplayListeners.clear();
         }
 
         if (this.folderDisplayNameListeners.size > 0) {
@@ -531,6 +569,7 @@ export class FolderMetadataService extends BaseMetadataService {
             });
 
             if (this.hasFolderDisplayStyleChanged(directDisplayDataBefore, directDisplayDataAfter)) {
+                this.markFolderDisplayChanged();
                 this.folderStyleChangeListener(folderPath);
             }
         }

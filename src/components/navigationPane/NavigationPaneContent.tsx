@@ -61,7 +61,7 @@ import { collectAllTagPaths } from '../../utils/tagTree';
 import type { TagTreeNode } from '../../types/storage';
 import { normalizeNavigationSectionOrderInput } from '../../utils/navigationSections';
 import { compositeWithBase } from '../../utils/colorUtils';
-import { areNavRainbowSettingsEqual, getActiveNavRainbowSettings, getActiveVaultProfile } from '../../utils/vaultProfiles';
+import { getActiveVaultProfile } from '../../utils/vaultProfiles';
 import { PropertyKeyVisibilityModal } from '../../modals/PropertyKeyVisibilityModal';
 import type { NavigateToFolderOptions, RevealPropertyOptions, RevealTagOptions } from '../../hooks/useNavigatorReveal';
 import { NAVIGATION_PANE_SURFACE_COLOR_MAPPINGS } from '../../constants/surfaceColorMappings';
@@ -71,6 +71,9 @@ import type { CombinedNavigationItem } from '../../types/virtualization';
 import { NavigationPaneItemRenderer } from './NavigationPaneItemRenderer';
 import { NavigationPaneLayout } from './NavigationPaneLayout';
 import type { NavigationPaneRowContext } from './NavigationPaneItemRenderer.types';
+import type { FolderNavigationSourceState } from '../../hooks/useFolderNavigationSourceState';
+import type { NavigationRainbowState } from '../../hooks/useNavigationRainbowState';
+import type { FolderDecorationModel } from '../../utils/folderDecoration';
 
 const EMPTY_INDENT_GUIDE_MAP = new Map<string, number[]>();
 
@@ -86,6 +89,9 @@ interface NavigationPaneProps {
     style?: React.CSSProperties;
     uiScale: number;
     rootContainerRef: React.RefObject<HTMLDivElement | null>;
+    folderNavigationSource: FolderNavigationSourceState;
+    folderDecorationModel: FolderDecorationModel;
+    navRainbowState: NavigationRainbowState;
     searchNavFilters?: SearchNavFilterState;
     onExecuteSearchShortcut?: (shortcutKey: string, searchShortcut: import('../../types/shortcuts').SearchShortcut) => Promise<void> | void;
     onNavigateToFolder: (folderPath: string, options?: NavigateToFolderOptions) => void;
@@ -362,6 +368,9 @@ export const NavigationPane = React.memo(
             settings,
             activeProfile,
             isVisible,
+            folderNavigationSource: props.folderNavigationSource,
+            folderDecorationModel: props.folderDecorationModel,
+            navRainbowState: props.navRainbowState,
             shortcutsExpanded: shortcuts.shortcutsExpanded,
             recentNotesExpanded: shortcuts.recentNotesExpanded,
             pinShortcuts: uiState.pinShortcuts && settings.showShortcuts,
@@ -484,16 +493,7 @@ export const NavigationPane = React.memo(
             rootContainerRef,
             variables: NAVIGATION_PANE_SURFACE_COLOR_MAPPINGS
         });
-        const previousNavRainbowRef = useRef<ReturnType<typeof getActiveNavRainbowSettings> | null>(null);
-        const activeNavRainbow = useMemo(() => {
-            const nextNavRainbow = getActiveNavRainbowSettings(settings);
-            const previousNavRainbow = previousNavRainbowRef.current;
-            if (previousNavRainbow && areNavRainbowSettingsEqual(previousNavRainbow, nextNavRainbow)) {
-                return previousNavRainbow;
-            }
-            previousNavRainbowRef.current = nextNavRainbow;
-            return nextNavRainbow;
-        }, [settings]);
+        const activeNavRainbow = props.navRainbowState.navRainbow;
         const solidBackgroundCacheRef = useRef<Map<string, string | undefined>>(new Map());
         useEffect(() => {
             solidBackgroundCacheRef.current.clear();

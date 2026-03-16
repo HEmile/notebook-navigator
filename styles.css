@@ -3893,6 +3893,11 @@ body {
     min-width: 0;
 }
 
+.nn-parent-folder-content[data-has-background='true'] {
+    border-radius: 4px;
+    padding: 1px 4px;
+}
+
 .nn-parent-folder-content[data-reveal='true'] {
     cursor: pointer;
     user-select: none;

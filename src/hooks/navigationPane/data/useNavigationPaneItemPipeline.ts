@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { App, TFile } from 'obsidian';
 import type { MetadataService } from '../../../services/MetadataService';
 import type { NotebookNavigatorSettings } from '../../../settings/types';
@@ -28,10 +28,10 @@ import {
     type NavigationSectionId as NavigationSectionIdType
 } from '../../../types';
 import type { CombinedNavigationItem } from '../../../types/virtualization';
+import type { NavigationRainbowState } from '../../useNavigationRainbowState';
+import type { FolderDecorationModel } from '../../../utils/folderDecoration';
 import { buildNavigationPathIndexMap } from '../../../utils/navigationIndex';
 import {
-    buildFolderRainbowColors,
-    buildNavigationRainbowPalettes,
     buildPropertyRainbowColors,
     buildRecentRainbowColors,
     buildShortcutRainbowColors,
@@ -46,7 +46,6 @@ import {
     parseNavigationSeparatorKey
 } from '../../../utils/navigationSeparators';
 import { normalizePropertyNodeId } from '../../../utils/propertyTree';
-import { areNavRainbowSettingsEqual, getActiveNavRainbowSettings } from '../../../utils/vaultProfiles';
 import type { FileNameIconNeedle } from '../../../utils/fileIconUtils';
 import { createNavigationItemDecorator, type NavigationRainbowColors } from './decorateNavigationItems';
 import { insertRootSpacing, SPACER_ITEM_TYPES } from './rootSpacing';
@@ -62,6 +61,8 @@ export interface UseNavigationPaneItemPipelineParams {
     metadataService: MetadataService;
     fileNameIconNeedles: readonly FileNameIconNeedle[];
     getFileDisplayName: (file: TFile) => string;
+    folderDecorationModel: FolderDecorationModel;
+    navRainbowState: NavigationRainbowState;
     sectionOrder: NavigationSectionIdType[];
     showHiddenItems: boolean;
     pinShortcuts: boolean;
@@ -108,16 +109,14 @@ const isRecentNavigationItem = (item: CombinedNavigationItem): boolean => {
     return item.type === NavigationPaneItemType.RECENT_NOTE;
 };
 
-const isDarkThemeActive = (): boolean => {
-    return document.body?.classList.contains('theme-dark') ?? false;
-};
-
 export function useNavigationPaneItemPipeline({
     app,
     settings,
     metadataService,
     fileNameIconNeedles,
     getFileDisplayName,
+    folderDecorationModel,
+    navRainbowState,
     sectionOrder,
     showHiddenItems,
     pinShortcuts,
@@ -131,37 +130,8 @@ export function useNavigationPaneItemPipeline({
     parsedExcludedFolders,
     metadataDecorationVersion
 }: UseNavigationPaneItemPipelineParams): NavigationPaneItemPipelineResult {
-    const previousNavRainbowRef = useRef<ReturnType<typeof getActiveNavRainbowSettings> | null>(null);
-    const [isDarkTheme, setIsDarkTheme] = useState(() => isDarkThemeActive());
     const normalizedSectionOrder = useMemo(() => sanitizeNavigationSectionOrder(sectionOrder), [sectionOrder]);
-
-    // Track dark/light theme changes via body class observation and Obsidian's css-change event
-    useEffect(() => {
-        const syncTheme = () => {
-            setIsDarkTheme(previousTheme => {
-                const nextTheme = isDarkThemeActive();
-                return previousTheme === nextTheme ? previousTheme : nextTheme;
-            });
-        };
-
-        const bodyObserver = document.body
-            ? new MutationObserver(() => {
-                  syncTheme();
-              })
-            : null;
-        bodyObserver?.observe(document.body, {
-            attributes: true,
-            attributeFilter: ['class']
-        });
-
-        const cssChangeRef = app.workspace.on('css-change', syncTheme);
-        syncTheme();
-
-        return () => {
-            bodyObserver?.disconnect();
-            app.workspace.offref(cssChangeRef);
-        };
-    }, [app]);
+    const { navRainbow, navRainbowPalettes } = navRainbowState;
 
     const { items, sectionSpacerMap, firstSectionId } = useMemo(() => {
         const allItems: CombinedNavigationItem[] = [];
@@ -427,33 +397,6 @@ export function useNavigationPaneItemPipeline({
         return result;
     }, [firstSectionId, items, parsedNavigationSeparators, pinShortcuts, sectionSpacerMap, showHiddenItems]);
 
-    const navRainbow = useMemo(() => {
-        const nextNavRainbow = getActiveNavRainbowSettings(settings);
-        const previousNavRainbow = previousNavRainbowRef.current;
-        if (previousNavRainbow && areNavRainbowSettingsEqual(previousNavRainbow, nextNavRainbow)) {
-            return previousNavRainbow;
-        }
-        previousNavRainbowRef.current = nextNavRainbow;
-        return nextNavRainbow;
-    }, [settings]);
-    const navRainbowPalettes = useMemo(() => buildNavigationRainbowPalettes(navRainbow, isDarkTheme), [isDarkTheme, navRainbow]);
-
-    const folderRainbowColors = useMemo(() => {
-        const palette = navRainbowPalettes.folder;
-        if (!palette) {
-            return { colorsByPath: new Map<string, string>(), rootColor: undefined, getInheritedColor: (_path: string) => undefined };
-        }
-
-        return buildFolderRainbowColors({
-            items: folderItems,
-            palette,
-            scope: navRainbow.folders.scope,
-            showRootFolder: settings.showRootFolder,
-            rootLevel: settings.showRootFolder ? 1 : 0,
-            inheritColors: settings.inheritFolderColors
-        });
-    }, [folderItems, navRainbow.folders.scope, navRainbowPalettes.folder, settings.inheritFolderColors, settings.showRootFolder]);
-
     const tagRainbowColors = useMemo(() => {
         const palette = navRainbowPalettes.tag;
         if (!palette) {
@@ -510,24 +453,24 @@ export function useNavigationPaneItemPipeline({
 
     const navRainbowColors = useMemo<NavigationRainbowColors>(
         () => ({
-            folder: folderRainbowColors,
             tag: tagRainbowColors,
             property: propertyRainbowColors,
             shortcut: shortcutRainbowColors,
             recent: recentRainbowColors
         }),
-        [folderRainbowColors, propertyRainbowColors, recentRainbowColors, shortcutRainbowColors, tagRainbowColors]
+        [propertyRainbowColors, recentRainbowColors, shortcutRainbowColors, tagRainbowColors]
     );
-
     const decorateItem = useMemo(() => {
         void metadataDecorationVersion;
         return createNavigationItemDecorator({
             app,
             settings,
+            navRainbow,
             fileNameIconNeedles,
             getFileDisplayName,
             metadataService,
             parsedExcludedFolders,
+            folderDecorationModel,
             navRainbowPalettes,
             navRainbowColors
         });
@@ -537,6 +480,8 @@ export function useNavigationPaneItemPipeline({
         getFileDisplayName,
         metadataDecorationVersion,
         metadataService,
+        folderDecorationModel,
+        navRainbow,
         navRainbowColors,
         navRainbowPalettes,
         parsedExcludedFolders,

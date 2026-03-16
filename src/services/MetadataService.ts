@@ -180,6 +180,14 @@ export class MetadataService {
         return this.folderService.getFolderDisplayData(folderPath, options);
     }
 
+    getFolderDisplayVersion(): number {
+        return this.folderService.getFolderDisplayVersion();
+    }
+
+    subscribeToFolderDisplayChanges(listener: (version: number) => void): () => void {
+        return this.folderService.subscribeToFolderDisplayChanges(listener);
+    }
+
     getFolderDisplayNameVersion(): number {
         return this.folderService.getFolderDisplayNameVersion();
     }

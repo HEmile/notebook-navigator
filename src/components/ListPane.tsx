@@ -73,6 +73,7 @@ import { type SearchNavFilterState } from '../types/search';
 import { EMPTY_LIST_MENU_TYPE } from '../utils/contextMenu';
 import { useUXPreferences } from '../context/UXPreferencesContext';
 import { type InclusionOperator } from '../utils/filterSearch';
+import type { FolderDecorationModel } from '../utils/folderDecoration';
 import { useSurfaceColorVariables } from '../hooks/useSurfaceColorVariables';
 import { LIST_PANE_SURFACE_COLOR_MAPPINGS } from '../constants/surfaceColorMappings';
 import { getListPaneMeasurements } from '../utils/listPaneMeasurements';
@@ -127,6 +128,7 @@ interface ListPaneProps {
      * Callback invoked whenever tag-related search tokens change.
      */
     onSearchTokensChange?: (state: SearchNavFilterState) => void;
+    folderDecorationModel: FolderDecorationModel;
     onNavigateToFolder: (folderPath: string, options?: NavigateToFolderOptions) => void;
     onRevealTag: (tagPath: string, options?: RevealTagOptions) => void;
     onRevealProperty: (propertyNodeId: string, options?: RevealPropertyOptions) => boolean;
@@ -168,7 +170,7 @@ function ListPaneTitleChrome({
 export const ListPane = React.memo(
     forwardRef<ListPaneHandle, ListPaneProps>(function ListPane(props, ref) {
         const { app, isMobile } = useServices();
-        const { onNavigateToFolder, onRevealTag, onRevealProperty } = props;
+        const { onNavigateToFolder, onRevealTag, onRevealProperty, folderDecorationModel } = props;
         const selectionState = useSelectionState();
         const selectionDispatch = useSelectionDispatch();
         const settings = useSettingsState();
@@ -532,6 +534,7 @@ export const ListPane = React.memo(
                         visibleListPropertyKeys={visibleListPropertyKeys}
                         visibleNavigationPropertyKeys={visibleNavigationPropertyKeys}
                         onNavigateToFolder={onNavigateToFolder}
+                        folderDecorationModel={folderDecorationModel}
                     />
                     {/* iOS (Obsidian 1.11+): keep the floating toolbar inside the panel */}
                     {shouldRenderBottomToolbarInsidePanel ? <div className="nn-pane-bottom-toolbar">{listToolbar}</div> : null}

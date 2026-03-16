@@ -29,6 +29,7 @@ import type { ListPaneItem } from '../../types/virtualization';
 import type { NotebookNavigatorSettings } from '../../settings';
 import type { SortOption } from '../../settings';
 import type { InclusionOperator } from '../../utils/filterSearch';
+import type { FolderDecorationModel } from '../../utils/folderDecoration';
 import type { NavigateToFolderOptions } from '../../hooks/useNavigatorReveal';
 import { FileItem } from '../FileItem';
 import { ServiceIcon } from '../ServiceIcon';
@@ -65,6 +66,7 @@ interface ListPaneVirtualContentProps {
     visibleListPropertyKeys: ReadonlySet<string>;
     visibleNavigationPropertyKeys: ReadonlySet<string>;
     onNavigateToFolder: (folderPath: string, options?: NavigateToFolderOptions) => void;
+    folderDecorationModel: FolderDecorationModel;
 }
 
 function getItemAt<T>(items: T[], index: number): T | undefined {
@@ -110,7 +112,8 @@ export function ListPaneVirtualContent({
     fileIconSize,
     visibleListPropertyKeys,
     visibleNavigationPropertyKeys,
-    onNavigateToFolder
+    onNavigateToFolder,
+    folderDecorationModel
 }: ListPaneVirtualContentProps) {
     const { app, commandQueue, isMobile } = useServices();
 
@@ -371,6 +374,7 @@ export function ListPaneVirtualContent({
                                             fileIconSize={fileIconSize}
                                             visiblePropertyKeys={visibleListPropertyKeys}
                                             visibleNavigationPropertyKeys={visibleNavigationPropertyKeys}
+                                            folderDecorationModel={folderDecorationModel}
                                         />
                                     ) : null}
                                 </div>

@@ -26,7 +26,7 @@ import {
     SHORTCUTS_VIRTUAL_FOLDER_ID,
     TAGS_ROOT_VIRTUAL_FOLDER_ID
 } from '../../../types';
-import type { NotebookNavigatorSettings } from '../../../settings/types';
+import type { NavRainbowSettings, NotebookNavigatorSettings } from '../../../settings/types';
 import type { MetadataService } from '../../../services/MetadataService';
 import type { CombinedNavigationItem } from '../../../types/virtualization';
 import type { NavigationRainbowPalettes } from '../../../utils/navigationRainbow';
@@ -37,6 +37,7 @@ import {
     createNavigationItemDecorationContext,
     inheritVirtualFolderStyle,
     overlayItemWithRainbow,
+    resolveFolderItemDecorationColors,
     resolveRecentDecorationColors,
     resolveNavigationFileIconId,
     type DecorationColors,
@@ -62,21 +63,12 @@ function decorateFolderNavigationItem(ctx: NavigationItemDecorationContext, item
         backgroundColor: folderDisplayData.backgroundColor
     };
 
-    const folderRainbow = ctx.rainbow.folder;
-    if (!item.isExcluded && folderRainbow.isEnabled) {
-        const isVirtualRootFolder = item.data.path === '/';
-        const ownRainbowColor = folderRainbow.colors.colorsByPath.get(item.data.path);
-        const inheritedRainbowColor = ownRainbowColor ? undefined : folderRainbow.colors.getInheritedColor(item.data.path);
-        const rainbowColor = ownRainbowColor ?? inheritedRainbowColor ?? (isVirtualRootFolder ? folderRainbow.colors.rootColor : undefined);
-        const shouldApplyByScope =
-            folderRainbow.scope === 'all'
-                ? true
-                : folderRainbow.scope === 'root'
-                  ? isVirtualRootFolder || item.level === folderRainbow.rootLevel || Boolean(inheritedRainbowColor)
-                  : item.level > folderRainbow.rootLevel;
-
-        colors = applyScopedRainbow({ ctx, shouldApply: shouldApplyByScope, rainbowColor, colors });
-    }
+    colors = resolveFolderItemDecorationColors({
+        ctx,
+        folderPath: item.data.path,
+        color: colors.color,
+        backgroundColor: colors.backgroundColor
+    });
 
     return {
         ...item,
@@ -266,10 +258,12 @@ function decorateNavigationItem(ctx: NavigationItemDecorationContext, item: Comb
 export interface DecorateNavigationItemsParams {
     app: App;
     settings: NotebookNavigatorSettings;
+    navRainbow: NavRainbowSettings;
     fileNameIconNeedles: readonly FileNameIconNeedle[];
     getFileDisplayName: (file: TFile) => string;
     metadataService: MetadataService;
     parsedExcludedFolders: string[];
+    folderDecorationModel: NavigationItemDecorationContext['folderDecorationModel'];
     navRainbowPalettes: NavigationRainbowPalettes;
     navRainbowColors: NavigationRainbowColors;
 }
@@ -280,10 +274,12 @@ export function createNavigationItemDecorator(
     const {
         app,
         settings,
+        navRainbow,
         fileNameIconNeedles,
         getFileDisplayName,
         metadataService,
         parsedExcludedFolders,
+        folderDecorationModel,
         navRainbowPalettes,
         navRainbowColors
     } = params;
@@ -291,10 +287,12 @@ export function createNavigationItemDecorator(
     const ctx = createNavigationItemDecorationContext({
         app,
         settings,
+        navRainbow,
         fileNameIconNeedles,
         getFileDisplayName,
         metadataService,
         parsedExcludedFolders,
+        folderDecorationModel,
         navRainbowPalettes,
         navRainbowColors
     });

@@ -300,69 +300,92 @@ export interface FolderRainbowColors {
     getInheritedColor: (folderPath: string) => string | undefined;
 }
 
-export function buildFolderRainbowColors(params: {
-    items: readonly CombinedNavigationItem[];
-    palette: readonly string[];
+export function resolveFolderRainbowColor(params: {
+    folderPath: string;
     scope: NavRainbowScope;
     showRootFolder: boolean;
-    rootLevel: number;
+    colors: FolderRainbowColors;
+}): string | undefined {
+    const { folderPath, scope, showRootFolder, colors } = params;
+    if (folderPath === '/') {
+        return showRootFolder && scope !== 'child' ? colors.rootColor : undefined;
+    }
+
+    return colors.colorsByPath.get(folderPath) ?? colors.getInheritedColor(folderPath);
+}
+
+export function resolveFolderRainbowDecorationColors(params: {
+    mode: NavRainbowColorMode;
+    folderPath: string;
+    scope: NavRainbowScope;
+    showRootFolder: boolean;
+    colors: FolderRainbowColors;
+    color: string | null | undefined;
+    backgroundColor: string | null | undefined;
+}): { color?: string; backgroundColor?: string } {
+    return applyRainbowOverlay({
+        mode: params.mode,
+        rainbowColor: resolveFolderRainbowColor({
+            folderPath: params.folderPath,
+            scope: params.scope,
+            showRootFolder: params.showRootFolder,
+            colors: params.colors
+        }),
+        color: params.color,
+        backgroundColor: params.backgroundColor
+    });
+}
+
+export function buildFolderRainbowColorsFromSiblingPaths(params: {
+    siblingPathsByParent: ReadonlyMap<string, readonly string[]>;
+    palette: readonly string[] | null | undefined;
+    scope: NavRainbowScope;
+    showRootFolder: boolean;
     inheritColors: boolean;
 }): FolderRainbowColors {
-    const { items, palette, scope, showRootFolder, rootLevel, inheritColors } = params;
-    const paletteStart = palette[0];
+    const { siblingPathsByParent, palette, scope, showRootFolder, inheritColors } = params;
     const colorsByPath = new Map<string, string>();
+    if (!palette || palette.length === 0) {
+        return {
+            colorsByPath,
+            rootColor: undefined,
+            getInheritedColor: (_folderPath: string) => undefined
+        };
+    }
+
     let rootColor: string | undefined;
-
     if (scope === 'root') {
-        const keys = collectUniqueKeys({
-            items,
-            includeItem: item => item.type === NavigationPaneItemType.FOLDER && !item.isExcluded && item.level === rootLevel,
-            getKey: item => (item.type === NavigationPaneItemType.FOLDER ? item.data.path : undefined),
-            options: { excludeKey: key => key === '/' }
-        });
-
-        rootColor = paletteStart;
+        const rootPaths = siblingPathsByParent.get('/') ?? [];
+        rootColor = palette[0];
 
         if (showRootFolder) {
             const rootScopedColors = assignColorsWithVirtualRootOffset({
-                keys,
+                keys: rootPaths,
                 palette,
                 virtualRootKey: FOLDER_VIRTUAL_ROOT_RAINBOW_KEY
             });
 
-            for (const key of keys) {
-                const color = rootScopedColors.get(key);
+            rootPaths.forEach(path => {
+                const color = rootScopedColors.get(path);
                 if (color) {
-                    colorsByPath.set(key, color);
+                    colorsByPath.set(path, color);
                 }
-            }
+            });
         } else {
-            assignRainbowColorsFromPalette({ keys, palette, target: colorsByPath });
+            assignRainbowColorsFromPalette({ keys: rootPaths, palette, target: colorsByPath });
         }
     } else {
-        const childPathsByParent = collectSiblingKeysByParent({
-            items,
-            includeItem: item =>
-                item.type === NavigationPaneItemType.FOLDER && !item.isExcluded && (scope !== 'child' || item.level > rootLevel),
-            getKey: item => {
-                if (item.type !== NavigationPaneItemType.FOLDER) {
-                    return undefined;
-                }
-
-                const path = item.data.path;
-                if (!path || path === '/') {
-                    return undefined;
-                }
-                return path;
-            },
-            getParentKey: (_item, path) => getParentFolderPath(path)
-        });
-
         if (showRootFolder && scope === 'all') {
-            rootColor = paletteStart;
+            rootColor = palette[0];
         }
 
-        assignColorsBySiblingGroups({ groupedKeys: childPathsByParent, palette, target: colorsByPath });
+        siblingPathsByParent.forEach((childPaths, parentPath) => {
+            if (parentPath === '' || (scope === 'child' && parentPath === '/')) {
+                return;
+            }
+
+            assignRainbowColorsFromPalette({ keys: childPaths, palette, target: colorsByPath });
+        });
     }
 
     const getInheritedColor = createInheritedColorResolver({
@@ -374,6 +397,64 @@ export function buildFolderRainbowColors(params: {
     });
 
     return { colorsByPath, rootColor, getInheritedColor };
+}
+
+function collectFolderSiblingPathsFromItems(params: {
+    items: readonly CombinedNavigationItem[];
+    scope: NavRainbowScope;
+    rootLevel: number;
+}): Map<string, string[]> {
+    const { items, scope, rootLevel } = params;
+
+    if (scope === 'root') {
+        const rootPaths = collectUniqueKeys({
+            items,
+            includeItem: item => item.type === NavigationPaneItemType.FOLDER && !item.isExcluded && item.level === rootLevel,
+            getKey: item => (item.type === NavigationPaneItemType.FOLDER ? item.data.path : undefined),
+            options: { excludeKey: key => key === '/' }
+        });
+        return new Map<string, string[]>([['/', rootPaths]]);
+    }
+
+    return collectSiblingKeysByParent({
+        items,
+        includeItem: item =>
+            item.type === NavigationPaneItemType.FOLDER && !item.isExcluded && (scope !== 'child' || item.level > rootLevel),
+        getKey: item => {
+            if (item.type !== NavigationPaneItemType.FOLDER) {
+                return undefined;
+            }
+
+            const path = item.data.path;
+            if (!path || path === '/') {
+                return undefined;
+            }
+            return path;
+        },
+        getParentKey: (_item, path) => getParentFolderPath(path)
+    });
+}
+
+export function buildFolderRainbowColors(params: {
+    items: readonly CombinedNavigationItem[];
+    palette: readonly string[];
+    scope: NavRainbowScope;
+    showRootFolder: boolean;
+    rootLevel: number;
+    inheritColors: boolean;
+}): FolderRainbowColors {
+    const { items, palette, scope, showRootFolder, rootLevel, inheritColors } = params;
+    return buildFolderRainbowColorsFromSiblingPaths({
+        siblingPathsByParent: collectFolderSiblingPathsFromItems({
+            items,
+            scope,
+            rootLevel
+        }),
+        palette,
+        scope,
+        showRootFolder,
+        inheritColors
+    });
 }
 
 export interface TagRainbowColors {

@@ -45,6 +45,7 @@ import { useSettingsDerived, useSettingsState } from '../context/SettingsContext
 import { useUXPreferences } from '../context/UXPreferencesContext';
 import { useFileCache } from '../context/StorageContext';
 import { useContextMenu } from '../hooks/useContextMenu';
+import type { FolderDecorationModel } from '../utils/folderDecoration';
 import { useListPaneAppearance } from '../hooks/useListPaneAppearance';
 import { useShortcuts } from '../context/ShortcutsContext';
 import { strings } from '../i18n';
@@ -55,8 +56,8 @@ import { runAsyncAction } from '../utils/async';
 import { getTooltipPlacement } from '../utils/domUtils';
 import { openFileInContext } from '../utils/openFileInContext';
 import { FILE_VISIBILITY, getExtensionSuffix, shouldDisplayFile } from '../utils/fileTypeUtils';
+import { resolveFolderDecorationColors } from '../utils/folderDecoration';
 import { resolveFileDragIconId, resolveFileIconId } from '../utils/fileIconUtils';
-import { resolveDefaultDateField } from '../utils/sortUtils';
 import {
     getFileItemLayoutState,
     isListPaneCompactMode,
@@ -70,6 +71,7 @@ import { openAddTagToFilesModal } from '../utils/tagModalHelpers';
 import { resolveUXIcon } from '../utils/uxIcons';
 import type { InclusionOperator } from '../utils/filterSearch';
 import { getNavigatorPinContext } from '../utils/selectionUtils';
+import { resolveDefaultDateField } from '../utils/sortUtils';
 import { useFileItemContentState } from './fileItem/useFileItemContentState';
 import { useFileItemPills } from './fileItem/useFileItemPills';
 
@@ -105,6 +107,7 @@ interface FileItemProps {
     visiblePropertyKeys: ReadonlySet<string>;
     /** Visible frontmatter property keys in navigation pane (normalized keys) */
     visibleNavigationPropertyKeys: ReadonlySet<string>;
+    folderDecorationModel: FolderDecorationModel;
 }
 
 /**
@@ -187,6 +190,7 @@ interface ParentFolderLabelProps {
     label: string;
     iconVersion: number;
     color?: string;
+    backgroundColor?: string;
     showIcon: boolean;
     applyColorToName: boolean;
     onReveal?: () => void;
@@ -195,11 +199,22 @@ interface ParentFolderLabelProps {
 /**
  * Renders a parent folder label with icon for display in file items.
  */
-function ParentFolderLabel({ iconId, label, iconVersion, color, showIcon, applyColorToName, onReveal }: ParentFolderLabelProps) {
+function ParentFolderLabel({
+    iconId,
+    label,
+    iconVersion,
+    color,
+    backgroundColor,
+    showIcon,
+    applyColorToName,
+    onReveal
+}: ParentFolderLabelProps) {
     const iconRef = useRef<HTMLSpanElement>(null);
     const hasColor = Boolean(color);
+    const hasBackground = Boolean(backgroundColor);
     const iconStyle: React.CSSProperties | undefined = color ? { color } : undefined;
     const labelStyle: React.CSSProperties | undefined = applyColorToName && color ? { color } : undefined;
+    const contentStyle: React.CSSProperties | undefined = backgroundColor ? { backgroundColor } : undefined;
     const labelClassName = applyColorToName ? 'nn-parent-folder-label nn-parent-folder-label--colored' : 'nn-parent-folder-label';
     const isRevealEnabled = Boolean(onReveal);
 
@@ -236,7 +251,9 @@ function ParentFolderLabel({ iconId, label, iconVersion, color, showIcon, applyC
         <div className="nn-parent-folder" data-dot-separator={showIcon ? 'false' : 'true'}>
             <div
                 className="nn-parent-folder-content"
+                data-has-background={hasBackground ? 'true' : 'false'}
                 data-reveal={isRevealEnabled ? 'true' : 'false'}
+                style={contentStyle}
                 onClick={isRevealEnabled ? handleClick : undefined}
             >
                 {showIcon ? (
@@ -288,7 +305,8 @@ export const FileItem = React.memo(function FileItem({
     localDayReference,
     fileIconSize,
     visiblePropertyKeys,
-    visibleNavigationPropertyKeys
+    visibleNavigationPropertyKeys,
+    folderDecorationModel
 }: FileItemProps) {
     // === Hooks (all hooks together at the top) ===
     const { app, isMobile, plugin, commandQueue, tagOperations } = useServices();
@@ -571,6 +589,7 @@ export const FileItem = React.memo(function FileItem({
         name: string;
         iconId: string;
         color?: string;
+        backgroundColor?: string;
         applyColorToName: boolean;
         showIcon: boolean;
     } | null = null;
@@ -580,18 +599,27 @@ export const FileItem = React.memo(function FileItem({
         const parentFolderDisplayData = metadataService.getFolderDisplayData(parentFolderSource.path, {
             includeDisplayName: true,
             includeColor: shouldShowParentFolderColor,
-            includeBackgroundColor: false,
+            includeBackgroundColor: shouldShowParentFolderColor,
             includeIcon: shouldShowParentFolderIcon
         });
         const customParentIcon = shouldShowParentFolderIcon ? parentFolderDisplayData.icon : undefined;
         const fallbackParentIcon = 'lucide-folder-closed';
 
-        const parentFolderColor = shouldShowParentFolderColor ? parentFolderDisplayData.color : undefined;
+        const parentFolderDecorationColors = shouldShowParentFolderColor
+            ? resolveFolderDecorationColors({
+                  model: folderDecorationModel,
+                  folderPath: parentFolderSource.path,
+                  color: parentFolderDisplayData.color,
+                  backgroundColor: parentFolderDisplayData.backgroundColor
+              })
+            : { color: undefined, backgroundColor: undefined };
+        const parentFolderColor = parentFolderDecorationColors.color;
         const shouldApplyParentFolderColor = Boolean(parentFolderColor);
         parentFolderMeta = {
             name: parentFolderDisplayData.displayName || parentFolderSource.name,
             iconId: customParentIcon ?? fallbackParentIcon,
             color: shouldApplyParentFolderColor ? parentFolderColor : undefined,
+            backgroundColor: parentFolderDecorationColors.backgroundColor,
             applyColorToName: shouldApplyParentFolderColor && !settings.colorIconOnly,
             showIcon: shouldShowParentFolderIcon
         };
@@ -605,6 +633,7 @@ export const FileItem = React.memo(function FileItem({
                 label={parentFolderMeta.name}
                 iconVersion={iconServiceVersion}
                 color={parentFolderMeta.color}
+                backgroundColor={parentFolderMeta.backgroundColor}
                 showIcon={parentFolderMeta.showIcon}
                 applyColorToName={parentFolderMeta.applyColorToName}
                 onReveal={settings.parentFolderClickRevealsFile ? revealFileInNavigation : undefined}

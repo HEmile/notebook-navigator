@@ -24,10 +24,13 @@ import type { PropertyTreeNode, TagTreeNode } from '../../src/types/storage';
 import { buildRainbowPalette, parseCssColor } from '../../src/utils/colorUtils';
 import {
     applyRainbowOverlay,
+    buildFolderRainbowColorsFromSiblingPaths,
     buildNavigationRainbowPalettes,
     buildFolderRainbowColors,
     buildPropertyRainbowColors,
-    buildTagRainbowColors
+    buildTagRainbowColors,
+    resolveFolderRainbowColor,
+    resolveFolderRainbowDecorationColors
 } from '../../src/utils/navigationRainbow';
 
 function createTestTFolder(path: string): TFolder {
@@ -271,6 +274,80 @@ describe('navigationRainbow', () => {
         expect(parentColor).toBeDefined();
         expect(folderRainbow.getInheritedColor('A/child')).toBe(parentColor);
         expect(folderRainbow.getInheritedColor('A/child/grandchild')).toBe(parentColor);
+    });
+
+    it('builds precomputed folder rainbow colors from sibling paths', () => {
+        const start = parseCssColor('#000000') ?? { r: 0, g: 0, b: 0, a: 1 };
+        const end = parseCssColor('#ffffff') ?? { r: 255, g: 255, b: 255, a: 1 };
+        const palette = buildRainbowPalette({ steps: 1024, start, end, style: 'rgb' });
+
+        const folderRainbow = buildFolderRainbowColorsFromSiblingPaths({
+            siblingPathsByParent: new Map<string, readonly string[]>([
+                ['/', ['A', 'B']],
+                ['A', ['A/child']]
+            ]),
+            palette,
+            scope: 'root',
+            showRootFolder: true,
+            inheritColors: true
+        });
+
+        expect(resolveFolderRainbowColor({ folderPath: 'A', scope: 'root', showRootFolder: true, colors: folderRainbow })).toBeDefined();
+        expect(resolveFolderRainbowColor({ folderPath: 'A/child', scope: 'root', showRootFolder: true, colors: folderRainbow })).toBe(
+            resolveFolderRainbowColor({ folderPath: 'A', scope: 'root', showRootFolder: true, colors: folderRainbow })
+        );
+    });
+
+    it('keeps direct folder colors when rainbow foreground mode is active', () => {
+        const start = parseCssColor('#000000') ?? { r: 0, g: 0, b: 0, a: 1 };
+        const end = parseCssColor('#ffffff') ?? { r: 255, g: 255, b: 255, a: 1 };
+        const palette = buildRainbowPalette({ steps: 1024, start, end, style: 'rgb' });
+        const folderRainbow = buildFolderRainbowColorsFromSiblingPaths({
+            siblingPathsByParent: new Map<string, readonly string[]>([['/', ['A', 'B']]]),
+            palette,
+            scope: 'root',
+            showRootFolder: true,
+            inheritColors: false
+        });
+
+        const resolved = resolveFolderRainbowDecorationColors({
+            mode: 'foreground',
+            folderPath: 'A',
+            color: 'rgb(12, 34, 56)',
+            backgroundColor: undefined,
+            scope: 'root',
+            showRootFolder: true,
+            colors: folderRainbow
+        });
+
+        expect(resolved.color).toBe('rgb(12, 34, 56)');
+    });
+
+    it('applies folder rainbow background when background mode is active', () => {
+        const start = parseCssColor('#000000') ?? { r: 0, g: 0, b: 0, a: 1 };
+        const end = parseCssColor('#ffffff') ?? { r: 255, g: 255, b: 255, a: 1 };
+        const palette = buildRainbowPalette({ steps: 1024, start, end, style: 'rgb' });
+
+        const folderRainbow = buildFolderRainbowColorsFromSiblingPaths({
+            siblingPathsByParent: new Map<string, readonly string[]>([['/', ['A', 'B']]]),
+            palette,
+            scope: 'root',
+            showRootFolder: true,
+            inheritColors: false
+        });
+
+        const resolved = resolveFolderRainbowDecorationColors({
+            mode: 'background',
+            folderPath: 'A',
+            color: undefined,
+            backgroundColor: undefined,
+            scope: 'root',
+            showRootFolder: true,
+            colors: folderRainbow
+        });
+
+        expect(resolved.color).toBeUndefined();
+        expect(resolved.backgroundColor).toBeDefined();
     });
 
     it('inherits tag rainbow color from nearest root-scoped ancestor', () => {
