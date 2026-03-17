@@ -1,6 +1,6 @@
 # Notebook Navigator Storage Architecture
 
-Updated: February 18, 2026
+Updated: March 16, 2026
 
 ## Table of Contents
 
@@ -206,7 +206,6 @@ export const STORAGE_KEYS: LocalStorageKeys = {
   localStorageVersionKey: 'notebook-navigator-localstorage-version',
   vaultProfileKey: 'notebook-navigator-vault-profile',
   releaseCheckTimestampKey: 'notebook-navigator-release-check-timestamp',
-  latestKnownReleaseKey: 'notebook-navigator-latest-known-release',
   searchProviderKey: 'notebook-navigator-search-provider',
   folderSortOrderKey: 'notebook-navigator-folder-sort-order',
   tagSortOrderKey: 'notebook-navigator-tag-sort-order',
@@ -222,6 +221,8 @@ export const STORAGE_KEYS: LocalStorageKeys = {
   calendarPlacementKey: 'notebook-navigator-calendar-placement',
   calendarLeftPlacementKey: 'notebook-navigator-calendar-left-placement',
   calendarWeeksToShowKey: 'notebook-navigator-calendar-weeks-to-show',
+  featureImageSizeKey: 'notebook-navigator-feature-image-size',
+  featureImagePixelSizeKey: 'notebook-navigator-feature-image-pixel-size',
   compactItemHeightKey: 'notebook-navigator-compact-item-height',
   compactItemHeightScaleTextKey: 'notebook-navigator-compact-item-height-scale-text'
 };
@@ -370,7 +371,7 @@ export interface IconAssetRecord {
 5. When a navigator view mounts, `StorageContext` waits for `useIndexedDBReady()` before doing cache work.
 6. If `IndexedDBStorage` marked a pending rebuild notice (schema downgrade, content version mismatch, or IndexedDB open recovery),
    `useStorageVaultSync` starts a rebuild progress notice.
-7. `useStorageVaultSync` diffs indexable vault files (markdown plus PDFs that pass the current visibility/profile filters)
+7. `useStorageVaultSync` diffs indexable vault files (markdown plus PDFs with hidden-item exclusions disabled for indexing)
    against the in-memory cache (`calculateFileDiff()`),
    then writes additions/updates/removals to IndexedDB (`recordFileChanges()`, `removeFilesFromCache()`).
 8. Tag and property trees are rebuilt from database records (`buildTagTreeFromDatabase()`, `buildPropertyTreeFromDatabase()`), filtered to currently visible markdown paths.
@@ -381,12 +382,12 @@ export interface IconAssetRecord {
 ### File Change (During Session)
 
 1. Obsidian emits vault events (create, delete, rename, modify) and metadata cache events (`metadataCache.on('changed')` for markdown files).
-2. Vault events are debounced (`TIMEOUTS.FILE_OPERATION_DELAY`) and collapsed into a single diff pass.
-3. StorageContext runs `calculateFileDiff()` and updates IndexedDB:
-   - Adds new records with default provider state
-   - Updates `mtime` for modified files without clearing provider-owned fields
-   - Removes deleted records
-   - Preserves cached data across renames by seeding the new path with the previous record and moving preview/blob keys
+2. `create`, `delete`, and `rename` events are coalesced through the debounced diff path (`TIMEOUTS.FILE_OPERATION_DELAY`).
+3. StorageContext updates IndexedDB through two paths:
+   - `create` / `delete` / `rename`: runs `calculateFileDiff()`, adds/removes records, and preserves cached data across
+     renames by seeding the new path with the previous record and moving preview/blob keys.
+   - `modify`: updates the file record immediately with `recordFileChanges([file], ...)`, preserves provider-owned
+     fields, and queues regeneration for stale derived content.
 4. For metadata cache changes that do not produce a vault `modify` event, StorageContext can reset provider processed mtimes (`markFilesForRegeneration()`) to force reprocessing against the updated metadata cache.
 5. Content providers queue affected files for regeneration as needed (with `useMetadataCacheQueue` gating metadata-dependent types).
 6. Providers write derived content through `IndexedDBStorage`, which updates the in-memory cache and emits change events for UI consumers.
@@ -411,7 +412,8 @@ export interface IconAssetRecord {
 1. Stops background work: vault sync timers, tag rebuild debouncers, metadata waits, and content provider queues.
 2. Clears IndexedDB stores (`IndexedDBStorage.clearDatabase()` / `IndexedDBStorage.clear()`), which also resets the in-memory caches.
 3. Resets tag/property tree state and marks storage as not ready.
-4. Persists rebuild notice state in local storage (`STORAGE_KEYS.cacheRebuildNoticeKey`, `source: 'rebuild'`) so a rebuild notice can be restored after a restart.
+4. If there is rebuild work to track (`enabledTypes.length > 0` and `total > 0`), persists rebuild notice state in local
+   storage (`STORAGE_KEYS.cacheRebuildNoticeKey`, `source: 'rebuild'`) so a rebuild notice can be restored after a restart.
 5. Re-runs the initial diff + queue process.
 
 ### UI State Change
@@ -461,9 +463,11 @@ Implementation references:
 
 ### Hidden file property patterns (`hiddenFileProperties`)
 
-- Case-insensitive list of frontmatter keys.
+- Case-insensitive frontmatter exclusion rules.
+- Supported forms: `key` and `key=value`.
 - Applies to markdown files (`.md`) only.
-- A file is hidden when any of the configured keys exist in frontmatter (the value is ignored).
+- A file is hidden when a configured key exists, or when a configured `key=value` rule matches the normalized
+  frontmatter value (including array entries and boolean/number values).
 
 ### Hidden file tag patterns (`hiddenFileTags`)
 

@@ -1,6 +1,6 @@
 # Notebook Navigator Scroll Orchestration
 
-Updated: February 18, 2026
+Updated: March 16, 2026
 
 ## Table of Contents
 
@@ -149,8 +149,8 @@ requests.
 - Both hooks use `ResizeObserver` to detect when the DOM container has width and height. Scrolls never run while the
   container or any parent is hidden.
 - The composed `isScrollContainerReady` flag requires both logical visibility and physical dimensions.
-- Both panes use TanStack Virtual `scrollMargin` and `scrollPaddingStart`/`scrollPaddingEnd` to align row math with
-  overlay chrome and bottom overlays.
+- Both panes use TanStack Virtual `scrollMargin` to align row math with pane chrome. The list pane also uses
+  `scrollPaddingStart`, and both panes can use `scrollPaddingEnd` for bottom overlays.
 - In the list pane, mobile taps on the pane header call `handleScrollToTop`, which performs a smooth
   `scrollTo({ top: 0 })`.
 
@@ -159,11 +159,11 @@ requests.
 `useNavigationPaneScroll` wires TanStack Virtual for navigation items (folders, tags, properties, shortcuts, recent notes, and
 spacers).
 
-- **Virtualizer setup**: Item height estimates follow navigation settings and mobile overrides. `scrollMargin` and
-  `scrollPaddingStart`/`scrollPaddingEnd` align virtualization math and `scrollToIndex` below the pinned chrome stack
-  and above bottom overlays.
-- **Safe viewport adjustment**: `scrollToIndexSafely` runs `scrollToIndex` and then adjusts `scrollTop` to keep the
-  rendered row between the pinned chrome stack and bottom overlays (calendar, mobile floating toolbar).
+- **Virtualizer setup**: Item height estimates follow navigation settings and mobile overrides. `scrollMargin` aligns
+  virtualization math and `scrollToIndex` below the unpinned banner, and `scrollPaddingEnd` is used when bottom
+  overlays need extra space.
+- **Safe viewport adjustment**: `scrollToIndexSafely` runs `scrollToIndex`, then `ensureIndexNotCovered` applies a
+  bottom-overlap correction when `scrollPaddingEnd` is non-zero. Top alignment is handled by `scrollMargin`.
 - **Selection handling**: The hook watches folder/tag/property selection, pane focus, and visibility. It suppresses auto-scroll
   when a shortcut is active or when `skipAutoScroll` is enabled for shortcut reveals.
 - **Hidden item toggles**: When `showHiddenItems` changes, the current selection is queued with intent
@@ -174,8 +174,8 @@ spacers).
   moved again.
 - **External entries**: `requestScroll` normalizes the path and queues an `external` intent so reveal flows can drive
   the navigation pane.
-- **Mobile drawer**: A `notebook-navigator-visible` event sets a pending scroll when the drawer becomes visible on
-  mobile devices.
+- **Mobile drawer**: A `notebook-navigator-visible` event first attempts an immediate scroll for the current selection.
+  If the pane is not ready or the row index is not available yet, the hook queues a `mobile-visibility` pending scroll.
 - **Settings changes**: Navigation sizing changes trigger `measure()` and an `auto` scroll to keep the selection within
   the safe viewport. Scroll inset changes (`scrollMargin`, `scrollPaddingEnd`) use the same `auto` scroll path.
 
@@ -194,9 +194,9 @@ spacers).
 - **Context tracking**: `contextIndexVersionRef` maintains the last version seen per folder/tag/property context. When the index
   advances within a folder, tag, or property context (pin/unpin, reorder, delete), the hook queues a `list-structure-change` scroll (when
   `revealFileOnListChanges` is enabled) so the selected file remains visible.
-- **Folder navigation**: When the list context changes or `isFolderNavigation` is true, the hook sets a pending request
-  (file or top) and clears the navigation flag. Pending entries can be queued even when the pane is hidden and execute
-  once the list becomes ready.
+- **Folder navigation**: When the list context changes or `isFolderNavigation` is true, the hook clears stale pending
+  work, then sets a pending request (file or top) and clears the navigation flag. Pending entries can be queued even
+  when the pane is hidden and execute once the list becomes ready.
 - **Reveal operations**: Reveal flows queue a `reveal` pending scroll. Startup reveals override alignment to `'center'`.
 - **Mobile drawer**: The `notebook-navigator-visible` event queues a visibility-change scroll when a file is selected.
 - **Settings and search**: Appearance changes and descendant toggles queue `list-structure-change` entries. Search
@@ -242,7 +242,8 @@ spacers).
 ### Mobile Drawer Visibility
 
 1. The mobile drawer raises the `notebook-navigator-visible` event when opened.
-2. Navigation queues a `mobile-visibility` scroll for the current selection.
+2. Navigation first attempts an immediate scroll for the current selection and falls back to a `mobile-visibility`
+   pending scroll if the pane is not ready yet.
 3. The list pane queues a `visibility-change` scroll for the selected file, preserving context when the drawer becomes
    visible.
 
@@ -251,7 +252,7 @@ spacers).
 1. When search filters remove the selected file, the list pane detects that the file path is absent from
    `filePathToIndex`.
 2. Unless suppressed for mobile shortcuts, the hook queues a `top` scroll with reason `list-structure-change`.
-3. If the selected file remains in the results, folder navigation effects keep it visible without extra scroll requests.
+3. If the selected file remains in the results, the search effect does not queue an additional scroll request.
 
 ## Implementation Details
 
@@ -289,10 +290,9 @@ export function rankListPending(p?: { type: 'file' | 'top'; reason?: ListScrollI
 
 ### Safe Viewport
 
-- Both panes pass scroll insets to TanStack Virtual (`scrollMargin`, `scrollPaddingStart`, `scrollPaddingEnd`) so row
-  offsets and `scrollToIndex` align with overlay chrome.
-- Navigation runs a post-scroll adjustment step (`ensureIndexNotCovered`) that clamps the target row between the safe
-  top and bottom bounds, retrying for a few animation frames while virtualization settles.
+- Both panes pass scroll insets to TanStack Virtual so row offsets and `scrollToIndex` align with pane chrome.
+- Navigation runs a post-scroll adjustment step (`ensureIndexNotCovered`) that corrects bottom overlap after
+  `scrollToIndex`, retrying for a few animation frames while virtualization settles.
 
 ### Stabilization Mechanisms
 

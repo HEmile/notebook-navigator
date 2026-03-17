@@ -1,6 +1,6 @@
 # Notebook Navigator Theming Guide
 
-Updated: March 15, 2026
+Updated: March 16, 2026
 
 ## Table of Contents
 
@@ -26,6 +26,10 @@ Notebook Navigator is themed with CSS variables (custom properties). Themes and 
 match the rest of the theme.
 
 The Style Settings plugin exposes most `--nn-theme-*` variables under “Notebook Navigator”.
+
+Authored CSS lives in `src/styles/index.css` and `src/styles/sections/*`. `styles.css` is generated output. Regenerate
+styles with `npm run build:styles` or `./scripts/build.sh`. `src/constants/notebookNavigatorIcon.ts` is generated from
+`icon.svg` via `npm run build:icons`.
 
 ## CSS Variables Reference
 
@@ -65,7 +69,7 @@ Most variables are colors and should resolve to a computed color (some are used 
 | `--nn-theme-calendar-day-outside-month-color` | `var(--nn-theme-foreground-faded)`     | Text color for days outside the current month   |
 | `--nn-theme-calendar-weekend-bg`              | `color-mix(in srgb, var(--nn-theme-foreground) 10%, transparent)` | Background color for weekend day cells |
 | `--nn-theme-calendar-hover-bg`                | `var(--background-modifier-hover)`     | Hover background for calendar buttons and days  |
-| `--nn-theme-calendar-day-has-note-bg`         | `var(--nn-theme-foreground-faint)`     | Dot color for dates with a daily note           |
+| `--nn-theme-calendar-day-has-note-bg`         | `var(--nn-theme-foreground-faded)`     | Dot color for dates with a daily note           |
 | `--nn-theme-calendar-day-has-unfinished-task-color` | `var(--nn-theme-calendar-day-has-note-bg)` | Color for the hollow indicator shown on dates with unfinished tasks |
 | `--nn-theme-calendar-day-has-feature-image-color` | `white`                             | Text color for dates with feature images        |
 | `--nn-theme-calendar-day-today-color`         | `var(--nn-theme-calendar-day-in-month-color)` | Text color for today's date                |
@@ -271,7 +275,7 @@ navigation pane background. In `primary` and `secondary` background modes, both 
 | `--nn-theme-mobile-list-header-link-color`             | `var(--link-color)`                                              | Color for back button and clickable breadcrumb segments on mobile                                                |
 | `--nn-theme-mobile-list-header-breadcrumb-color`       | `var(--nn-theme-foreground)`                                     | Color for current folder and separators in breadcrumb on mobile                                                  |
 | `--nn-theme-mobile-list-header-breadcrumb-font-weight` | `600`                                                            | Font weight for mobile breadcrumb                                                                                |
-| `--nn-theme-mobile-toolbar-bg`                         | `var(--background-secondary)`                                    | Background color of the mobile toolbar                                                                           |
+| `--nn-theme-mobile-toolbar-bg`                         | `var(--background-secondary)`                                    | Defined token exposed in Style Settings; current shipped toolbar styles use `--nn-theme-list-bg` or `--nn-theme-mobile-toolbar-glass-bg` instead |
 | `--nn-theme-mobile-toolbar-button-icon-color`          | `var(--link-color)`                                              | Icon color for toolbar buttons                                                                                   |
 | `--nn-theme-mobile-toolbar-button-active-bg`           | `var(--background-modifier-hover)`                               | Background color for active toolbar button                                                                       |
 | `--nn-theme-mobile-toolbar-button-active-icon-color`   | `var(--link-color)`                                              | Icon color for active toolbar button                                                                             |
@@ -417,7 +421,6 @@ body {
   --nn-theme-file-selected-inactive-property-bg: #4c5058;
   --nn-theme-file-border-width: 1px;
   --nn-theme-file-pill-border-width: 1px;
-  --nn-theme-file-hover-border-color: rgba(255, 255, 255, 0.16);
   --nn-theme-file-selected-border-color: rgba(255, 255, 255, 0.24);
   --nn-theme-file-selected-inactive-border-color: rgba(255, 255, 255, 0.14);
   --nn-theme-file-tag-border-color: rgba(255, 255, 255, 0.2);

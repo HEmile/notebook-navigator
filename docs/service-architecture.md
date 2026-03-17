@@ -1,6 +1,6 @@
 # Notebook Navigator Service Architecture
 
-Updated: March 8, 2026
+Updated: March 16, 2026
 
 ## Table of Contents
 
@@ -235,7 +235,7 @@ when `useFrontmatterMetadata` is enabled.
   - Updates separator keys on folder/tag rename and delete.
   - Cleans stale entries during metadata cleanup and exposes a versioned subscription.
 
-**Key APIs:**
+**Selected API surface (examples):**
 
 ```typescript
 // Folder metadata
@@ -248,6 +248,10 @@ getFolderBackgroundColor(folderPath: string): string | undefined
 setFolderIcon(folderPath: string, iconId: string): Promise<void>
 removeFolderIcon(folderPath: string): Promise<void>
 getFolderIcon(folderPath: string): string | undefined
+setFolderStyleChangeListener(listener: ((folderPath: string) => void) | null): void
+getFolderDisplayData(folderPath: string): FolderDisplayData
+getFolderDisplayVersion(): number
+getFolderDisplayNameVersion(): number
 setFolderSortOverride(folderPath: string, sortOption: SortOption): Promise<void>
 removeFolderSortOverride(folderPath: string): Promise<void>
 getFolderSortOverride(folderPath: string): SortOption | undefined
@@ -270,6 +274,7 @@ handleTagDelete(tagPath: string): Promise<void>
 setTagSortOverride(tagPath: string, sortOption: SortOption): Promise<void>
 removeTagSortOverride(tagPath: string): Promise<void>
 getTagSortOverride(tagPath: string): SortOption | undefined
+setTagChildSortOrderOverride(tagPath: string, sortOrder: AlphaSortOrder): Promise<void>
 
 // Property metadata
 setPropertyColor(nodeId: string, color: string): Promise<void>
@@ -305,6 +310,9 @@ getFileIcon(filePath: string): string | undefined
 setFileColor(filePath: string, color: string): Promise<void>
 removeFileColor(filePath: string): Promise<void>
 getFileColor(filePath: string): string | undefined
+setFileBackgroundColor(filePath: string, color: string): Promise<void>
+removeFileBackgroundColor(filePath: string): Promise<void>
+getFileBackgroundColor(filePath: string): string | undefined
 migrateFileMetadataToFrontmatter(): Promise<FileMetadataMigrationResult>
 handleFileDelete(filePath: string): Promise<void>
 handleFileRename(oldPath: string, newPath: string): Promise<void>
@@ -328,6 +336,7 @@ queue integration.
 
 - File and folder creation, rename, deletion, duplication.
 - Folder note conversion with conflict handling.
+- Tag/property-driven note creation and property assignment.
 - Batch file moves with modal workflows and selection updates.
 - Canvas/base drawing creation and reveal helpers.
 - Command queue tracking for deletes and moves.
@@ -338,6 +347,8 @@ queue integration.
 ```typescript
 createNewFolder(parent: TFolder, onSuccess?: (path: string) => void): Promise<void>
 createNewFile(parent: TFolder): Promise<TFile | null>
+createNewFileForTag(tagPath: string, sourcePath?: string, openInNewTab?: boolean): Promise<TFile | null>
+createNewFileForProperty(propertyNodeId: string, sourcePath?: string, openInNewTab?: boolean): Promise<TFile | null>
 renameFolder(folder: TFolder, settings?: NotebookNavigatorSettings): Promise<void>
 renameFile(file: TFile): Promise<void>
 deleteFolder(folder: TFolder, confirmBeforeDelete: boolean, onSuccess?: () => void): Promise<void>
@@ -387,6 +398,7 @@ deleteFilesWithSmartSelection(
 createCanvas(parent: TFolder): Promise<TFile | null>
 createBase(parent: TFolder): Promise<TFile | null>
 createNewDrawing(parent: TFolder, type?: 'excalidraw' | 'tldraw'): Promise<TFile | null>
+applyPropertyNodeToFiles(propertyNodeId: string, files: readonly TFile[]): Promise<ApplyPropertyNodeResult>
 
 openVersionHistory(file: TFile): Promise<void>
 getRevealInSystemExplorerText(): string
@@ -601,13 +613,16 @@ Bridge between React storage state and non-React consumers that need tag data.
 ```typescript
 updateTagTree(tree: Map<string, TagTreeNode>, tagged: number, untagged: number): void
 getTagTree(): Map<string, TagTreeNode>
+hasNodes(): boolean
+addTreeUpdateListener(listener: () => void): () => void
 getFlattenedTagNodes(): readonly TagTreeNode[]
-collectTagFilePaths(tagPath: string): string[]
 getUntaggedCount(): number
 getTaggedCount(): number
 findTagNode(tagPath: string): TagTreeNode | null
-getAllTagPaths(): string[]
-collectTagPaths(node: TagTreeNode): Set<string>
+resolveSelectionTagPath(tagPath: string): string | null
+getAllTagPaths(): readonly string[]
+collectDescendantTagPaths(tagPath: string): Set<string>
+collectTagFilePaths(tagPath: string): string[]
 ```
 
 ### PropertyTreeService
@@ -758,7 +773,7 @@ Optional integration with the community Omnisearch plugin.
 
 ```typescript
 isAvailable(): boolean
-search(query: string): Promise<OmnisearchHit[]>
+search(query: string, options?: { pathScope?: string }): Promise<OmnisearchHit[]>
 registerOnIndexed(callback: () => void): void
 unregisterOnIndexed(callback: () => void): void
 ```
@@ -818,7 +833,9 @@ clearPendingNotice(): void
 
 ## Dependency Injection
 
-Services depend on small interfaces rather than the plugin class.
+Many storage and metadata helpers depend on small provider interfaces (`ISettingsProvider`, `ITagTreeProvider`,
+`IPropertyTreeProvider`), while plugin/workspace controllers still depend on `NotebookNavigatorPlugin` or concrete
+services.
 
 ### ISettingsProvider
 
@@ -844,11 +861,15 @@ interface ISettingsProvider {
 
 ```typescript
 interface ITagTreeProvider {
-  getAllTagPaths(): string[];
+  addTreeUpdateListener(listener: () => void): () => void;
+  hasNodes(): boolean;
+  findTagNode(tagPath: string): TagTreeNode | null;
+  resolveSelectionTagPath(tagPath: string): string | null;
+  getAllTagPaths(): readonly string[];
+  collectDescendantTagPaths(tagPath: string): Set<string>;
+  collectTagFilePaths(tagPath: string): string[];
 }
 ```
-
-`TagTreeService` implements the interface and surfaces additional helpers for internal use.
 
 ### IPropertyTreeProvider
 
@@ -938,6 +959,9 @@ if (this.settings.searchProvider === 'omnisearch' && !this.omnisearchService.isA
   this.setSearchProvider('internal');
 }
 this.api = new NotebookNavigatorAPI(this, this.app);
+this.metadataService.setFolderStyleChangeListener(folderPath => {
+  this.api?.emitFolderChange(folderPath);
+});
 this.releaseCheckService = new ReleaseCheckService(this);
 
 const iconService = getIconService();

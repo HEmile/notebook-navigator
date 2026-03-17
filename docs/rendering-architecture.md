@@ -1,6 +1,6 @@
 # Notebook Navigator Rendering Architecture
 
-Updated: February 18, 2026
+Updated: March 16, 2026
 
 ## Table of Contents
 
@@ -19,9 +19,10 @@ The Notebook Navigator plugin renders React applications inside two Obsidian `It
 `NotebookNavigatorView` (main navigator) and `NotebookNavigatorCalendarView` (calendar right sidebar). Both trees are
 mounted with `createRoot` and wrapped in `React.StrictMode`.
 
-The main navigator UI is a two-pane layout (`NavigationPane` and `ListPane`). Each pane combines pane-level chrome
-(headers, toolbars, pinned sections, overlays) with a virtualized scroll region for rows. Both panes use
-`@tanstack/react-virtual` to mount only the rows required for the viewport plus overscan.
+The main navigator UI renders `NavigationPane` and `ListPane` in dual-pane and single-pane layouts, and can also mount
+an inline `Calendar` panel in single-pane mode when the left-sidebar calendar placement is configured below the panes.
+Both panes combine pane-level chrome with a virtualized scroll region for rows. Both panes use `@tanstack/react-virtual`
+to mount only the rows required for the viewport plus overscan.
 
 The calendar right-sidebar view renders `CalendarRightSidebar`, which hosts `Calendar` in sidebar mode and forwards
 date-filter actions to the main navigator view.
@@ -115,6 +116,7 @@ graph TD
     NNC --> UNB["UpdateNoticeBanner"];
     NNC --> NPR["NavigationPane"];
     NNC --> LPR["ListPane"];
+    NNC --> SPC["Single-pane Calendar (optional)"];
 ```
 
 ### Calendar right-sidebar stack
@@ -129,17 +131,18 @@ graph TD
 
 ```mermaid
 graph TD
-    NPR["NavigationPane"] --> SC["Scroll container"];
-    SC --> OVL["Sticky overlay stack"];
-    OVL --> NPH["NavigationPaneHeader"];
-    OVL --> VTA["VaultTitleArea"];
-    OVL --> NTBA["NavigationToolbar Android"];
-    OVL --> PB["NavigationBanner pinned"];
-    OVL --> PINNED["Pinned shortcuts and recent notes"];
+    NPR["NavigationPane"] --> CH["Navigation pane chrome"];
+    CH --> NPH["NavigationPaneHeader"];
+    CH --> VTA["VaultTitleArea"];
+    CH --> NTBA["NavigationToolbar Android"];
+    CH --> PB["NavigationBanner pinned"];
+    CH --> PINNED["Pinned shortcuts and recent notes"];
+    NPR --> PANEL["Navigation pane panel"];
+    PANEL --> SC["Scroll container"];
     SC --> NB["NavigationBanner unpinned"];
     SC -->|normal mode| NPL["Virtualized navigation list"];
     SC -->|root reorder| NRP["NavigationRootReorderPanel"];
-    NPR --> NTBI["NavigationToolbar iOS"];
+    NPR --> NTBI["NavigationToolbar iOS / bottom toolbar"];
     NPR --> CAL["Calendar overlay"];
 ```
 
@@ -147,14 +150,14 @@ graph TD
 
 ```mermaid
 graph TD
-    LPR["ListPane"] --> SC["Scroll container"];
-    SC --> OVL["Sticky overlay stack"];
-    OVL --> LPH["ListPaneHeader"];
-    OVL --> LTBA["ListToolbar Android"];
-    OVL --> SI["SearchInput"];
-    OVL --> LTA["ListPaneTitleArea"];
-    SC --> LPL["Virtualized file list"];
-    LPR --> LTBI["ListToolbar iOS"];
+    LPR["ListPane"] --> CH["List pane chrome"];
+    CH --> LPH["ListPaneHeader"];
+    CH --> LTBA["ListToolbar Android"];
+    CH --> SI["SearchInput"];
+    CH --> LTA["ListPaneTitleArea"];
+    LPR --> PANEL["List pane panel"];
+    PANEL --> LPL["ListPaneVirtualContent"];
+    LPR --> LTBI["ListToolbar iOS / bottom toolbar"];
     LPR --> CAL["Calendar overlay"];
 ```
 
@@ -221,10 +224,10 @@ graph TD
 - Runs `useDragAndDrop`, `useDragNavigationPaneActivation`, `useMobileSwipeNavigation`, `useNavigatorReveal`,
   `useNavigatorEventHandlers`, `useNavigationActions`, `useNavigatorScale`, and `useUpdateNotice` to provide navigation
   commands, drag activation, swipe gestures, and update notices.
-- Bridges list search tag filters into `NavigationPane` for tag highlighting via `searchTagFilters`.
+- Bridges list search filters into `NavigationPane` for tag and property highlighting via `searchNavFilters`.
 - Applies CSS custom properties for navigation item height, indentation, and font sizes once per settings change.
-- Renders `UpdateNoticeBanner`, `NavigationPane` (with banner and reorder panel), and `ListPane` in the correct pane
-  arrangement (single or dual).
+- Renders `UpdateNoticeBanner`, `NavigationPane`, `ListPane`, and the optional inline single-pane `Calendar` in the
+  correct pane arrangement.
 
 ### UpdateNoticeBanner
 
@@ -256,7 +259,8 @@ graph TD
 
 - Mobile toolbar providing expand/collapse, hidden item toggle, root reorder toggle, calendar toggle, and new folder
   action.
-- Rendered at the top on Android and the bottom on iOS.
+- Rendered at the top on Android. On iOS, floating toolbars render inside the pane; non-floating toolbars render in the
+  bottom toolbar container.
 
 ### NavigationPane
 
@@ -264,14 +268,14 @@ graph TD
 
 - Consumes data from `useNavigationPaneData`, `useNavigationRootReorder`, `useNavigationPaneScroll`,
   and `useNavigationPaneKeyboard`.
-- Renders a sticky overlay stack (header, vault title, Android toolbar, pinned banner, pinned shortcuts/recent), an
-  optional unpinned `NavigationBanner`, and either the virtualized tree or `NavigationRootReorderPanel`.
+- Renders pane chrome outside the scroller (header, vault title, Android toolbar, pinned banner, pinned
+  shortcuts/recent), keeps the optional unpinned `NavigationBanner` inside the scroller, and shows either the
+  virtualized tree or `NavigationRootReorderPanel`.
 - Handles folder/tag/property drag targets and uses dnd-kit sortable contexts for shortcut reordering.
 - Integrates context menus (`buildFolderMenu`, `buildTagMenu`, `buildPropertyMenu`, `buildFileMenu`) and frontmatter exclusion logic for
   hidden items.
-- Measures overlay and bottom overlay heights via `useMeasuredElementHeight` and passes `scrollMargin`,
-  `scrollPaddingStart`, and `scrollPaddingEnd` to `useNavigationPaneScroll` so `scrollToIndex` aligns rows below the
-  sticky chrome and above bottom overlays (calendar, iOS toolbar).
+- Measures the unpinned banner height via `useMeasuredElementHeight` and passes it as `scrollMargin` to
+  `useNavigationPaneScroll`. `scrollPaddingEnd` is used for the iOS floating-toolbar case.
 
 ### NavigationBanner
 
@@ -319,14 +323,14 @@ graph TD
 **Location**: `src/components/ListPane.tsx`
 
 - Consumes data and behavior from `useListPaneData`, `useListPaneScroll`, `useListPaneKeyboard`,
-  `useListPaneAppearance`, `useMultiSelection`, `useContextMenu`, and `useFileOpener`.
-- Renders the search bar (`SearchInput`), `ListPaneTitleArea`, mobile toolbars, empty states, and the virtual list with
-  top spacer, date headers, file rows, and bottom spacer.
+  `useListPaneAppearance`, `useMultiSelection`, `useContextMenu`, and `useListPaneSelectionCoordinator`.
+- Renders pane chrome outside the scroller (`SearchInput`, `ListPaneTitleArea`, mobile toolbars), plus empty states and
+  the virtual list with top spacer, date headers, file rows, and bottom spacer.
 - Integrates Omnisearch results when configured, including excerpt matches and highlight metadata.
 - Maintains drop-zone attributes for drag-and-drop moves and exposes scroll handlers for reveal operations and search
   reset behavior.
-- Measures chrome and bottom overlay heights (iOS toolbar, calendar) and passes them to `useListPaneScroll` as
-  `scrollMargin`/`scrollPaddingEnd`.
+- Uses `scrollMargin: 0` with `useListPaneScroll`. `scrollPaddingEnd` covers the iOS floating toolbar only; calendar
+  overlay changes trigger a follow-up scroll instead of participating in `scrollPaddingEnd`.
 - Persists search active state through `UXPreferences` and debounces input before triggering expensive filtering.
 
 ### SearchInput
@@ -399,10 +403,9 @@ graph TD
 
 - `useNavigationPaneData` returns `items: CombinedNavigationItem[]` plus lookup maps (`pathToIndex`) and pinned-section
   arrays (`shortcutItems`, `pinnedRecentNotesItems`) used by the pane chrome.
-- `NavigationPane` measures sticky chrome height, unpinned banner height, and bottom overlay height via
-  `useMeasuredElementHeight`, then passes:
-  - `scrollMargin` (chrome + unpinned banner),
-  - `scrollPaddingEnd` (calendar + iOS bottom toolbar),
+- `NavigationPane` measures the unpinned banner height via `useMeasuredElementHeight`, then passes:
+  - `scrollMargin` (unpinned banner height),
+  - `scrollPaddingEnd` (iOS floating-toolbar inset when present),
   into `useNavigationPaneScroll`.
 - `useNavigationPaneScroll` initializes the virtualizer with `NAVPANE_MEASUREMENTS` and exposes `requestScroll` for reveal
   operations.
@@ -431,7 +434,7 @@ const { rowVirtualizer, scrollContainerRefCallback, requestScroll } = useNavigat
   isVisible: navigationVisible,
   activeShortcutKey,
   scrollMargin: navigationScrollMargin,
-  scrollPaddingEnd: calendarOverlayHeight + bottomToolbarHeight
+  scrollPaddingEnd
 });
 ```
 
@@ -440,8 +443,8 @@ const { rowVirtualizer, scrollContainerRefCallback, requestScroll } = useNavigat
 - `useListPaneData` emits `ListPaneItem[]` composed of top/bottom spacers, date headers, and file items with pinned and
   hidden flags plus lookup maps (`filePathToIndex`, `fileIndexMap`).
 - `useListPaneScroll` feeds `listItems` into `useVirtualizer`, calculating heights with `getListPaneMeasurements`,
-  preview availability (`hasPreview`), search metadata, and appearance settings. The list overlay height is passed as
-  `scrollMargin` so `scrollToIndex` aligns items below the header/search chrome.
+  preview availability (`hasPreview`), search metadata, and appearance settings. The current implementation uses
+  `scrollMargin: 0`; the calendar overlay is handled by a follow-up `scrollToIndex` when its height changes.
 - The hook maintains a single pending scroll request with priority ranking (reveal, navigation, visibility change,
   search) and executes it after the index version matches the expected rebuild.
 - `ListPane` renders virtual items by switching on `item.type` and passing search metadata to `FileItem`; headers are
@@ -477,8 +480,8 @@ const { rowVirtualizer, scrollContainerRefCallback, handleScrollToTop } = useLis
   suppressSearchTopScrollRef,
   topSpacerHeight,
   includeDescendantNotes,
-  scrollMargin: listOverlayHeight,
-  scrollPaddingEnd: bottomToolbarHeight + calendarOverlayHeight
+  scrollMargin: 0,
+  scrollPaddingEnd: bottomToolbarHeight
 });
 ```
 

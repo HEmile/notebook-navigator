@@ -1,6 +1,6 @@
 # Notebook Navigator Startup Process
 
-Updated: February 18, 2026
+Updated: March 16, 2026
 
 ## Table of Contents
 
@@ -111,32 +111,36 @@ show progress.
 5. Load settings from `data.json` and run migrations.
    - Sanitize keyboard shortcuts and migrate legacy fields.
    - Apply default date/time formats and migrate folder note template settings.
+6. Sync local mirrors, load per-device UX preferences, and normalize settings.
+   - Resolve sync-mode local mirrors from vault-scoped localStorage.
    - Load UX preferences from vault-scoped localStorage.
-6. Handle first-launch setup when no saved data exists.
-   - Normalize tag settings and clear vault-scoped localStorage keys (preserving IndexedDB version markers).
+   - Normalize tag and property settings.
+7. Handle first-launch setup when no saved data exists.
+   - Clear plugin localStorage keys (preserving IndexedDB version markers).
    - Re-seed per-device localStorage mirrors for sync-mode settings and UX preferences.
    - Expand the root folder when `showRootFolder` is enabled.
    - Persist the current localStorage version (`LOCALSTORAGE_VERSION`).
-7. Initialize recent data and UX tracking.
+8. Initialize recent data and UX tracking.
    - `RecentDataManager` loads persisted recent notes and icons.
    - `RecentNotesService` starts recording file-open history.
-8. Construct core services and controllers:
+9. Construct core services and controllers:
    - `WorkspaceCoordinator` and `HomepageController` manage view activation and homepage flow.
    - `MetadataService`, `TagOperations`, `TagTreeService`, `PropertyTreeService`, and `CommandQueueService`.
    - `FileSystemOperations` wired with tag tree, property tree, and visibility preferences.
    - `OmnisearchService`, `NotebookNavigatorAPI`, and `ReleaseCheckService`.
    - `ExternalIconProviderController` initializes icon providers and syncs settings.
-9. Register view, commands, settings tab, and workspace integrations.
+10. Register view, commands, settings tab, and workspace integrations.
    - Register both `NOTEBOOK_NAVIGATOR_VIEW` (`NotebookNavigatorView`) and
      `NOTEBOOK_NAVIGATOR_CALENDAR_VIEW` (`NotebookNavigatorCalendarView`).
    - `registerNavigatorCommands` wires command palette entries.
    - `registerWorkspaceEvents` adds editor context menu actions, the ribbon icon, recent-note tracking, and
      rename/delete handlers.
-10. Wait for `workspace.onLayoutReady()`.
+11. Wait for `workspace.onLayoutReady()`.
    - `HomepageController.handleWorkspaceReady()` activates the view on first launch and opens the configured homepage (if set).
    - On first launch, the Welcome modal is opened after the workspace is ready.
    - Triggers Style Settings parsing, version notice checks, and optional release polling.
-   - `applyCalendarPlacementView({ force: true, reveal: false })` syncs the calendar right-sidebar leaf with `settings.calendarPlacement`.
+  - `applyCalendarPlacementView({ force: true, reveal: false })` syncs the calendar right-sidebar leaf with the
+    effective calendar placement and detaches restored right-sidebar calendar leaves when the calendar feature is disabled.
 
 ### Phase 2: View Creation
 
@@ -167,21 +171,24 @@ or calendar placement changes run after layout/settings updates.
    - Adds `notebook-navigator-mobile` and platform classes on mobile (`notebook-navigator-android`, `notebook-navigator-ios`).
    - Adds `notebook-navigator-obsidian-1-11-plus-*` when `requireApiVersion('1.11.0')` passes.
 5. Pane chrome uses headers on all platforms and toolbars on mobile:
-   - `NavigationPaneHeader` and `ListPaneHeader` render at the top of the scroll content area.
+   - `NavigationPaneHeader` and `ListPaneHeader` render in pane chrome above the scrollers.
    - Android mobile renders `NavigationToolbar` / `ListToolbar` at the top.
-   - iOS mobile renders `NavigationToolbar` / `ListToolbar` in a bottom toolbar container.
+   - On iOS with Obsidian 1.11+ and floating toolbars enabled, the toolbars render inside the pane; otherwise they
+     render in the bottom toolbar container.
 
 #### Calendar right sidebar view (`NotebookNavigatorCalendarView.tsx`)
 
 1. `applyCalendarPlacementView()` evaluates `settings.calendarPlacement` after layout readiness and on settings updates.
-2. When placement is `right-sidebar`, it calls `WorkspaceCoordinator.ensureCalendarViewInRightSidebar(...)`.
+2. When the effective placement is `right-sidebar` and `calendarEnabled` is true, it calls
+   `WorkspaceCoordinator.ensureCalendarViewInRightSidebar(...)`.
 3. Obsidian calls `NotebookNavigatorCalendarView.onOpen()` when the calendar leaf is created/restored.
 4. React app mounts with:
    - `SettingsProvider`
    - `ServicesProvider`
    - `CalendarRightSidebar`
 5. `CalendarRightSidebar` renders `Calendar` with `weeksToShowOverride={6}` and forwards date-filter actions to the navigator view.
-6. When placement changes away from `right-sidebar`, `WorkspaceCoordinator.detachCalendarViewLeaves()` removes calendar leaves.
+6. When placement changes away from `right-sidebar`, or the feature is disabled, `WorkspaceCoordinator.detachCalendarViewLeaves()`
+   removes calendar leaves. Restored calendar leaves also detach themselves on open when the feature is disabled.
 
 ### Phase 3: Database Version Check and Initialization
 
@@ -408,28 +415,22 @@ The plugin uses debouncers in a few specific places where Obsidian emits bursty 
 
 **Trigger**: Obsidian calls Plugin.onunload() when disabling the plugin
 
-1. Set the `isUnloading` flag to prevent new operations from starting.
-2. Dispose runtime managers that watch local storage and external providers.
-   - `RecentDataManager.dispose()` stops persistence sync.
-   - `ExternalIconProviderController.dispose()` releases icon provider hooks.
-3. Clear listener maps to avoid callbacks during teardown:
+1. `Plugin.onunload()` calls `initiateShutdown()`.
+2. `initiateShutdown()` sets the `isUnloading` flag and flushes shutdown-critical work:
+   - Flush pending recent-data persists.
+   - Clear queued command operations.
+   - Stop content processing in mounted navigator and calendar leaves.
+   - Call `shutdownDatabase()` to close IndexedDB and clear in-memory caches.
+3. `preferencesController.dispose()` then disposes `RecentDataManager` and clears recent-data / UX listeners.
+4. Clear listener maps to avoid callbacks during teardown:
    - Settings update listeners
    - File rename listeners
-   - Recent data listeners
-4. Release service instances:
-   - `MetadataService` and `TagOperations` references set to `null`
-   - `PropertyTreeService` reference set to `null`
-   - `CommandQueueService.clearAllOperations()` then set to `null`
-   - `OmnisearchService` reference cleared
-   - `RecentDataManager` reference cleared after disposal
-5. Stop content processing in mounted navigator and calendar leaves:
-   - Iterate leaves via `getLeavesOfType(NOTEBOOK_NAVIGATOR_VIEW)` and call `NotebookNavigatorView.stopContentProcessing()`.
-   - Iterate leaves via `getLeavesOfType(NOTEBOOK_NAVIGATOR_CALENDAR_VIEW)` and call `NotebookNavigatorCalendarView.stopContentProcessing()`.
+   - Update notice listeners
+5. Dispose long-lived services/controllers and clear remaining references:
+   - `ExternalIconProviderController.dispose()` releases icon provider hooks.
+   - `MetadataService.dispose()` tears down metadata watchers.
+   - Remaining service refs are nulled after cleanup.
 6. Remove the ribbon icon element.
-7. Call `shutdownDatabase()` to:
-   - Close the IndexedDB connection
-   - Clear the in-memory cache
-   - Keep the operation idempotent for repeated unloads
 
 ### Phase 2: View Cleanup
 
@@ -445,10 +446,11 @@ The plugin uses debouncers in a few specific places where Obsidian emits bursty 
    - Set root to null
    - Clear the container element
 3. `NotebookNavigatorCalendarView.onClose()` unregisters the settings listener, unmounts the React root, and tears down the view container classes.
-4. StorageContext cleanup (via useEffect return):
-   - Stop all content processing in ContentProviderRegistry
-   - Cancel any pending timers
-   - Prevent setState calls after unmount
+4. Storage subtree cleanup happens in two layers:
+   - `NotebookNavigatorView.stopContentProcessing()` reaches `StorageContext.stopAllProcessing()`, which marks storage
+     stopped, cancels debouncers/timeouts, detaches vault and metadata listeners, and clears pending metadata waits.
+   - `useInitializeContentProviderRegistry()` stops provider queues and clears deferred sync timers when the storage
+     subtree unmounts.
 
 ### Key Principles
 

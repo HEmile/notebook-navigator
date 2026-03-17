@@ -1,6 +1,6 @@
 # Notebook Navigator API Reference
 
-Updated: March 7, 2026
+Updated: March 16, 2026
 
 The Notebook Navigator plugin exposes a public API for other plugins and scripts to interact with navigator features.
 
@@ -127,6 +127,10 @@ Customize folder, tag, and property node appearance, manage pinned files.
 
 `setFolderMeta()`, `setTagMeta()`, and `setPropertyMeta()` use `FolderMetadataUpdate`,
 `TagMetadataUpdate`, and `PropertyMetadataUpdate`.
+
+When `useFrontmatterMetadata` is enabled, `getFolderMeta()` resolves current folder display data through
+`MetadataService`, and `setFolderMeta()` writes through `metadataService.setFolderStyle(...)`. Folder metadata can
+therefore reflect folder-note frontmatter, not only the raw settings maps.
 
 #### Property Update Behavior
 
@@ -334,7 +338,7 @@ When `navItem.type === 'tag'`, `navItem.tag` can be either a canonical tag path 
 | Method         | Description                  | Returns          |
 | -------------- | ---------------------------- | ---------------- |
 | `getNavItem()` | Get selected folder, tag, or property | `NavItem`        |
-| `getCurrent()` | Get complete selection state | `SelectionState` |
+| `getCurrent()` | Get current file selection state | `SelectionState` |
 
 ```typescript
 // Check what's selected
@@ -470,8 +474,8 @@ nn.on('pinned-files-changed', ({ files }) => {
 
 // Use 'once' for one-time events (auto-unsubscribes)
 nn.once('storage-ready', () => {
-  // Wait for storage to be ready before querying metadata or pinned files
-  console.log('Storage is ready - safe to call read APIs');
+  // Wait for storage to be ready before storage-backed navigation/tag/property lookups
+  console.log('Storage is ready - initial mirror bootstrap is complete');
   // No need to unsubscribe, it's handled automatically
 });
 
@@ -489,7 +493,7 @@ const navRef = nn.on('nav-item-changed', ({ item }) => {
 });
 
 const selectionRef = nn.on('selection-changed', ({ state }) => {
-  // TypeScript knows 'state' is SelectionState with files and focused properties
+  // TypeScript knows 'state' is SelectionState with files and focused
   console.log(`${state.files.length} files selected`);
 });
 
@@ -552,7 +556,7 @@ nn.on('selection-changed', ({ state }) => {
 // Works without type definitions
 const nn = app.plugins.plugins['notebook-navigator']?.api;
 if (nn) {
-  // Wait for storage if needed, then proceed
+  // Wait for storage if you need storage-backed navigation/tag/property reads
   await nn.whenReady();
 
   const folder = app.vault.getFolderByPath('Projects');
