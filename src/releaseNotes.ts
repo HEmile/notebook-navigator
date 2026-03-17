@@ -77,6 +77,14 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '2.5.2',
+        date: '2026-03-20',
+        showOnUpdate: true,
+        improved: [
+            'Frontmatter icons now support wikilink-wrapped SVG paths such as **[[icons/folder.svg]]**.'
+        ]
+    },
+    {
         version: '2.5.1',
         date: '2026-03-16',
         showOnUpdate: true,

@@ -77,6 +77,19 @@ describe('extractMetadataFromCache - icon extraction', () => {
 
         expect(result.icon).toBe('simple-icons:github');
     });
+
+    it('accepts wikilinked vault svg icon values', () => {
+        const settings = createSettings();
+        const metadata: CachedMetadata = {
+            frontmatter: {
+                icon: '[[_resources/icons/TokenTek_Symbol_Black.svg]]'
+            }
+        };
+
+        const result = extractMetadataFromCache(metadata, settings);
+
+        expect(result.icon).toBe('vault:_resources/icons/TokenTek_Symbol_Black.svg');
+    });
 });
 
 describe('extractMetadataFromCache - name extraction', () => {

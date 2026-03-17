@@ -669,6 +669,11 @@ export function deserializeIconFromFrontmatter(value: string): string | null {
         return `emoji:${emojiOnly}`;
     }
 
+    const wikiLinkPath = extractVaultSvgPathFromWikiLink(trimmed);
+    if (wikiLinkPath) {
+        return `${VAULT_PROVIDER_ID}:${wikiLinkPath}`;
+    }
+
     if (!trimmed.includes(':') && trimmed.toLowerCase().endsWith(VAULT_SVG_EXTENSION)) {
         return `${VAULT_PROVIDER_ID}:${trimmed}`;
     }
@@ -717,6 +722,26 @@ function deserializeLegacyProviderPrefixedFrontmatter(value: string): string | n
     return null;
 }
 
+function extractVaultSvgPathFromWikiLink(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed.startsWith('[[') || !trimmed.endsWith(']]')) {
+        return null;
+    }
+
+    const inner = trimmed.slice(2, -2).trim();
+    if (!inner || inner.includes('\n') || inner.includes('\r')) {
+        return null;
+    }
+
+    const pipeIndex = inner.indexOf('|');
+    const rawTarget = (pipeIndex === -1 ? inner : inner.slice(0, pipeIndex)).trim();
+    if (!rawTarget || rawTarget.includes('#') || rawTarget.includes('^')) {
+        return null;
+    }
+
+    return rawTarget.toLowerCase().endsWith(VAULT_SVG_EXTENSION) ? rawTarget : null;
+}
+
 /**
  * Deserializes an icon value from note frontmatter back into canonical format.
  * Rejects provider-prefixed values (e.g. "emoji:📁") and only accepts:
@@ -739,6 +764,11 @@ export function deserializeIconFromFrontmatterStrict(value: string): string | nu
     const emojiOnly = extractFirstEmoji(trimmed);
     if (emojiOnly && emojiOnly === trimmed) {
         return `emoji:${emojiOnly}`;
+    }
+
+    const wikiLinkPath = extractVaultSvgPathFromWikiLink(trimmed);
+    if (wikiLinkPath) {
+        return `${VAULT_PROVIDER_ID}:${wikiLinkPath}`;
     }
 
     if (!trimmed.includes(':') && trimmed.toLowerCase().endsWith(VAULT_SVG_EXTENSION)) {

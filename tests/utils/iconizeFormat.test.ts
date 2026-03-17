@@ -149,6 +149,15 @@ describe('frontmatter icon helpers', () => {
         expect(deserializeIconFromFrontmatter('rpg-awesome:ra-harpoon-trident')).toBe('rpg-awesome:harpoon-trident');
     });
 
+    it('deserializes wikilinked vault svg paths', () => {
+        expect(deserializeIconFromFrontmatter('[[_resources/icons/TokenTek_Symbol_Black.svg]]')).toBe(
+            'vault:_resources/icons/TokenTek_Symbol_Black.svg'
+        );
+        expect(deserializeIconFromFrontmatter(' [[_resources/icons/TokenTek_Symbol_Black.svg|TokenTek]] ')).toBe(
+            'vault:_resources/icons/TokenTek_Symbol_Black.svg'
+        );
+    });
+
     it('deserializes plain emoji strings into canonical emoji identifiers', () => {
         expect(deserializeIconFromFrontmatter('📁')).toBe('emoji:📁');
     });
