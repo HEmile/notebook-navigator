@@ -1,6 +1,6 @@
 # Notebook Navigator API Reference
 
-Updated: March 16, 2026
+Updated: March 17, 2026
 
 The Notebook Navigator plugin exposes a public API for other plugins and scripts to interact with navigator features.
 
@@ -129,8 +129,8 @@ Customize folder, tag, and property node appearance, manage pinned files.
 `TagMetadataUpdate`, and `PropertyMetadataUpdate`.
 
 When `useFrontmatterMetadata` is enabled, `getFolderMeta()` resolves current folder display data through
-`MetadataService`, and `setFolderMeta()` writes through `metadataService.setFolderStyle(...)`. Folder metadata can
-therefore reflect folder-note frontmatter, not only the raw settings maps.
+`MetadataService`. `setFolderMeta()` writes through `metadataService.setFolderStyle(...)` whenever `MetadataService` is
+available. Folder metadata can therefore reflect folder-note frontmatter, not only the raw settings maps.
 
 #### Property Update Behavior
 
@@ -255,24 +255,24 @@ When calling `navigateToFolder(folder)`:
 
 When calling `navigateToTag(tag)`:
 
-- Accepts both `'work'` and `'#work'` formats
+- Accepts `'work'`, `'#work'`, and aggregate tag collection ids from `nn.tagCollections`
 - Requires tag data to be available (`storage-ready`)
 - Expands the tags root when "All tags" is enabled and collapsed
 - Expands parent tags for hierarchical tags (e.g. `'parent/child'`)
 - Preserves navigation focus in single-pane mode
-- Returns `false` if the tag is not present in the current tag tree
+- Returns `false` if a real tag is not present in the current tag tree
 - Returns `false` if the navigator view cannot be opened or does not become ready
 
 ### Property Navigation Behavior
 
 When calling `navigateToProperty(nodeId)`:
 
-- Accepts property key and key/value node ids (e.g. `'key:status'`, `'key:status=done'`)
+- Accepts `nn.propertyNodes.rootId`, property key ids, and key/value node ids (e.g. `'key:status'`, `'key:status=done'`)
 - Normalizes node ids to canonical lowercase form before selection
 - Expands the properties root when "All properties" is enabled and collapsed
 - Expands the parent key node for key/value selections when needed
 - Preserves navigation focus in single-pane mode
-- Returns `false` if the target node is not present in the current property tree
+- Returns `false` if a key or key/value target is not present in the current property tree
 - Returns `false` if the navigator view cannot be opened or does not become ready
 
 ```typescript

@@ -1,6 +1,6 @@
 # Notebook Navigator Scroll Orchestration
 
-Updated: March 16, 2026
+Updated: March 17, 2026
 
 ## Table of Contents
 
@@ -44,7 +44,8 @@ Primary implementation:
 
 - `src/hooks/useNavigationPaneScroll.ts`
 - `src/hooks/useListPaneScroll.ts`
-- Shared helpers: `src/types/scroll.ts`, `src/utils/navigationIndex.ts`
+- Support modules: `src/types/scroll.ts`
+- Navigation-specific index resolution: `src/utils/navigationIndex.ts`
 
 ## The Problem
 
@@ -210,8 +211,8 @@ spacers).
 ### Toggling Hidden Items
 
 1. `showHiddenItems` flips in UX preferences.
-2. The navigation hook increments `indexVersion`, defers selection scrolls with `intent: 'visibilityToggle'`, and waits
-   for the next version.
+2. The navigation hook queues the current selection with `intent: 'visibilityToggle'` and
+   `minIndexVersion = current + 1`, then waits for the next `pathToIndex` rebuild to advance `indexVersion`.
 3. After the tree rebuild, the pending scroll resolves the selection and runs.
 4. The stabilization check revalidates the index on the next frame and queues another scroll if the index moved again.
 

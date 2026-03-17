@@ -1,6 +1,6 @@
 # Notebook Navigator Rendering Architecture
 
-Updated: March 16, 2026
+Updated: March 17, 2026
 
 ## Table of Contents
 
@@ -44,9 +44,9 @@ the scroll container refs, gate scroll execution on physical container visibilit
 rebuilds, and queue scroll intents (reveal requests, navigation jumps, configuration changes) so they run only after the
 corresponding virtual items exist.
 
-Both virtualizers use `scrollMargin`, and the list pane also uses `scrollPaddingStart`. Both panes use
-`scrollPaddingEnd` so `scrollToIndex` aligns rows below the pane chrome and keeps the target row above bottom overlays
-(calendar, iOS toolbars).
+Both virtualizers use `scrollMargin`, and the list pane also uses `scrollPaddingStart`. The navigation pane uses
+`scrollPaddingEnd` when bottom overlays need extra space. The list pane uses `scrollPaddingEnd` for the iOS floating
+toolbar only; calendar overlay changes are handled by a follow-up scroll after the layout updates.
 
 ### 2. Synchronous Storage Mirror
 
@@ -264,7 +264,7 @@ graph TD
 
 ### NavigationPane
 
-**Location**: `src/components/NavigationPane.tsx`
+**Location**: `src/components/navigationPane/NavigationPaneContent.tsx` (`src/components/NavigationPane.tsx` re-exports it)
 
 - Consumes data from `useNavigationPaneData`, `useNavigationRootReorder`, `useNavigationPaneScroll`,
   and `useNavigationPaneKeyboard`.
@@ -409,8 +409,8 @@ graph TD
   into `useNavigationPaneScroll`.
 - `useNavigationPaneScroll` initializes the virtualizer with `NAVPANE_MEASUREMENTS` and exposes `requestScroll` for reveal
   operations.
-- `NavigationPane` maps `rowVirtualizer.getVirtualItems()` to components, switching on `item.type` to render the correct
-  row (`FolderItem`, `TagTreeItem`, `VirtualFolderComponent`, `ShortcutItem`, recent note rows, spacers).
+- `NavigationPaneContent` delegates virtual row layout to `NavigationPaneLayout`, which maps
+  `rowVirtualizer.getVirtualItems()` and renders rows through `NavigationPaneItemRenderer`.
 - Because `virtualItem.start` includes `scrollMargin`, row wrappers subtract it when positioning inside the virtual
   container (`virtualItem.start - scrollMargin`).
 - Root reorder mode swaps the virtual list for `NavigationRootReorderPanel` (non-virtualized), which renders
@@ -445,10 +445,12 @@ const { rowVirtualizer, scrollContainerRefCallback, requestScroll } = useNavigat
 - `useListPaneScroll` feeds `listItems` into `useVirtualizer`, calculating heights with `getListPaneMeasurements`,
   preview availability (`hasPreview`), search metadata, and appearance settings. The current implementation uses
   `scrollMargin: 0`; the calendar overlay is handled by a follow-up `scrollToIndex` when its height changes.
-- The hook maintains a single pending scroll request with priority ranking (reveal, navigation, visibility change,
-  search) and executes it after the index version matches the expected rebuild.
-- `ListPane` renders virtual items by switching on `item.type` and passing search metadata to `FileItem`; headers are
-  inline `<div className="nn-date-group-header">` nodes, matching the measurement logic.
+- The hook maintains a single pending scroll request with ranked priorities: `top`, `list-structure-change`,
+  `visibility-change`, `folder-navigation`, then `reveal`. It executes the selected request after the index version
+  matches the expected rebuild.
+- `ListPane` delegates virtual row rendering to `ListPaneVirtualContent`, which switches on `item.type` and passes
+  search metadata to `FileItem`; headers are inline `<div className="nn-date-group-header">` nodes, matching the
+  measurement logic.
 - Because `virtualItem.start` includes `scrollMargin`, row wrappers subtract it when positioning inside the virtual
   container (`virtualItem.start - scrollMargin`).
 
@@ -481,7 +483,7 @@ const { rowVirtualizer, scrollContainerRefCallback, handleScrollToTop } = useLis
   topSpacerHeight,
   includeDescendantNotes,
   scrollMargin: 0,
-  scrollPaddingEnd: bottomToolbarHeight
+  scrollPaddingEnd
 });
 ```
 

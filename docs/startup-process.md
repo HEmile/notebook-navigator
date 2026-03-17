@@ -1,6 +1,6 @@
 # Notebook Navigator Startup Process
 
-Updated: March 16, 2026
+Updated: March 17, 2026
 
 ## Table of Contents
 
@@ -241,7 +241,8 @@ tag extraction and markdown pipeline processing:
 
 #### Initial load (`isInitialLoad=true`)
 
-1. Gather indexable files with `getIndexableFiles()` (`getFilteredMarkdownAndPdfFiles()`).
+1. Gather indexable files with `getIndexableFiles()` from `useStorageFileQueries`
+   (`getFilteredMarkdownAndPdfFiles(..., { showHiddenItems: true })`).
 2. Calculate diffs through `calculateFileDiff()`.
    - Cold boot: all files appear as new (database cache is empty)
    - Warm boot: compare against cached data to find new/modified files

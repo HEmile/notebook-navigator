@@ -1,6 +1,6 @@
 # Notebook Navigator metadata pipeline
 
-Updated: March 16, 2026
+Updated: March 17, 2026
 
 ## Table of contents
 
@@ -19,7 +19,7 @@ Updated: March 16, 2026
 
 Notebook Navigator maintains a local file cache in IndexedDB and mirrors it into an in-memory cache for synchronous reads during rendering.
 
-The pipeline has two layers:
+The pipeline has three layers:
 
 - Vault sync: keep a `FileData` record for each indexable file path up to date with the vault state.
 - Derived content: generate tags, frontmatter metadata, preview text, word count, task counters, property pills, and feature images using background content providers.
@@ -34,7 +34,9 @@ The cache includes:
 
 ## Data model
 
-Notebook Navigator indexes markdown notes and PDFs (`src/utils/fileFilters.ts`, `getFilteredMarkdownAndPdfFiles()`).
+Notebook Navigator indexes markdown notes and PDFs through `getIndexableFiles()` in
+`src/context/storage/useStorageFileQueries.ts`, backed by `getFilteredMarkdownAndPdfFiles(..., { showHiddenItems: true })`
+in `src/utils/fileFilters.ts`.
 
 Each indexed file path has a `FileData` record (`src/storage/IndexedDBStorage.ts`) containing:
 

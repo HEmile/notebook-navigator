@@ -1,6 +1,6 @@
 # Notebook Navigator Storage Architecture
 
-Updated: March 16, 2026
+Updated: March 17, 2026
 
 ## Table of Contents
 
@@ -407,7 +407,8 @@ export interface IconAssetRecord {
 
 ### Cache Rebuild (Manual)
 
-`StorageContext.rebuildCache()` (invoked by the rebuild-cache command/API) runs an exclusive rebuild sequence:
+`StorageContext.rebuildCache()` (invoked by the rebuild-cache command, settings action, or internal plugin/view rebuild
+path) runs an exclusive rebuild sequence:
 
 1. Stops background work: vault sync timers, tag rebuild debouncers, metadata waits, and content provider queues.
 2. Clears IndexedDB stores (`IndexedDBStorage.clearDatabase()` / `IndexedDBStorage.clear()`), which also resets the in-memory caches.

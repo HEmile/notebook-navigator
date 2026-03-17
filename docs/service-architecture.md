@@ -960,7 +960,11 @@ if (this.settings.searchProvider === 'omnisearch' && !this.omnisearchService.isA
 }
 this.api = new NotebookNavigatorAPI(this, this.app);
 this.metadataService.setFolderStyleChangeListener(folderPath => {
-  this.api?.emitFolderChange(folderPath);
+  if (!this.api) {
+    return;
+  }
+
+  this.api[INTERNAL_NOTEBOOK_NAVIGATOR_API].metadata.emitFolderChangedForPath(folderPath);
 });
 this.releaseCheckService = new ReleaseCheckService(this);
 
