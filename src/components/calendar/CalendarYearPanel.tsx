@@ -28,6 +28,7 @@ interface CalendarYearPanelProps {
     selectedMonthIndex: number;
     hasYearPeriodNote: boolean;
     yearMonthEntries: CalendarYearMonthEntry[];
+    highlightedMonthFeatureImageKeys: Set<string>;
     highlightedMonthImageUrls: Record<string, string>;
     onNavigateYear: (delta: number) => void;
     onYearPeriodClick: (event: React.MouseEvent<HTMLElement>) => void;
@@ -42,6 +43,7 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
     selectedMonthIndex,
     hasYearPeriodNote,
     yearMonthEntries,
+    highlightedMonthFeatureImageKeys,
     highlightedMonthImageUrls,
     onNavigateYear,
     onYearPeriodClick,
@@ -92,12 +94,9 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                 {yearMonthEntries.map(entry => {
                     const isSelectedMonth = entry.monthIndex === selectedMonthIndex;
                     const isCurrentMonth = entry.key === currentMonthKey;
+                    const hasFeatureImageKey = highlightedMonthFeatureImageKeys.has(entry.key);
                     const featureImageUrl = highlightedMonthImageUrls[entry.key] ?? null;
-                    const monthLabelText = entry.noteCount > 0 ? `${entry.shortLabel} (${entry.noteCount})` : entry.shortLabel;
-                    const monthAriaLabel =
-                        entry.noteCount > 0
-                            ? `${entry.fullLabel} ${selectedYearValue} (${entry.noteCount})`
-                            : `${entry.fullLabel} ${selectedYearValue}`;
+                    const monthAriaLabel = `${entry.fullLabel} ${selectedYearValue}`;
                     const style: React.CSSProperties | undefined = featureImageUrl
                         ? { backgroundImage: `url(${featureImageUrl})` }
                         : undefined;
@@ -110,6 +109,9 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                                 'nn-navigation-calendar-year-month',
                                 isCurrentMonth ? 'is-current-month' : '',
                                 isSelectedMonth ? 'is-selected-month' : '',
+                                entry.hasDailyNote ? 'has-daily-note' : '',
+                                entry.hasUnfinishedTasks ? 'has-unfinished-tasks' : '',
+                                hasFeatureImageKey ? 'has-feature-image-key' : '',
                                 featureImageUrl ? 'has-feature-image' : ''
                             ]
                                 .filter(Boolean)
@@ -118,7 +120,10 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                             style={style}
                             onClick={event => onSelectYearMonth(event, entry.date)}
                         >
-                            <span className="nn-navigation-calendar-year-month-label">{monthLabelText}</span>
+                            <span className="nn-navigation-calendar-year-month-label">{entry.shortLabel}</span>
+                            {entry.hasUnfinishedTasks ? (
+                                <span className="nn-navigation-calendar-year-month-unfinished-task-indicator" aria-hidden="true" />
+                            ) : null}
                         </button>
                     );
                 })}

@@ -64,6 +64,16 @@ export interface CalendarProps {
 
 type HeaderPeriodKind = Extract<CalendarNoteKind, 'month' | 'quarter' | 'year'>;
 
+interface CalendarYearMonthBaseEntry {
+    date: MomentInstance;
+    dayFiles: TFile[];
+    fullLabel: string;
+    hasDailyNote: boolean;
+    key: string;
+    monthIndex: number;
+    shortLabel: string;
+}
+
 function getWorkspaceActiveFile(workspace: Workspace): TFile | null {
     const activeView = workspace.getActiveViewOfType(FileView);
     const activeFile = activeView?.file;
@@ -899,43 +909,59 @@ export function Calendar({
     const yearNotesEnabled = isCustomCalendar && settings.calendarCustomYearPattern.trim() !== '';
     const selectedYear = cursorDate?.year() ?? null;
 
-    const yearMonthEntries = useMemo<CalendarYearMonthEntry[]>(() => {
+    const yearMonthBaseEntries = useMemo<CalendarYearMonthBaseEntry[]>(() => {
         if (!momentApi || selectedYear === null || !showYearCalendar) {
             return [];
         }
 
-        // Force refresh when vault contents change so year month counts reflect created/renamed/deleted daily notes.
+        // Force refresh when vault contents change so year month note coverage stays in sync.
         void vaultVersion;
 
-        const entries: CalendarYearMonthEntry[] = [];
+        const entries: CalendarYearMonthBaseEntry[] = [];
         for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
             const monthDate = momentApi(new Date(selectedYear, monthIndex, 1))
                 .startOf('day')
                 .locale(displayLocale);
             const daysInMonth = new Date(selectedYear, monthIndex + 1, 0).getDate();
-            let noteCount = 0;
+            const dayFiles: TFile[] = [];
 
             for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
                 const dayDate = monthDate.clone().set({ date: dayNumber });
                 const existingFile = getExistingDayNoteFile(dayDate);
 
                 if (existingFile) {
-                    noteCount += 1;
+                    dayFiles.push(existingFile);
                 }
             }
 
             entries.push({
                 date: monthDate,
+                dayFiles,
                 fullLabel: monthDate.format('MMMM'),
+                hasDailyNote: dayFiles.length > 0,
                 key: monthDate.format('YYYY-MM'),
                 monthIndex,
-                noteCount,
                 shortLabel: monthDate.format('MMM')
             });
         }
 
         return entries;
     }, [displayLocale, getExistingDayNoteFile, momentApi, selectedYear, showYearCalendar, vaultVersion]);
+
+    const yearMonthEntries = useMemo<CalendarYearMonthEntry[]>(() => {
+        // Force refresh when calendar task metadata changes so year month indicators stay in sync.
+        void taskIndicatorVersion;
+
+        return yearMonthBaseEntries.map(entry => ({
+            date: entry.date,
+            fullLabel: entry.fullLabel,
+            hasDailyNote: entry.hasDailyNote,
+            hasUnfinishedTasks: db ? entry.dayFiles.some(file => (db.getFile(file.path)?.taskUnfinished ?? 0) > 0) : false,
+            key: entry.key,
+            monthIndex: entry.monthIndex,
+            shortLabel: entry.shortLabel
+        }));
+    }, [db, taskIndicatorVersion, yearMonthBaseEntries]);
 
     const highlightedMonthFilesByKey = useMemo(() => {
         const filesByKey = new Map<string, TFile>();
@@ -946,7 +972,7 @@ export function Calendar({
 
         void featureImageVersion;
 
-        for (const entry of yearMonthEntries) {
+        for (const entry of yearMonthBaseEntries) {
             const highlightedDayIso = settings.calendarMonthHighlights[entry.key] ?? null;
             if (highlightedDayIso) {
                 const highlightedDay = momentApi(highlightedDayIso, 'YYYY-MM-DD', true);
@@ -959,7 +985,7 @@ export function Calendar({
                 continue;
             }
 
-            if (entry.noteCount === 0) {
+            if (!entry.hasDailyNote) {
                 continue;
             }
 
@@ -967,14 +993,7 @@ export function Calendar({
                 continue;
             }
 
-            const daysInMonth = new Date(entry.date.year(), entry.monthIndex + 1, 0).getDate();
-            for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
-                const dayDate = entry.date.clone().set({ date: dayNumber });
-                const file = getExistingDayNoteFile(dayDate);
-                if (!file) {
-                    continue;
-                }
-
+            for (const file of entry.dayFiles) {
                 const record = db.getFile(file.path);
                 const featureKey = record?.featureImageKey ?? null;
                 const featureStatus = record?.featureImageStatus ?? null;
@@ -988,7 +1007,15 @@ export function Calendar({
         }
 
         return filesByKey;
-    }, [db, featureImageVersion, getExistingDayNoteFile, momentApi, settings.calendarMonthHighlights, showYearCalendar, yearMonthEntries]);
+    }, [
+        db,
+        featureImageVersion,
+        getExistingDayNoteFile,
+        momentApi,
+        settings.calendarMonthHighlights,
+        showYearCalendar,
+        yearMonthBaseEntries
+    ]);
 
     const highlightedMonthFeatureImageTargets = useMemo<CalendarFeatureImageTarget[]>(() => {
         void featureImageVersion;
@@ -1016,6 +1043,16 @@ export function Calendar({
 
         return targets;
     }, [db, featureImageVersion, highlightedMonthFilesByKey, settings.calendarShowFeatureImage]);
+
+    const highlightedMonthFeatureImageKeys = useMemo(() => {
+        const keys = new Set<string>();
+
+        highlightedMonthFeatureImageTargets.forEach(target => {
+            keys.add(target.id);
+        });
+
+        return keys;
+    }, [highlightedMonthFeatureImageTargets]);
 
     const highlightedMonthWatchedNotePaths = useMemo(() => {
         const paths = new Set<string>();
@@ -1177,8 +1214,14 @@ export function Calendar({
             }
         });
 
+        for (const entry of yearMonthBaseEntries) {
+            for (const file of entry.dayFiles) {
+                paths.add(file.path);
+            }
+        }
+
         return paths;
-    }, [visibleDayNotePaths, weekNoteFilesByKey]);
+    }, [visibleDayNotePaths, weekNoteFilesByKey, yearMonthBaseEntries]);
     visibleIndicatorNotePathsRef.current = visibleIndicatorNotePaths;
     const visibleFeatureImageNotePaths = useMemo(() => {
         const paths = new Set<string>(visibleDayNotePaths);
@@ -1361,6 +1404,7 @@ export function Calendar({
                     selectedMonthIndex={cursorDate.month()}
                     hasYearPeriodNote={Boolean(headerPeriodNoteFiles.year)}
                     yearMonthEntries={yearMonthEntries}
+                    highlightedMonthFeatureImageKeys={highlightedMonthFeatureImageKeys}
                     highlightedMonthImageUrls={highlightedMonthImageUrls}
                     onNavigateYear={handleNavigateYear}
                     onYearPeriodClick={event => handleHeaderPeriodClick(event, 'year')}

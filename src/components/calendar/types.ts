@@ -50,9 +50,10 @@ export interface CalendarWeek {
 export interface CalendarYearMonthEntry {
     date: MomentInstance;
     fullLabel: string;
+    hasDailyNote: boolean;
+    hasUnfinishedTasks: boolean;
     key: string;
     monthIndex: number;
-    noteCount: number;
     shortLabel: string;
 }
 

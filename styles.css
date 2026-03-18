@@ -2900,6 +2900,55 @@ body {
     text-overflow: ellipsis;
 }
 
+.nn-navigation-calendar-year-month.has-daily-note:not(.has-feature-image):not(.has-feature-image-key)::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, var(--nn-calendar-note-indicator-center-offset));
+    height: min(var(--nn-calendar-note-indicator-size), var(--nn-calendar-note-indicator-max-size));
+    aspect-ratio: 1 / 1;
+    width: auto;
+    border-radius: 999px;
+    background-color: var(--nn-calendar-note-indicator-color);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.nn-navigation-calendar-year-month.has-daily-note.has-unfinished-tasks:not(.has-feature-image):not(.has-feature-image-key)::after {
+    transform: translate(calc(-50% - (var(--nn-calendar-task-indicator-offset-x) / 2)), var(--nn-calendar-note-indicator-center-offset));
+}
+
+.nn-navigation-calendar-year-month-unfinished-task-indicator {
+    display: none;
+}
+
+.nn-navigation-calendar-year-month.has-unfinished-tasks .nn-navigation-calendar-year-month-unfinished-task-indicator {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, var(--nn-calendar-note-indicator-center-offset));
+    height: min(var(--nn-calendar-note-indicator-size), var(--nn-calendar-note-indicator-max-size));
+    aspect-ratio: 1 / 1;
+    width: auto;
+    border-radius: 999px;
+    border: 1px solid var(--nn-calendar-task-indicator-color);
+    background-color: transparent;
+    z-index: 1;
+    pointer-events: none;
+    display: block;
+}
+
+.nn-navigation-calendar-year-month.has-daily-note.has-unfinished-tasks:not(.has-feature-image):not(.has-feature-image-key)
+    .nn-navigation-calendar-year-month-unfinished-task-indicator {
+    transform: translate(calc(-50% + (var(--nn-calendar-task-indicator-offset-x) / 2)), var(--nn-calendar-note-indicator-center-offset));
+}
+
+.nn-navigation-calendar-year-month.has-unfinished-tasks.has-feature-image .nn-navigation-calendar-year-month-unfinished-task-indicator,
+.nn-navigation-calendar-year-month.has-unfinished-tasks.has-feature-image-key .nn-navigation-calendar-year-month-unfinished-task-indicator {
+    border-color: currentColor;
+}
+
 .nn-navigation-calendar-year-month.is-selected-month {
     box-shadow: inset 0 0 0 2px var(--nn-calendar-active-editor-border-color) !important;
     color: var(--nn-theme-calendar-day-in-month-color);
@@ -2909,7 +2958,8 @@ body {
     color: var(--nn-theme-calendar-day-has-feature-image-color);
 }
 
-.nn-navigation-calendar[data-highlight-today='true'] .nn-navigation-calendar-year-month.is-current-month:not(.has-feature-image) {
+.nn-navigation-calendar[data-highlight-today='true']
+    .nn-navigation-calendar-year-month.is-current-month:not(.has-feature-image):not(.has-feature-image-key) {
     background-color: var(--nn-theme-calendar-day-today-bg) !important;
     color: var(--nn-theme-calendar-day-today-color);
 }
@@ -2930,12 +2980,13 @@ body {
     color: var(--nn-theme-calendar-day-has-feature-image-color);
 }
 
-.nn-navigation-calendar[data-highlight-today='true'] button.nn-navigation-calendar-year-month.is-current-month:not(.has-feature-image) {
+.nn-navigation-calendar[data-highlight-today='true']
+    button.nn-navigation-calendar-year-month.is-current-month:not(.has-feature-image):not(.has-feature-image-key) {
     color: var(--nn-theme-calendar-day-today-color);
 }
 
 .nn-navigation-calendar[data-highlight-today='true']
-    button.nn-navigation-calendar-year-month.is-current-month.is-selected-month:not(.has-feature-image) {
+    button.nn-navigation-calendar-year-month.is-current-month.is-selected-month:not(.has-feature-image):not(.has-feature-image-key) {
     color: var(--nn-theme-calendar-day-today-color);
 }
 
@@ -3255,7 +3306,7 @@ body {
         filter: brightness(1.05);
     }
 
-    .nn-navigation-calendar-year-month:hover:not(.is-selected-month):not(.has-feature-image) {
+    .nn-navigation-calendar-year-month:hover:not(.is-selected-month):not(.has-feature-image):not(.has-feature-image-key) {
         background-color: var(--nn-theme-calendar-hover-bg) !important;
     }
 }
@@ -3365,6 +3416,10 @@ body {
     text-shadow:
         0 1px 2px rgba(0, 0, 0, 0.75),
         0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.nn-navigation-calendar-year-month.has-feature-image-key .nn-navigation-calendar-year-month-label {
+    font-weight: 600;
 }
 
 .nn-navigation-calendar-day-number {
