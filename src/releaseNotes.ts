@@ -81,7 +81,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-03-20',
         showOnUpdate: true,
         improved: [
-            'Frontmatter icons now support wikilink-wrapped SVG paths such as **[[icons/folder.svg]]**.'
+            'Icons in frontmatter now support wikilink-wrapped SVG paths like **[[icons/folder.svg]]**.',
+            'Yearly calendar months now longer show "(n)" suffix, instead they show the same circles as daily notes (filled circle for notes, hollow circle for tasks).'
         ]
     },
     {
