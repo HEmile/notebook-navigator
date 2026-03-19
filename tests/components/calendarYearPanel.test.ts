@@ -41,8 +41,9 @@ describe('CalendarYearPanel', () => {
             React.createElement(CalendarYearPanel, {
                 showYearCalendar: true,
                 currentMonthKey: null,
-                selectedYearValue: 2026,
-                selectedMonthIndex: 2,
+                displayedYearValue: 2026,
+                activeYearValue: 2026,
+                activeMonthIndex: 2,
                 hasYearPeriodNote: false,
                 yearMonthEntries: [createEntry({ hasDailyNote: true, hasUnfinishedTasks: true })],
                 highlightedMonthFeatureImageKeys: new Set<string>(),
@@ -66,8 +67,9 @@ describe('CalendarYearPanel', () => {
             React.createElement(CalendarYearPanel, {
                 showYearCalendar: true,
                 currentMonthKey: null,
-                selectedYearValue: 2026,
-                selectedMonthIndex: 0,
+                displayedYearValue: 2026,
+                activeYearValue: 2026,
+                activeMonthIndex: 0,
                 hasYearPeriodNote: false,
                 yearMonthEntries: [createEntry({ hasDailyNote: true, hasUnfinishedTasks: true })],
                 highlightedMonthFeatureImageKeys: new Set<string>(['2026-01']),
@@ -82,5 +84,28 @@ describe('CalendarYearPanel', () => {
         expect(html).toMatch(/class="[^"]*has-feature-image-key[^"]*has-feature-image[^"]*"/);
         expect(html).toContain('background-image:url(blob:month-image)');
         expect(html).not.toContain('(1)');
+    });
+
+    it('does not keep the selected-month outline when browsing a different year', () => {
+        const html = renderToStaticMarkup(
+            React.createElement(CalendarYearPanel, {
+                showYearCalendar: true,
+                currentMonthKey: null,
+                displayedYearValue: 2025,
+                activeYearValue: 2026,
+                activeMonthIndex: 0,
+                hasYearPeriodNote: false,
+                yearMonthEntries: [createEntry()],
+                highlightedMonthFeatureImageKeys: new Set<string>(),
+                highlightedMonthImageUrls: {},
+                onNavigateYear: () => {},
+                onYearPeriodClick: () => {},
+                onYearPeriodContextMenu: () => {},
+                onSelectYearMonth: () => {}
+            })
+        );
+
+        expect(html).not.toContain('is-selected-month');
+        expect(html).toContain('aria-label="January 2025"');
     });
 });

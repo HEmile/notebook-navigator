@@ -195,9 +195,9 @@ body {
     --nn-theme-calendar-day-outside-month-color: var(--nn-theme-foreground-faded);
     --nn-theme-calendar-weekend-bg: color-mix(in srgb, var(--nn-theme-foreground) 10%, transparent);
     --nn-theme-calendar-hover-bg: var(--background-modifier-hover);
-    --nn-theme-calendar-day-has-note-bg: var(--nn-theme-foreground-faded);
-    --nn-theme-calendar-day-has-unfinished-task-color: var(--nn-theme-calendar-day-has-note-bg);
-    --nn-theme-calendar-day-has-feature-image-color: white;
+    --nn-theme-calendar-note-indicator-color: var(--nn-theme-foreground-faded);
+    --nn-theme-calendar-unfinished-task-indicator-color: var(--nn-theme-calendar-note-indicator-color);
+    --nn-theme-calendar-feature-image-text-color: white;
     --nn-theme-calendar-feature-image-overlay-color: rgb(0 0 0 / 0.05);
     --nn-theme-calendar-day-today-color: var(--nn-theme-calendar-day-in-month-color);
     --nn-theme-calendar-day-today-bg: var(--text-selection);
@@ -2481,8 +2481,8 @@ body {
     --nn-calendar-task-indicator-offset-x: clamp(5px, calc(var(--nn-calendar-day-font-size) * 0.42), 9px);
     --nn-calendar-weekend-corner-radius: 6px;
     --nn-calendar-header-chip-bg: var(--nn-theme-nav-bg);
-    --nn-calendar-note-indicator-color: var(--nn-theme-calendar-day-has-note-bg);
-    --nn-calendar-task-indicator-color: var(--nn-theme-calendar-day-has-unfinished-task-color);
+    --nn-calendar-note-indicator-color: var(--nn-theme-calendar-note-indicator-color);
+    --nn-calendar-task-indicator-color: var(--nn-theme-calendar-unfinished-task-indicator-color);
     --nn-calendar-active-editor-border-color: var(--nn-theme-calendar-day-active-border-color);
 }
 
@@ -2977,7 +2977,7 @@ body {
 }
 
 .nn-navigation-calendar-year-month.is-selected-month.has-feature-image {
-    color: var(--nn-theme-calendar-day-has-feature-image-color);
+    color: var(--nn-theme-calendar-feature-image-text-color);
 }
 
 .nn-navigation-calendar[data-highlight-today='true']
@@ -2991,7 +2991,7 @@ body {
 }
 
 .nn-navigation-calendar button.nn-navigation-calendar-year-month.has-feature-image {
-    color: var(--nn-theme-calendar-day-has-feature-image-color);
+    color: var(--nn-theme-calendar-feature-image-text-color);
 }
 
 .nn-navigation-calendar button.nn-navigation-calendar-year-month.is-selected-month {
@@ -2999,7 +2999,7 @@ body {
 }
 
 .nn-navigation-calendar button.nn-navigation-calendar-year-month.is-selected-month.has-feature-image {
-    color: var(--nn-theme-calendar-day-has-feature-image-color);
+    color: var(--nn-theme-calendar-feature-image-text-color);
 }
 
 .nn-navigation-calendar[data-highlight-today='true']
@@ -3418,11 +3418,11 @@ body {
 }
 
 .nn-navigation-calendar-day.has-feature-image {
-    color: var(--nn-theme-calendar-day-has-feature-image-color);
+    color: var(--nn-theme-calendar-feature-image-text-color);
 }
 
 .nn-navigation-calendar-year-month.has-feature-image {
-    color: var(--nn-theme-calendar-day-has-feature-image-color);
+    color: var(--nn-theme-calendar-feature-image-text-color);
 }
 
 .nn-navigation-calendar-day.has-feature-image .nn-navigation-calendar-day-number {
@@ -8348,7 +8348,7 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: nn-theme-calendar-day-has-note-bg
+        id: nn-theme-calendar-note-indicator-color
         title: Daily note indicator
         description: Color for the dot indicator shown on dates with a daily note.
         type: variable-themed-color
@@ -8356,7 +8356,7 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: nn-theme-calendar-day-has-unfinished-task-color
+        id: nn-theme-calendar-unfinished-task-indicator-color
         title: Unfinished task indicator
         description: Color for the hollow indicator shown on dates with unfinished tasks.
         type: variable-themed-color
@@ -8364,7 +8364,7 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: nn-theme-calendar-day-has-feature-image-color
+        id: nn-theme-calendar-feature-image-text-color
         title: Feature image text color
         description: Text color for dates with feature images.
         type: variable-themed-color

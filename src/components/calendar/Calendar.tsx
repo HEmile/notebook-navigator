@@ -137,6 +137,7 @@ export function Calendar({
 
     const momentApi = getMomentApi();
     const [cursorDate, setCursorDate] = useState<MomentInstance | null>(() => (momentApi ? momentApi().startOf('day') : null));
+    const [yearPanelYear, setYearPanelYear] = useState<number | null>(() => (momentApi ? momentApi().startOf('day').year() : null));
     const todayIso = useLocalDayKey();
     const [activeEditorFilePath, setActiveEditorFilePath] = useState<string | null>(
         () => resolveActiveEditorFilePath(app.workspace) ?? null
@@ -413,6 +414,14 @@ export function Calendar({
         }
         setCursorDate(momentApi().startOf('day'));
     }, [cursorDate, momentApi]);
+
+    useEffect(() => {
+        if (!cursorDate) {
+            return;
+        }
+
+        setYearPanelYear(previousYear => (previousYear === cursorDate.year() ? previousYear : cursorDate.year()));
+    }, [cursorDate]);
 
     const displayLocale = useMemo(() => {
         if (!momentApi) {
@@ -776,15 +785,14 @@ export function Calendar({
 
     const handleNavigateYear = useCallback(
         (delta: number) => {
-            if (!momentApi) {
-                return;
-            }
-
             clearHoverTooltip();
-            setCursorDate(prev => (prev ?? momentApi().startOf('day')).clone().add(delta, 'year'));
+            setYearPanelYear(previousYear => {
+                const baseYear = previousYear ?? cursorDate?.year() ?? momentApi?.().startOf('day').year() ?? new Date().getFullYear();
+                return baseYear + delta;
+            });
             onNavigationAction?.();
         },
-        [clearHoverTooltip, momentApi, onNavigationAction]
+        [clearHoverTooltip, cursorDate, momentApi, onNavigationAction]
     );
 
     const openCalendarHelp = useCallback(() => {
@@ -831,6 +839,7 @@ export function Calendar({
 
             clearHoverTooltip();
             setCursorDate(date.clone().startOf('day'));
+            setYearPanelYear(date.year());
             onNavigationAction?.();
         },
         [clearHoverTooltip, handleDateFilterModifiedClick, onNavigationAction]
@@ -907,10 +916,10 @@ export function Calendar({
     const monthNotesEnabled = isCustomCalendar && settings.calendarCustomMonthPattern.trim() !== '';
     const quarterNotesEnabled = isCustomCalendar && settings.calendarCustomQuarterPattern.trim() !== '';
     const yearNotesEnabled = isCustomCalendar && settings.calendarCustomYearPattern.trim() !== '';
-    const selectedYear = cursorDate?.year() ?? null;
+    const displayedYear = yearPanelYear ?? cursorDate?.year() ?? null;
 
     const yearMonthBaseEntries = useMemo<CalendarYearMonthBaseEntry[]>(() => {
-        if (!momentApi || selectedYear === null || !showYearCalendar) {
+        if (!momentApi || displayedYear === null || !showYearCalendar) {
             return [];
         }
 
@@ -919,10 +928,10 @@ export function Calendar({
 
         const entries: CalendarYearMonthBaseEntry[] = [];
         for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
-            const monthDate = momentApi(new Date(selectedYear, monthIndex, 1))
+            const monthDate = momentApi(new Date(displayedYear, monthIndex, 1))
                 .startOf('day')
                 .locale(displayLocale);
-            const daysInMonth = new Date(selectedYear, monthIndex + 1, 0).getDate();
+            const daysInMonth = new Date(displayedYear, monthIndex + 1, 0).getDate();
             const dayFiles: TFile[] = [];
 
             for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
@@ -946,7 +955,7 @@ export function Calendar({
         }
 
         return entries;
-    }, [displayLocale, getExistingDayNoteFile, momentApi, selectedYear, showYearCalendar, vaultVersion]);
+    }, [displayLocale, displayedYear, getExistingDayNoteFile, momentApi, showYearCalendar, vaultVersion]);
 
     const yearMonthEntries = useMemo<CalendarYearMonthEntry[]>(() => {
         // Force refresh when calendar task metadata changes so year month indicators stay in sync.
@@ -1069,6 +1078,14 @@ export function Calendar({
         maxConcurrentLoads: isMobile ? 2 : 4
     });
 
+    const yearPanelDate = useMemo(() => {
+        if (!momentApi || !cursorDate || displayedYear === null) {
+            return null;
+        }
+
+        return cursorDate.clone().set({ year: displayedYear }).locale(displayLocale);
+    }, [cursorDate, displayLocale, displayedYear, momentApi]);
+
     const headerPeriodNoteFiles = useMemo<CalendarHeaderPeriodNoteFiles>(() => {
         void vaultVersion;
         if (!momentApi || !cursorDate) {
@@ -1161,6 +1178,50 @@ export function Calendar({
             });
         },
         [cursorDate, displayLocale, getHeaderPeriodState, showCalendarNoteContextMenu]
+    );
+
+    const yearPanelPeriodNoteFile = useMemo(() => {
+        void vaultVersion;
+        if (!yearPanelDate || !yearNotesEnabled) {
+            return null;
+        }
+
+        return getExistingCustomCalendarNoteFile('year', yearPanelDate);
+    }, [getExistingCustomCalendarNoteFile, vaultVersion, yearNotesEnabled, yearPanelDate]);
+
+    const handleYearPanelPeriodClick = useCallback(
+        (event: React.MouseEvent<HTMLElement>) => {
+            if (!yearPanelDate) {
+                return;
+            }
+
+            if (handleDateFilterModifiedClick(event, 'year', yearPanelDate)) {
+                return;
+            }
+
+            if (!yearNotesEnabled) {
+                return;
+            }
+
+            openOrCreateCustomCalendarNote('year', yearPanelDate, yearPanelPeriodNoteFile);
+        },
+        [handleDateFilterModifiedClick, openOrCreateCustomCalendarNote, yearNotesEnabled, yearPanelDate, yearPanelPeriodNoteFile]
+    );
+
+    const handleYearPanelPeriodContextMenu = useCallback(
+        (event: React.MouseEvent<HTMLElement>) => {
+            if (!yearPanelDate) {
+                return;
+            }
+
+            showCalendarNoteContextMenu(event, {
+                kind: 'year',
+                date: yearPanelDate,
+                existingFile: yearPanelPeriodNoteFile,
+                canCreate: yearNotesEnabled
+            });
+        },
+        [showCalendarNoteContextMenu, yearNotesEnabled, yearPanelDate, yearPanelPeriodNoteFile]
     );
 
     const weekNoteFilesByKey = useMemo(() => {
@@ -1315,7 +1376,7 @@ export function Calendar({
         return null;
     }
 
-    const selectedYearValue = cursorDate.year();
+    const activeYearValue = cursorDate.year();
     const currentMonthKey = todayIso ? todayIso.slice(0, 7) : null;
     const monthYearHeaderDate = cursorDate.clone().locale(displayLocale);
     const monthLabel = monthYearHeaderDate.format('MMMM');
@@ -1400,15 +1461,16 @@ export function Calendar({
                 <CalendarYearPanel
                     showYearCalendar={showYearCalendar}
                     currentMonthKey={currentMonthKey}
-                    selectedYearValue={selectedYearValue}
-                    selectedMonthIndex={cursorDate.month()}
-                    hasYearPeriodNote={Boolean(headerPeriodNoteFiles.year)}
+                    displayedYearValue={displayedYear ?? activeYearValue}
+                    activeYearValue={activeYearValue}
+                    activeMonthIndex={cursorDate.month()}
+                    hasYearPeriodNote={Boolean(yearPanelPeriodNoteFile)}
                     yearMonthEntries={yearMonthEntries}
                     highlightedMonthFeatureImageKeys={highlightedMonthFeatureImageKeys}
                     highlightedMonthImageUrls={highlightedMonthImageUrls}
                     onNavigateYear={handleNavigateYear}
-                    onYearPeriodClick={event => handleHeaderPeriodClick(event, 'year')}
-                    onYearPeriodContextMenu={event => handleHeaderPeriodContextMenu(event, 'year')}
+                    onYearPeriodClick={handleYearPanelPeriodClick}
+                    onYearPeriodContextMenu={handleYearPanelPeriodContextMenu}
                     onSelectYearMonth={handleSelectYearMonth}
                 />
             </div>

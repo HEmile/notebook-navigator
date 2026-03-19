@@ -24,8 +24,9 @@ import type { CalendarYearMonthEntry } from './types';
 interface CalendarYearPanelProps {
     showYearCalendar: boolean;
     currentMonthKey: string | null;
-    selectedYearValue: number;
-    selectedMonthIndex: number;
+    displayedYearValue: number;
+    activeYearValue: number;
+    activeMonthIndex: number;
     hasYearPeriodNote: boolean;
     yearMonthEntries: CalendarYearMonthEntry[];
     highlightedMonthFeatureImageKeys: Set<string>;
@@ -39,8 +40,9 @@ interface CalendarYearPanelProps {
 export const CalendarYearPanel = React.memo(function CalendarYearPanel({
     showYearCalendar,
     currentMonthKey,
-    selectedYearValue,
-    selectedMonthIndex,
+    displayedYearValue,
+    activeYearValue,
+    activeMonthIndex,
     hasYearPeriodNote,
     yearMonthEntries,
     highlightedMonthFeatureImageKeys,
@@ -78,7 +80,7 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                     onClick={onYearPeriodClick}
                     onContextMenu={onYearPeriodContextMenu}
                 >
-                    {selectedYearValue}
+                    {displayedYearValue}
                 </button>
                 <button
                     type="button"
@@ -92,11 +94,11 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
 
             <div className="nn-navigation-calendar-year-grid">
                 {yearMonthEntries.map(entry => {
-                    const isSelectedMonth = entry.monthIndex === selectedMonthIndex;
+                    const isSelectedMonth = displayedYearValue === activeYearValue && entry.monthIndex === activeMonthIndex;
                     const isCurrentMonth = entry.key === currentMonthKey;
                     const hasFeatureImageKey = highlightedMonthFeatureImageKeys.has(entry.key);
                     const featureImageUrl = highlightedMonthImageUrls[entry.key] ?? null;
-                    const monthAriaLabel = `${entry.fullLabel} ${selectedYearValue}`;
+                    const monthAriaLabel = `${entry.fullLabel} ${displayedYearValue}`;
                     const style: React.CSSProperties | undefined = featureImageUrl
                         ? { backgroundImage: `url(${featureImageUrl})` }
                         : undefined;
