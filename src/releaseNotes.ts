@@ -80,6 +80,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.5.2',
         date: '2026-03-20',
         showOnUpdate: true,
+        new: [
+            'New setting: Style settings > Calendar > ==Feature image overlay color==. Adds a color overlay to darken or tint feature images in calendar days and months. Set separate colors for light and dark mode.'
+        ],
         improved: [
             'Icons in frontmatter now support wikilink-wrapped SVG paths like **[[icons/folder.svg]]**.',
             'Yearly calendar months now longer show "(n)" suffix, instead they show the same circles as daily notes (filled circle for notes, hollow circle for tasks).'

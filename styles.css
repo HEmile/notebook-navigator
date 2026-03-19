@@ -198,6 +198,7 @@ body {
     --nn-theme-calendar-day-has-note-bg: var(--nn-theme-foreground-faded);
     --nn-theme-calendar-day-has-unfinished-task-color: var(--nn-theme-calendar-day-has-note-bg);
     --nn-theme-calendar-day-has-feature-image-color: white;
+    --nn-theme-calendar-feature-image-overlay-color: rgb(0 0 0 / 0.05);
     --nn-theme-calendar-day-today-color: var(--nn-theme-calendar-day-in-month-color);
     --nn-theme-calendar-day-today-bg: var(--text-selection);
     --nn-theme-calendar-day-active-border-color: var(--nn-theme-foreground-faded);
@@ -345,6 +346,7 @@ body {
 
 .theme-dark {
     --nn-theme-pinned-shortcut-shadow-color: rgba(0, 0, 0, 0.18);
+    --nn-theme-calendar-feature-image-overlay-color: rgb(0 0 0 / 0.3);
 }
 /* Source: src/styles/sections/layout-base.css */
 
@@ -2889,6 +2891,26 @@ body {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+}
+
+.nn-navigation-calendar-day.has-feature-image::before,
+.nn-navigation-calendar-year-month.has-feature-image::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03) 24%, rgba(255, 255, 255, 0) 48%),
+        linear-gradient(
+            var(--nn-theme-calendar-feature-image-overlay-color, rgb(0 0 0 / 0.05)),
+            var(--nn-theme-calendar-feature-image-overlay-color, rgb(0 0 0 / 0.05))
+        );
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+    z-index: 0;
 }
 
 .nn-navigation-calendar-year-month-label {
@@ -8347,6 +8369,15 @@ settings:
         description: Text color for dates with feature images.
         type: variable-themed-color
         format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: nn-theme-calendar-feature-image-overlay-color
+        title: Feature image overlay color
+        description: Adds a color overlay to darken or tint feature images in calendar days and months. Set separate colors for light and dark mode.
+        type: variable-themed-color
+        opacity: true
+        format: rgb
         default-light: '#'
         default-dark: '#'
     -

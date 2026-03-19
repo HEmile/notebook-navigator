@@ -349,7 +349,7 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: nn-theme-calendar-day-has-note-bg
+        id: nn-theme-calendar-note-indicator-color
         title: Daily note indicator
         description: Color for the dot indicator shown on dates with a daily note.
         type: variable-themed-color
@@ -357,7 +357,7 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: nn-theme-calendar-day-has-unfinished-task-color
+        id: nn-theme-calendar-unfinished-task-indicator-color
         title: Unfinished task indicator
         description: Color for the hollow indicator shown on dates with unfinished tasks.
         type: variable-themed-color
@@ -365,11 +365,20 @@ settings:
         default-light: '#'
         default-dark: '#'
     -
-        id: nn-theme-calendar-day-has-feature-image-color
+        id: nn-theme-calendar-feature-image-text-color
         title: Feature image text color
         description: Text color for dates with feature images.
         type: variable-themed-color
         format: hex
+        default-light: '#'
+        default-dark: '#'
+    -
+        id: nn-theme-calendar-feature-image-overlay-color
+        title: Feature image overlay color
+        description: Adds a color overlay to darken or tint feature images in calendar days and months. Set separate colors for light and dark mode.
+        type: variable-themed-color
+        opacity: true
+        format: rgb
         default-light: '#'
         default-dark: '#'
     -

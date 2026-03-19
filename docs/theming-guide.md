@@ -69,9 +69,10 @@ Most variables are colors and should resolve to a computed color (some are used 
 | `--nn-theme-calendar-day-outside-month-color` | `var(--nn-theme-foreground-faded)`     | Text color for days outside the current month   |
 | `--nn-theme-calendar-weekend-bg`              | `color-mix(in srgb, var(--nn-theme-foreground) 10%, transparent)` | Background color for weekend day cells |
 | `--nn-theme-calendar-hover-bg`                | `var(--background-modifier-hover)`     | Hover background for calendar buttons and days  |
-| `--nn-theme-calendar-day-has-note-bg`         | `var(--nn-theme-foreground-faded)`     | Dot color for dates with a daily note           |
-| `--nn-theme-calendar-day-has-unfinished-task-color` | `var(--nn-theme-calendar-day-has-note-bg)` | Color for the hollow indicator shown on dates with unfinished tasks |
-| `--nn-theme-calendar-day-has-feature-image-color` | `white`                             | Text color for dates with feature images        |
+| `--nn-theme-calendar-note-indicator-color`   | `var(--nn-theme-foreground-faded)`     | Dot color for dates with a daily note           |
+| `--nn-theme-calendar-unfinished-task-indicator-color` | `var(--nn-theme-calendar-note-indicator-color)` | Color for the hollow indicator shown on dates with unfinished tasks |
+| `--nn-theme-calendar-feature-image-text-color` | `white`                             | Text color for dates with feature images        |
+| `--nn-theme-calendar-feature-image-overlay-color` | `rgb(0 0 0 / 0.05)` in light mode, `rgb(0 0 0 / 0.3)` in dark mode | Overlay color for calendar feature images |
 | `--nn-theme-calendar-day-today-color`         | `var(--nn-theme-calendar-day-in-month-color)` | Text color for today's date                |
 | `--nn-theme-calendar-day-today-bg`            | `var(--text-selection)`                | Background color for today's date highlight     |
 | `--nn-theme-calendar-day-active-border-color` | `var(--nn-theme-foreground-faded)` | Border color for the outline shown on the active day in the calendar |
@@ -315,9 +316,10 @@ body {
   --nn-theme-calendar-day-outside-month-color: var(--nn-theme-foreground-faded);
   --nn-theme-calendar-weekend-bg: rgba(169, 183, 198, 0.1);
   --nn-theme-calendar-hover-bg: #4b5059;
-  --nn-theme-calendar-day-has-note-bg: #4a78c8;
-  --nn-theme-calendar-day-has-unfinished-task-color: #4a78c8;
-  --nn-theme-calendar-day-has-feature-image-color: #ffffff;
+  --nn-theme-calendar-note-indicator-color: #4a78c8;
+  --nn-theme-calendar-unfinished-task-indicator-color: #4a78c8;
+  --nn-theme-calendar-feature-image-text-color: #ffffff;
+  --nn-theme-calendar-feature-image-overlay-color: rgb(0 0 0 / 0.05);
   --nn-theme-calendar-day-today-color: #ffffff;
   --nn-theme-calendar-day-today-bg: #4a78c8;
   --nn-theme-calendar-day-active-border-color: rgba(169, 183, 198, 0.5);
@@ -479,6 +481,7 @@ To support both light and dark modes, define your variables under `.theme-light`
 .theme-light {
   /* Navigation pane */
   --nn-theme-nav-bg: #ffeeff; /* Light pink */
+  --nn-theme-calendar-feature-image-overlay-color: rgb(0 0 0 / 0.05);
   --nn-theme-nav-separator-color: #ff99cc; /* Pink separator lines */
   --nn-theme-navitem-name-color: #ff66cc; /* Pink text */
   --nn-theme-navitem-hover-bg: #ffddff; /* Very light pink */
@@ -501,6 +504,7 @@ To support both light and dark modes, define your variables under `.theme-light`
 .theme-dark {
   /* Navigation pane */
   --nn-theme-nav-bg: #330033; /* Dark purple */
+  --nn-theme-calendar-feature-image-overlay-color: rgb(0 0 0 / 0.3);
   --nn-theme-nav-separator-color: #ff66ff; /* Bright separator lines */
   --nn-theme-navitem-name-color: #ffaaff; /* Light pink text */
   --nn-theme-navitem-hover-bg: #442244; /* Dark purple hover */
