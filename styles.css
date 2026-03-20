@@ -3780,6 +3780,12 @@ body {
     height: calc(var(--nn-file-title-line-height) * var(--filename-rows, 1));
 }
 
+.nn-file-name[data-title-rows='1'] {
+    display: block;
+    white-space: nowrap;
+    word-break: normal;
+}
+
 .nn-file-name[data-has-color='true'] {
     color: var(--nn-file-name-custom-color);
 }
@@ -3954,6 +3960,9 @@ body {
 /* Preview on same line as date - match date line-height for alignment */
 .nn-file-second-line .nn-file-preview {
     line-height: var(--nn-file-single-text-line-height);
+    display: block;
+    white-space: nowrap;
+    word-break: normal;
 }
 
 /* Parent folder indicator shown under file names */

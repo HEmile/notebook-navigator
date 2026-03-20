@@ -469,6 +469,7 @@ export const FileItem = React.memo(function FileItem({
             <div
                 className="nn-file-name"
                 data-has-color={applyColorToName ? 'true' : 'false'}
+                data-title-rows={appearanceSettings.titleRows}
                 style={
                     {
                         '--filename-rows': appearanceSettings.titleRows,
