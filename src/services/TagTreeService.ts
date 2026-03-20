@@ -20,6 +20,7 @@ import { TagTreeNode } from '../types/storage';
 import { findTagNode, collectAllTagPaths, collectTagFilePaths as collectTagFilePathsFromNode } from '../utils/tagTree';
 import { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
 import { naturalCompare } from '../utils/sortUtils';
+import { normalizeTagPathValue } from '../utils/tagPrefixMatcher';
 
 /**
  * Service that provides access to the tag tree from StorageContext
@@ -198,8 +199,7 @@ export class TagTreeService implements ITagTreeProvider {
     }
 
     private normalizeLookupPath(tagPath: string): string {
-        const cleanPath = tagPath.startsWith('#') ? tagPath.substring(1) : tagPath;
-        return cleanPath.toLowerCase();
+        return normalizeTagPathValue(tagPath);
     }
 
     private rebuildTreeIndexes(tree: Map<string, TagTreeNode>): { nodeByPath: Map<string, TagTreeNode>; flattenedTags: TagTreeNode[] } {

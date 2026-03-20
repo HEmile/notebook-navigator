@@ -140,6 +140,21 @@ describe('extractMetadataFromCache - name extraction', () => {
 
         expect(result.fn).toBe('From array');
     });
+
+    it('matches configured name fields across NFC and NFD-equivalent keys', () => {
+        const settings = createSettings({
+            frontmatterNameField: 'réunion'
+        });
+        const metadata: CachedMetadata = {
+            frontmatter: {
+                're\u0301union': 'Project X'
+            }
+        };
+
+        const result = extractMetadataFromCache(metadata, settings);
+
+        expect(result.fn).toBe('Project X');
+    });
 });
 
 describe('extractMetadataFromCache - background extraction', () => {
@@ -156,5 +171,20 @@ describe('extractMetadataFromCache - background extraction', () => {
         const result = extractMetadataFromCache(metadata, settings);
 
         expect(result.background).toBe('#112233');
+    });
+
+    it('matches configured icon fields across NFC and NFD-equivalent keys', () => {
+        const settings = createSettings({
+            frontmatterIconField: 'réunion'
+        });
+        const metadata: CachedMetadata = {
+            frontmatter: {
+                're\u0301union': 'LiCalendar'
+            }
+        };
+
+        const result = extractMetadataFromCache(metadata, settings);
+
+        expect(result.icon).toBe('calendar');
     });
 });

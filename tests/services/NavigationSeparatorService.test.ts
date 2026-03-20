@@ -24,7 +24,7 @@ import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { ISettingsProvider } from '../../src/interfaces/ISettingsProvider';
 import type { CleanupValidators } from '../../src/services/MetadataService';
 import { createDefaultFileData } from '../../src/storage/indexeddb/fileData';
-import { buildPropertySeparatorKey } from '../../src/utils/navigationSeparators';
+import { buildPropertySeparatorKey, buildTagSeparatorKey } from '../../src/utils/navigationSeparators';
 import { buildPropertyValueNodeId } from '../../src/utils/propertyTree';
 import { setActivePropertyFields } from '../../src/utils/vaultProfiles';
 
@@ -140,6 +140,69 @@ describe('NavigationSeparatorService property cleanup', () => {
         const validators = createValidators([]);
 
         const changed = await service.cleanupWithValidators(validators, settings);
+
+        expect(changed).toBe(true);
+        expect(settings.navigationSeparators).toEqual({});
+    });
+});
+
+describe('NavigationSeparatorService tag cleanup', () => {
+    const app = new App();
+
+    it('normalizes legacy tag separator keys during cleanup without tag provider', async () => {
+        const settings = createSettings();
+        const legacyKey = buildTagSeparatorKey('re\u0301union');
+        const normalizedKey = buildTagSeparatorKey('réunion');
+        settings.navigationSeparators = {
+            [legacyKey]: true
+        };
+
+        const provider = new TestSettingsProvider(settings);
+        const service = new NavigationSeparatorService(app, provider, () => null);
+
+        const changed = await service.cleanupSeparators(settings);
+
+        expect(changed).toBe(true);
+        expect(settings.navigationSeparators[legacyKey]).toBeUndefined();
+        expect(settings.navigationSeparators[normalizedKey]).toBe(true);
+    });
+
+    it('normalizes legacy tag separator keys and keeps existing entries when tag exists', async () => {
+        const settings = createSettings();
+        const legacyKey = buildTagSeparatorKey('re\u0301union');
+        const normalizedKey = buildTagSeparatorKey('réunion');
+        settings.navigationSeparators = {
+            [legacyKey]: true
+        };
+
+        const provider = new TestSettingsProvider(settings);
+        const service = new NavigationSeparatorService(app, provider, () => null);
+        const validators = {
+            ...createValidators([]),
+            tagTree: new Map([['réunion', {}]])
+        } as CleanupValidators;
+
+        const changed = await service.cleanupWithValidators(validators, settings);
+
+        expect(changed).toBe(true);
+        expect(settings.navigationSeparators).toEqual({
+            [normalizedKey]: true
+        });
+    });
+
+    it('removes normalized and legacy tag separators when tag no longer exists', async () => {
+        const settings = createSettings();
+        const legacyKey = buildTagSeparatorKey('re\u0301union');
+        const normalizedKey = buildTagSeparatorKey('réunion');
+        settings.navigationSeparators = {
+            [legacyKey]: true,
+            [normalizedKey]: true
+        };
+
+        const provider = new TestSettingsProvider(settings);
+        const service = new NavigationSeparatorService(app, provider, () => null);
+
+        const changed = await service.cleanupWithValidators(createValidators([]), settings);
 
         expect(changed).toBe(true);
         expect(settings.navigationSeparators).toEqual({});

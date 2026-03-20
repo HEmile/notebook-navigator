@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { casefold } from '../../utils/recordUtils';
+
 export interface FrontmatterTagField {
     key: string;
     lowerKey: string;
@@ -74,7 +76,7 @@ export function mutateFrontmatterTagFields(frontmatter: Record<string, unknown>,
             continue;
         }
 
-        const lowerKey = key.toLowerCase();
+        const lowerKey = casefold(key);
         if (lowerKey === 'tags' || lowerKey === 'tag' || lowerKey === 'aliases' || lowerKey === 'alias') {
             mutateValue(key, lowerKey, value);
         }

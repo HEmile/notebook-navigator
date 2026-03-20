@@ -19,11 +19,14 @@
 import { describe, expect, it } from 'vitest';
 import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../src/types';
 import {
+    ShortcutType,
     ShortcutStartType,
+    getShortcutKey,
     getShortcutStartTargetFingerprint,
     isShortcutStartFolder,
     isShortcutStartProperty,
     isShortcutStartTag,
+    normalizeSearchShortcutName,
     normalizeShortcutStartTarget
 } from '../../src/types/shortcuts';
 
@@ -89,6 +92,29 @@ describe('shortcuts', () => {
             expect(getShortcutStartTargetFingerprint({ type: ShortcutStartType.PROPERTY, nodeId: 'key:Status=In Progress' })).toBe(
                 'property:key:status=in progress'
             );
+        });
+    });
+
+    describe('search shortcut names', () => {
+        it('normalizes NFC and NFD-equivalent names to the same canonical identifier', () => {
+            expect(normalizeSearchShortcutName('Café')).toBe(normalizeSearchShortcutName('Cafe\u0301'));
+        });
+
+        it('builds the same shortcut key for NFC and NFD-equivalent names', () => {
+            const nfcShortcut = {
+                type: ShortcutType.SEARCH,
+                name: 'Café',
+                query: 'tag:#inbox',
+                provider: 'internal' as const
+            };
+            const nfdShortcut = {
+                type: ShortcutType.SEARCH,
+                name: 'Cafe\u0301',
+                query: 'tag:#inbox',
+                provider: 'internal' as const
+            };
+
+            expect(getShortcutKey(nfcShortcut)).toBe(getShortcutKey(nfdShortcut));
         });
     });
 });

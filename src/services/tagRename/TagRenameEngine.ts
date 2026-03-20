@@ -17,6 +17,7 @@
  */
 
 import { App, TFile, parseFrontMatterAliases, parseFrontMatterTags, TagCache } from 'obsidian';
+import { normalizeCaseInsensitiveIdentifierPreservingWhitespace } from '../../utils/recordUtils';
 import { normalizeTagPathValue } from '../../utils/tagPrefixMatcher';
 import { mutateFrontmatterTagFields } from './frontmatterTagMutator';
 
@@ -97,9 +98,9 @@ export class TagReplacement {
         // Pre-cache common transformations for faster lookup
         this.cache.set(this.fromTag.tag, this.toTag.tag);
         this.cache.set(this.fromTag.name, this.toTag.name);
-        this.cache.set(this.fromTag.tag.toLowerCase(), this.toTag.tag);
+        this.cache.set(normalizeCaseInsensitiveIdentifierPreservingWhitespace(this.fromTag.tag), this.toTag.tag);
         if (this.fromTag.name.length > 0) {
-            this.cache.set(this.fromTag.name.toLowerCase(), this.toTag.name);
+            this.cache.set(normalizeCaseInsensitiveIdentifierPreservingWhitespace(this.fromTag.name), this.toTag.name);
         }
     }
 
@@ -111,11 +112,55 @@ export class TagReplacement {
         return this.toTag;
     }
 
+    private replaceMatchedValue(value: string): string {
+        const cached = this.lookup(value);
+        if (cached !== value) {
+            return cached;
+        }
+
+        const normalizedValue = normalizeCaseInsensitiveIdentifierPreservingWhitespace(value);
+        const normalizedCached = this.lookup(normalizedValue);
+        if (normalizedCached !== normalizedValue) {
+            return this.cacheValue(value, normalizedValue, normalizedCached);
+        }
+
+        if (normalizedValue.startsWith(this.fromTag.canonicalPrefix)) {
+            const substituted = this.replaceMatchedTagPrefix(value, true);
+            return this.cacheValue(value, normalizedValue, substituted);
+        }
+
+        if (`#${normalizedValue}`.startsWith(this.fromTag.canonicalPrefix)) {
+            const substituted = this.replaceMatchedTagPrefix(value, false);
+            return this.cacheValue(value, normalizedValue, substituted);
+        }
+
+        return value;
+    }
+
     /**
-     * Replaces the tag within a string literal at the specified position.
+     * Replaces the matched tag within a string literal at the specified position.
+     * When `matchedValue` is provided, its length is used for the splice.
      */
-    inString(text: string, position = 0): string {
-        return `${text.slice(0, position)}${this.toTag.tag}${text.slice(position + this.fromTag.tag.length)}`;
+    inString(text: string, position = 0, matchedValue?: string): string {
+        const targetValue = matchedValue ?? (position === 0 ? text : this.fromTag.tag);
+        const replacement = this.replaceMatchedValue(targetValue);
+        return `${text.slice(0, position)}${replacement}${text.slice(position + targetValue.length)}`;
+    }
+
+    private replaceMatchedTagPrefix(value: string, includeHash: boolean): string {
+        const rawValue = includeHash ? value.slice(1) : value;
+        const sourceDepth = this.fromTag.canonicalName.split('/').filter(Boolean).length;
+        if (sourceDepth === 0) {
+            return value;
+        }
+
+        const suffixSegments = rawValue.split('/').slice(sourceDepth);
+        const targetValue = includeHash ? this.toTag.tag : this.toTag.name;
+        if (suffixSegments.length === 0) {
+            return targetValue;
+        }
+
+        return `${targetValue}/${suffixSegments.join('/')}`;
     }
 
     /**
@@ -142,28 +187,7 @@ export class TagReplacement {
                 return replaced;
             }
 
-            const cached = this.lookup(value);
-            if (cached !== value) {
-                return cached;
-            }
-
-            const lowercase = value.toLowerCase();
-            const lowercaseCached = this.lookup(lowercase);
-            if (lowercaseCached !== lowercase) {
-                return this.cacheValue(value, lowercase, lowercaseCached);
-            }
-
-            if (lowercase.startsWith(this.fromTag.canonicalPrefix)) {
-                const substituted = this.inString(value);
-                return this.cacheValue(value, lowercase, substituted);
-            }
-
-            if (`#${lowercase}`.startsWith(this.fromTag.canonicalPrefix)) {
-                const substituted = this.inString(`#${value}`).slice(1);
-                return this.cacheValue(value, lowercase, substituted);
-            }
-
-            return value;
+            return this.replaceMatchedValue(value);
         });
     }
 
@@ -179,11 +203,11 @@ export class TagReplacement {
             return null;
         }
 
-        const existing = new Set(tagNames.map(name => name.toLowerCase()));
+        const existing = new Set(tagNames.map(name => normalizeCaseInsensitiveIdentifierPreservingWhitespace(name)));
 
         for (const tagName of tagNames.filter(name => this.fromTag.matches(name))) {
             const renamed = this.inString(tagName);
-            if (existing.has(renamed.toLowerCase())) {
+            if (existing.has(normalizeCaseInsensitiveIdentifierPreservingWhitespace(renamed))) {
                 return [new TagDescriptor(tagName), new TagDescriptor(renamed)];
             }
         }
@@ -199,11 +223,11 @@ export class TagReplacement {
     }
 
     /**
-     * Caches a replacement value for both original and lowercase versions
+     * Caches a replacement value for both original and canonical lookup variants.
      */
-    private cacheValue(original: string, lowercase: string, value: string): string {
+    private cacheValue(original: string, normalized: string, value: string): string {
         this.cache.set(original, value);
-        this.cache.set(lowercase, value);
+        this.cache.set(normalized, value);
         return value;
     }
 }
@@ -261,7 +285,7 @@ export class RenameFile {
             if (!matchesExtracted || !matchesCache) {
                 return { outcome: 'skipped', reason: 'file-changed' };
             }
-            updatedText = replacement.inString(updatedText, start.offset);
+            updatedText = replacement.inString(updatedText, start.offset, extracted);
         }
 
         const inlineChanged = updatedText !== original;

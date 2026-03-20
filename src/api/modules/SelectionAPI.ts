@@ -23,9 +23,11 @@ import { STORAGE_KEYS } from '../../types';
 import { localStorage } from '../../utils/localStorage';
 import {
     canRestorePropertySelectionNodeId,
+    normalizePropertyNodeId,
     parseStoredPropertySelectionNodeId,
     type PropertySelectionNodeId
 } from '../../utils/propertyTree';
+import { normalizeTagPath } from '../../utils/tagUtils';
 
 type SelectionAPIHost = {
     app: {
@@ -106,9 +108,10 @@ export class SelectionAPI {
 
             const folderPath = localStorage.get<string>(STORAGE_KEYS.selectedFolderKey);
             const tagName = localStorage.get<string>(STORAGE_KEYS.selectedTagKey);
+            const normalizedTagName = normalizeTagPath(tagName);
 
-            if (tagName) {
-                this.selectionState.navigationTag = tagName;
+            if (normalizedTagName) {
+                this.selectionState.navigationTag = normalizedTagName;
                 this.selectionState.navigationFolder = null;
                 this.selectionState.navigationProperty = null;
             } else if (folderPath) {
@@ -168,14 +171,16 @@ export class SelectionAPI {
      */
     updateNavigationState(folder: TFolder | null, tag: string | null, property: PropertySelectionNodeId | null): void {
         this.navigationStateInitialized = true;
+        const normalizedProperty = property === null ? null : (normalizePropertyNodeId(property) ?? property);
+        const normalizedTag = tag === null ? null : normalizeTagPath(tag);
 
-        if (property) {
+        if (normalizedProperty) {
             this.selectionState.navigationFolder = null;
             this.selectionState.navigationTag = null;
-            this.selectionState.navigationProperty = property;
-        } else if (tag) {
+            this.selectionState.navigationProperty = normalizedProperty;
+        } else if (normalizedTag) {
             this.selectionState.navigationFolder = null;
-            this.selectionState.navigationTag = tag;
+            this.selectionState.navigationTag = normalizedTag;
             this.selectionState.navigationProperty = null;
         } else if (folder) {
             this.selectionState.navigationFolder = folder;

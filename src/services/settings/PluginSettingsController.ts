@@ -75,10 +75,11 @@ import {
     isStringRecordValue,
     sanitizeRecord
 } from '../../utils/recordUtils';
-import { clearHiddenTagPatternCache } from '../../utils/tagPrefixMatcher';
+import { clearHiddenTagPatternCache, normalizeTagPathValue } from '../../utils/tagPrefixMatcher';
 import { ensureVaultProfiles, DEFAULT_VAULT_PROFILE_ID, clearHiddenFolderMatcherCache } from '../../utils/vaultProfiles';
 import { getPathPatternCacheKey } from '../../utils/pathPatternMatcher';
 import { normalizePropertyKeyNodeId, normalizePropertyNodeId } from '../../utils/propertyTree';
+import { normalizeNavigationSeparatorKey } from '../../utils/navigationSeparators';
 import { normalizeUXIconMapRecord } from '../../utils/uxIcons';
 import { sanitizeKeyboardShortcuts } from '../../utils/keyboardShortcuts';
 import { isRecord } from '../../utils/typeGuards';
@@ -392,7 +393,11 @@ export class PluginSettingsController {
             const normalized = Object.create(null) as Record<string, T>;
             const sanitized = sanitizeRecord(record);
             for (const [key, value] of Object.entries(sanitized)) {
-                normalized[key.toLowerCase()] = value;
+                const canonicalKey = normalizeTagPathValue(key);
+                if (!canonicalKey) {
+                    continue;
+                }
+                normalized[canonicalKey] = value;
             }
             return normalized;
         };
@@ -402,7 +407,7 @@ export class PluginSettingsController {
                 return [];
             }
 
-            return [...new Set(array.map(value => value.toLowerCase()))];
+            return [...new Set(array.map(value => normalizeTagPathValue(value)).filter(value => value.length > 0))];
         };
 
         if (this.currentSettings.tagColors) {
@@ -419,6 +424,10 @@ export class PluginSettingsController {
 
         if (this.currentSettings.tagSortOverrides) {
             this.currentSettings.tagSortOverrides = normalizeRecord(this.currentSettings.tagSortOverrides);
+        }
+
+        if (this.currentSettings.tagTreeSortOverrides) {
+            this.currentSettings.tagTreeSortOverrides = normalizeRecord(this.currentSettings.tagTreeSortOverrides);
         }
 
         if (this.currentSettings.tagAppearances) {
@@ -492,6 +501,22 @@ export class PluginSettingsController {
         if (this.currentSettings.propertyAppearances) {
             this.currentSettings.propertyAppearances = normalizePropertyNodeRecord(this.currentSettings.propertyAppearances);
         }
+    }
+
+    public normalizeNavigationSeparatorSettings(): void {
+        const normalized = Object.create(null) as Record<string, boolean>;
+        const sanitized = sanitizeRecord(this.currentSettings.navigationSeparators, isBooleanRecordValue);
+
+        for (const [key, value] of Object.entries(sanitized)) {
+            const normalizedKey = normalizeNavigationSeparatorKey(key);
+            if (!normalizedKey) {
+                continue;
+            }
+
+            normalized[normalizedKey] = value;
+        }
+
+        this.currentSettings.navigationSeparators = normalized;
     }
 
     public async saveSettings(): Promise<void> {

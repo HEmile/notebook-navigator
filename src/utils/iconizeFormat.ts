@@ -17,7 +17,7 @@
  */
 
 import { extractFirstEmoji } from './emojiUtils';
-import { sanitizeRecord } from './recordUtils';
+import { casefold, casefoldPreservingWhitespace, sanitizeRecord } from './recordUtils';
 
 /**
  * Base mapping between icon providers and their pack names
@@ -412,7 +412,7 @@ export function normalizeFileTypeIconMapKey(input: string): string {
     const trimmed = input.trim();
     const unquoted = tryUnquoteSingleQuotedText(trimmed);
     const value = unquoted ?? trimmed;
-    return value.trim().replace(/^\./, '').toLowerCase();
+    return casefold(value.trim().replace(/^\./, ''));
 }
 
 /**
@@ -431,16 +431,15 @@ export function normalizeFileNameIconMapKey(input: string): string {
         if (unquoted.trim().length === 0) {
             return '';
         }
-        // Return the unquoted value as-is, preserving internal whitespace
-        return unquoted.toLowerCase();
+        return casefoldPreservingWhitespace(unquoted);
     }
 
     // Preserve whitespace if the raw input has leading or trailing spaces
     if (/^\s|\s$/.test(input)) {
-        return input.toLowerCase();
+        return casefoldPreservingWhitespace(input);
     }
 
-    return input.trim().toLowerCase();
+    return casefold(input);
 }
 
 interface NormalizedIconMapEntry {

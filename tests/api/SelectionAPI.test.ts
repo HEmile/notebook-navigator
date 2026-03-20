@@ -20,6 +20,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { TFolder } from 'obsidian';
 import { SelectionAPI } from '../../src/api/modules/SelectionAPI';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
+import { buildPropertyValueNodeId, normalizePropertyTreeValuePath } from '../../src/utils/propertyTree';
 
 function createSelectionAPI(): SelectionAPI {
     return new SelectionAPI({
@@ -71,6 +72,32 @@ describe('SelectionAPI', () => {
             folder: null,
             tag: null,
             property: 'key:status'
+        });
+    });
+
+    it('normalizes property navigation ids before storing navigation state', () => {
+        const selectionAPI = createSelectionAPI();
+
+        selectionAPI.updateNavigationState(null, null, 'key:Re\u0301union=Planifie\u0301');
+
+        expect(selectionAPI.getNavItem()).toEqual({
+            type: 'property',
+            folder: null,
+            tag: null,
+            property: buildPropertyValueNodeId('réunion', normalizePropertyTreeValuePath('Planifié'))
+        });
+    });
+
+    it('normalizes tag navigation ids before storing navigation state', () => {
+        const selectionAPI = createSelectionAPI();
+
+        selectionAPI.updateNavigationState(null, '#re\u0301union/notes', null);
+
+        expect(selectionAPI.getNavItem()).toEqual({
+            type: 'tag',
+            folder: null,
+            tag: 'réunion/notes',
+            property: null
         });
     });
 });

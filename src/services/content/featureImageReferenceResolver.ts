@@ -19,6 +19,7 @@
 import { normalizePath, type App, type FrontMatterCache, TFile } from 'obsidian';
 import type { NotebookNavigatorSettings } from '../../settings';
 import { isImageExtension, isImageFile, isPdfFile } from '../../utils/fileTypeUtils';
+import { getMatchingRecordValue } from '../../utils/recordUtils';
 import { getYoutubeVideoId } from '../../utils/youtubeUtils';
 
 export type FeatureImageReference =
@@ -259,7 +260,7 @@ export function findFeatureImageReference(params: {
     const frontmatter = params.frontmatter;
     if (frontmatter) {
         for (const property of params.settings.featureImageProperties) {
-            const candidates = extractFrontmatterStringValues(frontmatter[property]);
+            const candidates = extractFrontmatterStringValues(getMatchingRecordValue(frontmatter, property));
 
             for (const candidate of candidates) {
                 const extracted = extractFrontmatterImageTarget(candidate);

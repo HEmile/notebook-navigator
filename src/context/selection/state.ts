@@ -17,6 +17,8 @@
  */
 
 import type { App, TFile, TFolder } from 'obsidian';
+import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../types';
+import { normalizePropertyNodeId } from '../../utils/propertyTree';
 import { normalizeTagPath } from '../../utils/tagUtils';
 import type { SelectionAction, SelectionRevealSource, SelectionState } from './types';
 
@@ -26,6 +28,14 @@ function createSelectedFilesSet(file?: TFile | null): Set<string> {
         selectedFiles.add(file.path);
     }
     return selectedFiles;
+}
+
+function normalizeSelectedPropertyNodeId(nodeId: SelectionState['selectedProperty']): SelectionState['selectedProperty'] {
+    if (!nodeId || nodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
+        return nodeId;
+    }
+
+    return normalizePropertyNodeId(nodeId) ?? nodeId;
 }
 
 function withSingleSelection(
@@ -118,7 +128,7 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 selectionType: 'property',
                 selectedFolder: null,
                 selectedTag: null,
-                selectedProperty: action.nodeId,
+                selectedProperty: normalizeSelectedPropertyNodeId(action.nodeId),
                 selectedFile: action.autoSelectedFile ?? null,
                 isRevealOperation: false,
                 isFolderChangeWithAutoSelect: action.autoSelectedFile !== undefined && action.autoSelectedFile !== null,
@@ -228,7 +238,7 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                         selectionType: 'property',
                         selectedFolder: null,
                         selectedTag: null,
-                        selectedProperty: action.targetProperty,
+                        selectedProperty: normalizeSelectedPropertyNodeId(action.targetProperty),
                         selectedFile: action.file,
                         isRevealOperation: true,
                         isFolderChangeWithAutoSelect: false,

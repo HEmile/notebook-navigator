@@ -98,6 +98,26 @@ describe('TagFileMutations', () => {
         expect(file.content).toBe('#project kickoff\nFollow up with tomorrow');
     });
 
+    it('adds tags using the existing frontmatter key and dedupes NFC and NFD-equivalent values', async () => {
+        const file = createFile('Notes/Cafe.md', { Tags: ['Cafe\u0301'] }, '');
+
+        await fileMutations.addTagToFile(file, 'Café');
+
+        expect(file.frontmatter.Tags).toEqual(['Cafe\u0301']);
+        expect(Reflect.has(file.frontmatter, 'tags')).toBe(false);
+    });
+
+    it('clears tags using the existing frontmatter key when keeping an empty tags property', async () => {
+        settings.keepEmptyTagsProperty = true;
+        const file = createFile('Notes/Tagged.md', { Tags: 'project' }, '');
+
+        const cleared = await fileMutations.clearAllTagsFromFile(file);
+
+        expect(cleared).toBe(true);
+        expect(file.frontmatter.Tags).toEqual([]);
+        expect(Reflect.has(file.frontmatter, 'tags')).toBe(false);
+    });
+
     it('removes emoji inline tag occurrences when removing tag from file', async () => {
         const file = createFile('Notes/Emoji.md', { tags: ['project😀'] }, 'Plan #project😀 today');
         cachedTagsByPath.set(file.path, ['project😀']);

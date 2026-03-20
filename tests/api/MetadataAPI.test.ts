@@ -21,6 +21,7 @@ import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { NotebookNavigatorSettings } from '../../src/settings';
 import type { IconString } from '../../src/api/types';
 import { TFolder } from 'obsidian';
+import { buildPropertyValueNodeId, normalizePropertyTreeValuePath } from '../../src/utils/propertyTree';
 
 describe('MetadataAPI icon normalization', () => {
     let foldersByPath: Map<string, TFolder>;
@@ -339,6 +340,67 @@ describe('MetadataAPI icon normalization', () => {
         expect(triggerMock).toHaveBeenCalledWith('tag-changed', {
             tag: 'status',
             metadata: null
+        });
+    });
+
+    it('reads tag metadata across NFC and NFD-equivalent tag paths', () => {
+        plugin.settings.tagColors.réunion = '#112233';
+        const metadataAPI = new MetadataAPI(api);
+
+        expect(metadataAPI.getTagMeta('re\u0301union')).toEqual({
+            color: '#112233',
+            backgroundColor: undefined,
+            icon: undefined
+        });
+        expect(metadataAPI.getTagMeta('#re\u0301union')).toEqual({
+            color: '#112233',
+            backgroundColor: undefined,
+            icon: undefined
+        });
+    });
+
+    it('normalizes raw tag metadata keys when updating from settings', () => {
+        const metadataAPI = new MetadataAPI(api);
+        const updatedSettings = structuredClone(plugin.settings);
+        updatedSettings.tagColors['re\u0301union'] = '#112233';
+
+        metadataAPI.updateFromSettings(updatedSettings);
+
+        expect(metadataAPI.getTagMeta('réunion')).toEqual({
+            color: '#112233',
+            backgroundColor: undefined,
+            icon: undefined
+        });
+        expect(triggerMock).toHaveBeenCalledWith('tag-changed', {
+            tag: 'réunion',
+            metadata: {
+                color: '#112233',
+                backgroundColor: undefined,
+                icon: undefined
+            }
+        });
+    });
+
+    it('normalizes raw property metadata keys when updating from settings', () => {
+        const metadataAPI = new MetadataAPI(api);
+        const updatedSettings = structuredClone(plugin.settings);
+        updatedSettings.propertyColors['key:Re\u0301union=Planifie\u0301'] = '#112233';
+        const canonicalNodeId = buildPropertyValueNodeId('réunion', normalizePropertyTreeValuePath('Planifié'));
+
+        metadataAPI.updateFromSettings(updatedSettings);
+
+        expect(metadataAPI.getPropertyMeta(canonicalNodeId)).toEqual({
+            color: '#112233',
+            backgroundColor: undefined,
+            icon: undefined
+        });
+        expect(triggerMock).toHaveBeenCalledWith('property-changed', {
+            nodeId: canonicalNodeId,
+            metadata: {
+                color: '#112233',
+                backgroundColor: undefined,
+                icon: undefined
+            }
         });
     });
 

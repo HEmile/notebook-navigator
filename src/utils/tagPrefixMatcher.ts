@@ -23,6 +23,7 @@ import {
     parsePathPattern,
     type ParsedPathPattern
 } from './pathPatternMatcher';
+import { normalizeCaseInsensitiveIdentifierPreservingWhitespace } from './recordUtils';
 
 /**
  * Simple tag prefix matching utilities
@@ -116,7 +117,7 @@ function sanitizePattern(pattern: string): string {
  * Normalizes a tag path or pattern by trimming slashes, removing # prefix, and lowercasing.
  */
 export function normalizeTagPathValue(tag: string): string {
-    return cleanTagPath(tag).toLowerCase();
+    return normalizeCaseInsensitiveIdentifierPreservingWhitespace(cleanTagPath(tag));
 }
 
 // Cache parsed matchers and path patterns keyed by the joined pattern list.
@@ -229,7 +230,7 @@ export function matchesHiddenTagPattern(tagPath: string, tagName: string, matche
 
     const normalizedPath = sanitizePattern(tagPath);
     const pathSegments = getNormalizedPathSegments(normalizedPath, normalizeTagPathValue);
-    const normalizedName = tagName.toLowerCase();
+    const normalizedName = normalizeCaseInsensitiveIdentifierPreservingWhitespace(tagName);
 
     if (matcher.pathPatterns.some(pattern => matchesParsedPatternSegments(pattern, pathSegments))) {
         return true;
@@ -287,7 +288,10 @@ export function createHiddenTagVisibility(patterns: string[], showHiddenItems: b
     const isTagVisible = shouldFilterHiddenTags
         ? (tagPath: string, tagName?: string) => {
               const normalizedPath = normalizeTagPathValue(tagPath);
-              const normalizedName = tagName !== undefined ? tagName.toLowerCase() : (normalizedPath.split('/').pop() ?? normalizedPath);
+              const normalizedName =
+                  tagName !== undefined
+                      ? normalizeCaseInsensitiveIdentifierPreservingWhitespace(tagName)
+                      : (normalizedPath.split('/').pop() ?? normalizedPath);
               return !matchesHiddenTagPattern(normalizedPath, normalizedName, matcher);
           }
         : () => true;

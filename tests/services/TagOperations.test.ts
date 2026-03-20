@@ -221,6 +221,76 @@ describe('TagReplacement', () => {
         expect(origin.canonical).toBe('#projects');
         expect(target.canonical).toBe('#areas');
     });
+
+    it('renames tags and detects collisions across NFC and NFD-equivalent forms', () => {
+        const replacement = new TagRenameModule.TagReplacement(
+            new TagRenameModule.TagDescriptor('réunion'),
+            new TagRenameModule.TagDescriptor('areas')
+        );
+
+        const [updated] = replacement.inArray(['re\u0301union/notes'], false, false) as string[];
+        expect(updated).toBe('areas/notes');
+
+        const collision = replacement.willMergeTags(['#réunion', '#areas']);
+        expect(collision).not.toBeNull();
+    });
+
+    it('renames inline tag strings across NFC and NFD-equivalent forms', () => {
+        const replacement = new TagRenameModule.TagReplacement(
+            new TagRenameModule.TagDescriptor('réunion'),
+            new TagRenameModule.TagDescriptor('areas')
+        );
+
+        expect(replacement.inString('#re\u0301union')).toBe('#areas');
+        expect(replacement.inString('#re\u0301union/notes')).toBe('#areas/notes');
+
+        const collision = replacement.willMergeTags(['#re\u0301union', '#areas']);
+        expect(collision).not.toBeNull();
+        if (!collision) {
+            return;
+        }
+
+        const [origin, target] = collision;
+        expect(origin.canonical).toBe('#réunion');
+        expect(target.canonical).toBe('#areas');
+    });
+});
+
+describe('RenameFile', () => {
+    it('renames inline NFD tags without leaving combining marks behind', async () => {
+        const file = Object.assign(createTestTFile('Reunion.md'), {
+            content: 'Plan #re\u0301union/notes today'
+        });
+        const matchedTag = '#re\u0301union/notes';
+        const startOffset = file.content.indexOf(matchedTag);
+        const endOffset = startOffset + matchedTag.length;
+        const tagCache = {
+            tag: matchedTag,
+            position: {
+                start: { line: 0, col: startOffset, offset: startOffset },
+                end: { line: 0, col: endOffset, offset: endOffset }
+            }
+        };
+
+        const app = new App();
+        app.vault.getAbstractFileByPath = vi.fn((path: string) => (path === file.path ? file : null));
+        app.vault.read = vi.fn(async () => file.content);
+        app.vault.modify = vi.fn(async (_file: TFile, content: string) => {
+            file.content = content;
+        });
+
+        const renameFile = new TagRenameModule.RenameFile(app, file.path, [tagCache], false);
+        const replacement = new TagRenameModule.TagReplacement(
+            new TagRenameModule.TagDescriptor('réunion'),
+            new TagRenameModule.TagDescriptor('areas')
+        );
+
+        const result = await renameFile.renamed(replacement);
+
+        expect(result).toEqual({ outcome: 'changed' });
+        expect(file.content).toBe('Plan #areas/notes today');
+        expect(file.content).not.toContain('\u0301');
+    });
 });
 
 describe('TagOperations shortcut migration', () => {
@@ -270,6 +340,26 @@ describe('TagOperations shortcut migration', () => {
         expect(profile.shortcuts).toEqual([{ type: ShortcutType.TAG, tagPath: 'projects' }]);
         expect(provider.saveSettingsAndUpdate).not.toHaveBeenCalled();
     });
+
+    it('renames legacy NFD tag shortcuts using canonical path matching', async () => {
+        const settings = createSettings();
+        const profile = getActiveVaultProfile(settings);
+        profile.shortcuts = [
+            { type: ShortcutType.TAG, tagPath: 're\u0301union' },
+            { type: ShortcutType.TAG, tagPath: 're\u0301union/notes' },
+            { type: ShortcutType.NOTE, path: 'Notes.md' }
+        ];
+        const { tagOperations, provider } = createTagOperations(settings);
+
+        await tagOperations.updateTagShortcutsAfterRename('réunion', 'areas');
+
+        expect(profile.shortcuts).toEqual([
+            { type: ShortcutType.TAG, tagPath: 'areas' },
+            { type: ShortcutType.TAG, tagPath: 'areas/notes' },
+            { type: ShortcutType.NOTE, path: 'Notes.md' }
+        ]);
+        expect(provider.saveSettingsAndUpdate).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('TagOperations shortcut cleanup on delete', () => {
@@ -299,6 +389,22 @@ describe('TagOperations shortcut cleanup on delete', () => {
 
         expect(profile.shortcuts).toEqual([{ type: ShortcutType.NOTE, path: 'Notes.md' }]);
         expect(provider.saveSettingsAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('removes legacy NFD tag shortcuts when deleting a canonical tag path', async () => {
+        const settings = createSettings();
+        const profile = getActiveVaultProfile(settings);
+        profile.shortcuts = [
+            { type: ShortcutType.TAG, tagPath: 're\u0301union' },
+            { type: ShortcutType.TAG, tagPath: 're\u0301union/notes' },
+            { type: ShortcutType.NOTE, path: 'Notes.md' }
+        ];
+        const { tagOperations, provider } = createTagOperations(settings);
+
+        await tagOperations.removeTagShortcutsAfterDelete('réunion');
+
+        expect(profile.shortcuts).toEqual([{ type: ShortcutType.NOTE, path: 'Notes.md' }]);
+        expect(provider.saveSettingsAndUpdate).toHaveBeenCalledTimes(1);
     });
 });
 

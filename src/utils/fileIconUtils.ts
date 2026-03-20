@@ -21,6 +21,7 @@ import { hasExcalidrawFrontmatterFlag, isExcalidrawFile } from './fileNameUtils'
 import { isImageExtension } from './fileTypeUtils';
 import type { IconId } from '../services/icons/types';
 import { deserializeIconFromFrontmatter } from './iconizeFormat';
+import { casefoldPreservingWhitespace } from './recordUtils';
 
 export type FileIconFallbackMode = 'none' | 'file';
 
@@ -86,7 +87,7 @@ export function buildFileNameIconNeedles(iconMap: Record<string, string>): FileN
         }
 
         // Preserve whitespace in the key to allow matching patterns like 'ai ' (with trailing space)
-        const needle = key.toLowerCase();
+        const needle = casefoldPreservingWhitespace(key);
         const iconId = deserializeIconFromFrontmatter(value.trim()) ?? '';
         // Reject keys that are empty when trimmed, but allow keys with leading/trailing whitespace
         if (needle.trim().length === 0 || !iconId) {
@@ -108,7 +109,7 @@ export function buildFileNameIconNeedles(iconMap: Record<string, string>): FileN
 }
 
 export function resolveFileNameMatchIconIdFromNeedles(basename: string, needles: readonly FileNameIconNeedle[]): IconId | null {
-    const fileName = basename.toLowerCase();
+    const fileName = casefoldPreservingWhitespace(basename);
     if (!fileName) {
         return null;
     }

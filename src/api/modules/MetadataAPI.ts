@@ -37,6 +37,7 @@ import { PinnedNotes } from '../../types';
 import { normalizeCanonicalIconId } from '../../utils/iconizeFormat';
 import { normalizePropertyNodeId } from '../../utils/propertyTree';
 import { clonePinnedNotesRecord, normalizePinnedNoteContext } from '../../utils/recordUtils';
+import { normalizeTagPathValue } from '../../utils/tagPrefixMatcher';
 
 type MetadataUpdate = {
     color?: string | null;
@@ -131,14 +132,44 @@ export class MetadataAPI {
     }
 
     /**
-     * Normalizes a tag key by removing leading "#" and converting to lowercase
+     * Normalizes a tag key into canonical tag-path form.
      * @param tag - Tag string that may or may not have "#" prefix
      * @returns Normalized tag key for internal storage
      */
     private normalizeTagKey(tag: string): string {
-        // Strip single leading "#" if present and lowercase
-        const normalized = tag.startsWith('#') ? tag.slice(1) : tag;
-        return normalized.toLowerCase();
+        return normalizeTagPathValue(tag);
+    }
+
+    private normalizeTagMetadataRecord(record: Record<string, string> | undefined): Record<string, string> {
+        if (!record) {
+            return {};
+        }
+
+        const normalized: Record<string, string> = {};
+        Object.entries(record).forEach(([key, value]) => {
+            const normalizedKey = this.normalizeTagKey(key);
+            if (!normalizedKey) {
+                return;
+            }
+            normalized[normalizedKey] = value;
+        });
+        return normalized;
+    }
+
+    private normalizePropertyMetadataRecord(record: Record<string, string> | undefined): Record<string, string> {
+        if (!record) {
+            return {};
+        }
+
+        const normalized: Record<string, string> = {};
+        Object.entries(record).forEach(([key, value]) => {
+            const normalizedKey = normalizePropertyNodeId(key) ?? key;
+            if (!normalizedKey) {
+                return;
+            }
+            normalized[normalizedKey] = value;
+        });
+        return normalized;
     }
 
     /**
@@ -221,12 +252,12 @@ export class MetadataAPI {
             folderColors: settings.folderColors || {},
             folderBackgroundColors: settings.folderBackgroundColors || {},
             folderIcons: settings.folderIcons || {},
-            tagColors: settings.tagColors || {},
-            tagBackgroundColors: settings.tagBackgroundColors || {},
-            tagIcons: settings.tagIcons || {},
-            propertyColors: settings.propertyColors || {},
-            propertyBackgroundColors: settings.propertyBackgroundColors || {},
-            propertyIcons: settings.propertyIcons || {},
+            tagColors: this.normalizeTagMetadataRecord(settings.tagColors),
+            tagBackgroundColors: this.normalizeTagMetadataRecord(settings.tagBackgroundColors),
+            tagIcons: this.normalizeTagMetadataRecord(settings.tagIcons),
+            propertyColors: this.normalizePropertyMetadataRecord(settings.propertyColors),
+            propertyBackgroundColors: this.normalizePropertyMetadataRecord(settings.propertyBackgroundColors),
+            propertyIcons: this.normalizePropertyMetadataRecord(settings.propertyIcons),
             fileIcons: settings.fileIcons || {},
             fileColors: settings.fileColors || {},
             fileBackgroundColors: settings.fileBackgroundColors || {},

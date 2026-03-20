@@ -17,8 +17,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+    casefold,
+    casefoldPreservingWhitespace,
     clonePinnedNotesRecord,
     ensureRecord,
+    findMatchingRecordKey,
+    getMatchingRecordValue,
     foldSearchText,
     foldSearchTextFromLowercase,
     isStringRecordValue,
@@ -77,6 +81,23 @@ describe('foldSearchText', () => {
     it('matches foldSearchTextFromLowercase output for lowercased input', () => {
         const lowercased = 'canción';
         expect(foldSearchTextFromLowercase(lowercased)).toBe(foldSearchText(lowercased));
+    });
+});
+
+describe('identifier normalization helpers', () => {
+    it('treats NFC and NFD text as equivalent in casefold', () => {
+        expect(casefold('Réunion')).toBe(casefold('Re\u0301union'));
+    });
+
+    it('preserves surrounding whitespace when requested', () => {
+        expect(casefoldPreservingWhitespace(' Re\u0301union ')).toBe(' réunion ');
+    });
+
+    it('finds matching record keys across NFC and NFD variants', () => {
+        const record = { 're\u0301union': 'value' };
+
+        expect(findMatchingRecordKey(record, 'réunion')).toBe('re\u0301union');
+        expect(getMatchingRecordValue(record, 'réunion')).toBe('value');
     });
 });
 

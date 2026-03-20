@@ -126,7 +126,7 @@ const matchesHiddenFolderLiteralPrefix = (pattern: ParsedPathPattern, candidateS
         if (segment.type !== 'literal') {
             return false;
         }
-        if (segment.value.toLowerCase() !== candidate) {
+        if (casefold(segment.value) !== candidate) {
             return false;
         }
     }
@@ -733,7 +733,7 @@ function hasVaultProfileNameDuplicate(
         return false;
     }
 
-    const normalizedCandidate = candidateName.trim().toLowerCase();
+    const normalizedCandidate = casefold(candidateName);
     if (!normalizedCandidate) {
         return false;
     }
@@ -742,9 +742,50 @@ function hasVaultProfileNameDuplicate(
         if (options.excludeId && profile.id === options.excludeId) {
             return false;
         }
-        const normalizedProfileName = (profile.name ?? '').trim().toLowerCase();
+        const normalizedProfileName = casefold(profile.name ?? '');
         return normalizedProfileName === normalizedCandidate;
     });
+}
+
+function getCanonicalHiddenTagPattern(pattern: string): string {
+    const trimmed = pattern.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    const parsed = parsePathPattern(trimmed, { normalizePattern: normalizeTagPathValue });
+    if (parsed) {
+        return parsed.normalized;
+    }
+
+    if (trimmed.startsWith('*') && !trimmed.slice(1).includes('*') && !trimmed.includes('/')) {
+        const suffix = normalizeTagPathValue(trimmed.slice(1));
+        return suffix.length > 0 ? `*${suffix}` : '';
+    }
+
+    if (trimmed.endsWith('*') && !trimmed.slice(0, -1).includes('*') && !trimmed.includes('/')) {
+        const prefix = normalizeTagPathValue(trimmed.slice(0, -1));
+        return prefix.length > 0 ? `${prefix}*` : '';
+    }
+
+    return normalizeTagPathValue(trimmed);
+}
+
+function dedupeCanonicalHiddenTagPatterns(patterns: string[]): string[] {
+    const uniquePatterns: string[] = [];
+    const seen = new Set<string>();
+
+    patterns.forEach(pattern => {
+        const canonical = getCanonicalHiddenTagPattern(pattern);
+        if (!canonical || seen.has(canonical)) {
+            return;
+        }
+
+        seen.add(canonical);
+        uniquePatterns.push(pattern);
+    });
+
+    return uniquePatterns;
 }
 
 // Returns the localized name for the default profile, falling back to English if not available
@@ -983,7 +1024,7 @@ export function updateHiddenTagPrefixMatches(settings: NotebookNavigatorSettings
         });
 
         if (profileUpdated) {
-            profile.hiddenTags = Array.from(new Set(updatedPatterns));
+            profile.hiddenTags = dedupeCanonicalHiddenTagPatterns(updatedPatterns);
             didUpdate = true;
         }
     });
@@ -1029,7 +1070,7 @@ export function updateHiddenFileTagPrefixMatches(settings: NotebookNavigatorSett
         });
 
         if (profileUpdated) {
-            profile.hiddenFileTags = Array.from(new Set(updatedPatterns));
+            profile.hiddenFileTags = dedupeCanonicalHiddenTagPatterns(updatedPatterns);
             didUpdate = true;
         }
     });

@@ -577,6 +577,24 @@ describe('property selection resolution', () => {
         const resolved = resolvePropertySelectionNodeId(tree, legacySelection);
         expect(resolved).toBe(canonicalSelection);
     });
+
+    it('resolves NFC and NFD-equivalent property node ids to the canonical node', () => {
+        const rawValue = 'Planifié';
+        const db = createMockDb([
+            {
+                path: 'notes/a.md',
+                properties: [{ fieldKey: 'Réunion', value: rawValue }]
+            }
+        ]);
+        const tree = buildPropertyTreeFromDatabase(db, {
+            includedPropertyKeys: new Set(['réunion'])
+        });
+
+        const legacySelection = 'key:Re\u0301union=Planifie\u0301';
+        const canonicalSelection = buildPropertyValueNodeId('réunion', normalizePropertyTreeValuePath(rawValue));
+        const resolved = resolvePropertySelectionNodeId(tree, legacySelection);
+        expect(resolved).toBe(canonicalSelection);
+    });
 });
 
 describe('property selection restore', () => {
@@ -598,6 +616,16 @@ describe('property selection restore', () => {
         setActivePropertyFields(settings, 'status');
 
         expect(canRestorePropertySelectionNodeId(settings, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID)).toBe(false);
+    });
+
+    it('allows restoring NFC and NFD-equivalent property node ids for configured keys', () => {
+        const settings = {
+            ...DEFAULT_SETTINGS,
+            showProperties: true
+        };
+        setActivePropertyFields(settings, 'Réunion');
+
+        expect(canRestorePropertySelectionNodeId(settings, 'key:Re\u0301union')).toBe(true);
     });
 });
 

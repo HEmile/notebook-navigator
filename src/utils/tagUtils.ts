@@ -198,11 +198,11 @@ export function extractFileTagsFromRawTags(rawTags: readonly string[] | null): s
         if (!cleanTag) {
             continue;
         }
-        const lowerTag = cleanTag.toLowerCase();
-        if (seen.has(lowerTag)) {
+        const canonicalTag = normalizeTagPathValue(cleanTag);
+        if (!canonicalTag || seen.has(canonicalTag)) {
             continue;
         }
-        seen.add(lowerTag);
+        seen.add(canonicalTag);
         uniqueTags.push(cleanTag);
     }
 

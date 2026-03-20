@@ -33,6 +33,7 @@ import {
     isTagShortcut,
     isPropertyShortcut,
     normalizePropertyShortcutNodeId,
+    normalizeSearchShortcutName,
     normalizeShortcutStartTarget
 } from '../types/shortcuts';
 import type { SearchProvider } from '../types/search';
@@ -347,12 +348,15 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
         return map;
     }, [rawShortcuts]);
 
-    // Maps search shortcut names (lowercase) to shortcuts for fast lookup
+    // Maps search shortcut names in canonical form to shortcuts for fast lookup
     const searchShortcutsByName = useMemo(() => {
         const map = new Map<string, SearchShortcut>();
         rawShortcuts.forEach(shortcut => {
             if (isSearchShortcut(shortcut)) {
-                map.set(shortcut.name.toLowerCase(), shortcut);
+                const normalizedName = normalizeSearchShortcutName(shortcut.name);
+                if (normalizedName) {
+                    map.set(normalizedName, shortcut);
+                }
             }
         });
         return map;
@@ -622,7 +626,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                         emptySearchQuery = true;
                         return;
                     }
-                    const lookupKey = normalizedName.toLowerCase();
+                    const lookupKey = normalizeSearchShortcutName(normalizedName);
                     if (searchNames.has(lookupKey)) {
                         duplicateSearch = true;
                         return;
@@ -774,7 +778,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                 return false;
             }
 
-            const nameKey = normalizedName.toLowerCase();
+            const nameKey = normalizeSearchShortcutName(normalizedName);
             if (searchShortcutsByName.has(nameKey)) {
                 showNotice(strings.shortcuts.searchExists, { variant: 'warning' });
                 return false;
@@ -847,7 +851,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
     // Removes a search shortcut by its name (case-insensitive)
     const removeSearchShortcut = useCallback(
         async (name: string) => {
-            const shortcut = searchShortcutsByName.get(name.trim().toLowerCase());
+            const shortcut = searchShortcutsByName.get(normalizeSearchShortcutName(name));
             if (!shortcut) {
                 return false;
             }
@@ -906,7 +910,10 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
     );
 
     // Finds a search shortcut by name (case-insensitive)
-    const findSearchShortcut = useCallback((name: string) => searchShortcutsByName.get(name.trim().toLowerCase()), [searchShortcutsByName]);
+    const findSearchShortcut = useCallback(
+        (name: string) => searchShortcutsByName.get(normalizeSearchShortcutName(name)),
+        [searchShortcutsByName]
+    );
 
     const value: ShortcutsContextValue = useMemo(
         () => ({

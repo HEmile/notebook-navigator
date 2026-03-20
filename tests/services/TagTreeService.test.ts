@@ -55,6 +55,16 @@ describe('TagTreeService', () => {
         expect(service.findTagNode('missing/tag')).toBeNull();
     });
 
+    it('finds and resolves tags across NFC and NFD-equivalent paths', () => {
+        const service = new TagTreeService();
+        const reunion = createTagNode('Réunion', 'réunion', 'Réunion');
+
+        service.updateTagTree(new Map([[reunion.path, reunion]]), 0, 0);
+
+        expect(service.findTagNode('re\u0301union')).toBe(reunion);
+        expect(service.resolveSelectionTagPath('#re\u0301union/notes')).toBe('réunion');
+    });
+
     it('resolves selected tag paths to canonical node or nearest existing parent', () => {
         const service = new TagTreeService();
         const projects = createTagNode('Projects', 'projects', 'Projects');

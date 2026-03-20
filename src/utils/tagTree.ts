@@ -352,9 +352,7 @@ export function collectTagFilePaths(node: TagTreeNode, files: Set<string> = new 
  * Find a tag node by its path
  */
 export function findTagNode(tree: Map<string, TagTreeNode>, tagPath: string): TagTreeNode | null {
-    // Remove # prefix if present
-    const cleanPath = tagPath.startsWith('#') ? tagPath.substring(1) : tagPath;
-    const lowerPath = cleanPath.toLowerCase();
+    const lowerPath = normalizeTagPathValue(tagPath);
 
     // Helper function to search recursively
     function searchNode(nodes: Map<string, TagTreeNode>, visited: Set<TagTreeNode>): TagTreeNode | null {

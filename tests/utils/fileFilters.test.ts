@@ -16,7 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { describe, expect, it } from 'vitest';
-import { createFrontmatterPropertyExclusionMatcher, createHiddenFileNameMatcher, shouldExcludeFileName } from '../../src/utils/fileFilters';
+import {
+    createFrontmatterPropertyExclusionMatcher,
+    createHiddenFileNameMatcher,
+    shouldExcludeFileName,
+    shouldExcludeFolder
+} from '../../src/utils/fileFilters';
 import { createTestTFile } from './createTestTFile';
 
 describe('shouldExcludeFileName', () => {
@@ -49,6 +54,12 @@ describe('shouldExcludeFileName', () => {
         const file = createTestTFile('Images/Cover.PNG');
         expect(shouldExcludeFileName(file, ['/images/*'])).toBe(true);
         expect(shouldExcludeFileName(file, ['/other/*'])).toBe(false);
+    });
+
+    it('matches NFC and NFD-equivalent file names and paths', () => {
+        const file = createTestTFile('Café/Résumé.md');
+        expect(shouldExcludeFileName(file, ['/cafe\u0301/*'])).toBe(true);
+        expect(shouldExcludeFileName(file, ['re\u0301sume\u0301.md'])).toBe(true);
     });
 
     it('matches literal extension patterns', () => {
@@ -87,6 +98,13 @@ describe('shouldExcludeFileName', () => {
         const first = createHiddenFileNameMatcher(['  *.png ', 'temp-*', '*.png']);
         const second = createHiddenFileNameMatcher(['temp-*', '*.png']);
         expect(first).toBe(second);
+    });
+});
+
+describe('shouldExcludeFolder', () => {
+    it('matches NFC and NFD-equivalent folder names for literal and wildcard rules', () => {
+        expect(shouldExcludeFolder('re\u0301union', ['réunion'])).toBe(true);
+        expect(shouldExcludeFolder('re\u0301union-notes', ['réunion*'])).toBe(true);
     });
 });
 

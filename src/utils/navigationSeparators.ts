@@ -17,6 +17,8 @@
  */
 
 import { NavigationSectionId } from '../types';
+import { normalizeTagPath } from './tagUtils';
+import { normalizePropertyNodeId } from './propertyTree';
 
 /** Canonical mapping of section ids to persisted key suffixes */
 const SECTION_KEY_BY_ID: Record<NavigationSectionId, string> = {
@@ -132,4 +134,35 @@ export function parseNavigationSeparatorKey(key: string): NavigationSeparatorTar
     }
 
     return null;
+}
+
+/** Rebuilds a persisted separator key into canonical form */
+export function normalizeNavigationSeparatorKey(key: string): string | null {
+    const descriptor = parseNavigationSeparatorKey(key);
+    if (!descriptor) {
+        return null;
+    }
+
+    if (descriptor.type === 'section') {
+        return buildSectionSeparatorKey(descriptor.id);
+    }
+
+    if (descriptor.type === 'folder') {
+        return buildFolderSeparatorKey(descriptor.path);
+    }
+
+    if (descriptor.type === 'tag') {
+        const normalizedTagPath = normalizeTagPath(descriptor.path);
+        if (!normalizedTagPath) {
+            return null;
+        }
+        return buildTagSeparatorKey(normalizedTagPath);
+    }
+
+    const normalizedNodeId = normalizePropertyNodeId(descriptor.nodeId);
+    if (!normalizedNodeId) {
+        return null;
+    }
+
+    return buildPropertySeparatorKey(normalizedNodeId);
 }

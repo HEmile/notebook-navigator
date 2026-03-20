@@ -344,6 +344,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.preferencesController.loadUXPreferences();
         this.settingsController.normalizeTagSettings();
         this.settingsController.normalizePropertySettings();
+        this.settingsController.normalizeNavigationSeparatorSettings();
 
         // Handle first launch initialization
         if (isFirstLaunch) {
@@ -1037,6 +1038,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         await this.loadSettings();
         this.settingsController.normalizeTagSettings();
         this.settingsController.normalizePropertySettings();
+        this.settingsController.normalizeNavigationSeparatorSettings();
         this.settings.syncModes = preservedSyncModes;
         await this.saveSettingsAndUpdate();
 

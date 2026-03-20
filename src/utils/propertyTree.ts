@@ -509,7 +509,12 @@ export function isPropertySelectionNodeIdConfigured(
         return true;
     }
 
-    const parsed = parsePropertyNodeId(selectionNodeId);
+    const normalizedSelectionNodeId = normalizePropertyNodeId(selectionNodeId);
+    if (!normalizedSelectionNodeId) {
+        return false;
+    }
+
+    const parsed = parsePropertyNodeId(normalizedSelectionNodeId);
     if (!parsed) {
         return false;
     }
@@ -525,7 +530,12 @@ export function isPropertySelectionNodeIdVisibleInNavigation(
         return true;
     }
 
-    const parsed = parsePropertyNodeId(selectionNodeId);
+    const normalizedSelectionNodeId = normalizePropertyNodeId(selectionNodeId);
+    if (!normalizedSelectionNodeId) {
+        return false;
+    }
+
+    const parsed = parsePropertyNodeId(normalizedSelectionNodeId);
     if (!parsed) {
         return false;
     }
@@ -558,7 +568,12 @@ export function resolvePropertySelectionNodeId(
         return selectionNodeId;
     }
 
-    const parsed = parsePropertyNodeId(selectionNodeId);
+    const normalizedSelectionNodeId = normalizePropertyNodeId(selectionNodeId);
+    if (!normalizedSelectionNodeId) {
+        return PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
+    }
+
+    const parsed = parsePropertyNodeId(normalizedSelectionNodeId);
     if (!parsed) {
         return PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
     }
@@ -804,7 +819,11 @@ export function parseStoredPropertySelectionNodeId(value: unknown): PropertySele
         if (value === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
             return PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
         }
-        return isPropertyTreeNodeId(value) ? value : null;
+        if (!isPropertyTreeNodeId(value)) {
+            return null;
+        }
+
+        return normalizePropertyNodeId(value);
     }
 
     const legacySelection = parseLegacyStoredPropertySelection(value);

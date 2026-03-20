@@ -44,7 +44,7 @@ export class TagShortcutMutations {
             const preservedPaths = new Set<string>();
             for (const shortcut of shortcuts) {
                 if (isTagShortcut(shortcut)) {
-                    const { tagPath } = shortcut;
+                    const tagPath = normalizeTagPath(shortcut.tagPath) ?? shortcut.tagPath;
                     if (tagPath !== normalizedOld && !tagPath.startsWith(prefix)) {
                         preservedPaths.add(tagPath);
                     }
@@ -61,7 +61,7 @@ export class TagShortcutMutations {
                     continue;
                 }
 
-                const currentPath = shortcut.tagPath;
+                const currentPath = normalizeTagPath(shortcut.tagPath) ?? shortcut.tagPath;
                 const isDirectMatch = currentPath === normalizedOld;
                 const isDescendantMatch = currentPath.startsWith(prefix);
                 let targetPath = currentPath;
@@ -86,7 +86,7 @@ export class TagShortcutMutations {
                     continue;
                 }
 
-                const nextShortcut = targetPath === currentPath ? shortcut : { ...shortcut, tagPath: targetPath };
+                const nextShortcut = targetPath === shortcut.tagPath ? shortcut : { ...shortcut, tagPath: targetPath };
                 updated.push(nextShortcut);
                 occupiedPaths.add(targetPath);
                 preservedPaths.add(targetPath);
@@ -117,7 +117,7 @@ export class TagShortcutMutations {
                     continue;
                 }
 
-                const currentPath = shortcut.tagPath;
+                const currentPath = normalizeTagPath(shortcut.tagPath) ?? shortcut.tagPath;
                 if (currentPath === normalizedPath || currentPath.startsWith(prefix)) {
                     changed = true;
                     continue;

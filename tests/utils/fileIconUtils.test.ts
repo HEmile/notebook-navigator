@@ -84,6 +84,16 @@ describe('resolveFileNameMatchIconId', () => {
         expect(resolveFileNameMatchIconIdFromNeedles('AI notes', needles)).toBe('brain');
         expect(resolveFileNameMatchIconIdFromNeedles('AInotes', needles)).toBe(null);
     });
+
+    it('matches NFC rule keys against NFD basenames', () => {
+        const needles = buildFileNameIconNeedles({ réunion: 'LiCalendar' });
+        expect(resolveFileNameMatchIconIdFromNeedles('re\u0301union notes', needles)).toBe('calendar');
+    });
+
+    it('matches NFD rule keys against NFC basenames', () => {
+        const needles = buildFileNameIconNeedles({ 're\u0301union': 'LiCalendar' });
+        expect(resolveFileNameMatchIconIdFromNeedles('réunion notes', needles)).toBe('calendar');
+    });
 });
 
 describe('resolveFileTypeIconKey', () => {

@@ -22,6 +22,16 @@ import { TagTreeNode } from '../types/storage';
 import { BaseSuggestModal } from './BaseSuggestModal';
 import NotebookNavigatorPlugin from '../main';
 import { hasValidTagCharacters } from '../utils/tagUtils';
+import { normalizeTagPathValue } from '../utils/tagPrefixMatcher';
+
+export function hasExactTagSuggestionMatch(input: string, suggestions: readonly FuzzyMatch<TagTreeNode>[]): boolean {
+    const normalizedInput = normalizeTagPathValue(input);
+    if (!normalizedInput) {
+        return false;
+    }
+
+    return suggestions.some(suggestion => suggestion.item.path === normalizedInput);
+}
 
 /**
  * Modal for selecting a tag to navigate to
@@ -88,9 +98,7 @@ export class TagSuggestModal extends BaseSuggestModal<TagTreeNode> {
         }
 
         // Check if an exact match already exists (case-insensitive)
-        const lowerInput = this.currentInput.toLowerCase();
-        const exactMatch = suggestions.find(s => s.item.path === lowerInput);
-        if (exactMatch) {
+        if (hasExactTagSuggestionMatch(this.currentInput, suggestions)) {
             return suggestions;
         }
 

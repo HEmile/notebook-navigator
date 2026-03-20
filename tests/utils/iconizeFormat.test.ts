@@ -215,6 +215,13 @@ describe('parseIconMapText', () => {
         expect(parsed.invalidLines).toEqual([]);
         expect(parsed.map['ai ']).toBe('LiBrain');
     });
+
+    it('canonicalizes NFC and NFD-equivalent file name keys to the same identifier', () => {
+        const parsed = parseIconMapText("'Cafe\u0301'=brain\n'Café'=calendar", normalizeFileNameIconMapKey);
+        expect(parsed.invalidLines).toEqual([]);
+        expect(Object.keys(parsed.map)).toEqual(['café']);
+        expect(parsed.map.café).toBe('LiCalendar');
+    });
 });
 
 describe('serializeIconMapRecord', () => {

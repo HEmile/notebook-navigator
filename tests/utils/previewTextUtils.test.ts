@@ -625,6 +625,13 @@ describe('PreviewTextUtils.extractPreviewText', () => {
         expect(preview).toBe('Caption');
     });
 
+    it('matches previewProperties across NFC and NFD-equivalent keys', () => {
+        const settings = createSettings({ previewProperties: ['réunion'] });
+        const frontmatter = { 're\u0301union': 'Preview from frontmatter' };
+        const preview = PreviewTextUtils.extractPreviewText('Fallback content', settings, frontmatter);
+        expect(preview).toBe('Preview from frontmatter');
+    });
+
     it('falls back to note content when previewProperties value becomes empty', () => {
         const settings = createSettings({ previewProperties: ['summary'] });
         const frontmatter = { summary: '![[image.png]]' };

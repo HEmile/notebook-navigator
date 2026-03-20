@@ -20,7 +20,7 @@ import type { FrontMatterCache } from 'obsidian';
 import type { NotebookNavigatorSettings } from '../../settings';
 import { collectVisibleTextSkippingFencedCodeBlocks, findFencedCodeBlockRanges, findInlineCodeRanges } from '../codeRangeUtils';
 import { hasExcalidrawFrontmatterFlag, isExcalidrawFileName } from '../fileNameUtils';
-import { getRecordValue } from '../typeGuards';
+import { getMatchingRecordValue } from '../recordUtils';
 import {
     clipIncludingCode,
     collapseWhitespace,
@@ -159,7 +159,7 @@ export function extractPreviewText(content: string, settings: NotebookNavigatorS
 
     if (frontmatter && hasPreviewProperties) {
         for (const property of settings.previewProperties) {
-            const value = getRecordValue(frontmatter, property);
+            const value = getMatchingRecordValue(frontmatter, property);
             const propertyValue = resolvePreviewPropertyValue(value);
             if (!propertyValue) {
                 continue;

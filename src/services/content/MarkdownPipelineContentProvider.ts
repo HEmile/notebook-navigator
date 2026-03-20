@@ -36,7 +36,7 @@ import {
     skipMarkdownWhitespace
 } from '../../utils/codeRangeUtils';
 import { PreviewTextUtils } from '../../utils/previewTextUtils';
-import { createCaseInsensitiveKeyMatcher } from '../../utils/recordUtils';
+import { createCaseInsensitiveKeyMatcher, findMatchingRecordKey } from '../../utils/recordUtils';
 import { countWordsForNoteProperty } from '../../utils/wordCountUtils';
 import type { ContentProviderProcessResult } from './BaseContentProvider';
 import { findFeatureImageReference, type FeatureImageReference } from './featureImageReferenceResolver';
@@ -306,14 +306,19 @@ function resolvePropertyItemsFromFrontmatter(frontmatter: FrontMatterCache | nul
 
     for (let fieldIndex = 0; fieldIndex < nameFields.length; fieldIndex += 1) {
         const field = nameFields[fieldIndex];
-        const values = extractFrontmatterValues(frontmatter[field]);
+        const matchingField = findMatchingRecordKey(frontmatter, field);
+        if (!matchingField) {
+            continue;
+        }
+
+        const values = extractFrontmatterValues(frontmatter[matchingField]);
         if (values.length === 0) {
             continue;
         }
 
         for (let valueIndex = 0; valueIndex < values.length; valueIndex += 1) {
             const value = values[valueIndex];
-            entries.push({ fieldKey: field, value: value.value, valueKind: value.valueKind });
+            entries.push({ fieldKey: matchingField, value: value.value, valueKind: value.valueKind });
         }
     }
 

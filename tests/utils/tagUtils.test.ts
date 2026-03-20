@@ -16,7 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { describe, it, expect } from 'vitest';
-import { determineTagToReveal, hasValidTagCharacters, isInlineTagValueCompatible, isValidTagPrecedingChar } from '../../src/utils/tagUtils';
+import {
+    determineTagToReveal,
+    extractFileTagsFromRawTags,
+    hasValidTagCharacters,
+    isInlineTagValueCompatible,
+    isValidTagPrecedingChar
+} from '../../src/utils/tagUtils';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import { TAGGED_TAG_ID } from '../../src/types';
 import { createDefaultFileData, type FileData } from '../../src/storage/IndexedDBStorage';
@@ -135,6 +141,14 @@ describe('tagUtils', () => {
 
             expect(shortestPathResult).toBe(TAGGED_TAG_ID);
             expect(exactPathResult).toBe('project/task');
+        });
+    });
+
+    describe('extractFileTagsFromRawTags', () => {
+        it('deduplicates NFC and NFD-equivalent tags while keeping the first occurrence', () => {
+            const tags = extractFileTagsFromRawTags(['#réunion', '#re\u0301union', '#RÉUNION']);
+
+            expect(tags).toEqual(['réunion']);
         });
     });
 });

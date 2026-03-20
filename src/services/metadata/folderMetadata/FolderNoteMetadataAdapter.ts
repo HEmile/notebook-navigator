@@ -22,6 +22,7 @@ import { getDBInstanceOrNull } from '../../../storage/fileOperations';
 import type { FileContentChange } from '../../../storage/IndexedDBStorage';
 import { normalizeCanonicalIconId, serializeIconForFrontmatter } from '../../../utils/iconizeFormat';
 import { getParentFolderPath } from '../../../utils/pathUtils';
+import { findMatchingRecordKey } from '../../../utils/recordUtils';
 import { getFolderNote, getFolderNoteDetectionSettings } from '../../../utils/folderNotes';
 import { resolveFolderNoteName } from '../../../utils/folderNoteName';
 import type { FolderFrontmatterFields, FolderNoteMetadata, FolderStyleUpdate, FolderStyleValues, FolderStyleWriteResult } from './types';
@@ -282,15 +283,16 @@ export class FolderNoteMetadataAdapter {
     }
 
     private updateFrontmatterField(frontmatter: Record<string, unknown>, field: string, value: string | null): void {
+        const targetField = findMatchingRecordKey(frontmatter, field) ?? field;
         if (value !== null) {
-            if (frontmatter[field] !== value) {
-                frontmatter[field] = value;
+            if (frontmatter[targetField] !== value) {
+                frontmatter[targetField] = value;
             }
             return;
         }
 
-        if (Reflect.has(frontmatter, field)) {
-            delete frontmatter[field];
+        if (Reflect.has(frontmatter, targetField)) {
+            delete frontmatter[targetField];
         }
     }
 

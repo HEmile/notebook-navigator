@@ -31,6 +31,7 @@ import { mutateFrontmatterTagFields } from '../tagRename/frontmatterTagMutator';
 import { mergeRanges, NumericRange } from '../../utils/arrayUtils';
 import { findFencedCodeBlockRanges, findInlineCodeRanges, isIndexInRanges } from '../../utils/codeRangeUtils';
 import { parseCommaSeparatedList } from '../../utils/commaSeparatedListUtils';
+import { findMatchingRecordKey } from '../../utils/recordUtils';
 
 /**
  * Type for frontmatter objects that may contain a tags property
@@ -121,33 +122,31 @@ export class TagFileMutations {
 
         try {
             await this.app.fileManager.processFrontMatter(file, (frontmatter: TagsFrontmatter) => {
-                const rawTags = frontmatter.tags;
+                const tagFieldKey = this.resolveFrontmatterTagFieldKey(frontmatter) ?? 'tags';
+                const rawTags = frontmatter[tagFieldKey];
                 const isEmptyString = typeof rawTags === 'string' && rawTags.trim().length === 0;
 
                 if (rawTags === undefined || rawTags === null || isEmptyString) {
-                    frontmatter.tags = [tag];
+                    frontmatter[tagFieldKey] = [tag];
                     return;
                 }
 
                 if (Array.isArray(rawTags)) {
-                    // Filter out non-string values and empty strings from the tags array
                     const normalizedTags = rawTags
                         .filter((value): value is string => typeof value === 'string')
                         .map(value => value.trim())
                         .filter((value): value is string => value.length > 0);
-                    const nextTags = Array.from(new Set([...normalizedTags, tag]));
-                    frontmatter.tags = nextTags;
+                    frontmatter[tagFieldKey] = this.dedupeCanonicalTagValues([...normalizedTags, tag]);
                     return;
                 }
 
                 if (typeof rawTags === 'string') {
                     const tags = parseCommaSeparatedList(rawTags);
-                    tags.push(tag);
-                    frontmatter.tags = Array.from(new Set(tags));
+                    frontmatter[tagFieldKey] = this.dedupeCanonicalTagValues([...tags, tag]);
                     return;
                 }
 
-                frontmatter.tags = [tag];
+                frontmatter[tagFieldKey] = [tag];
             });
         } catch (error: unknown) {
             console.error('[Notebook Navigator] Error adding tag to frontmatter', error);
@@ -241,7 +240,12 @@ export class TagFileMutations {
 
         try {
             await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
-                const rawTags = frontmatter.tags;
+                const tagFieldKey = this.resolveFrontmatterTagFieldKey(frontmatter);
+                if (!tagFieldKey) {
+                    return;
+                }
+
+                const rawTags = frontmatter[tagFieldKey];
                 const hasTags =
                     typeof rawTags === 'string'
                         ? rawTags.trim().length > 0
@@ -251,7 +255,7 @@ export class TagFileMutations {
 
                 if (hasTags) {
                     hadTags = true;
-                    this.cleanupFrontmatterTags(frontmatter);
+                    this.cleanupFrontmatterTags(frontmatter, tagFieldKey);
                 }
             });
         } catch (error) {
@@ -339,7 +343,7 @@ export class TagFileMutations {
         let changed = false;
         try {
             await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
-                let removedCanonicalTags = false;
+                let removedCanonicalTagFieldKey: string | null = null;
                 const mutated = mutateFrontmatterTagFields(frontmatter, field => {
                     if (Array.isArray(field.value)) {
                         if (field.isAlias) {
@@ -361,8 +365,8 @@ export class TagFileMutations {
                         }
                         if (result.nextValue === undefined) {
                             field.remove();
-                            if (field.lowerKey === 'tags') {
-                                removedCanonicalTags = true;
+                            if (field.lowerKey === 'tags' || field.lowerKey === 'tag') {
+                                removedCanonicalTagFieldKey = removedCanonicalTagFieldKey ?? field.key;
                             }
                         } else {
                             field.set(result.nextValue);
@@ -394,19 +398,19 @@ export class TagFileMutations {
                     }
                     if (result.nextValue === undefined) {
                         field.remove();
-                        if (field.lowerKey === 'tags') {
-                            removedCanonicalTags = true;
+                        if (field.lowerKey === 'tags' || field.lowerKey === 'tag') {
+                            removedCanonicalTagFieldKey = removedCanonicalTagFieldKey ?? field.key;
                         }
                     } else {
                         field.set(result.nextValue);
                     }
                 });
 
-                if (removedCanonicalTags) {
-                    this.cleanupFrontmatterTags(frontmatter);
+                if (removedCanonicalTagFieldKey) {
+                    this.cleanupFrontmatterTags(frontmatter, removedCanonicalTagFieldKey);
                 }
 
-                if (mutated || removedCanonicalTags) {
+                if (mutated || removedCanonicalTagFieldKey !== null) {
                     changed = true;
                 }
             });
@@ -556,21 +560,46 @@ export class TagFileMutations {
         return { filtered, removed };
     }
 
-    private cleanupFrontmatterTags(frontmatter: Record<string, unknown>): void {
+    private resolveFrontmatterTagFieldKey(frontmatter: Record<string, unknown>): string | null {
+        return findMatchingRecordKey(frontmatter, 'tags') ?? findMatchingRecordKey(frontmatter, 'tag');
+    }
+
+    private dedupeCanonicalTagValues(tags: readonly string[]): string[] {
+        const uniqueTags: string[] = [];
+        const seen = new Set<string>();
+
+        tags.forEach(tag => {
+            const trimmed = tag.trim();
+            if (trimmed.length === 0) {
+                return;
+            }
+
+            const normalized = normalizeTagPathValue(trimmed);
+            if (!normalized || seen.has(normalized)) {
+                return;
+            }
+
+            seen.add(normalized);
+            uniqueTags.push(trimmed);
+        });
+
+        return uniqueTags;
+    }
+
+    private cleanupFrontmatterTags(frontmatter: Record<string, unknown>, tagFieldKey: string = 'tags'): void {
         const settings = this.getSettings();
         const keepProperty = Boolean(settings?.keepEmptyTagsProperty);
         if (keepProperty) {
-            frontmatter.tags = [];
+            frontmatter[tagFieldKey] = [];
             return;
         }
-        // Safely delete the tags property if it exists
-        if (Reflect.has(frontmatter, 'tags')) {
-            delete frontmatter.tags;
+        if (Reflect.has(frontmatter, tagFieldKey)) {
+            delete frontmatter[tagFieldKey];
         }
     }
 
     private async stripInlineTags(file: TFile, tags: string[]): Promise<boolean> {
-        const uniqueTags = Array.from(new Set(tags.map(tag => tag.trim()).filter((value): value is string => value.length > 0)));
+        const uniqueTags = this.dedupeCanonicalTagValues(tags);
         if (uniqueTags.length === 0) {
             return false;
         }

@@ -49,7 +49,7 @@ import {
     getActivePropertyKeySet
 } from './vaultProfiles';
 import { getCachedFileTags } from './tagUtils';
-import { casefold, normalizePinnedNoteContext } from './recordUtils';
+import { casefold, getMatchingRecordValue, normalizePinnedNoteContext } from './recordUtils';
 import { getParentFolderPath } from './pathUtils';
 import {
     buildPropertyKeyNodeId,
@@ -190,7 +190,7 @@ function extractPropertySortParts(value: unknown): string[] {
 }
 
 function extractPropertySortValue(frontmatter: Record<string, unknown>, propertyKey: string): string | null {
-    const parts = extractPropertySortParts(frontmatter[propertyKey]);
+    const parts = extractPropertySortParts(getMatchingRecordValue(frontmatter, propertyKey));
     if (parts.length === 0) {
         return null;
     }

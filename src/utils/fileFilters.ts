@@ -30,7 +30,7 @@ import {
 import { getDBInstanceOrNull } from '../storage/fileOperations';
 import { createHiddenTagVisibility } from './tagPrefixMatcher';
 import { type CachedFileTagsDB, getCachedFileTags } from './tagUtils';
-import { casefold, sortAndDedupeByComparator } from './recordUtils';
+import { casefold, casefoldPreservingWhitespace, sortAndDedupeByComparator } from './recordUtils';
 import { normalizePropertyTreeValuePath } from './propertyUtils';
 
 interface FileFilterOptions {
@@ -54,7 +54,18 @@ export function clearHiddenFileNameMatcherCache(): void {
 }
 
 function normalizeHiddenFileNamePatterns(patterns: string[]): string[] {
-    return Array.from(new Set(patterns.map(pattern => pattern.trim().toLowerCase()).filter(pattern => pattern.length > 0))).sort();
+    return Array.from(
+        new Set(patterns.map(pattern => normalizeHiddenFileNamePattern(pattern)).filter(pattern => pattern.length > 0))
+    ).sort();
+}
+
+function normalizeHiddenFileNamePattern(pattern: string): string {
+    const trimmed = pattern.trim();
+    if (trimmed.length === 0) {
+        return '';
+    }
+
+    return casefoldPreservingWhitespace(trimmed);
 }
 
 interface CompiledGlob {
@@ -70,7 +81,8 @@ function isPathPattern(pattern: string): boolean {
 }
 
 function normalizeVaultPath(value: string): string {
-    const normalized = value.trim().toLowerCase();
+    const trimmed = value.trim();
+    const normalized = trimmed.length === 0 ? '' : casefoldPreservingWhitespace(trimmed);
     if (normalized.length === 0) {
         return '';
     }
@@ -196,10 +208,10 @@ export function createHiddenFileNameMatcher(patterns: string[]): HiddenFileNameM
 
     const matcher: HiddenFileNameMatcher = {
         matches: (file: TFile) => {
-            const name = file.name.toLowerCase();
-            const basename = file.basename.toLowerCase();
+            const name = casefoldPreservingWhitespace(file.name);
+            const basename = casefoldPreservingWhitespace(file.basename);
             const path = normalizeVaultPath(file.path);
-            const extension = file.extension ? `.${file.extension.toLowerCase()}` : '';
+            const extension = file.extension ? `.${casefoldPreservingWhitespace(file.extension)}` : '';
 
             if (literalNames.has(name) || literalPaths.has(path) || (extension.length > 0 && literalExtensions.has(extension))) {
                 return true;
@@ -456,7 +468,10 @@ function matchesFolderPattern(folderName: string, pattern: string): boolean {
         return false;
     }
 
-    const normalizedFolderName = folderName.toLowerCase();
+    const normalizedFolderName = casefold(folderName);
+    if (!normalizedFolderName) {
+        return false;
+    }
 
     // Exact match if no wildcards
     if (!normalizedPattern.includes('*')) {

@@ -22,6 +22,7 @@ import { METADATA_SENTINEL } from '../storage/IndexedDBStorage';
 import { DateUtils } from './dateUtils';
 import { getCachedCommaSeparatedList } from './commaSeparatedListUtils';
 import { deserializeIconFromFrontmatterCompat } from './iconizeFormat';
+import { getMatchingRecordValue } from './recordUtils';
 import { isRecord } from './typeGuards';
 
 /**
@@ -71,7 +72,7 @@ function extractFrontmatterNameFromCache(metadata: CachedMetadata | null, frontm
     }
 
     for (const field of nameFields) {
-        const nameValue = frontmatterRecord[field];
+        const nameValue = getMatchingRecordValue(frontmatterRecord, field);
 
         if (typeof nameValue === 'string') {
             const trimmedName = nameValue.trim();
@@ -140,7 +141,7 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
     // Extract icon if field is specified
     // Extract icon from frontmatter field
     if (settings.frontmatterIconField && settings.frontmatterIconField.trim()) {
-        const iconValue = frontmatterRecord[settings.frontmatterIconField];
+        const iconValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterIconField);
 
         // Helper to extract and convert icon value from Iconize format to canonical format
         const extractIconValue = (value: unknown): string | undefined => {
@@ -176,7 +177,7 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
 
     // Extract color if field is specified
     if (settings.frontmatterColorField && settings.frontmatterColorField.trim()) {
-        const colorValue = frontmatterRecord[settings.frontmatterColorField];
+        const colorValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterColorField);
         const parsedColor = extractTrimmedFrontmatterString(colorValue);
         if (parsedColor) {
             result.color = parsedColor;
@@ -185,7 +186,7 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
 
     // Extract background color if field is specified
     if (settings.frontmatterBackgroundField && settings.frontmatterBackgroundField.trim()) {
-        const backgroundValue = frontmatterRecord[settings.frontmatterBackgroundField];
+        const backgroundValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterBackgroundField);
         const parsedBackground = extractTrimmedFrontmatterString(backgroundValue);
         if (parsedBackground) {
             result.background = parsedBackground;
@@ -194,7 +195,7 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
 
     // Extract created date if field is specified
     if (settings.frontmatterCreatedField && settings.frontmatterCreatedField.trim()) {
-        const createdValue = frontmatterRecord[settings.frontmatterCreatedField];
+        const createdValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterCreatedField);
 
         if (createdValue !== undefined) {
             // Field exists, try to parse it
@@ -213,7 +214,7 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
 
     // Extract modified date if field is specified
     if (settings.frontmatterModifiedField && settings.frontmatterModifiedField.trim()) {
-        const modifiedValue = frontmatterRecord[settings.frontmatterModifiedField];
+        const modifiedValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterModifiedField);
 
         if (modifiedValue !== undefined) {
             // Field exists, try to parse it

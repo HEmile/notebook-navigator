@@ -84,6 +84,63 @@ export function isPlainObjectRecordValue(value: unknown): value is Record<string
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Canonicalizes a case-insensitive identifier while preserving surrounding whitespace.
+ * Use for user-authored lookup keys where NFC/NFD-equivalent text must match.
+ */
+export function normalizeCaseInsensitiveIdentifierPreservingWhitespace(value: string): string {
+    if (!value) {
+        return '';
+    }
+
+    return value.normalize('NFC').toLowerCase();
+}
+
+/**
+ * Canonicalizes a case-insensitive identifier after trimming surrounding whitespace.
+ * Use for user-authored lookup keys stored without semantic leading/trailing whitespace.
+ */
+function normalizeCaseInsensitiveIdentifier(value: string): string {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+        return '';
+    }
+
+    return normalizeCaseInsensitiveIdentifierPreservingWhitespace(trimmed);
+}
+
+export function casefoldPreservingWhitespace(value: string): string {
+    return normalizeCaseInsensitiveIdentifierPreservingWhitespace(value);
+}
+
+export function findMatchingRecordKey(record: Record<string, unknown> | null | undefined, targetKey: string): string | null {
+    if (!record) {
+        return null;
+    }
+
+    const normalizedTargetKey = casefold(targetKey);
+    if (!normalizedTargetKey) {
+        return null;
+    }
+
+    for (const key of Object.keys(record)) {
+        if (casefold(key) === normalizedTargetKey) {
+            return key;
+        }
+    }
+
+    return null;
+}
+
+export function getMatchingRecordValue(record: Record<string, unknown> | null | undefined, targetKey: string): unknown {
+    const matchingKey = findMatchingRecordKey(record, targetKey);
+    if (matchingKey === null || !record) {
+        return undefined;
+    }
+
+    return record[matchingKey];
+}
+
 export interface PinnedNoteContextValue {
     folder: boolean;
     tag: boolean;
@@ -127,11 +184,7 @@ export function clonePinnedNotesRecord(value: unknown): Record<string, PinnedNot
 }
 
 export function casefold(value: string): string {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) {
-        return '';
-    }
-    return trimmed.toLowerCase();
+    return normalizeCaseInsensitiveIdentifier(value);
 }
 
 // Reference: "Text Normalization: Unicode Forms, Case Folding & Whitespace Handling for NLP"

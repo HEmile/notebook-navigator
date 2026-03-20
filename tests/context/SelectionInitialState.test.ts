@@ -21,6 +21,8 @@ import { App, TFile, TFolder } from 'obsidian';
 import { loadInitialSelectionState } from '../../src/context/selection/useSelectionProvider';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import { STORAGE_KEYS } from '../../src/types';
+import { buildPropertyValueNodeId, normalizePropertyTreeValuePath } from '../../src/utils/propertyTree';
+import { setActivePropertyFields } from '../../src/utils/vaultProfiles';
 
 const storage = new Map<string, unknown>();
 
@@ -118,5 +120,22 @@ describe('loadInitialSelectionState', () => {
 
         expect(Array.from(state.selectedFiles)).toEqual(['notes/one.md', 'notes/two.md']);
         expect(state.selectedFile?.path).toBe('notes/one.md');
+    });
+
+    it('restores canonical property selections from NFC and NFD-equivalent stored node ids', () => {
+        storage.set(STORAGE_KEYS.selectedPropertyKey, 'key:Re\u0301union=Planifie\u0301');
+
+        const { app } = createAppWithRoot();
+        const settings = {
+            ...DEFAULT_SETTINGS,
+            showProperties: true
+        };
+        setActivePropertyFields(settings, 'Réunion');
+
+        const state = loadInitialSelectionState({ app, settings });
+
+        expect(state.selectionType).toBe('property');
+        expect(state.selectedFolder).toBeNull();
+        expect(state.selectedProperty).toBe(buildPropertyValueNodeId('réunion', normalizePropertyTreeValuePath('Planifié')));
     });
 });

@@ -24,7 +24,7 @@ import { isNoteShortcut } from '../../types/shortcuts';
 import type { NotebookNavigatorSettings } from '../../settings';
 import { getDBInstance } from '../../storage/fileOperations';
 import { deserializeIconFromFrontmatterCompat, normalizeCanonicalIconId, serializeIconForFrontmatter } from '../../utils/iconizeFormat';
-import { normalizePinnedNoteContext } from '../../utils/recordUtils';
+import { findMatchingRecordKey, normalizePinnedNoteContext } from '../../utils/recordUtils';
 
 /**
  * Service for managing file-specific metadata operations
@@ -217,13 +217,18 @@ export class FileMetadataService extends BaseMetadataService {
             let didUpdate = false;
             try {
                 await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
-                    const currentValue = frontmatter[iconField];
+                    const targetField = findMatchingRecordKey(frontmatter, iconField);
+                    if (!targetField) {
+                        return;
+                    }
+
+                    const currentValue = frontmatter[targetField];
                     if (typeof currentValue === 'string') {
                         const normalized = deserializeIconFromFrontmatterCompat(currentValue);
                         if (normalized !== oldIconId) {
                             return;
                         }
-                        frontmatter[iconField] = replacementValue;
+                        frontmatter[targetField] = replacementValue;
                         didUpdate = true;
                         return;
                     }
@@ -243,7 +248,7 @@ export class FileMetadataService extends BaseMetadataService {
                         });
 
                         if (didUpdate) {
-                            frontmatter[iconField] = next;
+                            frontmatter[targetField] = next;
                         }
                     }
                 });
@@ -303,14 +308,15 @@ export class FileMetadataService extends BaseMetadataService {
         try {
             // Update the frontmatter in the file
             await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
+                const targetField = findMatchingRecordKey(frontmatter, trimmedField) ?? trimmedField;
                 if (normalizedFrontmatterValue && normalizedFrontmatterValue.length > 0) {
-                    frontmatter[trimmedField] = normalizedFrontmatterValue;
+                    frontmatter[targetField] = normalizedFrontmatterValue;
                     return;
                 }
 
                 // Remove the field if it exists and new value is empty
-                if (Reflect.has(frontmatter, trimmedField)) {
-                    delete frontmatter[trimmedField];
+                if (Reflect.has(frontmatter, targetField)) {
+                    delete frontmatter[targetField];
                 }
             });
             // Sync the change to IndexedDB cache using canonical format

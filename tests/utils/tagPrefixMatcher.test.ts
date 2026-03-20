@@ -67,6 +67,12 @@ describe('matchesHiddenTagPattern', () => {
         expect(matchesHiddenTagPattern('attempt', extractName('attempt'), matcher)).toBe(false);
     });
 
+    it('matches wildcard name rules across NFC and NFD-equivalent tag names', () => {
+        const unicodeMatcher = createHiddenTagMatcher(['réu*', '*union']);
+
+        expect(matchesHiddenTagPattern('re\u0301union', extractName('re\u0301union'), unicodeMatcher)).toBe(true);
+    });
+
     it('matches tag names that end with configured text', () => {
         expect(matchesHiddenTagPattern('draft', extractName('draft'), matcher)).toBe(true);
         expect(matchesHiddenTagPattern('meeting-draft', extractName('meeting-draft'), matcher)).toBe(true);
@@ -96,5 +102,12 @@ describe('matchesHiddenTagPattern', () => {
         const emptyMatcher = createHiddenTagMatcher([]);
 
         expect(matchesHiddenTagPattern('archive', extractName('archive'), emptyMatcher)).toBe(false);
+    });
+
+    it('matches NFC and NFD-equivalent tag paths', () => {
+        const unicodeMatcher = createHiddenTagMatcher(['réunion']);
+
+        expect(matchesHiddenTagPattern('re\u0301union', extractName('re\u0301union'), unicodeMatcher)).toBe(true);
+        expect(matchesHiddenTagPattern('re\u0301union/notes', extractName('re\u0301union/notes'), unicodeMatcher)).toBe(true);
     });
 });

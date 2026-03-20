@@ -29,6 +29,7 @@ import {
     buildPropertySeparatorKey,
     buildSectionSeparatorKey,
     buildTagSeparatorKey,
+    normalizeNavigationSeparatorKey,
     parseNavigationSeparatorKey
 } from '../../utils/navigationSeparators';
 import { createConfiguredPropertyNodeValidator, normalizePropertyNodeId } from '../../utils/propertyTree';
@@ -398,7 +399,14 @@ export class NavigationSeparatorService extends BaseMetadataService {
         let changed = false;
 
         Object.keys(store).forEach(key => {
-            const descriptor = parseNavigationSeparatorKey(key);
+            const normalizedKey = normalizeNavigationSeparatorKey(key);
+            if (!normalizedKey) {
+                delete store[key];
+                changed = true;
+                return;
+            }
+
+            const descriptor = parseNavigationSeparatorKey(normalizedKey);
             if (!descriptor) {
                 delete store[key];
                 changed = true;
@@ -406,11 +414,17 @@ export class NavigationSeparatorService extends BaseMetadataService {
             }
             if (descriptor.type === 'folder' && !folderExists(descriptor.path)) {
                 delete store[key];
+                if (normalizedKey !== key && Object.prototype.hasOwnProperty.call(store, normalizedKey)) {
+                    delete store[normalizedKey];
+                }
                 changed = true;
                 return;
             }
             if (descriptor.type === 'tag' && !tagExists(descriptor.path)) {
                 delete store[key];
+                if (normalizedKey !== key && Object.prototype.hasOwnProperty.call(store, normalizedKey)) {
+                    delete store[normalizedKey];
+                }
                 changed = true;
                 return;
             }
@@ -418,30 +432,42 @@ export class NavigationSeparatorService extends BaseMetadataService {
                 const normalizedNodeId = normalizePropertyNodeId(descriptor.nodeId);
                 if (!normalizedNodeId) {
                     delete store[key];
+                    if (normalizedKey !== key && Object.prototype.hasOwnProperty.call(store, normalizedKey)) {
+                        delete store[normalizedKey];
+                    }
                     changed = true;
                     return;
                 }
 
-                const normalizedKey = buildPropertySeparatorKey(normalizedNodeId);
+                const normalizedPropertyKey = buildPropertySeparatorKey(normalizedNodeId);
                 if (propertyExists && !propertyExists(normalizedNodeId)) {
                     if (Object.prototype.hasOwnProperty.call(store, key)) {
                         delete store[key];
                         changed = true;
                     }
-                    if (normalizedKey !== key && Object.prototype.hasOwnProperty.call(store, normalizedKey)) {
-                        delete store[normalizedKey];
+                    if (normalizedPropertyKey !== key && Object.prototype.hasOwnProperty.call(store, normalizedPropertyKey)) {
+                        delete store[normalizedPropertyKey];
                         changed = true;
                     }
                     return;
                 }
 
-                if (normalizedKey !== key) {
-                    if (!Object.prototype.hasOwnProperty.call(store, normalizedKey)) {
-                        store[normalizedKey] = true;
+                if (normalizedPropertyKey !== key) {
+                    if (!Object.prototype.hasOwnProperty.call(store, normalizedPropertyKey)) {
+                        store[normalizedPropertyKey] = store[key];
                     }
                     delete store[key];
                     changed = true;
                 }
+                return;
+            }
+
+            if (normalizedKey !== key) {
+                if (!Object.prototype.hasOwnProperty.call(store, normalizedKey)) {
+                    store[normalizedKey] = store[key];
+                }
+                delete store[key];
+                changed = true;
             }
         });
 
