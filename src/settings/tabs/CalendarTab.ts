@@ -19,7 +19,13 @@
 import { DropdownComponent, ExtraButtonComponent, Setting } from 'obsidian';
 import { getCurrentLanguage, strings } from '../../i18n';
 import { MOMENT_FORMAT_DOCS_URL } from '../../constants/urls';
-import { isCalendarLeftPlacement, isCalendarPlacement, isCalendarWeekendDays, type CalendarWeeksToShow } from '../types';
+import {
+    isCalendarMonthHeadingFormat,
+    isCalendarLeftPlacement,
+    isCalendarPlacement,
+    isCalendarWeekendDays,
+    type CalendarWeeksToShow
+} from '../types';
 import type { SettingsTabContext } from './SettingsTabContext';
 import {
     createCalendarCustomDateFormatter,
@@ -161,6 +167,27 @@ export function renderCalendarTab(context: SettingsTabContext): void {
                     }
 
                     plugin.settings.calendarWeekendDays = value;
+                    await plugin.saveSettingsAndUpdate();
+                });
+        });
+
+    appearanceGroup
+        .addSetting(setting => {
+            setting
+                .setName(strings.settings.items.calendarMonthHeadingFormat.name)
+                .setDesc(strings.settings.items.calendarMonthHeadingFormat.desc);
+        })
+        .addDropdown((dropdown: DropdownComponent) => {
+            dropdown
+                .addOption('full', strings.settings.items.calendarMonthHeadingFormat.options.full)
+                .addOption('short', strings.settings.items.calendarMonthHeadingFormat.options.short)
+                .setValue(plugin.settings.calendarMonthHeadingFormat)
+                .onChange(async value => {
+                    if (!isCalendarMonthHeadingFormat(value)) {
+                        return;
+                    }
+
+                    plugin.settings.calendarMonthHeadingFormat = value;
                     await plugin.saveSettingsAndUpdate();
                 });
         });

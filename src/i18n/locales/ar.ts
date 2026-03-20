@@ -1182,6 +1182,14 @@ export const STRINGS_AR = {
                     thuFri: 'الخميس والجمعة'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'تنسيق اسم الشهر',
+                desc: 'اسم الشهر عادي أو مختصر عندما يكون عرض السنة مخفيًا.',
+                options: {
+                    full: 'يناير (كامل)',
+                    short: 'يناير (مختصر)'
+                }
+            },
             showInfoButtons: {
                 name: 'إظهار أزرار المعلومات',
                 desc: 'عرض أزرار المعلومات في شريط البحث ورأس التقويم.'

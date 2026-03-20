@@ -81,7 +81,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-03-20',
         showOnUpdate: true,
         new: [
-            'New setting: Style settings > Calendar > ==Feature image overlay color==. Adds a color overlay to darken or tint feature images in calendar days and months. Set separate colors for light and dark mode.'
+            'New setting: Calendar > ==Month name format==. Choose between full (January) or short (Jan) when the year view is hidden.',
+            'New style setting: Style settings > Calendar > ==Feature image overlay color==. Adds a color overlay to darken or tint feature images in calendar days and months. Set separate colors for light and dark mode.'
         ],
         improved: [
             'Icons in frontmatter now support wikilink-wrapped SVG paths like **[[icons/folder.svg]]**.',

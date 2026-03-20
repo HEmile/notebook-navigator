@@ -237,6 +237,13 @@ export function isCalendarWeekendDays(value: unknown): value is CalendarWeekendD
     return value === 'none' || value === 'sat-sun' || value === 'fri-sat' || value === 'thu-fri';
 }
 
+/** How the calendar month heading is formatted. */
+export type CalendarMonthHeadingFormat = 'full' | 'short';
+
+export function isCalendarMonthHeadingFormat(value: unknown): value is CalendarMonthHeadingFormat {
+    return value === 'full' || value === 'short';
+}
+
 /** Source used for calendar notes in the navigation pane */
 export type CalendarIntegrationMode = 'daily-notes' | 'notebook-navigator';
 
@@ -504,6 +511,7 @@ export interface NotebookNavigatorSettings {
     calendarConfirmBeforeCreate: boolean;
     calendarLocale: string;
     calendarWeekendDays: CalendarWeekendDays;
+    calendarMonthHeadingFormat: CalendarMonthHeadingFormat;
     calendarHighlightToday: boolean;
     calendarShowFeatureImage: boolean;
     calendarMonthHighlights: Record<string, string>;

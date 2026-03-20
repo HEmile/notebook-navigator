@@ -1185,6 +1185,14 @@ export const STRINGS_DE = {
                     thuFri: 'Donnerstag und Freitag'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'Monatsname-Format',
+                desc: 'Normaler oder abgekürzter Monatsname, wenn die Jahresansicht ausgeblendet ist.',
+                options: {
+                    full: 'Januar (voll)',
+                    short: 'Jan. (kurz)'
+                }
+            },
             showInfoButtons: {
                 name: 'Info-Schaltflächen anzeigen',
                 desc: 'Info-Schaltflächen in der Suchleiste und der Kalenderüberschrift anzeigen.'

@@ -1186,6 +1186,14 @@ export const STRINGS_PT_BR = {
                     thuFri: 'Quinta-feira e sexta-feira'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'Formato do nome do mês',
+                desc: 'Nome do mês normal ou abreviado quando a visualização anual está oculta.',
+                options: {
+                    full: 'janeiro (completo)',
+                    short: 'jan (curto)'
+                }
+            },
             showInfoButtons: {
                 name: 'Mostrar botões de informação',
                 desc: 'Exibir botões de informação na barra de pesquisa e no cabeçalho do calendário.'

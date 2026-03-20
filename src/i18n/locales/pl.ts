@@ -1186,6 +1186,14 @@ export const STRINGS_PL = {
                     thuFri: 'czwartek i piątek'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'Format nazwy miesiąca',
+                desc: 'Normalna lub skrócona nazwa miesiąca, gdy widok roku jest ukryty.',
+                options: {
+                    full: 'styczeń (pełna)',
+                    short: 'sty (krótka)'
+                }
+            },
             showInfoButtons: {
                 name: 'Pokaż przyciski informacyjne',
                 desc: 'Wyświetla przyciski informacyjne w pasku wyszukiwania i nagłówku kalendarza.'

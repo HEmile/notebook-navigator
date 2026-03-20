@@ -45,6 +45,7 @@ import {
     type TagSortOrder,
     type VaultProfile,
     isAlphaSortOrder,
+    isCalendarMonthHeadingFormat,
     isCalendarLeftPlacement,
     isCalendarPlacement,
     isCalendarWeekendDays,
@@ -276,6 +277,10 @@ export class PluginSettingsController {
 
         if (!isCalendarWeekendDays(this.currentSettings.calendarWeekendDays)) {
             this.currentSettings.calendarWeekendDays = DEFAULT_SETTINGS.calendarWeekendDays;
+        }
+
+        if (!isCalendarMonthHeadingFormat(this.currentSettings.calendarMonthHeadingFormat)) {
+            this.currentSettings.calendarMonthHeadingFormat = DEFAULT_SETTINGS.calendarMonthHeadingFormat;
         }
 
         if (!isFeatureImageSizeSetting(this.currentSettings.featureImageSize)) {

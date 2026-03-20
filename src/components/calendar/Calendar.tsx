@@ -1379,7 +1379,8 @@ export function Calendar({
     const activeYearValue = cursorDate.year();
     const currentMonthKey = todayIso ? todayIso.slice(0, 7) : null;
     const monthYearHeaderDate = cursorDate.clone().locale(displayLocale);
-    const monthLabel = monthYearHeaderDate.format('MMMM');
+    const monthHeadingFormat = showYearCalendar || settings.calendarMonthHeadingFormat !== 'short' ? 'MMMM' : 'MMM';
+    const monthLabel = monthYearHeaderDate.format(monthHeadingFormat);
     const yearLabel = monthYearHeaderDate.format('YYYY');
     const quarterLabel = monthYearHeaderDate.format('[Q]Q');
     const canCreateDayNotes = settings.calendarIntegrationMode !== 'daily-notes' || Boolean(dailyNoteSettings);

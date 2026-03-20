@@ -1180,6 +1180,14 @@ export const STRINGS_TH = {
                     thuFri: 'วันพฤหัสบดีและวันศุกร์'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'รูปแบบชื่อเดือน',
+                desc: 'ชื่อเดือนแบบปกติหรือแบบย่อเมื่อมุมมองปีถูกซ่อน',
+                options: {
+                    full: 'มกราคม (เต็ม)',
+                    short: 'ม.ค. (ย่อ)'
+                }
+            },
             showInfoButtons: {
                 name: 'แสดงปุ่มข้อมูล',
                 desc: 'แสดงปุ่มข้อมูลในแถบค้นหาและส่วนหัวปฏิทิน'

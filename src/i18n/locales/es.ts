@@ -1185,6 +1185,14 @@ export const STRINGS_ES = {
                     thuFri: 'Jueves y viernes'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'Formato del nombre del mes',
+                desc: 'Nombre del mes normal o abreviado cuando la vista anual está oculta.',
+                options: {
+                    full: 'enero (completo)',
+                    short: 'ene. (corto)'
+                }
+            },
             showInfoButtons: {
                 name: 'Mostrar botones de información',
                 desc: 'Mostrar botones de información en la barra de búsqueda y el encabezado del calendario.'

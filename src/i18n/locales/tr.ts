@@ -1184,6 +1184,14 @@ export const STRINGS_TR = {
                     thuFri: 'Perşembe ve cuma'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'Ay adı biçimi',
+                desc: 'Yıl görünümü gizlendiğinde normal veya kısaltılmış ay adı.',
+                options: {
+                    full: 'Ocak (tam)',
+                    short: 'Oca (kısa)'
+                }
+            },
             showInfoButtons: {
                 name: 'Bilgi düğmelerini göster',
                 desc: 'Arama çubuğunda ve takvim başlığında bilgi düğmelerini göster.'

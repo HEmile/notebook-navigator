@@ -1180,6 +1180,14 @@ export const STRINGS_EN = {
                     thuFri: 'Thursday and Friday'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'Month name format',
+                desc: 'Full or short month name when the year view is hidden.',
+                options: {
+                    full: 'January (full)',
+                    short: 'Jan (short)'
+                }
+            },
             showInfoButtons: {
                 name: 'Show info buttons',
                 desc: 'Display info buttons in the search bar and calendar header.'

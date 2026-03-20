@@ -1184,6 +1184,14 @@ export const STRINGS_ID = {
                     thuFri: 'Kamis dan Jumat'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'Format nama bulan',
+                desc: 'Nama bulan normal atau singkatan saat tampilan tahun disembunyikan.',
+                options: {
+                    full: 'Januari (lengkap)',
+                    short: 'Jan (singkat)'
+                }
+            },
             showInfoButtons: {
                 name: 'Tampilkan tombol info',
                 desc: 'Tampilkan tombol info di bilah pencarian dan header kalender.'

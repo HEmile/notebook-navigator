@@ -1177,6 +1177,14 @@ export const STRINGS_ZH_CN = {
                     thuFri: '周四和周五'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: '月份名称格式',
+                desc: '年视图隐藏时，显示正常或缩写的月份名称。',
+                options: {
+                    full: '一月 (完整)',
+                    short: '1月 (简称)'
+                }
+            },
             showInfoButtons: {
                 name: '显示信息按钮',
                 desc: '在搜索栏和日历标题中显示信息按钮。'

@@ -1185,6 +1185,14 @@ export const STRINGS_VI = {
                     thuFri: 'Thứ năm và thứ sáu'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'Định dạng tên tháng',
+                desc: 'Tên tháng bình thường hoặc viết tắt khi chế độ xem năm bị ẩn.',
+                options: {
+                    full: 'tháng 1 (đầy đủ)',
+                    short: 'Thg 01 (ngắn)'
+                }
+            },
             showInfoButtons: {
                 name: 'Hiển thị nút thông tin',
                 desc: 'Hiển thị nút thông tin trên thanh tìm kiếm và tiêu đề lịch.'

@@ -1185,6 +1185,14 @@ export const STRINGS_NL = {
                     thuFri: 'Donderdag en vrijdag'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'Maandnaam-indeling',
+                desc: 'Normale of afgekorte maandnaam wanneer het jaaroverzicht verborgen is.',
+                options: {
+                    full: 'januari (volledig)',
+                    short: 'jan. (kort)'
+                }
+            },
             showInfoButtons: {
                 name: 'Infoknoppen tonen',
                 desc: 'Infoknoppen weergeven in de zoekbalk en de kalenderheader.'

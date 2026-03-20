@@ -1183,6 +1183,14 @@ export const STRINGS_KO = {
                     thuFri: '목요일과 금요일'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: '월 이름 형식',
+                desc: '연도 보기가 숨겨져 있을 때 월 이름을 일반 또는 약어로 표시합니다.',
+                options: {
+                    full: '1월 (전체)',
+                    short: '1월 (축약)'
+                }
+            },
             showInfoButtons: {
                 name: '정보 버튼 표시',
                 desc: '검색 바와 캘린더 헤더에 정보 버튼을 표시합니다.'

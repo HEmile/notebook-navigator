@@ -1184,6 +1184,14 @@ export const STRINGS_FA = {
                     thuFri: 'پنجشنبه و جمعه'
                 }
             },
+            calendarMonthHeadingFormat: {
+                name: 'قالب نام ماه',
+                desc: 'نام ماه معمولی یا مخفف وقتی نمای سال پنهان است.',
+                options: {
+                    full: 'ژانویه (کامل)',
+                    short: 'ژانویه (کوتاه)'
+                }
+            },
             showInfoButtons: {
                 name: 'نمایش دکمه‌های اطلاعات',
                 desc: 'نمایش دکمه‌های اطلاعات در نوار جستجو و سربرگ تقویم.'
