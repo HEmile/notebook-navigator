@@ -81,13 +81,13 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-03-20',
         showOnUpdate: true,
         new: [
-            'New setting: Calendar > ==Month name format==. Choose between full (January) or short (Jan) when the year view is hidden.',
-            'New style setting: Style settings > Calendar > ==Feature image overlay color==. Adds a color overlay to darken or tint feature images in calendar days and months. Set separate colors for light and dark mode.'
+            'New setting: Calendar > ==Month name format==. Choose between "full" (January) or "short" (Jan) when the year view is hidden.',
+            'New style setting: Calendar > ==Feature image overlay color==. Adds a color overlay to darken or tint feature images in calendar days and months. Set separate colors for light and dark mode.'
         ],
         improved: [
-            'Icons in frontmatter now support wikilink-wrapped SVG paths like **[[icons/folder.svg]]**.',
-            'Yearly calendar months now longer show "(n)" suffix, instead they show the same circles as daily notes (filled circle for notes, hollow circle for tasks).',
-            'Single-line file titles and preview text in list pane now truncate with ellipsis instead of dropping the last word before the ellipsis.'
+            '**Icons in frontmatter** now support wikilink-wrapped SVG paths like **[[icons/folder.svg]]**.',
+            '**Yearly calendar months now longer show "(n)" suffix**, instead they show the same circles as daily notes (filled circle for notes, hollow circle for tasks).',
+            '**Single-line file titles and preview text in list pane now truncate with ellipsis** instead of dropping the last word before the ellipsis.'
         ],
         fixed: [
             'The yearly calendar month outline now always follows the active month.',
