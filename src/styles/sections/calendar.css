@@ -33,6 +33,7 @@
     --nn-calendar-weeknumber-font-size: var(--nn-calendar-day-font-size);
     --nn-calendar-day-font-size: 12px;
     --nn-calendar-section-gap: 6px;
+    --nn-calendar-year-panel-padding-top: 8px;
     --nn-calendar-padding: 8px;
     --nn-calendar-safe-area: 0px;
     --nn-calendar-border-width: 1px;
@@ -395,6 +396,13 @@
 /* ========================================================================
    Year panel (shared)
    ======================================================================== */
+
+.nn-navigation-calendar-year-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nn-calendar-section-gap);
+    padding-top: var(--nn-calendar-year-panel-padding-top);
+}
 
 .nn-navigation-calendar-year-nav {
     display: flex;

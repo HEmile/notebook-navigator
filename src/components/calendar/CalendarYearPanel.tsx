@@ -57,7 +57,7 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
     }
 
     return (
-        <>
+        <div className="nn-navigation-calendar-year-panel">
             <div className="nn-navigation-calendar-year-nav">
                 <button
                     type="button"
@@ -130,6 +130,6 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                     );
                 })}
             </div>
-        </>
+        </div>
     );
 });
