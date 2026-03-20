@@ -41,7 +41,6 @@ export interface NavigationPaneShortcutRenderState {
     propertiesHeaderTrailingAction: VirtualFolderTrailingAction;
     shortcutNumberBadgesByKey: Map<string, string>;
     shouldShowShortcutCounts: boolean;
-    useRecentFilesLabel: boolean;
     removeShortcut: (key: string) => Promise<boolean>;
     handleShortcutFolderActivate: (folder: TFolder, shortcutKey: string) => void;
     handleShortcutFolderNoteClick: (folder: TFolder, shortcutKey: string, event: React.MouseEvent<HTMLSpanElement>) => void;

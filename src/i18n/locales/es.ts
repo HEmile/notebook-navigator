@@ -61,8 +61,7 @@ export const STRINGS_ES = {
 
     navigationPane: {
         shortcutsHeader: 'Accesos directos',
-        recentNotesHeader: 'Notas recientes',
-        recentFilesHeader: 'Archivos recientes',
+        recentFilesHeader: 'Archivos recientes', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Propiedades',
         reorderRootFoldersTitle: 'Reordenar navegación',
         reorderRootFoldersHint: 'Usa flechas o arrastra para reordenar',
@@ -70,10 +69,8 @@ export const STRINGS_ES = {
         resetRootToAlpha: 'Restablecer orden alfabético',
         resetRootToFrequency: 'Restablecer al orden por frecuencia',
         pinShortcuts: 'Fijar accesos directos',
-        pinShortcutsAndRecentNotes: 'Fijar accesos directos y notas recientes',
         pinShortcutsAndRecentFiles: 'Fijar accesos directos y archivos recientes',
         unpinShortcuts: 'Desfijar accesos directos',
-        unpinShortcutsAndRecentNotes: 'Desfijar accesos directos y notas recientes',
         unpinShortcutsAndRecentFiles: 'Desfijar accesos directos y archivos recientes',
         profileMenuAria: 'Cambiar perfil de bóveda'
     },
@@ -1051,7 +1048,7 @@ export const STRINGS_ES = {
             },
             startView: {
                 name: 'Vista de inicio predeterminada',
-                desc: 'Elige qué panel mostrar al abrir Notebook Navigator. El panel de navegación muestra los accesos directos, las notas recientes y la estructura de carpetas. El panel de lista muestra la lista de notas en pantalla.',
+                desc: 'Elige qué panel mostrar al abrir Notebook Navigator. El panel de navegación muestra los accesos directos, los archivos recientes y la estructura de carpetas. El panel de lista muestra la lista de archivos en pantalla.',
                 options: {
                     navigation: 'Panel de navegación',
                     files: 'Panel de lista'
@@ -1132,24 +1129,24 @@ export const STRINGS_ES = {
                 }
             },
             showRecentNotes: {
-                name: 'Mostrar notas recientes',
-                desc: 'Mostrar la sección de notas recientes en el panel de navegación.'
+                name: 'Mostrar archivos recientes',
+                desc: 'Mostrar la sección de archivos recientes en el panel de navegación.'
             },
             hideRecentNotes: {
-                name: 'Ocultar notas',
-                desc: 'Elige qué tipos de notas ocultar en la sección de notas recientes.',
+                name: 'Ocultar tipos de archivos',
+                desc: 'Elige qué tipos de archivos ocultar en la sección de archivos recientes.',
                 options: {
-                    none: 'Ninguna',
+                    none: 'Ninguno',
                     folderNotes: 'Notas de carpeta'
                 }
             },
             recentNotesCount: {
-                name: 'Cantidad de notas recientes',
-                desc: 'Número de notas recientes a mostrar.'
+                name: 'Cantidad de archivos recientes',
+                desc: 'Número de archivos recientes a mostrar.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Fijar notas recientes con accesos directos',
-                desc: 'Incluir notas recientes cuando se fijan los accesos directos.'
+                name: 'Fijar archivos recientes con accesos directos',
+                desc: 'Incluir archivos recientes cuando se fijan los accesos directos.'
             },
             calendarEnabled: {
                 name: 'Activar calendario',

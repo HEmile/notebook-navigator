@@ -69,7 +69,7 @@ interface UseNavigationPaneDataParams {
     navRainbowState: NavigationRainbowState;
     /** Whether the shortcuts virtual folder is expanded */
     shortcutsExpanded: boolean;
-    /** Whether the recent notes virtual folder is expanded */
+    /** Whether the recent files virtual folder is expanded */
     recentNotesExpanded: boolean;
     /** Whether shortcuts should be pinned at the top of the pane */
     pinShortcuts: boolean;
@@ -93,9 +93,9 @@ interface UseNavigationPaneDataResult {
     tagsVirtualFolderHasChildren: boolean;
     /** Whether the properties section is available in navigation */
     propertiesSectionActive: boolean;
-    /** Recent notes items rendered in the pinned area when pinning is enabled */
+    /** Recent files items rendered in the pinned area when pinning is enabled */
     pinnedRecentNotesItems: CombinedNavigationItem[];
-    /** Whether recent notes are pinned with shortcuts */
+    /** Whether recent files are pinned with shortcuts */
     shouldPinRecentNotes: boolean;
     /** Map from item keys to index in items array */
     pathToIndex: Map<string, number>;

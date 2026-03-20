@@ -62,8 +62,7 @@ export const STRINGS_FA = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'میانبرها',
-        recentNotesHeader: 'یادداشت‌های اخیر',
-        recentFilesHeader: 'فایل‌های اخیر',
+        recentFilesHeader: 'فایل‌های اخیر', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'ویژگی‌ها',
         reorderRootFoldersTitle: 'مرتب‌سازی مجدد ناوبری',
         reorderRootFoldersHint: 'از فلش‌ها یا کشیدن برای مرتب‌سازی استفاده کنید',
@@ -71,10 +70,8 @@ export const STRINGS_FA = {
         resetRootToAlpha: 'بازنشانی به ترتیب الفبایی',
         resetRootToFrequency: 'بازنشانی به ترتیب فراوانی',
         pinShortcuts: 'سنجاق کردن میانبرها',
-        pinShortcutsAndRecentNotes: 'سنجاق کردن میانبرها و یادداشت‌های اخیر',
         pinShortcutsAndRecentFiles: 'سنجاق کردن میانبرها و فایل‌های اخیر',
         unpinShortcuts: 'برداشتن سنجاق میانبرها',
-        unpinShortcutsAndRecentNotes: 'برداشتن سنجاق میانبرها و یادداشت‌های اخیر',
         unpinShortcutsAndRecentFiles: 'برداشتن سنجاق میانبرها و فایل‌های اخیر',
         profileMenuAria: 'تغییر پروفایل خزانه'
     },
@@ -1050,7 +1047,7 @@ export const STRINGS_FA = {
             },
             startView: {
                 name: 'نمای پیش‌فرض شروع',
-                desc: 'پنلی که هنگام باز کردن Notebook Navigator نمایش داده می‌شود را انتخاب کنید. پنل ناوبری میانبرها، یادداشت‌های اخیر و درخت پوشه را نمایش می‌دهد. پنل لیست فوراً لیست یادداشت‌ها را نمایش می‌دهد.',
+                desc: 'پنلی که هنگام باز کردن Notebook Navigator نمایش داده می‌شود را انتخاب کنید. پنل ناوبری میانبرها، فایل‌های اخیر و درخت پوشه را نمایش می‌دهد. پنل لیست فوراً لیست فایل‌ها را نمایش می‌دهد.',
                 options: {
                     navigation: 'پنل ناوبری',
                     files: 'پنل لیست'
@@ -1131,24 +1128,24 @@ export const STRINGS_FA = {
                 }
             },
             showRecentNotes: {
-                name: 'نمایش یادداشت‌های اخیر',
-                desc: 'بخش یادداشت‌های اخیر را در پنل ناوبری نمایش دهید.'
+                name: 'نمایش فایل‌های اخیر',
+                desc: 'بخش فایل‌های اخیر را در پنل ناوبری نمایش دهید.'
             },
             hideRecentNotes: {
-                name: 'پنهان کردن یادداشت‌ها',
-                desc: 'انتخاب کنید کدام انواع یادداشت در بخش یادداشت‌های اخیر پنهان شوند.',
+                name: 'پنهان کردن انواع فایل',
+                desc: 'انتخاب کنید کدام انواع فایل در بخش فایل‌های اخیر پنهان شوند.',
                 options: {
                     none: 'هیچ‌کدام',
                     folderNotes: 'یادداشت‌های پوشه'
                 }
             },
             recentNotesCount: {
-                name: 'تعداد یادداشت‌های اخیر',
-                desc: 'تعداد یادداشت‌های اخیر که نمایش داده می‌شوند.'
+                name: 'تعداد فایل‌های اخیر',
+                desc: 'تعداد فایل‌های اخیر که نمایش داده می‌شوند.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'سنجاق کردن یادداشت‌های اخیر با میانبرها',
-                desc: 'هنگام سنجاق کردن میانبرها، یادداشت‌های اخیر را نیز شامل شود.'
+                name: 'سنجاق کردن فایل‌های اخیر با میانبرها',
+                desc: 'هنگام سنجاق کردن میانبرها، فایل‌های اخیر را نیز شامل شود.'
             },
             calendarEnabled: {
                 name: 'فعال‌سازی تقویم',

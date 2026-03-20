@@ -62,8 +62,7 @@ export const STRINGS_IT = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'Scorciatoie', // Header label for shortcuts section in navigation pane (English: Shortcuts)
-        recentNotesHeader: 'Note recenti', // Header label for recent notes section in navigation pane (English: Recent notes)
-        recentFilesHeader: 'File recenti', // Header label when showing recent non-note files in navigation pane (English: Recent files)
+        recentFilesHeader: 'File recenti', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Proprietà',
         reorderRootFoldersTitle: 'Riordina navigazione',
         reorderRootFoldersHint: 'Usa frecce o trascina per riordinare',
@@ -71,10 +70,8 @@ export const STRINGS_IT = {
         resetRootToAlpha: 'Ripristina ordine alfabetico',
         resetRootToFrequency: 'Ripristina ordine per frequenza',
         pinShortcuts: 'Fissa scorciatoie',
-        pinShortcutsAndRecentNotes: 'Fissa scorciatoie e note recenti',
         pinShortcutsAndRecentFiles: 'Fissa scorciatoie e file recenti',
         unpinShortcuts: 'Rimuovi fissatura scorciatoie',
-        unpinShortcutsAndRecentNotes: 'Rimuovi fissatura scorciatoie e note recenti',
         unpinShortcutsAndRecentFiles: 'Rimuovi fissatura scorciatoie e file recenti',
         profileMenuAria: 'Cambia profilo vault'
     },
@@ -1046,7 +1043,7 @@ export const STRINGS_IT = {
             },
             startView: {
                 name: "Vista predefinita all'avvio",
-                desc: "Scegli quale pannello visualizzare all'apertura di Notebook Navigator. Il pannello navigazione mostra scorciatoie, note recenti e albero cartelle. Il pannello lista mostra subito l'elenco note.",
+                desc: "Scegli quale pannello visualizzare all'apertura di Notebook Navigator. Il pannello navigazione mostra scorciatoie, file recenti e albero cartelle. Il pannello lista mostra subito l'elenco file.",
                 options: {
                     navigation: 'Pannello navigazione',
                     files: 'Pannello lista'
@@ -1127,24 +1124,24 @@ export const STRINGS_IT = {
                 }
             },
             showRecentNotes: {
-                name: 'Mostra note recenti',
-                desc: 'Visualizza la sezione note recenti nel pannello navigazione.'
+                name: 'Mostra file recenti',
+                desc: 'Visualizza la sezione file recenti nel pannello navigazione.'
             },
             hideRecentNotes: {
-                name: 'Nascondi note',
-                desc: 'Scegli quali tipi di note nascondere nella sezione note recenti.',
+                name: 'Nascondi tipi di file',
+                desc: 'Scegli quali tipi di file nascondere nella sezione file recenti.',
                 options: {
                     none: 'Nessuno',
                     folderNotes: 'Note cartella'
                 }
             },
             recentNotesCount: {
-                name: 'Numero note recenti',
-                desc: 'Numero di note recenti da visualizzare.'
+                name: 'Numero file recenti',
+                desc: 'Numero di file recenti da visualizzare.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Fissa note recenti con scorciatoie',
-                desc: 'Includi le note recenti quando le scorciatoie sono fissate.'
+                name: 'Fissa file recenti con scorciatoie',
+                desc: 'Includi i file recenti quando le scorciatoie sono fissate.'
             },
             calendarEnabled: {
                 name: 'Attiva calendario',

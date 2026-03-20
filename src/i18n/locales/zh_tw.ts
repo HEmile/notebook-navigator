@@ -61,8 +61,7 @@ export const STRINGS_ZH_TW = {
 
     navigationPane: {
         shortcutsHeader: '捷徑',
-        recentNotesHeader: '最近筆記',
-        recentFilesHeader: '最近檔案',
+        recentFilesHeader: '最近檔案', // Header label for recent files section in navigation pane (English: Recent files)
         properties: '屬性',
         reorderRootFoldersTitle: '重新排列導覽',
         reorderRootFoldersHint: '使用方向鍵或拖曳來重新排列',
@@ -70,10 +69,8 @@ export const STRINGS_ZH_TW = {
         resetRootToAlpha: '重設為字母順序',
         resetRootToFrequency: '重設為頻率排序',
         pinShortcuts: '釘選捷徑',
-        pinShortcutsAndRecentNotes: '釘選捷徑和最近筆記',
         pinShortcutsAndRecentFiles: '釘選捷徑和最近檔案',
         unpinShortcuts: '取消釘選捷徑',
-        unpinShortcutsAndRecentNotes: '取消釘選捷徑和最近筆記',
         unpinShortcutsAndRecentFiles: '取消釘選捷徑和最近檔案',
         profileMenuAria: '變更保險庫設定檔'
     },
@@ -1043,7 +1040,7 @@ export const STRINGS_ZH_TW = {
             },
             startView: {
                 name: '預設啟動檢視',
-                desc: '選擇開啟 Notebook Navigator 時顯示的窗格。導覽窗格顯示捷徑、最近筆記和資料夾結構。列表窗格顯示筆記列表。',
+                desc: '選擇開啟 Notebook Navigator 時顯示的窗格。導覽窗格顯示捷徑、最近檔案和資料夾結構。列表窗格顯示檔案列表。',
                 options: {
                     navigation: '導覽窗格',
                     files: '列表窗格'
@@ -1124,24 +1121,24 @@ export const STRINGS_ZH_TW = {
                 }
             },
             showRecentNotes: {
-                name: '顯示最近筆記',
-                desc: '在導覽窗格中顯示最近筆記區段。'
+                name: '顯示最近檔案',
+                desc: '在導覽窗格中顯示最近檔案區段。'
             },
             hideRecentNotes: {
-                name: '隱藏筆記',
-                desc: '選擇在最近筆記區段中隱藏的筆記類型。',
+                name: '隱藏檔案類型',
+                desc: '選擇在最近檔案區段中隱藏的檔案類型。',
                 options: {
                     none: '無',
                     folderNotes: '資料夾筆記'
                 }
             },
             recentNotesCount: {
-                name: '最近筆記數量',
-                desc: '要顯示的最近筆記數量。'
+                name: '最近檔案數量',
+                desc: '要顯示的最近檔案數量。'
             },
             pinRecentNotesWithShortcuts: {
-                name: '將最近筆記與捷徑一起釘選',
-                desc: '釘選捷徑時包含最近筆記。'
+                name: '將最近檔案與捷徑一起釘選',
+                desc: '釘選捷徑時包含最近檔案。'
             },
             calendarEnabled: {
                 name: '啟用日曆',

@@ -62,8 +62,7 @@ export const STRINGS_RU = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'Ярлыки', // Header label for shortcuts section in navigation pane (English: Shortcuts)
-        recentNotesHeader: 'Недавние заметки', // Header label for recent notes section in navigation pane (English: Recent notes)
-        recentFilesHeader: 'Недавние файлы', // Header label when showing recent non-note files in navigation pane (English: Recent files)
+        recentFilesHeader: 'Недавние файлы', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Свойства',
         reorderRootFoldersTitle: 'Изменить порядок навигации',
         reorderRootFoldersHint: 'Используйте стрелки или перетаскивание',
@@ -71,10 +70,8 @@ export const STRINGS_RU = {
         resetRootToAlpha: 'Сбросить в алфавитный порядок',
         resetRootToFrequency: 'Сбросить по частоте',
         pinShortcuts: 'Закрепить ярлыки',
-        pinShortcutsAndRecentNotes: 'Закрепить ярлыки и недавние заметки',
         pinShortcutsAndRecentFiles: 'Закрепить ярлыки и недавние файлы',
         unpinShortcuts: 'Открепить ярлыки',
-        unpinShortcutsAndRecentNotes: 'Открепить ярлыки и недавние заметки',
         unpinShortcutsAndRecentFiles: 'Открепить ярлыки и недавние файлы',
         profileMenuAria: 'Сменить профиль хранилища'
     },
@@ -1047,7 +1044,7 @@ export const STRINGS_RU = {
             },
             startView: {
                 name: 'Начальный вид по умолчанию',
-                desc: 'Выберите, какая панель отображается при открытии Notebook Navigator. Панель навигации показывает ярлыки, недавние заметки и дерево папок. Панель списка сразу показывает список заметок.',
+                desc: 'Выберите, какая панель отображается при открытии Notebook Navigator. Панель навигации показывает ярлыки, недавние файлы и дерево папок. Панель списка сразу показывает список файлов.',
                 options: {
                     navigation: 'Панель навигации',
                     files: 'Панель списка'
@@ -1128,24 +1125,24 @@ export const STRINGS_RU = {
                 }
             },
             showRecentNotes: {
-                name: 'Показывать недавние заметки',
-                desc: 'Отображать раздел недавних заметок в панели навигации.'
+                name: 'Показывать недавние файлы',
+                desc: 'Отображать раздел недавних файлов в панели навигации.'
             },
             hideRecentNotes: {
-                name: 'Скрыть заметки',
-                desc: 'Выберите типы заметок для скрытия в разделе недавних заметок.',
+                name: 'Скрыть типы файлов',
+                desc: 'Выберите типы файлов для скрытия в разделе недавних файлов.',
                 options: {
                     none: 'Нет',
                     folderNotes: 'Заметки папок'
                 }
             },
             recentNotesCount: {
-                name: 'Количество недавних заметок',
-                desc: 'Количество отображаемых недавних заметок.'
+                name: 'Количество недавних файлов',
+                desc: 'Количество отображаемых недавних файлов.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Закрепить недавние заметки вместе с ярлыками',
-                desc: 'Включать недавние заметки при закреплении ярлыков.'
+                name: 'Закрепить недавние файлы вместе с ярлыками',
+                desc: 'Включать недавние файлы при закреплении ярлыков.'
             },
             calendarEnabled: {
                 name: 'Включить календарь',

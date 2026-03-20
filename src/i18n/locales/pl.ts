@@ -61,8 +61,7 @@ export const STRINGS_PL = {
 
     navigationPane: {
         shortcutsHeader: 'Skróty',
-        recentNotesHeader: 'Ostatnie notatki',
-        recentFilesHeader: 'Ostatnie pliki',
+        recentFilesHeader: 'Ostatnie pliki', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Atrybuty',
         reorderRootFoldersTitle: 'Zmień kolejność elementów',
         reorderRootFoldersHint: 'Użyj strzałek lub przeciągnij, aby zmienić kolejność',
@@ -70,10 +69,8 @@ export const STRINGS_PL = {
         resetRootToAlpha: 'Ustaw alfabetycznie',
         resetRootToFrequency: 'Ustaw ostatnie',
         pinShortcuts: 'Przypnij skróty',
-        pinShortcutsAndRecentNotes: 'Przypnij skróty i ostatnie notatki',
         pinShortcutsAndRecentFiles: 'Przypnij skróty i ostatnie pliki',
         unpinShortcuts: 'Odepnij skróty',
-        unpinShortcutsAndRecentNotes: 'Odepnij skróty i ostatnie notatki',
         unpinShortcutsAndRecentFiles: 'Odepnij skróty i ostatnie pliki',
         profileMenuAria: 'Zmień profil sejfu'
     },
@@ -1052,7 +1049,7 @@ export const STRINGS_PL = {
             },
             startView: {
                 name: 'Domyślny widok początkowy',
-                desc: 'Wybierz, który panel ma być widoczny po otwarciu Notebook Navigator. Panel nawigacji pokazuje skróty, ostatnie notatki i strukturę folderów. Panel listy od razu pokazuje listę notatek.',
+                desc: 'Wybierz, który panel ma być widoczny po otwarciu Notebook Navigator. Panel nawigacji pokazuje skróty, ostatnie pliki i strukturę folderów. Panel listy od razu pokazuje listę plików.',
                 options: {
                     navigation: 'Panel nawigacji',
                     files: 'Panel listy'
@@ -1133,24 +1130,24 @@ export const STRINGS_PL = {
                 }
             },
             showRecentNotes: {
-                name: 'Pokaż ostatnie notatki',
-                desc: 'Wyświetla sekcję ostatnich notatek w panelu nawigacji.'
+                name: 'Pokaż ostatnie pliki',
+                desc: 'Wyświetla sekcję ostatnich plików w panelu nawigacji.'
             },
             hideRecentNotes: {
-                name: 'Ukryj notatki',
-                desc: 'Wybierz typy notatek do ukrycia w sekcji ostatnich notatek.',
+                name: 'Ukryj typy plików',
+                desc: 'Wybierz typy plików do ukrycia w sekcji ostatnich plików.',
                 options: {
                     none: 'Brak',
                     folderNotes: 'Notatki folderów'
                 }
             },
             recentNotesCount: {
-                name: 'Liczba ostatnich notatek',
-                desc: 'Liczba ostatnich notatek do wyświetlenia.'
+                name: 'Liczba ostatnich plików',
+                desc: 'Liczba ostatnich plików do wyświetlenia.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Przypnij ostatnie notatki razem ze skrótami',
-                desc: 'Dołącz ostatnie notatki podczas przypinania skrótów.'
+                name: 'Przypnij ostatnie pliki razem ze skrótami',
+                desc: 'Dołącz ostatnie pliki podczas przypinania skrótów.'
             },
             calendarEnabled: {
                 name: 'Włącz kalendarz',

@@ -62,8 +62,7 @@ export const STRINGS_UK = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'Ярлики', // Header label for shortcuts section in navigation pane (English: Shortcuts)
-        recentNotesHeader: 'Останні нотатки', // Header label for recent notes section in navigation pane (English: Recent notes)
-        recentFilesHeader: 'Останні файли', // Header label when showing recent non-note files in navigation pane (English: Recent files)
+        recentFilesHeader: 'Останні файли', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Властивості',
         reorderRootFoldersTitle: 'Змінити порядок навігації',
         reorderRootFoldersHint: 'Використовуйте стрілки або перетягування',
@@ -71,10 +70,8 @@ export const STRINGS_UK = {
         resetRootToAlpha: 'Скинути до алфавітного порядку',
         resetRootToFrequency: 'Скинути до порядку за частотою',
         pinShortcuts: 'Закріпити ярлики',
-        pinShortcutsAndRecentNotes: 'Закріпити ярлики та останні нотатки',
         pinShortcutsAndRecentFiles: 'Закріпити ярлики та останні файли',
         unpinShortcuts: 'Відкріпити ярлики',
-        unpinShortcutsAndRecentNotes: 'Відкріпити ярлики та останні нотатки',
         unpinShortcutsAndRecentFiles: 'Відкріпити ярлики та останні файли',
         profileMenuAria: 'Змінити профіль сховища'
     },
@@ -1047,7 +1044,7 @@ export const STRINGS_UK = {
             },
             startView: {
                 name: 'Вигляд при запуску за замовчуванням',
-                desc: 'Виберіть, яку панель відображати при відкритті Notebook Navigator. Панель навігації показує ярлики, останні нотатки та дерево папок. Панель списку одразу показує список нотаток.',
+                desc: 'Виберіть, яку панель відображати при відкритті Notebook Navigator. Панель навігації показує ярлики, останні файли та дерево папок. Панель списку одразу показує список файлів.',
                 options: {
                     navigation: 'Панель навігації',
                     files: 'Панель списку'
@@ -1128,24 +1125,24 @@ export const STRINGS_UK = {
                 }
             },
             showRecentNotes: {
-                name: 'Показувати останні нотатки',
-                desc: 'Відображати розділ останніх нотаток у панелі навігації.'
+                name: 'Показувати останні файли',
+                desc: 'Відображати розділ останніх файлів у панелі навігації.'
             },
             hideRecentNotes: {
-                name: 'Приховати нотатки',
-                desc: 'Оберіть типи нотаток для приховування в розділі останніх нотаток.',
+                name: 'Приховати типи файлів',
+                desc: 'Оберіть типи файлів для приховування в розділі останніх файлів.',
                 options: {
                     none: 'Жодного',
                     folderNotes: 'Нотатки папок'
                 }
             },
             recentNotesCount: {
-                name: 'Кількість останніх нотаток',
-                desc: 'Кількість останніх нотаток для відображення.'
+                name: 'Кількість останніх файлів',
+                desc: 'Кількість останніх файлів для відображення.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Закріпити останні нотатки разом з ярликами',
-                desc: 'Включати останні нотатки при закріпленні ярликів.'
+                name: 'Закріпити останні файли разом з ярликами',
+                desc: 'Включати останні файли при закріпленні ярликів.'
             },
             calendarEnabled: {
                 name: 'Увімкнути календар',

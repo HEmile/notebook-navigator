@@ -57,7 +57,6 @@ interface ShowNavigationSectionContextMenuParams {
     metadataService: MetadataService;
     settings: NotebookNavigatorSettings;
     plugin: NotebookNavigatorPlugin;
-    useRecentFilesLabel: boolean;
     pinToggleLabel: string;
     isShortcutsPinned: boolean;
     onToggleShortcutsPin: () => void;
@@ -72,7 +71,7 @@ interface VirtualRootMenuConfig {
 
 type VirtualFolderStyleKey = 'virtualFolderColors' | 'virtualFolderBackgroundColors';
 
-function getVirtualRootMenuConfig(sectionId: NavigationSectionId, useRecentFilesLabel: boolean): VirtualRootMenuConfig | null {
+function getVirtualRootMenuConfig(sectionId: NavigationSectionId): VirtualRootMenuConfig | null {
     if (sectionId === NavigationSectionId.SHORTCUTS) {
         return {
             uxIconId: 'nav-shortcuts',
@@ -83,7 +82,7 @@ function getVirtualRootMenuConfig(sectionId: NavigationSectionId, useRecentFiles
     if (sectionId === NavigationSectionId.RECENT) {
         return {
             uxIconId: 'nav-recent-files',
-            title: useRecentFilesLabel ? strings.navigationPane.recentFilesHeader : strings.navigationPane.recentNotesHeader
+            title: strings.navigationPane.recentFilesHeader
         };
     }
 
@@ -132,7 +131,6 @@ export function showNavigationSectionContextMenu({
     metadataService,
     settings,
     plugin,
-    useRecentFilesLabel,
     pinToggleLabel,
     isShortcutsPinned,
     onToggleShortcutsPin,
@@ -168,7 +166,7 @@ export function showNavigationSectionContextMenu({
     const virtualFolderId = getVirtualFolderId(sectionId);
     if (virtualFolderId) {
         const settingsProvider = metadataService.getSettingsProvider();
-        const virtualRootMenuConfig = getVirtualRootMenuConfig(sectionId, useRecentFilesLabel);
+        const virtualRootMenuConfig = getVirtualRootMenuConfig(sectionId);
         const virtualFolderColor = settingsProvider.settings.virtualFolderColors?.[virtualFolderId];
         const virtualFolderBackgroundColor = settingsProvider.settings.virtualFolderBackgroundColors?.[virtualFolderId];
         const titleOverride = virtualRootMenuConfig?.title ?? '';

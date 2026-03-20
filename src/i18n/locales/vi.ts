@@ -62,8 +62,7 @@ export const STRINGS_VI = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'Lối tắt', // Header label for shortcuts section in navigation pane (English: Shortcuts)
-        recentNotesHeader: 'Ghi chú gần đây', // Header label for recent notes section in navigation pane (English: Recent notes)
-        recentFilesHeader: 'Tệp gần đây', // Header label when showing recent non-note files in navigation pane (English: Recent files)
+        recentFilesHeader: 'Tệp gần đây', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Thuộc tính',
         reorderRootFoldersTitle: 'Sắp xếp lại điều hướng',
         reorderRootFoldersHint: 'Dùng mũi tên hoặc kéo để sắp xếp lại',
@@ -71,10 +70,8 @@ export const STRINGS_VI = {
         resetRootToAlpha: 'Đặt lại theo thứ tự bảng chữ cái',
         resetRootToFrequency: 'Đặt lại theo tần suất',
         pinShortcuts: 'Ghim lối tắt',
-        pinShortcutsAndRecentNotes: 'Ghim lối tắt và ghi chú gần đây',
         pinShortcutsAndRecentFiles: 'Ghim lối tắt và tệp gần đây',
         unpinShortcuts: 'Bỏ ghim lối tắt',
-        unpinShortcutsAndRecentNotes: 'Bỏ ghim lối tắt và ghi chú gần đây',
         unpinShortcutsAndRecentFiles: 'Bỏ ghim lối tắt và tệp gần đây',
         profileMenuAria: 'Đổi hồ sơ vault'
     },
@@ -1051,7 +1048,7 @@ export const STRINGS_VI = {
             },
             startView: {
                 name: 'Chế độ xem khởi động mặc định',
-                desc: 'Chọn ngăn hiển thị khi mở Notebook Navigator. Ngăn điều hướng hiện lối tắt, ghi chú gần đây và cây thư mục. Ngăn danh sách hiện danh sách ghi chú ngay.',
+                desc: 'Chọn ngăn hiển thị khi mở Notebook Navigator. Ngăn điều hướng hiện lối tắt, tệp gần đây và cây thư mục. Ngăn danh sách hiện danh sách tệp ngay.',
                 options: {
                     navigation: 'Ngăn điều hướng',
                     files: 'Ngăn danh sách'
@@ -1132,24 +1129,24 @@ export const STRINGS_VI = {
                 }
             },
             showRecentNotes: {
-                name: 'Hiện ghi chú gần đây',
-                desc: 'Hiển thị phần ghi chú gần đây trong ngăn điều hướng.'
+                name: 'Hiện tệp gần đây',
+                desc: 'Hiển thị phần tệp gần đây trong ngăn điều hướng.'
             },
             hideRecentNotes: {
-                name: 'Ẩn ghi chú',
-                desc: 'Chọn loại ghi chú cần ẩn trong phần ghi chú gần đây.',
+                name: 'Ẩn loại tệp',
+                desc: 'Chọn loại tệp cần ẩn trong phần tệp gần đây.',
                 options: {
                     none: 'Không',
                     folderNotes: 'Ghi chú thư mục'
                 }
             },
             recentNotesCount: {
-                name: 'Số lượng ghi chú gần đây',
-                desc: 'Số ghi chú gần đây để hiển thị.'
+                name: 'Số lượng tệp gần đây',
+                desc: 'Số tệp gần đây để hiển thị.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Ghim ghi chú gần đây cùng lối tắt',
-                desc: 'Bao gồm ghi chú gần đây khi lối tắt được ghim.'
+                name: 'Ghim tệp gần đây cùng lối tắt',
+                desc: 'Bao gồm tệp gần đây khi lối tắt được ghim.'
             },
             calendarEnabled: {
                 name: 'Bật lịch',

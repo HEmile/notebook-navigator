@@ -31,7 +31,6 @@ import type { TagTreeNode } from '../../../types/storage';
 import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isSearchShortcut, isTagShortcut } from '../../../types/shortcuts';
 import type { CombinedNavigationItem } from '../../../types/virtualization';
 import { isFolderInExcludedFolder, shouldExcludeFileName, shouldExcludeFileWithMatcher } from '../../../utils/fileFilters';
-import { FILE_VISIBILITY } from '../../../utils/fileTypeUtils';
 import { getDBInstance } from '../../../storage/fileOperations';
 import { getVirtualTagCollection, isVirtualTagCollectionId } from '../../../utils/virtualTagCollections';
 import { createHiddenTagVisibility, matchesHiddenTagPattern } from '../../../utils/tagPrefixMatcher';
@@ -73,7 +72,6 @@ export function useNavigationPaneListSections({
     propertiesSectionActive
 }: UseNavigationPaneListSectionsParams): NavigationPaneListSectionsResult {
     const {
-        fileVisibility,
         hiddenFileNames,
         hiddenFilePropertyMatcher,
         hiddenFileTags,
@@ -447,10 +445,7 @@ export function useNavigationPaneListSections({
             return recentNotesHiddenFileMatcher(file) ? null : file;
         };
 
-        const recentHeaderName =
-            fileVisibility === FILE_VISIBILITY.DOCUMENTS
-                ? strings.navigationPane.recentNotesHeader
-                : strings.navigationPane.recentFilesHeader;
+        const recentHeaderName = strings.navigationPane.recentFilesHeader;
 
         if (!recentNotesExpanded) {
             let hasChildren = false;
@@ -510,7 +505,6 @@ export function useNavigationPaneListSections({
         return items;
     }, [
         app,
-        fileVisibility,
         recentNotes,
         recentNotesExpanded,
         recentNotesHiddenFileMatcher,

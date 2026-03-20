@@ -61,8 +61,7 @@ export const STRINGS_JA = {
 
     navigationPane: {
         shortcutsHeader: 'ショートカット',
-        recentNotesHeader: '最近のノート',
-        recentFilesHeader: '最近のファイル',
+        recentFilesHeader: '最近のファイル', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'プロパティ',
         reorderRootFoldersTitle: 'ナビゲーションを並び替え',
         reorderRootFoldersHint: '矢印またはドラッグで並び替え',
@@ -70,10 +69,8 @@ export const STRINGS_JA = {
         resetRootToAlpha: 'アルファベット順にリセット',
         resetRootToFrequency: '頻度順にリセット',
         pinShortcuts: 'ショートカットを固定',
-        pinShortcutsAndRecentNotes: 'ショートカットと最近のノートを固定',
         pinShortcutsAndRecentFiles: 'ショートカットと最近のファイルを固定',
         unpinShortcuts: 'ショートカットの固定を解除',
-        unpinShortcutsAndRecentNotes: 'ショートカットと最近のノートの固定を解除',
         unpinShortcutsAndRecentFiles: 'ショートカットと最近のファイルの固定を解除',
         profileMenuAria: '保管庫のプロファイルを変更'
     },
@@ -1049,7 +1046,7 @@ export const STRINGS_JA = {
             },
             startView: {
                 name: 'デフォルト起動ビュー',
-                desc: 'Notebook Navigator を開いたときに表示するペインを選択します。ナビゲーションペインはショートカット、最近のノート、フォルダ構造を表示します。リストペインはノート一覧を表示します。',
+                desc: 'Notebook Navigator を開いたときに表示するペインを選択します。ナビゲーションペインはショートカット、最近のファイル、フォルダ構造を表示します。リストペインはファイル一覧を表示します。',
                 options: {
                     navigation: 'ナビゲーションペイン',
                     files: 'リストペイン'
@@ -1130,24 +1127,24 @@ export const STRINGS_JA = {
                 }
             },
             showRecentNotes: {
-                name: '最近のノートを表示',
-                desc: 'ナビゲーションペインに最近のノートセクションを表示します。'
+                name: '最近のファイルを表示',
+                desc: 'ナビゲーションペインに最近のファイルセクションを表示します。'
             },
             hideRecentNotes: {
-                name: 'ノートを非表示',
-                desc: '最近のノートセクションで非表示にするノートの種類を選択します。',
+                name: 'ファイルの種類を非表示',
+                desc: '最近のファイルセクションで非表示にするファイルの種類を選択します。',
                 options: {
                     none: 'なし',
                     folderNotes: 'フォルダノート'
                 }
             },
             recentNotesCount: {
-                name: '最近のノート数',
-                desc: '表示する最近のノートの数。'
+                name: '最近のファイル数',
+                desc: '表示する最近のファイルの数。'
             },
             pinRecentNotesWithShortcuts: {
-                name: '最近のノートをショートカットと一緒に固定',
-                desc: 'ショートカットを固定するときに最近のノートを含める。'
+                name: '最近のファイルをショートカットと一緒に固定',
+                desc: 'ショートカットを固定するときに最近のファイルを含める。'
             },
             calendarEnabled: {
                 name: 'カレンダーを有効化',

@@ -62,8 +62,7 @@ export const STRINGS_AR = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'اختصارات', // Header label for shortcuts section in navigation pane (English: Shortcuts)
-        recentNotesHeader: 'ملاحظات حديثة', // Header label for recent notes section in navigation pane (English: Recent notes)
-        recentFilesHeader: 'ملفات حديثة', // Header label when showing recent non-note files in navigation pane (English: Recent files)
+        recentFilesHeader: 'ملفات حديثة', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'الخصائص',
         reorderRootFoldersTitle: 'إعادة ترتيب التنقل',
         reorderRootFoldersHint: 'استخدم الأسهم أو اسحب لإعادة الترتيب',
@@ -71,10 +70,8 @@ export const STRINGS_AR = {
         resetRootToAlpha: 'إعادة الترتيب الأبجدي',
         resetRootToFrequency: 'إعادة الترتيب حسب التكرار',
         pinShortcuts: 'تثبيت الاختصارات',
-        pinShortcutsAndRecentNotes: 'تثبيت الاختصارات والملاحظات الحديثة',
         pinShortcutsAndRecentFiles: 'تثبيت الاختصارات والملفات الحديثة',
         unpinShortcuts: 'إلغاء تثبيت الاختصارات',
-        unpinShortcutsAndRecentNotes: 'إلغاء تثبيت الاختصارات والملاحظات الحديثة',
         unpinShortcutsAndRecentFiles: 'إلغاء تثبيت الاختصارات والملفات الحديثة',
         profileMenuAria: 'تغيير ملف الخزنة'
     },
@@ -1048,7 +1045,7 @@ export const STRINGS_AR = {
             },
             startView: {
                 name: 'عرض البدء الافتراضي',
-                desc: 'اختر اللوحة التي تعرض عند فتح متصفح الدفتر. لوحة التنقل تعرض الاختصارات والملاحظات الحديثة وشجرة المجلدات. لوحة القائمة تعرض قائمة الملاحظات فورًا.',
+                desc: 'اختر اللوحة التي تعرض عند فتح متصفح الدفتر. لوحة التنقل تعرض الاختصارات والملفات الحديثة وشجرة المجلدات. لوحة القائمة تعرض قائمة الملفات فورًا.',
                 options: {
                     navigation: 'لوحة التنقل',
                     files: 'لوحة القائمة'
@@ -1129,24 +1126,24 @@ export const STRINGS_AR = {
                 }
             },
             showRecentNotes: {
-                name: 'إظهار الملاحظات الحديثة',
-                desc: 'عرض قسم الملاحظات الحديثة في لوحة التنقل.'
+                name: 'إظهار الملفات الحديثة',
+                desc: 'عرض قسم الملفات الحديثة في لوحة التنقل.'
             },
             hideRecentNotes: {
-                name: 'إخفاء الملاحظات',
-                desc: 'اختر أنواع الملاحظات المراد إخفاؤها في قسم الملاحظات الحديثة.',
+                name: 'إخفاء أنواع الملفات',
+                desc: 'اختر أنواع الملفات المراد إخفاؤها في قسم الملفات الحديثة.',
                 options: {
                     none: 'لا شيء',
                     folderNotes: 'ملاحظات المجلدات'
                 }
             },
             recentNotesCount: {
-                name: 'عدد الملاحظات الحديثة',
-                desc: 'عدد الملاحظات الحديثة المعروضة.'
+                name: 'عدد الملفات الحديثة',
+                desc: 'عدد الملفات الحديثة المعروضة.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'تثبيت الملاحظات الحديثة مع الاختصارات',
-                desc: 'تضمين الملاحظات الحديثة عند تثبيت الاختصارات.'
+                name: 'تثبيت الملفات الحديثة مع الاختصارات',
+                desc: 'تضمين الملفات الحديثة عند تثبيت الاختصارات.'
             },
             calendarEnabled: {
                 name: 'تفعيل التقويم',

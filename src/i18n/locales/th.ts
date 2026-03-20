@@ -62,8 +62,7 @@ export const STRINGS_TH = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'ทางลัด',
-        recentNotesHeader: 'โน้ตล่าสุด',
-        recentFilesHeader: 'ไฟล์ล่าสุด',
+        recentFilesHeader: 'ไฟล์ล่าสุด', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'คุณสมบัติ',
         reorderRootFoldersTitle: 'จัดเรียงการนำทางใหม่',
         reorderRootFoldersHint: 'ใช้ลูกศรหรือลากเพื่อจัดเรียงใหม่',
@@ -71,10 +70,8 @@ export const STRINGS_TH = {
         resetRootToAlpha: 'รีเซ็ตเป็นลำดับตัวอักษร',
         resetRootToFrequency: 'รีเซ็ตเป็นลำดับความถี่',
         pinShortcuts: 'ปักหมุดทางลัด',
-        pinShortcutsAndRecentNotes: 'ปักหมุดทางลัดและโน้ตล่าสุด',
         pinShortcutsAndRecentFiles: 'ปักหมุดทางลัดและไฟล์ล่าสุด',
         unpinShortcuts: 'เลิกปักหมุดทางลัด',
-        unpinShortcutsAndRecentNotes: 'เลิกปักหมุดทางลัดและโน้ตล่าสุด',
         unpinShortcutsAndRecentFiles: 'เลิกปักหมุดทางลัดและไฟล์ล่าสุด',
         profileMenuAria: 'เปลี่ยนโปรไฟล์ห้องนิรภัย'
     },
@@ -1046,7 +1043,7 @@ export const STRINGS_TH = {
             },
             startView: {
                 name: 'มุมมองเริ่มต้นเมื่อเริ่มงาน',
-                desc: 'เลือกแผงที่จะแสดงเมื่อเปิด Notebook Navigator แผงนำทางแสดงทางลัด โน้ตล่าสุด และต้นไม้โฟลเดอร์ แผงรายการแสดงรายการโน้ตทันที',
+                desc: 'เลือกแผงที่จะแสดงเมื่อเปิด Notebook Navigator แผงนำทางแสดงทางลัด ไฟล์ล่าสุด และต้นไม้โฟลเดอร์ แผงรายการแสดงรายการไฟล์ทันที',
                 options: {
                     navigation: 'แผงนำทาง',
                     files: 'แผงรายการ'
@@ -1127,24 +1124,24 @@ export const STRINGS_TH = {
                 }
             },
             showRecentNotes: {
-                name: 'แสดงโน้ตล่าสุด',
-                desc: 'แสดงส่วนโน้ตล่าสุดในแผงนำทาง'
+                name: 'แสดงไฟล์ล่าสุด',
+                desc: 'แสดงส่วนไฟล์ล่าสุดในแผงนำทาง'
             },
             hideRecentNotes: {
-                name: 'ซ่อนโน้ต',
-                desc: 'เลือกประเภทโน้ตที่ต้องการซ่อนในส่วนโน้ตล่าสุด',
+                name: 'ซ่อนประเภทไฟล์',
+                desc: 'เลือกประเภทไฟล์ที่ต้องการซ่อนในส่วนไฟล์ล่าสุด',
                 options: {
                     none: 'ไม่มี',
                     folderNotes: 'โน้ตโฟลเดอร์'
                 }
             },
             recentNotesCount: {
-                name: 'จำนวนโน้ตล่าสุด',
-                desc: 'จำนวนโน้ตล่าสุดที่จะแสดง'
+                name: 'จำนวนไฟล์ล่าสุด',
+                desc: 'จำนวนไฟล์ล่าสุดที่จะแสดง'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'ปักหมุดโน้ตล่าสุดพร้อมทางลัด',
-                desc: 'รวมโน้ตล่าสุดเมื่อปักหมุดทางลัด'
+                name: 'ปักหมุดไฟล์ล่าสุดพร้อมทางลัด',
+                desc: 'รวมไฟล์ล่าสุดเมื่อปักหมุดทางลัด'
             },
             calendarEnabled: {
                 name: 'เปิดใช้งานปฏิทิน',

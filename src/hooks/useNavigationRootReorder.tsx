@@ -22,7 +22,6 @@ import type { NotebookNavigatorSettings } from '../settings';
 import type { PropertyTreeNode, TagTreeNode } from '../types/storage';
 import type { CombinedNavigationItem } from '../types/virtualization';
 import { NavigationPaneItemType, UNTAGGED_TAG_ID, STORAGE_KEYS, NavigationSectionId } from '../types';
-import { FILE_VISIBILITY } from '../utils/fileTypeUtils';
 import { strings } from '../i18n';
 import type { MetadataService } from '../services/MetadataService';
 import { localStorage } from '../utils/localStorage';
@@ -169,7 +168,7 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         customVaultName
     } = settings;
 
-    const { fileVisibility, hiddenFolders, hiddenTags } = activeProfile;
+    const { hiddenFolders, hiddenTags } = activeProfile;
     const hiddenTagMatcher = useMemo(() => createHiddenTagMatcher(hiddenTags), [hiddenTags]);
     const hasHiddenTagRules = useMemo(() => {
         return (
@@ -788,10 +787,7 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                 label = strings.navigationPane.shortcutsHeader;
             } else if (identifier === NavigationSectionId.RECENT) {
                 icon = resolveUXIcon(settings.interfaceIcons, 'nav-recent-files');
-                label =
-                    fileVisibility === FILE_VISIBILITY.DOCUMENTS
-                        ? strings.navigationPane.recentNotesHeader
-                        : strings.navigationPane.recentFilesHeader;
+                label = strings.navigationPane.recentFilesHeader;
             } else if (identifier === NavigationSectionId.FOLDERS) {
                 if (vaultRootDescriptor) {
                     const vaultIcon = rootFolderIconMap.get(vaultRootDescriptor.key);
@@ -844,7 +840,6 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         showTags,
         propertiesSectionActive,
         rootFolderDescriptors.length,
-        fileVisibility,
         vaultRootDescriptor,
         rootFolderIconMap,
         rootFolderColorMap,

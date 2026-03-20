@@ -61,8 +61,7 @@ export const STRINGS_KO = {
 
     navigationPane: {
         shortcutsHeader: '바로가기',
-        recentNotesHeader: '최근 노트',
-        recentFilesHeader: '최근 파일',
+        recentFilesHeader: '최근 파일', // Header label for recent files section in navigation pane (English: Recent files)
         properties: '속성',
         reorderRootFoldersTitle: '내비게이션 재정렬',
         reorderRootFoldersHint: '화살표 또는 드래그로 재정렬',
@@ -70,10 +69,8 @@ export const STRINGS_KO = {
         resetRootToAlpha: '알파벳 순서로 리셋',
         resetRootToFrequency: '빈도 순으로 리셋',
         pinShortcuts: '바로가기를 고정',
-        pinShortcutsAndRecentNotes: '바로가기와 최근 노트를 고정',
         pinShortcutsAndRecentFiles: '바로가기와 최근 파일을 고정',
         unpinShortcuts: '바로가기 고정을 해제',
-        unpinShortcutsAndRecentNotes: '바로가기와 최근 노트 고정을 해제',
         unpinShortcutsAndRecentFiles: '바로가기와 최근 파일 고정을 해제',
         profileMenuAria: '보관소 프로필 변경'
     },
@@ -1049,7 +1046,7 @@ export const STRINGS_KO = {
             },
             startView: {
                 name: '기본 시작 보기',
-                desc: 'Notebook Navigator를 열 때 표시할 창을 선택하세요. 탐색 창은 바로가기, 최근 노트, 폴더 구조를 표시합니다. 목록 창은 노트 목록을 표시합니다.',
+                desc: 'Notebook Navigator를 열 때 표시할 창을 선택하세요. 탐색 창은 바로가기, 최근 파일, 폴더 구조를 표시합니다. 목록 창은 파일 목록을 표시합니다.',
                 options: {
                     navigation: '탐색 창',
                     files: '목록 창'
@@ -1130,24 +1127,24 @@ export const STRINGS_KO = {
                 }
             },
             showRecentNotes: {
-                name: '최근 노트 표시',
-                desc: '탐색 창에 최근 노트 섹션을 표시합니다.'
+                name: '최근 파일 표시',
+                desc: '탐색 창에 최근 파일 섹션을 표시합니다.'
             },
             hideRecentNotes: {
-                name: '노트 숨기기',
-                desc: '최근 노트 섹션에서 숨길 노트 유형을 선택합니다.',
+                name: '파일 유형 숨기기',
+                desc: '최근 파일 섹션에서 숨길 파일 유형을 선택합니다.',
                 options: {
                     none: '없음',
                     folderNotes: '폴더 노트'
                 }
             },
             recentNotesCount: {
-                name: '최근 노트 수',
-                desc: '표시할 최근 노트의 수입니다.'
+                name: '최근 파일 수',
+                desc: '표시할 최근 파일의 수입니다.'
             },
             pinRecentNotesWithShortcuts: {
-                name: '바로가기와 함께 최근 노트 고정',
-                desc: '바로가기를 고정할 때 최근 노트를 포함합니다.'
+                name: '바로가기와 함께 최근 파일 고정',
+                desc: '바로가기를 고정할 때 최근 파일을 포함합니다.'
             },
             calendarEnabled: {
                 name: '캘린더 활성화',

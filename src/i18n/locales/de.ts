@@ -61,8 +61,7 @@ export const STRINGS_DE = {
 
     navigationPane: {
         shortcutsHeader: 'Lesezeichen',
-        recentNotesHeader: 'Neueste Notizen',
-        recentFilesHeader: 'Neueste Dateien',
+        recentFilesHeader: 'Neueste Dateien', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Eigenschaften',
         reorderRootFoldersTitle: 'Navigation neu anordnen',
         reorderRootFoldersHint: 'Pfeile oder Ziehen zum Neuanordnen',
@@ -70,10 +69,8 @@ export const STRINGS_DE = {
         resetRootToAlpha: 'Auf alphabetische Reihenfolge zurücksetzen',
         resetRootToFrequency: 'Auf Häufigkeitsreihenfolge zurücksetzen',
         pinShortcuts: 'Lesezeichen anheften',
-        pinShortcutsAndRecentNotes: 'Lesezeichen und neueste Notizen anheften',
         pinShortcutsAndRecentFiles: 'Lesezeichen und neueste Dateien anheften',
         unpinShortcuts: 'Lesezeichen lösen',
-        unpinShortcutsAndRecentNotes: 'Lesezeichen und neueste Notizen lösen',
         unpinShortcutsAndRecentFiles: 'Lesezeichen und neueste Dateien lösen',
         profileMenuAria: 'Tresorprofil ändern'
     },
@@ -1051,7 +1048,7 @@ export const STRINGS_DE = {
             },
             startView: {
                 name: 'Standard-Startansicht',
-                desc: 'Wählen Sie den Bereich, der beim Öffnen von Notebook Navigator angezeigt wird. Der Navigationsbereich zeigt Verknüpfungen, aktuelle Notizen und die Ordnerstruktur. Der Listenbereich zeigt die Notizliste.',
+                desc: 'Wählen Sie den Bereich, der beim Öffnen von Notebook Navigator angezeigt wird. Der Navigationsbereich zeigt Verknüpfungen, neueste Dateien und die Ordnerstruktur. Der Listenbereich zeigt die Dateiliste.',
                 options: {
                     navigation: 'Navigationsbereich',
                     files: 'Listenbereich'
@@ -1132,24 +1129,24 @@ export const STRINGS_DE = {
                 }
             },
             showRecentNotes: {
-                name: 'Neueste Notizen anzeigen',
-                desc: 'Den Bereich für neueste Notizen im Navigationsbereich anzeigen.'
+                name: 'Neueste Dateien anzeigen',
+                desc: 'Den Bereich für neueste Dateien im Navigationsbereich anzeigen.'
             },
             hideRecentNotes: {
-                name: 'Notizen ausblenden',
-                desc: 'Wähle aus, welche Notiztypen im Bereich der neuesten Notizen ausgeblendet werden sollen.',
+                name: 'Dateitypen ausblenden',
+                desc: 'Wähle aus, welche Dateitypen im Bereich der neuesten Dateien ausgeblendet werden sollen.',
                 options: {
                     none: 'Keine',
                     folderNotes: 'Ordnernotizen'
                 }
             },
             recentNotesCount: {
-                name: 'Anzahl neuester Notizen',
-                desc: 'Anzahl der anzuzeigenden neuesten Notizen.'
+                name: 'Anzahl neuester Dateien',
+                desc: 'Anzahl der anzuzeigenden neuesten Dateien.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Neueste Notizen mit Lesezeichen anheften',
-                desc: 'Neueste Notizen beim Anheften von Lesezeichen einbeziehen.'
+                name: 'Neueste Dateien mit Lesezeichen anheften',
+                desc: 'Neueste Dateien beim Anheften von Lesezeichen einbeziehen.'
             },
             calendarEnabled: {
                 name: 'Kalender aktivieren',

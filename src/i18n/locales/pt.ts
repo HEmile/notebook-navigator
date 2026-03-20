@@ -62,8 +62,7 @@ export const STRINGS_PT = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'Atalhos', // Header label for shortcuts section in navigation pane (English: Shortcuts)
-        recentNotesHeader: 'Notas recentes', // Header label for recent notes section in navigation pane (English: Recent notes)
-        recentFilesHeader: 'Ficheiros recentes', // Header label when showing recent non-note files in navigation pane (English: Recent files)
+        recentFilesHeader: 'Ficheiros recentes', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Propriedades',
         reorderRootFoldersTitle: 'Reordenar navegação',
         reorderRootFoldersHint: 'Use setas ou arraste para reordenar',
@@ -71,10 +70,8 @@ export const STRINGS_PT = {
         resetRootToAlpha: 'Repor ordem alfabética',
         resetRootToFrequency: 'Repor ordem por frequência',
         pinShortcuts: 'Fixar atalhos',
-        pinShortcutsAndRecentNotes: 'Fixar atalhos e notas recentes',
         pinShortcutsAndRecentFiles: 'Fixar atalhos e ficheiros recentes',
         unpinShortcuts: 'Desafixar atalhos',
-        unpinShortcutsAndRecentNotes: 'Desafixar atalhos e notas recentes',
         unpinShortcutsAndRecentFiles: 'Desafixar atalhos e ficheiros recentes',
         profileMenuAria: 'Alterar perfil do cofre'
     },
@@ -1050,7 +1047,7 @@ export const STRINGS_PT = {
             },
             startView: {
                 name: 'Vista de arranque predefinida',
-                desc: 'Escolha qual painel exibir ao abrir o Notebook Navigator. O painel de navegação mostra atalhos, notas recentes e árvore de pastas. O painel de lista mostra a lista de notas imediatamente.',
+                desc: 'Escolha qual painel exibir ao abrir o Notebook Navigator. O painel de navegação mostra atalhos, ficheiros recentes e árvore de pastas. O painel de lista mostra a lista de ficheiros imediatamente.',
                 options: {
                     navigation: 'Painel de navegação',
                     files: 'Painel de lista'
@@ -1131,24 +1128,24 @@ export const STRINGS_PT = {
                 }
             },
             showRecentNotes: {
-                name: 'Mostrar notas recentes',
-                desc: 'Exibir a secção de notas recentes no painel de navegação.'
+                name: 'Mostrar ficheiros recentes',
+                desc: 'Exibir a secção de ficheiros recentes no painel de navegação.'
             },
             hideRecentNotes: {
-                name: 'Ocultar notas',
-                desc: 'Escolher os tipos de notas a ocultar na secção de notas recentes.',
+                name: 'Ocultar tipos de ficheiros',
+                desc: 'Escolher os tipos de ficheiros a ocultar na secção de ficheiros recentes.',
                 options: {
                     none: 'Nenhum',
                     folderNotes: 'Notas de pasta'
                 }
             },
             recentNotesCount: {
-                name: 'Número de notas recentes',
-                desc: 'Número de notas recentes a exibir.'
+                name: 'Número de ficheiros recentes',
+                desc: 'Número de ficheiros recentes a exibir.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Fixar notas recentes com atalhos',
-                desc: 'Incluir notas recentes quando os atalhos estão fixos.'
+                name: 'Fixar ficheiros recentes com atalhos',
+                desc: 'Incluir ficheiros recentes quando os atalhos estão fixos.'
             },
             calendarEnabled: {
                 name: 'Ativar calendário',

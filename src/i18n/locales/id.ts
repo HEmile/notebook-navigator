@@ -62,8 +62,7 @@ export const STRINGS_ID = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'Pintasan',
-        recentNotesHeader: 'Catatan terbaru',
-        recentFilesHeader: 'File terbaru',
+        recentFilesHeader: 'File terbaru', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Properti',
         reorderRootFoldersTitle: 'Atur ulang navigasi',
         reorderRootFoldersHint: 'Gunakan panah atau seret untuk mengatur ulang',
@@ -71,10 +70,8 @@ export const STRINGS_ID = {
         resetRootToAlpha: 'Atur ulang ke urutan abjad',
         resetRootToFrequency: 'Atur ulang ke urutan frekuensi',
         pinShortcuts: 'Sematkan pintasan',
-        pinShortcutsAndRecentNotes: 'Sematkan pintasan dan catatan terbaru',
         pinShortcutsAndRecentFiles: 'Sematkan pintasan dan file terbaru',
         unpinShortcuts: 'Lepas sematan pintasan',
-        unpinShortcutsAndRecentNotes: 'Lepas sematan pintasan dan catatan terbaru',
         unpinShortcutsAndRecentFiles: 'Lepas sematan pintasan dan file terbaru',
         profileMenuAria: 'Ubah profil vault'
     },
@@ -1050,7 +1047,7 @@ export const STRINGS_ID = {
             },
             startView: {
                 name: 'Tampilan startup default',
-                desc: 'Pilih panel mana yang ditampilkan saat membuka Notebook Navigator. Panel navigasi menampilkan pintasan, catatan terbaru, dan pohon folder. Panel daftar menampilkan daftar catatan segera.',
+                desc: 'Pilih panel mana yang ditampilkan saat membuka Notebook Navigator. Panel navigasi menampilkan pintasan, file terbaru, dan pohon folder. Panel daftar menampilkan daftar file segera.',
                 options: {
                     navigation: 'Panel navigasi',
                     files: 'Panel daftar'
@@ -1131,24 +1128,24 @@ export const STRINGS_ID = {
                 }
             },
             showRecentNotes: {
-                name: 'Tampilkan catatan terbaru',
-                desc: 'Tampilkan bagian catatan terbaru di panel navigasi.'
+                name: 'Tampilkan file terbaru',
+                desc: 'Tampilkan bagian file terbaru di panel navigasi.'
             },
             hideRecentNotes: {
-                name: 'Sembunyikan catatan',
-                desc: 'Pilih jenis catatan yang disembunyikan di bagian catatan terbaru.',
+                name: 'Sembunyikan jenis file',
+                desc: 'Pilih jenis file yang disembunyikan di bagian file terbaru.',
                 options: {
                     none: 'Tidak ada',
                     folderNotes: 'Catatan folder'
                 }
             },
             recentNotesCount: {
-                name: 'Jumlah catatan terbaru',
-                desc: 'Jumlah catatan terbaru yang ditampilkan.'
+                name: 'Jumlah file terbaru',
+                desc: 'Jumlah file terbaru yang ditampilkan.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Sematkan catatan terbaru bersama pintasan',
-                desc: 'Sertakan catatan terbaru saat pintasan disematkan.'
+                name: 'Sematkan file terbaru bersama pintasan',
+                desc: 'Sertakan file terbaru saat pintasan disematkan.'
             },
             calendarEnabled: {
                 name: 'Aktifkan kalender',

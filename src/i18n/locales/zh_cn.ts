@@ -61,8 +61,7 @@ export const STRINGS_ZH_CN = {
 
     navigationPane: {
         shortcutsHeader: '快捷方式',
-        recentNotesHeader: '最近笔记',
-        recentFilesHeader: '最近文件',
+        recentFilesHeader: '最近文件', // Header label for recent files section in navigation pane (English: Recent files)
         properties: '属性',
         reorderRootFoldersTitle: '重新排列导航',
         reorderRootFoldersHint: '使用箭头或拖动来重新排列',
@@ -70,10 +69,8 @@ export const STRINGS_ZH_CN = {
         resetRootToAlpha: '重置为字母顺序',
         resetRootToFrequency: '重置为频率排序',
         pinShortcuts: '固定快捷方式',
-        pinShortcutsAndRecentNotes: '固定快捷方式和最近笔记',
         pinShortcutsAndRecentFiles: '固定快捷方式和最近文件',
         unpinShortcuts: '取消固定快捷方式',
-        unpinShortcutsAndRecentNotes: '取消固定快捷方式和最近笔记',
         unpinShortcutsAndRecentFiles: '取消固定快捷方式和最近文件',
         profileMenuAria: '更改仓库配置文件'
     },
@@ -1043,7 +1040,7 @@ export const STRINGS_ZH_CN = {
             },
             startView: {
                 name: '默认启动视图',
-                desc: '选择打开 Notebook Navigator 时显示的窗格。导航窗格显示快捷方式、最近笔记和文件夹结构。列表窗格显示笔记列表。',
+                desc: '选择打开 Notebook Navigator 时显示的窗格。导航窗格显示快捷方式、最近文件和文件夹结构。列表窗格显示文件列表。',
                 options: {
                     navigation: '导航窗格',
                     files: '列表窗格'
@@ -1124,24 +1121,24 @@ export const STRINGS_ZH_CN = {
                 }
             },
             showRecentNotes: {
-                name: '显示最近笔记',
-                desc: '在导航窗格中显示最近笔记部分。'
+                name: '显示最近文件',
+                desc: '在导航窗格中显示最近文件部分。'
             },
             hideRecentNotes: {
-                name: '隐藏笔记',
-                desc: '选择在最近笔记部分中隐藏的笔记类型。',
+                name: '隐藏文件类型',
+                desc: '选择在最近文件部分中隐藏的文件类型。',
                 options: {
                     none: '无',
                     folderNotes: '文件夹笔记'
                 }
             },
             recentNotesCount: {
-                name: '最近笔记数量',
-                desc: '要显示的最近笔记数量。'
+                name: '最近文件数量',
+                desc: '要显示的最近文件数量。'
             },
             pinRecentNotesWithShortcuts: {
-                name: '将最近笔记与快捷方式一起固定',
-                desc: '固定快捷方式时包含最近笔记。'
+                name: '将最近文件与快捷方式一起固定',
+                desc: '固定快捷方式时包含最近文件。'
             },
             calendarEnabled: {
                 name: '启用日历',

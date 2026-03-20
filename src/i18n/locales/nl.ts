@@ -62,8 +62,7 @@ export const STRINGS_NL = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'Snelkoppelingen',
-        recentNotesHeader: 'Recente notities',
-        recentFilesHeader: 'Recente bestanden',
+        recentFilesHeader: 'Recente bestanden', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Eigenschappen',
         reorderRootFoldersTitle: 'Navigatie herschikken',
         reorderRootFoldersHint: 'Gebruik pijlen of sleep om te herschikken',
@@ -71,10 +70,8 @@ export const STRINGS_NL = {
         resetRootToAlpha: 'Terugzetten naar alfabetische volgorde',
         resetRootToFrequency: 'Terugzetten naar frequentievolgorde',
         pinShortcuts: 'Snelkoppelingen vastpinnen',
-        pinShortcutsAndRecentNotes: 'Snelkoppelingen en recente notities vastpinnen',
         pinShortcutsAndRecentFiles: 'Snelkoppelingen en recente bestanden vastpinnen',
         unpinShortcuts: 'Snelkoppelingen losmaken',
-        unpinShortcutsAndRecentNotes: 'Snelkoppelingen en recente notities losmaken',
         unpinShortcutsAndRecentFiles: 'Snelkoppelingen en recente bestanden losmaken',
         profileMenuAria: 'Kluis profiel wijzigen'
     },
@@ -1051,7 +1048,7 @@ export const STRINGS_NL = {
             },
             startView: {
                 name: 'Standaard opstartweergave',
-                desc: 'Kies welk paneel wordt weergegeven bij het openen van Notebook Navigator. Navigatiepaneel toont snelkoppelingen, recente notities en mappenstructuur. Lijstpaneel toont direct de notitielijst.',
+                desc: 'Kies welk paneel wordt weergegeven bij het openen van Notebook Navigator. Navigatiepaneel toont snelkoppelingen, recente bestanden en mappenstructuur. Lijstpaneel toont direct de bestandenlijst.',
                 options: {
                     navigation: 'Navigatiepaneel',
                     files: 'Lijstpaneel'
@@ -1132,24 +1129,24 @@ export const STRINGS_NL = {
                 }
             },
             showRecentNotes: {
-                name: 'Recente notities tonen',
-                desc: 'De sectie recente notities weergeven in het navigatiepaneel.'
+                name: 'Recente bestanden tonen',
+                desc: 'De sectie recente bestanden weergeven in het navigatiepaneel.'
             },
             hideRecentNotes: {
-                name: 'Notities verbergen',
-                desc: 'Kies welke soorten notities verborgen worden in de sectie recente notities.',
+                name: 'Bestandstypen verbergen',
+                desc: 'Kies welke soorten bestanden verborgen worden in de sectie recente bestanden.',
                 options: {
                     none: 'Geen',
                     folderNotes: 'Mapnotities'
                 }
             },
             recentNotesCount: {
-                name: 'Aantal recente notities',
-                desc: 'Aantal weer te geven recente notities.'
+                name: 'Aantal recente bestanden',
+                desc: 'Aantal weer te geven recente bestanden.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Recente notities met snelkoppelingen vastpinnen',
-                desc: 'Recente notities opnemen wanneer snelkoppelingen zijn vastgepind.'
+                name: 'Recente bestanden met snelkoppelingen vastpinnen',
+                desc: 'Recente bestanden opnemen wanneer snelkoppelingen zijn vastgepind.'
             },
             calendarEnabled: {
                 name: 'Kalender inschakelen',

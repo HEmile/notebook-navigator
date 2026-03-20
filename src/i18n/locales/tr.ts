@@ -62,8 +62,7 @@ export const STRINGS_TR = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'Kısayollar', // Header label for shortcuts section in navigation pane (English: Shortcuts)
-        recentNotesHeader: 'Son notlar', // Header label for recent notes section in navigation pane (English: Recent notes)
-        recentFilesHeader: 'Son dosyalar', // Header label when showing recent non-note files in navigation pane (English: Recent files)
+        recentFilesHeader: 'Son dosyalar', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Özellikler',
         reorderRootFoldersTitle: 'Gezinmeyi yeniden sırala',
         reorderRootFoldersHint: 'Yeniden sıralamak için okları veya sürüklemeyi kullanın',
@@ -71,10 +70,8 @@ export const STRINGS_TR = {
         resetRootToAlpha: 'Alfabetik sıraya sıfırla',
         resetRootToFrequency: 'Sıklık sırasına sıfırla',
         pinShortcuts: 'Kısayolları sabitle',
-        pinShortcutsAndRecentNotes: 'Kısayolları ve son notları sabitle',
         pinShortcutsAndRecentFiles: 'Kısayolları ve son dosyaları sabitle',
         unpinShortcuts: 'Kısayolları sabitlemeden çıkar',
-        unpinShortcutsAndRecentNotes: 'Kısayolları ve son notları sabitlemeden çıkar',
         unpinShortcutsAndRecentFiles: 'Kısayolları ve son dosyaları sabitlemeden çıkar',
         profileMenuAria: 'Kasa profilini değiştir'
     },
@@ -1050,7 +1047,7 @@ export const STRINGS_TR = {
             },
             startView: {
                 name: 'Varsayılan başlangıç görünümü',
-                desc: "Notebook Navigator'ı açarken hangi bölmenin görüntüleneceğini seçin. Gezinme bölmesi kısayolları, son notları ve klasör ağacını gösterir. Liste bölmesi not listesini hemen gösterir.",
+                desc: "Notebook Navigator'ı açarken hangi bölmenin görüntüleneceğini seçin. Gezinme bölmesi kısayolları, son dosyaları ve klasör ağacını gösterir. Liste bölmesi dosya listesini hemen gösterir.",
                 options: {
                     navigation: 'Gezinme bölmesi',
                     files: 'Liste bölmesi'
@@ -1131,24 +1128,24 @@ export const STRINGS_TR = {
                 }
             },
             showRecentNotes: {
-                name: 'Son notları göster',
-                desc: 'Gezinme bölmesinde son notlar bölümünü görüntüle.'
+                name: 'Son dosyaları göster',
+                desc: 'Gezinme bölmesinde son dosyalar bölümünü görüntüle.'
             },
             hideRecentNotes: {
-                name: 'Notları gizle',
-                desc: 'Son notlar bölümünde gizlenecek not türlerini seç.',
+                name: 'Dosya türlerini gizle',
+                desc: 'Son dosyalar bölümünde gizlenecek dosya türlerini seç.',
                 options: {
                     none: 'Hiçbiri',
                     folderNotes: 'Klasör notları'
                 }
             },
             recentNotesCount: {
-                name: 'Son not sayısı',
-                desc: 'Görüntülenecek son not sayısı.'
+                name: 'Son dosya sayısı',
+                desc: 'Görüntülenecek son dosya sayısı.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Son notları kısayollarla birlikte sabitle',
-                desc: 'Kısayollar sabitlendiğinde son notları dahil et.'
+                name: 'Son dosyaları kısayollarla birlikte sabitle',
+                desc: 'Kısayollar sabitlendiğinde son dosyaları dahil et.'
             },
             calendarEnabled: {
                 name: 'Takvimi etkinleştir',

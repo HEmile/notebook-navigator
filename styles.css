@@ -8461,7 +8461,7 @@ settings:
     -
         id: nn-theme-navitem-file-name-color
         title: File text color
-        description: Text color for note shortcuts and recent files. Defaults to folder/tag text color.
+        description: Text color for file shortcuts and recent files. Defaults to folder/tag text color.
         type: variable-themed-color
         format: hex
         default-light: '#'
@@ -8631,7 +8631,7 @@ settings:
     -
         id: nn-theme-navitem-file-name-font-weight
         title: Default file name weight
-        description: Default font weight for file names in shortcuts and recent notes.
+        description: Default font weight for file names in shortcuts and recent files.
         type: variable-number-slider
         default: 400
         min: 100

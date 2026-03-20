@@ -21,7 +21,7 @@ import type { App } from 'obsidian';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { NoteCountInfo } from '../../types/noteCounts';
 import { strings } from '../../i18n';
-import { FILE_VISIBILITY, type FileVisibility } from '../../utils/fileTypeUtils';
+import type { FileVisibility } from '../../utils/fileTypeUtils';
 import { getFolderNoteDetectionSettings } from '../../utils/folderNotes';
 import { calculateFolderNoteCounts } from '../../utils/noteCountUtils';
 import { findTagNode, getTotalNoteCount } from '../../utils/tagTree';
@@ -80,17 +80,12 @@ export function useNavigationPaneShortcutDisplay({
     isShortcutsPinned,
     onConfigurePropertyKeys
 }: UseNavigationPaneShortcutDisplayProps) {
-    const useRecentFilesLabel = fileVisibility !== FILE_VISIBILITY.DOCUMENTS;
     const shouldIncludeRecentInPinLabel = settings.pinRecentNotesWithShortcuts && settings.showRecentNotes;
     const pinShortcutsLabel = shouldIncludeRecentInPinLabel
-        ? useRecentFilesLabel
-            ? strings.navigationPane.pinShortcutsAndRecentFiles
-            : strings.navigationPane.pinShortcutsAndRecentNotes
+        ? strings.navigationPane.pinShortcutsAndRecentFiles
         : strings.navigationPane.pinShortcuts;
     const unpinShortcutsLabel = shouldIncludeRecentInPinLabel
-        ? useRecentFilesLabel
-            ? strings.navigationPane.unpinShortcutsAndRecentFiles
-            : strings.navigationPane.unpinShortcutsAndRecentNotes
+        ? strings.navigationPane.unpinShortcutsAndRecentFiles
         : strings.navigationPane.unpinShortcuts;
     const pinToggleLabel = isShortcutsPinned ? unpinShortcutsLabel : pinShortcutsLabel;
 
@@ -260,7 +255,6 @@ export function useNavigationPaneShortcutDisplay({
     }, []);
 
     return {
-        useRecentFilesLabel,
         pinToggleLabel,
         shortcutHeaderTrailingAction,
         propertiesHeaderTrailingAction,

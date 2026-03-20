@@ -739,7 +739,6 @@ export const NavigationPane = React.memo(
                     metadataService,
                     settings,
                     plugin,
-                    useRecentFilesLabel: shortcuts.useRecentFilesLabel,
                     pinToggleLabel: shortcuts.pinToggleLabel,
                     isShortcutsPinned: uiState.pinShortcuts,
                     onToggleShortcutsPin: shortcuts.handleShortcutSplitToggle,

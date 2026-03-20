@@ -62,8 +62,7 @@ export const STRINGS_EN = {
     // Navigation pane
     navigationPane: {
         shortcutsHeader: 'Shortcuts', // Header label for shortcuts section in navigation pane (English: Shortcuts)
-        recentNotesHeader: 'Recent notes', // Header label for recent notes section in navigation pane (English: Recent notes)
-        recentFilesHeader: 'Recent files', // Header label when showing recent non-note files in navigation pane (English: Recent files)
+        recentFilesHeader: 'Recent files', // Header label for recent files section in navigation pane (English: Recent files)
         properties: 'Properties', // Header label for properties section in navigation pane (English: Properties)
         reorderRootFoldersTitle: 'Reorder navigation',
         reorderRootFoldersHint: 'Use arrows or drag to reorder',
@@ -71,10 +70,8 @@ export const STRINGS_EN = {
         resetRootToAlpha: 'Reset to alphabetical order',
         resetRootToFrequency: 'Reset to frequency order',
         pinShortcuts: 'Pin shortcuts',
-        pinShortcutsAndRecentNotes: 'Pin shortcuts and recent notes',
         pinShortcutsAndRecentFiles: 'Pin shortcuts and recent files',
         unpinShortcuts: 'Unpin shortcuts',
-        unpinShortcutsAndRecentNotes: 'Unpin shortcuts and recent notes',
         unpinShortcutsAndRecentFiles: 'Unpin shortcuts and recent files',
         profileMenuAria: 'Change vault profile'
     },
@@ -1046,7 +1043,7 @@ export const STRINGS_EN = {
             },
             startView: {
                 name: 'Default startup view',
-                desc: 'Choose which pane to display when opening Notebook Navigator. Navigation pane shows shortcuts, recent notes, and folder tree. List pane shows note list immediately.',
+                desc: 'Choose which pane to display when opening Notebook Navigator. Navigation pane shows shortcuts, recent files, and folder tree. List pane shows file list immediately.',
                 options: {
                     navigation: 'Navigation pane',
                     files: 'List pane'
@@ -1127,24 +1124,24 @@ export const STRINGS_EN = {
                 }
             },
             showRecentNotes: {
-                name: 'Show recent notes',
-                desc: 'Display the recent notes section in the navigation pane.'
+                name: 'Show recent files',
+                desc: 'Display the recent files section in the navigation pane.'
             },
             hideRecentNotes: {
-                name: 'Hide notes',
-                desc: 'Choose which note types to hide in the recent notes section.',
+                name: 'Hide file types',
+                desc: 'Choose which file types to hide in the recent files section.',
                 options: {
                     none: 'None',
                     folderNotes: 'Folder notes'
                 }
             },
             recentNotesCount: {
-                name: 'Recent notes count',
-                desc: 'Number of recent notes to display.'
+                name: 'Recent files count',
+                desc: 'Number of recent files to display.'
             },
             pinRecentNotesWithShortcuts: {
-                name: 'Pin recent notes with shortcuts',
-                desc: 'Include recent notes when shortcuts are pinned.'
+                name: 'Pin recent files with shortcuts',
+                desc: 'Include recent files when shortcuts are pinned.'
             },
             calendarEnabled: {
                 name: 'Enable calendar',

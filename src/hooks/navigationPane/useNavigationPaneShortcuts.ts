@@ -283,7 +283,6 @@ export function useNavigationPaneShortcuts({
         propertiesHeaderTrailingAction: shortcutDisplay.propertiesHeaderTrailingAction,
         shortcutNumberBadgesByKey: shortcutState.shortcutNumberBadgesByKey,
         shouldShowShortcutCounts: shortcutState.shouldShowShortcutCounts,
-        useRecentFilesLabel: shortcutDisplay.useRecentFilesLabel,
         removeShortcut,
         handleShortcutFolderActivate: shortcutActions.handleShortcutFolderActivate,
         handleShortcutFolderNoteClick: shortcutActions.handleShortcutFolderNoteClick,
