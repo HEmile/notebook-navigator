@@ -70,11 +70,52 @@ function getDayOfWeek(date: MomentInstance): number {
     return date.toDate().getDay();
 }
 
-export function startOfWeek(date: MomentInstance, weekStartsOn: number): MomentInstance {
+function startOfWeek(date: MomentInstance, weekStartsOn: number): MomentInstance {
     // Compute week start using the configured first day of week while keeping Moment for date math/formatting.
     const dayOfWeek = getDayOfWeek(date);
     const diff = (dayOfWeek - weekStartsOn + 7) % 7;
     return date.clone().subtract(diff, 'day').startOf('day');
+}
+
+interface CalendarWeekWindow {
+    windowStart: MomentInstance;
+    weekCount: number;
+}
+
+export function resolveCalendarWeekWindow(params: {
+    cursor: MomentInstance;
+    weekStartsOn: number;
+    weeksToShow: number;
+    alwaysRenderSixWeeks?: boolean;
+}): CalendarWeekWindow {
+    const weeksToShow = clamp(params.weeksToShow, 1, 6);
+
+    if (weeksToShow === 6) {
+        const monthStart = params.cursor.clone().startOf('month');
+        const gridStart = startOfWeek(monthStart, params.weekStartsOn);
+        if (params.alwaysRenderSixWeeks) {
+            return {
+                windowStart: gridStart,
+                weekCount: 6
+            };
+        }
+
+        const monthEnd = monthStart.clone().endOf('month');
+        const gridEndWeekStart = startOfWeek(monthEnd, params.weekStartsOn);
+        const totalWeeks = clamp(gridEndWeekStart.diff(gridStart, 'weeks') + 1, 1, 6);
+
+        return {
+            windowStart: gridStart,
+            weekCount: totalWeeks
+        };
+    }
+
+    const offset = Math.floor((weeksToShow - 1) / 2);
+    const cursorWeekStart = startOfWeek(params.cursor.clone(), params.weekStartsOn);
+    return {
+        windowStart: cursorWeekStart.clone().subtract(offset, 'week'),
+        weekCount: weeksToShow
+    };
 }
 
 export function isWeekendDay(dayOfWeek: number, weekendDays: CalendarWeekendDays): boolean {

@@ -45,8 +45,8 @@ import {
     clamp,
     formatIsoDate,
     isDateFilterModifierPressed,
-    setUnfinishedTaskCount,
-    startOfWeek
+    resolveCalendarWeekWindow,
+    setUnfinishedTaskCount
 } from './calendarUtils';
 import { useCalendarFeatureImages, type CalendarFeatureImageTarget } from './useCalendarFeatureImages';
 import { useCalendarHoverTooltip } from './useCalendarHoverTooltip';
@@ -569,29 +569,14 @@ export function Calendar({
 
         const weeksToShow = clamp(weeksToShowSetting, 1, 6);
         const cursor = cursorDate.clone().startOf('day');
-        const cursorWeekStart = startOfWeek(cursor.clone(), weekStartsOn);
         const targetMonth = cursor.month();
         const targetYear = cursor.year();
-
-        let windowStart: MomentInstance;
-        let weekCount: number;
-
-        if (weeksToShow === 6) {
-            // `6` means "full month": render as many week rows as needed to cover the month grid (capped at 6).
-            const monthStart = cursor.clone().startOf('month');
-            const gridStart = startOfWeek(monthStart, weekStartsOn);
-            const monthEnd = monthStart.clone().endOf('month');
-            const gridEndWeekStart = startOfWeek(monthEnd, weekStartsOn);
-            const totalWeeks = clamp(gridEndWeekStart.diff(gridStart, 'weeks') + 1, 1, 6);
-
-            windowStart = gridStart;
-            weekCount = totalWeeks;
-        } else {
-            // For 1..5 weeks: show a sliding N-week window around the cursor week (page navigation never skips weeks).
-            const offset = Math.floor((weeksToShow - 1) / 2);
-            windowStart = cursorWeekStart.clone().subtract(offset, 'week');
-            weekCount = weeksToShow;
-        }
+        const { windowStart, weekCount } = resolveCalendarWeekWindow({
+            cursor,
+            weekStartsOn,
+            weeksToShow,
+            alwaysRenderSixWeeks: isRightSidebar
+        });
 
         const visibleWeeks: CalendarWeek[] = [];
         for (let weekOffset = 0; weekOffset < weekCount; weekOffset++) {
@@ -623,6 +608,7 @@ export function Calendar({
         cursorDate,
         effectiveWeekMode,
         getExistingDayNoteFile,
+        isRightSidebar,
         momentApi,
         vaultVersion,
         weeksToShowSetting,

@@ -347,7 +347,7 @@ const normalizeNavRainbowBaseSection = (value: unknown, defaults: NavRainbowSett
     };
 };
 
-export const normalizeNavRainbowSettings = (value: unknown, defaults: NavRainbowSettings = NAV_RAINBOW_DEFAULTS): NavRainbowSettings => {
+const normalizeNavRainbowSettings = (value: unknown, defaults: NavRainbowSettings = NAV_RAINBOW_DEFAULTS): NavRainbowSettings => {
     const navRainbow = isRecord(value) ? value : null;
     const shortcuts = isRecord(navRainbow?.shortcuts) ? navRainbow.shortcuts : null;
     const recent = isRecord(navRainbow?.recent) ? navRainbow.recent : null;
