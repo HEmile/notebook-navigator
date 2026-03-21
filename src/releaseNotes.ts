@@ -80,13 +80,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.5.3',
         date: '2026-03-30',
         showOnUpdate: true,
-        new: [
-        ],
-        improved: [
-            'Calendar in right pane now always shows 6 weeks to avoid showing empty space between month and year calendar.'
-        ],
-        fixed: [
-        ]
+        new: [],
+        improved: ['Calendar in right pane now always shows 6 weeks to avoid showing empty space between month and year calendar.'],
+        fixed: []
     },
     {
         version: '2.5.2',

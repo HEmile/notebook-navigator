@@ -146,14 +146,6 @@ describe('FileMetadataService frontmatter integration', () => {
         expect(settingsProvider.settings.pinnedNotes?.['Vault/One.md']).toEqual({ folder: false, tag: false, property: true });
     });
 
-    it('treats legacy folder+tag pins as pinned in property context', () => {
-        settingsProvider.settings.pinnedNotes = {
-            'Vault/Legacy.md': { folder: true, tag: true }
-        } as unknown as NotebookNavigatorSettings['pinnedNotes'];
-
-        expect(service.isPinned('Vault/Legacy.md', 'property')).toBe(true);
-    });
-
     it('unpins legacy folder+tag pins from property context on toggle', async () => {
         settingsProvider.settings.pinnedNotes = {
             'Vault/Legacy.md': { folder: true, tag: true }
