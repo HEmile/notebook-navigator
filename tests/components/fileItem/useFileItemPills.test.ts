@@ -21,6 +21,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../../src/settings/defaultSettings';
 import { useFileItemPills, type UseFileItemPillsParams } from '../../../src/components/fileItem/useFileItemPills';
+import { buildPropertyValueNodeId } from '../../../src/utils/propertyTree';
 import { createTestTFile } from '../../utils/createTestTFile';
 
 const mockOpenLinkText = vi.fn();
@@ -183,6 +184,63 @@ describe('useFileItemPills', () => {
         expect(markup).toContain('nn-file-property-link');
         expect(markup).toContain('nn-clickable-tag');
         expect(markup).toContain('data-icon-id="external-link"');
+    });
+
+    it('renders numeric property values', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Numbers.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'rating',
+                    value: '4.5',
+                    valueKind: 'number'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['rating']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('data-show-properties="true"');
+        expect(markup).toContain('4.5');
+    });
+
+    it('renders boolean property values as value pills', () => {
+        const booleanValueNodeId = buildPropertyValueNodeId('flag', 'true');
+        mockMetadataService.getPropertyIcon.mockImplementation(nodeId => (nodeId === booleanValueNodeId ? 'check' : undefined));
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Flags.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'flag',
+                    value: 'true',
+                    valueKind: 'boolean'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                propertyIcons: { flag: 'key-icon' }
+            },
+            visiblePropertyKeys: new Set<string>(['flag']),
+            visibleNavigationPropertyKeys: new Set<string>(['flag'])
+        });
+
+        expect(markup).toContain('data-show-properties="true"');
+        expect(markup).toContain('true');
+        expect(markup).toContain('data-icon-id="check"');
     });
 
     it('renders bare external URLs as clickable property links', () => {

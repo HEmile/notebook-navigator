@@ -257,11 +257,7 @@ function getPropertyRowSummary(properties: FileData['properties'] | undefined): 
         }
 
         // Mirrors FileItem visibility rules so row estimates match rendered property pills.
-        if (entry.valueKind !== 'string') {
-            if (entry.valueKind !== undefined) {
-                return;
-            }
-
+        if (entry.valueKind === undefined) {
             const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
             if (isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind)) {
                 return;

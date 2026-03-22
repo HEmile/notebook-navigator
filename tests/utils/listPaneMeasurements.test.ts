@@ -19,6 +19,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     getFileItemLayoutState,
+    getPropertyRowCount,
     isListPaneCompactMode,
     shouldShowFeatureImageArea,
     shouldShowFileItemParentFolderLine
@@ -154,5 +155,37 @@ describe('listPaneMeasurements layout helpers', () => {
                 featureImageStatus: 'unprocessed'
             })
         ).toBe(true);
+    });
+
+    it('counts numeric frontmatter properties as visible property rows', () => {
+        expect(
+            getPropertyRowCount({
+                notePropertyType: 'none',
+                showFileProperties: true,
+                showPropertiesOnSeparateRows: false,
+                showFilePropertiesInCompactMode: true,
+                isCompactMode: false,
+                file: createTestTFile('Notes/Numbers.md'),
+                wordCount: null,
+                properties: [{ fieldKey: 'rating', value: '4.5', valueKind: 'number' }],
+                visiblePropertyKeys: new Set<string>(['rating'])
+            })
+        ).toBe(1);
+    });
+
+    it('counts boolean frontmatter properties as visible property rows', () => {
+        expect(
+            getPropertyRowCount({
+                notePropertyType: 'none',
+                showFileProperties: true,
+                showPropertiesOnSeparateRows: false,
+                showFilePropertiesInCompactMode: true,
+                isCompactMode: false,
+                file: createTestTFile('Notes/Flags.md'),
+                wordCount: null,
+                properties: [{ fieldKey: 'flag', value: 'true', valueKind: 'boolean' }],
+                visiblePropertyKeys: new Set<string>(['flag'])
+            })
+        ).toBe(1);
     });
 });

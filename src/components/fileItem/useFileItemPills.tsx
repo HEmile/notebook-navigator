@@ -354,16 +354,12 @@ export function useFileItemPills({
                 return false;
             }
 
-            if (entry.valueKind === 'string') {
-                return true;
+            if (entry.valueKind === undefined) {
+                const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
+                return !isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
             }
 
-            if (entry.valueKind !== undefined) {
-                return false;
-            }
-
-            const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
-            return !isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
+            return true;
         });
     }, [properties, visiblePropertyKeys]);
 
@@ -469,7 +465,7 @@ export function useFileItemPills({
 
             const trimmedFieldKey = entry.fieldKey.trim();
             const normalizedValuePath = normalizePropertyTreeValuePath(rawValue);
-            const isKeyOnlyValue = isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
+            const isKeyOnlyValue = entry.valueKind === 'boolean' ? false : isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
             const linkTarget = isKeyOnlyValue ? null : parsePropertyLinkTarget(rawValue);
             const label = linkTarget ? linkTarget.displayText : rawValue;
 

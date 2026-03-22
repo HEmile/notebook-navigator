@@ -136,6 +136,21 @@ describe('MarkdownPipelineContentProvider frontmatter custom properties', () => 
         ]);
     });
 
+    it('preserves value kind metadata for numeric literals', async () => {
+        const context = createApp();
+        const settings = createSettings({ propertyFields: 'rating, count' });
+        const provider = new TestMarkdownPipelineContentProvider(context.app);
+        const file = createFile('notes/note.md');
+
+        setFrontmatter(context, file, { rating: 4.5, count: 2 });
+        const result = await provider.runCustomProperty(file, settings);
+
+        expect(result).toEqual([
+            { fieldKey: 'rating', value: '4.5', valueKind: 'number' },
+            { fieldKey: 'count', value: '2', valueKind: 'number' }
+        ]);
+    });
+
     it('treats null frontmatter values as unassigned', async () => {
         const context = createApp();
         const settings = createSettings({ propertyFields: 'status, type' });
