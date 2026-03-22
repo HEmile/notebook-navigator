@@ -81,7 +81,10 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-03-30',
         showOnUpdate: true,
         new: [],
-        improved: ['Calendar in right pane now always shows 6 weeks to avoid showing empty space between month and year calendar.'],
+        improved: [
+            'Calendar in right pane now always shows 6 weeks to avoid showing empty space between month and year calendar.',
+            'Property pills in list pane now support custom URI schemes such as "zotero://..." and "file://...", while blocked schemes such as "javascript:..." remain non-clickable.'
+        ],
         fixed: []
     },
     {

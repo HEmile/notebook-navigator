@@ -214,6 +214,210 @@ describe('useFileItemPills', () => {
         expect(markup).toContain('data-icon-id="external-link"');
     });
 
+    it('renders bare custom URIs as clickable property links', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: 'zotero://open-pdf/library/items/A65QUPQU',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: true
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('zotero://open-pdf/library/items/A65QUPQU');
+        expect(markup).toContain('nn-file-property-link');
+        expect(markup).toContain('nn-clickable-tag');
+        expect(markup).toContain('data-icon-id="external-link"');
+    });
+
+    it('renders markdown custom URIs as clickable property links', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: '[Open in Zotero](zotero://open-pdf/library/items/A65QUPQU)',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: true
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('Open in Zotero');
+        expect(markup).not.toContain('zotero://open-pdf/library/items/A65QUPQU');
+        expect(markup).toContain('nn-file-property-link');
+        expect(markup).toContain('nn-clickable-tag');
+        expect(markup).toContain('data-icon-id="external-link"');
+    });
+
+    it('renders unsupported markdown URI targets as plain property values', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: '[Run script](javascript:alert(1))',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: true
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('Run script');
+        expect(markup).not.toContain('nn-file-property-link');
+        expect(markup).not.toContain('data-icon-id="external-link"');
+    });
+
+    it('keeps unsupported markdown URI targets non-clickable when property navigation is available', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: '[Run script](javascript:alert(1))',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: true
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>(['reference'])
+        });
+
+        expect(markup).toContain('Run script');
+        expect(markup).not.toContain('nn-clickable-tag');
+        expect(markup).not.toContain('nn-file-property-link');
+        expect(markup).not.toContain('role="button"');
+        expect(markup).not.toContain('tabindex="0"');
+    });
+
+    it('renders markdown file URIs as clickable property links', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: '[Open file](file:///Users/example/Documents/reference.pdf)',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: true
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('Open file');
+        expect(markup).toContain('nn-clickable-tag');
+        expect(markup).toContain('nn-file-property-link');
+        expect(markup).toContain('data-icon-id="external-link"');
+    });
+
+    it('renders bare file URIs as clickable property links', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: 'file:///Users/example/Documents/reference.pdf',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: true
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('file:///Users/example/Documents/reference.pdf');
+        expect(markup).toContain('nn-clickable-tag');
+        expect(markup).toContain('nn-file-property-link');
+        expect(markup).toContain('data-icon-id="external-link"');
+    });
+
+    it('renders mailto URIs as clickable property links', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Links.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'Reference',
+                    value: '[Email author](mailto:test@example.com)',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                enablePropertyExternalLinks: true
+            },
+            visiblePropertyKeys: new Set<string>(['reference']),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('Email author');
+        expect(markup).toContain('nn-clickable-tag');
+        expect(markup).toContain('nn-file-property-link');
+        expect(markup).toContain('data-icon-id="external-link"');
+    });
+
     it('renders internal property links as plain property values when link opening is disabled', () => {
         const markup = renderPillRows({
             file: createTestTFile('Notes/Links.md'),

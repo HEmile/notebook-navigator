@@ -26,8 +26,9 @@ import { isRecord } from './typeGuards';
 import { getActivePropertyFields } from './vaultProfiles';
 
 type WikiLinkTarget = { kind: 'internal'; target: string; displayText: string };
-type MarkdownLinkTarget = { kind: 'external'; target: string; displayText: string };
-export type PropertyLinkTarget = WikiLinkTarget | MarkdownLinkTarget;
+type ExternalLinkTarget = { kind: 'external'; target: string; displayText: string };
+type UnsupportedMarkdownLinkTarget = { kind: 'unsupported'; displayText: string };
+export type PropertyLinkTarget = WikiLinkTarget | ExternalLinkTarget | UnsupportedMarkdownLinkTarget;
 export interface PropertyKeySuggestion {
     key: string;
     noteCount: number;
@@ -37,6 +38,12 @@ interface PropertyKeyAggregate {
     displayKey: string;
     noteCount: number;
 }
+
+const EXTERNAL_URI_SCHEME_PATTERN = /^([a-z][a-z0-9+.-]{1,31}):/i;
+// Keep file: out of the blocked set so property pills follow desktop Obsidian's
+// external-link flow, which shows its own warning before opening the target.
+const BLOCKED_EXTERNAL_URI_PROTOCOLS = new Set(['data:', 'javascript:', 'vbscript:']);
+const ALLOWED_NON_SLASH_EXTERNAL_URI_PROTOCOLS = new Set(['mailto:', 'sms:', 'tel:']);
 
 export function hasPropertyFrontmatterFields(settings: NotebookNavigatorSettings): boolean {
     return getCachedCommaSeparatedList(getActivePropertyFields(settings)).length > 0;
@@ -178,7 +185,35 @@ function parseStrictWikiLink(value: string): WikiLinkTarget | null {
     };
 }
 
-function parseStrictMarkdownLink(value: string): MarkdownLinkTarget | null {
+function parseSupportedExternalUriTarget(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.includes('\n') || trimmed.includes('\r')) {
+        return null;
+    }
+
+    const schemeMatch = EXTERNAL_URI_SCHEME_PATTERN.exec(trimmed);
+    if (!schemeMatch) {
+        return null;
+    }
+
+    try {
+        const url = new URL(trimmed);
+        const protocol = url.protocol.toLowerCase();
+        if (BLOCKED_EXTERNAL_URI_PROTOCOLS.has(protocol)) {
+            return null;
+        }
+
+        if (ALLOWED_NON_SLASH_EXTERNAL_URI_PROTOCOLS.has(protocol)) {
+            return trimmed;
+        }
+
+        return trimmed.slice(protocol.length).startsWith('//') ? trimmed : null;
+    } catch {
+        return null;
+    }
+}
+
+function parseStrictMarkdownLink(value: string): PropertyLinkTarget | null {
     const trimmed = value.trim();
     if (!trimmed.startsWith('[') || trimmed.startsWith('![') || !trimmed.endsWith(')')) {
         return null;
@@ -207,37 +242,32 @@ function parseStrictMarkdownLink(value: string): MarkdownLinkTarget | null {
         return null;
     }
 
+    const supportedTarget = parseSupportedExternalUriTarget(rawTarget);
+    if (!supportedTarget) {
+        return {
+            kind: 'unsupported',
+            displayText: rawDisplayText
+        };
+    }
+
     return {
         kind: 'external',
-        target: rawTarget,
+        target: supportedTarget,
         displayText: rawDisplayText
     };
 }
 
-function parsePlainExternalUrl(value: string): MarkdownLinkTarget | null {
+function parsePlainExternalUrl(value: string): ExternalLinkTarget | null {
     const trimmed = value.trim();
-    if (trimmed.length < 8) {
-        return null;
-    }
-
-    const lower = trimmed.toLowerCase();
-    if (!lower.startsWith('http://') && !lower.startsWith('https://')) {
-        return null;
-    }
-
-    try {
-        const url = new URL(trimmed);
-        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-            return null;
-        }
-    } catch {
+    const supportedTarget = parseSupportedExternalUriTarget(trimmed);
+    if (!supportedTarget) {
         return null;
     }
 
     return {
         kind: 'external',
-        target: trimmed,
-        displayText: trimmed
+        target: supportedTarget,
+        displayText: supportedTarget
     };
 }
 

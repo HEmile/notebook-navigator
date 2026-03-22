@@ -207,6 +207,10 @@ export function useFileItemPills({
             const canNavigateToProperty = pill.canNavigateToProperty === true;
             event.stopPropagation();
 
+            if (pill.linkTarget?.kind === 'unsupported') {
+                return;
+            }
+
             if (canNavigateToProperty && onModifySearchWithProperty && propertySearchKey) {
                 const operator = getTagSearchModifierOperator(event, settings.multiSelectModifier, isMobile);
                 if (operator) {
@@ -728,7 +732,8 @@ export function useFileItemPills({
 
     const renderPropertyPill = useCallback(
         (pill: PropertyPill, index: number) => {
-            const canNavigateToProperty = pill.canNavigateToProperty === true;
+            const isUnsupportedMarkdownLink = pill.linkTarget?.kind === 'unsupported';
+            const canNavigateToProperty = pill.canNavigateToProperty === true && !isUnsupportedMarkdownLink;
             const isPropertyLink =
                 (pill.linkTarget?.kind === 'internal' && settings.enablePropertyInternalLinks) ||
                 (pill.linkTarget?.kind === 'external' && settings.enablePropertyExternalLinks);
