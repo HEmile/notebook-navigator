@@ -37,6 +37,8 @@ import type { FileData } from '../storage/IndexedDBStorage';
 import { getDBInstance } from '../storage/fileOperations';
 import { NavigatorContext } from '../types';
 import type { NavigationSeparatorTarget } from '../utils/navigationSeparators';
+import { buildPropertyKeyNodeId } from '../utils/propertyTree';
+import { casefold } from '../utils/recordUtils';
 
 /**
  * Validators object containing all data needed for cleanup operations
@@ -618,6 +620,20 @@ export class MetadataService {
             settings.propertyAppearances,
             settings.propertyTreeSortOverrides
         ]);
+        settings.vaultProfiles.forEach(profile => {
+            if (!Array.isArray(profile.propertyKeys) || profile.propertyKeys.length === 0) {
+                return;
+            }
+
+            profile.propertyKeys.forEach(entry => {
+                const normalizedKey = typeof entry?.key === 'string' ? casefold(entry.key) : '';
+                if (!normalizedKey) {
+                    return;
+                }
+
+                propertyKeys.add(buildPropertyKeyNodeId(normalizedKey));
+            });
+        });
 
         const pinnedNotes = settings.pinnedNotes ? Object.keys(settings.pinnedNotes).length : 0;
 

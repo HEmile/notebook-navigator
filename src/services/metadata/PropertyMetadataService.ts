@@ -28,6 +28,7 @@ import {
     normalizePropertyKeyNodeId,
     normalizePropertyNodeId
 } from '../../utils/propertyTree';
+import { casefold } from '../../utils/recordUtils';
 import { getActivePropertyFields } from '../../utils/vaultProfiles';
 import { BaseMetadataService } from './BaseMetadataService';
 
@@ -226,6 +227,54 @@ export class PropertyMetadataService extends BaseMetadataService {
         return nodeId => nodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID || validator(nodeId);
     }
 
+    private collectExistingPropertyKeys(validators: CleanupValidators): ReadonlySet<string> {
+        const keys = new Set<string>();
+
+        validators.dbFiles.forEach(file => {
+            const properties = file.data.properties;
+            if (!properties || properties.length === 0) {
+                return;
+            }
+
+            properties.forEach(entry => {
+                const normalizedKey = casefold(entry.fieldKey);
+                if (normalizedKey) {
+                    keys.add(normalizedKey);
+                }
+            });
+        });
+
+        return keys;
+    }
+
+    private pruneConfiguredPropertyKeys(targetSettings: NotebookNavigatorSettings, existingPropertyKeys: ReadonlySet<string>): boolean {
+        if (!Array.isArray(targetSettings.vaultProfiles) || targetSettings.vaultProfiles.length === 0) {
+            return false;
+        }
+
+        let changed = false;
+
+        targetSettings.vaultProfiles.forEach(profile => {
+            if (!Array.isArray(profile.propertyKeys) || profile.propertyKeys.length === 0) {
+                return;
+            }
+
+            const nextPropertyKeys = profile.propertyKeys.filter(entry => {
+                const normalizedKey = typeof entry?.key === 'string' ? casefold(entry.key) : '';
+                return normalizedKey.length > 0 && existingPropertyKeys.has(normalizedKey);
+            });
+
+            if (nextPropertyKeys.length === profile.propertyKeys.length) {
+                return;
+            }
+
+            profile.propertyKeys = nextPropertyKeys;
+            changed = true;
+        });
+
+        return changed;
+    }
+
     async cleanupPropertyMetadata(targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings): Promise<boolean> {
         const validators: CleanupValidators = {
             dbFiles: getDBInstance().getAllFiles(),
@@ -241,6 +290,7 @@ export class PropertyMetadataService extends BaseMetadataService {
         targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings
     ): Promise<boolean> {
         const validator = this.createPropertyNodeValidator(targetSettings, validators);
+        const existingPropertyKeys = this.collectExistingPropertyKeys(validators);
         const results = await Promise.all([
             this.cleanupMetadata(targetSettings, 'propertyColors', validator),
             this.cleanupMetadata(targetSettings, 'propertyBackgroundColors', validator),
@@ -249,7 +299,8 @@ export class PropertyMetadataService extends BaseMetadataService {
             this.cleanupMetadata(targetSettings, 'propertyTreeSortOverrides', validator),
             this.cleanupMetadata(targetSettings, 'propertyAppearances', validator)
         ]);
+        const propertyKeyChanges = this.pruneConfiguredPropertyKeys(targetSettings, existingPropertyKeys);
 
-        return results.some(changed => changed);
+        return propertyKeyChanges || results.some(changed => changed);
     }
 }

@@ -78,15 +78,15 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.5.3',
-        date: '2026-03-30',
-        showOnUpdate: true,
-        new: [],
+        date: '2026-03-22',
+        showOnUpdate: false,
         improved: [
-            'Calendar in right pane now always shows 6 weeks to avoid showing empty space between month and year calendar.',
-            'Property pills in list pane now support custom URI schemes such as "zotero://..." and "file://...", while blocked schemes such as "javascript:..." remain non-clickable.'
+            'Calendar in the right pane now always shows 6 weeks.',
+            'Property pills in list pane now support custom URI schemes like "zotero://..." and "file://...".'
         ],
         fixed: [
-            'Boolean and number frontmatter properties in list pane now show as property pills.'
+            'Boolean and number properties are now shown as property pills in the list pane.',
+            'Metadata cleanup now removes stale property-key selections.'
         ]
     },
     {

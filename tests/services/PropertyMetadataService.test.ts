@@ -22,7 +22,7 @@ import { PropertyMetadataService } from '../../src/services/metadata/PropertyMet
 import type { NotebookNavigatorSettings } from '../../src/settings';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { ISettingsProvider } from '../../src/interfaces/ISettingsProvider';
-import type { CleanupValidators } from '../../src/services/MetadataService';
+import { MetadataService, type CleanupValidators } from '../../src/services/MetadataService';
 import { createDefaultFileData } from '../../src/storage/indexeddb/fileData';
 import { buildPropertyKeyNodeId, buildPropertyValueNodeId } from '../../src/utils/propertyTree';
 import { setActivePropertyFields } from '../../src/utils/vaultProfiles';
@@ -164,6 +164,60 @@ describe('PropertyMetadataService cleanupWithValidators', () => {
         expect(settings.propertyBackgroundColors).toEqual({});
         expect(settings.propertyIcons).toEqual({});
         expect(settings.propertyTreeSortOverrides).toEqual({});
+    });
+
+    it('removes configured property keys that no longer exist in cached note data', async () => {
+        const settings = createSettings();
+        settings.vaultProfiles[0].propertyKeys = [
+            {
+                key: 'status',
+                showInNavigation: true,
+                showInList: true,
+                showInFileMenu: false
+            },
+            {
+                key: 'priority',
+                showInNavigation: true,
+                showInList: true,
+                showInFileMenu: false
+            }
+        ];
+
+        const provider = new TestSettingsProvider(settings);
+        const service = new PropertyMetadataService(app, provider);
+        const validators = createValidators([createMarkdownFileWithProperty('Note.md', 'Status', 'ToDo')]);
+
+        const changed = await service.cleanupWithValidators(validators, settings);
+
+        expect(changed).toBe(true);
+        expect(settings.vaultProfiles[0]?.propertyKeys).toEqual([
+            {
+                key: 'status',
+                showInNavigation: true,
+                showInList: true,
+                showInFileMenu: false
+            }
+        ]);
+    });
+});
+
+describe('MetadataService getCleanupSummary', () => {
+    it('counts stale configured property keys as properties to clean', () => {
+        const settings = createSettings();
+        settings.vaultProfiles[0].propertyKeys = [
+            {
+                key: 'status',
+                showInNavigation: true,
+                showInList: true,
+                showInFileMenu: false
+            }
+        ];
+
+        const summary = (
+            MetadataService as unknown as { computeMetadataCounts(settings: NotebookNavigatorSettings): { properties: number } }
+        ).computeMetadataCounts(settings);
+
+        expect(summary.properties).toBe(1);
     });
 });
 
