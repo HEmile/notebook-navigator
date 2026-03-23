@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { isCalendarCustomWeekPatternValid } from '../../src/utils/calendarCustomNotePatterns';
+import { escapeMomentLiteralPath, isCalendarCustomWeekPatternValid } from '../../src/utils/calendarCustomNotePatterns';
 
 describe('calendar custom note patterns', () => {
     type MomentStub = {
@@ -100,5 +100,9 @@ describe('calendar custom note patterns', () => {
         const momentApi = createMomentApi(context);
         expect(isCalendarCustomWeekPatternValid('YYYY/[Www', momentApi)).toBe(false);
         expect(context.lastStartOfUnit).toBe(null);
+    });
+
+    test('escapes square brackets inside literal path segments', () => {
+        expect(escapeMomentLiteralPath('Daily[Notes]/[2026]')).toBe('[Daily]\\[[Notes]\\]/\\[[2026]\\]');
     });
 });

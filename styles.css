@@ -2611,10 +2611,6 @@ body {
     cursor: pointer;
     box-shadow: none !important;
     outline: none;
-    transition:
-        background-color 120ms ease,
-        filter 120ms ease,
-        box-shadow 120ms ease;
 }
 
 .nn-navigation-calendar-period-button {
@@ -2679,7 +2675,6 @@ body {
     color: var(--nn-theme-foreground-muted);
     z-index: 0;
     flex: 0 0 auto;
-    transition: opacity 120ms ease;
 }
 
 .nn-navigation-calendar-month-help {

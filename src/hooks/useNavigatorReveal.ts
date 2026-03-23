@@ -36,6 +36,7 @@ import { doesFolderContainPath } from '../utils/pathUtils';
 import type { Align } from '../types/scroll';
 import { navigateToTag as navigateToTagInternal, type NavigateToTagOptions } from '../utils/tagNavigation';
 import { navigateToProperty as navigateToPropertyInternal, type NavigateToPropertyOptions } from '../utils/propertyNavigation';
+import { registerActiveFileWorkspaceListeners } from '../utils/workspaceActiveFileEvents';
 import {
     determinePropertyToReveal,
     getPropertyKeyNodeIdFromNodeId,
@@ -919,47 +920,13 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
             setFileToReveal(file);
         };
 
-        let pendingDetectTimer: number | null = null;
-        let pendingCandidateFile: TFile | null | undefined = undefined;
-
-        let pendingIgnoreNavigatorPreviewOpen: boolean | undefined = undefined;
-
-        // Keep this block in sync with src/components/calendar/Calendar.tsx. The scheduling below and
-        // the `handleFileOpen` background-open check intentionally mirror the calendar tracking path
-        // because Obsidian can emit `file-open` and `active-leaf-change` in different turns.
-        const scheduleDetectActiveFileChange = (candidateFile?: TFile | null, ignoreNavigatorPreviewOpen?: boolean) => {
-            if (candidateFile !== undefined) {
-                pendingCandidateFile = candidateFile;
-                pendingIgnoreNavigatorPreviewOpen = ignoreNavigatorPreviewOpen ?? false;
+        const cleanup = registerActiveFileWorkspaceListeners({
+            workspace: app.workspace,
+            commandQueue,
+            onChange: ({ candidateFile, ignoreBackgroundOpen }) => {
+                detectActiveFileChange(candidateFile, { ignoreNavigatorPreviewOpen: ignoreBackgroundOpen });
             }
-            if (pendingDetectTimer !== null) {
-                window.clearTimeout(pendingDetectTimer);
-            }
-            // Coalesce rapid file-open + active-leaf-change sequences and yield to let Obsidian update workspace state.
-            pendingDetectTimer = window.setTimeout(() => {
-                pendingDetectTimer = null;
-                const file = pendingCandidateFile;
-                const ignore = pendingIgnoreNavigatorPreviewOpen;
-                pendingCandidateFile = undefined;
-                pendingIgnoreNavigatorPreviewOpen = undefined;
-                detectActiveFileChange(file, { ignoreNavigatorPreviewOpen: ignore === true });
-            }, TIMEOUTS.YIELD_TO_EVENT_LOOP);
-        };
-
-        const handleActiveLeafChange = () => {
-            scheduleDetectActiveFileChange();
-        };
-
-        const handleFileOpen = (file: TFile | null) => {
-            // `isOpeningActiveFileInBackground` detects preview opens (`active: false`) while the open is in-flight,
-            // and for a short time after completion to cover cases where Obsidian emits `file-open` after
-            // `leaf.openFile(...)` resolves (e.g. in a later macrotask).
-            const ignoreNavigatorPreviewOpen = file instanceof TFile && commandQueue.isOpeningActiveFileInBackground(file.path);
-            scheduleDetectActiveFileChange(file, ignoreNavigatorPreviewOpen);
-        };
-
-        const activeLeafEventRef = app.workspace.on('active-leaf-change', handleActiveLeafChange);
-        const fileOpenEventRef = app.workspace.on('file-open', handleFileOpen);
+        });
 
         // Check for currently active file on mount
         if (!hasInitializedRef.current) {
@@ -978,11 +945,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
         }
 
         return () => {
-            if (pendingDetectTimer !== null) {
-                window.clearTimeout(pendingDetectTimer);
-            }
-            app.workspace.offref(activeLeafEventRef);
-            app.workspace.offref(fileOpenEventRef);
+            cleanup();
         };
     }, [app, app.workspace, settings.autoRevealActiveFile, settings.autoRevealIgnoreRightSidebar, settings.startView, commandQueue]);
 

@@ -17,7 +17,7 @@
  */
 
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FileView, TFile, type Workspace, type WorkspaceLeaf } from 'obsidian';
+import { FileView, TFile, normalizePath, type Workspace, type WorkspaceLeaf } from 'obsidian';
 import { getCurrentLanguage, strings } from '../../i18n';
 import { InfoModal } from '../../modals/InfoModal';
 import { useServices } from '../../context/ServicesContext';
@@ -31,10 +31,11 @@ import { getMomentApi, resolveMomentLocale, type MomentInstance } from '../../ut
 import { useFileOpener } from '../../hooks/useFileOpener';
 import { useLocalDayKey } from '../../hooks/useLocalDayKey';
 import { extractFrontmatterName } from '../../utils/metadataExtractor';
-import { TIMEOUTS } from '../../types/obsidian-extended';
 import { type CalendarNoteKind } from '../../utils/calendarNotes';
+import { escapeMomentLiteralPath } from '../../utils/calendarCustomNotePatterns';
 import { getActiveVaultProfile } from '../../utils/vaultProfiles';
 import type { CalendarWeeksToShow } from '../../settings/types';
+import { registerActiveFileWorkspaceListeners } from '../../utils/workspaceActiveFileEvents';
 import { CalendarGrid } from './CalendarGrid';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarHoverTooltip } from './CalendarHoverTooltip';
@@ -116,6 +117,10 @@ function isFileOpenInWorkspace(workspace: Workspace, filePath: string): boolean 
     return isOpen;
 }
 
+function stripMarkdownExtension(path: string): string {
+    return path.replace(/\.md$/iu, '');
+}
+
 export function Calendar({
     onWeekCountChange,
     onNavigationAction,
@@ -151,6 +156,7 @@ export function Calendar({
     const visibleIndicatorNotePathsRef = useRef<Set<string>>(new Set());
     const visibleFeatureImageNotePathsRef = useRef<Set<string>>(new Set());
     const visibleFrontmatterNotePathsRef = useRef<Set<string>>(new Set());
+    const lastAppliedActiveEditorDateKeyRef = useRef<string | null>(null);
     const dayNoteFileLookupCacheRef = useRef<Map<string, TFile | null>>(new Map());
     const vaultVersionDebounceRef = useRef<number | null>(null);
     const scheduleVaultVersionUpdate = useCallback(() => {
@@ -248,58 +254,18 @@ export function Calendar({
     }, [dbFallback, fileCache]);
 
     useEffect(() => {
-        let pendingSyncTimer: number | null = null;
-        let pendingCandidateFile: TFile | null | undefined = undefined;
-        let pendingIgnoreBackgroundOpen: boolean | undefined = undefined;
-
-        // Keep this block in sync with src/hooks/useNavigatorReveal.ts. The scheduling below and the
-        // `handleFileOpen` background-open check intentionally mirror that hook because Obsidian can
-        // emit `file-open` and `active-leaf-change` in different turns.
-        const scheduleSyncActiveEditorFilePath = (candidateFile?: TFile | null, ignoreBackgroundOpen?: boolean) => {
-            if (candidateFile !== undefined) {
-                pendingCandidateFile = candidateFile;
-                pendingIgnoreBackgroundOpen = ignoreBackgroundOpen ?? false;
+        const cleanup = registerActiveFileWorkspaceListeners({
+            workspace: app.workspace,
+            commandQueue,
+            onChange: ({ candidateFile, ignoreBackgroundOpen }) => {
+                syncActiveEditorFilePath(ignoreBackgroundOpen ? undefined : candidateFile);
             }
+        });
 
-            if (typeof window === 'undefined') {
-                syncActiveEditorFilePath(candidateFile);
-                return;
-            }
-
-            if (pendingSyncTimer !== null) {
-                window.clearTimeout(pendingSyncTimer);
-            }
-
-            // Yield to the event loop so workspace state reflects the new active file before reading it.
-            pendingSyncTimer = window.setTimeout(() => {
-                pendingSyncTimer = null;
-                const file = pendingIgnoreBackgroundOpen === true ? undefined : pendingCandidateFile;
-                pendingCandidateFile = undefined;
-                pendingIgnoreBackgroundOpen = undefined;
-                syncActiveEditorFilePath(file);
-            }, TIMEOUTS.YIELD_TO_EVENT_LOOP);
-        };
-
-        const handleActiveLeafChange = () => {
-            scheduleSyncActiveEditorFilePath();
-        };
-
-        const handleFileOpen = (file: TFile | null) => {
-            // Ignore preview opens (`active: false`) and fall back to the actual active view file.
-            const ignoreBackgroundOpen = file instanceof TFile && commandQueue?.isOpeningActiveFileInBackground(file.path) === true;
-            scheduleSyncActiveEditorFilePath(file, ignoreBackgroundOpen);
-        };
-
-        const activeLeafChangeRef = app.workspace.on('active-leaf-change', handleActiveLeafChange);
-        const fileOpenRef = app.workspace.on('file-open', handleFileOpen);
         syncActiveEditorFilePath();
 
         return () => {
-            if (pendingSyncTimer !== null) {
-                window.clearTimeout(pendingSyncTimer);
-            }
-            app.workspace.offref(activeLeafChangeRef);
-            app.workspace.offref(fileOpenRef);
+            cleanup();
         };
     }, [app.workspace, commandQueue, syncActiveEditorFilePath]);
 
@@ -559,6 +525,73 @@ export function Calendar({
         ]
     );
 
+    const resolveActiveEditorCalendarDayDate = useCallback(
+        (filePath: string): MomentInstance | null => {
+            if (!momentApi || !filePath.toLowerCase().endsWith('.md')) {
+                return null;
+            }
+
+            const normalizedFilePath = normalizePath(filePath);
+            const pathWithoutExtension = stripMarkdownExtension(normalizedFilePath);
+
+            if (settings.calendarIntegrationMode === 'daily-notes') {
+                if (!dailyNoteSettings) {
+                    return null;
+                }
+
+                const folderPattern = escapeMomentLiteralPath(dailyNoteSettings.folder);
+                const fullPattern = folderPattern ? `${folderPattern}/${dailyNoteSettings.format}` : dailyNoteSettings.format;
+                const parsedDate = momentApi(pathWithoutExtension, fullPattern, displayLocale, true);
+                if (!parsedDate.isValid()) {
+                    return null;
+                }
+
+                const normalizedFolder = normalizePath(dailyNoteSettings.folder.trim()).replace(/^\/+/u, '').replace(/\/+$/u, '');
+                const expectedPathWithoutExtension = normalizePath(
+                    normalizedFolder
+                        ? `${normalizedFolder}/${parsedDate.format(dailyNoteSettings.format)}`
+                        : parsedDate.format(dailyNoteSettings.format)
+                );
+                if (`${expectedPathWithoutExtension}.md` !== normalizedFilePath) {
+                    return null;
+                }
+
+                return parsedDate.startOf('day');
+            }
+
+            if (!canResolveCustomDayNotes) {
+                return null;
+            }
+
+            const rootFolderPattern = escapeMomentLiteralPath(customCalendarRootFolderSettings.calendarCustomRootFolder);
+            const fullPattern = rootFolderPattern
+                ? `${rootFolderPattern}/${dayNoteResolverContext.momentPattern}`
+                : dayNoteResolverContext.momentPattern;
+            const parsedDate = momentApi(pathWithoutExtension, fullPattern, displayLocale, true);
+            if (!parsedDate.isValid()) {
+                return null;
+            }
+
+            const normalizedDate = parsedDate.startOf('day');
+            const resolvedFile = getExistingDayNoteFile(normalizedDate);
+            if (resolvedFile?.path !== normalizedFilePath) {
+                return null;
+            }
+
+            return normalizedDate;
+        },
+        [
+            canResolveCustomDayNotes,
+            customCalendarRootFolderSettings.calendarCustomRootFolder,
+            dailyNoteSettings,
+            dayNoteResolverContext.momentPattern,
+            displayLocale,
+            getExistingDayNoteFile,
+            momentApi,
+            settings.calendarIntegrationMode
+        ]
+    );
+
     const weeks = useMemo<CalendarWeek[]>(() => {
         if (!momentApi || !cursorDate) {
             return [];
@@ -614,6 +647,48 @@ export function Calendar({
         weeksToShowSetting,
         weekStartsOn
     ]);
+    const activeEditorDate = useMemo(() => {
+        if (!activeEditorFilePath) {
+            return null;
+        }
+
+        for (const week of weeks) {
+            for (const day of week.days) {
+                if (day.file?.path === activeEditorFilePath) {
+                    return day.date.clone().startOf('day');
+                }
+            }
+        }
+
+        return resolveActiveEditorCalendarDayDate(activeEditorFilePath);
+    }, [activeEditorFilePath, resolveActiveEditorCalendarDayDate, weeks]);
+    const activeEditorDateKey =
+        activeEditorFilePath && activeEditorDate ? `${activeEditorFilePath}::${formatIsoDate(activeEditorDate)}` : null;
+
+    useLayoutEffect(() => {
+        if (!activeEditorDate || !activeEditorDateKey) {
+            lastAppliedActiveEditorDateKeyRef.current = null;
+            return;
+        }
+
+        if (lastAppliedActiveEditorDateKeyRef.current === activeEditorDateKey) {
+            return;
+        }
+
+        lastAppliedActiveEditorDateKeyRef.current = activeEditorDateKey;
+        setCursorDate(previousCursorDate => {
+            const nextCursorDate = activeEditorDate.clone().startOf('day');
+            if (
+                previousCursorDate &&
+                previousCursorDate.year() === nextCursorDate.year() &&
+                previousCursorDate.month() === nextCursorDate.month()
+            ) {
+                return previousCursorDate;
+            }
+
+            return nextCursorDate;
+        });
+    }, [activeEditorDate, activeEditorDateKey]);
 
     const visibleDayNotePaths = useMemo(() => {
         const paths = new Set<string>();

@@ -118,6 +118,44 @@ export function normalizeCalendarVaultFolderPath(value: string): string {
     return normalized.replace(/^\/+/u, '');
 }
 
+/** Escapes a normalized vault path so Moment treats every segment as a literal path segment, including square brackets. */
+export function escapeMomentLiteralPath(value: string): string {
+    const normalized = normalizePath(value).replace(/^\/+/u, '').replace(/\/+$/u, '');
+    if (!normalized) {
+        return '';
+    }
+
+    return normalized
+        .split('/')
+        .filter(Boolean)
+        .map(segment => {
+            let escaped = '';
+            let literalChunk = '';
+
+            const flushLiteralChunk = () => {
+                if (!literalChunk) {
+                    return;
+                }
+                escaped += `[${literalChunk}]`;
+                literalChunk = '';
+            };
+
+            for (const character of segment) {
+                if (character === '[' || character === ']') {
+                    flushLiteralChunk();
+                    escaped += `\\${character}`;
+                    continue;
+                }
+
+                literalChunk += character;
+            }
+
+            flushLiteralChunk();
+            return escaped;
+        })
+        .join('/');
+}
+
 /**
  * Returns true when a custom calendar pattern (folder + filename, without extension) can be parsed as a full date
  * (year, month, day).

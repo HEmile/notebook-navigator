@@ -81,6 +81,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-03-23',
         showOnUpdate: false,
         improved: [
+            'Calendar now follows the active daily note and switches to the matching month automatically.',
             'Improved list pane scroll performance by reducing repeated work in visible note rows.',
             'Quick actions are no longer visible while scrolling the list pane.'
         ]
