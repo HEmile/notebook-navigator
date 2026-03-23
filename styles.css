@@ -3842,7 +3842,7 @@ body {
     top: 8px; /* Default: 8px for normal mode */
     inset-inline-end: 8px;
     height: 20px;
-    display: none;
+    display: flex;
     background: var(--nn-theme-quick-actions-bg);
     border: 1px solid var(--nn-theme-quick-actions-border);
     border-radius: min(12px, var(--nn-theme-quick-actions-border-radius));
@@ -3889,12 +3889,6 @@ body {
 .nn-quick-actions-panel.nn-compact-mode[data-title-rows='2'],
 .nn-quick-actions-panel.nn-compact-mode[data-has-tags='true'] {
     top: var(--nn-file-padding-vertical-compact);
-}
-
-/* Panel appears when hovering anywhere on file row */
-.nn-desktop .nn-file:hover .nn-quick-actions-panel,
-.nn-desktop.nn-single-pane .nn-file:hover .nn-quick-actions-panel {
-    display: flex;
 }
 
 /* Second line container - holds date and preview text */

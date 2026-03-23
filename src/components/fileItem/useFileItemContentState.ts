@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { App, TFile } from 'obsidian';
 import { IndexedDBStorage, type FeatureImageStatus, type FileContentChange, type PropertyItem } from '../../storage/IndexedDBStorage';
 import { getCachedFileTags } from '../../utils/tagUtils';
@@ -60,6 +60,19 @@ export interface FileItemContentState {
     wordCount: number | null;
     taskUnfinished: number | null;
     metadataVersion: number;
+}
+
+export function subscribeToFileItemContentState(params: {
+    db: FileItemContentDb;
+    filePath: string;
+    loadSnapshot: () => FileItemCacheSnapshot;
+    applySnapshot: (snapshot: FileItemCacheSnapshot) => void;
+    onChange: (changes: FileContentChange['changes']) => void;
+}): () => void {
+    const { db, filePath, loadSnapshot, applySnapshot, onChange } = params;
+    const unsubscribe = db.onFileContentChange(filePath, onChange);
+    applySnapshot(loadSnapshot());
+    return unsubscribe;
 }
 
 export function loadFileItemCacheSnapshot({
@@ -139,63 +152,66 @@ export function useFileItemContentState({
 
     const featureImageObjectUrlRef = useRef<string | null>(null);
     const lastFeatureImageRegenRef = useRef<{ key: string; at: number } | null>(null);
-
-    useEffect(() => {
-        const initialSnapshot = loadSnapshot();
-
-        setPreviewText(prev => (prev === initialSnapshot.previewText ? prev : initialSnapshot.previewText));
-        setTags(prev => (areStringArraysEqual(prev, initialSnapshot.tags) ? prev : initialSnapshot.tags));
-        setFeatureImageKey(prev => (prev === initialSnapshot.featureImageKey ? prev : initialSnapshot.featureImageKey));
-        setFeatureImageStatus(prev => (prev === initialSnapshot.featureImageStatus ? prev : initialSnapshot.featureImageStatus));
-        setProperties(prev => (arePropertyItemsEqual(prev, initialSnapshot.properties) ? prev : initialSnapshot.properties));
-        setWordCount(prev => (prev === initialSnapshot.wordCount ? prev : initialSnapshot.wordCount));
-        setTaskUnfinished(prev => (prev === initialSnapshot.taskUnfinished ? prev : initialSnapshot.taskUnfinished));
-
+    useLayoutEffect(() => {
         const db = getDB();
-        const unsubscribe = db.onFileContentChange(file.path, (changes: FileContentChange['changes']) => {
-            let shouldRefreshFrontmatterState = false;
+        const unsubscribe = subscribeToFileItemContentState({
+            db,
+            filePath: file.path,
+            loadSnapshot,
+            applySnapshot: initialSnapshot => {
+                setPreviewText(prev => (prev === initialSnapshot.previewText ? prev : initialSnapshot.previewText));
+                setTags(prev => (areStringArraysEqual(prev, initialSnapshot.tags) ? prev : initialSnapshot.tags));
+                setFeatureImageKey(prev => (prev === initialSnapshot.featureImageKey ? prev : initialSnapshot.featureImageKey));
+                setFeatureImageStatus(prev => (prev === initialSnapshot.featureImageStatus ? prev : initialSnapshot.featureImageStatus));
+                setProperties(prev => (arePropertyItemsEqual(prev, initialSnapshot.properties) ? prev : initialSnapshot.properties));
+                setWordCount(prev => (prev === initialSnapshot.wordCount ? prev : initialSnapshot.wordCount));
+                setTaskUnfinished(prev => (prev === initialSnapshot.taskUnfinished ? prev : initialSnapshot.taskUnfinished));
+            },
+            onChange: (changes: FileContentChange['changes']) => {
+                let shouldRefreshFrontmatterState = false;
 
-            if (changes.preview !== undefined && showPreview && file.extension === 'md') {
-                const nextPreview = changes.preview || '';
-                setPreviewText(prev => (prev === nextPreview ? prev : nextPreview));
-            }
+                if (changes.preview !== undefined && showPreview && file.extension === 'md') {
+                    const nextPreview = changes.preview || '';
+                    setPreviewText(prev => (prev === nextPreview ? prev : nextPreview));
+                }
 
-            if (changes.featureImageKey !== undefined) {
-                setFeatureImageKey(prev => (prev === changes.featureImageKey ? prev : (changes.featureImageKey ?? null)));
-            }
+                if (changes.featureImageKey !== undefined) {
+                    setFeatureImageKey(prev => (prev === changes.featureImageKey ? prev : (changes.featureImageKey ?? null)));
+                }
 
-            if (changes.featureImageStatus !== undefined) {
-                const nextStatus = changes.featureImageStatus;
-                setFeatureImageStatus(prev => (prev === nextStatus ? prev : nextStatus));
-            }
+                if (changes.featureImageStatus !== undefined) {
+                    const nextStatus = changes.featureImageStatus;
+                    setFeatureImageStatus(prev => (prev === nextStatus ? prev : nextStatus));
+                }
 
-            if (changes.tags !== undefined) {
-                const nextTags = [...(changes.tags ?? [])];
-                setTags(prev => (areStringArraysEqual(prev, nextTags) ? prev : nextTags));
-            }
+                if (changes.tags !== undefined) {
+                    const nextTags = [...(changes.tags ?? [])];
+                    setTags(prev => (areStringArraysEqual(prev, nextTags) ? prev : nextTags));
+                }
 
-            if (changes.wordCount !== undefined) {
-                const nextWordCount = changes.wordCount ?? null;
-                setWordCount(prev => (prev === nextWordCount ? prev : nextWordCount));
-            }
+                if (changes.wordCount !== undefined) {
+                    const nextWordCount = changes.wordCount ?? null;
+                    setWordCount(prev => (prev === nextWordCount ? prev : nextWordCount));
+                }
 
-            if (changes.taskUnfinished !== undefined) {
-                const nextTaskUnfinished = changes.taskUnfinished ?? null;
-                setTaskUnfinished(prev => (prev === nextTaskUnfinished ? prev : nextTaskUnfinished));
-            }
+                if (changes.taskUnfinished !== undefined) {
+                    const nextTaskUnfinished = changes.taskUnfinished ?? null;
+                    setTaskUnfinished(prev => (prev === nextTaskUnfinished ? prev : nextTaskUnfinished));
+                }
 
-            if (changes.properties !== undefined) {
-                const nextProperties = clonePropertyItems(changes.properties ?? null);
-                setProperties(prev => (arePropertyItemsEqual(prev, nextProperties) ? prev : nextProperties));
-                shouldRefreshFrontmatterState = true;
-            }
+                if (changes.properties !== undefined) {
+                    const nextProperties = clonePropertyItems(changes.properties ?? null);
+                    setProperties(prev => (arePropertyItemsEqual(prev, nextProperties) ? prev : nextProperties));
+                    shouldRefreshFrontmatterState = true;
+                }
 
-            if (changes.metadata !== undefined) {
-                shouldRefreshFrontmatterState = true;
-            }
+                if (changes.metadata !== undefined) {
+                    shouldRefreshFrontmatterState = true;
+                }
 
-            if (shouldRefreshFrontmatterState) {
-                setMetadataVersion(version => version + 1);
+                if (shouldRefreshFrontmatterState) {
+                    setMetadataVersion(version => version + 1);
+                }
             }
         });
 

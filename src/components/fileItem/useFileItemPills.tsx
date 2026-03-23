@@ -19,8 +19,6 @@
 import React, { useCallback, useMemo } from 'react';
 import type { TFile } from 'obsidian';
 import { useMetadataService, useServices } from '../../context/ServicesContext';
-import { useActiveProfile } from '../../context/SettingsContext';
-import { useUXPreferences } from '../../context/UXPreferencesContext';
 import { useTagNavigation } from '../../hooks/useTagNavigation';
 import type { PropertyItem } from '../../storage/IndexedDBStorage';
 import type { NotePropertyType, NotebookNavigatorSettings } from '../../settings/types';
@@ -28,7 +26,6 @@ import { runAsyncAction } from '../../utils/async';
 import { naturalCompare } from '../../utils/sortUtils';
 import { getTagSearchModifierOperator } from '../../utils/tagUtils';
 import { isSupportedCssColor, parsePropertyLinkTarget, type PropertyLinkTarget } from '../../utils/propertyUtils';
-import { createHiddenTagVisibility } from '../../utils/tagPrefixMatcher';
 import { casefold } from '../../utils/recordUtils';
 import { resolveUXIcon } from '../../utils/uxIcons';
 import type { InclusionOperator } from '../../utils/filterSearch';
@@ -41,6 +38,7 @@ import {
     parsePropertyNodeId,
     normalizePropertyTreeValuePath
 } from '../../utils/propertyTree';
+import type { HiddenTagVisibility } from '../../utils/tagPrefixMatcher';
 import { ServiceIcon } from '../ServiceIcon';
 
 type PropertyPill = {
@@ -68,6 +66,7 @@ export interface UseFileItemPillsParams {
     settings: NotebookNavigatorSettings;
     visiblePropertyKeys: ReadonlySet<string>;
     visibleNavigationPropertyKeys: ReadonlySet<string>;
+    hiddenTagVisibility: HiddenTagVisibility;
     onModifySearchWithTag?: (tag: string, operator: InclusionOperator) => void;
     onModifySearchWithProperty?: (key: string, value: string | null, operator: InclusionOperator) => void;
 }
@@ -168,18 +167,13 @@ export function useFileItemPills({
     settings,
     visiblePropertyKeys,
     visibleNavigationPropertyKeys,
+    hiddenTagVisibility,
     onModifySearchWithTag,
     onModifySearchWithProperty
 }: UseFileItemPillsParams): FileItemPillsState {
     const { app, isMobile } = useServices();
     const metadataService = useMetadataService();
-    const { hiddenTags } = useActiveProfile();
-    const uxPreferences = useUXPreferences();
     const { navigateToTag, navigateToProperty } = useTagNavigation();
-    const hiddenTagVisibility = useMemo(
-        () => createHiddenTagVisibility(hiddenTags, uxPreferences.showHiddenItems),
-        [hiddenTags, uxPreferences.showHiddenItems]
-    );
     const wordCountPillIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'file-word-count'), [settings.interfaceIcons]);
 
     const handleTagClick = useCallback(

@@ -19,7 +19,12 @@
 import { App } from 'obsidian';
 import { describe, expect, it } from 'vitest';
 import { createDefaultFileData, type FileData } from '../../../src/storage/IndexedDBStorage';
-import { loadFileItemCacheSnapshot, type FileItemContentDb } from '../../../src/components/fileItem/useFileItemContentState';
+import {
+    loadFileItemCacheSnapshot,
+    subscribeToFileItemContentState,
+    type FileItemCacheSnapshot,
+    type FileItemContentDb
+} from '../../../src/components/fileItem/useFileItemContentState';
 import { createTestTFile } from '../../utils/createTestTFile';
 
 function createFileRecord(patch?: Partial<FileData>): FileData {
@@ -93,5 +98,69 @@ describe('useFileItemContentState helpers', () => {
         expect(snapshot.previewText).toBe('');
         expect(snapshot.tags).toEqual([]);
         expect(snapshot.wordCount).toBe(999);
+    });
+
+    it('loads a fresh snapshot after subscribing so mount-time updates are not missed', () => {
+        let currentSnapshot: FileItemCacheSnapshot = {
+            previewText: 'Initial preview',
+            tags: ['first'],
+            featureImageKey: null,
+            featureImageStatus: 'unprocessed',
+            featureImageUrl: null,
+            properties: null,
+            wordCount: 11,
+            taskUnfinished: 1
+        };
+        const appliedSnapshots: FileItemCacheSnapshot[] = [];
+        const events: string[] = [];
+
+        const db: FileItemContentDb = {
+            getCachedPreviewText: () => currentSnapshot.previewText,
+            getFile: () => null,
+            onFileContentChange: () => {
+                events.push('subscribe');
+                currentSnapshot = {
+                    ...currentSnapshot,
+                    previewText: 'Updated during subscribe',
+                    tags: ['second'],
+                    wordCount: 22,
+                    taskUnfinished: 2
+                };
+                return () => {
+                    events.push('unsubscribe');
+                };
+            },
+            ensurePreviewTextLoaded: async () => {},
+            getFeatureImageBlob: async () => null
+        };
+
+        const unsubscribe = subscribeToFileItemContentState({
+            db,
+            filePath: 'Notes/Daily.md',
+            loadSnapshot: () => {
+                events.push('load');
+                return currentSnapshot;
+            },
+            applySnapshot: snapshot => {
+                events.push('apply');
+                appliedSnapshots.push(snapshot);
+            },
+            onChange: () => {
+                events.push('change');
+            }
+        });
+
+        expect(events).toEqual(['subscribe', 'load', 'apply']);
+        expect(appliedSnapshots).toEqual([
+            expect.objectContaining({
+                previewText: 'Updated during subscribe',
+                tags: ['second'],
+                wordCount: 22,
+                taskUnfinished: 2
+            })
+        ]);
+
+        unsubscribe();
+        expect(events).toEqual(['subscribe', 'load', 'apply', 'unsubscribe']);
     });
 });

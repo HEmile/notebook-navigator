@@ -34,6 +34,17 @@ export interface FolderAppearance {
 
 export type TagAppearance = FolderAppearance;
 
+export interface ListPaneAppearanceSettings {
+    mode: ListDisplayMode;
+    titleRows: number;
+    previewRows: number;
+    notePropertyType: NotePropertyType;
+    showDate: boolean;
+    showPreview: boolean;
+    showImage: boolean;
+    groupBy: ListNoteGroupingOption;
+}
+
 export function getDefaultListMode(settings: NotebookNavigatorSettings): ListDisplayMode {
     return settings.defaultListMode === 'compact' ? 'compact' : 'standard';
 }
@@ -80,7 +91,7 @@ export function useListPaneAppearance() {
     const settings = useSettingsState();
     const { selectedFolder, selectedTag, selectedProperty, selectionType } = useSelectionState();
 
-    return useMemo(() => {
+    return useMemo<ListPaneAppearanceSettings>(() => {
         const defaultMode = getDefaultListMode(settings);
 
         const buildAppearance = (appearance: FolderAppearance | undefined) => {

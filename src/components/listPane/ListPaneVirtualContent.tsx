@@ -31,8 +31,16 @@ import type { SortOption } from '../../settings';
 import type { InclusionOperator } from '../../utils/filterSearch';
 import type { FolderDecorationModel } from '../../utils/folderDecoration';
 import type { NavigateToFolderOptions } from '../../hooks/useNavigatorReveal';
-import { FileItem } from '../FileItem';
+import { FileItem, type FileItemStorageHelpers } from '../FileItem';
 import { ServiceIcon } from '../ServiceIcon';
+import type { ListPaneAppearanceSettings } from '../../hooks/useListPaneAppearance';
+import type { FileNameIconNeedle } from '../../utils/fileIconUtils';
+import type { HiddenTagVisibility } from '../../utils/tagPrefixMatcher';
+
+export interface PointerClientPosition {
+    clientX: number;
+    clientY: number;
+}
 
 interface FolderGroupHeaderTarget {
     folder: TFolder;
@@ -58,13 +66,23 @@ interface ListPaneVirtualContentProps {
     isFolderNavigation: boolean;
     lastSelectedFilePath: string | null;
     isFileSelected: (file: TFile) => boolean;
+    hoveredFilePath: string | null;
+    suppressRowHover: boolean;
+    onHoveredFilePathChange: (path: string | null, pointerClientPosition: PointerClientPosition | null) => void;
     onFileClick: (file: TFile, fileIndex: number | undefined, event: React.MouseEvent) => void;
     onModifySearchWithTag: (tag: string, operator: InclusionOperator) => void;
     onModifySearchWithProperty: (key: string, value: string | null, operator: InclusionOperator) => void;
     localDayReference: Date | null;
     fileIconSize: number;
+    appearanceSettings: ListPaneAppearanceSettings;
+    includeDescendantNotes: boolean;
+    hiddenTagVisibility: HiddenTagVisibility;
+    fileNameIconNeedles: readonly FileNameIconNeedle[];
     visibleListPropertyKeys: ReadonlySet<string>;
     visibleNavigationPropertyKeys: ReadonlySet<string>;
+    fileItemStorage: FileItemStorageHelpers;
+    noteShortcutKeysByPath: ReadonlyMap<string, string>;
+    onToggleNoteShortcut: (file: TFile, shortcutKey: string | undefined) => Promise<void>;
     onNavigateToFolder: (folderPath: string, options?: NavigateToFolderOptions) => void;
     folderDecorationModel: FolderDecorationModel;
 }
@@ -88,6 +106,36 @@ function getDateGroupLabel(listItems: ListPaneItem[], index: number): string | n
     return null;
 }
 
+function getHoveredFilePathFromTarget(target: EventTarget | null): string | null {
+    if (!(target instanceof Element)) {
+        return null;
+    }
+
+    const fileElement = target.closest('.nn-file');
+    return fileElement instanceof HTMLElement ? (fileElement.dataset.path ?? null) : null;
+}
+
+export function getHoveredFilePathAtPointer(
+    scrollContainer: HTMLElement | null,
+    pointerClientPosition: PointerClientPosition | null
+): string | null {
+    if (!scrollContainer || !pointerClientPosition) {
+        return null;
+    }
+
+    const ownerDocument = scrollContainer.ownerDocument;
+    if (!ownerDocument) {
+        return null;
+    }
+
+    const target = ownerDocument.elementFromPoint(pointerClientPosition.clientX, pointerClientPosition.clientY);
+    if (!(target instanceof Element) || !scrollContainer.contains(target)) {
+        return null;
+    }
+
+    return getHoveredFilePathFromTarget(target);
+}
+
 export function ListPaneVirtualContent({
     listItems,
     rowVirtualizer,
@@ -105,13 +153,23 @@ export function ListPaneVirtualContent({
     isFolderNavigation,
     lastSelectedFilePath,
     isFileSelected,
+    hoveredFilePath,
+    suppressRowHover,
+    onHoveredFilePathChange,
     onFileClick,
     onModifySearchWithTag,
     onModifySearchWithProperty,
     localDayReference,
     fileIconSize,
+    appearanceSettings,
+    includeDescendantNotes,
+    hiddenTagVisibility,
+    fileNameIconNeedles,
     visibleListPropertyKeys,
     visibleNavigationPropertyKeys,
+    fileItemStorage,
+    noteShortcutKeysByPath,
+    onToggleNoteShortcut,
     onNavigateToFolder,
     folderDecorationModel
 }: ListPaneVirtualContentProps) {
@@ -216,6 +274,20 @@ export function ListPaneVirtualContent({
         [app, commandQueue, onNavigateToFolder]
     );
 
+    const handleListMouseMove = useCallback(
+        (event: React.MouseEvent<HTMLDivElement>) => {
+            onHoveredFilePathChange(getHoveredFilePathFromTarget(event.target), {
+                clientX: event.clientX,
+                clientY: event.clientY
+            });
+        },
+        [onHoveredFilePathChange]
+    );
+
+    const handleListMouseLeave = useCallback(() => {
+        onHoveredFilePathChange(null, null);
+    }, [onHoveredFilePathChange]);
+
     return (
         <div
             ref={scrollContainerRefCallback}
@@ -227,6 +299,8 @@ export function ListPaneVirtualContent({
             data-pane="files"
             role="list"
             tabIndex={-1}
+            onMouseMove={handleListMouseMove}
+            onMouseLeave={handleListMouseLeave}
         >
             <div className="nn-list-pane-content">
                 {isEmptySelection ? (
@@ -287,6 +361,10 @@ export function ListPaneVirtualContent({
                                 headerFolderPath !== null ? (folderGroupHeaderTargets.get(headerFolderPath) ?? null) : null;
                             const isClickableFolderGroupHeader = Boolean(folderGroupHeaderTarget) && !isPinnedHeader;
                             const dateGroup = item.type === ListPaneItemType.FILE ? getDateGroupLabel(listItems, virtualItem.index) : null;
+                            const shortcutKey =
+                                item.type === ListPaneItemType.FILE && item.data instanceof TFile
+                                    ? noteShortcutKeysByPath.get(item.data.path)
+                                    : undefined;
 
                             const hideSeparator =
                                 item.type === ListPaneItemType.FILE &&
@@ -358,6 +436,7 @@ export function ListPaneVirtualContent({
                                             isSelected={isSelected}
                                             hasSelectedAbove={hasSelectedAbove}
                                             hasSelectedBelow={hasSelectedBelow}
+                                            showQuickActionsPanel={!suppressRowHover && hoveredFilePath === item.data.path}
                                             onFileClick={onFileClick}
                                             fileIndex={item.fileIndex}
                                             selectionType={selectionType}
@@ -372,8 +451,15 @@ export function ListPaneVirtualContent({
                                             onModifySearchWithProperty={onModifySearchWithProperty}
                                             localDayReference={localDayReference}
                                             fileIconSize={fileIconSize}
+                                            appearanceSettings={appearanceSettings}
+                                            includeDescendantNotes={includeDescendantNotes}
+                                            hiddenTagVisibility={hiddenTagVisibility}
+                                            fileNameIconNeedles={fileNameIconNeedles}
                                             visiblePropertyKeys={visibleListPropertyKeys}
                                             visibleNavigationPropertyKeys={visibleNavigationPropertyKeys}
+                                            fileItemStorage={fileItemStorage}
+                                            shortcutKey={shortcutKey}
+                                            onToggleNoteShortcut={onToggleNoteShortcut}
                                             folderDecorationModel={folderDecorationModel}
                                         />
                                     ) : null}

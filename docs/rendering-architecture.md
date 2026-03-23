@@ -1,6 +1,6 @@
 # Notebook Navigator Rendering Architecture
 
-Updated: March 17, 2026
+Updated: March 23, 2026
 
 ## Table of Contents
 
@@ -327,6 +327,10 @@ graph TD
 - Renders pane chrome outside the scroller (`SearchInput`, `ListPaneTitleArea`, mobile toolbars), plus empty states and
   the virtual list with top spacer, date headers, file rows, and bottom spacer.
 - Integrates Omnisearch results when configured, including excerpt matches and highlight metadata.
+- Computes pane-level row inputs once (appearance settings, hidden-tag visibility, file-icon needles, shortcut lookup,
+  storage helpers) and passes them to virtual rows as stable props.
+- Attaches the list-pane context menu to the scroll container and lets delegated target resolution switch between empty
+  space actions and file menus.
 - Maintains drop-zone attributes for drag-and-drop moves and exposes scroll handlers for reveal operations and search
   reset behavior.
 - Uses `scrollMargin: 0` with `useListPaneScroll`. `scrollPaddingEnd` covers the iOS floating toolbar only; calendar
@@ -353,6 +357,7 @@ graph TD
 
 - Renders file title, Omnisearch highlights, preview text, feature image, tag pills, parent folder label, and date
   metadata based on appearance settings and optimization flags.
+- Reads pane-owned shared inputs from props and keeps row-local subscriptions limited to cached file content.
 - Subscribes to content updates from `IndexedDBStorage` to refresh preview text, tags, feature image status, custom
   property values, and word counts.
 - Provides quick actions (reveal, pin/unpin, open in new tab) on desktop hover and handles drag-and-drop metadata for
@@ -449,8 +454,10 @@ const { rowVirtualizer, scrollContainerRefCallback, requestScroll } = useNavigat
   `visibility-change`, `folder-navigation`, then `reveal`. It executes the selected request after the index version
   matches the expected rebuild.
 - `ListPane` delegates virtual row rendering to `ListPaneVirtualContent`, which switches on `item.type` and passes
-  search metadata to `FileItem`; headers are inline `<div className="nn-date-group-header">` nodes, matching the
-  measurement logic.
+  search metadata and pane-owned shared row props to `FileItem`; headers are inline
+  `<div className="nn-date-group-header">` nodes, matching the measurement logic.
+- `ListPaneVirtualContent` tracks hovered file path at the scroller level and `ListPane` suppresses quick-action hover
+  panels while the virtualizer reports active scrolling.
 - Because `virtualItem.start` includes `scrollMargin`, row wrappers subtract it when positioning inside the virtual
   container (`virtualItem.start - scrollMargin`).
 
@@ -506,7 +513,7 @@ to finalized updates.
 
 Virtualized row components (`FolderItem`, `TagTreeItem`, `ShortcutItem`, `FileItem`) memoize expensive derived values
 (class names, tooltip data, highlight ranges, tag colours) and rely on stable props to avoid unnecessary renders. Parent
-components memoize handler factories and service descriptors to keep prop identity stable.
+components memoize handler factories, service descriptors, and pane-owned row inputs to keep prop identity stable.
 
 ### 4. Debounced User Input
 

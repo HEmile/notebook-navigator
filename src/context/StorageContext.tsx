@@ -322,6 +322,8 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         [app, settings]
     );
 
+    const hasPreview = useCallback((path: string): boolean => getDBInstance().hasPreview(path), []);
+
     const regenerateFeatureImageForFile = useCallback(
         async (file: TFile) => {
             if (stoppedRef.current) {
@@ -411,7 +413,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
             getDB: getDBInstance,
             getFile: (path: string) => getDBInstance().getFile(path),
             getFiles: (paths: string[]) => getDBInstance().getFiles(paths),
-            hasPreview: (path: string) => getDBInstance().hasPreview(path),
+            hasPreview,
             isStorageReady,
             getTagTree,
             getPropertyTree,
@@ -428,6 +430,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         getFileModifiedTime,
         getFileTimestamps,
         getFileMetadata,
+        hasPreview,
         isStorageReady,
         rebuildCache,
         regenerateFeatureImageForFile

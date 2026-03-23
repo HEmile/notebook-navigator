@@ -41,16 +41,12 @@ import React, { useRef, useMemo, useEffect, useState, useCallback, useId } from 
 import { TFile, TFolder, setTooltip, setIcon } from 'obsidian';
 import { useServices } from '../context/ServicesContext';
 import { useMetadataService } from '../context/ServicesContext';
-import { useSettingsDerived, useSettingsState } from '../context/SettingsContext';
-import { useUXPreferences } from '../context/UXPreferencesContext';
-import { useFileCache } from '../context/StorageContext';
-import { useContextMenu } from '../hooks/useContextMenu';
+import { useSettingsState } from '../context/SettingsContext';
 import type { FolderDecorationModel } from '../utils/folderDecoration';
-import { useListPaneAppearance } from '../hooks/useListPaneAppearance';
-import { useShortcuts } from '../context/ShortcutsContext';
+import type { ListPaneAppearanceSettings } from '../hooks/useListPaneAppearance';
 import { strings } from '../i18n';
 import { SortOption } from '../settings';
-import { ItemType, type NavigationItemType } from '../types';
+import { type NavigationItemType } from '../types';
 import { DateUtils } from '../utils/dateUtils';
 import { runAsyncAction } from '../utils/async';
 import { getTooltipPlacement } from '../utils/domUtils';
@@ -72,7 +68,9 @@ import { resolveUXIcon } from '../utils/uxIcons';
 import type { InclusionOperator } from '../utils/filterSearch';
 import { getNavigatorPinContext } from '../utils/selectionUtils';
 import { resolveDefaultDateField } from '../utils/sortUtils';
-import { useFileItemContentState } from './fileItem/useFileItemContentState';
+import type { FileNameIconNeedle } from '../utils/fileIconUtils';
+import type { HiddenTagVisibility } from '../utils/tagPrefixMatcher';
+import { useFileItemContentState, type FileItemContentDb } from './fileItem/useFileItemContentState';
 import { useFileItemPills } from './fileItem/useFileItemPills';
 
 const FEATURE_IMAGE_MAX_ASPECT_RATIO = 16 / 9;
@@ -82,6 +80,7 @@ interface FileItemProps {
     isSelected: boolean;
     hasSelectedAbove?: boolean;
     hasSelectedBelow?: boolean;
+    showQuickActionsPanel: boolean;
     onFileClick: (file: TFile, fileIndex: number | undefined, event: React.MouseEvent) => void;
     fileIndex?: number;
     dateGroup?: string | null;
@@ -103,11 +102,26 @@ interface FileItemProps {
     localDayReference: Date | null;
     /** Icon size for rendering file icons */
     fileIconSize: number;
+    appearanceSettings: ListPaneAppearanceSettings;
+    includeDescendantNotes: boolean;
+    hiddenTagVisibility: HiddenTagVisibility;
+    fileNameIconNeedles: readonly FileNameIconNeedle[];
     /** Visible frontmatter property keys for file list pills (normalized keys) */
     visiblePropertyKeys: ReadonlySet<string>;
     /** Visible frontmatter property keys in navigation pane (normalized keys) */
     visibleNavigationPropertyKeys: ReadonlySet<string>;
+    fileItemStorage: FileItemStorageHelpers;
+    shortcutKey?: string;
+    onToggleNoteShortcut: (file: TFile, shortcutKey: string | undefined) => Promise<void>;
     folderDecorationModel: FolderDecorationModel;
+}
+
+export interface FileItemStorageHelpers {
+    getFileDisplayName: (file: TFile) => string;
+    getDB: () => FileItemContentDb;
+    getFileTimestamps: (file: TFile) => { created: number; modified: number };
+    hasPreview: (path: string) => boolean;
+    regenerateFeatureImageForFile: (file: TFile) => Promise<void>;
 }
 
 /**
@@ -277,7 +291,7 @@ function ParentFolderLabel({
  * Memoized FileItem component.
  * Renders an individual file item in the file list with preview text and metadata.
  * Displays the file name, date, preview text, and optional feature image.
- * Handles selection state, context menus, and drag-and-drop functionality.
+ * Handles selection state, quick actions, and drag-and-drop functionality.
  *
  * @param props - The component props
  * @param props.file - The Obsidian TFile to display
@@ -290,6 +304,7 @@ export const FileItem = React.memo(function FileItem({
     isSelected,
     hasSelectedAbove,
     hasSelectedBelow,
+    showQuickActionsPanel,
     onFileClick,
     fileIndex,
     dateGroup,
@@ -304,20 +319,22 @@ export const FileItem = React.memo(function FileItem({
     onModifySearchWithProperty,
     localDayReference,
     fileIconSize,
+    appearanceSettings,
+    includeDescendantNotes,
+    hiddenTagVisibility,
+    fileNameIconNeedles,
     visiblePropertyKeys,
     visibleNavigationPropertyKeys,
+    fileItemStorage,
+    shortcutKey,
+    onToggleNoteShortcut,
     folderDecorationModel
 }: FileItemProps) {
     // === Hooks (all hooks together at the top) ===
     const { app, isMobile, plugin, commandQueue, tagOperations } = useServices();
     const settings = useSettingsState();
-    const { fileNameIconNeedles } = useSettingsDerived();
-    const uxPreferences = useUXPreferences();
-    const includeDescendantNotes = uxPreferences.includeDescendantNotes;
-    const appearanceSettings = useListPaneAppearance();
-    const { getFileDisplayName, getDB, getFileTimestamps, hasPreview, regenerateFeatureImageForFile } = useFileCache();
     const metadataService = useMetadataService();
-    const { addNoteShortcut, hasNoteShortcut, noteShortcutKeysByPath, removeShortcut } = useShortcuts();
+    const { getFileDisplayName, getDB, getFileTimestamps, hasPreview, regenerateFeatureImageForFile } = fileItemStorage;
     const { previewText, tags, featureImageStatus, featureImageUrl, properties, wordCount, taskUnfinished, metadataVersion } =
         useFileItemContentState({
             app,
@@ -329,7 +346,6 @@ export const FileItem = React.memo(function FileItem({
         });
 
     // === State ===
-    const [isHovered, setIsHovered] = React.useState(false);
     const [featureImageAspectRatio, setFeatureImageAspectRatio] = useState<number | null>(null);
     const [isFeatureImageHidden, setIsFeatureImageHidden] = useState(false);
 
@@ -354,10 +370,10 @@ export const FileItem = React.memo(function FileItem({
         settings.showQuickActions && settings.quickActionRevealInFolder && file.parent && file.parent.path !== parentFolder;
     const canAddTagsToFile = file.extension === 'md';
     const shouldShowAddTagAction = settings.showQuickActions && settings.quickActionAddTag && canAddTagsToFile && Boolean(tagOperations);
-    const hasShortcut = hasNoteShortcut(file.path);
     const shouldShowShortcutAction = settings.showQuickActions && settings.quickActionAddToShortcuts;
     const hasQuickActions =
         shouldShowOpenInNewTab || shouldShowPinNote || shouldShowRevealIcon || shouldShowAddTagAction || shouldShowShortcutAction;
+    const hasShortcut = typeof shortcutKey === 'string';
     const iconServiceVersion = useIconServiceVersion();
     const showFileIcons = settings.showFileIcons;
     const hasUnfinishedTasks = typeof taskUnfinished === 'number' && taskUnfinished > 0;
@@ -493,6 +509,7 @@ export const FileItem = React.memo(function FileItem({
         settings,
         visiblePropertyKeys,
         visibleNavigationPropertyKeys,
+        hiddenTagVisibility,
         onModifySearchWithTag,
         onModifySearchWithProperty
     });
@@ -843,14 +860,7 @@ export const FileItem = React.memo(function FileItem({
     const handleShortcutToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        runAsyncAction(async () => {
-            const shortcutKey = noteShortcutKeysByPath.get(file.path);
-            if (shortcutKey) {
-                await removeShortcut(shortcutKey);
-            } else {
-                await addNoteShortcut(file.path);
-            }
-        });
+        runAsyncAction(async () => onToggleNoteShortcut(file, shortcutKey));
     };
 
     // Reveal the file in its actual folder in the navigator
@@ -888,7 +898,7 @@ export const FileItem = React.memo(function FileItem({
 
     const quickActionItems: { key: string; element: React.ReactNode }[] = [];
 
-    if (shouldShowRevealIcon) {
+    if (showQuickActionsPanel && shouldShowRevealIcon) {
         quickActionItems.push({
             key: 'reveal',
             element: (
@@ -902,7 +912,7 @@ export const FileItem = React.memo(function FileItem({
         });
     }
 
-    if (shouldShowAddTagAction) {
+    if (showQuickActionsPanel && shouldShowAddTagAction) {
         quickActionItems.push({
             key: 'add-tag',
             element: (
@@ -916,7 +926,7 @@ export const FileItem = React.memo(function FileItem({
         });
     }
 
-    if (shouldShowShortcutAction) {
+    if (showQuickActionsPanel && shouldShowShortcutAction) {
         quickActionItems.push({
             key: 'shortcut',
             element: (
@@ -930,7 +940,7 @@ export const FileItem = React.memo(function FileItem({
         });
     }
 
-    if (shouldShowPinNote) {
+    if (showQuickActionsPanel && shouldShowPinNote) {
         quickActionItems.push({
             key: 'pin',
             element: (
@@ -952,7 +962,7 @@ export const FileItem = React.memo(function FileItem({
         });
     }
 
-    if (shouldShowOpenInNewTab) {
+    if (showQuickActionsPanel && shouldShowOpenInNewTab) {
         quickActionItems.push({
             key: 'new-tab',
             element: (
@@ -990,37 +1000,36 @@ export const FileItem = React.memo(function FileItem({
 
     // Set up the icons when quick actions panel is shown
     useEffect(() => {
-        if (isHovered && !isMobile) {
-            if (revealInFolderIconRef.current && shouldShowRevealIcon) {
-                setIcon(revealInFolderIconRef.current, 'lucide-folder-search');
-            }
-            if (addTagIconRef.current && shouldShowAddTagAction) {
-                setIcon(addTagIconRef.current, 'lucide-tag');
-            }
-            if (addShortcutIconRef.current && shouldShowShortcutAction) {
-                setIcon(addShortcutIconRef.current, hasShortcut ? 'lucide-star-off' : 'lucide-star');
-            }
-            if (pinNoteIconRef.current && shouldShowPinNote) {
-                setIcon(pinNoteIconRef.current, isPinnedInCurrentContext ? 'lucide-pin-off' : 'lucide-pin');
-            }
-            if (openInNewTabIconRef.current && shouldShowOpenInNewTab) {
-                setIcon(openInNewTabIconRef.current, 'lucide-file-plus');
-            }
+        if (isMobile || !showQuickActionsPanel) {
+            return;
+        }
+
+        if (revealInFolderIconRef.current && shouldShowRevealIcon) {
+            setIcon(revealInFolderIconRef.current, 'lucide-folder-search');
+        }
+        if (addTagIconRef.current && shouldShowAddTagAction) {
+            setIcon(addTagIconRef.current, 'lucide-tag');
+        }
+        if (addShortcutIconRef.current && shouldShowShortcutAction) {
+            setIcon(addShortcutIconRef.current, hasShortcut ? 'lucide-star-off' : 'lucide-star');
+        }
+        if (pinNoteIconRef.current && shouldShowPinNote) {
+            setIcon(pinNoteIconRef.current, isPinnedInCurrentContext ? 'lucide-pin-off' : 'lucide-pin');
+        }
+        if (openInNewTabIconRef.current && shouldShowOpenInNewTab) {
+            setIcon(openInNewTabIconRef.current, 'lucide-file-plus');
         }
     }, [
-        isHovered,
         isMobile,
         shouldShowOpenInNewTab,
         shouldShowPinNote,
         shouldShowRevealIcon,
         shouldShowAddTagAction,
         shouldShowShortcutAction,
+        showQuickActionsPanel,
         hasShortcut,
         isPinnedInCurrentContext
     ]);
-
-    // Enable context menu
-    useContextMenu(fileRef, { type: ItemType.FILE, item: file });
 
     // Wrap onFileClick to pass file and fileIndex
     const handleItemClick = useCallback(
@@ -1049,14 +1058,12 @@ export const FileItem = React.memo(function FileItem({
             onMouseDown={handleMouseDown}
             draggable={!isMobile}
             role="listitem"
-            onMouseEnter={() => !isMobile && setIsHovered(true)}
-            onMouseLeave={() => !isMobile && setIsHovered(false)}
             aria-describedby={hiddenDescription ? hiddenDescriptionId : undefined}
             style={fileRowStyle}
         >
             <div className="nn-file-content">
                 {/* Quick actions panel - appears on hover */}
-                {isHovered && !isMobile && hasQuickActions && (
+                {!isMobile && hasQuickActions && showQuickActionsPanel && (
                     <div
                         className={`nn-quick-actions-panel ${isCompactMode ? 'nn-compact-mode' : ''}`}
                         data-title-rows={appearanceSettings.titleRows}

@@ -77,6 +77,15 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '2.5.4',
+        date: '2026-03-23',
+        showOnUpdate: false,
+        improved: [
+            'Improved list pane scroll performance by reducing repeated work in visible note rows.',
+            'Quick actions are no longer visible while scrolling the list pane.'
+        ]
+    },
+    {
         version: '2.5.3',
         date: '2026-03-22',
         showOnUpdate: false,

@@ -22,6 +22,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../../src/settings/defaultSettings';
 import { useFileItemPills, type UseFileItemPillsParams } from '../../../src/components/fileItem/useFileItemPills';
 import { buildPropertyValueNodeId } from '../../../src/utils/propertyTree';
+import { createHiddenTagVisibility, type HiddenTagVisibility } from '../../../src/utils/tagPrefixMatcher';
 import { createTestTFile } from '../../utils/createTestTFile';
 
 const mockOpenLinkText = vi.fn();
@@ -46,18 +47,6 @@ vi.mock('../../../src/context/ServicesContext', () => ({
     useMetadataService: () => mockMetadataService
 }));
 
-vi.mock('../../../src/context/SettingsContext', () => ({
-    useActiveProfile: () => ({
-        hiddenTags: []
-    })
-}));
-
-vi.mock('../../../src/context/UXPreferencesContext', () => ({
-    useUXPreferences: () => ({
-        showHiddenItems: false
-    })
-}));
-
 vi.mock('../../../src/hooks/useTagNavigation', () => ({
     useTagNavigation: () => ({
         navigateToTag: mockNavigateToTag,
@@ -70,9 +59,16 @@ vi.mock('../../../src/components/ServiceIcon', () => ({
         React.createElement('span', { 'data-icon-id': iconId, className })
 }));
 
-function renderPillRows(params: UseFileItemPillsParams): string {
+function renderPillRows(
+    params: Omit<UseFileItemPillsParams, 'hiddenTagVisibility'> & {
+        hiddenTagVisibility?: HiddenTagVisibility;
+    }
+): string {
     function Host() {
-        const state = useFileItemPills(params);
+        const state = useFileItemPills({
+            ...params,
+            hiddenTagVisibility: params.hiddenTagVisibility ?? createHiddenTagVisibility([], false)
+        });
         return React.createElement(
             'div',
             {
@@ -154,6 +150,28 @@ describe('useFileItemPills', () => {
 
         expect(markup).toContain('data-show-word-count="true"');
         expect(markup).toContain('1,234');
+    });
+
+    it('filters hidden tags using the provided visibility helper', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Hidden.md'),
+            isCompactMode: false,
+            tags: ['visible', 'archive/private'],
+            properties: null,
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showTags: true,
+                showFileTags: true
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>(),
+            hiddenTagVisibility: createHiddenTagVisibility(['archive'], false)
+        });
+
+        expect(markup).toContain('visible');
+        expect(markup).not.toContain('archive/private');
     });
 
     it('renders external property links using their display text', () => {

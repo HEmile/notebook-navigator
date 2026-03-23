@@ -18,7 +18,7 @@
 
 // src/hooks/useContextMenu.ts
 import { useEffect, useCallback, useState } from 'react';
-import { Menu, TFolder } from 'obsidian';
+import { Menu, TFile, TFolder } from 'obsidian';
 import { useExpansionState, useExpansionDispatch } from '../context/ExpansionContext';
 import { useSelectionState, useSelectionDispatch } from '../context/SelectionContext';
 import {
@@ -113,10 +113,29 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
 
             // Get the target element if it's an HTML element
             const targetElement = targetNode instanceof HTMLElement ? targetNode : targetNode.parentElement;
+            let menuElement: HTMLElement = elementRef.current;
 
             // Folder note override:
             // Right-clicking on a folder name should behave like right-clicking the folder note file.
             let menuConfig: MenuConfig = config;
+            if (menuConfig.type === EMPTY_LIST_MENU_TYPE) {
+                if (!targetElement) {
+                    return;
+                }
+
+                const fileTarget = targetElement.closest('.nn-file');
+                if (fileTarget instanceof HTMLElement) {
+                    const filePath = fileTarget.dataset.path;
+                    const file = filePath ? app.vault.getFileByPath(filePath) : null;
+                    if (!(file instanceof TFile)) {
+                        return;
+                    }
+
+                    menuConfig = { type: ItemType.FILE, item: file };
+                    menuElement = fileTarget;
+                }
+            }
+
             if (settings.enableFolderNoteLinks && menuConfig.type === ItemType.FOLDER && targetElement?.closest('.nn-navitem-name')) {
                 const folderNote = getFolderNote(menuConfig.item, settings);
                 if (folderNote) {
@@ -217,12 +236,12 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
             activeNavigatorMenu = menu;
 
             // Add context menu active class to show outline immediately
-            elementRef.current.classList.add('nn-context-menu-active');
+            menuElement.classList.add('nn-context-menu-active');
 
             // Handle separator hiding for file items in list pane
             if (isFileMenu) {
                 // Find the virtual item wrapper that contains this file item
-                const virtualItem = elementRef.current.closest('.nn-virtual-file-item');
+                const virtualItem = menuElement.closest('.nn-virtual-file-item');
                 if (virtualItem instanceof HTMLElement) {
                     // Hide separator below this item
                     virtualItem.classList.add('nn-hide-separator-context-menu');
@@ -278,21 +297,19 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
                 if (activeNavigatorMenu === menu) {
                     activeNavigatorMenu = null;
                 }
-                if (elementRef.current) {
-                    elementRef.current.classList.remove('nn-context-menu-active');
+                menuElement.classList.remove('nn-context-menu-active');
 
-                    // Remove separator hiding for file items
-                    if (isFileMenu) {
-                        const virtualItem = elementRef.current.closest('.nn-virtual-file-item');
-                        if (virtualItem instanceof HTMLElement) {
-                            // Remove separator hiding from this item
-                            virtualItem.classList.remove('nn-hide-separator-context-menu');
+                // Remove separator hiding for file items
+                if (isFileMenu) {
+                    const virtualItem = menuElement.closest('.nn-virtual-file-item');
+                    if (virtualItem instanceof HTMLElement) {
+                        // Remove separator hiding from this item
+                        virtualItem.classList.remove('nn-hide-separator-context-menu');
 
-                            // Remove separator hiding from previous item
-                            const prevVirtualItem = virtualItem.previousElementSibling;
-                            if (prevVirtualItem instanceof HTMLElement && prevVirtualItem.classList.contains('nn-virtual-file-item')) {
-                                prevVirtualItem.classList.remove('nn-hide-separator-context-menu');
-                            }
+                        // Remove separator hiding from previous item
+                        const prevVirtualItem = virtualItem.previousElementSibling;
+                        if (prevVirtualItem instanceof HTMLElement && prevVirtualItem.classList.contains('nn-virtual-file-item')) {
+                            prevVirtualItem.classList.remove('nn-hide-separator-context-menu');
                         }
                     }
                 }

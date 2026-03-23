@@ -121,6 +121,8 @@ interface UseListPaneScrollParams {
      * should keep the target row above that overlay.
      */
     scrollPaddingEnd?: number;
+    /** Called when the virtualizer scrolling state changes */
+    onVirtualizerScrollingChange?: (isScrolling: boolean, scrollElement: HTMLDivElement | null) => void;
 }
 
 /**
@@ -163,7 +165,8 @@ export function useListPaneScroll({
     visiblePropertyKeys,
     visiblePropertyKeySignature,
     scrollMargin = 0,
-    scrollPaddingEnd = 0
+    scrollPaddingEnd = 0,
+    onVirtualizerScrollingChange
 }: UseListPaneScrollParams): UseListPaneScrollResult {
     const { isMobile } = useServices();
     const listMeasurements = getListPaneMeasurements(isMobile);
@@ -216,6 +219,7 @@ export function useListPaneScroll({
 
     // Context tracking for index-version based reorder detection within a list context
     const contextIndexVersionRef = useRef<{ key: string; version: number } | null>(null);
+    const lastReportedVirtualizerScrollingRef = useRef(false);
 
     // Check if we're in compact mode
     const isCompactMode = isListPaneCompactMode({
@@ -393,7 +397,17 @@ export function useListPaneScroll({
             return padding + textContentHeight;
         },
         overscan: OVERSCAN,
-        scrollPaddingEnd: effectiveScrollPaddingEnd
+        scrollPaddingEnd: effectiveScrollPaddingEnd,
+        useScrollendEvent: true,
+        onChange: instance => {
+            const nextIsScrolling = instance.isScrolling;
+            if (lastReportedVirtualizerScrollingRef.current === nextIsScrolling) {
+                return;
+            }
+
+            lastReportedVirtualizerScrollingRef.current = nextIsScrolling;
+            onVirtualizerScrollingChange?.(nextIsScrolling, instance.scrollElement);
+        }
     });
 
     /**

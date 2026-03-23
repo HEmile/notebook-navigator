@@ -44,13 +44,15 @@
  *    - Keyboard navigation optimized
  */
 
-import React, { useRef, useEffect, useImperativeHandle, forwardRef, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef, useState, useMemo, useLayoutEffect } from 'react';
 import { TFile, Platform, requireApiVersion } from 'obsidian';
 import { Virtualizer } from '@tanstack/react-virtual';
 import { useSelectionState, useSelectionDispatch } from '../context/SelectionContext';
 import { useServices } from '../context/ServicesContext';
-import { useSettingsState, useActiveProfile } from '../context/SettingsContext';
+import { useSettingsState, useActiveProfile, useSettingsDerived } from '../context/SettingsContext';
 import { useUIState } from '../context/UIStateContext';
+import { useFileCache } from '../context/StorageContext';
+import { useShortcuts } from '../context/ShortcutsContext';
 import { useListPaneKeyboard } from '../hooks/useListPaneKeyboard';
 import { useListPaneData } from '../hooks/useListPaneData';
 import { useListPaneScroll } from '../hooks/useListPaneScroll';
@@ -67,7 +69,8 @@ import { ListToolbar } from './ListToolbar';
 import { Calendar } from './calendar';
 import { SearchInput } from './SearchInput';
 import { ListPaneTitleArea } from './ListPaneTitleArea';
-import { ListPaneVirtualContent } from './listPane/ListPaneVirtualContent';
+import { ListPaneVirtualContent, getHoveredFilePathAtPointer, type PointerClientPosition } from './listPane/ListPaneVirtualContent';
+import type { FileItemStorageHelpers } from './FileItem';
 import { type SearchShortcut } from '../types/shortcuts';
 import { type SearchNavFilterState } from '../types/search';
 import { EMPTY_LIST_MENU_TYPE } from '../utils/contextMenu';
@@ -78,6 +81,7 @@ import { useSurfaceColorVariables } from '../hooks/useSurfaceColorVariables';
 import { LIST_PANE_SURFACE_COLOR_MAPPINGS } from '../constants/surfaceColorMappings';
 import { getListPaneMeasurements } from '../utils/listPaneMeasurements';
 import { resolveUXIcon } from '../utils/uxIcons';
+import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
 import { getActivePropertyKeySet } from '../utils/vaultProfiles';
 import { DateUtils } from '../utils/dateUtils';
 import type { NavigateToFolderOptions, RevealPropertyOptions, RevealTagOptions } from '../hooks/useNavigatorReveal';
@@ -175,17 +179,21 @@ export const ListPane = React.memo(
         const selectionDispatch = useSelectionDispatch();
         const settings = useSettingsState();
         const activeProfile = useActiveProfile();
+        const { fileNameIconNeedles } = useSettingsDerived();
         const uxPreferences = useUXPreferences();
         const includeDescendantNotes = uxPreferences.includeDescendantNotes;
         const showHiddenItems = uxPreferences.showHiddenItems;
         const showCalendar = uxPreferences.showCalendar;
         const appearanceSettings = useListPaneAppearance();
+        const { getFileDisplayName, getDB, getFileTimestamps, hasPreview, regenerateFeatureImageForFile } = useFileCache();
+        const { noteShortcutKeysByPath, addNoteShortcut, removeShortcut } = useShortcuts();
         const uiState = useUIState();
         const isVerticalDualPane = !uiState.singlePane && settings.dualPaneOrientation === 'vertical';
         const calendarPlacement = settings.calendarPlacement;
         const shouldRenderCalendarOverlay =
             settings.calendarEnabled && calendarPlacement === 'left-sidebar' && showCalendar && isVerticalDualPane;
         const listPaneRef = useRef<HTMLDivElement>(null);
+        const hoverPointerClientPositionRef = useRef<PointerClientPosition | null>(null);
         // Android uses toolbar at top, iOS at bottom
         const isAndroid = Platform.isAndroidApp;
         /** Maps semi-transparent theme color variables to computed opaque equivalents (see constants/surfaceColorMappings). */
@@ -195,6 +203,10 @@ export const ListPane = React.memo(
             variables: LIST_PANE_SURFACE_COLOR_MAPPINGS
         });
         const [calendarWeekCount, setCalendarWeekCount] = useState<number>(() => settings.calendarWeeksToShow);
+        const [isListScrolling, setIsListScrolling] = useState(false);
+        const [hoveredFilePath, setHoveredFilePath] = useState<string | null>(null);
+        const addNoteShortcutRef = useRef(addNoteShortcut);
+        const removeShortcutRef = useRef(removeShortcut);
         const listPaneTitle = settings.listPaneTitle ?? 'header';
         const shouldShowDesktopTitleArea = !isMobile && listPaneTitle === 'list';
         const listMeasurements = getListPaneMeasurements(isMobile);
@@ -300,6 +312,37 @@ export const ListPane = React.memo(
                 visibleNavigationPropertyKeys: getActivePropertyKeySet(settings, 'navigation')
             };
         }, [settings]);
+        const fileItemStorage = useMemo<FileItemStorageHelpers>(
+            () => ({
+                getFileDisplayName,
+                getDB,
+                getFileTimestamps,
+                hasPreview,
+                regenerateFeatureImageForFile
+            }),
+            [getFileDisplayName, getDB, getFileTimestamps, hasPreview, regenerateFeatureImageForFile]
+        );
+        const hiddenTagVisibility = useMemo(
+            () => createHiddenTagVisibility(activeProfile.hiddenTags, showHiddenItems),
+            [activeProfile.hiddenTags, showHiddenItems]
+        );
+        const syncHoveredFilePathToPointer = React.useCallback((scrollElement: HTMLDivElement | null) => {
+            const nextHoveredFilePath = getHoveredFilePathAtPointer(scrollElement, hoverPointerClientPositionRef.current);
+            setHoveredFilePath(previous => (previous === nextHoveredFilePath ? previous : nextHoveredFilePath));
+        }, []);
+        const handleVirtualizerScrollingChange = React.useCallback(
+            (isScrolling: boolean, scrollElement: HTMLDivElement | null) => {
+                if (isScrolling) {
+                    setIsListScrolling(previous => (previous ? previous : true));
+                    setHoveredFilePath(previous => (previous === null ? previous : null));
+                    return;
+                }
+
+                syncHoveredFilePathToPointer(scrollElement);
+                setIsListScrolling(false);
+            },
+            [syncHoveredFilePathToPointer]
+        );
         const visibleListPropertyKeySignature = useMemo(() => {
             if (visibleListPropertyKeys.size === 0) {
                 return '';
@@ -331,7 +374,8 @@ export const ListPane = React.memo(
             visiblePropertyKeys: visibleListPropertyKeys,
             visiblePropertyKeySignature: visibleListPropertyKeySignature,
             scrollMargin: 0,
-            scrollPaddingEnd
+            scrollPaddingEnd,
+            onVirtualizerScrollingChange: handleVirtualizerScrollingChange
         });
 
         const prevCalendarOverlayVisibleRef = useRef<boolean>(shouldRenderCalendarOverlay);
@@ -376,8 +420,29 @@ export const ListPane = React.memo(
             return <ListToolbar isSearchActive={isSearchActive} onSearchToggle={handleSearchToggle} />;
         }, [handleSearchToggle, isSearchActive]);
 
+        const handleHoveredFilePathChange = React.useCallback(
+            (path: string | null, pointerClientPosition: PointerClientPosition | null) => {
+                hoverPointerClientPositionRef.current = pointerClientPosition;
+                setHoveredFilePath(previous => (previous === path ? previous : path));
+            },
+            []
+        );
+
+        useLayoutEffect(() => {
+            if (isListScrolling) {
+                return;
+            }
+
+            syncHoveredFilePathToPointer(scrollContainerRef.current);
+        }, [isListScrolling, listItems, scrollContainerRef, syncHoveredFilePathToPointer]);
+
+        useEffect(() => {
+            addNoteShortcutRef.current = addNoteShortcut;
+            removeShortcutRef.current = removeShortcut;
+        }, [addNoteShortcut, removeShortcut]);
+
         // Attach context menu to empty areas in the list pane for file creation
-        useContextMenu(scrollContainerRef, selectedFolder ? { type: EMPTY_LIST_MENU_TYPE, item: selectedFolder } : null);
+        useContextMenu(scrollContainerRef, { type: EMPTY_LIST_MENU_TYPE, item: selectedFolder ?? null });
 
         // Check if we're in compact mode
         const isCompactMode = !appearanceSettings.showDate && !appearanceSettings.showPreview && !appearanceSettings.showImage;
@@ -398,6 +463,14 @@ export const ListPane = React.memo(
             rowVirtualizer
         });
         ensureSelectionForCurrentFilterRef.current = ensureSelectionForCurrentFilter;
+        const toggleNoteShortcut = React.useCallback(async (file: TFile, shortcutKey: string | undefined) => {
+            if (shortcutKey) {
+                await removeShortcutRef.current(shortcutKey);
+                return;
+            }
+
+            await addNoteShortcutRef.current(file.path);
+        }, []);
 
         const effectiveSortOption = getEffectiveSortOption(settings, selectionType, selectedFolder, selectedTag, selectedProperty);
 
@@ -526,13 +599,23 @@ export const ListPane = React.memo(
                         isFolderNavigation={selectionState.isFolderNavigation}
                         lastSelectedFilePath={lastSelectedFilePath}
                         isFileSelected={isFileSelected}
+                        hoveredFilePath={hoveredFilePath}
+                        suppressRowHover={isListScrolling}
+                        onHoveredFilePathChange={handleHoveredFilePathChange}
                         onFileClick={handleFileItemClick}
                         onModifySearchWithTag={modifySearchWithTag}
                         onModifySearchWithProperty={modifySearchWithProperty}
                         localDayReference={localDayReference}
                         fileIconSize={listMeasurements.fileIconSize}
+                        appearanceSettings={appearanceSettings}
+                        includeDescendantNotes={includeDescendantNotes}
+                        hiddenTagVisibility={hiddenTagVisibility}
+                        fileNameIconNeedles={fileNameIconNeedles}
                         visibleListPropertyKeys={visibleListPropertyKeys}
                         visibleNavigationPropertyKeys={visibleNavigationPropertyKeys}
+                        fileItemStorage={fileItemStorage}
+                        noteShortcutKeysByPath={noteShortcutKeysByPath}
+                        onToggleNoteShortcut={toggleNoteShortcut}
                         onNavigateToFolder={onNavigateToFolder}
                         folderDecorationModel={folderDecorationModel}
                     />
