@@ -196,6 +196,9 @@ function buildDescendantApplyStats<T>({
     const changedSavedDescendantCount = savedDescendantCount - matchingSavedDescendantCount;
     const missingSavedDescendantCount = Math.max(descendantCount - savedDescendantCount, 0);
 
+    // `changedSavedDescendantCount` is the confirmation-modal count: existing saved
+    // descendant overrides that will be overwritten. `affectedCount` also includes
+    // live descendants that do not have a saved override yet and will receive one.
     return {
         descendantCount,
         savedDescendantCount,
