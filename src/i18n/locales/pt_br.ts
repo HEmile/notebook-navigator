@@ -131,6 +131,12 @@ export const STRINGS_PT_BR = {
         mobileBackToNavigation: 'Voltar à navegação',
         changeSortOrder: 'Alterar ordem de classificação',
         defaultSort: 'Padrão',
+        descendants: 'descendentes',
+        subfolders: 'subpastas',
+        subtags: 'subtags',
+        childValues: 'valores filhos',
+        applySortToDescendants: (target: string) => `Aplicar ordenação a ${target}`,
+        applyAppearanceToDescendants: (target: string) => `Aplicar aparência a ${target}`,
         showFolders: 'Mostrar navegação',
         reorderRootFolders: 'Reordenar navegação',
         finishRootFolderReorder: 'Concluído',
@@ -376,6 +382,12 @@ export const STRINGS_PT_BR = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Aplicar',
+            applySortTitle: (target: string) => `Aplicar ordenação a ${target}?`,
+            applyAppearanceTitle: (target: string) => `Aplicar aparência a ${target}?`,
+            affectedCountMessage: (count: number) => `Substituições existentes que serão alteradas: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Cores arco-íris: ${section}`
         },

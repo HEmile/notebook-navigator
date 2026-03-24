@@ -130,6 +130,12 @@ export const STRINGS_ZH_CN = {
         mobileBackToNavigation: '返回导航', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: '更改排序方式', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: '默认', // Label for default sorting mode (English: Default)
+        descendants: '子项',
+        subfolders: '子文件夹',
+        subtags: '子标签',
+        childValues: '子值',
+        applySortToDescendants: (target: string) => `将排序应用到${target}`,
+        applyAppearanceToDescendants: (target: string) => `将外观应用到${target}`,
         showFolders: '显示导航', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: '重新排列导航',
         finishRootFolderReorder: '完成',
@@ -374,6 +380,12 @@ export const STRINGS_ZH_CN = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: '应用',
+            applySortTitle: (target: string) => `将排序应用到${target}？`,
+            applyAppearanceTitle: (target: string) => `将外观应用到${target}？`,
+            affectedCountMessage: (count: number) => `将更改的现有覆盖：${count}。`
+        },
         navRainbowSection: {
             title: (section: string) => `彩虹颜色: ${section}`
         },

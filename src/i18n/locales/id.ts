@@ -131,6 +131,12 @@ export const STRINGS_ID = {
         mobileBackToNavigation: 'Kembali ke navigasi',
         changeSortOrder: 'Ubah urutan',
         defaultSort: 'Default',
+        descendants: 'turunan',
+        subfolders: 'subfolder',
+        subtags: 'subtag',
+        childValues: 'nilai anak',
+        applySortToDescendants: (target: string) => `Terapkan urutan ke ${target}`,
+        applyAppearanceToDescendants: (target: string) => `Terapkan tampilan ke ${target}`,
         showFolders: 'Tampilkan navigasi',
         reorderRootFolders: 'Atur ulang navigasi',
         finishRootFolderReorder: 'Selesai',
@@ -375,6 +381,12 @@ export const STRINGS_ID = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Terapkan',
+            applySortTitle: (target: string) => `Terapkan urutan ke ${target}?`,
+            applyAppearanceTitle: (target: string) => `Terapkan tampilan ke ${target}?`,
+            affectedCountMessage: (count: number) => `Penimpaan yang ada dan akan berubah: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Warna pelangi: ${section}`
         },

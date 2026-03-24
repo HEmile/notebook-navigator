@@ -131,6 +131,12 @@ export const STRINGS_NL = {
         mobileBackToNavigation: 'Terug naar navigatie',
         changeSortOrder: 'Sorteervolgorde wijzigen',
         defaultSort: 'Standaard',
+        descendants: 'subelementen',
+        subfolders: 'submappen',
+        subtags: 'subtags',
+        childValues: 'onderliggende waarden',
+        applySortToDescendants: (target: string) => `Sortering toepassen op ${target}`,
+        applyAppearanceToDescendants: (target: string) => `Weergave toepassen op ${target}`,
         showFolders: 'Navigatie tonen',
         reorderRootFolders: 'Navigatie herschikken',
         finishRootFolderReorder: 'Klaar',
@@ -376,6 +382,12 @@ export const STRINGS_NL = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Toepassen',
+            applySortTitle: (target: string) => `Sortering toepassen op ${target}?`,
+            applyAppearanceTitle: (target: string) => `Weergave toepassen op ${target}?`,
+            affectedCountMessage: (count: number) => `Bestaande overschrijvingen die wijzigen: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Regenboogkleuren: ${section}`
         },

@@ -131,6 +131,12 @@ export const STRINGS_UK = {
         mobileBackToNavigation: 'Назад до навігації', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: 'Змінити порядок сортування', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: 'За замовчуванням', // Label for default sorting mode (English: Default)
+        descendants: 'нащадків',
+        subfolders: 'підпапок',
+        subtags: 'підтегів',
+        childValues: 'дочірніх значень',
+        applySortToDescendants: (target: string) => `Застосувати сортування для ${target}`,
+        applyAppearanceToDescendants: (target: string) => `Застосувати оформлення для ${target}`,
         showFolders: 'Показати навігацію', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: 'Змінити порядок навігації',
         finishRootFolderReorder: 'Готово',
@@ -375,6 +381,12 @@ export const STRINGS_UK = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Застосувати',
+            applySortTitle: (target: string) => `Застосувати сортування для ${target}?`,
+            applyAppearanceTitle: (target: string) => `Застосувати оформлення для ${target}?`,
+            affectedCountMessage: (count: number) => `Наявних перевизначень, які зміняться: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Кольори веселки: ${section}`
         },

@@ -130,6 +130,12 @@ export const STRINGS_DE = {
         mobileBackToNavigation: 'Zurück zur Navigation', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: 'Sortierreihenfolge ändern', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: 'Standard', // Label for default sorting mode (English: Default)
+        descendants: 'Unterelemente',
+        subfolders: 'Unterordner',
+        subtags: 'Unter-Tags',
+        childValues: 'Unterwerte',
+        applySortToDescendants: (target: string) => `Sortierung auf ${target} anwenden`,
+        applyAppearanceToDescendants: (target: string) => `Darstellung auf ${target} anwenden`,
         showFolders: 'Navigation anzeigen', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: 'Navigation neu anordnen',
         finishRootFolderReorder: 'Neuordnung fertig',
@@ -375,6 +381,12 @@ export const STRINGS_DE = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Anwenden',
+            applySortTitle: (target: string) => `Sortierung auf ${target} anwenden?`,
+            applyAppearanceTitle: (target: string) => `Darstellung auf ${target} anwenden?`,
+            affectedCountMessage: (count: number) => `Vorhandene Überschreibungen, die sich ändern: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Regenbogenfarben: ${section}`
         },

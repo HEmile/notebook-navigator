@@ -130,6 +130,12 @@ export const STRINGS_ZH_TW = {
         mobileBackToNavigation: '返回導覽',
         changeSortOrder: '變更排序方式',
         defaultSort: '預設',
+        descendants: '子項',
+        subfolders: '子資料夾',
+        subtags: '子標籤',
+        childValues: '子值',
+        applySortToDescendants: (target: string) => `將排序套用到${target}`,
+        applyAppearanceToDescendants: (target: string) => `將外觀套用到${target}`,
         showFolders: '顯示導覽',
         reorderRootFolders: '重新排列導覽',
         finishRootFolderReorder: '完成重新排列',
@@ -374,6 +380,12 @@ export const STRINGS_ZH_TW = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: '套用',
+            applySortTitle: (target: string) => `將排序套用到${target}？`,
+            applyAppearanceTitle: (target: string) => `將外觀套用到${target}？`,
+            affectedCountMessage: (count: number) => `將更改的現有覆寫：${count}。`
+        },
         navRainbowSection: {
             title: (section: string) => `彩虹顏色: ${section}`
         },

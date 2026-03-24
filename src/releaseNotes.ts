@@ -80,10 +80,13 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.5.4',
         date: '2026-03-23',
         showOnUpdate: false,
+        new: [
+            '==Apply sort to descendants==, and ==Apply appearance to descendants== - two new menu options to apply the current sort or appearance setting to all subfolders, subtags, or child values.'
+        ],
         improved: [
             'Calendar now follows the active daily note and switches to the matching month automatically.',
             'Improved list pane scroll performance by reducing repeated work in visible note rows.',
-            'Quick actions are no longer visible while scrolling the list pane.'
+            'Quick actions are now hidden while scrolling the list pane.',
         ]
     },
     {

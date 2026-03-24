@@ -131,6 +131,12 @@ export const STRINGS_RU = {
         mobileBackToNavigation: 'Назад к навигации', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: 'Изменить сортировку', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: 'По умолчанию', // Label for default sorting mode (English: Default)
+        descendants: 'потомков',
+        subfolders: 'подпапок',
+        subtags: 'подтегов',
+        childValues: 'дочерних значений',
+        applySortToDescendants: (target: string) => `Применить сортировку для ${target}`,
+        applyAppearanceToDescendants: (target: string) => `Применить оформление для ${target}`,
         showFolders: 'Показать навигацию', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: 'Изменить порядок навигации',
         finishRootFolderReorder: 'Готово',
@@ -375,6 +381,12 @@ export const STRINGS_RU = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Применить',
+            applySortTitle: (target: string) => `Применить сортировку для ${target}?`,
+            applyAppearanceTitle: (target: string) => `Применить оформление для ${target}?`,
+            affectedCountMessage: (count: number) => `Существующих переопределений, которые изменятся: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Цвета радуги: ${section}`
         },

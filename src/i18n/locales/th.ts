@@ -131,6 +131,12 @@ export const STRINGS_TH = {
         mobileBackToNavigation: 'กลับไปการนำทาง',
         changeSortOrder: 'เปลี่ยนลำดับการเรียง',
         defaultSort: 'ค่าเริ่มต้น',
+        descendants: 'รายการย่อย',
+        subfolders: 'โฟลเดอร์ย่อย',
+        subtags: 'แท็กย่อย',
+        childValues: 'ค่าย่อย',
+        applySortToDescendants: (target: string) => `ใช้การเรียงลำดับกับ${target}`,
+        applyAppearanceToDescendants: (target: string) => `ใช้รูปลักษณ์กับ${target}`,
         showFolders: 'แสดงการนำทาง',
         reorderRootFolders: 'จัดเรียงการนำทางใหม่',
         finishRootFolderReorder: 'เสร็จสิ้น',
@@ -374,6 +380,12 @@ export const STRINGS_TH = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'ใช้',
+            applySortTitle: (target: string) => `ใช้การเรียงลำดับกับ${target}?`,
+            applyAppearanceTitle: (target: string) => `ใช้รูปลักษณ์กับ${target}?`,
+            affectedCountMessage: (count: number) => `การแทนที่ที่มีอยู่ซึ่งจะเปลี่ยนแปลง: ${count}`
+        },
         navRainbowSection: {
             title: (section: string) => `สีรุ้ง: ${section}`
         },

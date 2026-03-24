@@ -130,6 +130,12 @@ export const STRINGS_FR = {
         mobileBackToNavigation: 'Retour à la navigation', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: "Changer l'ordre de tri", // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: 'Par défaut', // Label for default sorting mode (English: Default)
+        descendants: 'descendants',
+        subfolders: 'sous-dossiers',
+        subtags: 'sous-étiquettes',
+        childValues: 'valeurs enfants',
+        applySortToDescendants: (target: string) => `Appliquer le tri aux ${target}`,
+        applyAppearanceToDescendants: (target: string) => `Appliquer l'apparence aux ${target}`,
         showFolders: 'Afficher la navigation', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: 'Réorganiser la navigation',
         finishRootFolderReorder: 'Terminé',
@@ -375,6 +381,12 @@ export const STRINGS_FR = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Appliquer',
+            applySortTitle: (target: string) => `Appliquer le tri aux ${target}\u202f?`,
+            applyAppearanceTitle: (target: string) => `Appliquer l'apparence aux ${target}\u202f?`,
+            affectedCountMessage: (count: number) => `Remplacements existants qui seront modifiés\u202f: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Couleurs arc-en-ciel: ${section}`
         },

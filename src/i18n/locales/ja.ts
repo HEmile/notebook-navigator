@@ -130,6 +130,12 @@ export const STRINGS_JA = {
         mobileBackToNavigation: 'ナビゲーションに戻る', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: '並び順を変更', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: 'デフォルト', // Label for default sorting mode (English: Default)
+        descendants: '子孫',
+        subfolders: 'サブフォルダー',
+        subtags: 'サブタグ',
+        childValues: '子の値',
+        applySortToDescendants: (target: string) => `${target}に並び替えを適用`,
+        applyAppearanceToDescendants: (target: string) => `${target}に外観を適用`,
         showFolders: 'ナビゲーションを表示', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: 'ナビゲーションを並び替え',
         finishRootFolderReorder: '完了',
@@ -374,6 +380,12 @@ export const STRINGS_JA = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: '適用',
+            applySortTitle: (target: string) => `${target}に並び替えを適用しますか？`,
+            applyAppearanceTitle: (target: string) => `${target}に外観を適用しますか？`,
+            affectedCountMessage: (count: number) => `変更される既存のオーバーライド: ${count}。`
+        },
         navRainbowSection: {
             title: (section: string) => `レインボーカラー: ${section}`
         },

@@ -131,6 +131,12 @@ export const STRINGS_FA = {
         mobileBackToNavigation: 'بازگشت به ناوبری',
         changeSortOrder: 'تغییر ترتیب',
         defaultSort: 'پیش‌فرض',
+        descendants: 'فرزندان',
+        subfolders: 'زیرپوشه‌ها',
+        subtags: 'زیربرچسب‌ها',
+        childValues: 'مقادیر فرزند',
+        applySortToDescendants: (target: string) => `اعمال مرتب‌سازی به ${target}`,
+        applyAppearanceToDescendants: (target: string) => `اعمال ظاهر به ${target}`,
         showFolders: 'نمایش ناوبری',
         reorderRootFolders: 'مرتب‌سازی مجدد ناوبری',
         finishRootFolderReorder: 'تمام',
@@ -374,6 +380,12 @@ export const STRINGS_FA = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'اعمال',
+            applySortTitle: (target: string) => `مرتب‌سازی به ${target} اعمال شود؟`,
+            applyAppearanceTitle: (target: string) => `ظاهر به ${target} اعمال شود؟`,
+            affectedCountMessage: (count: number) => `بازنویسی‌های موجود که تغییر خواهند کرد: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `رنگ‌های رنگین‌کمان: ${section}`
         },

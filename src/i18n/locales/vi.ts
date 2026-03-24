@@ -131,6 +131,12 @@ export const STRINGS_VI = {
         mobileBackToNavigation: 'Quay lại điều hướng', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: 'Đổi thứ tự sắp xếp', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: 'Mặc định', // Label for default sorting mode (English: Default)
+        descendants: 'phần tử con',
+        subfolders: 'thư mục con',
+        subtags: 'thẻ con',
+        childValues: 'giá trị con',
+        applySortToDescendants: (target: string) => `Áp dụng sắp xếp cho ${target}`,
+        applyAppearanceToDescendants: (target: string) => `Áp dụng giao diện cho ${target}`,
         showFolders: 'Hiện điều hướng', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: 'Sắp xếp lại điều hướng',
         finishRootFolderReorder: 'Hoàn tất',
@@ -374,6 +380,12 @@ export const STRINGS_VI = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Áp dụng',
+            applySortTitle: (target: string) => `Áp dụng sắp xếp cho ${target}?`,
+            applyAppearanceTitle: (target: string) => `Áp dụng giao diện cho ${target}?`,
+            affectedCountMessage: (count: number) => `Ghi đè hiện có sẽ thay đổi: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Màu cầu vồng: ${section}`
         },

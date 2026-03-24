@@ -131,6 +131,12 @@ export const STRINGS_EN = {
         mobileBackToNavigation: 'Back to navigation', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: 'Change sort order', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: 'Default', // Label for default sorting mode (English: Default)
+        descendants: 'descendants',
+        subfolders: 'subfolders',
+        subtags: 'subtags',
+        childValues: 'child values',
+        applySortToDescendants: (target: string) => `Apply sort to ${target}`,
+        applyAppearanceToDescendants: (target: string) => `Apply appearance to ${target}`,
         showFolders: 'Show navigation', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: 'Reorder navigation',
         finishRootFolderReorder: 'Done reordering',
@@ -374,6 +380,12 @@ export const STRINGS_EN = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Apply',
+            applySortTitle: (target: string) => `Apply sort to ${target}?`,
+            applyAppearanceTitle: (target: string) => `Apply appearance to ${target}?`,
+            affectedCountMessage: (count: number) => `Existing overrides that will change: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Rainbow colors: ${section}`
         },

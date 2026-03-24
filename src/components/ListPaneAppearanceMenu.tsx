@@ -36,6 +36,11 @@ interface AppearanceMenuProps {
     selectedProperty?: PropertySelectionNodeId | null;
     selectionType?: ItemType;
     updateSettings: (updater: (settings: NotebookNavigatorSettings) => void) => Promise<void>;
+    descendantAction?: {
+        menuTitle: string;
+        onApply: () => void;
+        disabled?: boolean;
+    };
 }
 
 interface AppearanceRecordAccessor {
@@ -51,7 +56,8 @@ export function showListPaneAppearanceMenu({
     selectedTag,
     selectedProperty,
     selectionType,
-    updateSettings
+    updateSettings,
+    descendantAction
 }: AppearanceMenuProps) {
     const defaultMode: ListDisplayMode = getDefaultListMode(settings);
     const resolveAppearanceAccessor = (): AppearanceRecordAccessor | null => {
@@ -310,6 +316,17 @@ export function showListPaneAppearanceMenu({
                         updateAppearance({ groupBy: option });
                     });
             });
+        });
+    }
+
+    if (descendantAction) {
+        menu.addSeparator();
+        menu.addItem(item => {
+            item.setTitle(descendantAction.menuTitle)
+                .setDisabled(Boolean(descendantAction.disabled))
+                .onClick(() => {
+                    descendantAction.onApply();
+                });
         });
     }
 

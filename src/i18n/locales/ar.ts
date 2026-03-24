@@ -131,6 +131,12 @@ export const STRINGS_AR = {
         mobileBackToNavigation: 'العودة للتنقل', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: 'تغيير ترتيب الفرز', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: 'افتراضي', // Label for default sorting mode (English: Default)
+        descendants: 'العناصر الفرعية',
+        subfolders: 'المجلدات الفرعية',
+        subtags: 'الوسوم الفرعية',
+        childValues: 'القيم الفرعية',
+        applySortToDescendants: (target: string) => `تطبيق الترتيب على ${target}`,
+        applyAppearanceToDescendants: (target: string) => `تطبيق المظهر على ${target}`,
         showFolders: 'إظهار التنقل', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: 'إعادة ترتيب التنقل',
         finishRootFolderReorder: 'تم',
@@ -374,6 +380,12 @@ export const STRINGS_AR = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'تطبيق',
+            applySortTitle: (target: string) => `تطبيق الترتيب على ${target}؟`,
+            applyAppearanceTitle: (target: string) => `تطبيق المظهر على ${target}؟`,
+            affectedCountMessage: (count: number) => `التجاوزات الحالية التي ستتغير: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `ألوان قوس قزح: ${section}`
         },

@@ -131,6 +131,12 @@ export const STRINGS_TR = {
         mobileBackToNavigation: 'Gezinmeye dön', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: 'Sıralama düzenini değiştir', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: 'Varsayılan', // Label for default sorting mode (English: Default)
+        descendants: 'alt öğeler',
+        subfolders: 'alt klasörler',
+        subtags: 'alt etiketler',
+        childValues: 'alt değerler',
+        applySortToDescendants: (target: string) => `Sıralamayı ${target} için uygula`,
+        applyAppearanceToDescendants: (target: string) => `Görünümü ${target} için uygula`,
         showFolders: 'Gezinmeyi göster', // Tooltip for button to show the navigation pane (English: Show navigation)
         reorderRootFolders: 'Gezinmeyi yeniden sırala',
         finishRootFolderReorder: 'Tamamlandı',
@@ -375,6 +381,12 @@ export const STRINGS_TR = {
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: 'Uygula',
+            applySortTitle: (target: string) => `Sıralama ${target} için uygulansın mı?`,
+            applyAppearanceTitle: (target: string) => `Görünüm ${target} için uygulansın mı?`,
+            affectedCountMessage: (count: number) => `Değişecek mevcut geçersiz kılmalar: ${count}.`
+        },
         navRainbowSection: {
             title: (section: string) => `Gökkuşağı renkleri: ${section}`
         },
