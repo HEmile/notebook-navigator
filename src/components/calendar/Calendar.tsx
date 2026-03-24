@@ -688,7 +688,7 @@ export function Calendar({
 
             return nextCursorDate;
         });
-    }, [activeEditorDate, activeEditorDateKey]);
+    }, [activeEditorDate, activeEditorDateKey, activeEditorFilePath]);
 
     const visibleDayNotePaths = useMemo(() => {
         const paths = new Set<string>();

@@ -679,7 +679,7 @@ export class FileDeletionService {
             }
 
             try {
-                await fallbackLeaf.openFile(replacement, { active: false });
+                await fallbackLeaf.openFile(replacement, { active: true });
             } catch {
                 // Ignore failures when opening a replacement file. The delete still runs.
             }
@@ -687,16 +687,18 @@ export class FileDeletionService {
         }
 
         const activeLeaf = this.getActiveFileViewLeaf();
-        if (activeLeaf && leaves.includes(activeLeaf)) {
+        const replacementLeaf = activeLeaf && leaves.includes(activeLeaf) ? activeLeaf : (leaves[0] ?? null);
+        if (replacementLeaf) {
             try {
-                await activeLeaf.openFile(replacement, { active: false });
+                // Keep the replacement note as the workspace active file so calendar follow mode updates after delete.
+                await replacementLeaf.openFile(replacement, { active: true });
             } catch {
                 // Ignore failures when opening a replacement file. The delete still runs.
             }
 
             const emptyViewState: ViewState = { type: 'empty', state: {} };
             for (const leaf of leaves) {
-                if (leaf === activeLeaf) {
+                if (leaf === replacementLeaf) {
                     continue;
                 }
 
@@ -714,21 +716,6 @@ export class FileDeletionService {
             }
 
             return;
-        }
-
-        const emptyViewState: ViewState = { type: 'empty', state: {} };
-        for (const leaf of leaves) {
-            try {
-                await leaf.setViewState(emptyViewState);
-            } catch {
-                // Ignore failures when clearing leaf state. The delete still runs.
-            }
-
-            try {
-                leaf.detach();
-            } catch {
-                // Ignore failures when detaching leaves. The delete still runs.
-            }
         }
     }
 
@@ -747,7 +734,7 @@ export class FileDeletionService {
             }
 
             try {
-                await fallbackLeaf.openFile(replacement, { active: false });
+                await fallbackLeaf.openFile(replacement, { active: true });
             } catch {
                 // Ignore failures when opening a replacement file. The delete still runs.
             }
@@ -755,16 +742,18 @@ export class FileDeletionService {
         }
 
         const activeLeaf = this.getActiveFileViewLeaf();
-        if (activeLeaf && uniqueLeaves.has(activeLeaf)) {
+        const replacementLeaf = activeLeaf && uniqueLeaves.has(activeLeaf) ? activeLeaf : (Array.from(uniqueLeaves)[0] ?? null);
+        if (replacementLeaf) {
             try {
-                await activeLeaf.openFile(replacement, { active: false });
+                // Keep the replacement note as the workspace active file so calendar follow mode updates after delete.
+                await replacementLeaf.openFile(replacement, { active: true });
             } catch {
                 // Ignore failures when opening a replacement file. The delete still runs.
             }
 
             const emptyViewState: ViewState = { type: 'empty', state: {} };
             for (const leaf of uniqueLeaves) {
-                if (leaf === activeLeaf) {
+                if (leaf === replacementLeaf) {
                     continue;
                 }
 
@@ -782,21 +771,6 @@ export class FileDeletionService {
             }
 
             return;
-        }
-
-        const emptyViewState: ViewState = { type: 'empty', state: {} };
-        for (const leaf of uniqueLeaves) {
-            try {
-                await leaf.setViewState(emptyViewState);
-            } catch {
-                // Ignore failures when clearing leaf state. The delete still runs.
-            }
-
-            try {
-                leaf.detach();
-            } catch {
-                // Ignore failures when detaching leaves. The delete still runs.
-            }
         }
     }
 }
