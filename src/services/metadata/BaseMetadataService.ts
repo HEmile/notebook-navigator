@@ -589,13 +589,15 @@ export abstract class BaseMetadataService {
         let hasChanges = false;
         // We know metadata is an object with string keys
         const metadataObj = metadata as Record<string, unknown>;
+        const metadataPaths = Object.keys(metadataObj);
 
-        for (const path in metadataObj) {
+        for (const path of metadataPaths) {
             if (!validator(path)) {
                 delete metadataObj[path];
                 hasChanges = true;
             }
         }
+
         return hasChanges;
     }
 

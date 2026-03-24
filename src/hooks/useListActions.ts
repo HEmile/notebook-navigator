@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Menu, TFolder } from 'obsidian';
 import { useSelectionState, useSelectionDispatch } from '../context/SelectionContext';
 import { useServices, useFileSystemOps, useMetadataService } from '../context/ServicesContext';
@@ -41,6 +41,16 @@ type SelectionSortTarget =
     | { type: typeof ItemType.FOLDER; key: string }
     | { type: typeof ItemType.TAG; key: string }
     | { type: typeof ItemType.PROPERTY; key: string };
+
+type DescendantApplyStats = {
+    descendantCount: number;
+    savedDescendantCount: number;
+    matchingSavedDescendantCount: number;
+    changedSavedDescendantCount: number;
+    missingSavedDescendantCount: number;
+    affectedCount: number;
+    disabled: boolean;
+};
 
 function collectFolderDescendantPaths(folder: TFolder): string[] {
     const paths: string[] = [];
@@ -67,6 +77,33 @@ function collectFolderDescendantPaths(folder: TFolder): string[] {
     }
 
     return paths;
+}
+
+function countFolderDescendants(folder: TFolder): number {
+    let count = 0;
+    const stack: TFolder[] = [];
+
+    folder.children.forEach(child => {
+        if (child instanceof TFolder) {
+            stack.push(child);
+        }
+    });
+
+    while (stack.length > 0) {
+        const current = stack.pop();
+        if (!current) {
+            continue;
+        }
+
+        count += 1;
+        current.children.forEach(child => {
+            if (child instanceof TFolder) {
+                stack.push(child);
+            }
+        });
+    }
+
+    return count;
 }
 
 function isFolderDescendantSettingKey(selectedFolderPath: string, candidatePath: string): boolean {
@@ -126,22 +163,48 @@ function isPropertyDescendantSettingKey(selectedNodeId: string, candidateNodeId:
     return candidateNode.valuePath.startsWith(`${selectedNode.valuePath}/`);
 }
 
-function countRecordEntries<T>(record: Record<string, T> | undefined, predicate: (key: string, value: T) => boolean): number {
-    if (!record) {
-        return 0;
-    }
-
-    let count = 0;
-    Object.entries(record).forEach(([key, value]) => {
-        if (predicate(key, value)) {
-            count += 1;
-        }
-    });
-    return count;
-}
-
 function hasStoredAppearanceOverride(appearance: FolderAppearance | undefined): appearance is FolderAppearance {
     return Boolean(appearance && Object.keys(appearance).length > 0);
+}
+
+function buildDescendantApplyStats<T>({
+    descendantCount,
+    descendantEntries,
+    hasCurrentOverride,
+    matchesCurrentOverride
+}: {
+    descendantCount: number;
+    descendantEntries: readonly T[];
+    hasCurrentOverride: boolean;
+    matchesCurrentOverride: (entry: T) => boolean;
+}): DescendantApplyStats {
+    const savedDescendantCount = descendantEntries.length;
+
+    if (!hasCurrentOverride) {
+        return {
+            descendantCount,
+            savedDescendantCount,
+            matchingSavedDescendantCount: 0,
+            changedSavedDescendantCount: savedDescendantCount,
+            missingSavedDescendantCount: 0,
+            affectedCount: savedDescendantCount,
+            disabled: descendantCount === 0 || savedDescendantCount === 0
+        };
+    }
+
+    const matchingSavedDescendantCount = descendantEntries.filter(matchesCurrentOverride).length;
+    const changedSavedDescendantCount = savedDescendantCount - matchingSavedDescendantCount;
+    const missingSavedDescendantCount = Math.max(descendantCount - savedDescendantCount, 0);
+
+    return {
+        descendantCount,
+        savedDescendantCount,
+        matchingSavedDescendantCount,
+        changedSavedDescendantCount,
+        missingSavedDescendantCount,
+        affectedCount: changedSavedDescendantCount + missingSavedDescendantCount,
+        disabled: descendantCount === 0 || (savedDescendantCount === descendantCount && matchingSavedDescendantCount === descendantCount)
+    };
 }
 
 function normalizeAppearanceOverride(
@@ -321,18 +384,25 @@ export function useListActions() {
     }, [getCurrentSortOption]);
 
     const getSelectionSortOverride = useCallback((): SortOption | undefined => {
-        const target = getSelectionSortTarget();
-        if (!target) {
-            return undefined;
+        if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
+            return settings.folderSortOverrides?.[selectionState.selectedFolder.path];
         }
-        if (target.type === ItemType.FOLDER) {
-            return metadataService.getFolderSortOverride(target.key);
+        if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
+            return settings.tagSortOverrides?.[selectionState.selectedTag];
         }
-        if (target.type === ItemType.TAG) {
-            return metadataService.getTagSortOverride(target.key);
+        if (selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty) {
+            return settings.propertySortOverrides?.[selectionState.selectedProperty];
         }
-        return metadataService.getPropertySortOverride(target.key);
-    }, [getSelectionSortTarget, metadataService]);
+        return undefined;
+    }, [
+        selectionState.selectionType,
+        selectionState.selectedFolder,
+        selectionState.selectedTag,
+        selectionState.selectedProperty,
+        settings.folderSortOverrides,
+        settings.tagSortOverrides,
+        settings.propertySortOverrides
+    ]);
 
     const getSelectionAppearanceOverride = useCallback((): FolderAppearance | undefined => {
         if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
@@ -427,8 +497,102 @@ export function useListActions() {
     const selectionAppearanceOverride = useMemo(() => getSelectionAppearanceOverride(), [getSelectionAppearanceOverride]);
     const hasSelectionAppearanceOverride = hasStoredAppearanceOverride(selectionAppearanceOverride);
     const selectionDescendantLabel = useMemo(() => getSelectionDescendantLabel(), [getSelectionDescendantLabel]);
+    const [folderTreeVersion, setFolderTreeVersion] = useState(0);
+    const [tagTreeVersion, setTagTreeVersion] = useState(0);
+    const [propertyTreeVersion, setPropertyTreeVersion] = useState(0);
+
+    useEffect(() => {
+        const bumpFolderTreeVersion = (file: unknown) => {
+            if (file instanceof TFolder) {
+                setFolderTreeVersion(current => current + 1);
+            }
+        };
+
+        const createRef = app.vault.on('create', bumpFolderTreeVersion);
+        const deleteRef = app.vault.on('delete', bumpFolderTreeVersion);
+        const renameRef = app.vault.on('rename', file => {
+            bumpFolderTreeVersion(file);
+        });
+
+        return () => {
+            app.vault.offref(createRef);
+            app.vault.offref(deleteRef);
+            app.vault.offref(renameRef);
+        };
+    }, [app.vault]);
+
+    useEffect(() => {
+        if (!tagTreeService) {
+            return;
+        }
+
+        return tagTreeService.addTreeUpdateListener(() => {
+            setTagTreeVersion(current => current + 1);
+        });
+    }, [tagTreeService]);
+
+    useEffect(() => {
+        if (!propertyTreeService) {
+            return;
+        }
+
+        return propertyTreeService.addTreeUpdateListener(() => {
+            setPropertyTreeVersion(current => current + 1);
+        });
+    }, [propertyTreeService]);
+
+    // The descendant action follows a strict two-phase contract.
+    // Phase 1 is menu construction: decide enabled/disabled from descendantCount plus
+    // the saved settings record only. The menu must be disabled only when clicking it
+    // would be a guaranteed no-op:
+    // - there are no descendants
+    // - the selected node is default and there are no saved descendant overrides
+    // - the selected node has a saved override and every descendant already has that
+    //   same saved override
+    // Phase 2 uses the live tree to write or clear settings for every real descendant.
+    // Confirmation is reserved for cases that overwrite or delete existing descendant
+    // overrides. Creating missing descendant overrides applies immediately.
+    const selectionDescendantCount = useMemo(() => {
+        // These version counters exist only to invalidate the cached descendantCount
+        // when folder/tag/property tree structure changes without changing the current selection id.
+        void folderTreeVersion;
+        void tagTreeVersion;
+        void propertyTreeVersion;
+
+        if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
+            return countFolderDescendants(selectionState.selectedFolder);
+        }
+
+        if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
+            if (selectionState.selectedTag === TAGGED_TAG_ID) {
+                return tagTreeService?.getAllTagPaths().length ?? 0;
+            }
+
+            return tagTreeService?.collectDescendantTagPaths(selectionState.selectedTag).size ?? 0;
+        }
+
+        if (selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty && propertyTreeService) {
+            if (selectionState.selectedProperty === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
+                return collectAllPropertyNodeIds(propertyTreeService).length;
+            }
+
+            return propertyTreeService.collectDescendantNodeIds(selectionState.selectedProperty).size;
+        }
+
+        return 0;
+    }, [
+        folderTreeVersion,
+        propertyTreeService,
+        propertyTreeVersion,
+        selectionState.selectedFolder,
+        selectionState.selectedProperty,
+        selectionState.selectedTag,
+        selectionState.selectionType,
+        tagTreeService,
+        tagTreeVersion
+    ]);
     // Keep the action available for selections that conceptually own descendants.
-    // The stored-settings count is computed lazily when the user opens the confirmation flow.
+    // The actual disabled state is derived later from descendantCount plus saved settings.
     const canApplyToDescendants =
         hasFolderSelection || (hasTagSelection && selectionState.selectedTag !== UNTAGGED_TAG_ID) || hasPropertySelection;
 
@@ -467,10 +631,15 @@ export function useListActions() {
         [getSelectionSortTarget, metadataService]
     );
 
-    const getDescendantSortChangeCount = useCallback((): number => {
+    const getDescendantSortChangeStats = useCallback(() => {
         const target = selectionSortTarget;
         if (!target) {
-            return 0;
+            return buildDescendantApplyStats({
+                descendantCount: 0,
+                descendantEntries: [],
+                hasCurrentOverride: false,
+                matchesCurrentOverride: () => false
+            });
         }
 
         const sortOverrides =
@@ -480,21 +649,16 @@ export function useListActions() {
                   ? settings.tagSortOverrides
                   : settings.propertySortOverrides;
 
-        // Menu state and modal counts only scan stored settings so opening the menus
-        // does not traverse the live folder, tag, or property trees.
-        return countRecordEntries(sortOverrides, (key, currentOverride) => {
-            if (!isSelectionDescendantSettingKey(key)) {
-                return false;
-            }
-
-            if (selectionSortOverride !== undefined) {
-                return currentOverride !== selectionSortOverride;
-            }
-
-            return true;
+        const descendantEntries = Object.entries(sortOverrides ?? {}).filter(([key]) => isSelectionDescendantSettingKey(key));
+        return buildDescendantApplyStats({
+            descendantCount: selectionDescendantCount,
+            descendantEntries,
+            hasCurrentOverride: selectionSortOverride !== undefined,
+            matchesCurrentOverride: ([, currentOverride]) => currentOverride === selectionSortOverride
         });
     }, [
         isSelectionDescendantSettingKey,
+        selectionDescendantCount,
         selectionSortOverride,
         selectionSortTarget,
         settings.folderSortOverrides,
@@ -502,84 +666,107 @@ export function useListActions() {
         settings.tagSortOverrides
     ]);
 
+    const applySortToDescendants = useCallback(async () => {
+        const target = selectionSortTarget;
+        if (!target) {
+            return;
+        }
+
+        const selectionDescendantKeys = getSelectionDescendantKeys();
+        if (selectionDescendantKeys.length === 0) {
+            return;
+        }
+
+        await updateSettings(current => {
+            if (target.type === ItemType.FOLDER) {
+                const next = sanitizeRecord(ensureRecord(current.folderSortOverrides));
+                selectionDescendantKeys.forEach(key => {
+                    if (selectionSortOverride !== undefined) {
+                        next[key] = selectionSortOverride;
+                        return;
+                    }
+                    delete next[key];
+                });
+                current.folderSortOverrides = next;
+                return;
+            }
+
+            if (target.type === ItemType.TAG) {
+                const next = sanitizeRecord(ensureRecord(current.tagSortOverrides));
+                selectionDescendantKeys.forEach(key => {
+                    if (selectionSortOverride !== undefined) {
+                        next[key] = selectionSortOverride;
+                        return;
+                    }
+                    delete next[key];
+                });
+                current.tagSortOverrides = next;
+                return;
+            }
+
+            const next = sanitizeRecord(ensureRecord(current.propertySortOverrides));
+            selectionDescendantKeys.forEach(key => {
+                if (selectionSortOverride !== undefined) {
+                    next[key] = selectionSortOverride;
+                    return;
+                }
+                delete next[key];
+            });
+            current.propertySortOverrides = next;
+        });
+        app.workspace.requestSaveLayout();
+    }, [app, getSelectionDescendantKeys, selectionSortOverride, selectionSortTarget, updateSettings]);
+
     const promptApplySortToDescendants = useCallback(() => {
         const target = selectionSortTarget;
         if (!target) {
             return;
         }
 
-        const affectedCount = getDescendantSortChangeCount();
+        // Keep the prompt path on the same fast path as the menu: cached descendantCount
+        // plus saved settings only. The only live tree walk happens inside applySortToDescendants.
+        const stats = getDescendantSortChangeStats();
+
+        if (stats.disabled) {
+            return;
+        }
+
+        if (stats.changedSavedDescendantCount === 0) {
+            // Only new descendant overrides will be created here. There is nothing to
+            // overwrite or delete, so skip the confirmation modal and apply directly.
+            runAsyncAction(async () => {
+                await applySortToDescendants();
+            });
+            return;
+        }
+
         const title = strings.modals.bulkApply.applySortTitle(selectionDescendantLabel);
-        const message = strings.modals.bulkApply.affectedCountMessage(affectedCount);
+        // The modal count reports only existing descendant overrides that will be
+        // deleted or overwritten. Missing descendants that receive new overrides
+        // are intentionally excluded from this number.
+        const message = strings.modals.bulkApply.affectedCountMessage(stats.changedSavedDescendantCount);
 
         new ConfirmModal(
             app,
             title,
             message,
             async () => {
-                // The confirm step switches to live tree traversal so descendants without
-                // stored overrides still receive the propagated sort setting.
-                const selectionDescendantKeys = getSelectionDescendantKeys();
-                if (selectionDescendantKeys.length === 0) {
-                    return;
-                }
-
-                await updateSettings(current => {
-                    if (target.type === ItemType.FOLDER) {
-                        const next = sanitizeRecord(ensureRecord(current.folderSortOverrides));
-                        selectionDescendantKeys.forEach(key => {
-                            if (selectionSortOverride !== undefined) {
-                                next[key] = selectionSortOverride;
-                                return;
-                            }
-                            delete next[key];
-                        });
-                        current.folderSortOverrides = next;
-                        return;
-                    }
-
-                    if (target.type === ItemType.TAG) {
-                        const next = sanitizeRecord(ensureRecord(current.tagSortOverrides));
-                        selectionDescendantKeys.forEach(key => {
-                            if (selectionSortOverride !== undefined) {
-                                next[key] = selectionSortOverride;
-                                return;
-                            }
-                            delete next[key];
-                        });
-                        current.tagSortOverrides = next;
-                        return;
-                    }
-
-                    const next = sanitizeRecord(ensureRecord(current.propertySortOverrides));
-                    selectionDescendantKeys.forEach(key => {
-                        if (selectionSortOverride !== undefined) {
-                            next[key] = selectionSortOverride;
-                            return;
-                        }
-                        delete next[key];
-                    });
-                    current.propertySortOverrides = next;
-                });
-                app.workspace.requestSaveLayout();
+                await applySortToDescendants();
             },
             strings.modals.bulkApply.applyButton,
             { confirmButtonClass: 'mod-cta' }
         ).open();
-    }, [
-        app,
-        getDescendantSortChangeCount,
-        getSelectionDescendantKeys,
-        selectionDescendantLabel,
-        selectionSortOverride,
-        selectionSortTarget,
-        updateSettings
-    ]);
+    }, [app, applySortToDescendants, getDescendantSortChangeStats, selectionDescendantLabel, selectionSortTarget]);
 
-    const getDescendantAppearanceChangeCount = useCallback((): number => {
+    const getDescendantAppearanceChangeStats = useCallback(() => {
         const target = selectionSortTarget;
         if (!target) {
-            return 0;
+            return buildDescendantApplyStats({
+                descendantCount: 0,
+                descendantEntries: [],
+                hasCurrentOverride: false,
+                matchesCurrentOverride: () => false
+            });
         }
 
         const appearances =
@@ -589,28 +776,81 @@ export function useListActions() {
                   ? settings.tagAppearances
                   : settings.propertyAppearances;
 
-        // The modal count intentionally reflects only stored appearance settings that would change.
-        return countRecordEntries(appearances, (key, descendantAppearance) => {
-            if (!isSelectionDescendantSettingKey(key)) {
-                return false;
-            }
+        const descendantEntries = Object.entries(appearances ?? {}).filter(
+            ([key, descendantAppearance]) => isSelectionDescendantSettingKey(key) && hasStoredAppearanceOverride(descendantAppearance)
+        );
 
-            if (hasSelectionAppearanceOverride && selectionAppearanceOverride) {
-                return !areAppearanceOverridesEqual(descendantAppearance, selectionAppearanceOverride, defaultMode);
-            }
-
-            return hasStoredAppearanceOverride(descendantAppearance);
+        return buildDescendantApplyStats({
+            descendantCount: selectionDescendantCount,
+            descendantEntries,
+            hasCurrentOverride: hasSelectionAppearanceOverride && Boolean(selectionAppearanceOverride),
+            matchesCurrentOverride: ([, descendantAppearance]) =>
+                hasSelectionAppearanceOverride &&
+                selectionAppearanceOverride !== undefined &&
+                areAppearanceOverridesEqual(descendantAppearance, selectionAppearanceOverride, defaultMode)
         });
     }, [
         defaultMode,
         hasSelectionAppearanceOverride,
         isSelectionDescendantSettingKey,
         selectionAppearanceOverride,
+        selectionDescendantCount,
         selectionSortTarget,
         settings.folderAppearances,
         settings.propertyAppearances,
         settings.tagAppearances
     ]);
+
+    const applyAppearanceToDescendants = useCallback(async () => {
+        const target = selectionSortTarget;
+        if (!target) {
+            return;
+        }
+
+        const selectionDescendantKeys = getSelectionDescendantKeys();
+        if (selectionDescendantKeys.length === 0) {
+            return;
+        }
+
+        await updateSettings(current => {
+            if (target.type === ItemType.FOLDER) {
+                const next = sanitizeRecord(ensureRecord(current.folderAppearances));
+                selectionDescendantKeys.forEach(key => {
+                    if (hasSelectionAppearanceOverride && selectionAppearanceOverride) {
+                        next[key] = { ...selectionAppearanceOverride };
+                        return;
+                    }
+                    delete next[key];
+                });
+                current.folderAppearances = next;
+                return;
+            }
+
+            if (target.type === ItemType.TAG) {
+                const next = sanitizeRecord(ensureRecord(current.tagAppearances));
+                selectionDescendantKeys.forEach(key => {
+                    if (hasSelectionAppearanceOverride && selectionAppearanceOverride) {
+                        next[key] = { ...selectionAppearanceOverride };
+                        return;
+                    }
+                    delete next[key];
+                });
+                current.tagAppearances = next;
+                return;
+            }
+
+            const next = sanitizeRecord(ensureRecord(current.propertyAppearances));
+            selectionDescendantKeys.forEach(key => {
+                if (hasSelectionAppearanceOverride && selectionAppearanceOverride) {
+                    next[key] = { ...selectionAppearanceOverride };
+                    return;
+                }
+                delete next[key];
+            });
+            current.propertyAppearances = next;
+        });
+        app.workspace.requestSaveLayout();
+    }, [app, getSelectionDescendantKeys, hasSelectionAppearanceOverride, selectionAppearanceOverride, selectionSortTarget, updateSettings]);
 
     const promptApplyAppearanceToDescendants = useCallback(() => {
         const target = selectionSortTarget;
@@ -618,74 +858,40 @@ export function useListActions() {
             return;
         }
 
-        const affectedCount = getDescendantAppearanceChangeCount();
+        // The prompt uses the same no-op contract as the menu item itself.
+        // It must not walk the live tree just to decide whether to open.
+        const stats = getDescendantAppearanceChangeStats();
+
+        if (stats.disabled) {
+            return;
+        }
+
+        if (stats.changedSavedDescendantCount === 0) {
+            // Only new descendant overrides will be created here. There is nothing to
+            // overwrite or delete, so skip the confirmation modal and apply directly.
+            runAsyncAction(async () => {
+                await applyAppearanceToDescendants();
+            });
+            return;
+        }
+
         const title = strings.modals.bulkApply.applyAppearanceTitle(selectionDescendantLabel);
-        const message = strings.modals.bulkApply.affectedCountMessage(affectedCount);
+        // The modal count reports only existing descendant overrides that will be
+        // deleted or overwritten. Missing descendants that receive new overrides
+        // are intentionally excluded from this number.
+        const message = strings.modals.bulkApply.affectedCountMessage(stats.changedSavedDescendantCount);
 
         new ConfirmModal(
             app,
             title,
             message,
             async () => {
-                // The modal count comes from stored settings only, but the confirmed apply
-                // still targets the live descendant tree so new descendant overrides can be created.
-                const selectionDescendantKeys = getSelectionDescendantKeys();
-                if (selectionDescendantKeys.length === 0) {
-                    return;
-                }
-
-                await updateSettings(current => {
-                    if (target.type === ItemType.FOLDER) {
-                        const next = sanitizeRecord(ensureRecord(current.folderAppearances));
-                        selectionDescendantKeys.forEach(key => {
-                            if (hasSelectionAppearanceOverride && selectionAppearanceOverride) {
-                                next[key] = { ...selectionAppearanceOverride };
-                                return;
-                            }
-                            delete next[key];
-                        });
-                        current.folderAppearances = next;
-                        return;
-                    }
-
-                    if (target.type === ItemType.TAG) {
-                        const next = sanitizeRecord(ensureRecord(current.tagAppearances));
-                        selectionDescendantKeys.forEach(key => {
-                            if (hasSelectionAppearanceOverride && selectionAppearanceOverride) {
-                                next[key] = { ...selectionAppearanceOverride };
-                                return;
-                            }
-                            delete next[key];
-                        });
-                        current.tagAppearances = next;
-                        return;
-                    }
-
-                    const next = sanitizeRecord(ensureRecord(current.propertyAppearances));
-                    selectionDescendantKeys.forEach(key => {
-                        if (hasSelectionAppearanceOverride && selectionAppearanceOverride) {
-                            next[key] = { ...selectionAppearanceOverride };
-                            return;
-                        }
-                        delete next[key];
-                    });
-                    current.propertyAppearances = next;
-                });
-                app.workspace.requestSaveLayout();
+                await applyAppearanceToDescendants();
             },
             strings.modals.bulkApply.applyButton,
             { confirmButtonClass: 'mod-cta' }
         ).open();
-    }, [
-        app,
-        getDescendantAppearanceChangeCount,
-        getSelectionDescendantKeys,
-        hasSelectionAppearanceOverride,
-        selectionAppearanceOverride,
-        selectionDescendantLabel,
-        selectionSortTarget,
-        updateSettings
-    ]);
+    }, [app, applyAppearanceToDescendants, getDescendantAppearanceChangeStats, selectionDescendantLabel, selectionSortTarget]);
 
     const handleAppearanceMenu = useCallback(
         (event: React.MouseEvent) => {
@@ -704,13 +910,15 @@ export function useListActions() {
                 descendantAction: canApplyToDescendants
                     ? {
                           menuTitle: strings.paneHeader.applyAppearanceToDescendants(selectionDescendantLabel),
-                          onApply: promptApplyAppearanceToDescendants
+                          onApply: promptApplyAppearanceToDescendants,
+                          disabled: getDescendantAppearanceChangeStats().disabled
                       }
                     : undefined
             });
         },
         [
             canApplyToDescendants,
+            getDescendantAppearanceChangeStats,
             hasAppearanceOrSortSelection,
             promptApplyAppearanceToDescendants,
             selectionDescendantLabel,
@@ -784,9 +992,12 @@ export function useListActions() {
             if (canApplyToDescendants) {
                 menu.addSeparator();
                 menu.addItem(item => {
-                    item.setTitle(strings.paneHeader.applySortToDescendants(selectionDescendantLabel)).onClick(() => {
-                        promptApplySortToDescendants();
-                    });
+                    const descendantStats = getDescendantSortChangeStats();
+                    item.setTitle(strings.paneHeader.applySortToDescendants(selectionDescendantLabel))
+                        .setDisabled(descendantStats.disabled)
+                        .onClick(() => {
+                            promptApplySortToDescendants();
+                        });
                 });
             }
 
@@ -797,6 +1008,7 @@ export function useListActions() {
             hasAppearanceOrSortSelection,
             app,
             getCurrentSortOption,
+            getDescendantSortChangeStats,
             getSelectionSortOverride,
             promptApplySortToDescendants,
             removeSelectionSortOverride,
