@@ -41,6 +41,7 @@ import {
 import { normalizeTagPath } from '../../utils/tagUtils';
 import { getActivePropertyKeySet } from '../../utils/vaultProfiles';
 import { getFirstSelectedFile } from './state';
+import { createSelectionHistoryEntry } from './state';
 import type { SelectionAction, SelectionDispatch, SelectionState } from './types';
 
 interface LoadInitialSelectionStateArgs {
@@ -110,9 +111,14 @@ function loadStoredStringArray(key: string, errorMessage: string): string[] {
     }
 }
 
-function persistStoredValue(key: string, value: string | string[] | null, errorMessage: string): void {
+function persistStoredValue(key: string, value: unknown, errorMessage: string): void {
     try {
-        if (value === null || (Array.isArray(value) && value.length === 0)) {
+        if (value === null) {
+            localStorage.remove(key);
+            return;
+        }
+
+        if (Array.isArray(value) && value.length === 0) {
             localStorage.remove(key);
             return;
         }
@@ -193,6 +199,15 @@ export function loadInitialSelectionState({ app, settings }: LoadInitialSelectio
         selectedFolder = vault.getRoot();
     }
 
+    const currentHistoryEntry = createSelectionHistoryEntry({
+        selectionType,
+        selectedFolder,
+        selectedTag: selectedProperty ? null : normalizedTag,
+        selectedProperty
+    });
+    const navigationHistory = currentHistoryEntry ? [currentHistoryEntry] : [];
+    const navigationHistoryIndex = currentHistoryEntry ? 0 : 0;
+
     return {
         selectionType,
         selectedFolder,
@@ -206,7 +221,9 @@ export function loadInitialSelectionState({ app, settings }: LoadInitialSelectio
         isFolderChangeWithAutoSelect: false,
         isKeyboardNavigation: false,
         isFolderNavigation: false,
-        revealSource: null
+        revealSource: null,
+        navigationHistory,
+        navigationHistoryIndex
     };
 }
 
@@ -328,9 +345,13 @@ export function useSelectionReconciliation({
             if (!isPropertySelectionNodeIdVisibleInNavigation(pluginSettings, selectedProperty)) {
                 pendingPropertyRenameSelectionRef.current = null;
                 if (pluginSettings.showProperties) {
-                    dispatch({ type: 'SET_SELECTED_PROPERTY', nodeId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID });
+                    dispatch({
+                        type: 'SET_SELECTED_PROPERTY',
+                        nodeId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
+                        historyBehavior: 'replace'
+                    });
                 } else {
-                    dispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot() });
+                    dispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot(), historyBehavior: 'replace' });
                 }
                 return;
             }
@@ -352,9 +373,13 @@ export function useSelectionReconciliation({
 
                 pendingPropertyRenameSelectionRef.current = null;
                 if (pluginSettings.showProperties) {
-                    dispatch({ type: 'SET_SELECTED_PROPERTY', nodeId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID });
+                    dispatch({
+                        type: 'SET_SELECTED_PROPERTY',
+                        nodeId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
+                        historyBehavior: 'replace'
+                    });
                 } else {
-                    dispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot() });
+                    dispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot(), historyBehavior: 'replace' });
                 }
                 return;
             }
@@ -364,7 +389,7 @@ export function useSelectionReconciliation({
             }
 
             if (resolvedSelectionNodeId !== selectedProperty) {
-                dispatch({ type: 'SET_SELECTED_PROPERTY', nodeId: resolvedSelectionNodeId });
+                dispatch({ type: 'SET_SELECTED_PROPERTY', nodeId: resolvedSelectionNodeId, historyBehavior: 'replace' });
             }
         },
         [app.vault, dispatch, pluginSettings, propertyFeatureEnabled, propertyTreeService]
@@ -403,12 +428,12 @@ export function useSelectionReconciliation({
 
             const resolvedTagPath = tagTreeService.resolveSelectionTagPath(selectedTag);
             if (!resolvedTagPath) {
-                enhancedDispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot() });
+                enhancedDispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot(), historyBehavior: 'replace' });
                 return;
             }
 
             if (resolvedTagPath !== selectedTag) {
-                enhancedDispatch({ type: 'SET_SELECTED_TAG', tag: resolvedTagPath });
+                enhancedDispatch({ type: 'SET_SELECTED_TAG', tag: resolvedTagPath, historyBehavior: 'replace' });
             }
         });
     }, [app.vault, enhancedDispatch, stateRef, tagTreeService]);
@@ -427,7 +452,7 @@ export function useSelectionReconciliation({
             if (currentTag === payload.oldCanonicalPath || currentTag.startsWith(`${payload.oldCanonicalPath}/`)) {
                 const suffix = currentTag.slice(payload.oldCanonicalPath.length);
                 const nextTag = suffix ? `${payload.newCanonicalPath}${suffix}` : payload.newCanonicalPath;
-                enhancedDispatch({ type: 'SET_SELECTED_TAG', tag: nextTag });
+                enhancedDispatch({ type: 'SET_SELECTED_TAG', tag: nextTag, historyBehavior: 'replace' });
             }
         };
 
@@ -442,7 +467,7 @@ export function useSelectionReconciliation({
                     ? payload.canonicalPath.slice(0, payload.canonicalPath.lastIndexOf('/'))
                     : '';
                 if (parent) {
-                    enhancedDispatch({ type: 'SET_SELECTED_TAG', tag: parent });
+                    enhancedDispatch({ type: 'SET_SELECTED_TAG', tag: parent, historyBehavior: 'replace' });
                 } else {
                     enhancedDispatch({ type: 'CLEAR_SELECTION' });
                 }
@@ -483,7 +508,7 @@ export function useSelectionReconciliation({
                 ? buildPropertyValueNodeId(payload.newKey, parsed.valuePath)
                 : buildPropertyKeyNodeId(payload.newKey);
             pendingPropertyRenameSelectionRef.current = nextNodeId;
-            enhancedDispatch({ type: 'SET_SELECTED_PROPERTY', nodeId: nextNodeId });
+            enhancedDispatch({ type: 'SET_SELECTED_PROPERTY', nodeId: nextNodeId, historyBehavior: 'replace' });
         };
 
         const handlePropertyKeyDelete = (payload: PropertyKeyDeleteEventPayload) => {
@@ -505,9 +530,13 @@ export function useSelectionReconciliation({
 
             pendingPropertyRenameSelectionRef.current = null;
             if (pluginSettings.showProperties) {
-                enhancedDispatch({ type: 'SET_SELECTED_PROPERTY', nodeId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID });
+                enhancedDispatch({
+                    type: 'SET_SELECTED_PROPERTY',
+                    nodeId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
+                    historyBehavior: 'replace'
+                });
             } else {
-                enhancedDispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot() });
+                enhancedDispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot(), historyBehavior: 'replace' });
             }
         };
 
@@ -527,9 +556,13 @@ export function useSelectionReconciliation({
 
         if (!propertyFeatureEnabled && state.selectionType === 'property' && !keepPropertiesRootSelection) {
             if (pluginSettings.showProperties) {
-                dispatch({ type: 'SET_SELECTED_PROPERTY', nodeId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID });
+                dispatch({
+                    type: 'SET_SELECTED_PROPERTY',
+                    nodeId: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
+                    historyBehavior: 'replace'
+                });
             } else {
-                dispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot() });
+                dispatch({ type: 'SET_SELECTED_FOLDER', folder: app.vault.getRoot(), historyBehavior: 'replace' });
             }
         }
     }, [app.vault, dispatch, pluginSettings.showProperties, propertyFeatureEnabled, state.selectedProperty, state.selectionType]);

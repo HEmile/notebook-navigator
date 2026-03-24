@@ -770,6 +770,8 @@ export const STRINGS_FA = {
         moveFiles: 'انتقال فایل‌ها',
         selectNextFile: 'انتخاب فایل بعدی',
         selectPreviousFile: 'انتخاب فایل قبلی',
+        navigateBack: 'بازگشت',
+        navigateForward: 'جلو رفتن',
         convertToFolderNote: 'تبدیل به یادداشت پوشه',
         setAsFolderNote: 'تنظیم به عنوان یادداشت پوشه',
         detachFolderNote: 'جدا کردن یادداشت پوشه',

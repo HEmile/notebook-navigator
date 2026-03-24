@@ -81,7 +81,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-03-23',
         showOnUpdate: false,
         new: [
-            '==Apply sort to descendants==, and ==Apply appearance to descendants== - two new menu options to apply the current sort or appearance setting to all subfolders, subtags, or child values.'
+            '==Apply sort to descendants==, and ==Apply appearance to descendants== - two new menu options to apply the current sort or appearance setting to all subfolders, subtags, or child values.',
+            'New commands: ==Navigate back== and ==Navigate forward==. Moves through recent folder, tag, and property selections in the navigator.'
         ],
         improved: [
             'Calendar now follows the active daily note and switches to the matching month automatically.',

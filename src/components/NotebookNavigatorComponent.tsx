@@ -75,6 +75,7 @@ import { EMPTY_SEARCH_NAV_FILTER_STATE, type SearchNavFilterState } from '../typ
 import { getFeatureImageDisplayMeasurements, getListPaneMeasurements } from '../utils/listPaneMeasurements';
 import type { InclusionOperator } from '../utils/filterSearch';
 import { useFolderDecorationState } from '../hooks/useFolderDecorationState';
+import type { SelectionHistoryEntry } from '../context/selection/types';
 
 // Checks if two string arrays have identical content in the same order
 const arraysEqual = (a: string[], b: string[]): boolean => {
@@ -92,6 +93,11 @@ const arraysEqual = (a: string[], b: string[]): boolean => {
     return true;
 };
 
+interface ResolvedSelectionHistoryTarget {
+    entry: SelectionHistoryEntry;
+    index: number;
+}
+
 export interface NotebookNavigatorHandle {
     // Navigates to a file by revealing it in its actual parent folder
     navigateToFile: (file: TFile, options?: RevealFileOptions) => boolean;
@@ -103,6 +109,8 @@ export interface NotebookNavigatorHandle {
     createNoteInSelectedFolder: (openInNewTab?: boolean) => Promise<void>;
     createNoteFromTemplateInSelectedFolder: () => Promise<void>;
     moveSelectedFiles: () => Promise<void>;
+    navigateBack: () => Promise<boolean>;
+    navigateForward: () => Promise<boolean>;
     addShortcutForCurrentSelection: () => Promise<void>;
     navigateToFolder: (folder: TFolder | string, options?: NavigateToFolderOptions) => boolean;
     navigateToTag: (tagPath: string) => string | null;
@@ -504,6 +512,153 @@ export const NotebookNavigatorComponent = React.memo(
             focusFilesPane: focusFilesPaneCallback
         });
 
+        const resolveSelectionHistoryEntry = useCallback(
+            (entry: SelectionHistoryEntry): SelectionHistoryEntry | null => {
+                if (entry.type === ItemType.FOLDER) {
+                    const folder = app.vault.getFolderByPath(entry.value);
+                    return folder
+                        ? {
+                              type: ItemType.FOLDER,
+                              value: folder.path
+                          }
+                        : null;
+                }
+
+                if (entry.type === ItemType.TAG) {
+                    if (!settings.showTags) {
+                        return null;
+                    }
+
+                    const normalizedTag = normalizeTagPath(entry.value);
+                    if (!normalizedTag) {
+                        return null;
+                    }
+
+                    if (normalizedTag === TAGGED_TAG_ID || normalizedTag === UNTAGGED_TAG_ID) {
+                        return {
+                            type: ItemType.TAG,
+                            value: normalizedTag
+                        };
+                    }
+
+                    if (!tagTreeService) {
+                        return null;
+                    }
+
+                    const resolvedTag = tagTreeService.resolveSelectionTagPath(normalizedTag);
+                    return resolvedTag
+                        ? {
+                              type: ItemType.TAG,
+                              value: resolvedTag
+                          }
+                        : null;
+                }
+
+                if (entry.type === ItemType.PROPERTY) {
+                    if (!settings.showProperties) {
+                        return null;
+                    }
+
+                    const normalizedNodeId =
+                        entry.value === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
+                            ? PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
+                            : normalizePropertyNodeId(entry.value);
+                    if (!normalizedNodeId) {
+                        return null;
+                    }
+
+                    if (normalizedNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
+                        return {
+                            type: ItemType.PROPERTY,
+                            value: PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
+                        };
+                    }
+
+                    if (!propertyTreeService) {
+                        return null;
+                    }
+
+                    const resolvedNodeId = propertyTreeService.resolveSelectionNodeId(normalizedNodeId);
+                    return resolvedNodeId !== PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
+                        ? {
+                              type: ItemType.PROPERTY,
+                              value: resolvedNodeId
+                          }
+                        : null;
+                }
+
+                return null;
+            },
+            [app.vault, propertyTreeService, settings.showProperties, settings.showTags, tagTreeService]
+        );
+
+        const getSelectionHistoryTarget = useCallback(
+            (direction: 'back' | 'forward'): ResolvedSelectionHistoryTarget | null => {
+                const { navigationHistory } = selectionState;
+                if (navigationHistory.length === 0) {
+                    return null;
+                }
+
+                const startIndex = Math.min(Math.max(selectionState.navigationHistoryIndex, 0), navigationHistory.length - 1);
+                const step = direction === 'back' ? -1 : 1;
+                for (let index = startIndex + step; index >= 0 && index < navigationHistory.length; index += step) {
+                    const resolvedEntry = resolveSelectionHistoryEntry(navigationHistory[index]);
+                    if (!resolvedEntry) {
+                        continue;
+                    }
+
+                    return {
+                        entry: resolvedEntry,
+                        index
+                    };
+                }
+
+                return null;
+            },
+            [resolveSelectionHistoryEntry, selectionState]
+        );
+
+        const navigateSelectionHistory = useCallback(
+            (direction: 'back' | 'forward'): boolean => {
+                const target = getSelectionHistoryTarget(direction);
+                if (!target) {
+                    return false;
+                }
+
+                if (target.entry.type === ItemType.FOLDER) {
+                    const folder = app.vault.getFolderByPath(target.entry.value);
+                    if (!folder) {
+                        return false;
+                    }
+
+                    return navigateToFolder(folder, {
+                        historyIndex: target.index,
+                        skipFocus: true,
+                        source: 'manual'
+                    });
+                }
+
+                if (target.entry.type === ItemType.TAG) {
+                    return (
+                        navigateToTag(target.entry.value, {
+                            historyIndex: target.index,
+                            skipFocus: true,
+                            source: 'manual'
+                        }) !== null
+                    );
+                }
+
+                return (
+                    navigateToProperty(target.entry.value, {
+                        historyIndex: target.index,
+                        skipFocus: true,
+                        source: 'manual'
+                    }) !== null
+                );
+            },
+            [app.vault, getSelectionHistoryTarget, navigateToFolder, navigateToProperty, navigateToTag]
+        );
+
         // Handles file reveal from shortcuts, using nearest folder navigation
         const handleShortcutNoteReveal = useCallback(
             (file: TFile) => {
@@ -644,6 +799,8 @@ export const NotebookNavigatorComponent = React.memo(
                 // Select adjacent files via command palette actions
                 selectNextFile: async () => navigateToAdjacentFile('next'),
                 selectPreviousFile: async () => navigateToAdjacentFile('previous'),
+                navigateBack: async () => navigateSelectionHistory('back'),
+                navigateForward: async () => navigateSelectionHistory('forward'),
                 openShortcutByNumber: (shortcutNumber: number) => {
                     const navHandle = navigationPaneRef.current;
                     if (!navHandle) {
@@ -984,6 +1141,7 @@ export const NotebookNavigatorComponent = React.memo(
             navigateToFolder,
             navigateToTag,
             navigateToProperty,
+            navigateSelectionHistory,
             uiState.singlePane,
             uiState.currentSinglePaneView,
             uiState.focusedPane,

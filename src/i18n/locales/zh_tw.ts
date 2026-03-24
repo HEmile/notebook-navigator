@@ -763,6 +763,8 @@ export const STRINGS_ZH_TW = {
         moveFiles: '移動檔案',
         selectNextFile: '選擇下一個檔案',
         selectPreviousFile: '選擇上一個檔案',
+        navigateBack: '向後導覽',
+        navigateForward: '向前導覽',
         convertToFolderNote: '轉換為資料夾筆記',
         setAsFolderNote: '設為資料夾筆記',
         detachFolderNote: '解除資料夾筆記',

@@ -22,6 +22,12 @@ import type { NavigationItemType } from '../../types';
 import type { PropertySelectionNodeId } from '../../utils/propertyTree';
 
 export type SelectionRevealSource = 'auto' | 'manual' | 'shortcut' | 'startup';
+export type SelectionHistoryBehavior = 'record' | 'replace' | 'skip';
+
+export interface SelectionHistoryEntry {
+    type: NavigationItemType;
+    value: string;
+}
 
 export interface SelectionState {
     selectionType: NavigationItemType;
@@ -37,12 +43,35 @@ export interface SelectionState {
     isFolderNavigation: boolean;
     selectedFile: TFile | null;
     revealSource: SelectionRevealSource | null;
+    navigationHistory: SelectionHistoryEntry[];
+    navigationHistoryIndex: number;
 }
 
 export type SelectionAction =
-    | { type: 'SET_SELECTED_FOLDER'; folder: TFolder | null; autoSelectedFile?: TFile | null; source?: SelectionRevealSource }
-    | { type: 'SET_SELECTED_TAG'; tag: string | null; autoSelectedFile?: TFile | null; source?: SelectionRevealSource }
-    | { type: 'SET_SELECTED_PROPERTY'; nodeId: PropertySelectionNodeId; autoSelectedFile?: TFile | null; source?: SelectionRevealSource }
+    | {
+          type: 'SET_SELECTED_FOLDER';
+          folder: TFolder | null;
+          autoSelectedFile?: TFile | null;
+          source?: SelectionRevealSource;
+          historyBehavior?: SelectionHistoryBehavior;
+          historyIndex?: number;
+      }
+    | {
+          type: 'SET_SELECTED_TAG';
+          tag: string | null;
+          autoSelectedFile?: TFile | null;
+          source?: SelectionRevealSource;
+          historyBehavior?: SelectionHistoryBehavior;
+          historyIndex?: number;
+      }
+    | {
+          type: 'SET_SELECTED_PROPERTY';
+          nodeId: PropertySelectionNodeId;
+          autoSelectedFile?: TFile | null;
+          source?: SelectionRevealSource;
+          historyBehavior?: SelectionHistoryBehavior;
+          historyIndex?: number;
+      }
     | { type: 'SET_SELECTED_FILE'; file: TFile | null }
     | { type: 'SET_SELECTION_TYPE'; selectionType: NavigationItemType }
     | { type: 'CLEAR_SELECTION' }
@@ -55,6 +84,8 @@ export type SelectionAction =
           targetProperty?: PropertySelectionNodeId | null;
           source?: SelectionRevealSource;
           targetFolder?: TFolder | null;
+          historyBehavior?: SelectionHistoryBehavior;
+          historyIndex?: number;
       }
     | { type: 'CLEANUP_DELETED_FOLDER'; deletedPath: string }
     | { type: 'CLEANUP_DELETED_FILE'; deletedPath: string; nextFileToSelect?: TFile | null }

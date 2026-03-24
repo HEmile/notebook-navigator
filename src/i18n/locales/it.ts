@@ -766,6 +766,8 @@ export const STRINGS_IT = {
         moveFiles: 'Sposta file', // Command palette: Move selected files to another folder (English: Move files)
         selectNextFile: 'Seleziona file successivo', // Command palette: Selects the next file in the current view (English: Select next file)
         selectPreviousFile: 'Seleziona file precedente', // Command palette: Selects the previous file in the current view (English: Select previous file)
+        navigateBack: 'Naviga indietro',
+        navigateForward: 'Naviga avanti',
         convertToFolderNote: 'Converti in nota cartella', // Command palette: Converts the active file into a folder note with a new folder (English: Convert to folder note)
         setAsFolderNote: 'Imposta come nota cartella', // Command palette: Renames the active file to its folder note name (English: Set as folder note)
         detachFolderNote: 'Scollega nota cartella', // Command palette: Renames the active folder note to a new name (English: Detach folder note)

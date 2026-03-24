@@ -415,6 +415,20 @@ export class NotebookNavigatorView extends ItemView {
     }
 
     /**
+     * Moves to the previous folder, tag, or property in list-pane history
+     */
+    async navigateBack(): Promise<boolean> {
+        return (await this.componentHandle?.navigateBack()) ?? false;
+    }
+
+    /**
+     * Moves to the next folder, tag, or property in list-pane history
+     */
+    async navigateForward(): Promise<boolean> {
+        return (await this.componentHandle?.navigateForward()) ?? false;
+    }
+
+    /**
      * Selects the next file in the current navigator view
      */
     async selectNextFileInCurrentView(): Promise<boolean> {

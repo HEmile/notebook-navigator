@@ -770,6 +770,8 @@ export const STRINGS_TR = {
         moveFiles: 'Dosyaları taşı', // Command palette: Move selected files to another folder (English: Move files)
         selectNextFile: 'Sonraki dosyayı seç', // Command palette: Selects the next file in the current view (English: Select next file)
         selectPreviousFile: 'Önceki dosyayı seç', // Command palette: Selects the previous file in the current view (English: Select previous file)
+        navigateBack: 'Geri git',
+        navigateForward: 'İleri git',
         convertToFolderNote: 'Klasör notuna dönüştür', // Command palette: Converts the active file into a folder note with a new folder (English: Convert to folder note)
         setAsFolderNote: 'Klasör notu olarak ayarla', // Command palette: Renames the active file to its folder note name (English: Set as folder note)
         detachFolderNote: 'Klasör notunu ayır', // Command palette: Renames the active folder note to a new name (English: Detach folder note)

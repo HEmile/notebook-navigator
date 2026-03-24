@@ -20,7 +20,9 @@ import type { App, TFile, TFolder } from 'obsidian';
 import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../types';
 import { normalizePropertyNodeId } from '../../utils/propertyTree';
 import { normalizeTagPath } from '../../utils/tagUtils';
-import type { SelectionAction, SelectionRevealSource, SelectionState } from './types';
+import type { SelectionAction, SelectionHistoryBehavior, SelectionHistoryEntry, SelectionRevealSource, SelectionState } from './types';
+
+const MAX_NAVIGATION_HISTORY_ENTRIES = 100;
 
 function createSelectedFilesSet(file?: TFile | null): Set<string> {
     const selectedFiles = new Set<string>();
@@ -38,6 +40,167 @@ function normalizeSelectedPropertyNodeId(nodeId: SelectionState['selectedPropert
     return normalizePropertyNodeId(nodeId) ?? nodeId;
 }
 
+function clampHistoryIndex(index: number, length: number): number {
+    if (length <= 0) {
+        return 0;
+    }
+
+    if (index < 0) {
+        return 0;
+    }
+
+    if (index >= length) {
+        return length - 1;
+    }
+
+    return index;
+}
+
+function areSelectionHistoryEntriesEqual(
+    left: SelectionHistoryEntry | null | undefined,
+    right: SelectionHistoryEntry | null | undefined
+): boolean {
+    if (!left || !right) {
+        return false;
+    }
+
+    return left.type === right.type && left.value === right.value;
+}
+
+export function createSelectionHistoryEntry(params: {
+    selectionType: SelectionState['selectionType'];
+    selectedFolder: TFolder | null;
+    selectedTag: string | null;
+    selectedProperty: SelectionState['selectedProperty'];
+}): SelectionHistoryEntry | null {
+    if (params.selectionType === 'folder' && params.selectedFolder) {
+        return {
+            type: 'folder',
+            value: params.selectedFolder.path
+        };
+    }
+
+    if (params.selectionType === 'tag' && params.selectedTag) {
+        const normalizedTag = normalizeTagPath(params.selectedTag);
+        if (!normalizedTag) {
+            return null;
+        }
+
+        return {
+            type: 'tag',
+            value: normalizedTag
+        };
+    }
+
+    if (params.selectionType === 'property' && params.selectedProperty) {
+        const normalizedProperty = normalizeSelectedPropertyNodeId(params.selectedProperty);
+        if (!normalizedProperty) {
+            return null;
+        }
+
+        return {
+            type: 'property',
+            value: normalizedProperty
+        };
+    }
+
+    return null;
+}
+
+function dedupeAdjacentHistoryEntries(
+    entries: SelectionHistoryEntry[],
+    currentIndex: number
+): { navigationHistory: SelectionHistoryEntry[]; navigationHistoryIndex: number } {
+    const nextEntries = entries.slice();
+    let nextIndex = clampHistoryIndex(currentIndex, nextEntries.length);
+
+    if (nextEntries.length === 0) {
+        return {
+            navigationHistory: nextEntries,
+            navigationHistoryIndex: 0
+        };
+    }
+
+    if (nextIndex > 0 && areSelectionHistoryEntriesEqual(nextEntries[nextIndex], nextEntries[nextIndex - 1])) {
+        nextEntries.splice(nextIndex, 1);
+        nextIndex -= 1;
+    }
+
+    if (nextIndex < nextEntries.length - 1 && areSelectionHistoryEntriesEqual(nextEntries[nextIndex], nextEntries[nextIndex + 1])) {
+        nextEntries.splice(nextIndex + 1, 1);
+    }
+
+    return limitSelectionHistoryEntries(nextEntries, nextIndex);
+}
+
+function limitSelectionHistoryEntries(
+    entries: SelectionHistoryEntry[],
+    currentIndex: number
+): { navigationHistory: SelectionHistoryEntry[]; navigationHistoryIndex: number } {
+    if (entries.length === 0) {
+        return {
+            navigationHistory: entries,
+            navigationHistoryIndex: 0
+        };
+    }
+
+    if (entries.length <= MAX_NAVIGATION_HISTORY_ENTRIES) {
+        return {
+            navigationHistory: entries,
+            navigationHistoryIndex: clampHistoryIndex(currentIndex, entries.length)
+        };
+    }
+
+    const overflowCount = entries.length - MAX_NAVIGATION_HISTORY_ENTRIES;
+    const trimmedEntries = entries.slice(overflowCount);
+    return {
+        navigationHistory: trimmedEntries,
+        navigationHistoryIndex: clampHistoryIndex(currentIndex - overflowCount, trimmedEntries.length)
+    };
+}
+
+function updateSelectionHistory(
+    state: SelectionState,
+    nextEntry: SelectionHistoryEntry | null,
+    historyBehavior?: SelectionHistoryBehavior,
+    historyIndex?: number
+): { navigationHistory: SelectionHistoryEntry[]; navigationHistoryIndex: number } {
+    if (!nextEntry) {
+        return {
+            navigationHistory: state.navigationHistory,
+            navigationHistoryIndex: state.navigationHistoryIndex
+        };
+    }
+
+    const currentHistory = state.navigationHistory.length > 0 ? state.navigationHistory.slice() : [nextEntry];
+    const currentIndex = clampHistoryIndex(state.navigationHistoryIndex, currentHistory.length);
+
+    if (typeof historyIndex === 'number') {
+        const targetIndex = clampHistoryIndex(historyIndex, currentHistory.length);
+        currentHistory[targetIndex] = nextEntry;
+        return dedupeAdjacentHistoryEntries(currentHistory, targetIndex);
+    }
+
+    const resolvedBehavior = historyBehavior ?? 'record';
+    if (resolvedBehavior === 'skip') {
+        return limitSelectionHistoryEntries(currentHistory, currentIndex);
+    }
+
+    if (resolvedBehavior === 'replace') {
+        currentHistory[currentIndex] = nextEntry;
+        return dedupeAdjacentHistoryEntries(currentHistory, currentIndex);
+    }
+
+    const currentEntry = currentHistory[currentIndex];
+    if (areSelectionHistoryEntriesEqual(currentEntry, nextEntry)) {
+        return limitSelectionHistoryEntries(currentHistory, currentIndex);
+    }
+
+    const nextHistory = currentHistory.slice(0, currentIndex + 1);
+    nextHistory.push(nextEntry);
+    return limitSelectionHistoryEntries(nextHistory, nextHistory.length - 1);
+}
+
 function withSingleSelection(
     state: SelectionState,
     params: {
@@ -51,8 +214,23 @@ function withSingleSelection(
         isKeyboardNavigation: boolean;
         isFolderNavigation: boolean;
         revealSource: SelectionRevealSource | null;
+        historyBehavior?: SelectionHistoryBehavior;
+        historyIndex?: number;
     }
 ): SelectionState {
+    const nextHistoryEntry = createSelectionHistoryEntry({
+        selectionType: params.selectionType,
+        selectedFolder: params.selectedFolder,
+        selectedTag: params.selectedTag,
+        selectedProperty: params.selectedProperty
+    });
+    const { navigationHistory, navigationHistoryIndex } = updateSelectionHistory(
+        state,
+        nextHistoryEntry,
+        params.historyBehavior,
+        params.historyIndex
+    );
+
     return {
         ...state,
         selectionType: params.selectionType,
@@ -67,7 +245,9 @@ function withSingleSelection(
         isFolderChangeWithAutoSelect: params.isFolderChangeWithAutoSelect,
         isKeyboardNavigation: params.isKeyboardNavigation,
         isFolderNavigation: params.isFolderNavigation,
-        revealSource: params.revealSource
+        revealSource: params.revealSource,
+        navigationHistory,
+        navigationHistoryIndex
     };
 }
 
@@ -106,7 +286,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 isFolderChangeWithAutoSelect: action.autoSelectedFile !== undefined && action.autoSelectedFile !== null,
                 isKeyboardNavigation: false,
                 isFolderNavigation: true,
-                revealSource: action.source ?? null
+                revealSource: action.source ?? null,
+                historyBehavior: action.historyBehavior,
+                historyIndex: action.historyIndex
             });
 
         case 'SET_SELECTED_TAG':
@@ -120,7 +302,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 isFolderChangeWithAutoSelect: action.autoSelectedFile !== undefined && action.autoSelectedFile !== null,
                 isKeyboardNavigation: false,
                 isFolderNavigation: true,
-                revealSource: action.source ?? null
+                revealSource: action.source ?? null,
+                historyBehavior: action.historyBehavior,
+                historyIndex: action.historyIndex
             });
 
         case 'SET_SELECTED_PROPERTY':
@@ -134,7 +318,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 isFolderChangeWithAutoSelect: action.autoSelectedFile !== undefined && action.autoSelectedFile !== null,
                 isKeyboardNavigation: false,
                 isFolderNavigation: true,
-                revealSource: action.source ?? null
+                revealSource: action.source ?? null,
+                historyBehavior: action.historyBehavior,
+                historyIndex: action.historyIndex
             });
 
         case 'SET_SELECTED_FILE':
@@ -184,6 +370,7 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
 
             const normalizedTargetTag = action.targetTag === undefined ? undefined : normalizeTagPath(action.targetTag);
             const revealSource: SelectionRevealSource = action.source ?? (action.isManualReveal ? 'manual' : 'auto');
+            const historyBehavior = action.historyBehavior ?? (revealSource === 'auto' || revealSource === 'startup' ? 'skip' : 'record');
             const targetFolder = action.targetFolder ?? null;
 
             if (action.isManualReveal) {
@@ -197,7 +384,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                     isFolderChangeWithAutoSelect: false,
                     isKeyboardNavigation: false,
                     isFolderNavigation: state.isFolderNavigation,
-                    revealSource
+                    revealSource,
+                    historyBehavior,
+                    historyIndex: action.historyIndex
                 });
             }
 
@@ -213,7 +402,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                         isFolderChangeWithAutoSelect: false,
                         isKeyboardNavigation: false,
                         isFolderNavigation: state.isFolderNavigation,
-                        revealSource
+                        revealSource,
+                        historyBehavior,
+                        historyIndex: action.historyIndex
                     });
                 }
 
@@ -228,7 +419,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                     isFolderChangeWithAutoSelect: false,
                     isKeyboardNavigation: false,
                     isFolderNavigation: state.isFolderNavigation,
-                    revealSource
+                    revealSource,
+                    historyBehavior,
+                    historyIndex: action.historyIndex
                 });
             }
 
@@ -244,7 +437,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                         isFolderChangeWithAutoSelect: false,
                         isKeyboardNavigation: false,
                         isFolderNavigation: state.isFolderNavigation,
-                        revealSource
+                        revealSource,
+                        historyBehavior,
+                        historyIndex: action.historyIndex
                     });
                 }
 
@@ -259,7 +454,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                     isFolderChangeWithAutoSelect: false,
                     isKeyboardNavigation: false,
                     isFolderNavigation: state.isFolderNavigation,
-                    revealSource
+                    revealSource,
+                    historyBehavior,
+                    historyIndex: action.historyIndex
                 });
             }
 
@@ -274,7 +471,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                     isFolderChangeWithAutoSelect: false,
                     isKeyboardNavigation: false,
                     isFolderNavigation: state.isFolderNavigation,
-                    revealSource
+                    revealSource,
+                    historyBehavior,
+                    historyIndex: action.historyIndex
                 });
             }
 
@@ -289,7 +488,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                     isFolderChangeWithAutoSelect: false,
                     isKeyboardNavigation: false,
                     isFolderNavigation: state.isFolderNavigation,
-                    revealSource
+                    revealSource,
+                    historyBehavior,
+                    historyIndex: action.historyIndex
                 });
             }
 
@@ -303,7 +504,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 isFolderChangeWithAutoSelect: false,
                 isKeyboardNavigation: false,
                 isFolderNavigation: state.isFolderNavigation,
-                revealSource
+                revealSource,
+                historyBehavior,
+                historyIndex: action.historyIndex
             });
         }
 

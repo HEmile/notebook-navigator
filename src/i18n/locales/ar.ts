@@ -768,6 +768,8 @@ export const STRINGS_AR = {
         moveFiles: 'نقل الملفات', // Command palette: Move selected files to another folder (English: Move files)
         selectNextFile: 'تحديد الملف التالي', // Command palette: Selects the next file in the current view (English: Select next file)
         selectPreviousFile: 'تحديد الملف السابق', // Command palette: Selects the previous file in the current view (English: Select previous file)
+        navigateBack: 'الانتقال للخلف',
+        navigateForward: 'الانتقال للأمام',
         convertToFolderNote: 'تحويل إلى ملاحظة مجلد', // Command palette: Converts the active file into a folder note with a new folder (English: Convert to folder note)
         setAsFolderNote: 'تعيين كملاحظة مجلد', // Command palette: Renames the active file to its folder note name (English: Set as folder note)
         detachFolderNote: 'فصل ملاحظة المجلد', // Command palette: Renames the active folder note to a new name (English: Detach folder note)

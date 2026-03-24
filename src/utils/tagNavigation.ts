@@ -35,6 +35,8 @@ export interface NavigateToTagOptions {
     source?: SelectionRevealSource;
     preserveNavigationFocus?: boolean;
     requireTagInTree?: boolean;
+    skipFocus?: boolean;
+    historyIndex?: number;
 }
 
 export interface TagNavigationEnvironment {
@@ -78,7 +80,16 @@ function focusPane(env: TagNavigationEnvironment, pane: 'navigation' | 'files', 
 }
 
 function selectTagAndFocus(env: TagNavigationEnvironment, tagPath: string, options?: NavigateToTagOptions): void {
-    env.selectionDispatch({ type: 'SET_SELECTED_TAG', tag: tagPath, source: options?.source });
+    env.selectionDispatch({
+        type: 'SET_SELECTED_TAG',
+        tag: tagPath,
+        source: options?.source,
+        historyIndex: options?.historyIndex
+    });
+
+    if (options?.skipFocus) {
+        return;
+    }
 
     const preserveNavigationFocus = options?.preserveNavigationFocus ?? true;
     if (env.uiState.singlePane) {

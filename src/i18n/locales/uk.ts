@@ -767,6 +767,8 @@ export const STRINGS_UK = {
         moveFiles: 'Перемістити файли', // Command palette: Move selected files to another folder (English: Move files)
         selectNextFile: 'Вибрати наступний файл', // Command palette: Selects the next file in the current view (English: Select next file)
         selectPreviousFile: 'Вибрати попередній файл', // Command palette: Selects the previous file in the current view (English: Select previous file)
+        navigateBack: 'Назад',
+        navigateForward: 'Вперед',
         convertToFolderNote: 'Конвертувати в нотатку папки', // Command palette: Converts the active file into a folder note with a new folder (English: Convert to folder note)
         setAsFolderNote: 'Встановити як нотатку папки', // Command palette: Renames the active file to its folder note name (English: Set as folder note)
         detachFolderNote: "Від'єднати нотатку папки", // Command palette: Renames the active folder note to a new name (English: Detach folder note)

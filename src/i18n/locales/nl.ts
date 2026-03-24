@@ -771,6 +771,8 @@ export const STRINGS_NL = {
         moveFiles: 'Bestanden verplaatsen',
         selectNextFile: 'Volgend bestand selecteren',
         selectPreviousFile: 'Vorig bestand selecteren',
+        navigateBack: 'Terug navigeren',
+        navigateForward: 'Vooruit navigeren',
         convertToFolderNote: 'Converteren naar mapnotitie',
         setAsFolderNote: 'Als mapnotitie instellen',
         detachFolderNote: 'Mapnotitie loskoppelen',

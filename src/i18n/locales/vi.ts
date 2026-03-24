@@ -771,6 +771,8 @@ export const STRINGS_VI = {
         moveFiles: 'Di chuyển tệp', // Command palette: Move selected files to another folder (English: Move files)
         selectNextFile: 'Chọn tệp tiếp theo', // Command palette: Selects the next file in the current view (English: Select next file)
         selectPreviousFile: 'Chọn tệp trước', // Command palette: Selects the previous file in the current view (English: Select previous file)
+        navigateBack: 'Điều hướng lùi',
+        navigateForward: 'Điều hướng tới',
         convertToFolderNote: 'Chuyển thành ghi chú thư mục', // Command palette: Converts the active file into a folder note with a new folder (English: Convert to folder note)
         setAsFolderNote: 'Đặt làm ghi chú thư mục', // Command palette: Renames the active file to its folder note name (English: Set as folder note)
         detachFolderNote: 'Tách ghi chú thư mục', // Command palette: Renames the active folder note to a new name (English: Detach folder note)

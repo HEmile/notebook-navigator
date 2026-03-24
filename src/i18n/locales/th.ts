@@ -766,6 +766,8 @@ export const STRINGS_TH = {
         moveFiles: 'ย้ายไฟล์',
         selectNextFile: 'เลือกไฟล์ถัดไป',
         selectPreviousFile: 'เลือกไฟล์ก่อนหน้า',
+        navigateBack: 'นำทางย้อนกลับ',
+        navigateForward: 'นำทางไปข้างหน้า',
         convertToFolderNote: 'แปลงเป็นโน้ตโฟลเดอร์',
         setAsFolderNote: 'ตั้งเป็นโน้ตโฟลเดอร์',
         detachFolderNote: 'แยกโน้ตโฟลเดอร์',

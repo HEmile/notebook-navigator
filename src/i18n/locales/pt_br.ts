@@ -772,6 +772,8 @@ export const STRINGS_PT_BR = {
         moveFiles: 'Mover arquivos',
         selectNextFile: 'Selecionar próximo arquivo',
         selectPreviousFile: 'Selecionar arquivo anterior',
+        navigateBack: 'Navegar para trás',
+        navigateForward: 'Navegar para frente',
         convertToFolderNote: 'Converter em nota de pasta',
         setAsFolderNote: 'Definir como nota de pasta',
         detachFolderNote: 'Desvincular nota de pasta',

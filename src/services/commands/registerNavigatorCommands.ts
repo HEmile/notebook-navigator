@@ -985,6 +985,34 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
         }
     });
 
+    // Command to move to the previous folder, tag, or property selection in navigator history
+    plugin.addCommand({
+        id: 'navigate-back',
+        name: strings.commands.navigateBack,
+        callback: () => {
+            runAsyncAction(async () => {
+                const view = await ensureNavigatorOpen(plugin);
+                if (view) {
+                    await view.navigateBack();
+                }
+            });
+        }
+    });
+
+    // Command to move to the next folder, tag, or property selection in navigator history
+    plugin.addCommand({
+        id: 'navigate-forward',
+        name: strings.commands.navigateForward,
+        callback: () => {
+            runAsyncAction(async () => {
+                const view = await ensureNavigatorOpen(plugin);
+                if (view) {
+                    await view.navigateForward();
+                }
+            });
+        }
+    });
+
     // Command to convert the active file into a folder note
     plugin.addCommand({
         id: 'convert-to-folder-note',

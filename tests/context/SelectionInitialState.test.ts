@@ -138,4 +138,19 @@ describe('loadInitialSelectionState', () => {
         expect(state.selectedFolder).toBeNull();
         expect(state.selectedProperty).toBe(buildPropertyValueNodeId('réunion', normalizePropertyTreeValuePath('Planifié')));
     });
+
+    it('initializes navigation history in memory from the current selection only', () => {
+        storage.set(STORAGE_KEYS.selectedFolderKey, '/');
+
+        const { app } = createAppWithRoot();
+        const state = loadInitialSelectionState({ app, settings: { ...DEFAULT_SETTINGS } });
+
+        expect(state.navigationHistory).toEqual([
+            {
+                type: 'folder',
+                value: '/'
+            }
+        ]);
+        expect(state.navigationHistoryIndex).toBe(0);
+    });
 });

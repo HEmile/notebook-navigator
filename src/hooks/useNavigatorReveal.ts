@@ -73,6 +73,10 @@ export interface NavigateToFolderOptions {
     preserveNavigationFocus?: boolean;
     // When true, prevents automatic first-file selection for the target folder
     suppressAutoSelect?: boolean;
+    // When true, keeps the current focus state unchanged
+    skipFocus?: boolean;
+    // Moves the current history pointer to a previous or next selection entry
+    historyIndex?: number;
 }
 
 export interface RevealTagOptions {
@@ -696,17 +700,20 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
                 type: 'SET_SELECTED_FOLDER',
                 folder,
                 source: options?.source,
-                autoSelectedFile: suppressAutoSelect ? null : undefined
+                autoSelectedFile: suppressAutoSelect ? null : undefined,
+                historyIndex: options?.historyIndex
             });
 
-            if (uiState.singlePane) {
-                if (options?.preserveNavigationFocus) {
-                    focusNavigationPane({ updateSinglePaneView: true });
+            if (!options?.skipFocus) {
+                if (uiState.singlePane) {
+                    if (options?.preserveNavigationFocus) {
+                        focusNavigationPane({ updateSinglePaneView: true });
+                    } else {
+                        focusFilesPane({ updateSinglePaneView: true });
+                    }
                 } else {
-                    focusFilesPane({ updateSinglePaneView: true });
+                    focusNavigationPane();
                 }
-            } else {
-                focusNavigationPane();
             }
 
             const shouldSkipScroll = Boolean(options?.skipScroll);

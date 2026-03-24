@@ -769,6 +769,8 @@ export const STRINGS_JA = {
         moveFiles: 'ファイルを移動', // Command palette: Move selected files to another folder (English: Move files)
         selectNextFile: '次のファイルを選択', // Command palette: Selects the next file in the current view (English: Select next file)
         selectPreviousFile: '前のファイルを選択', // Command palette: Selects the previous file in the current view (English: Select previous file)
+        navigateBack: '前に戻る',
+        navigateForward: '次に進む',
         convertToFolderNote: 'フォルダノートに変換', // Command palette: Converts the active file into a folder note with a new folder (English: Convert to folder note)
         setAsFolderNote: 'フォルダノートとして設定', // Command palette: Renames the active file to its folder note name (English: Set as folder note)
         detachFolderNote: 'フォルダノートを解除', // Command palette: Renames the active folder note to a new name (English: Detach folder note)

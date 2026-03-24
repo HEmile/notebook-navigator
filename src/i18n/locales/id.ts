@@ -770,6 +770,8 @@ export const STRINGS_ID = {
         moveFiles: 'Pindahkan file',
         selectNextFile: 'Pilih file berikutnya',
         selectPreviousFile: 'Pilih file sebelumnya',
+        navigateBack: 'Navigasi mundur',
+        navigateForward: 'Navigasi maju',
         convertToFolderNote: 'Konversi ke catatan folder',
         setAsFolderNote: 'Atur sebagai catatan folder',
         detachFolderNote: 'Lepaskan catatan folder',

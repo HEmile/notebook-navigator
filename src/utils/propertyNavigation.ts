@@ -39,6 +39,8 @@ export interface NavigateToPropertyOptions {
     source?: SelectionRevealSource;
     preserveNavigationFocus?: boolean;
     requirePropertyInTree?: boolean;
+    skipFocus?: boolean;
+    historyIndex?: number;
 }
 
 export interface PropertyNavigationEnvironment {
@@ -110,7 +112,16 @@ function selectPropertyAndFocus(
     nodeId: PropertySelectionNodeId,
     options?: NavigateToPropertyOptions
 ): void {
-    env.selectionDispatch({ type: 'SET_SELECTED_PROPERTY', nodeId, source: options?.source });
+    env.selectionDispatch({
+        type: 'SET_SELECTED_PROPERTY',
+        nodeId,
+        source: options?.source,
+        historyIndex: options?.historyIndex
+    });
+
+    if (options?.skipFocus) {
+        return;
+    }
 
     const preserveNavigationFocus = options?.preserveNavigationFocus ?? true;
     if (env.uiState.singlePane) {

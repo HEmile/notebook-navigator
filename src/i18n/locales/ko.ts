@@ -769,6 +769,8 @@ export const STRINGS_KO = {
         moveFiles: '파일 이동', // Command palette: Move selected files to another folder (English: Move files)
         selectNextFile: '다음 파일 선택', // Command palette: Selects the next file in the current view (English: Select next file)
         selectPreviousFile: '이전 파일 선택', // Command palette: Selects the previous file in the current view (English: Select previous file)
+        navigateBack: '뒤로 이동',
+        navigateForward: '앞으로 이동',
         convertToFolderNote: '폴더 노트로 변환', // Command palette: Converts the active file into a folder note with a new folder (English: Convert to folder note)
         setAsFolderNote: '폴더 노트로 설정', // Command palette: Renames the active file to its folder note name (English: Set as folder note)
         detachFolderNote: '폴더 노트 해제', // Command palette: Renames the active folder note to a new name (English: Detach folder note)

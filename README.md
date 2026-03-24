@@ -252,6 +252,8 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - `Notebook Navigator: Navigate to folder` Search dialog to jump to any folder
 - `Notebook Navigator: Navigate to tag` Search dialog to jump to any tag
 - `Notebook Navigator: Navigate to property` Search dialog to jump to any property key or value
+- `Notebook Navigator: Navigate back` Moves to the previous folder, tag, or property selection in navigator history
+- `Notebook Navigator: Navigate forward` Moves to the next folder, tag, or property selection in navigator history
 - `Notebook Navigator: Add to shortcuts` Adds or removes the current file, folder, tag, or property from shortcuts
 - `Notebook Navigator: Open shortcut 1-9` Opens shortcut by its position in the shortcuts list
 - `Notebook Navigator: Search` Opens quick search field or focuses it if already open. Search persists between sessions. **Suggestion:** Bind to a shortcut key like `Cmd/Ctrl+Shift+S` for quick file filtering
@@ -321,6 +323,8 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 | `notebook-navigator:navigate-to-folder`           | Notebook Navigator: Navigate to folder                                                               |
 | `notebook-navigator:navigate-to-tag`              | Notebook Navigator: Navigate to tag                                                                  |
 | `notebook-navigator:navigate-to-property`         | Notebook Navigator: Navigate to property                                                             |
+| `notebook-navigator:navigate-back`                | Notebook Navigator: Navigate back                                                                    |
+| `notebook-navigator:navigate-forward`             | Notebook Navigator: Navigate forward                                                                 |
 | `notebook-navigator:add-shortcut`                 | Notebook Navigator: Add to shortcuts                                                                 |
 | `notebook-navigator:open-shortcut-1`              | Notebook Navigator: Open shortcut 1                                                                  |
 | `notebook-navigator:open-shortcut-2`              | Notebook Navigator: Open shortcut 2                                                                  |
@@ -386,7 +390,7 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - **Tag tree** - Hierarchical tags with configurable root tag ordering
 - **Property browser** - Browse file properties organized by key and value with file counts, custom colors, icons, and drag and drop
 - **Auto-reveal active file** - Folder expansion and scroll-to-selection
-- **Keyboard and commands** - Configurable hotkeys, next/previous file commands, open shortcut 1–9 commands
+- **Keyboard and commands** - Configurable hotkeys, selection history back/forward commands, next/previous file commands, open shortcut 1–9 commands
 
 ### 9.3 Organization
 

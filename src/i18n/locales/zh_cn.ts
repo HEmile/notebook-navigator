@@ -763,6 +763,8 @@ export const STRINGS_ZH_CN = {
         moveFiles: '移动文件', // Command palette: Move selected files to another folder (English: Move files)
         selectNextFile: '选择下一个文件', // Command palette: Selects the next file in the current view (English: Select next file)
         selectPreviousFile: '选择上一个文件', // Command palette: Selects the previous file in the current view (English: Select previous file)
+        navigateBack: '向后导航',
+        navigateForward: '向前导航',
         convertToFolderNote: '转换为文件夹笔记', // Command palette: Converts the active file into a folder note with a new folder (English: Convert to folder note)
         setAsFolderNote: '设为文件夹笔记', // Command palette: Renames the active file to its folder note name (English: Set as folder note)
         detachFolderNote: '解除文件夹笔记', // Command palette: Renames the active folder note to a new name (English: Detach folder note)
