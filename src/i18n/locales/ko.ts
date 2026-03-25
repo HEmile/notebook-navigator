@@ -1183,6 +1183,8 @@ export const STRINGS_KO = {
             calendarLocale: {
                 name: '지역',
                 desc: '주 번호와 한 주의 첫 번째 요일을 제어합니다.',
+                incompatibleWeekPatternWarning:
+                    '주간 노트 패턴이 ISO 주 토큰("W" 또는 "G")을 사용합니다. 캘린더는 이 지역의 시작 요일 대신 월요일부터 시작하는 주를 표시합니다.',
                 options: {
                     systemDefault: '기본값'
                 }
@@ -1277,7 +1279,9 @@ export const STRINGS_KO = {
             },
             calendarCustomWeekPattern: {
                 name: '주간 노트',
-                parsingError: '패턴은 전체 주(주 연도, 주 번호)로 포맷되고 다시 파싱될 수 있어야 합니다.'
+                parsingError: '패턴은 전체 주(주 연도, 주 번호)로 포맷되고 다시 파싱될 수 있어야 합니다.',
+                localeMismatchWarning:
+                    '이 패턴은 ISO 주 토큰("W" 또는 "G")을 사용합니다. 캘린더는 월요일부터 시작하는 주를 표시합니다. 주간 노트가 선택한 지역 설정을 따르려면 "w" 또는 "g"를 사용하세요.'
             },
             calendarCustomMonthPattern: {
                 name: '월간 노트',

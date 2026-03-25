@@ -1180,6 +1180,8 @@ export const STRINGS_IT = {
             calendarLocale: {
                 name: 'Lingua',
                 desc: 'Controlla la numerazione delle settimane e il primo giorno della settimana.',
+                incompatibleWeekPatternWarning:
+                    'Il modello delle note settimanali utilizza token di settimana ISO ("W" o "G"). Il calendario mostrerà le settimane a partire da lunedì invece del primo giorno della settimana di questa lingua.',
                 options: {
                     systemDefault: 'Predefinito'
                 }
@@ -1275,7 +1277,9 @@ export const STRINGS_IT = {
             calendarCustomWeekPattern: {
                 name: 'Note settimanali',
                 parsingError:
-                    'Il modello deve poter essere formattato e rianalizzato come una settimana completa (anno settimana, numero settimana).'
+                    'Il modello deve poter essere formattato e rianalizzato come una settimana completa (anno settimana, numero settimana).',
+                localeMismatchWarning:
+                    'Questo modello utilizza token di settimana ISO ("W" o "G"). Il calendario mostrerà le settimane a partire da lunedì. Usa "w" o "g" se le note settimanali devono seguire la lingua selezionata.'
             },
             calendarCustomMonthPattern: {
                 name: 'Note mensili',

@@ -1184,6 +1184,8 @@ export const STRINGS_ID = {
             calendarLocale: {
                 name: 'Bahasa',
                 desc: 'Mengontrol penomoran minggu dan hari pertama dalam seminggu.',
+                incompatibleWeekPatternWarning:
+                    'Pola catatan mingguan menggunakan token minggu ISO ("W" atau "G"). Kalender akan menampilkan minggu dimulai dari Senin, bukan hari pertama minggu dari bahasa ini.',
                 options: {
                     systemDefault: 'Default'
                 }
@@ -1278,7 +1280,9 @@ export const STRINGS_ID = {
             },
             calendarCustomWeekPattern: {
                 name: 'Catatan mingguan',
-                parsingError: 'Pola harus dapat diformat dan diparse kembali sebagai minggu lengkap (tahun minggu, nomor minggu).'
+                parsingError: 'Pola harus dapat diformat dan diparse kembali sebagai minggu lengkap (tahun minggu, nomor minggu).',
+                localeMismatchWarning:
+                    'Pola ini menggunakan token minggu ISO ("W" atau "G"). Kalender akan menampilkan minggu dimulai dari Senin. Gunakan "w" atau "g" jika catatan mingguan harus mengikuti bahasa yang dipilih.'
             },
             calendarCustomMonthPattern: {
                 name: 'Catatan bulanan',

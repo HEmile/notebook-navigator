@@ -1185,6 +1185,8 @@ export const STRINGS_ES = {
             calendarLocale: {
                 name: 'Configuración regional',
                 desc: 'Controla la numeración de semanas y el primer día de la semana.',
+                incompatibleWeekPatternWarning:
+                    'El patrón de notas semanales usa tokens de semana ISO ("W" o "G"). El calendario mostrará las semanas empezando en lunes en lugar del primer día de la semana de esta configuración regional.',
                 options: {
                     systemDefault: 'Predeterminado'
                 }
@@ -1279,7 +1281,9 @@ export const STRINGS_ES = {
             },
             calendarCustomWeekPattern: {
                 name: 'Notas semanales',
-                parsingError: 'El patrón debe formatear y volver a analizarse como una semana completa (año de semana, número de semana).'
+                parsingError: 'El patrón debe formatear y volver a analizarse como una semana completa (año de semana, número de semana).',
+                localeMismatchWarning:
+                    'Este patrón usa tokens de semana ISO ("W" o "G"). El calendario mostrará las semanas empezando en lunes. Use "w" o "g" si las notas semanales deben seguir la configuración regional seleccionada.'
             },
             calendarCustomMonthPattern: {
                 name: 'Notas mensuales',

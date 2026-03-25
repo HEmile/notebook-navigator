@@ -35,6 +35,11 @@ export function getCalendarCustomWeekAnchorDate(date: MomentInstance, pattern: s
     return localized.startOf(unit);
 }
 
+export function doesCalendarCustomWeekPatternOverrideLocaleWeekStart(pattern: string, firstDayOfWeek: number): boolean {
+    const normalizedFirstDay = Number.isInteger(firstDayOfWeek) && firstDayOfWeek >= 0 && firstDayOfWeek <= 6 ? firstDayOfWeek : 1;
+    return getCalendarCustomWeekAnchorUnit(pattern) === 'isoWeek' && normalizedFirstDay !== 1;
+}
+
 /**
  * Removes the legacy `{title}` token from calendar patterns so it is not treated as a literal path segment.
  * Calendar notes resolve by formatted date path only.

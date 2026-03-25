@@ -1185,6 +1185,8 @@ export const STRINGS_VI = {
             calendarLocale: {
                 name: 'Ngôn ngữ',
                 desc: 'Điều khiển đánh số tuần và ngày đầu tuần.',
+                incompatibleWeekPatternWarning:
+                    'Mẫu ghi chú hàng tuần sử dụng token tuần ISO ("W" hoặc "G"). Lịch sẽ hiển thị tuần bắt đầu từ thứ Hai thay vì ngày đầu tuần của ngôn ngữ này.',
                 options: {
                     systemDefault: 'Mặc định'
                 }
@@ -1279,7 +1281,9 @@ export const STRINGS_VI = {
             },
             calendarCustomWeekPattern: {
                 name: 'Ghi chú hàng tuần',
-                parsingError: 'Mẫu phải có thể định dạng và phân tích lại thành một tuần đầy đủ (năm tuần, số tuần).'
+                parsingError: 'Mẫu phải có thể định dạng và phân tích lại thành một tuần đầy đủ (năm tuần, số tuần).',
+                localeMismatchWarning:
+                    'Mẫu này sử dụng token tuần ISO ("W" hoặc "G"). Lịch sẽ hiển thị tuần bắt đầu từ thứ Hai. Sử dụng "w" hoặc "g" nếu ghi chú hàng tuần cần tuân theo ngôn ngữ đã chọn.'
             },
             calendarCustomMonthPattern: {
                 name: 'Ghi chú hàng tháng',

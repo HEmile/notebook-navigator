@@ -34,6 +34,7 @@ import {
     DEFAULT_CALENDAR_CUSTOM_QUARTER_PATTERN,
     DEFAULT_CALENDAR_CUSTOM_WEEK_PATTERN,
     DEFAULT_CALENDAR_CUSTOM_YEAR_PATTERN,
+    doesCalendarCustomWeekPatternOverrideLocaleWeekStart,
     ensureMarkdownFileName,
     isCalendarCustomDatePatternValid,
     isCalendarCustomMonthPatternValid,
@@ -50,7 +51,7 @@ import { getActiveVaultProfile } from '../../utils/vaultProfiles';
 import { createSettingGroupFactory } from '../settingGroups';
 import { addSettingSyncModeToggle } from '../syncModeToggle';
 import { createSubSettingsContainer, setElementVisible } from '../subSettings';
-import { getMomentApi, resolveMomentLocale } from '../../utils/moment';
+import { getMomentApi, resolveMomentLocale, type MomentApi } from '../../utils/moment';
 import { runAsyncAction } from '../../utils/async';
 import { CalendarTemplateModal } from '../../modals/CalendarTemplateModal';
 import { createInlineExternalLinkText } from './externalLink';
@@ -131,24 +132,29 @@ export function renderCalendarTab(context: SettingsTabContext): void {
 
     const appearanceGroup = createGroup(strings.settings.groups.navigation.appearance);
 
-    appearanceGroup
-        .addSetting(setting => {
-            setting.setName(strings.settings.items.calendarLocale.name).setDesc(strings.settings.items.calendarLocale.desc);
-        })
-        .addDropdown((dropdown: DropdownComponent) => {
-            dropdown.addOption(
-                CALENDAR_LOCALE_SYSTEM_DEFAULT,
-                `${strings.settings.items.calendarLocale.options.systemDefault} (${currentLocale || 'en'})`
-            );
-            for (const locale of localeOptions) {
-                dropdown.addOption(locale, locale);
-            }
+    const calendarLocaleSetting = appearanceGroup.addSetting(setting => {
+        setting.setName(strings.settings.items.calendarLocale.name).setDesc(strings.settings.items.calendarLocale.desc);
+    });
 
-            dropdown.setValue(plugin.settings.calendarLocale).onChange(async value => {
-                plugin.settings.calendarLocale = value;
-                await plugin.saveSettingsAndUpdate();
-            });
+    calendarLocaleSetting.addDropdown((dropdown: DropdownComponent) => {
+        dropdown.addOption(
+            CALENDAR_LOCALE_SYSTEM_DEFAULT,
+            `${strings.settings.items.calendarLocale.options.systemDefault} (${currentLocale || 'en'})`
+        );
+        for (const locale of localeOptions) {
+            dropdown.addOption(locale, locale);
+        }
+
+        dropdown.setValue(plugin.settings.calendarLocale).onChange(async value => {
+            plugin.settings.calendarLocale = value;
+            renderCalendarIntegrationVisibility();
+            await plugin.saveSettingsAndUpdate();
         });
+    });
+
+    const calendarLocaleWarningEl = calendarLocaleSetting.descEl.createDiv({
+        cls: 'setting-item-description nn-setting-hidden nn-setting-warning'
+    });
 
     appearanceGroup
         .addSetting(setting => {
@@ -459,6 +465,10 @@ export function renderCalendarTab(context: SettingsTabContext): void {
         cls: 'setting-item-description nn-setting-hidden nn-setting-warning'
     });
 
+    const calendarCustomWeekPatternWarningEl = calendarCustomWeekPattern.descEl.createDiv({
+        cls: 'setting-item-description nn-setting-hidden nn-setting-warning'
+    });
+
     const calendarCustomMonthPattern = createCalendarCustomPatternSetting({
         name: strings.settings.items.calendarCustomMonthPattern.name,
         placeholder: DEFAULT_CALENDAR_CUSTOM_MONTH_PATTERN,
@@ -528,6 +538,23 @@ export function renderCalendarTab(context: SettingsTabContext): void {
     // Read current input values while typing; the setting values are updated via debounced callbacks.
     const getInputValue = (element: HTMLInputElement | null, fallback: string): string => element?.value ?? fallback;
 
+    const buildCustomPattern = (value: string, fallback: string): string => {
+        const { folderPattern, filePattern } = splitCalendarCustomPattern(value, fallback);
+        return folderPattern ? `${folderPattern}/${filePattern}` : filePattern;
+    };
+
+    const resolveCalendarLocales = (momentApi: MomentApi): { displayLocale: string; calendarRulesLocale: string } => {
+        const currentLanguage = getCurrentLanguage();
+        const fallbackLocale = momentApi.locale() || 'en';
+        const requestedDisplayLocale = (currentLanguage || fallbackLocale).replace(/_/g, '-');
+        const displayLocale = resolveMomentLocale(requestedDisplayLocale, momentApi, fallbackLocale);
+        const requestedCalendarRulesLocale =
+            plugin.settings.calendarLocale === 'system-default' ? displayLocale : plugin.settings.calendarLocale;
+        const calendarRulesLocale = resolveMomentLocale(requestedCalendarRulesLocale, momentApi, displayLocale);
+
+        return { displayLocale, calendarRulesLocale };
+    };
+
     const templateTargets = [
         calendarCustomFilePattern,
         calendarCustomWeekPattern,
@@ -592,13 +619,7 @@ export function renderCalendarTab(context: SettingsTabContext): void {
             return;
         }
 
-        const currentLanguage = getCurrentLanguage();
-        const fallbackLocale = momentApi.locale() || 'en';
-        const requestedDisplayLocale = (currentLanguage || fallbackLocale).replace(/_/g, '-');
-        const displayLocale = resolveMomentLocale(requestedDisplayLocale, momentApi, fallbackLocale);
-        const requestedCalendarRulesLocale =
-            plugin.settings.calendarLocale === 'system-default' ? displayLocale : plugin.settings.calendarLocale;
-        const calendarRulesLocale = resolveMomentLocale(requestedCalendarRulesLocale, momentApi, displayLocale);
+        const { displayLocale, calendarRulesLocale } = resolveCalendarLocales(momentApi);
 
         const sampleDate = momentApi('2026-01-19', 'YYYY-MM-DD', true);
         if (!sampleDate.isValid()) {
@@ -652,6 +673,45 @@ export function renderCalendarTab(context: SettingsTabContext): void {
         setExampleText(calendarCustomYearPattern, yearExamplePath ? exampleTemplate.replace('{path}', yearExamplePath) : '');
     };
 
+    const renderCalendarWeekCompatibilityWarnings = (): void => {
+        calendarLocaleWarningEl.setText('');
+        calendarCustomWeekPatternWarningEl.setText('');
+        setElementVisible(calendarLocaleWarningEl, false);
+        setElementVisible(calendarCustomWeekPatternWarningEl, false);
+
+        if (plugin.settings.calendarIntegrationMode !== 'notebook-navigator') {
+            return;
+        }
+
+        const momentApi = getMomentApi();
+        if (!momentApi) {
+            return;
+        }
+
+        const weekPatternRaw = getInputValue(calendarCustomWeekPattern.inputEl, plugin.settings.calendarCustomWeekPattern);
+        if (weekPatternRaw.trim() === '') {
+            return;
+        }
+
+        const weekCustomPattern = buildCustomPattern(weekPatternRaw, '');
+        if (!isCalendarCustomWeekPatternValid(weekCustomPattern, momentApi)) {
+            return;
+        }
+
+        const { calendarRulesLocale } = resolveCalendarLocales(momentApi);
+        const localeData = momentApi().locale(calendarRulesLocale).localeData();
+        const localeFirstDayOfWeek = localeData.firstDayOfWeek();
+        const showWarning = doesCalendarCustomWeekPatternOverrideLocaleWeekStart(weekCustomPattern, localeFirstDayOfWeek);
+        if (!showWarning) {
+            return;
+        }
+
+        calendarLocaleWarningEl.setText(strings.settings.items.calendarLocale.incompatibleWeekPatternWarning);
+        calendarCustomWeekPatternWarningEl.setText(strings.settings.items.calendarCustomWeekPattern.localeMismatchWarning);
+        setElementVisible(calendarLocaleWarningEl, true);
+        setElementVisible(calendarCustomWeekPatternWarningEl, true);
+    };
+
     /** Updates calendar integration sub-setting visibility and validates the custom file pattern */
     const renderCalendarIntegrationVisibility = (): void => {
         const isDailyNotes = plugin.settings.calendarIntegrationMode === 'daily-notes';
@@ -662,28 +722,25 @@ export function renderCalendarTab(context: SettingsTabContext): void {
             calendarCustomRootFolderInputEl.value = activeProfile.periodicNotesFolder;
         }
 
-        const setAllErrorsHidden = () => {
+        const setAllMessagesHidden = () => {
             setElementVisible(calendarCustomFilePatternErrorEl, false);
             setElementVisible(calendarCustomWeekPatternErrorEl, false);
+            setElementVisible(calendarCustomWeekPatternWarningEl, false);
             setElementVisible(calendarCustomMonthPatternErrorEl, false);
             setElementVisible(calendarCustomQuarterPatternErrorEl, false);
             setElementVisible(calendarCustomYearPatternErrorEl, false);
+            setElementVisible(calendarLocaleWarningEl, false);
         };
 
         setElementVisible(dailyNotesInfoSettingsEl, isDailyNotes);
         setElementVisible(customCalendarSettingsEl, isCustom);
 
         if (!isCustom) {
-            setAllErrorsHidden();
+            setAllMessagesHidden();
             return;
         }
 
         const momentApi = getMomentApi();
-
-        const buildCustomPattern = (value: string, fallback: string): string => {
-            const { folderPattern, filePattern } = splitCalendarCustomPattern(value, fallback);
-            return folderPattern ? `${folderPattern}/${filePattern}` : filePattern;
-        };
 
         const dailyPatternRaw = getInputValue(calendarCustomFilePattern.inputEl, plugin.settings.calendarCustomFilePattern);
         const dailyCustomPattern = buildCustomPattern(dailyPatternRaw, DEFAULT_CALENDAR_CUSTOM_FILE_PATTERN);
@@ -717,6 +774,7 @@ export function renderCalendarTab(context: SettingsTabContext): void {
         calendarCustomYearPatternErrorEl.setText(showYearError ? strings.settings.items.calendarCustomYearPattern.parsingError : '');
         setElementVisible(calendarCustomYearPatternErrorEl, showYearError);
 
+        renderCalendarWeekCompatibilityWarnings();
         renderCalendarCustomPatternPreviews();
         renderCalendarTemplateIndicators();
     };

@@ -1185,6 +1185,8 @@ export const STRINGS_NL = {
             calendarLocale: {
                 name: 'Taal',
                 desc: 'Bepaalt weeknummering en eerste dag van de week.',
+                incompatibleWeekPatternWarning:
+                    'Het patroon voor wekelijkse notities gebruikt ISO-weektokens ("W" of "G"). De kalender toont weken beginnend op maandag in plaats van de eerste dag van de week van deze taal.',
                 options: {
                     systemDefault: 'Standaard'
                 }
@@ -1279,7 +1281,9 @@ export const STRINGS_NL = {
             },
             calendarCustomWeekPattern: {
                 name: 'Wekelijkse notities',
-                parsingError: 'Het patroon moet kunnen formatteren en terug-parsen naar een volledige week (weekjaar, weeknummer).'
+                parsingError: 'Het patroon moet kunnen formatteren en terug-parsen naar een volledige week (weekjaar, weeknummer).',
+                localeMismatchWarning:
+                    'Dit patroon gebruikt ISO-weektokens ("W" of "G"). De kalender toont weken beginnend op maandag. Gebruik "w" of "g" als wekelijkse notities de geselecteerde taal moeten volgen.'
             },
             calendarCustomMonthPattern: {
                 name: 'Maandelijkse notities',

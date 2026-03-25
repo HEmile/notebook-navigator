@@ -86,6 +86,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         ],
         improved: [
             'Calendar now follows the active daily note and switches to the matching month automatically.',
+            'Calendar settings now warn when the weekly notes pattern uses ISO week tokens that override the locale first day of week.',
             'Improved list pane scroll performance by reducing repeated work in visible note rows.',
             'Quick actions are now hidden while scrolling the list pane.'
         ]

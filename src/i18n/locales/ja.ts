@@ -1183,6 +1183,8 @@ export const STRINGS_JA = {
             calendarLocale: {
                 name: 'ロケール',
                 desc: '週番号と週の開始曜日を制御します。',
+                incompatibleWeekPatternWarning:
+                    'ウィークリーノートのパターンがISO週トークン（"W" または "G"）を使用しています。カレンダーはこのロケールの週の開始曜日ではなく、月曜日から始まる週を表示します。',
                 options: {
                     systemDefault: 'デフォルト'
                 }
@@ -1277,7 +1279,9 @@ export const STRINGS_JA = {
             },
             calendarCustomWeekPattern: {
                 name: 'ウィークリーノート',
-                parsingError: 'パターンは完全な週（週年、週番号）としてフォーマットされ、再度パースできる必要があります。'
+                parsingError: 'パターンは完全な週（週年、週番号）としてフォーマットされ、再度パースできる必要があります。',
+                localeMismatchWarning:
+                    'このパターンはISO週トークン（"W" または "G"）を使用しています。カレンダーは月曜日から始まる週を表示します。ウィークリーノートが選択したロケールに従う場合は、"w" または "g" を使用してください。'
             },
             calendarCustomMonthPattern: {
                 name: 'マンスリーノート',

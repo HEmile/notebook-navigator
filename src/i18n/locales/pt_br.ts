@@ -1186,6 +1186,8 @@ export const STRINGS_PT_BR = {
             calendarLocale: {
                 name: 'Idioma',
                 desc: 'Controla a numeração das semanas e o primeiro dia da semana.',
+                incompatibleWeekPatternWarning:
+                    'O padrão de notas semanais usa tokens de semana ISO ("W" ou "G"). O calendário exibirá as semanas começando na segunda-feira em vez do primeiro dia da semana deste idioma.',
                 options: {
                     systemDefault: 'Padrão'
                 }
@@ -1281,7 +1283,9 @@ export const STRINGS_PT_BR = {
             calendarCustomWeekPattern: {
                 name: 'Notas semanais',
                 parsingError:
-                    'O padrão deve ser formatado e analisado novamente como uma semana completa (ano da semana, número da semana).'
+                    'O padrão deve ser formatado e analisado novamente como uma semana completa (ano da semana, número da semana).',
+                localeMismatchWarning:
+                    'Este padrão usa tokens de semana ISO ("W" ou "G"). O calendário exibirá as semanas começando na segunda-feira. Use "w" ou "g" se as notas semanais devem seguir o idioma selecionado.'
             },
             calendarCustomMonthPattern: {
                 name: 'Notas mensais',

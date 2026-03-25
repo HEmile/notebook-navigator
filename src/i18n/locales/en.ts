@@ -1180,6 +1180,8 @@ export const STRINGS_EN = {
             calendarLocale: {
                 name: 'Locale',
                 desc: 'Controls week numbering and first day of the week.',
+                incompatibleWeekPatternWarning:
+                    'Weekly notes pattern uses ISO week tokens ("W" or "G"). The calendar will display weeks starting on Monday instead of this locale\'s first day of week.',
                 options: {
                     systemDefault: 'Default'
                 }
@@ -1274,7 +1276,9 @@ export const STRINGS_EN = {
             },
             calendarCustomWeekPattern: {
                 name: 'Weekly notes',
-                parsingError: 'Pattern must format and parse back to a full week (week year, week number).'
+                parsingError: 'Pattern must format and parse back to a full week (week year, week number).',
+                localeMismatchWarning:
+                    'This pattern uses ISO week tokens ("W" or "G"). The calendar will display weeks starting on Monday. Use "w" or "g" if weekly notes should follow the selected locale.'
             },
             calendarCustomMonthPattern: {
                 name: 'Monthly notes',

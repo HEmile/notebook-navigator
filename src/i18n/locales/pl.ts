@@ -1186,6 +1186,8 @@ export const STRINGS_PL = {
             calendarLocale: {
                 name: 'Ustawienia regionalne',
                 desc: 'Kontroluje numerację tygodni i pierwszy dzień tygodnia.',
+                incompatibleWeekPatternWarning:
+                    'Wzór notatek tygodniowych używa tokenów tygodnia ISO ("W" lub "G"). Kalendarz będzie wyświetlał tygodnie zaczynające się od poniedziałku zamiast od pierwszego dnia tygodnia tych ustawień regionalnych.',
                 options: {
                     systemDefault: 'Domyślne'
                 }
@@ -1280,7 +1282,9 @@ export const STRINGS_PL = {
             },
             calendarCustomWeekPattern: {
                 name: 'Notatki tygodniowe',
-                parsingError: 'Wzór musi być tak sformatowany, aby można było odczytać kompletną datę (rok tygodnia, numer tygodnia).'
+                parsingError: 'Wzór musi być tak sformatowany, aby można było odczytać kompletną datę (rok tygodnia, numer tygodnia).',
+                localeMismatchWarning:
+                    'Ten wzór używa tokenów tygodnia ISO ("W" lub "G"). Kalendarz będzie wyświetlał tygodnie zaczynające się od poniedziałku. Użyj "w" lub "g", jeśli notatki tygodniowe mają być zgodne z wybranymi ustawieniami regionalnymi.'
             },
             calendarCustomMonthPattern: {
                 name: 'Notatki miesięczne',

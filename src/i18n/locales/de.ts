@@ -1185,6 +1185,8 @@ export const STRINGS_DE = {
             calendarLocale: {
                 name: 'Gebietsschema',
                 desc: 'Steuert Wochennummerierung und ersten Wochentag.',
+                incompatibleWeekPatternWarning:
+                    'Das Muster f\u00fcr w\u00f6chentliche Notizen verwendet ISO-Wochen-Token ("W" oder "G"). Der Kalender zeigt Wochen ab Montag statt ab dem ersten Wochentag dieses Gebietsschemas an.',
                 options: {
                     systemDefault: 'Standard'
                 }
@@ -1280,7 +1282,9 @@ export const STRINGS_DE = {
             calendarCustomWeekPattern: {
                 name: 'Wöchentliche Notizen',
                 parsingError:
-                    'Das Muster muss als vollständige Woche (Wochenjahr, Wochennummer) formatiert und wieder geparst werden können.'
+                    'Das Muster muss als vollständige Woche (Wochenjahr, Wochennummer) formatiert und wieder geparst werden können.',
+                localeMismatchWarning:
+                    'Dieses Muster verwendet ISO-Wochen-Token ("W" oder "G"). Der Kalender zeigt Wochen ab Montag an. Verwenden Sie "w" oder "g", wenn w\u00f6chentliche Notizen dem gew\u00e4hlten Gebietsschema folgen sollen.'
             },
             calendarCustomMonthPattern: {
                 name: 'Monatliche Notizen',

@@ -1177,6 +1177,8 @@ export const STRINGS_ZH_TW = {
             calendarLocale: {
                 name: '日曆語言',
                 desc: '選擇日曆顯示的語言。',
+                incompatibleWeekPatternWarning:
+                    '週記模式使用了 ISO 週標記（"W" 或 "G"）。日曆將從星期一開始顯示每週，而不是此語言設定的每週第一天。',
                 options: {
                     systemDefault: '系統預設'
                 }
@@ -1271,7 +1273,9 @@ export const STRINGS_ZH_TW = {
             },
             calendarCustomWeekPattern: {
                 name: '週記',
-                parsingError: '模式必須能格式化並重新解析為完整週（週年、週數）。'
+                parsingError: '模式必須能格式化並重新解析為完整週（週年、週數）。',
+                localeMismatchWarning:
+                    '此模式使用了 ISO 週標記（"W" 或 "G"）。日曆將從星期一開始顯示每週。如果週記應遵循所選語言設定，請使用 "w" 或 "g"。'
             },
             calendarCustomMonthPattern: {
                 name: '月記',

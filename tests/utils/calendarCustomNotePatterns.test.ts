@@ -17,7 +17,11 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { escapeMomentLiteralPath, isCalendarCustomWeekPatternValid } from '../../src/utils/calendarCustomNotePatterns';
+import {
+    doesCalendarCustomWeekPatternOverrideLocaleWeekStart,
+    escapeMomentLiteralPath,
+    isCalendarCustomWeekPatternValid
+} from '../../src/utils/calendarCustomNotePatterns';
 
 describe('calendar custom note patterns', () => {
     type MomentStub = {
@@ -62,6 +66,18 @@ describe('calendar custom note patterns', () => {
         const momentApi = createMomentApi(context);
         expect(isCalendarCustomWeekPatternValid('GGGG-[W]WW', momentApi)).toBe(true);
         expect(context.lastStartOfUnit).toBe('isoWeek');
+    });
+
+    test('marks ISO week patterns as incompatible with non-Monday locales', () => {
+        expect(doesCalendarCustomWeekPatternOverrideLocaleWeekStart('GGGG-[W]WW', 0)).toBe(true);
+    });
+
+    test('does not mark locale week patterns as incompatible with non-Monday locales', () => {
+        expect(doesCalendarCustomWeekPatternOverrideLocaleWeekStart('gggg/[W]ww', 0)).toBe(false);
+    });
+
+    test('does not mark ISO week patterns as incompatible with Monday locales', () => {
+        expect(doesCalendarCustomWeekPatternOverrideLocaleWeekStart('GGGG-[W]WW', 1)).toBe(false);
     });
 
     test('rejects weekly pattern without week number token', () => {

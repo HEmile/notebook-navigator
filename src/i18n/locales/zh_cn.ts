@@ -1177,6 +1177,8 @@ export const STRINGS_ZH_CN = {
             calendarLocale: {
                 name: '日历语言',
                 desc: '选择日历显示的语言。',
+                incompatibleWeekPatternWarning:
+                    '周记模式使用了 ISO 周标记（"W" 或 "G"）。日历将从星期一开始显示每周，而不是此语言设置的每周第一天。',
                 options: {
                     systemDefault: '系统默认'
                 }
@@ -1271,7 +1273,9 @@ export const STRINGS_ZH_CN = {
             },
             calendarCustomWeekPattern: {
                 name: '周记',
-                parsingError: '模式必须能格式化并重新解析为完整周（周年、周数）。'
+                parsingError: '模式必须能格式化并重新解析为完整周（周年、周数）。',
+                localeMismatchWarning:
+                    '此模式使用了 ISO 周标记（"W" 或 "G"）。日历将从星期一开始显示每周。如果周记应遵循所选语言设置，请使用 "w" 或 "g"。'
             },
             calendarCustomMonthPattern: {
                 name: '月记',
