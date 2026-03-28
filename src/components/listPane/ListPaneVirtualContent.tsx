@@ -36,6 +36,7 @@ import { ServiceIcon } from '../ServiceIcon';
 import type { ListPaneAppearanceSettings } from '../../hooks/useListPaneAppearance';
 import type { FileNameIconNeedle } from '../../utils/fileIconUtils';
 import type { HiddenTagVisibility } from '../../utils/tagPrefixMatcher';
+import type { FileItemPillDecorationModel } from '../../utils/fileItemPillDecoration';
 
 export interface PointerClientPosition {
     clientX: number;
@@ -85,6 +86,7 @@ interface ListPaneVirtualContentProps {
     onToggleNoteShortcut: (file: TFile, shortcutKey: string | undefined) => Promise<void>;
     onNavigateToFolder: (folderPath: string, options?: NavigateToFolderOptions) => void;
     folderDecorationModel: FolderDecorationModel;
+    fileItemPillDecorationModel: FileItemPillDecorationModel;
 }
 
 function getItemAt<T>(items: T[], index: number): T | undefined {
@@ -171,7 +173,8 @@ export function ListPaneVirtualContent({
     noteShortcutKeysByPath,
     onToggleNoteShortcut,
     onNavigateToFolder,
-    folderDecorationModel
+    folderDecorationModel,
+    fileItemPillDecorationModel
 }: ListPaneVirtualContentProps) {
     const { app, commandQueue, isMobile } = useServices();
 
@@ -461,6 +464,7 @@ export function ListPaneVirtualContent({
                                             shortcutKey={shortcutKey}
                                             onToggleNoteShortcut={onToggleNoteShortcut}
                                             folderDecorationModel={folderDecorationModel}
+                                            fileItemPillDecorationModel={fileItemPillDecorationModel}
                                         />
                                     ) : null}
                                 </div>

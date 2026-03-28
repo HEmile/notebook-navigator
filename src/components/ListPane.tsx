@@ -85,6 +85,7 @@ import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
 import { getActivePropertyKeySet } from '../utils/vaultProfiles';
 import { DateUtils } from '../utils/dateUtils';
 import type { NavigateToFolderOptions, RevealPropertyOptions, RevealTagOptions } from '../hooks/useNavigatorReveal';
+import type { FileItemPillDecorationModel } from '../utils/fileItemPillDecoration';
 
 /**
  * Renders the list pane displaying files from the selected folder.
@@ -133,6 +134,7 @@ interface ListPaneProps {
      */
     onSearchTokensChange?: (state: SearchNavFilterState) => void;
     folderDecorationModel: FolderDecorationModel;
+    fileItemPillDecorationModel: FileItemPillDecorationModel;
     onNavigateToFolder: (folderPath: string, options?: NavigateToFolderOptions) => void;
     onRevealTag: (tagPath: string, options?: RevealTagOptions) => void;
     onRevealProperty: (propertyNodeId: string, options?: RevealPropertyOptions) => boolean;
@@ -174,7 +176,7 @@ function ListPaneTitleChrome({
 export const ListPane = React.memo(
     forwardRef<ListPaneHandle, ListPaneProps>(function ListPane(props, ref) {
         const { app, isMobile } = useServices();
-        const { onNavigateToFolder, onRevealTag, onRevealProperty, folderDecorationModel } = props;
+        const { onNavigateToFolder, onRevealTag, onRevealProperty, folderDecorationModel, fileItemPillDecorationModel } = props;
         const selectionState = useSelectionState();
         const selectionDispatch = useSelectionDispatch();
         const settings = useSettingsState();
@@ -618,6 +620,7 @@ export const ListPane = React.memo(
                         onToggleNoteShortcut={toggleNoteShortcut}
                         onNavigateToFolder={onNavigateToFolder}
                         folderDecorationModel={folderDecorationModel}
+                        fileItemPillDecorationModel={fileItemPillDecorationModel}
                     />
                     {/* iOS (Obsidian 1.11+): keep the floating toolbar inside the panel */}
                     {shouldRenderBottomToolbarInsidePanel ? <div className="nn-pane-bottom-toolbar">{listToolbar}</div> : null}

@@ -23,6 +23,7 @@ import { DEFAULT_SETTINGS } from '../../../src/settings/defaultSettings';
 import { useFileItemPills, type UseFileItemPillsParams } from '../../../src/components/fileItem/useFileItemPills';
 import { buildPropertyValueNodeId } from '../../../src/utils/propertyTree';
 import { createHiddenTagVisibility, type HiddenTagVisibility } from '../../../src/utils/tagPrefixMatcher';
+import type { FileItemPillDecorationModel } from '../../../src/utils/fileItemPillDecoration';
 import { createTestTFile } from '../../utils/createTestTFile';
 
 const mockOpenLinkText = vi.fn();
@@ -60,14 +61,31 @@ vi.mock('../../../src/components/ServiceIcon', () => ({
 }));
 
 function renderPillRows(
-    params: Omit<UseFileItemPillsParams, 'hiddenTagVisibility'> & {
+    params: Omit<UseFileItemPillsParams, 'hiddenTagVisibility' | 'fileItemPillDecorationModel'> & {
         hiddenTagVisibility?: HiddenTagVisibility;
+        fileItemPillDecorationModel?: FileItemPillDecorationModel;
     }
 ): string {
+    const emptyDecorationModel: FileItemPillDecorationModel = {
+        navRainbowMode: 'none',
+        tagRainbowColors: {
+            colorsByPath: new Map(),
+            rootColor: undefined,
+            getInheritedColor: () => undefined
+        },
+        propertyRainbowColors: {
+            colorsByNodeId: new Map(),
+            rootColor: undefined,
+            rootColorsByKey: new Map()
+        },
+        inheritPropertyColors: false
+    };
+
     function Host() {
         const state = useFileItemPills({
             ...params,
-            hiddenTagVisibility: params.hiddenTagVisibility ?? createHiddenTagVisibility([], false)
+            hiddenTagVisibility: params.hiddenTagVisibility ?? createHiddenTagVisibility([], false),
+            fileItemPillDecorationModel: params.fileItemPillDecorationModel ?? emptyDecorationModel
         });
         return React.createElement(
             'div',
@@ -130,6 +148,41 @@ describe('useFileItemPills', () => {
         expect(markup).toContain('data-show-tags="true"');
         expect(markup.indexOf('beta')).toBeLessThan(markup.indexOf('alpha'));
         expect(markup).toContain('style="color:#ff0000"');
+    });
+
+    it('applies rainbow tag colors in file list pills', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Rainbow.md'),
+            isCompactMode: false,
+            tags: ['alpha'],
+            properties: null,
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showTags: true,
+                showFileTags: true,
+                colorFileTags: true
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>(),
+            fileItemPillDecorationModel: {
+                navRainbowMode: 'foreground',
+                tagRainbowColors: {
+                    colorsByPath: new Map([['alpha', '#00ff00']]),
+                    rootColor: undefined,
+                    getInheritedColor: () => undefined
+                },
+                propertyRainbowColors: {
+                    colorsByNodeId: new Map(),
+                    rootColor: undefined,
+                    rootColorsByKey: new Map()
+                },
+                inheritPropertyColors: false
+            }
+        });
+
+        expect(markup).toContain('style="color:#00ff00"');
     });
 
     it('renders word count pill rows for markdown notes when word count is active', () => {
@@ -228,6 +281,88 @@ describe('useFileItemPills', () => {
 
         expect(markup).toContain('data-show-properties="true"');
         expect(markup).toContain('4.5');
+    });
+
+    it('applies rainbow property colors in file list pills', () => {
+        const statusNodeId = buildPropertyValueNodeId('status', 'done');
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Status.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'status',
+                    value: 'done',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                colorFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['status']),
+            visibleNavigationPropertyKeys: new Set<string>(['status']),
+            fileItemPillDecorationModel: {
+                navRainbowMode: 'foreground',
+                tagRainbowColors: {
+                    colorsByPath: new Map(),
+                    rootColor: undefined,
+                    getInheritedColor: () => undefined
+                },
+                propertyRainbowColors: {
+                    colorsByNodeId: new Map([[statusNodeId, '#00aa00']]),
+                    rootColor: undefined,
+                    rootColorsByKey: new Map()
+                },
+                inheritPropertyColors: false
+            }
+        });
+
+        expect(markup).toContain('style="color:#00aa00"');
+    });
+
+    it('inherits rainbow property colors for escaped property keys', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/EscapedStatus.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'status=final%',
+                    value: 'done',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                colorFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['status=final%']),
+            visibleNavigationPropertyKeys: new Set<string>(['status=final%']),
+            fileItemPillDecorationModel: {
+                navRainbowMode: 'foreground',
+                tagRainbowColors: {
+                    colorsByPath: new Map(),
+                    rootColor: undefined,
+                    getInheritedColor: () => undefined
+                },
+                propertyRainbowColors: {
+                    colorsByNodeId: new Map(),
+                    rootColor: undefined,
+                    rootColorsByKey: new Map([['status=final%', '#118833']])
+                },
+                inheritPropertyColors: true
+            }
+        });
+
+        expect(markup).toContain('done');
+        expect(markup).toContain('style="color:#118833"');
     });
 
     it('renders boolean property values as value pills', () => {

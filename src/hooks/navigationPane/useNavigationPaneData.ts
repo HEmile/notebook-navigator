@@ -32,7 +32,6 @@
 import { TFolder } from 'obsidian';
 import { useServices, useMetadataService } from '../../context/ServicesContext';
 import { useRecentData } from '../../context/RecentDataContext';
-import { useExpansionState } from '../../context/ExpansionContext';
 import { useFileCache } from '../../context/StorageContext';
 import { useShortcuts } from '../../context/ShortcutsContext';
 import { useUXPreferences } from '../../context/UXPreferencesContext';
@@ -42,14 +41,13 @@ import type { CombinedNavigationItem } from '../../types/virtualization';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { NoteCountInfo } from '../../types/noteCounts';
 import type { NavigationRainbowState } from '../useNavigationRainbowState';
-import { useSettingsDerived, type ActiveProfileState } from '../../context/SettingsContext';
+import { useSettingsDerived } from '../../context/SettingsContext';
 import { useNavigationNoteCounts } from './data/useNavigationNoteCounts';
 import { useNavigationPaneItemPipeline } from './data/useNavigationPaneItemPipeline';
 import { useNavigationPaneListSections } from './data/useNavigationPaneListSections';
-import { useNavigationPaneSourceState } from './data/useNavigationPaneSourceState';
-import { useNavigationPaneTreeSections } from './data/useNavigationPaneTreeSections';
+import type { NavigationPaneSourceState } from './data/useNavigationPaneSourceState';
+import type { NavigationPaneTreeSectionsResult } from './data/useNavigationPaneTreeSections';
 import type { FolderDecorationModel } from '../../utils/folderDecoration';
-import type { FolderNavigationSourceState } from '../useFolderNavigationSourceState';
 
 /**
  * Parameters for the useNavigationPaneData hook
@@ -57,12 +55,12 @@ import type { FolderNavigationSourceState } from '../useFolderNavigationSourceSt
 interface UseNavigationPaneDataParams {
     /** Plugin settings */
     settings: NotebookNavigatorSettings;
-    /** Active profile-derived values */
-    activeProfile: ActiveProfileState;
     /** Whether the navigation pane is currently visible */
     isVisible: boolean;
-    /** Shared folder ordering and exclusion state */
-    folderNavigationSource: FolderNavigationSourceState;
+    /** Shared navigation source state */
+    sourceState: NavigationPaneSourceState;
+    /** Precomputed navigation tree sections shared with file-list decoration */
+    treeSections: NavigationPaneTreeSectionsResult;
     /** Shared folder decoration model */
     folderDecorationModel: FolderDecorationModel;
     /** Shared navigation rainbow state */
@@ -140,9 +138,9 @@ interface UseNavigationPaneDataResult {
  */
 export function useNavigationPaneData({
     settings,
-    activeProfile,
     isVisible,
-    folderNavigationSource,
+    sourceState,
+    treeSections,
     folderDecorationModel,
     navRainbowState,
     shortcutsExpanded,
@@ -154,22 +152,11 @@ export function useNavigationPaneData({
     const { fileNameIconNeedles } = useSettingsDerived();
     const { recentNotes } = useRecentData();
     const metadataService = useMetadataService();
-    const expansionState = useExpansionState();
-    const { fileData, getFileDisplayName } = useFileCache();
+    const { getFileDisplayName } = useFileCache();
     const { hydratedShortcuts } = useShortcuts();
     const uxPreferences = useUXPreferences();
     const includeDescendantNotes = uxPreferences.includeDescendantNotes;
     const showHiddenItems = uxPreferences.showHiddenItems;
-    const sourceState = useNavigationPaneSourceState({
-        app,
-        settings,
-        activeProfile,
-        folderNavigationSource,
-        fileData,
-        hydratedShortcuts,
-        showHiddenItems,
-        includeDescendantNotes
-    });
     const {
         effectiveFrontmatterExclusions,
         hiddenFolders,
@@ -201,13 +188,7 @@ export function useNavigationPaneData({
         propertiesSectionActive,
         resolvedRootPropertyKeys,
         propertyCollectionCount
-    } = useNavigationPaneTreeSections({
-        settings,
-        expansionState,
-        showHiddenItems,
-        includeDescendantNotes,
-        sourceState
-    });
+    } = treeSections;
 
     /**
      * Pre-compute parsed excluded folders to avoid repeated parsing

@@ -19,9 +19,10 @@
 // src/components/NotebookNavigatorComponent.tsx
 import React, { useEffect, useImperativeHandle, forwardRef, useRef, useState, useCallback, useLayoutEffect, useMemo } from 'react';
 import { TFile, TFolder } from 'obsidian';
+import { useExpansionState } from '../context/ExpansionContext';
 import { useSelectionState, useSelectionDispatch, resolvePrimarySelectedFile } from '../context/SelectionContext';
 import { useServices } from '../context/ServicesContext';
-import { useSettingsState } from '../context/SettingsContext';
+import { useActiveProfile, useSettingsState } from '../context/SettingsContext';
 import { useUIState, useUIDispatch } from '../context/UIStateContext';
 import { useShortcuts } from '../context/ShortcutsContext';
 import { useUXPreferences } from '../context/UXPreferencesContext';
@@ -75,6 +76,9 @@ import { EMPTY_SEARCH_NAV_FILTER_STATE, type SearchNavFilterState } from '../typ
 import { getFeatureImageDisplayMeasurements, getListPaneMeasurements } from '../utils/listPaneMeasurements';
 import type { InclusionOperator } from '../utils/filterSearch';
 import { useFolderDecorationState } from '../hooks/useFolderDecorationState';
+import { useFileItemPillDecorationState } from '../hooks/useFileItemPillDecorationState';
+import { useNavigationPaneTreeSections } from '../hooks/navigationPane/data/useNavigationPaneTreeSections';
+import { useNavigationPaneSourceState } from '../hooks/navigationPane/data/useNavigationPaneSourceState';
 import type { SelectionHistoryEntry } from '../context/selection/types';
 
 // Checks if two string arrays have identical content in the same order
@@ -146,6 +150,8 @@ export const NotebookNavigatorComponent = React.memo(
     forwardRef<NotebookNavigatorHandle>(function NotebookNavigatorComponent(_, ref) {
         const { app, isMobile, fileSystemOps, plugin, tagTreeService, propertyTreeService, commandQueue, tagOperations } = useServices();
         const settings = useSettingsState();
+        const activeProfile = useActiveProfile();
+        const expansionState = useExpansionState();
         const uxPreferences = useUXPreferences();
         const uxRef = useRef(uxPreferences);
         useEffect(() => {
@@ -183,9 +189,10 @@ export const NotebookNavigatorComponent = React.memo(
             addNoteShortcut,
             addTagShortcut,
             addPropertyShortcut,
-            removeShortcut
+            removeShortcut,
+            hydratedShortcuts
         } = useShortcuts();
-        const { stopAllProcessing, rebuildCache } = useFileCache();
+        const { stopAllProcessing, rebuildCache, fileData } = useFileCache();
         const { bannerNotice, markAsDisplayed } = useUpdateNotice();
         // Keep stable references to avoid stale closures in imperative handles
         const stopProcessingRef = useRef(stopAllProcessing);
@@ -1296,6 +1303,28 @@ export const NotebookNavigatorComponent = React.memo(
             settings.calendarPlacement === 'left-sidebar' &&
             settings.calendarLeftPlacement === 'below';
         const { folderNavigationSource, folderDecorationModel, navRainbowState } = useFolderDecorationState();
+        const navigationSourceState = useNavigationPaneSourceState({
+            app,
+            settings,
+            activeProfile,
+            folderNavigationSource,
+            fileData,
+            hydratedShortcuts,
+            showHiddenItems: uxPreferences.showHiddenItems,
+            includeDescendantNotes: uxPreferences.includeDescendantNotes
+        });
+        const navigationTreeSections = useNavigationPaneTreeSections({
+            settings,
+            expansionState,
+            showHiddenItems: uxPreferences.showHiddenItems,
+            includeDescendantNotes: uxPreferences.includeDescendantNotes,
+            sourceState: navigationSourceState
+        });
+        const fileItemPillDecorationModel = useFileItemPillDecorationState({
+            sourceState: navigationSourceState,
+            includeDescendantNotes: uxPreferences.includeDescendantNotes,
+            navRainbowState
+        });
 
         return (
             <div className="nn-scale-wrapper" data-ui-scale={scaleWrapperDataAttr} style={scaleWrapperStyle}>
@@ -1325,7 +1354,8 @@ export const NotebookNavigatorComponent = React.memo(
                         style={navigationPaneStyle}
                         uiScale={uiScale}
                         rootContainerRef={containerRef}
-                        folderNavigationSource={folderNavigationSource}
+                        navigationSourceState={navigationSourceState}
+                        navigationTreeSections={navigationTreeSections}
                         folderDecorationModel={folderDecorationModel}
                         navRainbowState={navRainbowState}
                         searchNavFilters={searchNavFilters}
@@ -1343,6 +1373,7 @@ export const NotebookNavigatorComponent = React.memo(
                         ref={listPaneRef}
                         rootContainerRef={containerRef}
                         folderDecorationModel={folderDecorationModel}
+                        fileItemPillDecorationModel={fileItemPillDecorationModel}
                         onSearchTokensChange={handleSearchTokensChange}
                         onNavigateToFolder={navigateToFolder}
                         onRevealTag={revealTag}

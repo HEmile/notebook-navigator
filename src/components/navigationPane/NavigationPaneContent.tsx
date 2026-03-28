@@ -71,8 +71,9 @@ import type { CombinedNavigationItem } from '../../types/virtualization';
 import { NavigationPaneItemRenderer } from './NavigationPaneItemRenderer';
 import { NavigationPaneLayout } from './NavigationPaneLayout';
 import type { NavigationPaneRowContext } from './NavigationPaneItemRenderer.types';
-import type { FolderNavigationSourceState } from '../../hooks/useFolderNavigationSourceState';
 import type { NavigationRainbowState } from '../../hooks/useNavigationRainbowState';
+import type { NavigationPaneSourceState } from '../../hooks/navigationPane/data/useNavigationPaneSourceState';
+import type { NavigationPaneTreeSectionsResult } from '../../hooks/navigationPane/data/useNavigationPaneTreeSections';
 import type { FolderDecorationModel } from '../../utils/folderDecoration';
 
 const EMPTY_INDENT_GUIDE_MAP = new Map<string, number[]>();
@@ -89,7 +90,8 @@ interface NavigationPaneProps {
     style?: React.CSSProperties;
     uiScale: number;
     rootContainerRef: React.RefObject<HTMLDivElement | null>;
-    folderNavigationSource: FolderNavigationSourceState;
+    navigationSourceState: NavigationPaneSourceState;
+    navigationTreeSections: NavigationPaneTreeSectionsResult;
     folderDecorationModel: FolderDecorationModel;
     navRainbowState: NavigationRainbowState;
     searchNavFilters?: SearchNavFilterState;
@@ -366,9 +368,9 @@ export const NavigationPane = React.memo(
             navigationBannerPath
         } = useNavigationPaneData({
             settings,
-            activeProfile,
             isVisible,
-            folderNavigationSource: props.folderNavigationSource,
+            sourceState: props.navigationSourceState,
+            treeSections: props.navigationTreeSections,
             folderDecorationModel: props.folderDecorationModel,
             navRainbowState: props.navRainbowState,
             shortcutsExpanded: shortcuts.shortcutsExpanded,

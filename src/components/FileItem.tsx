@@ -69,6 +69,7 @@ import type { InclusionOperator } from '../utils/filterSearch';
 import { getNavigatorPinContext } from '../utils/selectionUtils';
 import { resolveDefaultDateField } from '../utils/sortUtils';
 import type { FileNameIconNeedle } from '../utils/fileIconUtils';
+import type { FileItemPillDecorationModel } from '../utils/fileItemPillDecoration';
 import type { HiddenTagVisibility } from '../utils/tagPrefixMatcher';
 import { useFileItemContentState, type FileItemContentDb } from './fileItem/useFileItemContentState';
 import { useFileItemPills } from './fileItem/useFileItemPills';
@@ -114,6 +115,7 @@ interface FileItemProps {
     shortcutKey?: string;
     onToggleNoteShortcut: (file: TFile, shortcutKey: string | undefined) => Promise<void>;
     folderDecorationModel: FolderDecorationModel;
+    fileItemPillDecorationModel: FileItemPillDecorationModel;
 }
 
 export interface FileItemStorageHelpers {
@@ -328,7 +330,8 @@ export const FileItem = React.memo(function FileItem({
     fileItemStorage,
     shortcutKey,
     onToggleNoteShortcut,
-    folderDecorationModel
+    folderDecorationModel,
+    fileItemPillDecorationModel
 }: FileItemProps) {
     // === Hooks (all hooks together at the top) ===
     const { app, isMobile, plugin, commandQueue, tagOperations } = useServices();
@@ -511,7 +514,8 @@ export const FileItem = React.memo(function FileItem({
         visibleNavigationPropertyKeys,
         hiddenTagVisibility,
         onModifySearchWithTag,
-        onModifySearchWithProperty
+        onModifySearchWithProperty,
+        fileItemPillDecorationModel
     });
 
     // Format display date based on current sort

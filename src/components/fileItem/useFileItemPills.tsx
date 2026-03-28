@@ -39,6 +39,11 @@ import {
     normalizePropertyTreeValuePath
 } from '../../utils/propertyTree';
 import type { HiddenTagVisibility } from '../../utils/tagPrefixMatcher';
+import {
+    resolveFileItemPropertyDecorationColors,
+    resolveFileItemTagDecorationColors,
+    type FileItemPillDecorationModel
+} from '../../utils/fileItemPillDecoration';
 import { ServiceIcon } from '../ServiceIcon';
 
 type PropertyPill = {
@@ -69,6 +74,7 @@ export interface UseFileItemPillsParams {
     hiddenTagVisibility: HiddenTagVisibility;
     onModifySearchWithTag?: (tag: string, operator: InclusionOperator) => void;
     onModifySearchWithProperty?: (key: string, value: string | null, operator: InclusionOperator) => void;
+    fileItemPillDecorationModel: FileItemPillDecorationModel;
 }
 
 export interface FileItemPillsState {
@@ -169,7 +175,8 @@ export function useFileItemPills({
     visibleNavigationPropertyKeys,
     hiddenTagVisibility,
     onModifySearchWithTag,
-    onModifySearchWithProperty
+    onModifySearchWithProperty,
+    fileItemPillDecorationModel
 }: UseFileItemPillsParams): FileItemPillsState {
     const { app, isMobile } = useServices();
     const metadataService = useMetadataService();
@@ -275,14 +282,31 @@ export function useFileItemPills({
 
         const entries = new Map<string, { color?: string; background?: string }>();
         visibleTags.forEach(tag => {
-            const data = getTagColorData(tag);
-            if (data.color || data.background) {
-                entries.set(tag, data);
+            const tagColorData = getTagColorData(tag);
+            const resolved = resolveFileItemTagDecorationColors({
+                model: fileItemPillDecorationModel,
+                tagPath: tag,
+                color: tagColorData.color,
+                backgroundColor: tagColorData.background
+            });
+            if (resolved.color || resolved.backgroundColor) {
+                entries.set(tag, {
+                    color: resolved.color,
+                    background: resolved.backgroundColor
+                });
             }
         });
 
         return entries;
-    }, [getTagColorData, settings.colorFileTags, settings.inheritTagColors, settings.tagBackgroundColors, settings.tagColors, visibleTags]);
+    }, [
+        fileItemPillDecorationModel,
+        getTagColorData,
+        settings.colorFileTags,
+        settings.inheritTagColors,
+        settings.tagBackgroundColors,
+        settings.tagColors,
+        visibleTags
+    ]);
 
     const categorizedTags = useMemo(() => {
         if (visibleTags.length === 0) {
@@ -375,8 +399,12 @@ export function useFileItemPills({
                 continue;
             }
 
-            const rawValueNodeId = buildPropertyValueNodeId(entry.fieldKey, rawValue);
-            const valueNodeId = normalizePropertyNodeId(rawValueNodeId) ?? rawValueNodeId;
+            const normalizedValuePath = normalizePropertyTreeValuePath(rawValue);
+            const isKeyOnlyValue = entry.valueKind === 'boolean' ? false : isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
+            const rawPropertyNodeId = isKeyOnlyValue
+                ? buildPropertyKeyNodeId(entry.fieldKey)
+                : buildPropertyValueNodeId(entry.fieldKey, normalizedValuePath);
+            const valueNodeId = normalizePropertyNodeId(rawPropertyNodeId) ?? rawPropertyNodeId;
             if (!seenValueNodeIds.has(valueNodeId)) {
                 seenValueNodeIds.add(valueNodeId);
                 signatures.push(`v:${valueNodeId}\u0000${colorRecord?.[valueNodeId] ?? ''}\u0000${backgroundRecord?.[valueNodeId] ?? ''}`);
@@ -462,16 +490,6 @@ export function useFileItemPills({
             const isKeyOnlyValue = entry.valueKind === 'boolean' ? false : isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
             const linkTarget = isKeyOnlyValue ? null : parsePropertyLinkTarget(rawValue);
             const label = linkTarget ? linkTarget.displayText : rawValue;
-
-            const cacheKey = `${entry.fieldKey}\u0000${rawValue}`;
-            let colorData = colorLookupCache.get(cacheKey);
-            if (!colorData) {
-                colorData = settings.colorFileProperties
-                    ? metadataService.getPropertyColorData(buildPropertyValueNodeId(entry.fieldKey, rawValue))
-                    : {};
-                colorLookupCache.set(cacheKey, colorData);
-            }
-
             const propertyNodeId = (() => {
                 if (!trimmedFieldKey) {
                     return undefined;
@@ -482,6 +500,27 @@ export function useFileItemPills({
                     : buildPropertyValueNodeId(trimmedFieldKey, normalizedValuePath);
                 return normalizePropertyNodeId(rawPropertyNodeId) ?? rawPropertyNodeId;
             })();
+
+            const cacheKey = propertyNodeId ?? `${entry.fieldKey}\u0000${rawValue}`;
+            let colorData = colorLookupCache.get(cacheKey);
+            if (!colorData) {
+                if (settings.colorFileProperties && propertyNodeId) {
+                    const baseColorData = metadataService.getPropertyColorData(propertyNodeId);
+                    const resolved = resolveFileItemPropertyDecorationColors({
+                        model: fileItemPillDecorationModel,
+                        nodeId: propertyNodeId,
+                        color: baseColorData.color,
+                        backgroundColor: baseColorData.background
+                    });
+                    colorData = {
+                        color: resolved.color,
+                        background: resolved.backgroundColor
+                    };
+                } else {
+                    colorData = {};
+                }
+                colorLookupCache.set(cacheKey, colorData);
+            }
 
             const parsedPropertyNode = propertyNodeId ? parsePropertyNodeId(propertyNodeId) : null;
             const propertyKeyNodeId = propertyNodeId
@@ -538,6 +577,7 @@ export function useFileItemPills({
         return pills;
     }, [
         canShowPropertyPills,
+        fileItemPillDecorationModel,
         metadataService,
         propertyColorSignature,
         settings.colorFileProperties,
