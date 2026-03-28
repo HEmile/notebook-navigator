@@ -280,6 +280,38 @@ describe('fileFinder getFilesForTag', () => {
 
         expect(files.map(file => file.path)).toEqual([childTagFile.path, rootTagFile.path]);
     });
+
+    it('skips tag ordering work when orderResults is disabled', () => {
+        const rootTagFile = createTestTFile('notes/root.md');
+        rootTagFile.stat.mtime = 20;
+        rootTagFile.stat.ctime = 20;
+        setFileTags(rootTagFile, ['projects']);
+
+        const childTagFile = createTestTFile('notes/child.md');
+        childTagFile.stat.mtime = 10;
+        childTagFile.stat.ctime = 10;
+        setFileTags(childTagFile, ['projects/client']);
+
+        const settings = createSettings();
+        settings.filterPinnedByFolder = true;
+        settings.pinnedNotes = {
+            [childTagFile.path]: { folder: false, tag: true, property: false }
+        };
+
+        const app = createAppWithFiles([rootTagFile, childTagFile]);
+        const projectsNode = createTagNode('projects', 'Projects');
+        const tagTreeService = createTagTreeService({
+            hasNodes: () => true,
+            findTagNode: () => projectsNode,
+            collectTagFilePaths: () => [rootTagFile.path, childTagFile.path]
+        });
+
+        const files = getFilesForTag('projects', settings, { includeDescendantNotes: true, showHiddenItems: false }, app, tagTreeService, {
+            orderResults: false
+        });
+
+        expect(files.map(file => file.path)).toEqual([rootTagFile.path, childTagFile.path]);
+    });
 });
 
 describe('fileFinder getFilesForProperty', () => {

@@ -1779,6 +1779,10 @@ export const STRINGS_DE = {
                 name: 'Ungetaggte Notizen anzeigen',
                 desc: '"Ohne Tag" für Notizen ohne Tags anzeigen.'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Tags nach Auswahl filtern',
+                desc: 'Nur Tags anzeigen, die in Notizen im ausgewählten Ordner oder der ausgewählten Eigenschaft vorkommen.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Tags-Eigenschaft nach Entfernen des letzten Tags beibehalten',
                 desc: 'Behält die Tags-Frontmatter-Eigenschaft, wenn alle Tags entfernt werden. Wenn deaktiviert, wird die Tags-Eigenschaft aus dem Frontmatter gelöscht.'

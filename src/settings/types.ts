@@ -417,6 +417,7 @@ export interface NotebookNavigatorSettings {
     showTagIcons: boolean;
     showAllTagsFolder: boolean;
     showUntagged: boolean;
+    scopeTagsToCurrentContext: boolean;
     tagSortOrder: TagSortOrder;
     inheritTagColors: boolean;
     keepEmptyTagsProperty: boolean;

@@ -108,7 +108,7 @@ interface NavigationPaneProps {
 
 export const NavigationPane = React.memo(
     forwardRef<NavigationPaneHandle, NavigationPaneProps>(function NavigationPane(props, ref) {
-        const { app, isMobile, plugin, tagTreeService, propertyTreeService } = useServices();
+        const { app, isMobile, plugin, propertyTreeService } = useServices();
         const commandQueue = useCommandQueue();
         const metadataService = useMetadataService();
         const expansionState = useExpansionState();
@@ -393,9 +393,8 @@ export const NavigationPane = React.memo(
             selectionState,
             selectionDispatch,
             uiDispatch,
-            tagTreeService,
             propertyTreeService,
-            tagTree: fileData.tagTree,
+            tagTree: props.navigationTreeSections.renderTagTree,
             propertyTree: fileData.propertyTree,
             tagsVirtualFolderHasChildren,
             setShortcutsExpanded: shortcuts.setShortcutsExpanded,

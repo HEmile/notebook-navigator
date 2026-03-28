@@ -67,6 +67,10 @@ interface PinnedDisplayScope {
     restrictToFolderPath?: string;
 }
 
+interface NavigationFileQueryOptions {
+    orderResults?: boolean;
+}
+
 function matchesPathSelection(candidatePath: string, selectedPath: string, includeDescendants: boolean): boolean {
     if (candidatePath === selectedPath) {
         return true;
@@ -374,7 +378,8 @@ export function getFilesForFolder(
     folder: TFolder,
     settings: NotebookNavigatorSettings,
     visibility: VisibilityPreferences,
-    app: App
+    app: App,
+    options?: NavigationFileQueryOptions
 ): TFile[] {
     const files: TFile[] = [];
     const excludedFolderPatterns = getActiveHiddenFolders(settings);
@@ -459,6 +464,10 @@ export function getFilesForFolder(
         });
     }
 
+    if (options?.orderResults === false) {
+        return allFiles;
+    }
+
     const sortOption = getEffectiveSortOption(settings, 'folder', folder);
     sortNavigationFiles(allFiles, settings, app, sortOption);
 
@@ -479,7 +488,8 @@ export function getFilesForTag(
     settings: NotebookNavigatorSettings,
     visibility: VisibilityPreferences,
     app: App,
-    tagTreeService: ITagTreeProvider | null
+    tagTreeService: ITagTreeProvider | null,
+    options?: NavigationFileQueryOptions
 ): TFile[] {
     const hiddenTags = getActiveHiddenTags(settings);
     const hiddenFileTags = getActiveHiddenFileTags(settings);
@@ -598,6 +608,10 @@ export function getFilesForTag(
         }
     }
 
+    if (options?.orderResults === false) {
+        return filteredFiles;
+    }
+
     const sortOption = getEffectiveSortOption(settings, 'tag', null, tag);
     sortNavigationFiles(filteredFiles, settings, app, sortOption);
 
@@ -616,7 +630,8 @@ export function getFilesForProperty(
     settings: NotebookNavigatorSettings,
     visibility: VisibilityPreferences,
     app: App,
-    propertyTreeService: IPropertyTreeProvider | null = null
+    propertyTreeService: IPropertyTreeProvider | null = null,
+    options?: NavigationFileQueryOptions
 ): TFile[] {
     const includesAnyProperty = propertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
     // Root properties selection includes every configured key that is enabled in either
@@ -755,6 +770,10 @@ export function getFilesForProperty(
             return false;
         });
     })();
+
+    if (options?.orderResults === false) {
+        return matchedFiles;
+    }
 
     const sortOption = getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, propertyNodeId);
     sortNavigationFiles(matchedFiles, settings, app, sortOption);

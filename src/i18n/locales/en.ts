@@ -1771,6 +1771,10 @@ export const STRINGS_EN = {
                 name: 'Show untagged notes',
                 desc: 'Display "Untagged" item for notes without any tags.'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Filter tags by selection',
+                desc: 'Only show tags that appear in notes within the selected folder or property.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Retain tags property after removing last tag',
                 desc: 'Keep the tags frontmatter property when all tags are removed. When disabled, the tags property is deleted from frontmatter.'

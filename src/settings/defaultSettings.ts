@@ -261,6 +261,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showTagIcons: true,
     showAllTagsFolder: true,
     showUntagged: true,
+    scopeTagsToCurrentContext: false,
     tagSortOrder: 'alpha-asc',
     inheritTagColors: true,
     keepEmptyTagsProperty: false,

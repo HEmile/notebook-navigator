@@ -1776,6 +1776,10 @@ export const STRINGS_KO = {
                 name: '태그 없는 노트 표시',
                 desc: '태그가 없는 노트에 대해 "태그 없음" 항목을 표시합니다.'
             },
+            scopeTagsToCurrentContext: {
+                name: '선택 항목으로 태그 필터링',
+                desc: '선택한 폴더 또는 속성 내 노트에 있는 태그만 표시합니다.'
+            },
             keepEmptyTagsProperty: {
                 name: '마지막 태그 제거 후 tags 속성 유지',
                 desc: '모든 태그가 제거될 때 frontmatter 의 tags 속성을 유지합니다. 비활성화하면 tags 속성이 frontmatter 에서 삭제됩니다.'

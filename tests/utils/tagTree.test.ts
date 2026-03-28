@@ -18,6 +18,8 @@
 import { describe, it, expect } from 'vitest';
 import {
     buildTagTreeFromDatabase,
+    buildTagTreeFromFilePaths,
+    clearNoteCountCache,
     findTagNode,
     collectTagFilePaths,
     collectAllTagPaths,
@@ -244,6 +246,56 @@ describe('tag tree ordering', () => {
         const childKeys = Array.from(groupNode?.children.keys() ?? []);
 
         expect(childKeys).toEqual(['group/tag01', 'group/tag1']);
+    });
+
+    it('preserves existing note count cache when cache reset is disabled', () => {
+        clearNoteCountCache();
+
+        const cachedNode: TagTreeNode = {
+            name: 'cached',
+            path: 'cached',
+            displayPath: 'cached',
+            children: new Map(),
+            notesWithTag: new Set(['one.md'])
+        };
+
+        expect(getTotalNoteCount(cachedNode)).toBe(1);
+        cachedNode.notesWithTag.add('two.md');
+
+        const db = createMockDb([{ path: 'notes/example.md', tags: ['#example'] }]);
+        buildTagTreeFromDatabase(db, undefined, undefined, [], false, false);
+
+        expect(getTotalNoteCount(cachedNode)).toBe(1);
+
+        clearNoteCountCache();
+        expect(getTotalNoteCount(cachedNode)).toBe(2);
+    });
+
+    it('builds a scoped tree from selected file paths without scanning the full database', () => {
+        const db = {
+            getFile: (path: string) => {
+                if (path === 'notes/alpha.md') {
+                    return createFileData(['#alpha']);
+                }
+                if (path === 'notes/untagged.md') {
+                    return createFileData([]);
+                }
+                if (path === 'notes/hidden.md') {
+                    return createFileData(['#hidden/private']);
+                }
+                return null;
+            },
+            forEachFile: () => {
+                throw new Error('full database scan should not run for scoped builds');
+            }
+        } as unknown as IndexedDBStorage;
+
+        const result = buildTagTreeFromFilePaths(db, ['notes/alpha.md', 'notes/untagged.md', 'notes/hidden.md'], ['hidden'], false, false);
+
+        expect(Array.from(result.tagTree.keys())).toEqual(['alpha', 'hidden']);
+        expect(result.tagged).toBe(1);
+        expect(result.untagged).toBe(1);
+        expect(result.hiddenRootTags.size).toBe(0);
     });
 });
 

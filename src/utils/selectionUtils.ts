@@ -85,6 +85,10 @@ export interface NavigationSelectionScope {
     selectedProperty?: SelectionState['selectedProperty'];
 }
 
+interface NavigationSelectionOptions {
+    orderResults?: boolean;
+}
+
 export function getNavigatorPinContext(selectionType: NavigationSelectionScope['selectionType']): NavigatorContext {
     if (selectionType === ItemType.TAG) {
         return ItemType.TAG;
@@ -103,16 +107,17 @@ export function getFilesForNavigationSelection(
     visibility: VisibilityPreferences,
     app: App,
     tagTreeService: ITagTreeProvider | null,
-    propertyTreeService: IPropertyTreeProvider | null
+    propertyTreeService: IPropertyTreeProvider | null,
+    options?: NavigationSelectionOptions
 ): TFile[] {
     if (selectionScope.selectionType === ItemType.FOLDER && selectionScope.selectedFolder) {
-        return getFilesForFolder(selectionScope.selectedFolder, settings, visibility, app);
+        return getFilesForFolder(selectionScope.selectedFolder, settings, visibility, app, options);
     }
     if (selectionScope.selectionType === ItemType.TAG && selectionScope.selectedTag) {
-        return getFilesForTag(selectionScope.selectedTag, settings, visibility, app, tagTreeService);
+        return getFilesForTag(selectionScope.selectedTag, settings, visibility, app, tagTreeService, options);
     }
     if (selectionScope.selectionType === ItemType.PROPERTY && selectionScope.selectedProperty) {
-        return getFilesForProperty(selectionScope.selectedProperty, settings, visibility, app, propertyTreeService);
+        return getFilesForProperty(selectionScope.selectedProperty, settings, visibility, app, propertyTreeService, options);
     }
     return [];
 }

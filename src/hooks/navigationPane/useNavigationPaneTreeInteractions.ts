@@ -22,7 +22,6 @@ import { App, TFolder } from 'obsidian';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { CommandQueueService } from '../../services/CommandQueueService';
 import type { PropertyTreeService } from '../../services/PropertyTreeService';
-import type { TagTreeService } from '../../services/TagTreeService';
 import type { ExpansionAction } from '../../context/ExpansionContext';
 import type { SelectionAction, SelectionState } from '../../context/SelectionContext';
 import type { UIAction } from '../../context/UIStateContext';
@@ -69,7 +68,6 @@ interface UseNavigationPaneTreeInteractionsProps {
     selectionState: SelectionState;
     selectionDispatch: Dispatch<SelectionAction>;
     uiDispatch: Dispatch<UIAction>;
-    tagTreeService: TagTreeService | null;
     propertyTreeService: PropertyTreeService | null;
     tagTree: Map<string, TagTreeNode>;
     propertyTree: Map<string, PropertyTreeNode>;
@@ -111,7 +109,6 @@ export function useNavigationPaneTreeInteractions({
     selectionState,
     selectionDispatch,
     uiDispatch,
-    tagTreeService,
     propertyTreeService,
     tagTree,
     propertyTree,
@@ -300,10 +297,6 @@ export function useNavigationPaneTreeInteractions({
 
     const getAllDescendantTags = useCallback(
         (tagPath: string): string[] => {
-            if (tagTreeService) {
-                return Array.from(tagTreeService.collectDescendantTagPaths(tagPath));
-            }
-
             const descendants: string[] = [];
             const tagNode = findTagNode(tagTree, tagPath);
             if (!tagNode) {
@@ -320,7 +313,7 @@ export function useNavigationPaneTreeInteractions({
             collectDescendants(tagNode);
             return descendants;
         },
-        [tagTree, tagTreeService]
+        [tagTree]
     );
 
     const getAllPropertyNodeIds = useCallback((): string[] => {

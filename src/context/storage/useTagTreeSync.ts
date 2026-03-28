@@ -25,7 +25,6 @@ import { getDBInstance } from '../../storage/fileOperations';
 import type { StorageFileData } from './storageFileData';
 import type { TagTreeNode } from '../../types/storage';
 import { buildTagTreeFromDatabase } from '../../utils/tagTree';
-import { clearNoteCountCache } from '../../utils/tagTree';
 import type { NotebookNavigatorSettings } from '../../settings';
 import type { FileVisibility } from '../../utils/fileTypeUtils';
 
@@ -120,8 +119,6 @@ export function useTagTreeSync(params: {
             hiddenTagsRef.current,
             showHiddenItems
         );
-
-        clearNoteCountCache();
 
         setFileData(previous => ({ ...previous, tagTree, tagged, untagged, hiddenRootTags }));
 

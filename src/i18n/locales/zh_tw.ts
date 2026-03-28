@@ -1770,6 +1770,10 @@ export const STRINGS_ZH_TW = {
                 name: '顯示無標籤筆記',
                 desc: '為沒有任何標籤的筆記顯示「無標籤」項目。'
             },
+            scopeTagsToCurrentContext: {
+                name: '依選擇篩選標籤',
+                desc: '僅顯示所選資料夾或屬性中筆記包含的標籤。'
+            },
             keepEmptyTagsProperty: {
                 name: '刪除最後一個標籤後保留 tags 屬性',
                 desc: '當所有標籤被刪除時保留 frontmatter 中的 tags 屬性。停用時，tags 屬性將從 frontmatter 中刪除。'

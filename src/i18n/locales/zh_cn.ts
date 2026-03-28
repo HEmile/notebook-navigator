@@ -1770,6 +1770,10 @@ export const STRINGS_ZH_CN = {
                 name: '显示无标签笔记',
                 desc: '为没有任何标签的笔记显示"无标签"项目。'
             },
+            scopeTagsToCurrentContext: {
+                name: '按选择筛选标签',
+                desc: '仅显示所选文件夹或属性中笔记包含的标签。'
+            },
             keepEmptyTagsProperty: {
                 name: '删除最后一个标签后保留 tags 属性',
                 desc: '当所有标签被删除时保留 frontmatter 中的 tags 属性。禁用时,tags 属性将从 frontmatter 中删除。'

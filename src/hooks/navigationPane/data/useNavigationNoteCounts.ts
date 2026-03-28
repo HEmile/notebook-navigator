@@ -23,7 +23,7 @@ import type { CombinedNavigationItem } from '../../../types/virtualization';
 import type { NoteCountInfo } from '../../../types/noteCounts';
 import type { NotebookNavigatorSettings } from '../../../settings/types';
 import type { FileVisibility } from '../../../utils/fileTypeUtils';
-import { getTotalNoteCount } from '../../../utils/tagTree';
+import { createTagNoteCountInfo } from '../../../utils/tagTree';
 import { createFrontmatterPropertyExclusionMatcher, type HiddenFileNameMatcher } from '../../../utils/fileFilters';
 import { createHiddenTagVisibility } from '../../../utils/tagPrefixMatcher';
 import { getDBInstanceOrNull } from '../../../storage/fileOperations';
@@ -114,15 +114,11 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
             }
 
             const tagNode = item.data;
-            const current = tagNode.notesWithTag.size;
-            if (includeDescendantNotes) {
-                const total = getTotalNoteCount(tagNode);
-                const descendants = Math.max(total - current, 0);
-                counts.set(tagNode.path, { current, descendants, total });
+            if (item.noteCount) {
+                counts.set(tagNode.path, item.noteCount);
                 return;
             }
-
-            counts.set(tagNode.path, { current, descendants: 0, total: current });
+            counts.set(tagNode.path, createTagNoteCountInfo(tagNode, includeDescendantNotes));
         });
 
         return counts;

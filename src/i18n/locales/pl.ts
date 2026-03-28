@@ -1781,6 +1781,10 @@ export const STRINGS_PL = {
                 name: 'Pokaż nieotagowane notatki',
                 desc: 'Nieotagowane notatki zawierają etykietę "Bez tagów".'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Filtruj tagi według wyboru',
+                desc: 'Pokaż tylko tagi występujące w notatkach w wybranym folderze lub właściwości.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Zachowaj atrybut tags po usunięciu ostatniego tagu',
                 desc: 'Zachowuje atrybut tags, gdy wszystkie tagi zostaną usunięte. Gdy wyłączone, atrybut tags również zostanie usunięty.'

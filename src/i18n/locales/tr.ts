@@ -1777,6 +1777,10 @@ export const STRINGS_TR = {
                 name: 'Etiketsiz notları göster',
                 desc: 'Etiketi olmayan notlar için "Etiketsiz" öğesini görüntüle.'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Etiketleri seçime göre filtrele',
+                desc: 'Yalnızca seçili klasör veya özellikteki notlarda bulunan etiketleri göster.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Son etiket kaldırıldıktan sonra tags özelliğini koru',
                 desc: "Tüm etiketler kaldırıldığında tags frontmatter özelliğini koru. Devre dışı bırakıldığında, tags özelliği frontmatter'dan silinir."

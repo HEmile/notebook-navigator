@@ -1782,6 +1782,10 @@ export const STRINGS_PT_BR = {
                 name: 'Mostrar notas sem tags',
                 desc: 'Exibir item "Sem tags" para notas sem tags.'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Filtrar tags por seleção',
+                desc: 'Mostrar apenas tags que aparecem em notas na pasta ou propriedade selecionada.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Manter propriedade de tags após remover última tag',
                 desc: 'Manter a propriedade de tags do frontmatter quando todas as tags forem removidas. Quando desativado, a propriedade de tags é excluída do frontmatter.'

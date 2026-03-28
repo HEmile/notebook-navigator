@@ -442,6 +442,25 @@ export function showNavigationSectionContextMenu({
         hasActions = true;
     }
 
+    if (isTagSection) {
+        if (hasActions) {
+            menu.addSeparator();
+        }
+
+        menu.addItem(item => {
+            item.setTitle(strings.settings.items.scopeTagsToCurrentContext.name)
+                .setIcon('lucide-filter')
+                .setChecked(plugin.settings.scopeTagsToCurrentContext)
+                .onClick(() => {
+                    runAsyncAction(async () => {
+                        plugin.settings.scopeTagsToCurrentContext = !plugin.settings.scopeTagsToCurrentContext;
+                        await plugin.saveSettingsAndUpdate();
+                    });
+                });
+        });
+        hasActions = true;
+    }
+
     if (isTagSection || isPropertySection) {
         if (hasActions) {
             menu.addSeparator();

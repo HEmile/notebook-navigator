@@ -24,7 +24,7 @@ import { strings } from '../../i18n';
 import type { FileVisibility } from '../../utils/fileTypeUtils';
 import { getFolderNoteDetectionSettings } from '../../utils/folderNotes';
 import { calculateFolderNoteCounts } from '../../utils/noteCountUtils';
-import { findTagNode, getTotalNoteCount } from '../../utils/tagTree';
+import { createTagNoteCountInfo, findTagNode } from '../../utils/tagTree';
 import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../types';
 import { resolvePropertyTreeNode, getDirectPropertyKeyNoteCount, getTotalPropertyNoteCount } from '../../utils/propertyTree';
 import { getPathBaseName } from '../../utils/pathUtils';
@@ -173,14 +173,7 @@ export function useNavigationPaneShortcutDisplay({
                 return ZERO_NOTE_COUNT;
             }
 
-            const current = tagNode.notesWithTag.size;
-            if (!includeDescendantNotes) {
-                return { current, descendants: 0, total: current };
-            }
-
-            const total = getTotalNoteCount(tagNode);
-            const descendants = Math.max(total - current, 0);
-            return { current, descendants, total };
+            return createTagNoteCountInfo(tagNode, includeDescendantNotes);
         },
         [getTagCounts, includeDescendantNotes, settings.showNoteCount, tagTree]
     );

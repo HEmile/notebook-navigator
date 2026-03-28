@@ -1778,6 +1778,10 @@ export const STRINGS_VI = {
                 name: 'Hiện ghi chú không có thẻ',
                 desc: 'Hiển thị mục "Không có thẻ" cho ghi chú không có thẻ nào.'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Lọc thẻ theo lựa chọn',
+                desc: 'Chỉ hiển thị thẻ xuất hiện trong ghi chú thuộc thư mục hoặc thuộc tính đã chọn.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Giữ thuộc tính tags sau khi gỡ thẻ cuối',
                 desc: 'Giữ thuộc tính tags frontmatter khi tất cả thẻ bị gỡ. Khi tắt, thuộc tính tags bị xóa khỏi frontmatter.'

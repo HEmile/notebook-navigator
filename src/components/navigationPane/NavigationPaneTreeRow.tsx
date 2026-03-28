@@ -253,7 +253,7 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
                             });
                         }
                     }}
-                    countInfo={tagCounts.get(tagNode.path)}
+                    countInfo={item.noteCount ?? tagCounts.get(tagNode.path)}
                     showFileCount={settings.showNoteCount}
                 />
             );

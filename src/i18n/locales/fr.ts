@@ -1782,6 +1782,10 @@ export const STRINGS_FR = {
                 name: 'Afficher les notes sans étiquette',
                 desc: 'Afficher l\'élément "Sans étiquette" pour les notes sans aucune étiquette.'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Filtrer les étiquettes par sélection',
+                desc: 'Afficher uniquement les étiquettes présentes dans les notes du dossier ou de la propriété sélectionnée.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Conserver la propriété tags après suppression de la dernière étiquette',
                 desc: 'Conserve la propriété tags dans le frontmatter lorsque toutes les étiquettes sont supprimées. Si désactivé, la propriété tags est supprimée du frontmatter.'

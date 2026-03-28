@@ -1776,6 +1776,10 @@ export const STRINGS_IT = {
                 name: 'Mostra note senza tag',
                 desc: 'Visualizza elemento "Senza tag" per note senza alcun tag.'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Filtra tag per selezione',
+                desc: 'Mostra solo i tag presenti nelle note nella cartella o proprietà selezionata.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Mantieni proprietà tags dopo rimozione ultimo tag',
                 desc: 'Mantieni la proprietà tags frontmatter quando tutti i tag sono rimossi. Quando disabilitato, la proprietà tags è eliminata dal frontmatter.'

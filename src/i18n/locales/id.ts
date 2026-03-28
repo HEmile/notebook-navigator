@@ -1778,6 +1778,10 @@ export const STRINGS_ID = {
                 name: 'Tampilkan catatan tanpa tag',
                 desc: 'Tampilkan item "Tanpa tag" untuk catatan tanpa tag.'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Filter tag berdasarkan pilihan',
+                desc: 'Hanya tampilkan tag yang muncul di catatan dalam folder atau properti yang dipilih.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Pertahankan properti tag setelah menghapus tag terakhir',
                 desc: 'Pertahankan properti tag frontmatter saat semua tag dihapus. Saat dinonaktifkan, properti tag dihapus dari frontmatter.'

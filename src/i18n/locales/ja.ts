@@ -1777,6 +1777,10 @@ export const STRINGS_JA = {
                 name: 'タグなしノートを表示',
                 desc: 'タグのないノート用に「タグなし」項目を表示します。'
             },
+            scopeTagsToCurrentContext: {
+                name: '選択内容でタグを絞り込む',
+                desc: '選択したフォルダーまたはプロパティ内のノートに含まれるタグのみ表示します。'
+            },
             keepEmptyTagsProperty: {
                 name: '最後のタグを削除した後も tags プロパティを保持',
                 desc: 'すべてのタグが削除されても frontmatter の tags プロパティを保持します。無効にすると、tags プロパティは frontmatter から削除されます。'

@@ -78,9 +78,10 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.5.4',
-        date: '2026-03-23',
-        showOnUpdate: false,
+        date: '2026-03-30',
+        showOnUpdate: true,
         new: [
+            'New setting and menu option: ==Filter tags by selection==. Limits the tags section to tags that appear in notes within the selected folder or property.',
             '==Apply sort to descendants==, and ==Apply appearance to descendants== - two new menu options to apply the current sort or appearance setting to all subfolders, subtags, or property values.',
             'New commands: ==Navigate back== and ==Navigate forward==. Moves through recent folder, tag, and property selections in the navigator.'
         ],
@@ -88,11 +89,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
             'Calendar now follows the active daily note and switches to the matching month automatically.',
             'Calendar settings now warn when the weekly notes pattern uses ISO week tokens that override the locale first day of week.',
             'Improved list pane scroll performance by reducing repeated work in visible note rows.',
-            'Quick actions are now hidden while scrolling the list pane.',
+            'Quick actions are now hidden while scrolling the list pane.'
         ],
-        fixed: [
-            'Tag and property pills in the list pane now show rainbow colors.'
-        ]
+        fixed: ['Tag and property pills in the list pane now show rainbow colors.']
     },
     {
         version: '2.5.3',

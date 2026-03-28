@@ -192,6 +192,15 @@ export const NotebookNavigatorComponent = React.memo(
             removeShortcut,
             hydratedShortcuts
         } = useShortcuts();
+        const navigationSelectionScope = useMemo(
+            () => ({
+                selectionType: selectionState.selectionType,
+                selectedFolder: selectionState.selectedFolder,
+                selectedTag: selectionState.selectedTag,
+                selectedProperty: selectionState.selectedProperty
+            }),
+            [selectionState.selectedFolder, selectionState.selectedProperty, selectionState.selectedTag, selectionState.selectionType]
+        );
         const { stopAllProcessing, rebuildCache, fileData } = useFileCache();
         const { bannerNotice, markAsDisplayed } = useUpdateNotice();
         // Keep stable references to avoid stale closures in imperative handles
@@ -1314,11 +1323,15 @@ export const NotebookNavigatorComponent = React.memo(
             includeDescendantNotes: uxPreferences.includeDescendantNotes
         });
         const navigationTreeSections = useNavigationPaneTreeSections({
+            app,
             settings,
             expansionState,
             showHiddenItems: uxPreferences.showHiddenItems,
             includeDescendantNotes: uxPreferences.includeDescendantNotes,
-            sourceState: navigationSourceState
+            sourceState: navigationSourceState,
+            selectionScope: navigationSelectionScope,
+            tagTreeService,
+            propertyTreeService
         });
         const fileItemPillDecorationModel = useFileItemPillDecorationState({
             sourceState: navigationSourceState,

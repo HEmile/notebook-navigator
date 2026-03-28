@@ -1780,6 +1780,10 @@ export const STRINGS_NL = {
                 name: 'Notities zonder tags tonen',
                 desc: '"Zonder tags" item weergeven voor notities zonder tags.'
             },
+            scopeTagsToCurrentContext: {
+                name: 'Tags filteren op selectie',
+                desc: 'Alleen tags tonen die voorkomen in notities in de geselecteerde map of eigenschap.'
+            },
             keepEmptyTagsProperty: {
                 name: 'Tags-eigenschap behouden na verwijderen laatste tag',
                 desc: 'De tags frontmatter-eigenschap behouden wanneer alle tags worden verwijderd. Indien uitgeschakeld, wordt de tags-eigenschap verwijderd uit frontmatter.'

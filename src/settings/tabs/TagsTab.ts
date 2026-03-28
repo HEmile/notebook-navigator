@@ -109,6 +109,16 @@ export function renderTagsTab(context: SettingsTabContext): void {
         );
 
     new Setting(tagSubSettingsEl)
+        .setName(strings.settings.items.scopeTagsToCurrentContext.name)
+        .setDesc(strings.settings.items.scopeTagsToCurrentContext.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.scopeTagsToCurrentContext).onChange(async value => {
+                plugin.settings.scopeTagsToCurrentContext = value;
+                await plugin.saveSettingsAndUpdate();
+            })
+        );
+
+    new Setting(tagSubSettingsEl)
         .setName(strings.settings.items.keepEmptyTagsProperty.name)
         .setDesc(strings.settings.items.keepEmptyTagsProperty.desc)
         .addToggle(toggle =>

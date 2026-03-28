@@ -69,6 +69,7 @@ export interface TagTreeItem {
     level: number;
     path?: string;
     key: string;
+    noteCount?: NoteCountInfo;
     color?: string;
     backgroundColor?: string;
     icon?: string;
@@ -80,6 +81,7 @@ export interface UntaggedItem {
     data: TagTreeNode;
     level: number;
     key: string;
+    noteCount?: NoteCountInfo;
     color?: string;
     backgroundColor?: string;
     icon?: string;

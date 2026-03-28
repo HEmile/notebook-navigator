@@ -61,6 +61,7 @@ export interface UseNavigationPaneSourceStateParams {
 export interface NavigationPaneSourceState {
     effectiveFrontmatterExclusions: string[];
     hiddenFolders: string[];
+    hiddenTags: string[];
     hiddenFileProperties: string[];
     hiddenFileNames: string[];
     hiddenFileTags: string[];
@@ -245,6 +246,7 @@ export function useNavigationPaneSourceState({
         () => ({
             effectiveFrontmatterExclusions,
             hiddenFolders,
+            hiddenTags,
             hiddenFileProperties,
             hiddenFileNames,
             hiddenFileTags,
@@ -283,6 +285,7 @@ export function useNavigationPaneSourceState({
         [
             effectiveFrontmatterExclusions,
             hiddenFolders,
+            hiddenTags,
             hiddenFileProperties,
             hiddenFileNames,
             hiddenFileTags,
