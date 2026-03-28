@@ -1814,6 +1814,10 @@ export const STRINGS_IT = {
                 name: 'Mostra cartella proprietà',
                 desc: 'Visualizza "Proprietà" come cartella comprimibile.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Filtra proprietà per selezione',
+                desc: 'Mostra solo le proprietà presenti nelle note nella cartella o tag selezionato.'
+            },
             hiddenTags: {
                 name: 'Nascondi tag (profilo vault)',
                 desc: 'Lista di pattern tag separati da virgola. Pattern nome: tag* (inizia con), *tag (finisce con). Pattern percorso: archivio (tag e discendenti), archivio/* (solo discendenti), progetti/*/bozze (wildcard intermedio).',

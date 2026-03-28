@@ -82,6 +82,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         showOnUpdate: true,
         new: [
             'New setting and menu option: ==Filter tags by selection==. Limits the tags section to tags that appear in notes within the selected folder or property.',
+            'New setting and menu option: ==Filter properties by selection==. Limits the properties section to properties that appear in notes within the selected folder or tag.',
             '==Apply sort to descendants==, and ==Apply appearance to descendants== - two new menu options to apply the current sort or appearance setting to all subfolders, subtags, or property values.',
             'New commands: ==Navigate back== and ==Navigate forward==. Moves through recent folder, tag, and property selections in the navigator.'
         ],

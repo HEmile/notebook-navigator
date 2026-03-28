@@ -442,18 +442,27 @@ export function showNavigationSectionContextMenu({
         hasActions = true;
     }
 
-    if (isTagSection) {
+    if (isTagSection || isPropertySection) {
         if (hasActions) {
             menu.addSeparator();
         }
 
         menu.addItem(item => {
-            item.setTitle(strings.settings.items.scopeTagsToCurrentContext.name)
+            const title = isTagSection
+                ? strings.settings.items.scopeTagsToCurrentContext.name
+                : strings.settings.items.scopePropertiesToCurrentContext.name;
+            const checked = isTagSection ? plugin.settings.scopeTagsToCurrentContext : plugin.settings.scopePropertiesToCurrentContext;
+
+            item.setTitle(title)
                 .setIcon('lucide-filter')
-                .setChecked(plugin.settings.scopeTagsToCurrentContext)
+                .setChecked(checked)
                 .onClick(() => {
                     runAsyncAction(async () => {
-                        plugin.settings.scopeTagsToCurrentContext = !plugin.settings.scopeTagsToCurrentContext;
+                        if (isTagSection) {
+                            plugin.settings.scopeTagsToCurrentContext = !plugin.settings.scopeTagsToCurrentContext;
+                        } else {
+                            plugin.settings.scopePropertiesToCurrentContext = !plugin.settings.scopePropertiesToCurrentContext;
+                        }
                         await plugin.saveSettingsAndUpdate();
                     });
                 });

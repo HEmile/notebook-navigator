@@ -38,6 +38,7 @@ import { getDBInstanceOrNull } from '../../../storage/fileOperations';
 import type { NavigationSelectionScope } from '../../../utils/selectionUtils';
 import { getFilesForNavigationSelection } from '../../../utils/selectionUtils';
 import { buildTagTreeFromFilePaths, excludeFromTagTree } from '../../../utils/tagTree';
+import { buildPropertyTreeFromFilePaths, getTotalPropertyNoteCount } from '../../../utils/propertyTree';
 import {
     flattenFolderTree,
     flattenTagTree,
@@ -54,7 +55,6 @@ import {
     type TagComparator
 } from './navigationComparators';
 import type { NavigationPaneSourceState } from './useNavigationPaneSourceState';
-import { getTotalPropertyNoteCount } from '../../../utils/propertyTree';
 
 interface NavigationPaneTreeExpansionState {
     expandedFolders: Set<string>;
@@ -82,6 +82,8 @@ export interface NavigationPaneTreeSectionsResult {
     rootOrderingTagTree: Map<string, TagTreeNode>;
     resolvedRootTagKeys: string[];
     tagsVirtualFolderHasChildren: boolean;
+    renderPropertyTree: Map<string, PropertyTreeNode>;
+    rootOrderingPropertyTree: Map<string, PropertyTreeNode>;
     propertyItems: CombinedNavigationItem[];
     propertiesSectionActive: boolean;
     resolvedRootPropertyKeys: string[];
@@ -98,6 +100,15 @@ interface ScopedTagSectionSource {
     visibleTagTree: Map<string, TagTreeNode>;
     visibleTaggedCount: number;
     untaggedCount: number;
+}
+
+interface ResolvedRootPropertyOrdering {
+    rootNodeMap: Map<string, PropertyTreeNode>;
+    resolvedRootPropertyKeys: string[];
+}
+
+interface ScopedPropertySectionSource {
+    propertyTree: Map<string, PropertyTreeNode>;
 }
 
 function getEffectiveRootTagComparator(sourceState: Pick<NavigationPaneSourceState, 'tagComparator' | 'rootTagOrderMap'>): TagComparator {
@@ -164,6 +175,34 @@ function resolveRootTagOrdering(params: {
         rootNodeMap,
         resolvedRootTagKeys,
         hasVisibleTags: sortedRootNodes.length > 0
+    };
+}
+
+function getEffectiveRootPropertyComparator(
+    sourceState: Pick<NavigationPaneSourceState, 'propertyKeyComparator' | 'rootPropertyOrderMap'>
+): PropertyNodeComparator {
+    if (sourceState.rootPropertyOrderMap.size === 0) {
+        return sourceState.propertyKeyComparator;
+    }
+
+    return (a, b) => comparePropertyOrderWithFallback(a, b, sourceState.rootPropertyOrderMap, sourceState.propertyKeyComparator);
+}
+
+function resolveRootPropertyOrdering(params: {
+    propertyTree: Map<string, PropertyTreeNode>;
+    comparator: PropertyNodeComparator;
+}): ResolvedRootPropertyOrdering {
+    const rootNodes = Array.from(params.propertyTree.values());
+    const sortedRootNodes = rootNodes.length > 0 ? rootNodes.slice().sort(params.comparator) : rootNodes;
+    const rootNodeMap = new Map<string, PropertyTreeNode>();
+
+    sortedRootNodes.forEach(node => {
+        rootNodeMap.set(node.key, node);
+    });
+
+    return {
+        rootNodeMap,
+        resolvedRootPropertyKeys: sortedRootNodes.map(node => node.key)
     };
 }
 
@@ -534,31 +573,155 @@ export function useNavigationPaneTreeSections({
         sourceState.visibleTaggedCount
     ]);
 
+    const globalVisiblePropertyTree = useMemo(() => {
+        if (!settings.showProperties) {
+            return new Map<string, PropertyTreeNode>();
+        }
+
+        const visibleTree = new Map<string, PropertyTreeNode>();
+        sourceState.propertyTree.forEach((node, key) => {
+            if (!sourceState.visiblePropertyNavigationKeySet.has(node.key)) {
+                return;
+            }
+            visibleTree.set(key, node);
+        });
+        return visibleTree;
+    }, [settings.showProperties, sourceState.propertyTree, sourceState.visiblePropertyNavigationKeySet]);
+
+    const isScopedPropertyContextActive = useMemo(() => {
+        if (!settings.showProperties || !settings.scopePropertiesToCurrentContext) {
+            return false;
+        }
+
+        if (selectionScope.selectionType === ItemType.FOLDER) {
+            return Boolean(selectionScope.selectedFolder);
+        }
+
+        if (selectionScope.selectionType === ItemType.TAG) {
+            return Boolean(selectionScope.selectedTag);
+        }
+
+        return false;
+    }, [
+        selectionScope.selectedFolder,
+        selectionScope.selectedTag,
+        selectionScope.selectionType,
+        settings.scopePropertiesToCurrentContext,
+        settings.showProperties
+    ]);
+
+    const scopedPropertySectionSource = useMemo((): ScopedPropertySectionSource | null => {
+        void sourceState.fileChangeVersion;
+        void sourceState.metadataDecorationVersion;
+
+        if (!isScopedPropertyContextActive) {
+            return null;
+        }
+
+        const db = getDBInstanceOrNull();
+        if (!db) {
+            return null;
+        }
+
+        const scopedFiles = getFilesForNavigationSelection(
+            selectionScope,
+            settings,
+            { includeDescendantNotes, showHiddenItems },
+            app,
+            tagTreeService,
+            propertyTreeService,
+            { orderResults: false }
+        );
+        const scopedMarkdownPaths = scopedFiles.filter(file => file.extension === 'md').map(file => file.path);
+
+        if (sourceState.visiblePropertyNavigationKeySet.size === 0) {
+            return {
+                propertyTree: new Map<string, PropertyTreeNode>()
+            };
+        }
+
+        return {
+            propertyTree: buildPropertyTreeFromFilePaths(db, scopedMarkdownPaths, {
+                includedPropertyKeys: sourceState.visiblePropertyNavigationKeySet
+            })
+        };
+    }, [
+        app,
+        includeDescendantNotes,
+        isScopedPropertyContextActive,
+        propertyTreeService,
+        selectionScope,
+        settings,
+        showHiddenItems,
+        sourceState.fileChangeVersion,
+        sourceState.metadataDecorationVersion,
+        sourceState.visiblePropertyNavigationKeySet,
+        tagTreeService
+    ]);
+
+    const renderPropertyTree = useMemo(() => {
+        if (!settings.showProperties) {
+            return new Map<string, PropertyTreeNode>();
+        }
+        return scopedPropertySectionSource?.propertyTree ?? globalVisiblePropertyTree;
+    }, [globalVisiblePropertyTree, scopedPropertySectionSource, settings.showProperties]);
+
+    const effectiveRootPropertyComparator = useMemo(
+        () =>
+            getEffectiveRootPropertyComparator({
+                propertyKeyComparator: sourceState.propertyKeyComparator,
+                rootPropertyOrderMap: sourceState.rootPropertyOrderMap
+            }),
+        [sourceState.propertyKeyComparator, sourceState.rootPropertyOrderMap]
+    );
+
+    const globalRootPropertyOrdering = useMemo(() => {
+        if (!settings.showProperties) {
+            return {
+                rootNodeMap: new Map<string, PropertyTreeNode>(),
+                resolvedRootPropertyKeys: []
+            };
+        }
+
+        return resolveRootPropertyOrdering({
+            propertyTree: globalVisiblePropertyTree,
+            comparator: effectiveRootPropertyComparator
+        });
+    }, [effectiveRootPropertyComparator, globalVisiblePropertyTree, settings.showProperties]);
+
+    const renderRootPropertyOrdering = useMemo(() => {
+        if (!scopedPropertySectionSource) {
+            return globalRootPropertyOrdering;
+        }
+
+        return resolveRootPropertyOrdering({
+            propertyTree: renderPropertyTree,
+            comparator: effectiveRootPropertyComparator
+        });
+    }, [effectiveRootPropertyComparator, globalRootPropertyOrdering, renderPropertyTree, scopedPropertySectionSource]);
+
+    const rootOrderingPropertyTree = useMemo(() => globalRootPropertyOrdering.rootNodeMap, [globalRootPropertyOrdering.rootNodeMap]);
+    const resolvedRootPropertyKeys = useMemo(
+        () => globalRootPropertyOrdering.resolvedRootPropertyKeys,
+        [globalRootPropertyOrdering.resolvedRootPropertyKeys]
+    );
+
     const propertySectionBase = useMemo((): {
         propertiesSectionActive: boolean;
         keyNodes: PropertyTreeNode[];
         collectionCount: NoteCountInfo | undefined;
-        resolvedRootPropertyKeys: string[];
     } => {
         if (!settings.showProperties) {
             return {
                 propertiesSectionActive: false,
                 keyNodes: [],
-                collectionCount: undefined,
-                resolvedRootPropertyKeys: []
+                collectionCount: undefined
             };
         }
 
-        const keyNodes = Array.from(sourceState.propertyTree.values()).filter(node =>
-            sourceState.visiblePropertyNavigationKeySet.has(node.key)
-        );
-
-        const effectiveComparator: PropertyNodeComparator =
-            sourceState.rootPropertyOrderMap.size > 0
-                ? (a, b) => comparePropertyOrderWithFallback(a, b, sourceState.rootPropertyOrderMap, sourceState.propertyKeyComparator)
-                : sourceState.propertyKeyComparator;
-
-        keyNodes.sort(effectiveComparator);
+        const keyNodes = renderRootPropertyOrdering.resolvedRootPropertyKeys
+            .map(key => renderRootPropertyOrdering.rootNodeMap.get(key) ?? null)
+            .filter((node): node is PropertyTreeNode => node !== null);
 
         let collectionCount: NoteCountInfo | undefined;
         const shouldShowRootFolder = settings.showAllPropertiesFolder;
@@ -580,19 +743,15 @@ export function useNavigationPaneTreeSections({
         return {
             propertiesSectionActive: true,
             keyNodes,
-            collectionCount,
-            resolvedRootPropertyKeys: keyNodes.map(node => node.key)
+            collectionCount
         };
     }, [
         includeDescendantNotes,
+        renderRootPropertyOrdering,
         settings.showAllPropertiesFolder,
         settings.showNoteCount,
         settings.showProperties,
-        sourceState.hasRootPropertyShortcut,
-        sourceState.propertyKeyComparator,
-        sourceState.propertyTree,
-        sourceState.rootPropertyOrderMap,
-        sourceState.visiblePropertyNavigationKeySet
+        sourceState.hasRootPropertyShortcut
     ]);
 
     const { propertyItems, propertiesSectionActive } = useMemo((): {
@@ -700,9 +859,11 @@ export function useNavigationPaneTreeSections({
         rootOrderingTagTree,
         resolvedRootTagKeys,
         tagsVirtualFolderHasChildren,
+        renderPropertyTree,
+        rootOrderingPropertyTree,
         propertyItems,
         propertiesSectionActive,
-        resolvedRootPropertyKeys: propertySectionBase.resolvedRootPropertyKeys,
+        resolvedRootPropertyKeys,
         propertyCollectionCount: propertySectionBase.collectionCount
     };
 }

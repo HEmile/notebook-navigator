@@ -1808,6 +1808,10 @@ export const STRINGS_ZH_CN = {
                 name: '显示属性文件夹',
                 desc: '将"属性"显示为可折叠文件夹。'
             },
+            scopePropertiesToCurrentContext: {
+                name: '按选择筛选属性',
+                desc: '仅显示所选文件夹或标签中笔记包含的属性。'
+            },
             hiddenTags: {
                 name: '隐藏标签 (库配置)',
                 desc: '逗号分隔的标签模式列表。名称模式：tag*（以...开头）、*tag（以...结尾）。路径模式：archive（标签及其后代）、archive/*（仅后代）、projects/*/drafts（中间通配符）。',

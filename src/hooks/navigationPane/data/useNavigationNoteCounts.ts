@@ -48,7 +48,7 @@ export interface UseNavigationNoteCountsParams {
     includeDescendantNotes: boolean;
     visibleTaggedCount: number;
     untaggedCount: number;
-    propertyTree: Map<string, PropertyTreeNode>;
+    renderPropertyTree: Map<string, PropertyTreeNode>;
     propertyCollectionCount: NoteCountInfo | undefined;
     effectiveFrontmatterExclusions: string[];
     hiddenFolders: string[];
@@ -70,7 +70,7 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
         includeDescendantNotes,
         visibleTaggedCount,
         untaggedCount,
-        propertyTree,
+        renderPropertyTree,
         propertyCollectionCount,
         effectiveFrontmatterExclusions,
         hiddenFolders,
@@ -191,7 +191,7 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
                 return;
             }
 
-            const keyNode = propertyTree.get(node.key);
+            const keyNode = renderPropertyTree.get(node.key);
             if (!keyNode) {
                 counts.set(node.id, { current, descendants: 0, total: current });
                 return;
@@ -209,7 +209,7 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
         itemsWithMetadata,
         propertiesSectionActive,
         propertyCollectionCount,
-        propertyTree,
+        renderPropertyTree,
         settings.showNoteCount
     ]);
 

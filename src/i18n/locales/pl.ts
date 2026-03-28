@@ -1819,6 +1819,10 @@ export const STRINGS_PL = {
                 name: 'Pokaż folder atrybutów',
                 desc: 'Wyświetl "Atrybuty" jako zwijany folder.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Filtruj atrybuty według wyboru',
+                desc: 'Pokaż tylko atrybuty występujące w notatkach w wybranym folderze lub tagu.'
+            },
             hiddenTags: {
                 name: 'Ukryj tagi (profil sejfu)',
                 desc: 'Lista tagów rozdzielonych przecinkami. Format nazw: tag* (zaczynające się od), *tag (kończące się na). Format ścieżek: archiwum (tag i elementy podrzędne), archiwum/* (tylko elementy podrzędne), projekty/*/szkice (dowolne w środku).',

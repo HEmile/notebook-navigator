@@ -1808,6 +1808,10 @@ export const STRINGS_ZH_TW = {
                 name: '顯示屬性資料夾',
                 desc: '將「屬性」顯示為可摺疊資料夾。'
             },
+            scopePropertiesToCurrentContext: {
+                name: '依選擇篩選屬性',
+                desc: '僅顯示所選資料夾或標籤中筆記包含的屬性。'
+            },
             hiddenTags: {
                 name: '隱藏標籤（保險庫設定檔）',
                 desc: '逗號分隔的標籤模式列表。名稱模式：tag*（以...開頭）、*tag（以...結尾）。路徑模式：archive（標籤及其後代）、archive/*（僅後代）、projects/*/drafts（中間萬用字元）。',

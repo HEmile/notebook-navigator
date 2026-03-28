@@ -395,7 +395,7 @@ export const NavigationPane = React.memo(
             uiDispatch,
             propertyTreeService,
             tagTree: props.navigationTreeSections.renderTagTree,
-            propertyTree: fileData.propertyTree,
+            propertyTree: props.navigationTreeSections.renderPropertyTree,
             tagsVirtualFolderHasChildren,
             setShortcutsExpanded: shortcuts.setShortcutsExpanded,
             setRecentNotesExpanded: shortcuts.setRecentNotesExpanded,

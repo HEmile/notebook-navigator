@@ -1818,6 +1818,10 @@ export const STRINGS_ES = {
                 name: 'Mostrar carpeta de propiedades',
                 desc: 'Mostrar "Propiedades" como una carpeta desplegable.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Filtrar propiedades por selección',
+                desc: 'Mostrar solo propiedades que aparecen en notas dentro de la carpeta o etiqueta seleccionada.'
+            },
             hiddenTags: {
                 name: 'Ocultar etiquetas (perfil de bóveda)',
                 desc: 'Lista separada por comas de patrones de etiquetas. Patrones de nombre: tag* (empieza con), *tag (termina con). Patrones de ruta: archivo (etiqueta y descendientes), archivo/* (solo descendientes), proyectos/*/borradores (comodín intermedio).',

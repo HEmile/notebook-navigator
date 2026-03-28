@@ -1816,6 +1816,10 @@ export const STRINGS_ID = {
                 name: 'Tampilkan folder properti',
                 desc: 'Tampilkan "Properti" sebagai folder yang dapat dilipat.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Filter properti berdasarkan pilihan',
+                desc: 'Hanya tampilkan properti yang muncul di catatan dalam folder atau tag yang dipilih.'
+            },
             hiddenTags: {
                 name: 'Sembunyikan tag (profil vault)',
                 desc: 'Daftar pola tag yang dipisahkan koma. Pola nama: tag* (dimulai dengan), *tag (diakhiri dengan). Pola jalur: arsip (tag dan turunan), arsip/* (hanya turunan), proyek/*/draf (wildcard tengah).',

@@ -1818,6 +1818,10 @@ export const STRINGS_NL = {
                 name: 'Eigenschappenmap tonen',
                 desc: '"Eigenschappen" als een inklapbare map tonen.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Eigenschappen filteren op selectie',
+                desc: 'Alleen eigenschappen tonen die voorkomen in notities in de geselecteerde map of tag.'
+            },
             hiddenTags: {
                 name: 'Tags verbergen (kluisprofiel)',
                 desc: 'Kommagescheiden lijst van tagpatronen. Naampatronen: tag* (begint met), *tag (eindigt met). Padpatronen: archief (tag en afstammelingen), archief/* (alleen afstammelingen), projecten/*/concepten (wildcard in het midden).',

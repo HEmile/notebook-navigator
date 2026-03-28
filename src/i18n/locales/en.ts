@@ -1809,6 +1809,10 @@ export const STRINGS_EN = {
                 name: 'Show properties folder',
                 desc: 'Display "Properties" as a collapsible folder.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Filter properties by selection',
+                desc: 'Only show properties that appear in notes within the selected folder or tag.'
+            },
             hiddenTags: {
                 name: 'Hide tags (vault profile)',
                 desc: 'Comma-separated list of tag patterns. Name patterns: tag* (starting with), *tag (ending with). Path patterns: archive (tag and descendants), archive/* (descendants only), projects/*/drafts (mid-segment wildcard).',

@@ -348,4 +348,35 @@ describe('fileFinder getFilesForProperty', () => {
 
         expect(files.map(file => file.path)).toEqual([valueFile.path, keyOnlyFile.path]);
     });
+
+    it('skips property ordering work when orderResults is disabled', () => {
+        const keyOnlyFile = createTestTFile('notes/key-only.md');
+        keyOnlyFile.stat.mtime = 20;
+        keyOnlyFile.stat.ctime = 20;
+        setFileProperties(keyOnlyFile, [{ fieldKey: 'status', value: '', valueKind: 'string' }]);
+
+        const valueFile = createTestTFile('notes/value.md');
+        valueFile.stat.mtime = 10;
+        valueFile.stat.ctime = 10;
+        setFileProperties(valueFile, [{ fieldKey: 'status', value: 'work/anthropic', valueKind: 'string' }]);
+
+        const settings = createSettings();
+        setActivePropertyFields(settings, 'status');
+        settings.filterPinnedByFolder = true;
+        settings.pinnedNotes = {
+            [valueFile.path]: { folder: false, tag: false, property: true }
+        };
+
+        const app = createAppWithFiles([keyOnlyFile, valueFile]);
+        const files = getFilesForProperty(
+            buildPropertyKeyNodeId('status'),
+            settings,
+            { includeDescendantNotes: true, showHiddenItems: false },
+            app,
+            null,
+            { orderResults: false }
+        );
+
+        expect(files.map(file => file.path)).toEqual([keyOnlyFile.path, valueFile.path]);
+    });
 });

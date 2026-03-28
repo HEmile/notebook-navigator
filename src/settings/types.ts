@@ -428,6 +428,7 @@ export interface NotebookNavigatorSettings {
     inheritPropertyColors: boolean;
     propertySortOrder: TagSortOrder;
     showAllPropertiesFolder: boolean;
+    scopePropertiesToCurrentContext: boolean;
 
     // List pane tab
     defaultListMode: ListDisplayMode;

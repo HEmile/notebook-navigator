@@ -1815,6 +1815,10 @@ export const STRINGS_JA = {
                 name: 'プロパティフォルダを表示',
                 desc: '「プロパティ」を折りたたみ可能なフォルダとして表示します。'
             },
+            scopePropertiesToCurrentContext: {
+                name: '選択内容でプロパティを絞り込む',
+                desc: '選択したフォルダーまたはタグ内のノートに含まれるプロパティのみ表示します。'
+            },
             hiddenTags: {
                 name: 'タグを非表示 (ボルトプロファイル)',
                 desc: 'カンマ区切りのタグパターンリスト。名前パターン: tag*（で始まる）、*tag（で終わる）。パスパターン: archive（タグと子孫）、archive/*（子孫のみ）、projects/*/drafts（中間ワイルドカード）。',

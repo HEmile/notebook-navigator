@@ -1818,6 +1818,10 @@ export const STRINGS_PT = {
                 name: 'Mostrar pasta de propriedades',
                 desc: 'Exibir "Propriedades" como uma pasta recolhível.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Filtrar propriedades por seleção',
+                desc: 'Mostrar apenas propriedades que aparecem em notas na pasta ou etiqueta selecionada.'
+            },
             hiddenTags: {
                 name: 'Ocultar etiquetas (perfil do cofre)',
                 desc: 'Lista de padrões de etiquetas separados por vírgulas. Padrões de nome: tag* (começa com), *tag (termina com). Padrões de caminho: arquivo (etiqueta e descendentes), arquivo/* (apenas descendentes), projetos/*/rascunhos (curinga intermédio).',

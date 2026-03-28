@@ -19,9 +19,9 @@
 import React, { useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { App, TFolder } from 'obsidian';
+import type { IPropertyTreeProvider } from '../../interfaces/IPropertyTreeProvider';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { CommandQueueService } from '../../services/CommandQueueService';
-import type { PropertyTreeService } from '../../services/PropertyTreeService';
 import type { ExpansionAction } from '../../context/ExpansionContext';
 import type { SelectionAction, SelectionState } from '../../context/SelectionContext';
 import type { UIAction } from '../../context/UIStateContext';
@@ -68,7 +68,7 @@ interface UseNavigationPaneTreeInteractionsProps {
     selectionState: SelectionState;
     selectionDispatch: Dispatch<SelectionAction>;
     uiDispatch: Dispatch<UIAction>;
-    propertyTreeService: PropertyTreeService | null;
+    propertyTreeService: IPropertyTreeProvider | null;
     tagTree: Map<string, TagTreeNode>;
     propertyTree: Map<string, PropertyTreeNode>;
     tagsVirtualFolderHasChildren: boolean;
@@ -335,8 +335,9 @@ export function useNavigationPaneTreeInteractions({
 
     const getAllDescendantPropertyNodeIds = useCallback(
         (propertyNode: PropertyTreeNode): string[] => {
-            if (propertyTreeService) {
-                return Array.from(propertyTreeService.collectDescendantNodeIds(propertyNode.id));
+            const serviceNode = propertyTreeService?.findNode(propertyNode.id) ?? null;
+            if (serviceNode === propertyNode) {
+                return Array.from(propertyTreeService?.collectDescendantNodeIds(propertyNode.id) ?? []);
             }
 
             const descendants: string[] = [];

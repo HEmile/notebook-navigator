@@ -1814,6 +1814,10 @@ export const STRINGS_KO = {
                 name: '속성 폴더 표시',
                 desc: '"속성"을 접을 수 있는 폴더로 표시합니다.'
             },
+            scopePropertiesToCurrentContext: {
+                name: '선택 항목으로 속성 필터링',
+                desc: '선택한 폴더 또는 태그 내 노트에 있는 속성만 표시합니다.'
+            },
             hiddenTags: {
                 name: '태그 숨기기 (볼트 프로필)',
                 desc: '쉼표로 구분된 태그 패턴 목록입니다. 이름 패턴: tag* (시작), *tag (끝). 경로 패턴: archive (태그와 하위), archive/* (하위만), projects/*/drafts (중간 와일드카드).',

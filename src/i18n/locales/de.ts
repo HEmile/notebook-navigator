@@ -1817,6 +1817,10 @@ export const STRINGS_DE = {
                 name: 'Eigenschafts-Ordner anzeigen',
                 desc: '"Eigenschaften" als einklappbaren Ordner anzeigen.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Eigenschaften nach Auswahl filtern',
+                desc: 'Nur Eigenschaften anzeigen, die in Notizen im ausgewählten Ordner oder dem ausgewählten Tag vorkommen.'
+            },
             hiddenTags: {
                 name: 'Tags verstecken (Tresorprofil)',
                 desc: 'Kommagetrennte Liste von Tag-Mustern. Namensmuster: tag* (beginnt mit), *tag (endet mit). Pfadmuster: archiv (Tag und Untergeordnete), archiv/* (nur Untergeordnete), projekte/*/entwürfe (Platzhalter in der Mitte).',

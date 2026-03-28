@@ -1815,6 +1815,10 @@ export const STRINGS_TR = {
                 name: 'Özellikler klasörünü göster',
                 desc: '"Özellikler"i daraltılabilir klasör olarak görüntüle.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Özellikleri seçime göre filtrele',
+                desc: 'Yalnızca seçili klasör veya etiketteki notlarda bulunan özellikleri göster.'
+            },
             hiddenTags: {
                 name: 'Etiketleri gizle (kasa profili)',
                 desc: 'Virgülle ayrılmış etiket kalıpları listesi. Ad kalıpları: etiket* (ile başlayan), *etiket (ile biten). Yol kalıpları: arşiv (etiket ve alt öğeler), arşiv/* (yalnızca alt öğeler), projeler/*/taslaklar (ortada joker).',

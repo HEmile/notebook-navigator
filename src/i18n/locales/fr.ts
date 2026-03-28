@@ -1820,6 +1820,10 @@ export const STRINGS_FR = {
                 name: 'Afficher le dossier des propriétés',
                 desc: 'Afficher "Propriétés" comme un dossier repliable.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Filtrer les propriétés par sélection',
+                desc: 'Afficher uniquement les propriétés présentes dans les notes du dossier ou de l\'étiquette sélectionnée.'
+            },
             hiddenTags: {
                 name: 'Masquer les étiquettes (profil du coffre)',
                 desc: "Liste séparée par des virgules de motifs d'étiquettes. Motifs de nom : tag* (commence par), *tag (termine par). Motifs de chemin : archive (étiquette et descendants), archive/* (descendants uniquement), projets/*/brouillons (joker intermédiaire).",

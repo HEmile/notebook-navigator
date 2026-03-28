@@ -50,6 +50,10 @@ export interface PropertyTreeDatabaseLike {
     forEachFile: (callback: (path: string, fileData: FileData) => void) => void;
 }
 
+export interface PropertyTreeFileLookupDatabaseLike {
+    getFile: (path: string) => FileData | null;
+}
+
 type PropertyTreeFilePropertyEntry = NonNullable<FileData['properties']>[number];
 export type PropertyNodeSourceFile = { data: FileData };
 
@@ -834,6 +838,75 @@ export function parseStoredPropertySelectionNodeId(value: unknown): PropertySele
     return getSelectedPropertyNodeId(legacySelection);
 }
 
+function registerPropertyTreeEntry(
+    tree: Map<string, PropertyTreeNode>,
+    path: string,
+    propertyEntry: PropertyTreeFilePropertyEntry,
+    includedPropertyKeys: ReadonlySet<string>,
+    shouldFilterPropertyKeys: boolean
+): void {
+    const normalizedKey = normalizePropertyTreeKey(propertyEntry.fieldKey);
+    if (!normalizedKey) {
+        return;
+    }
+
+    if (shouldFilterPropertyKeys && !includedPropertyKeys.has(normalizedKey)) {
+        return;
+    }
+
+    const displayKey = propertyEntry.fieldKey.trim();
+    if (!displayKey) {
+        return;
+    }
+
+    let keyNode = tree.get(normalizedKey);
+    if (!keyNode) {
+        keyNode = {
+            id: buildPropertyKeyNodeId(normalizedKey),
+            kind: 'key',
+            key: normalizedKey,
+            valuePath: null,
+            name: displayKey,
+            displayPath: displayKey,
+            children: new Map(),
+            notesWithValue: new Set()
+        };
+        registerPropertyKeyDirectPaths(keyNode);
+        tree.set(normalizedKey, keyNode);
+    }
+
+    keyNode.notesWithValue.add(path);
+
+    const normalizedValuePath = normalizePropertyTreeValuePath(propertyEntry.value);
+    if (isPropertyTreeKeyOnlyValuePath(normalizedValuePath)) {
+        getOrBuildDirectPropertyKeyPaths(keyNode).add(path);
+        return;
+    }
+
+    const displayValuePath = normalizePropertyTreeDisplayValuePath(propertyEntry.value);
+    if (!displayValuePath) {
+        return;
+    }
+
+    const nodeId = buildPropertyValueNodeId(normalizedKey, normalizedValuePath);
+    let valueNode = keyNode.children.get(nodeId);
+    if (!valueNode) {
+        valueNode = {
+            id: nodeId,
+            kind: 'value',
+            key: normalizedKey,
+            valuePath: normalizedValuePath,
+            name: displayValuePath,
+            displayPath: displayValuePath,
+            children: new Map(),
+            notesWithValue: new Set()
+        };
+        keyNode.children.set(nodeId, valueNode);
+    }
+
+    valueNode.notesWithValue.add(path);
+}
+
 /**
  * Builds a property tree from the IndexedDB cache.
  *
@@ -871,68 +944,44 @@ export function buildPropertyTreeFromDatabase(
         }
 
         for (const propertyEntry of properties) {
-            const normalizedKey = normalizePropertyTreeKey(propertyEntry.fieldKey);
-            if (!normalizedKey) {
-                continue;
-            }
-
-            if (shouldFilterPropertyKeys && !includedPropertyKeys.has(normalizedKey)) {
-                continue;
-            }
-
-            const displayKey = propertyEntry.fieldKey.trim();
-            if (!displayKey) {
-                continue;
-            }
-
-            let keyNode = tree.get(normalizedKey);
-            if (!keyNode) {
-                keyNode = {
-                    id: buildPropertyKeyNodeId(normalizedKey),
-                    kind: 'key',
-                    key: normalizedKey,
-                    valuePath: null,
-                    name: displayKey,
-                    displayPath: displayKey,
-                    children: new Map(),
-                    notesWithValue: new Set()
-                };
-                registerPropertyKeyDirectPaths(keyNode);
-                tree.set(normalizedKey, keyNode);
-            }
-
-            keyNode.notesWithValue.add(path);
-
-            const normalizedValuePath = normalizePropertyTreeValuePath(propertyEntry.value);
-            if (isPropertyTreeKeyOnlyValuePath(normalizedValuePath)) {
-                getOrBuildDirectPropertyKeyPaths(keyNode).add(path);
-                continue;
-            }
-
-            const displayValuePath = normalizePropertyTreeDisplayValuePath(propertyEntry.value);
-            if (!displayValuePath) {
-                continue;
-            }
-
-            const nodeId = buildPropertyValueNodeId(normalizedKey, normalizedValuePath);
-            let valueNode = keyNode.children.get(nodeId);
-            if (!valueNode) {
-                valueNode = {
-                    id: nodeId,
-                    kind: 'value',
-                    key: normalizedKey,
-                    valuePath: normalizedValuePath,
-                    name: displayValuePath,
-                    displayPath: displayValuePath,
-                    children: new Map(),
-                    notesWithValue: new Set()
-                };
-                keyNode.children.set(nodeId, valueNode);
-            }
-
-            valueNode.notesWithValue.add(path);
+            registerPropertyTreeEntry(tree, path, propertyEntry, includedPropertyKeys, shouldFilterPropertyKeys);
         }
     });
+
+    return sortPropertyTreeNodes(tree);
+}
+
+/**
+ * Builds a property tree from a known set of markdown file paths.
+ * Scoped navigation uses this to keep builds proportional to the current selection.
+ */
+export function buildPropertyTreeFromFilePaths(
+    db: PropertyTreeFileLookupDatabaseLike,
+    filePaths: Iterable<string>,
+    options: Pick<BuildPropertyTreeOptions, 'includedPropertyKeys'> = {}
+): Map<string, PropertyTreeNode> {
+    propertyKeyDirectPathCache = new WeakMap<PropertyTreeNode, Set<string>>();
+
+    const tree = new Map<string, PropertyTreeNode>();
+    const hasIncludedPropertyFilter = options.includedPropertyKeys !== undefined && options.includedPropertyKeys.size > 0;
+    const includedPropertyKeys = normalizeIncludedPropertyKeySet(options.includedPropertyKeys);
+    const shouldFilterPropertyKeys = hasIncludedPropertyFilter;
+
+    for (const path of filePaths) {
+        const fileData = db.getFile(path);
+        if (!fileData) {
+            continue;
+        }
+
+        const properties = fileData.properties;
+        if (!properties || properties.length === 0) {
+            continue;
+        }
+
+        for (const propertyEntry of properties) {
+            registerPropertyTreeEntry(tree, path, propertyEntry, includedPropertyKeys, shouldFilterPropertyKeys);
+        }
+    }
 
     return sortPropertyTreeNodes(tree);
 }

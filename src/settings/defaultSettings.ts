@@ -272,6 +272,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     inheritPropertyColors: true,
     propertySortOrder: 'alpha-asc',
     showAllPropertiesFolder: true,
+    scopePropertiesToCurrentContext: false,
 
     // List pane tab
     defaultListMode: 'standard',

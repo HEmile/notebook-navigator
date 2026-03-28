@@ -98,6 +98,16 @@ export function renderPropertiesTab(context: SettingsTabContext): void {
             })
         );
 
+    new Setting(propertiesSubSettingsEl)
+        .setName(strings.settings.items.scopePropertiesToCurrentContext.name)
+        .setDesc(strings.settings.items.scopePropertiesToCurrentContext.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.scopePropertiesToCurrentContext).onChange(async value => {
+                plugin.settings.scopePropertiesToCurrentContext = value;
+                await plugin.saveSettingsAndUpdate();
+            })
+        );
+
     const propertyKeysInfoSetting = new Setting(propertiesSubSettingsEl).setName('').setDesc('');
     propertyKeysInfoSetting.settingEl.addClass('nn-setting-info-container');
     propertyKeysInfoSetting.settingEl.addClass('nn-setting-info-centered');

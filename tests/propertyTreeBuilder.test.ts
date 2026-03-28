@@ -25,6 +25,7 @@ import {
     determinePropertyToReveal,
     type PropertyTreeDatabaseLike,
     buildPropertyKeyNodeId,
+    buildPropertyTreeFromFilePaths,
     buildPropertyTreeFromDatabase,
     buildPropertyValueNodeId,
     collectPropertyKeyFilePaths,
@@ -72,6 +73,20 @@ function createMockDb(files: MockFile[]): PropertyTreeDatabaseLike {
     return {
         forEachFile: (callback: (path: string, data: FileData) => void) => {
             payload.forEach(entry => callback(entry.path, entry.data));
+        }
+    };
+}
+
+function createLookupDb(files: MockFile[]) {
+    const payload = new Map<string, FileData>();
+    files.forEach(file => {
+        payload.set(file.path, createFileData(file.properties));
+    });
+
+    return {
+        getFile: (path: string) => payload.get(path) ?? null,
+        forEachFile: () => {
+            throw new Error('full database scan should not run for scoped property builds');
         }
     };
 }
@@ -331,6 +346,32 @@ describe('buildPropertyTreeFromDatabase', () => {
             buildPropertyValueNodeId('status', normalizePropertyTreeValuePath('Work/Alpha')),
             buildPropertyValueNodeId('status', normalizePropertyTreeValuePath('Work/Zeta'))
         ]);
+    });
+
+    it('builds a scoped property tree from selected file paths without scanning the full database', () => {
+        const db = createLookupDb([
+            {
+                path: 'notes/status.md',
+                properties: [{ fieldKey: 'Status', value: 'Open' }]
+            },
+            {
+                path: 'notes/priority.md',
+                properties: [{ fieldKey: 'Priority', value: 'High' }]
+            },
+            {
+                path: 'notes/ignored.md',
+                properties: [{ fieldKey: 'Mood', value: 'Calm' }]
+            }
+        ]);
+
+        const tree = buildPropertyTreeFromFilePaths(db, ['notes/status.md', 'notes/priority.md'], {
+            includedPropertyKeys: new Set(['status', 'priority'])
+        });
+
+        expect(Array.from(tree.keys())).toEqual(['priority', 'status']);
+        expect(tree.get('status')?.notesWithValue).toEqual(new Set(['notes/status.md']));
+        expect(tree.get('priority')?.notesWithValue).toEqual(new Set(['notes/priority.md']));
+        expect(tree.has('mood')).toBe(false);
     });
 
     it('keeps key nodes for empty values without creating value nodes', () => {

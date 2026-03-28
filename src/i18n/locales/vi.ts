@@ -1816,6 +1816,10 @@ export const STRINGS_VI = {
                 name: 'Hiển thị thư mục thuộc tính',
                 desc: 'Hiển thị "Thuộc tính" dưới dạng thư mục có thể thu gọn.'
             },
+            scopePropertiesToCurrentContext: {
+                name: 'Lọc thuộc tính theo lựa chọn',
+                desc: 'Chỉ hiển thị thuộc tính xuất hiện trong ghi chú thuộc thư mục hoặc thẻ đã chọn.'
+            },
             hiddenTags: {
                 name: 'Ẩn thẻ (hồ sơ vault)',
                 desc: 'Danh sách mẫu thẻ phân cách bằng dấu phẩy. Mẫu tên: tag* (bắt đầu bằng), *tag (kết thúc bằng). Mẫu đường dẫn: archive (thẻ và con cháu), archive/* (chỉ con cháu), projects/*/drafts (ký tự đại diện ở giữa).',
