@@ -249,23 +249,6 @@ export function useNavigationPaneScroll({
     const prevPathToIndexSizeRef = useRef<number>(pathToIndex.size);
 
     /**
-     * Increment indexVersion when tree structure changes.
-     * This is critical for version gating - ensures pending scrolls wait for
-     * the new tree structure before executing.
-     */
-    useEffect(() => {
-        const sizeChanged = prevPathToIndexSizeRef.current !== pathToIndex.size;
-        const identityChanged = prevPathToIndexObjRef.current !== pathToIndex;
-
-        if (sizeChanged || identityChanged) {
-            const prevVersion = indexVersionRef.current;
-            indexVersionRef.current = prevVersion + 1;
-            prevPathToIndexSizeRef.current = pathToIndex.size;
-            prevPathToIndexObjRef.current = pathToIndex;
-        }
-    }, [pathToIndex, pathToIndex.size]);
-
-    /**
      * Initialize TanStack Virtual virtualizer with dynamic heights for navigation items
      */
     const effectiveScrollMargin = Number.isFinite(scrollMargin) && scrollMargin > 0 ? scrollMargin : 0;
@@ -333,6 +316,24 @@ export function useNavigationPaneScroll({
         },
         overscan: OVERSCAN
     });
+
+    /**
+     * Increment indexVersion and invalidate cached row measurements when tree structure changes.
+     * This is critical for version gating and for selection-scoped nav rebuilds where the row
+     * types or spacer layout can change without a height-setting change.
+     */
+    useEffect(() => {
+        const sizeChanged = prevPathToIndexSizeRef.current !== pathToIndex.size;
+        const identityChanged = prevPathToIndexObjRef.current !== pathToIndex;
+
+        if (sizeChanged || identityChanged) {
+            const prevVersion = indexVersionRef.current;
+            indexVersionRef.current = prevVersion + 1;
+            prevPathToIndexSizeRef.current = pathToIndex.size;
+            prevPathToIndexObjRef.current = pathToIndex;
+            rowVirtualizer.measure();
+        }
+    }, [pathToIndex, pathToIndex.size, rowVirtualizer]);
 
     const scrollToIndexSafely = useCallback(
         (index: number, align: Align) => {
