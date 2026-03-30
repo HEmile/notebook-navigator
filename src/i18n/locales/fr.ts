@@ -1822,7 +1822,7 @@ export const STRINGS_FR = {
             },
             scopePropertiesToCurrentContext: {
                 name: 'Filtrer les propriétés par sélection',
-                desc: 'Afficher uniquement les propriétés présentes dans les notes du dossier ou de l\'étiquette sélectionnée.'
+                desc: "Afficher uniquement les propriétés présentes dans les notes du dossier ou de l'étiquette sélectionnée."
             },
             hiddenTags: {
                 name: 'Masquer les étiquettes (profil du coffre)',

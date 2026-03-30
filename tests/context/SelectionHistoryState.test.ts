@@ -91,7 +91,7 @@ describe('selectionReducer navigation history', () => {
         expect(gammaState.navigationHistoryIndex).toBe(2);
     });
 
-    it('keeps auto reveals out of navigation history', () => {
+    it('records auto reveals in navigation history', () => {
         const root = createFolder('/');
         const alpha = createFolder('Alpha', root);
         const beta = createFolder('Beta', root);
@@ -107,7 +107,27 @@ describe('selectionReducer navigation history', () => {
         });
 
         expect(revealedState.selectedFolder?.path).toBe('Beta');
-        expect(revealedState.navigationHistory.map(entry => entry.value)).toEqual(['/', 'Alpha']);
+        expect(revealedState.navigationHistory.map(entry => entry.value)).toEqual(['/', 'Alpha', 'Beta']);
+        expect(revealedState.navigationHistoryIndex).toBe(2);
+    });
+
+    it('replaces the current history entry for startup reveals', () => {
+        const root = createFolder('/');
+        const alpha = createFolder('Alpha', root);
+        const beta = createFolder('Beta', root);
+        const file = createFile('Beta/note.md', beta);
+
+        const initialState = createSelectionState(root);
+        const alphaState = selectionReducer(initialState, { type: 'SET_SELECTED_FOLDER', folder: alpha });
+        const revealedState = selectionReducer(alphaState, {
+            type: 'REVEAL_FILE',
+            file,
+            targetFolder: beta,
+            source: 'startup'
+        });
+
+        expect(revealedState.selectedFolder?.path).toBe('Beta');
+        expect(revealedState.navigationHistory.map(entry => entry.value)).toEqual(['/', 'Beta']);
         expect(revealedState.navigationHistoryIndex).toBe(1);
     });
 

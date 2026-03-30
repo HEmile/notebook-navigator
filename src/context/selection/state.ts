@@ -370,7 +370,7 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
 
             const normalizedTargetTag = action.targetTag === undefined ? undefined : normalizeTagPath(action.targetTag);
             const revealSource: SelectionRevealSource = action.source ?? (action.isManualReveal ? 'manual' : 'auto');
-            const historyBehavior = action.historyBehavior ?? (revealSource === 'auto' || revealSource === 'startup' ? 'skip' : 'record');
+            const historyBehavior = action.historyBehavior ?? (revealSource === 'startup' ? 'replace' : 'record');
             const targetFolder = action.targetFolder ?? null;
 
             if (action.isManualReveal) {

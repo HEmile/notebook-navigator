@@ -77,6 +77,14 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '2.5.5',
+        date: '2026-04-03',
+        fixed: [
+            'Auto-reveal is now saved to the navigation history.',
+            'Startup file is now registered in navigation history.'
+        ]
+    },
+    {
         version: '2.5.4',
         date: '2026-03-30',
         showOnUpdate: true,
