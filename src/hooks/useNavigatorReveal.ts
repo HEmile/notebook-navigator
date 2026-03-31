@@ -17,9 +17,9 @@
  */
 
 import { useEffect, useRef, useCallback, RefObject, useState } from 'react';
-import { TFile, TFolder, App, FileView } from 'obsidian';
+import { TFile, TFolder, App, FileView, WorkspaceLeaf } from 'obsidian';
 import { getLeafSplitLocation } from '../utils/workspaceSplit';
-import { shouldSkipNavigatorAutoReveal } from '../utils/autoRevealUtils';
+import { isLeafInNavigatorWindow, shouldSkipNavigatorAutoReveal } from '../utils/autoRevealUtils';
 import type { NavigationPaneHandle } from '../components/NavigationPane';
 import { useExpansionState, useExpansionDispatch } from '../context/ExpansionContext';
 import { useSelectionState, useSelectionDispatch } from '../context/SelectionContext';
@@ -30,7 +30,14 @@ import { useUIState, useUIDispatch } from '../context/UIStateContext';
 import { useFileCache } from '../context/StorageContext';
 import { useCommandQueue } from '../context/ServicesContext';
 import { determineTagToReveal, findNearestVisibleTagAncestor, normalizeTagPath } from '../utils/tagUtils';
-import { ItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, TAGS_ROOT_VIRTUAL_FOLDER_ID, UNTAGGED_TAG_ID } from '../types';
+import {
+    ItemType,
+    NOTEBOOK_NAVIGATOR_VIEW,
+    PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
+    TAGGED_TAG_ID,
+    TAGS_ROOT_VIRTUAL_FOLDER_ID,
+    UNTAGGED_TAG_ID
+} from '../types';
 import { TIMEOUTS } from '../types/obsidian-extended';
 import { doesFolderContainPath } from '../utils/pathUtils';
 import type { Align } from '../types/scroll';
@@ -136,6 +143,22 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
         // Track the latest selected file path for workspace event handlers without re-registering listeners.
         selectedFilePathRef.current = selectionState.selectedFile?.path ?? null;
     }, [selectionState.selectedFile]);
+
+    const shouldIgnoreOtherWindowAutoReveal = useCallback(
+        (activeLeaf: WorkspaceLeaf | null) => {
+            if (!settings.autoRevealIgnoreOtherWindows || !activeLeaf) {
+                return false;
+            }
+
+            const navigatorLeaves = app.workspace.getLeavesOfType(NOTEBOOK_NAVIGATOR_VIEW);
+            if (navigatorLeaves.length === 0) {
+                return false;
+            }
+
+            return !isLeafInNavigatorWindow(activeLeaf, navigatorLeaves);
+        },
+        [app, settings.autoRevealIgnoreOtherWindows]
+    );
 
     const handleHiddenFileReveal = useCallback(
         (file: TFile, options?: RevealFileOptions): boolean => {
@@ -886,11 +909,15 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
          * Detects if the active file has changed and triggers reveal if needed.
          * This is the single entry point for both file-open and active-leaf-change events.
          */
-        const detectActiveFileChange = (candidateFile?: TFile | null, options?: { ignoreNavigatorPreviewOpen?: boolean }) => {
+        const detectActiveFileChange = (
+            candidateFile?: TFile | null,
+            options?: { ignoreNavigatorPreviewOpen?: boolean; activeLeaf?: WorkspaceLeaf | null }
+        ) => {
             const ignoreNavigatorPreviewOpen = options?.ignoreNavigatorPreviewOpen ?? false;
             // Get the currently active file view
             const view = app.workspace.getActiveViewOfType(FileView);
             const activeViewFile = view?.file instanceof TFile ? view.file : null;
+            const activeLeaf = options?.activeLeaf ?? view?.leaf ?? null;
             // Prefer the file from the event payload (file-open), falling back to the active view file.
             // This handles cases where the active view is not updated yet when events fire.
             const file = candidateFile instanceof TFile ? candidateFile : activeViewFile;
@@ -901,15 +928,16 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
             // Check if the file was just created; always reveal newly created files
             const isRecentlyCreated = file.stat.ctime === file.stat.mtime && Date.now() - file.stat.ctime < TIMEOUTS.FILE_OPERATION_DELAY;
 
-            if (!isRecentlyCreated && settings.autoRevealIgnoreRightSidebar) {
-                // Determine split of the active leaf and skip right-sidebar
-                // Only apply when the file is the active view file; the active leaf split is not meaningful for other candidates.
-                if (activeViewFile?.path === file.path) {
-                    const activeLeaf = view?.leaf ?? null;
+            if (!isRecentlyCreated) {
+                if (settings.autoRevealIgnoreRightSidebar) {
                     const split = getLeafSplitLocation(app, activeLeaf);
                     if (split === 'right-sidebar') {
                         return;
                     }
+                }
+
+                if (shouldIgnoreOtherWindowAutoReveal(activeLeaf)) {
+                    return;
                 }
             }
 
@@ -965,8 +993,8 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
         const cleanup = registerActiveFileWorkspaceListeners({
             workspace: app.workspace,
             commandQueue,
-            onChange: ({ candidateFile, ignoreBackgroundOpen }) => {
-                detectActiveFileChange(candidateFile, { ignoreNavigatorPreviewOpen: ignoreBackgroundOpen });
+            onChange: ({ candidateFile, activeLeaf, ignoreBackgroundOpen }) => {
+                detectActiveFileChange(candidateFile, { ignoreNavigatorPreviewOpen: ignoreBackgroundOpen, activeLeaf });
             }
         });
 
@@ -977,7 +1005,8 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
                 // Skip startup auto-reveal if the active leaf is in right sidebar
                 const activeLeaf = app.workspace.getActiveViewOfType(FileView)?.leaf ?? null;
                 const split = getLeafSplitLocation(app, activeLeaf);
-                if (!settings.autoRevealIgnoreRightSidebar || split !== 'right-sidebar') {
+                const isIgnoredRightSidebarLeaf = settings.autoRevealIgnoreRightSidebar && split === 'right-sidebar';
+                if (!isIgnoredRightSidebarLeaf && !shouldIgnoreOtherWindowAutoReveal(activeLeaf)) {
                     activeFileRef.current = activeFile.path;
                     setIsStartupReveal(true);
                     setFileToReveal(activeFile);
@@ -989,7 +1018,16 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
         return () => {
             cleanup();
         };
-    }, [app, app.workspace, settings.autoRevealActiveFile, settings.autoRevealIgnoreRightSidebar, settings.startView, commandQueue]);
+    }, [
+        app,
+        app.workspace,
+        settings.autoRevealActiveFile,
+        settings.autoRevealIgnoreOtherWindows,
+        settings.autoRevealIgnoreRightSidebar,
+        settings.startView,
+        commandQueue,
+        shouldIgnoreOtherWindowAutoReveal
+    ]);
 
     // Handle revealing the file when detected
     useEffect(() => {

@@ -1090,6 +1090,10 @@ export const STRINGS_NL = {
                 name: 'Gebeurtenissen van rechter zijbalk negeren',
                 desc: 'Actieve notitie niet wijzigen bij klikken of wijzigen van notities in de rechter zijbalk.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: 'Gebeurtenissen van andere vensters negeren',
+                desc: 'Actieve notitie niet wijzigen bij het werken met notities in een ander venster.'
+            },
             paneTransitionDuration: {
                 name: 'Enkelvoudig paneel animatie',
                 desc: 'Transitieduur bij het wisselen tussen panelen in enkelvoudig-paneel-modus (milliseconden).',

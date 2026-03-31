@@ -16,15 +16,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { WorkspaceLeaf } from 'obsidian';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandQueueService } from '../../src/services/CommandQueueService';
 import { registerActiveFileWorkspaceListeners } from '../../src/utils/workspaceActiveFileEvents';
 import { createTestTFile } from './createTestTFile';
 
-type ActiveLeafChangeHandler = () => void;
+type ActiveLeafChangeHandler = (leaf: WorkspaceLeaf | null) => void;
 type FileOpenHandler = (file: ReturnType<typeof createTestTFile> | null) => void;
 
+function createMockLeaf(id: string): WorkspaceLeaf {
+    return { id } as unknown as WorkspaceLeaf;
+}
+
 class MockWorkspace {
+    activeLeaf: WorkspaceLeaf | null = null;
     private activeLeafChangeHandlers = new Set<ActiveLeafChangeHandler>();
     private fileOpenHandlers = new Set<FileOpenHandler>();
 
@@ -45,9 +51,10 @@ class MockWorkspace {
         this.fileOpenHandlers.delete(ref as FileOpenHandler);
     }
 
-    emitActiveLeafChange() {
+    emitActiveLeafChange(leaf: WorkspaceLeaf | null = this.activeLeaf) {
+        this.activeLeaf = leaf;
         for (const handler of this.activeLeafChangeHandlers) {
-            handler();
+            handler(leaf);
         }
     }
 
@@ -73,6 +80,7 @@ describe('registerActiveFileWorkspaceListeners', () => {
     it('coalesces file-open and active-leaf-change into one callback', () => {
         const workspace = new MockWorkspace();
         const file = createTestTFile('notes/day.md');
+        const leaf = createMockLeaf('leaf-1');
         const onChange = vi.fn();
 
         const cleanup = registerActiveFileWorkspaceListeners({
@@ -80,8 +88,9 @@ describe('registerActiveFileWorkspaceListeners', () => {
             onChange
         });
 
+        workspace.activeLeaf = leaf;
         workspace.emitFileOpen(file);
-        workspace.emitActiveLeafChange();
+        workspace.emitActiveLeafChange(leaf);
 
         expect(onChange).not.toHaveBeenCalled();
 
@@ -90,6 +99,32 @@ describe('registerActiveFileWorkspaceListeners', () => {
         expect(onChange).toHaveBeenCalledTimes(1);
         expect(onChange).toHaveBeenCalledWith({
             candidateFile: file,
+            activeLeaf: leaf,
+            ignoreBackgroundOpen: false
+        });
+
+        cleanup();
+    });
+
+    it('uses the current active leaf for file-open events', () => {
+        const workspace = new MockWorkspace();
+        const file = createTestTFile('notes/day.md');
+        const leaf = createMockLeaf('leaf-2');
+        const onChange = vi.fn();
+
+        workspace.activeLeaf = leaf;
+
+        const cleanup = registerActiveFileWorkspaceListeners({
+            workspace,
+            onChange
+        });
+
+        workspace.emitFileOpen(file);
+        vi.runAllTimers();
+
+        expect(onChange).toHaveBeenCalledWith({
+            candidateFile: file,
+            activeLeaf: leaf,
             ignoreBackgroundOpen: false
         });
 
@@ -100,6 +135,7 @@ describe('registerActiveFileWorkspaceListeners', () => {
         const workspace = new MockWorkspace();
         const commandQueue = new CommandQueueService();
         const file = createTestTFile('notes/day.md');
+        const leaf = createMockLeaf('leaf-3');
         const onChange = vi.fn();
 
         let resolveOpenFile: () => void = () => {
@@ -115,6 +151,7 @@ describe('registerActiveFileWorkspaceListeners', () => {
             onChange
         });
 
+        workspace.activeLeaf = leaf;
         const openTask = commandQueue.executeOpenActiveFile(file, () => openFilePromise, { active: false });
 
         try {
@@ -126,6 +163,7 @@ describe('registerActiveFileWorkspaceListeners', () => {
             expect(onChange).toHaveBeenCalledTimes(1);
             expect(onChange).toHaveBeenCalledWith({
                 candidateFile: file,
+                activeLeaf: leaf,
                 ignoreBackgroundOpen: true
             });
         } finally {

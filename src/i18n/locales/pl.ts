@@ -1091,6 +1091,10 @@ export const STRINGS_PL = {
                 name: 'Ignoruj zdarzenia z prawego paska bocznego',
                 desc: 'Nie zmieniaj aktywnej notatki podczas klikania lub zmiany notatek w prawym pasku bocznym.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: 'Ignoruj zdarzenia z innych okien',
+                desc: 'Nie zmieniaj aktywnej notatki podczas pracy z notatkami w innym oknie.'
+            },
             paneTransitionDuration: {
                 name: 'Animacja pojedynczego panelu',
                 desc: 'Czas trwania przejścia podczas przełączania paneli w trybie pojedynczego panelu (w milisekundach).',

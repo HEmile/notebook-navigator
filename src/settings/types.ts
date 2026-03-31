@@ -316,6 +316,7 @@ export interface NotebookNavigatorSettings {
     autoRevealActiveFile: boolean;
     autoRevealShortestPath: boolean;
     autoRevealIgnoreRightSidebar: boolean;
+    autoRevealIgnoreOtherWindows: boolean;
     paneTransitionDuration: number;
 
     // General tab - Keyboard navigation

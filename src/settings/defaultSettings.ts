@@ -142,6 +142,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     autoRevealActiveFile: true,
     autoRevealShortestPath: true,
     autoRevealIgnoreRightSidebar: true,
+    autoRevealIgnoreOtherWindows: true,
     paneTransitionDuration: 150,
 
     // General tab - Keyboard navigation

@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { WorkspaceLeaf } from 'obsidian';
+
 interface ShouldSkipNavigatorAutoRevealParams {
     hasNavigatorFocus: boolean;
     isOpeningVersionHistory: boolean;
@@ -44,4 +46,13 @@ export function shouldSkipNavigatorAutoReveal({
     }
 
     return isNavigatorOpeningSelectedFile || ignoreNavigatorPreviewOpen;
+}
+
+export function isLeafInNavigatorWindow(leaf: WorkspaceLeaf | null, navigatorLeaves: WorkspaceLeaf[]): boolean {
+    if (!leaf || navigatorLeaves.length === 0) {
+        return false;
+    }
+
+    const activeWindow = leaf.getContainer().win;
+    return navigatorLeaves.some(navigatorLeaf => navigatorLeaf.getContainer().win === activeWindow);
 }

@@ -1090,6 +1090,10 @@ export const STRINGS_VI = {
                 name: 'Bỏ qua sự kiện từ thanh bên phải',
                 desc: 'Không đổi ghi chú đang hoạt động khi nhấn hoặc đổi ghi chú ở thanh bên phải.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: 'Bỏ qua sự kiện từ cửa sổ khác',
+                desc: 'Không đổi ghi chú đang hoạt động khi làm việc với ghi chú ở cửa sổ khác.'
+            },
             paneTransitionDuration: {
                 name: 'Hoạt ảnh ngăn đơn',
                 desc: 'Thời lượng chuyển đổi khi chuyển giữa các ngăn trong chế độ ngăn đơn (mili giây).',

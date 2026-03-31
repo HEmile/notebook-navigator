@@ -79,6 +79,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.5.5',
         date: '2026-04-03',
+        new: [
+            'New setting: General > Behavior > ==Ignore events from other windows==. When enabled, auto-reveal does not trigger when working with notes in a different window. Default enabled.'
+        ],
         fixed: [
             'Auto-reveal is now saved to the navigation history.',
             'Startup file is now registered in navigation history.',

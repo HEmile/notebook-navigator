@@ -1085,6 +1085,10 @@ export const STRINGS_IT = {
                 name: 'Ignora eventi dalla barra laterale destra',
                 desc: 'Non cambiare nota attiva quando clicchi o cambi note nella barra laterale destra.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: 'Ignora eventi da altre finestre',
+                desc: "Non cambiare nota attiva quando lavori con note in un'altra finestra."
+            },
             paneTransitionDuration: {
                 name: 'Animazione pannello singolo',
                 desc: 'Durata della transizione quando si passa tra i pannelli in modalità pannello singolo (millisecondi).',

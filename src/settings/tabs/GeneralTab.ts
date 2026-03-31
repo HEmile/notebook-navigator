@@ -620,6 +620,16 @@ export function renderGeneralTab(context: SettingsTabContext): void {
             })
         );
 
+    new Setting(autoRevealSettingsEl)
+        .setName(strings.settings.items.autoRevealIgnoreOtherWindows.name)
+        .setDesc(strings.settings.items.autoRevealIgnoreOtherWindows.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.settings.autoRevealIgnoreOtherWindows).onChange(async value => {
+                plugin.settings.autoRevealIgnoreOtherWindows = value;
+                await plugin.saveSettingsAndUpdate();
+            })
+        );
+
     const paneTransitionSetting = behaviorGroup.addSetting(setting => {
         setting.setName(strings.settings.items.paneTransitionDuration.name).setDesc(strings.settings.items.paneTransitionDuration.desc);
     });

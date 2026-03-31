@@ -1082,6 +1082,10 @@ export const STRINGS_ZH_CN = {
                 name: '忽略右侧边栏事件',
                 desc: '在右侧边栏中点击或更改笔记时不更改活动笔记。'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: '忽略其他窗口的事件',
+                desc: '在其他窗口中操作笔记时不更改活动笔记。'
+            },
             paneTransitionDuration: {
                 name: '单窗格动画',
                 desc: '在单窗格模式下切换窗格时的过渡持续时间（毫秒）。',

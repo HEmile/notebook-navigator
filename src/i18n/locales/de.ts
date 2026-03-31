@@ -1090,6 +1090,10 @@ export const STRINGS_DE = {
                 name: 'Ereignisse von rechter Seitenleiste ignorieren',
                 desc: 'Aktive Notiz nicht ändern, wenn in der rechten Seitenleiste auf Notizen geklickt oder diese gewechselt werden.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: 'Ereignisse von anderen Fenstern ignorieren',
+                desc: 'Aktive Notiz nicht ändern, wenn mit Notizen in einem anderen Fenster gearbeitet wird.'
+            },
             paneTransitionDuration: {
                 name: 'Einzelbereich-Animation',
                 desc: 'Übergangsdauer beim Wechseln zwischen Bereichen im Einzelbereich-Modus (Millisekunden).',

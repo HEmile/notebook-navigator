@@ -1089,6 +1089,10 @@ export const STRINGS_ID = {
                 name: 'Abaikan peristiwa dari sidebar kanan',
                 desc: 'Jangan ubah catatan aktif saat mengklik atau mengubah catatan di sidebar kanan.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: 'Abaikan peristiwa dari jendela lain',
+                desc: 'Jangan ubah catatan aktif saat bekerja dengan catatan di jendela lain.'
+            },
             paneTransitionDuration: {
                 name: 'Animasi panel tunggal',
                 desc: 'Durasi transisi saat beralih panel dalam mode panel tunggal (milidetik).',

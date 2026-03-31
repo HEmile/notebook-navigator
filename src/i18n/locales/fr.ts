@@ -1091,6 +1091,10 @@ export const STRINGS_FR = {
                 name: 'Ignorer les événements du panneau de droite',
                 desc: "Ne pas changer la note active lors d'un clic ou du changement de notes dans le panneau de droite."
             },
+            autoRevealIgnoreOtherWindows: {
+                name: "Ignorer les événements d'autres fenêtres",
+                desc: 'Ne pas changer la note active lorsque vous travaillez avec des notes dans une autre fenêtre.'
+            },
             paneTransitionDuration: {
                 name: 'Animation panneau unique',
                 desc: 'Durée de transition lors du changement de panneau en mode panneau unique (millisecondes).',

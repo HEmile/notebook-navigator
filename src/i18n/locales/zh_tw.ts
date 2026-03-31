@@ -1082,6 +1082,10 @@ export const STRINGS_ZH_TW = {
                 name: '忽略右側邊欄事件',
                 desc: '在右側邊欄中點按或變更筆記時不變更使用中的筆記。'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: '忽略其他視窗的事件',
+                desc: '在其他視窗中操作筆記時不變更使用中的筆記。'
+            },
             paneTransitionDuration: {
                 name: '單窗格動畫',
                 desc: '在單窗格模式下切換窗格時的過渡持續時間（毫秒）。',

@@ -1089,6 +1089,10 @@ export const STRINGS_TR = {
                 name: 'Sağ kenar çubuğundaki olayları yoksay',
                 desc: 'Sağ kenar çubuğunda notlara tıklarken veya değiştirirken aktif notu değiştirme.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: 'Diğer pencerelerden gelen olayları yoksay',
+                desc: 'Başka bir pencerede notlarla çalışırken aktif notu değiştirme.'
+            },
             paneTransitionDuration: {
                 name: 'Tek panel animasyonu',
                 desc: 'Tek panel modunda paneller arasında geçiş süresi (milisaniye).',

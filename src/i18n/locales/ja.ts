@@ -1088,6 +1088,10 @@ export const STRINGS_JA = {
                 name: '右サイドバーのイベントを無視',
                 desc: '右サイドバーでのクリックやノートの変更時にアクティブノートを変更しません。'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: '他のウィンドウのイベントを無視',
+                desc: '別のウィンドウでノートを操作しているときにアクティブノートを変更しません。'
+            },
             paneTransitionDuration: {
                 name: 'シングルペインアニメーション',
                 desc: 'シングルペインモードでペイン切り替え時のトランジション時間（ミリ秒）。',

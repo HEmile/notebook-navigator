@@ -1088,6 +1088,10 @@ export const STRINGS_KO = {
                 name: '오른쪽 사이드바의 이벤트 무시',
                 desc: '오른쪽 사이드바에서 클릭하거나 노트를 변경할 때 활성 노트를 변경하지 않습니다.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: '다른 창의 이벤트 무시',
+                desc: '다른 창에서 노트를 작업할 때 활성 노트를 변경하지 않습니다.'
+            },
             paneTransitionDuration: {
                 name: '단일 창 애니메이션',
                 desc: '단일 창 모드에서 창 전환 시 트랜지션 시간 (밀리초).',

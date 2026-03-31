@@ -1085,6 +1085,10 @@ export const STRINGS_EN = {
                 name: 'Ignore events from right sidebar',
                 desc: 'Do not change active note when clicking or changing notes in the right sidebar.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: 'Ignore events from other windows',
+                desc: 'Do not change active note when clicking or changing notes in another window.'
+            },
             paneTransitionDuration: {
                 name: 'Single pane animation',
                 desc: 'Transition duration when switching panes in single-pane mode (milliseconds).',
