@@ -1210,6 +1210,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
      * Navigates to a specific file in the navigator
      * Expands parent folders and scrolls to make the file visible
      * Note: This does NOT activate/show the view - callers must do that if needed
+     * Hidden files are not revealable while hidden items are off
      * @param file - The file to navigate to in the navigator
      */
     async revealFileInActualFolder(file: TFile, options?: RevealFileOptions) {

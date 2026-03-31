@@ -338,7 +338,9 @@ export class NotebookNavigatorView extends ItemView {
     }
 
     /**
-     * Navigates to a file by revealing it in its actual parent folder
+     * Navigates to a file by revealing it in its actual parent folder.
+     * Returns false when the file cannot be revealed in navigator context,
+     * including hidden files while hidden items are off.
      */
     navigateToFile(file: TFile, options?: RevealFileOptions) {
         return this.componentHandle?.navigateToFile(file, options) ?? false;

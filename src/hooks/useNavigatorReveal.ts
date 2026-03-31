@@ -36,6 +36,9 @@ import { doesFolderContainPath } from '../utils/pathUtils';
 import type { Align } from '../types/scroll';
 import { navigateToTag as navigateToTagInternal, type NavigateToTagOptions } from '../utils/tagNavigation';
 import { navigateToProperty as navigateToPropertyInternal, type NavigateToPropertyOptions } from '../utils/propertyNavigation';
+import { isFileHiddenBySettings } from '../utils/exclusionUtils';
+import { strings } from '../i18n';
+import { showNotice } from '../utils/noticeUtils';
 import { registerActiveFileWorkspaceListeners } from '../utils/workspaceActiveFileEvents';
 import {
     determinePropertyToReveal,
@@ -62,6 +65,8 @@ export interface RevealFileOptions {
     isStartupReveal?: boolean;
     // Prevents switching focus away from the navigation pane
     preserveNavigationFocus?: boolean;
+    // Shows a warning notice when a hidden file falls back to selection-only behavior
+    showHiddenFileNotice?: boolean;
 }
 
 export interface NavigateToFolderOptions {
@@ -132,6 +137,23 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
         selectedFilePathRef.current = selectionState.selectedFile?.path ?? null;
     }, [selectionState.selectedFile]);
 
+    const handleHiddenFileReveal = useCallback(
+        (file: TFile, options?: RevealFileOptions): boolean => {
+            if (!isFileHiddenBySettings(file, settings, app, uxPreferences.showHiddenItems)) {
+                return false;
+            }
+
+            // Hidden files are not revealable while hidden items are off.
+            // Keep the current folder/tag/property context and update selected file only.
+            selectionDispatch({ type: 'SET_SELECTED_FILE', file });
+            if (options?.showHiddenFileNotice) {
+                showNotice(strings.fileSystem.notifications.hiddenFileReveal, { variant: 'warning' });
+            }
+            return true;
+        },
+        [selectionDispatch, settings, app, uxPreferences.showHiddenItems]
+    );
+
     const getRevealTargetFolder = useCallback(
         (folder: TFolder | null): { target: TFolder | null; expandAncestors: boolean } => {
             if (!folder) {
@@ -196,12 +218,19 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
      * Handles manual file reveals triggered from commands or context menus.
      * Selects the file, switches the view to its parent folder (always the real parent when descendant notes are shown),
      * expands any collapsed ancestor folders, focuses the list pane, and requests navigation pane scroll to the target folder.
+     * Returns false when the file cannot be revealed in navigator context, including
+     * hidden files while hidden items are off. Hidden files still update selected file
+     * as a fallback and may show a notice when requested by the caller.
      *
      * @param file - File to surface in the navigator
      */
     const revealFileInActualFolder = useCallback(
         (file: TFile, options?: RevealFileOptions) => {
             if (!file?.parent) {
+                return false;
+            }
+
+            if (handleHiddenFileReveal(file, options)) {
                 return false;
             }
 
@@ -267,7 +296,8 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
             uiDispatch,
             navigationPaneRef,
             getRevealTargetFolder,
-            includeDescendantNotes
+            includeDescendantNotes,
+            handleHiddenFileReveal
         ]
     );
 
@@ -423,6 +453,10 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
     const revealFileInNearestFolder = useCallback(
         (file: TFile, options?: RevealFileOptions) => {
             if (!file?.parent) return;
+
+            if (handleHiddenFileReveal(file, options)) {
+                return;
+            }
 
             // Check if we're in tag view and should switch tags
             let targetTag: string | null | undefined = undefined;
@@ -661,7 +695,8 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
             selectionDispatch,
             getDB,
             getRevealTargetFolder,
-            navigationPaneRef
+            navigationPaneRef,
+            handleHiddenFileReveal
         ]
     );
 

@@ -109,7 +109,9 @@ export default class WorkspaceCoordinator {
 
     /**
      * Reveals a file in its actual parent folder across all navigator views.
-     * This is a "manual" reveal that always navigates to the file's true location.
+     * This is a "manual" reveal that targets the file's true location.
+     * Hidden files remain not revealable while hidden items are off; views may
+     * keep the current context and select the file as fallback.
      */
     revealFileInActualFolder(file: TFile, options?: RevealFileOptions): void {
         this.getNavigatorLeaves().forEach(leaf => {

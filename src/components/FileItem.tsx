@@ -831,7 +831,7 @@ export const FileItem = React.memo(function FileItem({
     const revealFileInNavigation = () => {
         runAsyncAction(async () => {
             await plugin.activateView();
-            await plugin.revealFileInActualFolder(file);
+            await plugin.revealFileInActualFolder(file, { showHiddenFileNotice: true });
         });
     };
 

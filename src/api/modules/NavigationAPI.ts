@@ -44,7 +44,10 @@ export class NavigationAPI {
     constructor(private api: NavigationAPIHost) {}
 
     /**
-     * Navigate to a specific file and select it
+     * Reveal a specific file in navigator context and select it.
+     * Returns false when the file cannot be revealed, including when the path
+     * cannot be resolved, the navigator is not ready, or the file is hidden
+     * while hidden items are off.
      * @param file - File to navigate to
      */
     async reveal(file: TFile | string): Promise<boolean> {

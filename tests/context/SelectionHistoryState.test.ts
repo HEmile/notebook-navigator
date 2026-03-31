@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 import { TFile, TFolder } from 'obsidian';
 import { selectionReducer } from '../../src/context/selection/state';
 import type { SelectionState } from '../../src/context/selection/types';
+import { buildPropertyValueNodeId } from '../../src/utils/propertyTree';
 
 function createFolder(path: string, parent: TFolder | null = null): TFolder {
     const folder = new TFolder();
@@ -146,5 +147,57 @@ describe('selectionReducer navigation history', () => {
         expect(state.navigationHistory[0]?.value).toBe('Folder-6');
         expect(state.navigationHistory[99]?.value).toBe('Folder-105');
         expect(state.navigationHistoryIndex).toBe(99);
+    });
+
+    it('keeps the current folder context when only the selected file changes', () => {
+        const root = createFolder('/');
+        const alpha = createFolder('Alpha', root);
+        const file = createFile('Alpha/note.md', alpha);
+
+        const initialState = createSelectionState(root);
+        const folderState = selectionReducer(initialState, { type: 'SET_SELECTED_FOLDER', folder: alpha });
+        const selectedFileState = selectionReducer(folderState, { type: 'SET_SELECTED_FILE', file });
+
+        expect(selectedFileState.selectionType).toBe('folder');
+        expect(selectedFileState.selectedFolder?.path).toBe('Alpha');
+        expect(selectedFileState.selectedTag).toBeNull();
+        expect(selectedFileState.selectedProperty).toBeNull();
+        expect(selectedFileState.selectedFile?.path).toBe('Alpha/note.md');
+    });
+
+    it('keeps the current tag context when only the selected file changes', () => {
+        const root = createFolder('/');
+        const alpha = createFolder('Alpha', root);
+        const file = createFile('Alpha/note.md', alpha);
+
+        const initialState = createSelectionState(root);
+        const tagState = selectionReducer(initialState, { type: 'SET_SELECTED_TAG', tag: 'work/projects' });
+        const selectedFileState = selectionReducer(tagState, { type: 'SET_SELECTED_FILE', file });
+
+        expect(selectedFileState.selectionType).toBe('tag');
+        expect(selectedFileState.selectedFolder).toBeNull();
+        expect(selectedFileState.selectedTag).toBe('work/projects');
+        expect(selectedFileState.selectedProperty).toBeNull();
+        expect(selectedFileState.selectedFile?.path).toBe('Alpha/note.md');
+    });
+
+    it('keeps the current property context when only the selected file changes', () => {
+        const root = createFolder('/');
+        const alpha = createFolder('Alpha', root);
+        const file = createFile('Alpha/note.md', alpha);
+        const propertyNodeId = buildPropertyValueNodeId('status', 'done');
+
+        const initialState = createSelectionState(root);
+        const propertyState = selectionReducer(initialState, {
+            type: 'SET_SELECTED_PROPERTY',
+            nodeId: propertyNodeId
+        });
+        const selectedFileState = selectionReducer(propertyState, { type: 'SET_SELECTED_FILE', file });
+
+        expect(selectedFileState.selectionType).toBe('property');
+        expect(selectedFileState.selectedFolder).toBeNull();
+        expect(selectedFileState.selectedTag).toBeNull();
+        expect(selectedFileState.selectedProperty).toBe(propertyNodeId);
+        expect(selectedFileState.selectedFile?.path).toBe('Alpha/note.md');
     });
 });

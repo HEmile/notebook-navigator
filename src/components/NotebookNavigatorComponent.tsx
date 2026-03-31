@@ -103,7 +103,8 @@ interface ResolvedSelectionHistoryTarget {
 }
 
 export interface NotebookNavigatorHandle {
-    // Navigates to a file by revealing it in its actual parent folder
+    // Navigates to a file by revealing it in its actual parent folder.
+    // Returns false when the file is not revealable in navigator context.
     navigateToFile: (file: TFile, options?: RevealFileOptions) => boolean;
     // Reveals a file while preserving the current navigation context when possible
     revealFileInNearestFolder: (file: TFile, options?: RevealFileOptions) => void;

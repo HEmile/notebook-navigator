@@ -81,7 +81,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-04-03',
         fixed: [
             'Auto-reveal is now saved to the navigation history.',
-            'Startup file is now registered in navigation history.'
+            'Startup file is now registered in navigation history.',
+            'Reveal operations on hidden files no longer switch folder, tag, or property context while Show hidden items is off.'
         ]
     },
     {

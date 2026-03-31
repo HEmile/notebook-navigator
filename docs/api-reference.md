@@ -229,13 +229,16 @@ When calling `reveal(file)`:
 - **Switches to file list view** if in single-pane mode
 - **Returns `false`** if the file path cannot be resolved
 - **Returns `false`** if the navigator view cannot be opened or does not become ready
+- **Returns `false`** if the file is hidden while Show hidden items is off
+- **Keeps the current folder, tag, or property context** when a hidden file cannot be revealed
+- **May still select the file as fallback** when a hidden file cannot be revealed
 
 ```typescript
 // Navigate to active file
 const activeFile = app.workspace.getActiveFile();
 if (activeFile) {
   await nn.navigation.reveal(activeFile);
-  // File is now selected in its parent folder
+  // File is selected in its parent folder when reveal succeeds
 }
 ```
 

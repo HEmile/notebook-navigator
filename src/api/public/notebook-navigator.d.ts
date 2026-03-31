@@ -347,7 +347,7 @@ export interface NotebookNavigatorAPI {
 
     /** Navigation operations */
     navigation: {
-        /** Reveal and select a file in the navigator */
+        /** Reveal and select a file in the navigator. Returns false when the file cannot be revealed, including hidden files while hidden items are off. */
         reveal(file: TFile | string): Promise<boolean>;
         /** Select a folder in the navigator navigation pane */
         navigateToFolder(folder: TFolder | string): Promise<boolean>;

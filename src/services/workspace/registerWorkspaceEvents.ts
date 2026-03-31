@@ -103,7 +103,7 @@ export default function registerWorkspaceEvents(plugin: NotebookNavigatorPlugin)
                         // Wrap file reveal with error handling
                         runAsyncAction(async () => {
                             await plugin.activateView();
-                            await plugin.revealFileInActualFolder(file);
+                            await plugin.revealFileInActualFolder(file, { showHiddenFileNotice: true });
                         });
                     });
             });

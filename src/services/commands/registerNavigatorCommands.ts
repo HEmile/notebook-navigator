@@ -40,7 +40,7 @@ import {
 } from '../../utils/calendarNotes';
 import { getFolderNote, getFolderNoteDetectionSettings, isFolderNote, isSupportedFolderNoteExtension } from '../../utils/folderNotes';
 import { createFrontmatterPropertyExclusionMatcher, isFolderInExcludedFolder, shouldExcludeFileWithMatcher } from '../../utils/fileFilters';
-import { getEffectiveFrontmatterExclusions, isFileHiddenBySettings } from '../../utils/exclusionUtils';
+import { getEffectiveFrontmatterExclusions } from '../../utils/exclusionUtils';
 import { runAsyncAction } from '../../utils/async';
 import { getMomentApi, resolveMomentLocale, type MomentInstance } from '../../utils/moment';
 import { NotebookNavigatorView } from '../../view/NotebookNavigatorView';
@@ -684,10 +684,7 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
                     // Wrap file reveal with error handling
                     runAsyncAction(async () => {
                         await plugin.activateView();
-                        if (isFileHiddenBySettings(activeFile, plugin.settings, plugin.app, plugin.getUXPreferences().showHiddenItems)) {
-                            showNotice(strings.fileSystem.notifications.hiddenFileReveal, { variant: 'warning' });
-                        }
-                        await plugin.revealFileInActualFolder(activeFile);
+                        await plugin.revealFileInActualFolder(activeFile, { showHiddenFileNotice: true });
                     });
                 }
                 return true;

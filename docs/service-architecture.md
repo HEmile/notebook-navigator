@@ -567,6 +567,8 @@ revealFileInActualFolder(file: TFile, options?: RevealFileOptions): void
 revealFileInNearestFolder(file: TFile, options?: RevealFileOptions): void
 ```
 
+`revealFileInActualFolder(...)` is strict reveal behavior. Hidden files are not revealable while hidden items are off. In that case the view keeps its current folder, tag, or property context and may update selected file as fallback.
+
 ### HomepageController
 
 **Location:** `src/services/workspace/HomepageController.ts`
