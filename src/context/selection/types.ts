@@ -87,6 +87,7 @@ export type SelectionAction =
           historyBehavior?: SelectionHistoryBehavior;
           historyIndex?: number;
       }
+    | { type: 'CLEAR_REVEAL_OPERATION' }
     | { type: 'CLEANUP_DELETED_FOLDER'; deletedPath: string }
     | { type: 'CLEANUP_DELETED_FILE'; deletedPath: string; nextFileToSelect?: TFile | null }
     | { type: 'TOGGLE_FILE_SELECTION'; file: TFile; anchorIndex?: number }

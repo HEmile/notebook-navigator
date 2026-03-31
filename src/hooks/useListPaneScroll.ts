@@ -1016,6 +1016,8 @@ export function useListPaneScroll({
                 reason: 'reveal',
                 minIndexVersion: indexVersionRef.current
             });
+            // Reveal behaves like a one-shot event; clear the flag once the list pane has queued the scroll.
+            selectionDispatch({ type: 'CLEAR_REVEAL_OPERATION' });
         }
     }, [selectionState.isRevealOperation, selectedFile, isScrollContainerReady, selectionDispatch, filePathToIndex, setPending]);
 

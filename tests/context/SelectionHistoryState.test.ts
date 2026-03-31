@@ -200,4 +200,27 @@ describe('selectionReducer navigation history', () => {
         expect(selectedFileState.selectedProperty).toBe(propertyNodeId);
         expect(selectedFileState.selectedFile?.path).toBe('Alpha/note.md');
     });
+
+    it('clears the reveal flag without changing the revealed selection', () => {
+        const root = createFolder('/');
+        const alpha = createFolder('Alpha', root);
+        const file = createFile('Alpha/note.md', alpha);
+
+        const initialState = createSelectionState(root);
+        const revealedState = selectionReducer(initialState, {
+            type: 'REVEAL_FILE',
+            file,
+            targetFolder: alpha,
+            source: 'manual'
+        });
+        const clearedState = selectionReducer(revealedState, { type: 'CLEAR_REVEAL_OPERATION' });
+
+        expect(revealedState.isRevealOperation).toBe(true);
+        expect(clearedState.isRevealOperation).toBe(false);
+        expect(clearedState.selectedFolder?.path).toBe('Alpha');
+        expect(clearedState.selectedFile?.path).toBe('Alpha/note.md');
+        expect(clearedState.revealSource).toBe('manual');
+        expect(clearedState.navigationHistory).toEqual(revealedState.navigationHistory);
+        expect(clearedState.navigationHistoryIndex).toBe(revealedState.navigationHistoryIndex);
+    });
 });

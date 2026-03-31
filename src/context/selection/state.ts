@@ -510,6 +510,16 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
             });
         }
 
+        case 'CLEAR_REVEAL_OPERATION':
+            if (!state.isRevealOperation) {
+                return state;
+            }
+
+            return {
+                ...state,
+                isRevealOperation: false
+            };
+
         case 'CLEANUP_DELETED_FOLDER':
             if (!state.selectedFolder || state.selectedFolder.path !== action.deletedPath) {
                 return state;

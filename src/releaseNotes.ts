@@ -85,6 +85,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         fixed: [
             'Auto-reveal is now saved to the navigation history.',
             'Startup file is now registered in navigation history.',
+            'Reveal file now scrolls the selected note into view every time in the list pane, including repeated reveals of the same note.',
             'Reveal operations on hidden files no longer switch folder, tag, or property context while Show hidden items is off.'
         ]
     },
