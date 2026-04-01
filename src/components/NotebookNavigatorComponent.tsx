@@ -102,6 +102,14 @@ interface ResolvedSelectionHistoryTarget {
     index: number;
 }
 
+interface AuxClickState {
+    mouseBackForwardAction: 'none' | 'singlePaneSwitch' | 'history';
+    singlePane: boolean;
+    focusedPane: 'navigation' | 'files' | 'search';
+    currentSinglePaneView: 'navigation' | 'files';
+    navigateSelectionHistory: (direction: 'back' | 'forward') => boolean;
+}
+
 export interface NotebookNavigatorHandle {
     // Navigates to a file by revealing it in its actual parent folder.
     // Returns false when the file is not revealable in navigator context.
@@ -228,6 +236,13 @@ export const NotebookNavigatorComponent = React.memo(
         const navigationPaneRef = useRef<NavigationPaneHandle>(null);
         const listPaneRef = useRef<ListPaneHandle>(null);
         const lastDualPaneRef = useRef(uiState.dualPane);
+        const auxClickStateRef = useRef<AuxClickState>({
+            mouseBackForwardAction: settings.mouseBackForwardAction,
+            singlePane: uiState.singlePane,
+            focusedPane: uiState.focusedPane,
+            currentSinglePaneView: uiState.currentSinglePaneView,
+            navigateSelectionHistory: () => false
+        });
 
         // Updates search filter highlight state only when values actually change
         const handleSearchTokensChange = useCallback((next: SearchNavFilterState) => {
@@ -431,49 +446,6 @@ export const NotebookNavigatorComponent = React.memo(
             setIsNavigatorFocused
         });
 
-        // Handle auxiliary mouse buttons for desktop single-pane switching
-        useEffect(() => {
-            if (isMobile) {
-                return;
-            }
-
-            const container = containerRef.current;
-            if (!container) {
-                return;
-            }
-
-            const handleAuxClick = (event: MouseEvent) => {
-                if (event.button !== 3 && event.button !== 4) {
-                    return;
-                }
-
-                if (!uiState.singlePane) {
-                    return;
-                }
-
-                event.preventDefault();
-
-                if (uiState.focusedPane === 'search') {
-                    return;
-                }
-
-                const targetView = event.button === 3 ? 'navigation' : 'files';
-
-                if (uiState.currentSinglePaneView === targetView) {
-                    return;
-                }
-
-                uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: targetView });
-                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: targetView });
-            };
-
-            container.addEventListener('auxclick', handleAuxClick);
-
-            return () => {
-                container.removeEventListener('auxclick', handleAuxClick);
-            };
-        }, [containerRef, isMobile, uiDispatch, uiState.currentSinglePaneView, uiState.focusedPane, uiState.singlePane]);
-
         // Get navigation actions
         const { handleExpandCollapseAll } = useNavigationActions();
 
@@ -675,6 +647,80 @@ export const NotebookNavigatorComponent = React.memo(
             },
             [app.vault, getSelectionHistoryTarget, navigateToFolder, navigateToProperty, navigateToTag]
         );
+
+        // Keeps aux-click behavior current without re-subscribing the DOM listener
+        useEffect(() => {
+            auxClickStateRef.current = {
+                mouseBackForwardAction: settings.mouseBackForwardAction,
+                singlePane: uiState.singlePane,
+                focusedPane: uiState.focusedPane,
+                currentSinglePaneView: uiState.currentSinglePaneView,
+                navigateSelectionHistory
+            };
+        }, [
+            navigateSelectionHistory,
+            settings.mouseBackForwardAction,
+            uiState.currentSinglePaneView,
+            uiState.focusedPane,
+            uiState.singlePane
+        ]);
+
+        // Handle auxiliary mouse buttons on desktop based on the configured action
+        useEffect(() => {
+            if (isMobile) {
+                return;
+            }
+
+            const container = containerRef.current;
+            if (!container) {
+                return;
+            }
+
+            const handleAuxClick = (event: MouseEvent) => {
+                if (event.button !== 3 && event.button !== 4) {
+                    return;
+                }
+
+                const { mouseBackForwardAction, singlePane, focusedPane, currentSinglePaneView, navigateSelectionHistory } =
+                    auxClickStateRef.current;
+                const direction = event.button === 3 ? 'back' : 'forward';
+
+                if (mouseBackForwardAction === 'none') {
+                    return;
+                }
+
+                if (mouseBackForwardAction === 'history') {
+                    event.preventDefault();
+                    navigateSelectionHistory(direction);
+                    return;
+                }
+
+                if (!singlePane) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                if (focusedPane === 'search') {
+                    return;
+                }
+
+                const targetView = direction === 'back' ? 'navigation' : 'files';
+
+                if (currentSinglePaneView === targetView) {
+                    return;
+                }
+
+                uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: targetView });
+                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: targetView });
+            };
+
+            container.addEventListener('auxclick', handleAuxClick);
+
+            return () => {
+                container.removeEventListener('auxclick', handleAuxClick);
+            };
+        }, [containerRef, isMobile, uiDispatch]);
 
         // Handles file reveal from shortcuts, using nearest folder navigation
         const handleShortcutNoteReveal = useCallback(

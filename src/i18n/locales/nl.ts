@@ -841,6 +841,7 @@ export const STRINGS_NL = {
                 templates: 'Sjablonen',
                 behavior: 'Gedrag',
                 keyboardNavigation: 'Toetsenbordnavigatie',
+                mouseButtons: 'Muisknoppen',
                 view: 'Uiterlijk',
                 icons: 'Iconen',
                 desktopAppearance: 'Desktop-uiterlijk',
@@ -1352,6 +1353,15 @@ export const STRINGS_NL = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Open het geselecteerde bestand in een nieuw tabblad, splitsing of venster met Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Muisknoppen terug/vooruit',
+                desc: 'Actie voor de terug- en vooruitknoppen van de muis op desktop.',
+                options: {
+                    none: 'Systeemstandaard gebruiken',
+                    singlePaneSwitch: 'Panelen wisselen (enkelvoudig paneel)',
+                    history: 'Geschiedenis navigeren'
+                }
             },
             fileVisibility: {
                 name: 'Bestandstypes tonen (kluisprofiel)',

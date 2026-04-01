@@ -841,6 +841,7 @@ export const STRINGS_DE = {
                 templates: 'Vorlagen',
                 behavior: 'Verhalten',
                 keyboardNavigation: 'Tastaturnavigation',
+                mouseButtons: 'Maustasten',
                 view: 'Darstellung',
                 icons: 'Symbole',
                 desktopAppearance: 'Desktop-Darstellung',
@@ -1353,6 +1354,15 @@ export const STRINGS_DE = {
             ctrlEnterOpenContext: {
                 name: 'Strg+Enter',
                 desc: 'Ausgewählte Datei in neuem Tab, geteilter Ansicht oder Fenster öffnen mit Strg+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Maustasten vor/zurück',
+                desc: 'Aktion für die Vor- und Zurück-Tasten der Maus auf dem Desktop.',
+                options: {
+                    none: 'Systemstandard verwenden',
+                    singlePaneSwitch: 'Bereiche wechseln (Einzelbereich)',
+                    history: 'Verlauf navigieren'
+                }
             },
             excludedNotes: {
                 name: 'Notizen mit Eigenschaftsregeln verstecken (Tresorprofil)',

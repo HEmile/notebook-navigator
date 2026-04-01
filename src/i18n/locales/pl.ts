@@ -842,6 +842,7 @@ export const STRINGS_PL = {
                 templates: 'Szablony',
                 behavior: 'Zachowanie',
                 keyboardNavigation: 'Nawigacja klawiaturą',
+                mouseButtons: 'Przyciski myszy',
                 view: 'Wygląd',
                 icons: 'Ikonki',
                 desktopAppearance: 'Wygląd na komputerze',
@@ -1353,6 +1354,15 @@ export const STRINGS_PL = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Otwórz wybrany plik w nowej karcie, grupie lub oknie po kliknięciu Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Przyciski wstecz/dalej myszy',
+                desc: 'Działanie przycisków wstecz i dalej myszy na komputerze.',
+                options: {
+                    none: 'Użyj domyślnych systemu',
+                    singlePaneSwitch: 'Przełącz panele (jeden panel)',
+                    history: 'Nawiguj historię'
+                }
             },
             fileVisibility: {
                 name: 'Pokaż typy plików (profil sejfu)',

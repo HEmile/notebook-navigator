@@ -842,6 +842,7 @@ export const STRINGS_PT_BR = {
                 templates: 'Modelos',
                 behavior: 'Comportamento',
                 keyboardNavigation: 'Navegação por teclado',
+                mouseButtons: 'Botões do mouse',
                 view: 'Aparência',
                 icons: 'Ícones',
                 desktopAppearance: 'Aparência do desktop',
@@ -1354,6 +1355,15 @@ export const STRINGS_PT_BR = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Abrir o arquivo selecionado em uma nova aba, divisão ou janela ao pressionar Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Botões voltar/avançar do mouse',
+                desc: 'Ação dos botões voltar e avançar do mouse no desktop.',
+                options: {
+                    none: 'Usar padrão do sistema',
+                    singlePaneSwitch: 'Alternar painéis (painel único)',
+                    history: 'Navegar no histórico'
+                }
             },
             fileVisibility: {
                 name: 'Mostrar tipos de arquivo (perfil do cofre)',

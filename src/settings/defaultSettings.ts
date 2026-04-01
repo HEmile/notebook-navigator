@@ -151,6 +151,9 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     shiftEnterOpenContext: 'tab',
     cmdCtrlEnterOpenContext: 'split',
 
+    // General tab - Mouse buttons
+    mouseBackForwardAction: 'history',
+
     // General tab - View
     startView: 'files',
     showInfoButtons: true,

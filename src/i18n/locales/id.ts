@@ -840,6 +840,7 @@ export const STRINGS_ID = {
                 templates: 'Templat',
                 behavior: 'Perilaku',
                 keyboardNavigation: 'Navigasi keyboard',
+                mouseButtons: 'Tombol mouse',
                 view: 'Tampilan',
                 icons: 'Ikon',
                 desktopAppearance: 'Tampilan desktop',
@@ -1350,6 +1351,15 @@ export const STRINGS_ID = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Buka file yang dipilih di tab baru, split, atau jendela saat menekan Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Tombol mundur/maju mouse',
+                desc: 'Aksi untuk tombol mundur dan maju mouse di desktop.',
+                options: {
+                    none: 'Gunakan default sistem',
+                    singlePaneSwitch: 'Pindah panel (panel tunggal)',
+                    history: 'Navigasi riwayat'
+                }
             },
             fileVisibility: {
                 name: 'Tampilkan jenis file (profil vault)',

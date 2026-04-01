@@ -197,6 +197,13 @@ export type MultiSelectModifier = 'cmdCtrl' | 'optionAlt';
 /** Workspace context used when opening a file in a new leaf. */
 export type FileOpenContext = 'tab' | 'split' | 'window';
 
+/** Action triggered by mouse back and forward buttons. */
+export type MouseBackForwardAction = 'none' | 'singlePaneSwitch' | 'history';
+
+export function isMouseBackForwardAction(value: unknown): value is MouseBackForwardAction {
+    return value === 'none' || value === 'singlePaneSwitch' || value === 'history';
+}
+
 /** Display options for vault title */
 export type VaultTitleOption = 'header' | 'navigation';
 
@@ -324,6 +331,9 @@ export interface NotebookNavigatorSettings {
     enterToOpenFiles: boolean;
     shiftEnterOpenContext: FileOpenContext;
     cmdCtrlEnterOpenContext: FileOpenContext;
+
+    // General tab - Mouse buttons
+    mouseBackForwardAction: MouseBackForwardAction;
 
     // General tab - View
     startView: 'navigation' | 'files';

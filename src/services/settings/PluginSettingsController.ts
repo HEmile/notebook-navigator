@@ -51,6 +51,7 @@ import {
     isCalendarWeekendDays,
     isFeatureImagePixelSizeSetting,
     isFeatureImageSizeSetting,
+    isMouseBackForwardAction,
     isPropertySortSecondaryOption,
     isRecentNotesHideMode,
     isSettingSyncMode,
@@ -289,6 +290,10 @@ export class PluginSettingsController {
 
         if (!isFeatureImagePixelSizeSetting(this.currentSettings.featureImagePixelSize)) {
             this.currentSettings.featureImagePixelSize = DEFAULT_SETTINGS.featureImagePixelSize;
+        }
+
+        if (!isMouseBackForwardAction(this.currentSettings.mouseBackForwardAction)) {
+            this.currentSettings.mouseBackForwardAction = DEFAULT_SETTINGS.mouseBackForwardAction;
         }
 
         if (!isAlphaSortOrder(this.currentSettings.folderSortOrder)) {

@@ -839,6 +839,7 @@ export const STRINGS_KO = {
                 templates: '템플릿',
                 behavior: '동작',
                 keyboardNavigation: '키보드 탐색',
+                mouseButtons: '마우스 버튼',
                 view: '모양',
                 icons: '아이콘',
                 desktopAppearance: '데스크톱 모양새',
@@ -1349,6 +1350,15 @@ export const STRINGS_KO = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Ctrl+Enter를 누르면 선택한 파일을 새 탭, 분할 또는 창에서 엽니다.'
+            },
+            mouseBackForwardAction: {
+                name: '마우스 뒤로/앞으로 버튼',
+                desc: '데스크톱에서 마우스 뒤로/앞으로 버튼의 동작.',
+                options: {
+                    none: '시스템 기본값 사용',
+                    singlePaneSwitch: '패널 전환 (단일 패널)',
+                    history: '기록 탐색'
+                }
             },
             fileVisibility: {
                 name: '파일 유형 표시 (볼트 프로필)',

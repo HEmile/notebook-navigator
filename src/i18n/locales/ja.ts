@@ -839,6 +839,7 @@ export const STRINGS_JA = {
                 templates: 'テンプレート',
                 behavior: '動作',
                 keyboardNavigation: 'キーボード操作',
+                mouseButtons: 'マウスボタン',
                 view: '外観',
                 icons: 'アイコン',
                 desktopAppearance: 'デスクトップの外観',
@@ -1349,6 +1350,15 @@ export const STRINGS_JA = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Ctrl+Enterで選択したファイルを新しいタブ、分割、またはウィンドウで開きます。'
+            },
+            mouseBackForwardAction: {
+                name: 'マウスの戻る/進むボタン',
+                desc: 'デスクトップでのマウスの戻る/進むボタンの動作。',
+                options: {
+                    none: 'システムのデフォルトを使用',
+                    singlePaneSwitch: 'ペイン切り替え（シングルペイン）',
+                    history: '履歴をナビゲート'
+                }
             },
             excludedNotes: {
                 name: 'プロパティルールでノートを非表示 (ボルトプロファイル)',

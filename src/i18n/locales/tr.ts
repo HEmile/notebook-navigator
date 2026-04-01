@@ -840,6 +840,7 @@ export const STRINGS_TR = {
                 templates: 'Şablonlar',
                 behavior: 'Davranış',
                 keyboardNavigation: 'Klavye ile gezinme',
+                mouseButtons: 'Fare düğmeleri',
                 view: 'Görünüm',
                 icons: 'Simgeler',
                 desktopAppearance: 'Masaüstü görünümü',
@@ -1350,6 +1351,15 @@ export const STRINGS_TR = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Ctrl+Enter ile seçili dosyayı yeni sekmede, bölmede veya pencerede aç.'
+            },
+            mouseBackForwardAction: {
+                name: 'Fare geri/ileri düğmeleri',
+                desc: 'Masaüstünde fare geri ve ileri düğmelerinin işlevi.',
+                options: {
+                    none: 'Sistem varsayılanını kullan',
+                    singlePaneSwitch: 'Panel değiştir (tek panel)',
+                    history: 'Geçmişte gezin'
+                }
             },
             fileVisibility: {
                 name: 'Dosya türlerini göster (kasa profili)',

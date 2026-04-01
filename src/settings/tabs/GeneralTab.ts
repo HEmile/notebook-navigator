@@ -32,6 +32,7 @@ import {
 import type {
     FileOpenContext,
     ListToolbarButtonId,
+    MouseBackForwardAction,
     MultiSelectModifier,
     NavigationToolbarButtonId,
     VaultProfilePropertyKey,
@@ -740,6 +741,31 @@ export function renderGeneralTab(context: SettingsTabContext): void {
                         await plugin.saveSettingsAndUpdate();
                     })
             );
+
+        const mouseButtonsGroup = createGroup(strings.settings.groups.general.mouseButtons);
+        const normalizeMouseBackForwardAction = (value: string): MouseBackForwardAction => {
+            if (value === 'singlePaneSwitch' || value === 'history') {
+                return value;
+            }
+            return 'none';
+        };
+
+        mouseButtonsGroup.addSetting(setting => {
+            setting
+                .setName(strings.settings.items.mouseBackForwardAction.name)
+                .setDesc(strings.settings.items.mouseBackForwardAction.desc)
+                .addDropdown(dropdown =>
+                    dropdown
+                        .addOption('none', strings.settings.items.mouseBackForwardAction.options.none)
+                        .addOption('singlePaneSwitch', strings.settings.items.mouseBackForwardAction.options.singlePaneSwitch)
+                        .addOption('history', strings.settings.items.mouseBackForwardAction.options.history)
+                        .setValue(plugin.settings.mouseBackForwardAction)
+                        .onChange(async value => {
+                            plugin.settings.mouseBackForwardAction = normalizeMouseBackForwardAction(value);
+                            await plugin.saveSettingsAndUpdate();
+                        })
+                );
+        });
     }
 
     if (!Platform.isMobile) {

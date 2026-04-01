@@ -841,6 +841,7 @@ export const STRINGS_ES = {
                 templates: 'Plantillas',
                 behavior: 'Comportamiento',
                 keyboardNavigation: 'Navegación con teclado',
+                mouseButtons: 'Botones del ratón',
                 view: 'Apariencia',
                 icons: 'Iconos',
                 desktopAppearance: 'Apariencia de escritorio',
@@ -1352,6 +1353,15 @@ export const STRINGS_ES = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Abrir el archivo seleccionado en una nueva pestaña, división o ventana al pulsar Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Botones atrás/adelante del ratón',
+                desc: 'Acción de los botones atrás y adelante del ratón en escritorio.',
+                options: {
+                    none: 'Usar predeterminado del sistema',
+                    singlePaneSwitch: 'Cambiar paneles (panel único)',
+                    history: 'Navegar en el historial'
+                }
             },
             excludedNotes: {
                 name: 'Ocultar notas con reglas de propiedades (perfil de bóveda)',

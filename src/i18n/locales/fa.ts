@@ -840,6 +840,7 @@ export const STRINGS_FA = {
                 templates: 'الگوها',
                 behavior: 'رفتار',
                 keyboardNavigation: 'پیمایش با صفحه‌کلید',
+                mouseButtons: 'دکمه‌های ماوس',
                 view: 'ظاهر',
                 icons: 'آیکون‌ها',
                 desktopAppearance: 'ظاهر دسکتاپ',
@@ -1350,6 +1351,15 @@ export const STRINGS_FA = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'فایل انتخاب‌شده را در تب، تقسیم یا پنجره جدید با فشار Ctrl+Enter باز کنید.'
+            },
+            mouseBackForwardAction: {
+                name: 'دکمه‌های عقب/جلو ماوس',
+                desc: 'عملکرد دکمه‌های عقب و جلو ماوس در دسکتاپ.',
+                options: {
+                    none: 'استفاده از پیش‌فرض سیستم',
+                    singlePaneSwitch: 'تغییر پنل (تک‌پنل)',
+                    history: 'پیمایش تاریخچه'
+                }
             },
             fileVisibility: {
                 name: 'نمایش انواع فایل (پروفایل خزانه)',

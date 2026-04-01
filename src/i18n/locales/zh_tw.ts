@@ -833,6 +833,7 @@ export const STRINGS_ZH_TW = {
                 templates: '範本',
                 behavior: '行為',
                 keyboardNavigation: '鍵盤導覽',
+                mouseButtons: '滑鼠按鈕',
                 view: '外觀',
                 icons: '圖示',
                 desktopAppearance: '桌面外觀',
@@ -1343,6 +1344,15 @@ export const STRINGS_ZH_TW = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: '按 Ctrl+Enter 在新分頁、分割或視窗中開啟所選檔案。'
+            },
+            mouseBackForwardAction: {
+                name: '滑鼠上一頁/下一頁按鈕',
+                desc: '桌面端滑鼠上一頁和下一頁按鈕的操作。',
+                options: {
+                    none: '使用系統預設',
+                    singlePaneSwitch: '切換面板（單面板）',
+                    history: '瀏覽歷史'
+                }
             },
             excludedNotes: {
                 name: '依屬性規則隱藏筆記（保險庫設定檔）',

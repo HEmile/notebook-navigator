@@ -836,6 +836,7 @@ export const STRINGS_TH = {
                 templates: 'เทมเพลต',
                 behavior: 'พฤติกรรม',
                 keyboardNavigation: 'การนำทางด้วยแป้นพิมพ์',
+                mouseButtons: 'ปุ่มเมาส์',
                 view: 'ลักษณะ',
                 icons: 'ไอคอน',
                 desktopAppearance: 'ลักษณะเดสก์ท็อป',
@@ -1346,6 +1347,15 @@ export const STRINGS_TH = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'เปิดไฟล์ที่เลือกในแท็บใหม่ แยก หรือหน้าต่างเมื่อกด Ctrl+Enter'
+            },
+            mouseBackForwardAction: {
+                name: 'ปุ่มย้อนกลับ/ไปข้างหน้าของเมาส์',
+                desc: 'การทำงานของปุ่มย้อนกลับและไปข้างหน้าของเมาส์บนเดสก์ท็อป',
+                options: {
+                    none: 'ใช้ค่าเริ่มต้นของระบบ',
+                    singlePaneSwitch: 'สลับแผง (แผงเดียว)',
+                    history: 'นำทางประวัติ'
+                }
             },
             fileVisibility: {
                 name: 'แสดงประเภทไฟล์ (โปรไฟล์ห้องนิรภัย)',

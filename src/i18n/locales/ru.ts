@@ -837,6 +837,7 @@ export const STRINGS_RU = {
                 templates: 'Шаблоны',
                 behavior: 'Поведение',
                 keyboardNavigation: 'Навигация с клавиатуры',
+                mouseButtons: 'Кнопки мыши',
                 view: 'Внешний вид',
                 icons: 'Иконки',
                 desktopAppearance: 'Внешний вид на компьютере',
@@ -1347,6 +1348,15 @@ export const STRINGS_RU = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Открыть выбранный файл в новой вкладке, разделении или окне при нажатии Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Кнопки «Назад»/«Вперёд» мыши',
+                desc: 'Действие кнопок «Назад» и «Вперёд» мыши на десктопе.',
+                options: {
+                    none: 'Использовать системное значение',
+                    singlePaneSwitch: 'Переключение панелей (одна панель)',
+                    history: 'Навигация по истории'
+                }
             },
             fileVisibility: {
                 name: 'Показывать типы файлов (профиль хранилища)',

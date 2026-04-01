@@ -838,6 +838,7 @@ export const STRINGS_AR = {
                 templates: 'قوالب',
                 behavior: 'السلوك',
                 keyboardNavigation: 'التنقل بلوحة المفاتيح',
+                mouseButtons: 'أزرار الفأرة',
                 view: 'المظهر',
                 icons: 'الأيقونات',
                 desktopAppearance: 'مظهر سطح المكتب',
@@ -1348,6 +1349,15 @@ export const STRINGS_AR = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'افتح الملف المحدد في علامة تبويب جديدة أو تقسيم أو نافذة عند الضغط على Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'أزرار الرجوع/التقدم في الفأرة',
+                desc: 'الإجراء لأزرار الرجوع والتقدم في الفأرة على سطح المكتب.',
+                options: {
+                    none: 'استخدام الإعداد الافتراضي للنظام',
+                    singlePaneSwitch: 'تبديل الألواح (لوح واحد)',
+                    history: 'التنقل في السجل'
+                }
             },
             fileVisibility: {
                 name: 'إظهار أنواع الملفات (ملف الخزنة)',

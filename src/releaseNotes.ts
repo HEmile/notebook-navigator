@@ -80,7 +80,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.5.5',
         date: '2026-04-03',
         new: [
-            'New setting: General > Behavior > ==Ignore events from other windows==. When enabled, auto-reveal does not trigger when working with notes in a different window. Default enabled.'
+            'New setting: General > Behavior > ==Ignore events from other windows==. When enabled, auto-reveal does not trigger when working with notes in a different window. Default enabled.',
+            'New setting: General > Mouse buttons > ==Mouse back/forward buttons==. Configures the action for mouse back and forward buttons on desktop: use system default, switch panes in single-pane mode, or navigate history.'
         ],
         fixed: [
             'Auto-reveal is now saved to the navigation history.',

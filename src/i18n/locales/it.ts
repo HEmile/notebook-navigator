@@ -836,6 +836,7 @@ export const STRINGS_IT = {
                 templates: 'Modelli',
                 behavior: 'Comportamento',
                 keyboardNavigation: 'Navigazione da tastiera',
+                mouseButtons: 'Pulsanti del mouse',
                 view: 'Aspetto',
                 icons: 'Icone',
                 desktopAppearance: 'Aspetto desktop',
@@ -1348,6 +1349,15 @@ export const STRINGS_IT = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Invio',
                 desc: 'Apri il file selezionato in una nuova scheda, divisione o finestra premendo Ctrl+Invio.'
+            },
+            mouseBackForwardAction: {
+                name: 'Pulsanti indietro/avanti del mouse',
+                desc: 'Azione per i pulsanti indietro e avanti del mouse su desktop.',
+                options: {
+                    none: 'Usa impostazione predefinita di sistema',
+                    singlePaneSwitch: 'Cambia pannello (pannello singolo)',
+                    history: 'Naviga nella cronologia'
+                }
             },
             fileVisibility: {
                 name: 'Mostra tipi file (profilo vault)',

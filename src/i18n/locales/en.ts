@@ -836,6 +836,7 @@ export const STRINGS_EN = {
                 templates: 'Templates',
                 behavior: 'Behavior',
                 keyboardNavigation: 'Keyboard navigation',
+                mouseButtons: 'Mouse buttons',
                 view: 'Appearance',
                 icons: 'Icons',
                 desktopAppearance: 'Desktop appearance',
@@ -1346,6 +1347,15 @@ export const STRINGS_EN = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Open selected file in a new tab, split, or window when pressing Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Mouse back/forward buttons',
+                desc: 'Action for mouse back and forward buttons on desktop.',
+                options: {
+                    none: 'Use system default',
+                    singlePaneSwitch: 'Switch panes (single-pane)',
+                    history: 'Navigate history'
+                }
             },
             fileVisibility: {
                 name: 'Show file types (vault profile)',

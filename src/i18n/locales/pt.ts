@@ -840,6 +840,7 @@ export const STRINGS_PT = {
                 templates: 'Modelos',
                 behavior: 'Comportamento',
                 keyboardNavigation: 'Navegação por teclado',
+                mouseButtons: 'Botões do rato',
                 view: 'Aparência',
                 icons: 'Ícones',
                 desktopAppearance: 'Aparência no computador',
@@ -1352,6 +1353,15 @@ export const STRINGS_PT = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Abrir o ficheiro selecionado num novo separador, divisão ou janela ao premir Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Botões voltar/avançar do rato',
+                desc: 'Ação dos botões voltar e avançar do rato no ambiente de trabalho.',
+                options: {
+                    none: 'Usar predefinição do sistema',
+                    singlePaneSwitch: 'Alternar painéis (painel único)',
+                    history: 'Navegar no histórico'
+                }
             },
             fileVisibility: {
                 name: 'Mostrar tipos de ficheiro (perfil do cofre)',

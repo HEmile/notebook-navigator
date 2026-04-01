@@ -833,6 +833,7 @@ export const STRINGS_ZH_CN = {
                 templates: '模板',
                 behavior: '行为',
                 keyboardNavigation: '键盘导航',
+                mouseButtons: '鼠标按钮',
                 view: '外观',
                 icons: '图标',
                 desktopAppearance: '桌面外观',
@@ -1343,6 +1344,15 @@ export const STRINGS_ZH_CN = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: '按 Ctrl+Enter 在新标签页、分栏或窗口中打开所选文件。'
+            },
+            mouseBackForwardAction: {
+                name: '鼠标后退/前进按钮',
+                desc: '桌面端鼠标后退和前进按钮的操作。',
+                options: {
+                    none: '使用系统默认',
+                    singlePaneSwitch: '切换面板（单面板）',
+                    history: '浏览历史'
+                }
             },
             excludedNotes: {
                 name: '按属性规则隐藏笔记 (库配置)',

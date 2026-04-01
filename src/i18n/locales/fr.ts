@@ -842,6 +842,7 @@ export const STRINGS_FR = {
                 templates: 'Modèles',
                 behavior: 'Comportement',
                 keyboardNavigation: 'Navigation au clavier',
+                mouseButtons: 'Boutons de souris',
                 view: 'Apparence',
                 icons: 'Icônes',
                 desktopAppearance: 'Apparence sur ordinateur',
@@ -1354,6 +1355,15 @@ export const STRINGS_FR = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Entrée',
                 desc: 'Ouvrir le fichier sélectionné dans un nouvel onglet, une division ou une fenêtre avec Ctrl+Entrée.'
+            },
+            mouseBackForwardAction: {
+                name: 'Boutons précédent/suivant de la souris',
+                desc: 'Action des boutons précédent et suivant de la souris sur ordinateur.',
+                options: {
+                    none: 'Utiliser la valeur système par défaut',
+                    singlePaneSwitch: 'Changer de volet (volet unique)',
+                    history: "Naviguer dans l'historique"
+                }
             },
             excludedNotes: {
                 name: 'Masquer les notes avec des règles de propriétés (profil du coffre)',

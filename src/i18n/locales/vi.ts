@@ -841,6 +841,7 @@ export const STRINGS_VI = {
                 templates: 'Mẫu',
                 behavior: 'Hành vi',
                 keyboardNavigation: 'Điều hướng bằng bàn phím',
+                mouseButtons: 'Nút chuột',
                 view: 'Giao diện',
                 icons: 'Biểu tượng',
                 desktopAppearance: 'Giao diện máy tính',
@@ -1351,6 +1352,15 @@ export const STRINGS_VI = {
             ctrlEnterOpenContext: {
                 name: 'Ctrl+Enter',
                 desc: 'Mở tệp đã chọn trong tab mới, chia đôi hoặc cửa sổ khi nhấn Ctrl+Enter.'
+            },
+            mouseBackForwardAction: {
+                name: 'Nút quay lại/tiến lên của chuột',
+                desc: 'Hành động cho nút quay lại và tiến lên của chuột trên máy tính.',
+                options: {
+                    none: 'Sử dụng mặc định hệ thống',
+                    singlePaneSwitch: 'Chuyển ngăn (một ngăn)',
+                    history: 'Điều hướng lịch sử'
+                }
             },
             fileVisibility: {
                 name: 'Hiện loại tệp (hồ sơ vault)',
