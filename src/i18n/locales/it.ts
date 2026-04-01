@@ -1315,6 +1315,36 @@ export const STRINGS_IT = {
                 buttonText: 'Ripristina separatore',
                 notice: 'Posizione separatore ripristinata. Riavvia Obsidian o riapri Notebook Navigator per applicare.'
             },
+            settingsTransfer: {
+                name: 'Importa ed esporta impostazioni',
+                desc: 'Esporta o importa le impostazioni di Notebook Navigator come JSON.',
+                importButtonText: 'Importa',
+                exportButtonText: 'Esporta',
+                import: {
+                    modalTitle: 'Importa impostazioni',
+                    fileButtonName: 'Importa da file',
+                    fileButtonDesc: 'Carica un file JSON dal disco.',
+                    fileButtonText: 'Importa da file',
+                    editorName: 'JSON',
+                    editorDesc: 'Incolla o modifica il JSON qui sotto.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Importa',
+                    successNotice: 'Impostazioni importate.',
+                    errorNotice: 'Impossibile importare le impostazioni: {message}',
+                    fileReadError: 'Impossibile leggere il file: {message}'
+                },
+                export: {
+                    modalTitle: 'Esporta impostazioni',
+                    editorName: 'JSON',
+                    editorDesc: 'Sono incluse solo le impostazioni modificate rispetto ai valori predefiniti.',
+                    placeholder: '{}',
+                    copyButtonText: 'Copia negli appunti',
+                    downloadButtonText: 'Scarica',
+                    copyNotice: 'Impostazioni copiate negli appunti.',
+                    downloadNotice: 'Impostazioni esportate.',
+                    downloadError: 'Impossibile scaricare le impostazioni: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Ripristina tutte le impostazioni',
                 desc: 'Ripristina tutte le impostazioni di Notebook Navigator ai valori predefiniti.',

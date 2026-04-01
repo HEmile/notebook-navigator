@@ -1318,6 +1318,36 @@ export const STRINGS_FA = {
                 buttonText: 'بازنشانی جداکننده',
                 notice: 'موقعیت جداکننده بازنشانی شد. اوبسیدین را ری‌استارت کنید یا Notebook Navigator را دوباره باز کنید.'
             },
+            settingsTransfer: {
+                name: 'وارد و صادر کردن تنظیمات',
+                desc: 'تنظیمات Notebook Navigator را به صورت JSON صادر یا وارد کنید.',
+                importButtonText: 'وارد کردن',
+                exportButtonText: 'صادر کردن',
+                import: {
+                    modalTitle: 'وارد کردن تنظیمات',
+                    fileButtonName: 'وارد کردن از فایل',
+                    fileButtonDesc: 'یک فایل JSON را از دیسک بارگذاری کنید.',
+                    fileButtonText: 'وارد کردن از فایل',
+                    editorName: 'JSON',
+                    editorDesc: 'JSON را در زیر جای‌گذاری یا ویرایش کنید.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'وارد کردن',
+                    successNotice: 'تنظیمات وارد شد.',
+                    errorNotice: 'وارد کردن تنظیمات ناموفق بود: {message}',
+                    fileReadError: 'خواندن فایل ممکن نبود: {message}'
+                },
+                export: {
+                    modalTitle: 'صادر کردن تنظیمات',
+                    editorName: 'JSON',
+                    editorDesc: 'فقط تنظیماتی که از پیش‌فرض تغییر کرده‌اند شامل می‌شوند.',
+                    placeholder: '{}',
+                    copyButtonText: 'کپی به کلیپ‌بورد',
+                    downloadButtonText: 'دانلود',
+                    copyNotice: 'تنظیمات به کلیپ‌بورد کپی شد.',
+                    downloadNotice: 'تنظیمات صادر شد.',
+                    downloadError: 'صادر کردن تنظیمات ناموفق بود: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'بازنشانی همه تنظیمات',
                 desc: 'همه تنظیمات Notebook Navigator را به مقادیر پیش‌فرض بازنشانی کنید.',

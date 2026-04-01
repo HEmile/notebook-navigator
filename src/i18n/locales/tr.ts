@@ -1318,6 +1318,36 @@ export const STRINGS_TR = {
                 buttonText: 'Ayırıcıyı sıfırla',
                 notice: "Ayırıcı konumu sıfırlandı. Uygulamak için Obsidian'ı yeniden başlatın veya Notebook Navigator'ı yeniden açın."
             },
+            settingsTransfer: {
+                name: 'Ayarları içe ve dışa aktar',
+                desc: 'Notebook Navigator ayarlarını JSON olarak dışa veya içe aktar.',
+                importButtonText: 'İçe aktar',
+                exportButtonText: 'Dışa aktar',
+                import: {
+                    modalTitle: 'Ayarları içe aktar',
+                    fileButtonName: 'Dosyadan içe aktar',
+                    fileButtonDesc: 'Diskten bir JSON dosyası yükle.',
+                    fileButtonText: 'Dosyadan içe aktar',
+                    editorName: 'JSON',
+                    editorDesc: 'Aşağıya JSON yapıştırın veya düzenleyin.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'İçe aktar',
+                    successNotice: 'Ayarlar içe aktarıldı.',
+                    errorNotice: 'Ayarlar içe aktarılamadı: {message}',
+                    fileReadError: 'Dosya okunamadı: {message}'
+                },
+                export: {
+                    modalTitle: 'Ayarları dışa aktar',
+                    editorName: 'JSON',
+                    editorDesc: 'Yalnızca varsayılandan farklı olan ayarlar dahil edilir.',
+                    placeholder: '{}',
+                    copyButtonText: 'Panoya kopyala',
+                    downloadButtonText: 'İndir',
+                    copyNotice: 'Ayarlar panoya kopyalandı.',
+                    downloadNotice: 'Ayarlar dışa aktarıldı.',
+                    downloadError: 'Ayarlar indirilemedi: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Tüm ayarları sıfırla',
                 desc: "Notebook Navigator'ın tüm ayarlarını varsayılan değerlere sıfırla.",

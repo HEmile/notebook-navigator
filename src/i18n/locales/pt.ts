@@ -1319,6 +1319,36 @@ export const STRINGS_PT = {
                 buttonText: 'Repor separador',
                 notice: 'Posição do separador reposta. Reinicie o Obsidian ou reabra o Notebook Navigator para aplicar.'
             },
+            settingsTransfer: {
+                name: 'Importar e exportar definições',
+                desc: 'Exportar ou importar definições do Notebook Navigator como JSON.',
+                importButtonText: 'Importar',
+                exportButtonText: 'Exportar',
+                import: {
+                    modalTitle: 'Importar definições',
+                    fileButtonName: 'Importar de ficheiro',
+                    fileButtonDesc: 'Carregar um ficheiro JSON do disco.',
+                    fileButtonText: 'Importar de ficheiro',
+                    editorName: 'JSON',
+                    editorDesc: 'Cole ou edite o JSON abaixo.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Importar',
+                    successNotice: 'Definições importadas.',
+                    errorNotice: 'Falha ao importar definições: {message}',
+                    fileReadError: 'Não foi possível ler o ficheiro: {message}'
+                },
+                export: {
+                    modalTitle: 'Exportar definições',
+                    editorName: 'JSON',
+                    editorDesc: 'Apenas as definições alteradas em relação aos valores predefinidos são incluídas.',
+                    placeholder: '{}',
+                    copyButtonText: 'Copiar para a área de transferência',
+                    downloadButtonText: 'Descarregar',
+                    copyNotice: 'Definições copiadas para a área de transferência.',
+                    downloadNotice: 'Definições exportadas.',
+                    downloadError: 'Falha ao descarregar definições: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Repor todas as definições',
                 desc: 'Repor todas as definições do Notebook Navigator para os valores predefinidos.',

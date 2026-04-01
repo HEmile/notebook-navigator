@@ -1321,6 +1321,36 @@ export const STRINGS_PT_BR = {
                 buttonText: 'Redefinir separador',
                 notice: 'Posição do separador redefinida. Reinicie o Obsidian ou reabra o Notebook Navigator para aplicar.'
             },
+            settingsTransfer: {
+                name: 'Importar e exportar configurações',
+                desc: 'Exportar ou importar configurações do Notebook Navigator como JSON.',
+                importButtonText: 'Importar',
+                exportButtonText: 'Exportar',
+                import: {
+                    modalTitle: 'Importar configurações',
+                    fileButtonName: 'Importar de arquivo',
+                    fileButtonDesc: 'Carregar um arquivo JSON do disco.',
+                    fileButtonText: 'Importar de arquivo',
+                    editorName: 'JSON',
+                    editorDesc: 'Cole ou edite o JSON abaixo.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Importar',
+                    successNotice: 'Configurações importadas.',
+                    errorNotice: 'Falha ao importar configurações: {message}',
+                    fileReadError: 'Não foi possível ler o arquivo: {message}'
+                },
+                export: {
+                    modalTitle: 'Exportar configurações',
+                    editorName: 'JSON',
+                    editorDesc: 'Apenas as configurações alteradas em relação aos valores padrão são incluídas.',
+                    placeholder: '{}',
+                    copyButtonText: 'Copiar para a área de transferência',
+                    downloadButtonText: 'Baixar',
+                    copyNotice: 'Configurações copiadas para a área de transferência.',
+                    downloadNotice: 'Configurações exportadas.',
+                    downloadError: 'Falha ao baixar configurações: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Redefinir todas as configurações',
                 desc: 'Redefinir todas as configurações do Notebook Navigator para os valores padrão.',

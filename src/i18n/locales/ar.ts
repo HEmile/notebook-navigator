@@ -1316,6 +1316,36 @@ export const STRINGS_AR = {
                 buttonText: 'إعادة تعيين الفاصل',
                 notice: 'تم إعادة تعيين موضع الفاصل. أعد تشغيل Obsidian أو أعد فتح متصفح الدفتر للتطبيق.'
             },
+            settingsTransfer: {
+                name: 'استيراد وتصدير الإعدادات',
+                desc: 'تصدير أو استيراد إعدادات متصفح الدفتر بصيغة JSON.',
+                importButtonText: 'استيراد',
+                exportButtonText: 'تصدير',
+                import: {
+                    modalTitle: 'استيراد الإعدادات',
+                    fileButtonName: 'استيراد من ملف',
+                    fileButtonDesc: 'تحميل ملف JSON من القرص.',
+                    fileButtonText: 'استيراد من ملف',
+                    editorName: 'JSON',
+                    editorDesc: 'الصق أو عدّل JSON أدناه.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'استيراد',
+                    successNotice: 'تم استيراد الإعدادات.',
+                    errorNotice: 'فشل استيراد الإعدادات: {message}',
+                    fileReadError: 'تعذّر قراءة الملف: {message}'
+                },
+                export: {
+                    modalTitle: 'تصدير الإعدادات',
+                    editorName: 'JSON',
+                    editorDesc: 'يتم تضمين الإعدادات المختلفة عن القيم الافتراضية فقط.',
+                    placeholder: '{}',
+                    copyButtonText: 'نسخ إلى الحافظة',
+                    downloadButtonText: 'تنزيل',
+                    copyNotice: 'تم نسخ الإعدادات إلى الحافظة.',
+                    downloadNotice: 'تم تصدير الإعدادات.',
+                    downloadError: 'فشل تنزيل الإعدادات: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'إعادة تعيين جميع الإعدادات',
                 desc: 'إعادة تعيين جميع إعدادات متصفح الدفتر إلى القيم الافتراضية.',

@@ -1318,6 +1318,36 @@ export const STRINGS_ID = {
                 buttonText: 'Atur ulang pemisah',
                 notice: 'Posisi pemisah diatur ulang. Mulai ulang Obsidian atau buka kembali Notebook Navigator untuk menerapkan.'
             },
+            settingsTransfer: {
+                name: 'Impor dan ekspor pengaturan',
+                desc: 'Ekspor atau impor pengaturan Notebook Navigator sebagai JSON.',
+                importButtonText: 'Impor',
+                exportButtonText: 'Ekspor',
+                import: {
+                    modalTitle: 'Impor pengaturan',
+                    fileButtonName: 'Impor dari file',
+                    fileButtonDesc: 'Muat file JSON dari disk.',
+                    fileButtonText: 'Impor dari file',
+                    editorName: 'JSON',
+                    editorDesc: 'Tempel atau edit JSON di bawah.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Impor',
+                    successNotice: 'Pengaturan diimpor.',
+                    errorNotice: 'Gagal mengimpor pengaturan: {message}',
+                    fileReadError: 'Tidak dapat membaca file: {message}'
+                },
+                export: {
+                    modalTitle: 'Ekspor pengaturan',
+                    editorName: 'JSON',
+                    editorDesc: 'Hanya pengaturan yang diubah dari default yang disertakan.',
+                    placeholder: '{}',
+                    copyButtonText: 'Salin ke papan klip',
+                    downloadButtonText: 'Unduh',
+                    copyNotice: 'Pengaturan disalin ke papan klip.',
+                    downloadNotice: 'Pengaturan diekspor.',
+                    downloadError: 'Gagal mengekspor pengaturan: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Atur ulang semua pengaturan',
                 desc: 'Atur ulang semua pengaturan Notebook Navigator ke nilai default.',

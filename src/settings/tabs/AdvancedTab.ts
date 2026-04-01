@@ -19,6 +19,7 @@
 import { ButtonComponent, Platform } from 'obsidian';
 import { strings } from '../../i18n';
 import { ConfirmModal } from '../../modals/ConfirmModal';
+import { SettingsExportModal, SettingsImportModal } from '../../modals/SettingsTransferModal';
 import type { MetadataCleanupSummary } from '../../services/MetadataService';
 import type { SettingsTabContext } from './SettingsTabContext';
 import { getNavigationPaneSizing } from '../../utils/paneSizing';
@@ -67,6 +68,22 @@ export function renderAdvancedTab(context: SettingsTabContext): void {
                 );
         });
     }
+
+    advancedGroup.addSetting(setting => {
+        setting
+            .setName(strings.settings.items.settingsTransfer.name)
+            .setDesc(strings.settings.items.settingsTransfer.desc)
+            .addButton(button =>
+                button.setButtonText(strings.settings.items.settingsTransfer.importButtonText).onClick(() => {
+                    new SettingsImportModal(context.app, plugin).open();
+                })
+            )
+            .addButton(button =>
+                button.setButtonText(strings.settings.items.settingsTransfer.exportButtonText).onClick(() => {
+                    new SettingsExportModal(context.app, plugin).open();
+                })
+            );
+    });
 
     advancedGroup.addSetting(setting => {
         setting

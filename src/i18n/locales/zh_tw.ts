@@ -1311,6 +1311,36 @@ export const STRINGS_ZH_TW = {
                 buttonText: '重設分隔符',
                 notice: '分隔符位置已重設。重新啟動 Obsidian 或重新開啟 Notebook Navigator 以套用。'
             },
+            settingsTransfer: {
+                name: '匯入和匯出設定',
+                desc: '將 Notebook Navigator 設定匯出或匯入為 JSON。',
+                importButtonText: '匯入',
+                exportButtonText: '匯出',
+                import: {
+                    modalTitle: '匯入設定',
+                    fileButtonName: '從檔案匯入',
+                    fileButtonDesc: '從磁碟載入 JSON 檔案。',
+                    fileButtonText: '從檔案匯入',
+                    editorName: 'JSON',
+                    editorDesc: '在下方貼上或編輯 JSON。',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: '匯入',
+                    successNotice: '設定已匯入。',
+                    errorNotice: '匯入設定失敗: {message}',
+                    fileReadError: '無法讀取檔案: {message}'
+                },
+                export: {
+                    modalTitle: '匯出設定',
+                    editorName: 'JSON',
+                    editorDesc: '僅包含與預設值不同的設定。',
+                    placeholder: '{}',
+                    copyButtonText: '複製到剪貼簿',
+                    downloadButtonText: '下載',
+                    copyNotice: '設定已複製到剪貼簿。',
+                    downloadNotice: '設定已匯出。',
+                    downloadError: '下載設定失敗: {message}'
+                }
+            },
             resetAllSettings: {
                 name: '重設所有設定',
                 desc: '將 Notebook Navigator 的所有設定重設為預設值。',

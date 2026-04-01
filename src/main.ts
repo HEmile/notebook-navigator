@@ -72,6 +72,7 @@ import {
 import { NOTEBOOK_NAVIGATOR_ICON_ID, NOTEBOOK_NAVIGATOR_ICON_SVG } from './constants/notebookNavigatorIcon';
 import { PluginSettingsController } from './services/settings/PluginSettingsController';
 import { PluginPreferencesController } from './services/settings/PluginPreferencesController';
+import { applyModifiedSettingsTransfer, createModifiedSettingsTransfer } from './settings/transfer';
 
 /**
  * Main plugin class for Notebook Navigator
@@ -185,17 +186,12 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             return;
         }
 
-        try {
-            await this.loadSettings();
-            const includeDescendantNotesChanged = this.preferencesController.syncMirrorsFromSettings();
-            this.preferencesController.initializeRecentDataManager();
-            this.isHandlingExternalSettingsUpdate = true;
-            this.onSettingsUpdate();
-            if (includeDescendantNotesChanged) {
-                this.preferencesController.notifyUXPreferencesUpdate();
-            }
-        } finally {
-            this.isHandlingExternalSettingsUpdate = false;
+        await this.loadSettings();
+        const includeDescendantNotesChanged = this.preferencesController.syncMirrorsFromSettings();
+        this.preferencesController.initializeRecentDataManager();
+        this.notifySettingsUpdateWithFullRefresh();
+        if (includeDescendantNotesChanged) {
+            this.preferencesController.notifyUXPreferencesUpdate();
         }
     }
 
@@ -1017,6 +1013,41 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     async saveSettingsAndUpdate() {
         await this.settingsController.saveSettings();
         this.onSettingsUpdate();
+    }
+
+    public createSettingsTransferJson(): string {
+        return JSON.stringify(createModifiedSettingsTransfer(this.settings), null, 2);
+    }
+
+    public async importSettingsTransfer(transferData: unknown): Promise<void> {
+        if (this.isUnloading) {
+            throw new Error('Plugin is unloading');
+        }
+
+        this.settings = applyModifiedSettingsTransfer(this.settings, transferData);
+        this.settingsController.mirrorAllSyncModeSettingsToLocalStorage();
+        await this.settingsController.saveSettings();
+        await this.loadSettings();
+        this.settingsController.normalizeTagSettings();
+        this.settingsController.normalizePropertySettings();
+        this.settingsController.normalizeNavigationSeparatorSettings();
+        const includeDescendantNotesChanged = this.preferencesController.syncMirrorsFromSettings();
+        this.preferencesController.initializeRecentDataManager();
+        await this.settingsController.saveSettings();
+        this.notifySettingsUpdateWithFullRefresh();
+
+        if (includeDescendantNotesChanged) {
+            this.preferencesController.notifyUXPreferencesUpdate();
+        }
+    }
+
+    private notifySettingsUpdateWithFullRefresh(): void {
+        try {
+            this.isHandlingExternalSettingsUpdate = true;
+            this.onSettingsUpdate();
+        } finally {
+            this.isHandlingExternalSettingsUpdate = false;
+        }
     }
 
     /**

@@ -1315,6 +1315,36 @@ export const STRINGS_RU = {
                 buttonText: 'Сбросить разделитель',
                 notice: 'Положение разделителя сброшено. Перезапустите Obsidian или переоткройте Notebook Navigator для применения.'
             },
+            settingsTransfer: {
+                name: 'Импорт и экспорт настроек',
+                desc: 'Экспорт или импорт настроек Notebook Navigator в формате JSON.',
+                importButtonText: 'Импорт',
+                exportButtonText: 'Экспорт',
+                import: {
+                    modalTitle: 'Импорт настроек',
+                    fileButtonName: 'Импорт из файла',
+                    fileButtonDesc: 'Загрузить JSON-файл с диска.',
+                    fileButtonText: 'Импорт из файла',
+                    editorName: 'JSON',
+                    editorDesc: 'Вставьте или отредактируйте JSON ниже.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Импортировать',
+                    successNotice: 'Настройки импортированы.',
+                    errorNotice: 'Не удалось импортировать настройки: {message}',
+                    fileReadError: 'Не удалось прочитать файл: {message}'
+                },
+                export: {
+                    modalTitle: 'Экспорт настроек',
+                    editorName: 'JSON',
+                    editorDesc: 'Включены только настройки, отличающиеся от значений по умолчанию.',
+                    placeholder: '{}',
+                    copyButtonText: 'Копировать в буфер обмена',
+                    downloadButtonText: 'Скачать',
+                    copyNotice: 'Настройки скопированы в буфер обмена.',
+                    downloadNotice: 'Настройки экспортированы.',
+                    downloadError: 'Не удалось скачать настройки: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Сбросить все настройки',
                 desc: 'Сбросить все настройки Notebook Navigator к значениям по умолчанию.',

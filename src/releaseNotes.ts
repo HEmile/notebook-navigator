@@ -78,8 +78,9 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.5.5',
-        date: '2026-04-03',
+        date: '2026-04-02',
         new: [
+            'New setting: Advanced > ==Import and export settings==. You can now export and import settings as a JSON file.',
             'New setting: General > Behavior > ==Ignore events from other windows==. When enabled, auto-reveal does not trigger when working with notes in a different window. Default enabled.',
             'New setting: General > Mouse buttons > ==Mouse back/forward buttons==. Configures the action for mouse back and forward buttons on desktop: use system default, switch panes in single-pane mode, or navigate history.'
         ],

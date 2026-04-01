@@ -1317,6 +1317,36 @@ export const STRINGS_JA = {
                 buttonText: 'セパレーターをリセット',
                 notice: 'セパレーターの位置がリセットされました。Obsidianを再起動するか、Notebook Navigatorを開き直して適用してください。'
             },
+            settingsTransfer: {
+                name: '設定のインポートとエクスポート',
+                desc: 'Notebook Navigatorの設定をJSONとしてエクスポートまたはインポートします。',
+                importButtonText: 'インポート',
+                exportButtonText: 'エクスポート',
+                import: {
+                    modalTitle: '設定をインポート',
+                    fileButtonName: 'ファイルからインポート',
+                    fileButtonDesc: 'ディスクからJSONファイルを読み込みます。',
+                    fileButtonText: 'ファイルからインポート',
+                    editorName: 'JSON',
+                    editorDesc: '下にJSONを貼り付けまたは編集してください。',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'インポート',
+                    successNotice: '設定がインポートされました。',
+                    errorNotice: '設定のインポートに失敗しました: {message}',
+                    fileReadError: 'ファイルを読み込めませんでした: {message}'
+                },
+                export: {
+                    modalTitle: '設定をエクスポート',
+                    editorName: 'JSON',
+                    editorDesc: 'デフォルトから変更された設定のみが含まれます。',
+                    placeholder: '{}',
+                    copyButtonText: 'クリップボードにコピー',
+                    downloadButtonText: 'ダウンロード',
+                    copyNotice: '設定がクリップボードにコピーされました。',
+                    downloadNotice: '設定がエクスポートされました。',
+                    downloadError: '設定のダウンロードに失敗しました: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'すべての設定をリセット',
                 desc: 'Notebook Navigatorのすべての設定をデフォルト値にリセットします。',

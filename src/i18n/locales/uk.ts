@@ -1315,6 +1315,36 @@ export const STRINGS_UK = {
                 buttonText: 'Скинути роздільник',
                 notice: 'Позицію роздільника скинуто. Перезапустіть Obsidian або відкрийте Notebook Navigator знову для застосування.'
             },
+            settingsTransfer: {
+                name: 'Імпорт та експорт налаштувань',
+                desc: 'Експорт або імпорт налаштувань Notebook Navigator у форматі JSON.',
+                importButtonText: 'Імпорт',
+                exportButtonText: 'Експорт',
+                import: {
+                    modalTitle: 'Імпорт налаштувань',
+                    fileButtonName: 'Імпорт з файлу',
+                    fileButtonDesc: 'Завантажити JSON-файл з диска.',
+                    fileButtonText: 'Імпорт з файлу',
+                    editorName: 'JSON',
+                    editorDesc: 'Вставте або відредагуйте JSON нижче.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Імпортувати',
+                    successNotice: 'Налаштування імпортовано.',
+                    errorNotice: 'Не вдалося імпортувати налаштування: {message}',
+                    fileReadError: 'Не вдалося прочитати файл: {message}'
+                },
+                export: {
+                    modalTitle: 'Експорт налаштувань',
+                    editorName: 'JSON',
+                    editorDesc: 'Включено лише налаштування, що відрізняються від значень за замовчуванням.',
+                    placeholder: '{}',
+                    copyButtonText: 'Копіювати до буфера обміну',
+                    downloadButtonText: 'Завантажити',
+                    copyNotice: 'Налаштування скопійовано до буфера обміну.',
+                    downloadNotice: 'Налаштування експортовано.',
+                    downloadError: 'Не вдалося завантажити налаштування: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Скинути всі налаштування',
                 desc: 'Скинути всі налаштування Notebook Navigator до значень за замовчуванням.',

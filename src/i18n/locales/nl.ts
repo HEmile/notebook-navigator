@@ -1319,6 +1319,36 @@ export const STRINGS_NL = {
                 buttonText: 'Scheiding resetten',
                 notice: 'Scheidingspositie gereset. Herstart Obsidian of heropen Notebook Navigator om toe te passen.'
             },
+            settingsTransfer: {
+                name: 'Instellingen importeren en exporteren',
+                desc: 'Notebook Navigator-instellingen exporteren of importeren als JSON.',
+                importButtonText: 'Importeren',
+                exportButtonText: 'Exporteren',
+                import: {
+                    modalTitle: 'Instellingen importeren',
+                    fileButtonName: 'Importeren uit bestand',
+                    fileButtonDesc: 'Een JSON-bestand laden vanaf schijf.',
+                    fileButtonText: 'Importeren uit bestand',
+                    editorName: 'JSON',
+                    editorDesc: 'Plak of bewerk JSON hieronder.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Importeren',
+                    successNotice: 'Instellingen geïmporteerd.',
+                    errorNotice: 'Importeren van instellingen mislukt: {message}',
+                    fileReadError: 'Kan bestand niet lezen: {message}'
+                },
+                export: {
+                    modalTitle: 'Instellingen exporteren',
+                    editorName: 'JSON',
+                    editorDesc: 'Alleen instellingen die afwijken van standaardwaarden zijn opgenomen.',
+                    placeholder: '{}',
+                    copyButtonText: 'Kopiëren naar klembord',
+                    downloadButtonText: 'Downloaden',
+                    copyNotice: 'Instellingen gekopieerd naar klembord.',
+                    downloadNotice: 'Instellingen geëxporteerd.',
+                    downloadError: 'Downloaden van instellingen mislukt: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Alle instellingen resetten',
                 desc: 'Alle Notebook Navigator-instellingen resetten naar standaardwaarden.',

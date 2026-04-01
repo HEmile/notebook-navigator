@@ -1314,6 +1314,36 @@ export const STRINGS_TH = {
                 buttonText: 'รีเซ็ตตัวคั่น',
                 notice: 'รีเซ็ตตำแหน่งตัวคั่นแล้ว รีสตาร์ท Obsidian หรือเปิด Notebook Navigator ใหม่เพื่อใช้งาน'
             },
+            settingsTransfer: {
+                name: 'นำเข้าและส่งออกการตั้งค่า',
+                desc: 'ส่งออกหรือนำเข้าการตั้งค่า Notebook Navigator เป็น JSON',
+                importButtonText: 'นำเข้า',
+                exportButtonText: 'ส่งออก',
+                import: {
+                    modalTitle: 'นำเข้าการตั้งค่า',
+                    fileButtonName: 'นำเข้าจากไฟล์',
+                    fileButtonDesc: 'โหลดไฟล์ JSON จากดิสก์',
+                    fileButtonText: 'นำเข้าจากไฟล์',
+                    editorName: 'JSON',
+                    editorDesc: 'วางหรือแก้ไข JSON ด้านล่าง',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'นำเข้า',
+                    successNotice: 'นำเข้าการตั้งค่าแล้ว',
+                    errorNotice: 'นำเข้าการตั้งค่าล้มเหลว: {message}',
+                    fileReadError: 'ไม่สามารถอ่านไฟล์ได้: {message}'
+                },
+                export: {
+                    modalTitle: 'ส่งออกการตั้งค่า',
+                    editorName: 'JSON',
+                    editorDesc: 'รวมเฉพาะการตั้งค่าที่เปลี่ยนแปลงจากค่าเริ่มต้น',
+                    placeholder: '{}',
+                    copyButtonText: 'คัดลอกไปยังคลิปบอร์ด',
+                    downloadButtonText: 'ดาวน์โหลด',
+                    copyNotice: 'คัดลอกการตั้งค่าไปยังคลิปบอร์ดแล้ว',
+                    downloadNotice: 'ส่งออกการตั้งค่าแล้ว',
+                    downloadError: 'ส่งออกการตั้งค่าล้มเหลว: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'รีเซ็ตการตั้งค่าทั้งหมด',
                 desc: 'รีเซ็ตการตั้งค่า Notebook Navigator ทั้งหมดเป็นค่าเริ่มต้น',

@@ -1319,6 +1319,36 @@ export const STRINGS_VI = {
                 buttonText: 'Đặt lại thanh phân cách',
                 notice: 'Đã đặt lại vị trí thanh phân cách. Khởi động lại Obsidian hoặc mở lại Notebook Navigator để áp dụng.'
             },
+            settingsTransfer: {
+                name: 'Nhập và xuất cài đặt',
+                desc: 'Xuất hoặc nhập cài đặt Notebook Navigator dưới dạng JSON.',
+                importButtonText: 'Nhập',
+                exportButtonText: 'Xuất',
+                import: {
+                    modalTitle: 'Nhập cài đặt',
+                    fileButtonName: 'Nhập từ tệp',
+                    fileButtonDesc: 'Tải tệp JSON từ ổ đĩa.',
+                    fileButtonText: 'Nhập từ tệp',
+                    editorName: 'JSON',
+                    editorDesc: 'Dán hoặc chỉnh sửa JSON bên dưới.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Nhập',
+                    successNotice: 'Đã nhập cài đặt.',
+                    errorNotice: 'Nhập cài đặt thất bại: {message}',
+                    fileReadError: 'Không thể đọc tệp: {message}'
+                },
+                export: {
+                    modalTitle: 'Xuất cài đặt',
+                    editorName: 'JSON',
+                    editorDesc: 'Chỉ bao gồm các cài đặt đã thay đổi so với mặc định.',
+                    placeholder: '{}',
+                    copyButtonText: 'Sao chép vào bộ nhớ tạm',
+                    downloadButtonText: 'Tải xuống',
+                    copyNotice: 'Đã sao chép cài đặt vào bộ nhớ tạm.',
+                    downloadNotice: 'Đã xuất cài đặt.',
+                    downloadError: 'Xuất cài đặt thất bại: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Đặt lại tất cả cài đặt',
                 desc: 'Đặt lại tất cả cài đặt Notebook Navigator về giá trị mặc định.',

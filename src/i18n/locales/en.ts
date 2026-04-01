@@ -1314,6 +1314,36 @@ export const STRINGS_EN = {
                 buttonText: 'Reset separator',
                 notice: 'Separator position reset. Restart Obsidian or reopen Notebook Navigator to apply.'
             },
+            settingsTransfer: {
+                name: 'Import and export settings',
+                desc: 'Export or import Notebook Navigator settings as JSON.',
+                importButtonText: 'Import',
+                exportButtonText: 'Export',
+                import: {
+                    modalTitle: 'Import settings',
+                    fileButtonName: 'Import from file',
+                    fileButtonDesc: 'Load a JSON file from disk.',
+                    fileButtonText: 'Import from file',
+                    editorName: 'JSON',
+                    editorDesc: 'Paste or edit JSON below.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Import',
+                    successNotice: 'Settings imported.',
+                    errorNotice: 'Failed to import settings: {message}',
+                    fileReadError: 'Could not read file: {message}'
+                },
+                export: {
+                    modalTitle: 'Export settings',
+                    editorName: 'JSON',
+                    editorDesc: 'Only settings changed from defaults are included.',
+                    placeholder: '{}',
+                    copyButtonText: 'Copy to clipboard',
+                    downloadButtonText: 'Download',
+                    copyNotice: 'Settings copied to clipboard.',
+                    downloadNotice: 'Settings exported.',
+                    downloadError: 'Failed to download settings: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Reset all settings',
                 desc: 'Reset all Notebook Navigator settings to default values.',

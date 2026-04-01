@@ -1320,6 +1320,36 @@ export const STRINGS_DE = {
                 buttonText: 'Trennelement zurücksetzen',
                 notice: 'Trennelementposition zurückgesetzt. Starten Sie Obsidian neu oder öffnen Sie Notebook Navigator erneut, um die Änderungen anzuwenden.'
             },
+            settingsTransfer: {
+                name: 'Einstellungen importieren und exportieren',
+                desc: 'Notebook Navigator-Einstellungen als JSON exportieren oder importieren.',
+                importButtonText: 'Importieren',
+                exportButtonText: 'Exportieren',
+                import: {
+                    modalTitle: 'Einstellungen importieren',
+                    fileButtonName: 'Aus Datei importieren',
+                    fileButtonDesc: 'Eine JSON-Datei von der Festplatte laden.',
+                    fileButtonText: 'Aus Datei importieren',
+                    editorName: 'JSON',
+                    editorDesc: 'JSON unten einfügen oder bearbeiten.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Importieren',
+                    successNotice: 'Einstellungen importiert.',
+                    errorNotice: 'Einstellungen konnten nicht importiert werden: {message}',
+                    fileReadError: 'Datei konnte nicht gelesen werden: {message}'
+                },
+                export: {
+                    modalTitle: 'Einstellungen exportieren',
+                    editorName: 'JSON',
+                    editorDesc: 'Nur Einstellungen, die von den Standardwerten abweichen, sind enthalten.',
+                    placeholder: '{}',
+                    copyButtonText: 'In die Zwischenablage kopieren',
+                    downloadButtonText: 'Herunterladen',
+                    copyNotice: 'Einstellungen in die Zwischenablage kopiert.',
+                    downloadNotice: 'Einstellungen exportiert.',
+                    downloadError: 'Einstellungen konnten nicht heruntergeladen werden: {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Alle Einstellungen zurücksetzen',
                 desc: 'Setzt alle Notebook Navigator-Einstellungen auf die Standardwerte zurück.',

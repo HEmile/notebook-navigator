@@ -1321,6 +1321,36 @@ export const STRINGS_FR = {
                 buttonText: 'Réinitialiser le séparateur',
                 notice: 'Position du séparateur réinitialisée. Redémarrez Obsidian ou rouvrez Notebook Navigator pour appliquer.'
             },
+            settingsTransfer: {
+                name: 'Importer et exporter les paramètres',
+                desc: 'Exporter ou importer les paramètres de Notebook Navigator au format JSON.',
+                importButtonText: 'Importer',
+                exportButtonText: 'Exporter',
+                import: {
+                    modalTitle: 'Importer les paramètres',
+                    fileButtonName: 'Importer depuis un fichier',
+                    fileButtonDesc: 'Charger un fichier JSON depuis le disque.',
+                    fileButtonText: 'Importer depuis un fichier',
+                    editorName: 'JSON',
+                    editorDesc: 'Collez ou modifiez le JSON ci-dessous.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: 'Importer',
+                    successNotice: 'Paramètres importés.',
+                    errorNotice: "Échec de l'importation des paramètres : {message}",
+                    fileReadError: 'Impossible de lire le fichier : {message}'
+                },
+                export: {
+                    modalTitle: 'Exporter les paramètres',
+                    editorName: 'JSON',
+                    editorDesc: 'Seuls les paramètres modifiés par rapport aux valeurs par défaut sont inclus.',
+                    placeholder: '{}',
+                    copyButtonText: 'Copier dans le presse-papiers',
+                    downloadButtonText: 'Télécharger',
+                    copyNotice: 'Paramètres copiés dans le presse-papiers.',
+                    downloadNotice: 'Paramètres exportés.',
+                    downloadError: 'Échec du téléchargement des paramètres : {message}'
+                }
+            },
             resetAllSettings: {
                 name: 'Réinitialiser tous les paramètres',
                 desc: 'Réinitialise tous les paramètres de Notebook Navigator aux valeurs par défaut.',

@@ -6084,6 +6084,42 @@ body.nn-resizing {
 .is-mobile .modal.nn-property-keys-modal .nn-property-keys-footer {
     padding-top: var(--size-2-3);
 }
+/* Source: src/styles/sections/modal-settings-transfer.css */
+
+/* ========================================================================
+   Settings transfer modal
+   ======================================================================== */
+
+.modal.nn-settings-transfer-modal {
+    width: min(720px, calc(100vw - 80px));
+    max-width: min(720px, calc(100vw - 80px));
+}
+
+.modal.nn-settings-transfer-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-settings-transfer-editor-setting {
+    margin-bottom: 0;
+}
+
+.nn-settings-transfer-editor {
+    min-height: 280px;
+    margin-top: 8px;
+    margin-bottom: 0;
+    resize: vertical;
+    font-family: var(--font-monospace);
+    line-height: 1.5;
+}
+
+.is-mobile .modal.nn-settings-transfer-modal {
+    max-width: calc(100vw - 24px);
+}
+
+.is-mobile .modal.nn-settings-transfer-modal .nn-settings-transfer-editor {
+    min-height: 220px;
+}
 /* Source: src/styles/sections/layout-virtual-list.css */
 
 /* ========================================================================

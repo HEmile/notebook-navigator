@@ -1317,6 +1317,36 @@ export const STRINGS_KO = {
                 buttonText: '구분선 초기화',
                 notice: '구분선 위치가 초기화되었습니다. Obsidian을 재시작하거나 Notebook Navigator를 다시 열어 적용하세요.'
             },
+            settingsTransfer: {
+                name: '설정 가져오기 및 내보내기',
+                desc: 'Notebook Navigator 설정을 JSON으로 내보내거나 가져옵니다.',
+                importButtonText: '가져오기',
+                exportButtonText: '내보내기',
+                import: {
+                    modalTitle: '설정 가져오기',
+                    fileButtonName: '파일에서 가져오기',
+                    fileButtonDesc: '디스크에서 JSON 파일을 불러옵니다.',
+                    fileButtonText: '파일에서 가져오기',
+                    editorName: 'JSON',
+                    editorDesc: '아래에 JSON을 붙여넣거나 편집하세요.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: '가져오기',
+                    successNotice: '설정을 가져왔습니다.',
+                    errorNotice: '설정 가져오기에 실패했습니다: {message}',
+                    fileReadError: '파일을 읽을 수 없습니다: {message}'
+                },
+                export: {
+                    modalTitle: '설정 내보내기',
+                    editorName: 'JSON',
+                    editorDesc: '기본값에서 변경된 설정만 포함됩니다.',
+                    placeholder: '{}',
+                    copyButtonText: '클립보드에 복사',
+                    downloadButtonText: '다운로드',
+                    copyNotice: '설정이 클립보드에 복사되었습니다.',
+                    downloadNotice: '설정이 내보내졌습니다.',
+                    downloadError: '설정 다운로드에 실패했습니다: {message}'
+                }
+            },
             resetAllSettings: {
                 name: '모든 설정 초기화',
                 desc: 'Notebook Navigator의 모든 설정을 기본값으로 초기화합니다.',
