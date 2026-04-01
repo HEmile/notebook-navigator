@@ -83,6 +83,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
             'New setting: General > Behavior > ==Ignore events from other windows==. When enabled, auto-reveal does not trigger when working with notes in a different window. Default enabled.',
             'New setting: General > Mouse buttons > ==Mouse back/forward buttons==. Configures the action for mouse back and forward buttons on desktop: use system default, switch panes in single-pane mode, or navigate history.'
         ],
+        improved: [
+            'Tag and property value pills that match the current navigation selection are hidden in the list pane.'
+        ],
         fixed: [
             'Auto-reveal is now saved to the navigation history.',
             'Startup file is now registered in navigation history.',

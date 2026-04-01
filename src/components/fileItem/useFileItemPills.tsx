@@ -19,12 +19,14 @@
 import React, { useCallback, useMemo } from 'react';
 import type { TFile } from 'obsidian';
 import { useMetadataService, useServices } from '../../context/ServicesContext';
+import { useSelectionState } from '../../context/SelectionContext';
 import { useTagNavigation } from '../../hooks/useTagNavigation';
 import type { PropertyItem } from '../../storage/IndexedDBStorage';
 import type { NotePropertyType, NotebookNavigatorSettings } from '../../settings/types';
+import { ItemType } from '../../types';
 import { runAsyncAction } from '../../utils/async';
 import { naturalCompare } from '../../utils/sortUtils';
-import { getTagSearchModifierOperator } from '../../utils/tagUtils';
+import { getTagSearchModifierOperator, normalizeTagPath } from '../../utils/tagUtils';
 import { isSupportedCssColor, parsePropertyLinkTarget, type PropertyLinkTarget } from '../../utils/propertyUtils';
 import { casefold } from '../../utils/recordUtils';
 import { resolveUXIcon } from '../../utils/uxIcons';
@@ -180,8 +182,28 @@ export function useFileItemPills({
 }: UseFileItemPillsParams): FileItemPillsState {
     const { app, isMobile } = useServices();
     const metadataService = useMetadataService();
+    const selectionState = useSelectionState();
     const { navigateToTag, navigateToProperty } = useTagNavigation();
     const wordCountPillIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'file-word-count'), [settings.interfaceIcons]);
+    const selectedTagToHide = useMemo(() => {
+        if (selectionState.selectionType !== ItemType.TAG) {
+            return null;
+        }
+
+        return normalizeTagPath(selectionState.selectedTag);
+    }, [selectionState.selectedTag, selectionState.selectionType]);
+    const selectedPropertyValueNodeIdToHide = useMemo(() => {
+        if (selectionState.selectionType !== ItemType.PROPERTY || !selectionState.selectedProperty) {
+            return null;
+        }
+
+        const parsedNode = parsePropertyNodeId(selectionState.selectedProperty);
+        if (!parsedNode?.valuePath) {
+            return null;
+        }
+
+        return normalizePropertyNodeId(selectionState.selectedProperty) ?? selectionState.selectedProperty;
+    }, [selectionState.selectedProperty, selectionState.selectionType]);
 
     const handleTagClick = useCallback(
         (event: React.MouseEvent, tag: string) => {
@@ -264,12 +286,22 @@ export function useFileItemPills({
             return tags;
         }
 
-        if (!hiddenTagVisibility.shouldFilterHiddenTags) {
+        if (!hiddenTagVisibility.shouldFilterHiddenTags && !selectedTagToHide) {
             return tags;
         }
 
-        return tags.filter(tag => hiddenTagVisibility.isTagVisible(tag));
-    }, [hiddenTagVisibility, tags]);
+        return tags.filter(tag => {
+            if (hiddenTagVisibility.shouldFilterHiddenTags && !hiddenTagVisibility.isTagVisible(tag)) {
+                return false;
+            }
+
+            if (!selectedTagToHide) {
+                return true;
+            }
+
+            return normalizeTagPath(tag) !== selectedTagToHide;
+        });
+    }, [hiddenTagVisibility, selectedTagToHide, tags]);
 
     const tagColorData = useMemo(() => {
         void settings.tagColors;
@@ -534,6 +566,10 @@ export function useFileItemPills({
                 normalizedPropertySearchKey.length > 0 &&
                 visibleNavigationPropertyKeys.has(normalizedPropertySearchKey);
 
+            if (selectedPropertyValueNodeIdToHide && propertyNodeId === selectedPropertyValueNodeIdToHide) {
+                continue;
+            }
+
             frontmatterPills.push({
                 value: rawValue,
                 label,
@@ -583,6 +619,7 @@ export function useFileItemPills({
         settings.colorFileProperties,
         settings.prioritizeColoredFileProperties,
         settings.showFileProperties,
+        selectedPropertyValueNodeIdToHide,
         visibleNavigationPropertyKeys,
         visibleProperties
     ]);

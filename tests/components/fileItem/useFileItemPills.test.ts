@@ -21,14 +21,24 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../../src/settings/defaultSettings';
 import { useFileItemPills, type UseFileItemPillsParams } from '../../../src/components/fileItem/useFileItemPills';
-import { buildPropertyValueNodeId } from '../../../src/utils/propertyTree';
+import { buildPropertyKeyNodeId, buildPropertyValueNodeId } from '../../../src/utils/propertyTree';
 import { createHiddenTagVisibility, type HiddenTagVisibility } from '../../../src/utils/tagPrefixMatcher';
 import type { FileItemPillDecorationModel } from '../../../src/utils/fileItemPillDecoration';
 import { createTestTFile } from '../../utils/createTestTFile';
+import { ItemType } from '../../../src/types';
 
 const mockOpenLinkText = vi.fn();
 const mockNavigateToTag = vi.fn();
 const mockNavigateToProperty = vi.fn();
+const mockSelectionState: {
+    selectionType: (typeof ItemType)[keyof typeof ItemType];
+    selectedTag: string | null;
+    selectedProperty: string | null;
+} = {
+    selectionType: ItemType.FOLDER,
+    selectedTag: null,
+    selectedProperty: null
+};
 const mockMetadataService = {
     getTagColorData: vi.fn<(tag: string) => { color?: string; background?: string }>(),
     getTagIcon: vi.fn<(tag: string) => string | undefined>(),
@@ -46,6 +56,10 @@ vi.mock('../../../src/context/ServicesContext', () => ({
         isMobile: false
     }),
     useMetadataService: () => mockMetadataService
+}));
+
+vi.mock('../../../src/context/SelectionContext', () => ({
+    useSelectionState: () => mockSelectionState
 }));
 
 vi.mock('../../../src/hooks/useTagNavigation', () => ({
@@ -106,6 +120,9 @@ describe('useFileItemPills', () => {
         mockOpenLinkText.mockReset();
         mockNavigateToTag.mockReset();
         mockNavigateToProperty.mockReset();
+        mockSelectionState.selectionType = ItemType.FOLDER;
+        mockSelectionState.selectedTag = null;
+        mockSelectionState.selectedProperty = null;
         mockMetadataService.getTagColorData.mockReset();
         mockMetadataService.getTagIcon.mockReset();
         mockMetadataService.getPropertyColorData.mockReset();
@@ -227,6 +244,57 @@ describe('useFileItemPills', () => {
         expect(markup).not.toContain('archive/private');
     });
 
+    it('hides only the exact selected tag pill in tag context', () => {
+        mockSelectionState.selectionType = ItemType.TAG;
+        mockSelectionState.selectedTag = 'ai';
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Tags.md'),
+            isCompactMode: false,
+            tags: ['ai', 'ai/openai', 'ml'],
+            properties: null,
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showTags: true,
+                showFileTags: true,
+                showFileTagAncestors: true
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).not.toContain('>ai<');
+        expect(markup).toContain('ai/openai');
+        expect(markup).toContain('ml');
+    });
+
+    it('hides nested selected tag pills only on exact matches', () => {
+        mockSelectionState.selectionType = ItemType.TAG;
+        mockSelectionState.selectedTag = 'ai/openai';
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Tags.md'),
+            isCompactMode: false,
+            tags: ['ai', 'ai/openai'],
+            properties: null,
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showTags: true,
+                showFileTags: true,
+                showFileTagAncestors: true
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('>ai<');
+        expect(markup).not.toContain('ai/openai');
+    });
+
     it('renders external property links using their display text', () => {
         const markup = renderPillRows({
             file: createTestTFile('Notes/Links.md'),
@@ -281,6 +349,68 @@ describe('useFileItemPills', () => {
 
         expect(markup).toContain('data-show-properties="true"');
         expect(markup).toContain('4.5');
+    });
+
+    it('hides only the exact selected property value pill in property value context', () => {
+        mockSelectionState.selectionType = ItemType.PROPERTY;
+        mockSelectionState.selectedProperty = buildPropertyValueNodeId('status', 'done');
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Status.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'status',
+                    value: 'done',
+                    valueKind: 'string'
+                },
+                {
+                    fieldKey: 'status',
+                    value: 'doing',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['status']),
+            visibleNavigationPropertyKeys: new Set<string>(['status'])
+        });
+
+        expect(markup).not.toContain('>done<');
+        expect(markup).toContain('doing');
+    });
+
+    it('keeps matching property value pills visible in property key context', () => {
+        mockSelectionState.selectionType = ItemType.PROPERTY;
+        mockSelectionState.selectedProperty = buildPropertyKeyNodeId('status');
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Status.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'status',
+                    value: 'done',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['status']),
+            visibleNavigationPropertyKeys: new Set<string>(['status'])
+        });
+
+        expect(markup).toContain('>done<');
     });
 
     it('applies rainbow property colors in file list pills', () => {
