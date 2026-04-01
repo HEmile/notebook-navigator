@@ -184,6 +184,10 @@ function parseMarkdownTaskMarker(line: string, startIndex: number): MarkdownTask
         return null;
     }
 
+    if (line.slice(index + 3).trim().length === 0) {
+        return null;
+    }
+
     const marker = line[index + 1];
     if (marker === ' ') {
         return 'unfinished';

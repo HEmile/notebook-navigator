@@ -163,6 +163,20 @@ describe('MarkdownPipelineContentProvider task counters', () => {
         expect(result).toEqual({ total: 3, unfinished: 1 });
     });
 
+    it('ignores empty checkbox list items', async () => {
+        const context = createApp();
+        const settings = createSettings();
+        const provider = new TestMarkdownPipelineContentProvider(context.app);
+        const file = createFile('notes/note.md');
+        file.stat.mtime = 100;
+
+        setMarkdownContent(context, file, '- [ ]\n- [ ]   \n* [x]\n1. [ ] task\n');
+        const fileData = createFileData({ mtime: file.stat.mtime, markdownPipelineMtime: file.stat.mtime });
+        const result = await provider.runTasks(file, fileData, settings);
+
+        expect(result).toEqual({ total: 1, unfinished: 1 });
+    });
+
     it('ignores plus markers and non-list checkboxes', async () => {
         const context = createApp();
         const settings = createSettings();

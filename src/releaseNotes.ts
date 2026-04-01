@@ -84,7 +84,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
             'New setting: General > Mouse buttons > ==Mouse back/forward buttons==. Configures the action for mouse back and forward buttons on desktop: use system default, switch panes in single-pane mode, or navigate history.'
         ],
         improved: [
-            'Tag and property value pills that match the current navigation selection are hidden in the list pane.'
+            'Tag and property value pills that match the current navigation selection are hidden in the list pane.',
+            'Empty checkbox list items are no longer counted as tasks.'
         ],
         fixed: [
             'Auto-reveal is now saved to the navigation history.',
