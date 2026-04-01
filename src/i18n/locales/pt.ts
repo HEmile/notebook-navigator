@@ -1321,7 +1321,7 @@ export const STRINGS_PT = {
             },
             settingsTransfer: {
                 name: 'Importar e exportar definições',
-                desc: 'Exportar ou importar definições do Notebook Navigator como JSON.',
+                desc: 'Exportar ou importar definições do Notebook Navigator como JSON. A importação substitui todas as definições.',
                 importButtonText: 'Importar',
                 exportButtonText: 'Exportar',
                 import: {
@@ -1330,7 +1330,7 @@ export const STRINGS_PT = {
                     fileButtonDesc: 'Carregar um ficheiro JSON do disco.',
                     fileButtonText: 'Importar de ficheiro',
                     editorName: 'JSON',
-                    editorDesc: 'Cole ou edite o JSON abaixo.',
+                    editorDesc: 'Cole ou edite o JSON abaixo. As definições não incluídas são repostas nos valores predefinidos.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'Importar',
                     successNotice: 'Definições importadas.',

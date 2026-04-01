@@ -1316,7 +1316,7 @@ export const STRINGS_TH = {
             },
             settingsTransfer: {
                 name: 'นำเข้าและส่งออกการตั้งค่า',
-                desc: 'ส่งออกหรือนำเข้าการตั้งค่า Notebook Navigator เป็น JSON',
+                desc: 'ส่งออกหรือนำเข้าการตั้งค่า Notebook Navigator เป็น JSON การนำเข้าจะแทนที่การตั้งค่าทั้งหมด',
                 importButtonText: 'นำเข้า',
                 exportButtonText: 'ส่งออก',
                 import: {
@@ -1325,7 +1325,7 @@ export const STRINGS_TH = {
                     fileButtonDesc: 'โหลดไฟล์ JSON จากดิสก์',
                     fileButtonText: 'นำเข้าจากไฟล์',
                     editorName: 'JSON',
-                    editorDesc: 'วางหรือแก้ไข JSON ด้านล่าง',
+                    editorDesc: 'วางหรือแก้ไข JSON ด้านล่าง การตั้งค่าที่ไม่ได้รวมไว้จะถูกรีเซ็ตเป็นค่าเริ่มต้น',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'นำเข้า',
                     successNotice: 'นำเข้าการตั้งค่าแล้ว',

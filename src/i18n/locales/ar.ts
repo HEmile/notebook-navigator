@@ -1318,7 +1318,7 @@ export const STRINGS_AR = {
             },
             settingsTransfer: {
                 name: 'استيراد وتصدير الإعدادات',
-                desc: 'تصدير أو استيراد إعدادات متصفح الدفتر بصيغة JSON.',
+                desc: 'تصدير أو استيراد إعدادات متصفح الدفتر بصيغة JSON. يؤدي الاستيراد إلى استبدال جميع الإعدادات.',
                 importButtonText: 'استيراد',
                 exportButtonText: 'تصدير',
                 import: {
@@ -1327,7 +1327,7 @@ export const STRINGS_AR = {
                     fileButtonDesc: 'تحميل ملف JSON من القرص.',
                     fileButtonText: 'استيراد من ملف',
                     editorName: 'JSON',
-                    editorDesc: 'الصق أو عدّل JSON أدناه.',
+                    editorDesc: 'الصق أو عدّل JSON أدناه. الإعدادات غير المضمنة تُعاد إلى القيم الافتراضية.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'استيراد',
                     successNotice: 'تم استيراد الإعدادات.',

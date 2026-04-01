@@ -1319,7 +1319,7 @@ export const STRINGS_KO = {
             },
             settingsTransfer: {
                 name: '설정 가져오기 및 내보내기',
-                desc: 'Notebook Navigator 설정을 JSON으로 내보내거나 가져옵니다.',
+                desc: 'Notebook Navigator 설정을 JSON으로 내보내거나 가져옵니다. 가져오기는 모든 설정을 대체합니다.',
                 importButtonText: '가져오기',
                 exportButtonText: '내보내기',
                 import: {
@@ -1328,7 +1328,7 @@ export const STRINGS_KO = {
                     fileButtonDesc: '디스크에서 JSON 파일을 불러옵니다.',
                     fileButtonText: '파일에서 가져오기',
                     editorName: 'JSON',
-                    editorDesc: '아래에 JSON을 붙여넣거나 편집하세요.',
+                    editorDesc: '아래에 JSON을 붙여넣거나 편집하세요. 포함되지 않은 설정은 기본값으로 초기화됩니다.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: '가져오기',
                     successNotice: '설정을 가져왔습니다.',

@@ -1323,7 +1323,7 @@ export const STRINGS_FR = {
             },
             settingsTransfer: {
                 name: 'Importer et exporter les paramètres',
-                desc: 'Exporter ou importer les paramètres de Notebook Navigator au format JSON.',
+                desc: 'Exporter ou importer les paramètres de Notebook Navigator au format JSON. L\u2019importation remplace tous les paramètres.',
                 importButtonText: 'Importer',
                 exportButtonText: 'Exporter',
                 import: {
@@ -1332,7 +1332,8 @@ export const STRINGS_FR = {
                     fileButtonDesc: 'Charger un fichier JSON depuis le disque.',
                     fileButtonText: 'Importer depuis un fichier',
                     editorName: 'JSON',
-                    editorDesc: 'Collez ou modifiez le JSON ci-dessous.',
+                    editorDesc:
+                        'Collez ou modifiez le JSON ci-dessous. Les paramètres non inclus sont réinitialisés aux valeurs par défaut.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'Importer',
                     successNotice: 'Paramètres importés.',

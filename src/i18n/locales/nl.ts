@@ -1321,7 +1321,7 @@ export const STRINGS_NL = {
             },
             settingsTransfer: {
                 name: 'Instellingen importeren en exporteren',
-                desc: 'Notebook Navigator-instellingen exporteren of importeren als JSON.',
+                desc: 'Notebook Navigator-instellingen exporteren of importeren als JSON. Importeren vervangt alle instellingen.',
                 importButtonText: 'Importeren',
                 exportButtonText: 'Exporteren',
                 import: {
@@ -1330,7 +1330,7 @@ export const STRINGS_NL = {
                     fileButtonDesc: 'Een JSON-bestand laden vanaf schijf.',
                     fileButtonText: 'Importeren uit bestand',
                     editorName: 'JSON',
-                    editorDesc: 'Plak of bewerk JSON hieronder.',
+                    editorDesc: 'Plak of bewerk JSON hieronder. Niet-opgenomen instellingen worden teruggezet naar de standaardwaarden.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'Importeren',
                     successNotice: 'Instellingen geïmporteerd.',

@@ -1317,7 +1317,7 @@ export const STRINGS_UK = {
             },
             settingsTransfer: {
                 name: 'Імпорт та експорт налаштувань',
-                desc: 'Експорт або імпорт налаштувань Notebook Navigator у форматі JSON.',
+                desc: 'Експорт або імпорт налаштувань Notebook Navigator у форматі JSON. Імпорт замінює всі налаштування.',
                 importButtonText: 'Імпорт',
                 exportButtonText: 'Експорт',
                 import: {
@@ -1326,7 +1326,7 @@ export const STRINGS_UK = {
                     fileButtonDesc: 'Завантажити JSON-файл з диска.',
                     fileButtonText: 'Імпорт з файлу',
                     editorName: 'JSON',
-                    editorDesc: 'Вставте або відредагуйте JSON нижче.',
+                    editorDesc: 'Вставте або відредагуйте JSON нижче. Не включені налаштування скидаються до значень за замовчуванням.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'Імпортувати',
                     successNotice: 'Налаштування імпортовано.',

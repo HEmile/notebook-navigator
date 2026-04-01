@@ -20,6 +20,8 @@ import { DEFAULT_SETTINGS } from './defaultSettings';
 import type { NotebookNavigatorSettings } from './types';
 import { isRecord } from '../utils/typeGuards';
 
+// These keys are stored locally or regenerated from local state and are intentionally excluded
+// from transfer exports and imports.
 const NON_TRANSFERABLE_SETTING_KEYS = new Set([
     'hiddenTags',
     'fileVisibility',
@@ -156,7 +158,15 @@ function mergeSettingsDiff(base: unknown, override: unknown): unknown {
     }
 
     if (Array.isArray(base)) {
-        return Array.isArray(override) ? structuredClone(override) : structuredClone(base);
+        if (!Array.isArray(override)) {
+            return structuredClone(base);
+        }
+
+        if (base.length === 0) {
+            return structuredClone(override);
+        }
+
+        return override.map(value => mergeSettingsDiff(base[0], value));
     }
 
     if (isRecord(base)) {
@@ -183,13 +193,15 @@ function mergeSettingsDiff(base: unknown, override: unknown): unknown {
     }
 
     if (base === null) {
-        return structuredClone(override);
+        return override === null || typeof override === 'string' ? structuredClone(override) : null;
     }
 
     return typeof override === typeof base ? structuredClone(override) : structuredClone(base);
 }
 
 export function createModifiedSettingsTransfer(settings: NotebookNavigatorSettings): Record<string, unknown> {
+    // Export only the transferable settings that differ from defaults.
+    // Import reconstructs the transferable settings state from this diff plus defaults.
     const currentSnapshot = createTransferableSettingsSnapshot(settings);
     const defaultSnapshot = createTransferableSettingsSnapshot(DEFAULT_SETTINGS);
     const diff = createSettingsDiff(defaultSnapshot, currentSnapshot);
@@ -205,6 +217,8 @@ export function applyModifiedSettingsTransfer(
         throw new Error('Settings import must be a JSON object.');
     }
 
+    // Import is state restore, not patch merge.
+    // Missing transferable keys are restored to their default values.
     const defaultSnapshot = createTransferableSettingsSnapshot(DEFAULT_SETTINGS);
     const mergedSnapshot = mergeSettingsDiff(defaultSnapshot, transferData);
     if (!isRecord(mergedSnapshot)) {

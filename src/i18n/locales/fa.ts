@@ -1320,7 +1320,7 @@ export const STRINGS_FA = {
             },
             settingsTransfer: {
                 name: 'وارد و صادر کردن تنظیمات',
-                desc: 'تنظیمات Notebook Navigator را به صورت JSON صادر یا وارد کنید.',
+                desc: 'تنظیمات Notebook Navigator را به صورت JSON صادر یا وارد کنید. وارد کردن، همه تنظیمات را جایگزین می‌کند.',
                 importButtonText: 'وارد کردن',
                 exportButtonText: 'صادر کردن',
                 import: {
@@ -1329,7 +1329,7 @@ export const STRINGS_FA = {
                     fileButtonDesc: 'یک فایل JSON را از دیسک بارگذاری کنید.',
                     fileButtonText: 'وارد کردن از فایل',
                     editorName: 'JSON',
-                    editorDesc: 'JSON را در زیر جای‌گذاری یا ویرایش کنید.',
+                    editorDesc: 'JSON را در زیر جای‌گذاری یا ویرایش کنید. تنظیمات شامل‌نشده به مقدار پیش‌فرض بازنشانی می‌شوند.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'وارد کردن',
                     successNotice: 'تنظیمات وارد شد.',

@@ -1313,7 +1313,7 @@ export const STRINGS_ZH_CN = {
             },
             settingsTransfer: {
                 name: '导入和导出设置',
-                desc: '将 Notebook Navigator 设置导出或导入为 JSON。',
+                desc: '将 Notebook Navigator 设置导出或导入为 JSON。导入会替换所有设置。',
                 importButtonText: '导入',
                 exportButtonText: '导出',
                 import: {
@@ -1322,7 +1322,7 @@ export const STRINGS_ZH_CN = {
                     fileButtonDesc: '从磁盘加载 JSON 文件。',
                     fileButtonText: '从文件导入',
                     editorName: 'JSON',
-                    editorDesc: '在下方粘贴或编辑 JSON。',
+                    editorDesc: '在下方粘贴或编辑 JSON。未包含的设置将重置为默认值。',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: '导入',
                     successNotice: '设置已导入。',

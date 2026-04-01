@@ -1321,7 +1321,7 @@ export const STRINGS_VI = {
             },
             settingsTransfer: {
                 name: 'Nhập và xuất cài đặt',
-                desc: 'Xuất hoặc nhập cài đặt Notebook Navigator dưới dạng JSON.',
+                desc: 'Xuất hoặc nhập cài đặt Notebook Navigator dưới dạng JSON. Việc nhập sẽ thay thế tất cả cài đặt.',
                 importButtonText: 'Nhập',
                 exportButtonText: 'Xuất',
                 import: {
@@ -1330,7 +1330,7 @@ export const STRINGS_VI = {
                     fileButtonDesc: 'Tải tệp JSON từ ổ đĩa.',
                     fileButtonText: 'Nhập từ tệp',
                     editorName: 'JSON',
-                    editorDesc: 'Dán hoặc chỉnh sửa JSON bên dưới.',
+                    editorDesc: 'Dán hoặc chỉnh sửa JSON bên dưới. Các cài đặt không được bao gồm sẽ được đặt lại về mặc định.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'Nhập',
                     successNotice: 'Đã nhập cài đặt.',

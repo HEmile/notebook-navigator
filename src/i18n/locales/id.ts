@@ -1320,7 +1320,7 @@ export const STRINGS_ID = {
             },
             settingsTransfer: {
                 name: 'Impor dan ekspor pengaturan',
-                desc: 'Ekspor atau impor pengaturan Notebook Navigator sebagai JSON.',
+                desc: 'Ekspor atau impor pengaturan Notebook Navigator sebagai JSON. Impor menggantikan semua pengaturan.',
                 importButtonText: 'Impor',
                 exportButtonText: 'Ekspor',
                 import: {
@@ -1329,7 +1329,7 @@ export const STRINGS_ID = {
                     fileButtonDesc: 'Muat file JSON dari disk.',
                     fileButtonText: 'Impor dari file',
                     editorName: 'JSON',
-                    editorDesc: 'Tempel atau edit JSON di bawah.',
+                    editorDesc: 'Tempel atau edit JSON di bawah. Pengaturan yang tidak disertakan akan diatur ulang ke default.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'Impor',
                     successNotice: 'Pengaturan diimpor.',

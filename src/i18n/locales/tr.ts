@@ -1320,7 +1320,7 @@ export const STRINGS_TR = {
             },
             settingsTransfer: {
                 name: 'Ayarları içe ve dışa aktar',
-                desc: 'Notebook Navigator ayarlarını JSON olarak dışa veya içe aktar.',
+                desc: 'Notebook Navigator ayarlarını JSON olarak dışa veya içe aktar. İçe aktarma tüm ayarları değiştirir.',
                 importButtonText: 'İçe aktar',
                 exportButtonText: 'Dışa aktar',
                 import: {
@@ -1329,7 +1329,7 @@ export const STRINGS_TR = {
                     fileButtonDesc: 'Diskten bir JSON dosyası yükle.',
                     fileButtonText: 'Dosyadan içe aktar',
                     editorName: 'JSON',
-                    editorDesc: 'Aşağıya JSON yapıştırın veya düzenleyin.',
+                    editorDesc: 'Aşağıya JSON yapıştırın veya düzenleyin. Dahil edilmeyen ayarlar varsayılan değerlere sıfırlanır.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'İçe aktar',
                     successNotice: 'Ayarlar içe aktarıldı.',

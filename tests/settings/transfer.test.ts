@@ -75,4 +75,27 @@ describe('applyModifiedSettingsTransfer', () => {
         expect((nextSettings as unknown as Record<string, unknown>).defaultListAppearance).toBeUndefined();
         expect(nextSettings.folderSortOrder).toBe('alpha-desc');
     });
+
+    it('rejects invalid values for nullable string settings during import', () => {
+        const nextSettings = applyModifiedSettingsTransfer(structuredClone(DEFAULT_SETTINGS), {
+            homepage: { bad: true },
+            folderNoteTemplate: 123
+        });
+
+        expect(nextSettings.homepage).toBeNull();
+        expect(nextSettings.folderNoteTemplate).toBeNull();
+    });
+
+    it('rejects invalid values for nested nullable string settings during import', () => {
+        const nextSettings = applyModifiedSettingsTransfer(structuredClone(DEFAULT_SETTINGS), {
+            vaultProfiles: [
+                {
+                    ...structuredClone(DEFAULT_SETTINGS.vaultProfiles[0]),
+                    navigationBanner: { bad: true }
+                }
+            ]
+        });
+
+        expect(nextSettings.vaultProfiles[0]?.navigationBanner).toBeNull();
+    });
 });

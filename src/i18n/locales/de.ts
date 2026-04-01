@@ -1322,7 +1322,7 @@ export const STRINGS_DE = {
             },
             settingsTransfer: {
                 name: 'Einstellungen importieren und exportieren',
-                desc: 'Notebook Navigator-Einstellungen als JSON exportieren oder importieren.',
+                desc: 'Notebook Navigator-Einstellungen als JSON exportieren oder importieren. Der Import ersetzt alle Einstellungen.',
                 importButtonText: 'Importieren',
                 exportButtonText: 'Exportieren',
                 import: {
@@ -1331,7 +1331,8 @@ export const STRINGS_DE = {
                     fileButtonDesc: 'Eine JSON-Datei von der Festplatte laden.',
                     fileButtonText: 'Aus Datei importieren',
                     editorName: 'JSON',
-                    editorDesc: 'JSON unten einfügen oder bearbeiten.',
+                    editorDesc:
+                        'JSON unten einfügen oder bearbeiten. Nicht enthaltene Einstellungen werden auf Standardwerte zurückgesetzt.',
                     placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
                     confirmButtonText: 'Importieren',
                     successNotice: 'Einstellungen importiert.',
