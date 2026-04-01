@@ -85,6 +85,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
             'New setting: General > Mouse buttons > ==Mouse back/forward buttons==. Configures the action for mouse back and forward buttons on desktop: use system default, switch panes in single-pane mode, or navigate history.'
         ],
         improved: [
+            'Calendar context menu now includes options to open notes in a new tab, to the right, or in a new window.',
             'Tag and property value pills that match the current navigation selection are hidden in the list pane.',
             'Empty checkbox list items are no longer counted as tasks.'
         ],

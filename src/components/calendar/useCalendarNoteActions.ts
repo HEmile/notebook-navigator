@@ -20,11 +20,14 @@ import React, { useCallback } from 'react';
 import { App, Menu, TFile } from 'obsidian';
 import { strings } from '../../i18n';
 import { ConfirmModal } from '../../modals/ConfirmModal';
+import type { CommandQueueService } from '../../services/CommandQueueService';
 import type { FileSystemOperations } from '../../services/FileSystemService';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import { runAsyncAction } from '../../utils/async';
 import { createDailyNote, getDailyNoteFilename, type DailyNoteSettings } from '../../utils/dailyNotes';
+import { setAsyncOnClick } from '../../utils/contextMenu/menuAsyncHelpers';
 import { showNotice } from '../../utils/noticeUtils';
+import { openFileInContext } from '../../utils/openFileInContext';
 import { createCalendarMarkdownFile, getCalendarTemplatePath } from '../../utils/calendarNotes';
 import type { MomentApi, MomentInstance } from '../../utils/moment';
 import { resolveUXIconForMenu } from '../../utils/uxIcons';
@@ -38,6 +41,7 @@ import {
 
 interface UseCalendarNoteActionsOptions {
     app: App;
+    commandQueue: CommandQueueService | null;
     fileSystemOps: FileSystemOperations;
     isMobile: boolean;
     settings: NotebookNavigatorSettings;
@@ -63,6 +67,7 @@ interface UseCalendarNoteActionsResult {
 
 export function useCalendarNoteActions({
     app,
+    commandQueue,
     fileSystemOps,
     isMobile,
     settings,
@@ -238,6 +243,31 @@ export function useCalendarNoteActions({
         [app, collapseNavigationIfMobile, dailyNoteSettings, onVaultChange, openFile, openOrCreateCustomCalendarNote, settings]
     );
 
+    const addCalendarNoteOpenOptions = useCallback(
+        (menu: Menu, file: TFile) => {
+            menu.addItem(item => {
+                setAsyncOnClick(item.setTitle(strings.contextMenu.file.openInNewTab).setIcon('lucide-file-plus'), async () => {
+                    await openFileInContext({ app, commandQueue, file, context: 'tab' });
+                });
+            });
+
+            menu.addItem(item => {
+                setAsyncOnClick(item.setTitle(strings.contextMenu.file.openToRight).setIcon('lucide-separator-vertical'), async () => {
+                    await openFileInContext({ app, commandQueue, file, context: 'split' });
+                });
+            });
+
+            if (!isMobile) {
+                menu.addItem(item => {
+                    setAsyncOnClick(item.setTitle(strings.contextMenu.file.openInNewWindow).setIcon('lucide-external-link'), async () => {
+                        await openFileInContext({ app, commandQueue, file, context: 'window' });
+                    });
+                });
+            }
+        },
+        [app, commandQueue, isMobile]
+    );
+
     const showCalendarNoteContextMenu = useCallback(
         (event: React.MouseEvent<HTMLElement>, target: CalendarNoteContextMenuTarget) => {
             event.preventDefault();
@@ -247,6 +277,13 @@ export function useCalendarNoteActions({
 
             const menu = new Menu();
             const isCurrentMonthHighlight = target.currentMonthHighlightDayIso === target.dayIso;
+            const existingFile = target.existingFile;
+
+            if (existingFile) {
+                addCalendarNoteOpenOptions(menu, existingFile);
+                menu.addSeparator();
+            }
+
             let hasHighlightMenuItem = false;
 
             if (showMonthHighlightActions && target.kind === 'day' && target.hasFeatureImage && target.monthKey && target.dayIso) {
@@ -274,7 +311,6 @@ export function useCalendarNoteActions({
                 }
             }
 
-            const existingFile = target.existingFile;
             if (existingFile) {
                 if (hasHighlightMenuItem) {
                     menu.addSeparator();
@@ -314,6 +350,7 @@ export function useCalendarNoteActions({
             menu.showAtMouseEvent(event.nativeEvent);
         },
         [
+            addCalendarNoteOpenOptions,
             clearHoverTooltip,
             collapseNavigationIfMobile,
             fileSystemOps,

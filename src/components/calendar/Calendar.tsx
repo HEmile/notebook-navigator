@@ -936,6 +936,7 @@ export function Calendar({
     const { getExistingCustomCalendarNoteFile, openOrCreateCustomCalendarNote, openOrCreateDailyNote, showCalendarNoteContextMenu } =
         useCalendarNoteActions({
             app,
+            commandQueue,
             fileSystemOps,
             isMobile,
             settings,
