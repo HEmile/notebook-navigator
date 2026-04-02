@@ -16,12 +16,45 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { mockLocalStorageStore, localStorageInit, localStorageGet, localStorageSet, localStorageRemove } = vi.hoisted(() => {
+    const mockLocalStorageStore = new Map<string, unknown>();
+    const localStorageInit = vi.fn();
+    const localStorageGet = vi.fn((key: string) => (mockLocalStorageStore.has(key) ? (mockLocalStorageStore.get(key) ?? null) : null));
+    const localStorageSet = vi.fn((key: string, value: unknown) => {
+        mockLocalStorageStore.set(key, value);
+        return true;
+    });
+    const localStorageRemove = vi.fn((key: string) => {
+        mockLocalStorageStore.delete(key);
+        return true;
+    });
+
+    return { mockLocalStorageStore, localStorageInit, localStorageGet, localStorageSet, localStorageRemove };
+});
+
+vi.mock('../../src/utils/localStorage', () => {
+    return {
+        localStorage: {
+            init: localStorageInit,
+            get: localStorageGet,
+            set: localStorageSet,
+            remove: localStorageRemove
+        }
+    };
+});
+
 import { PluginSettingsController } from '../../src/services/settings/PluginSettingsController';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import { STORAGE_KEYS } from '../../src/types';
 import { buildPropertySeparatorKey, buildTagSeparatorKey } from '../../src/utils/navigationSeparators';
 import { buildPropertyValueNodeId } from '../../src/utils/propertyTree';
+
+beforeEach(() => {
+    mockLocalStorageStore.clear();
+    vi.clearAllMocks();
+});
 
 describe('PluginSettingsController.normalizeTagSettings', () => {
     it('canonicalizes tag metadata keys and hidden-tag rules across NFC and NFD-equivalent forms', () => {
@@ -73,5 +106,37 @@ describe('PluginSettingsController.normalizeNavigationSeparatorSettings', () => 
             [buildTagSeparatorKey('réunion')]: true,
             [normalizedPropertyKey]: true
         });
+    });
+});
+
+describe('PluginSettingsController.prepareImportedUiScalePersistence', () => {
+    it('preserves the opposite-platform scale across an import save and reload when uiScale is local', async () => {
+        let storedData: Record<string, unknown> | null = null;
+
+        const controller = new PluginSettingsController({
+            keys: STORAGE_KEYS,
+            loadData: vi.fn(async () => (storedData ? structuredClone(storedData) : null)),
+            saveData: vi.fn(async data => {
+                storedData = structuredClone(data) as Record<string, unknown>;
+            }),
+            mirrorUXPreferences: vi.fn()
+        });
+        const settings = structuredClone(DEFAULT_SETTINGS);
+        settings.syncModes.uiScale = 'local';
+        settings.desktopScale = 1.3;
+        settings.mobileScale = 0.9;
+
+        controller.settings = settings;
+        controller.prepareImportedUiScalePersistence();
+        controller.mirrorAllSyncModeSettingsToLocalStorage();
+        await controller.saveSettings();
+        await controller.loadSettings();
+        await controller.saveSettings();
+
+        expect(mockLocalStorageStore.get(STORAGE_KEYS.uiScaleKey)).toBe(1.3);
+        expect(controller.settings.desktopScale).toBe(1.3);
+        expect(controller.settings.mobileScale).toBe(0.9);
+        expect(storedData?.['desktopScale']).toBeUndefined();
+        expect(storedData?.['mobileScale']).toBe(0.9);
     });
 });

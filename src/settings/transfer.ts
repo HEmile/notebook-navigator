@@ -37,6 +37,21 @@ const NON_TRANSFERABLE_SETTING_KEYS = new Set([
 
 export const SETTINGS_TRANSFER_FILENAME = 'notebook-navigator-settings.json';
 
+function createImportBaseSettings(currentSettings: NotebookNavigatorSettings): Record<string, unknown> {
+    const nextSettings = structuredClone(DEFAULT_SETTINGS) as unknown as Record<string, unknown>;
+    const currentSettingsRecord = currentSettings as unknown as Record<string, unknown>;
+
+    NON_TRANSFERABLE_SETTING_KEYS.forEach(key => {
+        if (!hasOwnKey(currentSettingsRecord, key)) {
+            return;
+        }
+
+        nextSettings[key] = structuredClone(currentSettingsRecord[key]);
+    });
+
+    return nextSettings;
+}
+
 function createFilteredTransferValue(base: unknown, current: unknown): unknown {
     if (Array.isArray(base)) {
         return Array.isArray(current) ? structuredClone(current) : structuredClone(base);
@@ -225,12 +240,11 @@ export function applyModifiedSettingsTransfer(
         throw new Error('Settings import must be a JSON object.');
     }
 
-    const nextSettings = structuredClone(currentSettings);
-    const nextSettingsRecord = nextSettings as unknown as Record<string, unknown>;
+    const nextSettingsRecord = createImportBaseSettings(currentSettings);
 
     Object.entries(defaultSnapshot).forEach(([key]) => {
         nextSettingsRecord[key] = mergedSnapshot[key];
     });
 
-    return nextSettings;
+    return nextSettingsRecord as unknown as NotebookNavigatorSettings;
 }

@@ -1025,6 +1025,10 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         }
 
         this.settings = applyModifiedSettingsTransfer(this.settings, transferData);
+        this.settingsController.normalizeTagSettings();
+        this.settingsController.normalizePropertySettings();
+        this.settingsController.normalizeNavigationSeparatorSettings();
+        this.settingsController.prepareImportedUiScalePersistence();
         this.settingsController.mirrorAllSyncModeSettingsToLocalStorage();
         await this.settingsController.saveSettings();
         await this.loadSettings();

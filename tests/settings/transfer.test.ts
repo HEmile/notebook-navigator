@@ -76,6 +76,20 @@ describe('applyModifiedSettingsTransfer', () => {
         expect(nextSettings.folderSortOrder).toBe('alpha-desc');
     });
 
+    it('does not retain unknown top-level keys from current settings during import overwrite', () => {
+        const currentSettings = structuredClone(DEFAULT_SETTINGS) as typeof DEFAULT_SETTINGS & Record<string, unknown>;
+        currentSettings.searchProvider = 'omnisearch';
+        currentSettings.legacyField = { stale: true };
+
+        const nextSettings = applyModifiedSettingsTransfer(currentSettings, {
+            folderSortOrder: 'alpha-desc'
+        });
+
+        expect((nextSettings as unknown as Record<string, unknown>).legacyField).toBeUndefined();
+        expect((nextSettings as unknown as Record<string, unknown>).searchProvider).toBe('omnisearch');
+        expect(nextSettings.folderSortOrder).toBe('alpha-desc');
+    });
+
     it('rejects invalid values for nullable string settings during import', () => {
         const nextSettings = applyModifiedSettingsTransfer(structuredClone(DEFAULT_SETTINGS), {
             homepage: { bad: true },

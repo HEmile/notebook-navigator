@@ -192,6 +192,15 @@ export class PluginSettingsController {
         });
     }
 
+    public prepareImportedUiScalePersistence(): void {
+        if (!this.isLocal('uiScale')) {
+            return;
+        }
+
+        this.shouldPersistDesktopScale = true;
+        this.shouldPersistMobileScale = true;
+    }
+
     public clearAllLocalStorage(): void {
         const storageKeyNames = Object.keys(STORAGE_KEYS) as (keyof LocalStorageKeys)[];
         storageKeyNames.forEach(storageKey => {
