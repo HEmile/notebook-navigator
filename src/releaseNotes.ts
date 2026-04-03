@@ -79,8 +79,12 @@ const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.5.6',
         date: '2026-04-03',
+        showOnUpdate: false,
         new: [
             'New setting: List > Appearance > ==Always show all tag and property pills==. When enabled, tag and property pills remain visible even when they match the current navigation selection.'
+        ],
+        fixed: [
+            'Fixed issue introduced in 2.5.5 where tag and property pills that matched the current navigation selection were hidden in the renderer but still counted by the virtualizer, causing incorrect item heights and scroll position drift in the list pane.'
         ]
     },
     {

@@ -23,8 +23,13 @@ import { useSelectionState } from '../../context/SelectionContext';
 import { useTagNavigation } from '../../hooks/useTagNavigation';
 import type { PropertyItem } from '../../storage/IndexedDBStorage';
 import type { NotePropertyType, NotebookNavigatorSettings } from '../../settings/types';
-import { ItemType } from '../../types';
 import { runAsyncAction } from '../../utils/async';
+import {
+    forEachVisibleFrontmatterProperty,
+    getSelectedPropertyValuePillToHide,
+    getSelectedTagPillToHide,
+    type VisibleFrontmatterPropertyEntry
+} from '../../utils/listPaneMeasurements';
 import { naturalCompare } from '../../utils/sortUtils';
 import { getTagSearchModifierOperator, normalizeTagPath } from '../../utils/tagUtils';
 import { isSupportedCssColor, parsePropertyLinkTarget, type PropertyLinkTarget } from '../../utils/propertyUtils';
@@ -33,12 +38,9 @@ import { resolveUXIcon } from '../../utils/uxIcons';
 import type { InclusionOperator } from '../../utils/filterSearch';
 import {
     buildPropertyKeyNodeId,
-    buildPropertyValueNodeId,
     getPropertyKeyNodeIdFromNodeId,
-    isPropertyKeyOnlyValuePath,
     normalizePropertyNodeId,
-    parsePropertyNodeId,
-    normalizePropertyTreeValuePath
+    parsePropertyNodeId
 } from '../../utils/propertyTree';
 import type { HiddenTagVisibility } from '../../utils/tagPrefixMatcher';
 import {
@@ -186,31 +188,18 @@ export function useFileItemPills({
     const { navigateToTag, navigateToProperty } = useTagNavigation();
     const wordCountPillIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'file-word-count'), [settings.interfaceIcons]);
     const selectedTagToHide = useMemo(() => {
-        if (settings.showSelectedNavigationPills) {
-            return null;
-        }
-
-        if (selectionState.selectionType !== ItemType.TAG) {
-            return null;
-        }
-
-        return normalizeTagPath(selectionState.selectedTag);
+        return getSelectedTagPillToHide({
+            selectionType: selectionState.selectionType,
+            selectedTag: selectionState.selectedTag,
+            showSelectedNavigationPills: settings.showSelectedNavigationPills
+        });
     }, [selectionState.selectedTag, selectionState.selectionType, settings.showSelectedNavigationPills]);
     const selectedPropertyValueNodeIdToHide = useMemo(() => {
-        if (settings.showSelectedNavigationPills) {
-            return null;
-        }
-
-        if (selectionState.selectionType !== ItemType.PROPERTY || !selectionState.selectedProperty) {
-            return null;
-        }
-
-        const parsedNode = parsePropertyNodeId(selectionState.selectedProperty);
-        if (!parsedNode?.valuePath) {
-            return null;
-        }
-
-        return normalizePropertyNodeId(selectionState.selectedProperty) ?? selectionState.selectedProperty;
+        return getSelectedPropertyValuePillToHide({
+            selectionType: selectionState.selectionType,
+            selectedProperty: selectionState.selectedProperty,
+            showSelectedNavigationPills: settings.showSelectedNavigationPills
+        });
     }, [selectionState.selectedProperty, selectionState.selectionType, settings.showSelectedNavigationPills]);
 
     const handleTagClick = useCallback(
@@ -397,32 +386,19 @@ export function useFileItemPills({
         return true;
     }, [categorizedTags, isCompactMode, settings.showFileTags, settings.showFileTagsInCompactMode, settings.showTags]);
 
-    const visibleProperties = useMemo(() => {
-        if (!properties || properties.length === 0) {
-            return properties;
-        }
-
-        if (visiblePropertyKeys.size === 0) {
-            return [];
-        }
-
-        return properties.filter(entry => {
-            const normalizedFieldKey = casefold(entry.fieldKey);
-            if (!visiblePropertyKeys.has(normalizedFieldKey)) {
-                return false;
-            }
-
-            if (entry.valueKind === undefined) {
-                const normalizedValuePath = normalizePropertyTreeValuePath(entry.value);
-                return !isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
-            }
-
-            return true;
+    const visibleFrontmatterProperties = useMemo(() => {
+        const entries: VisibleFrontmatterPropertyEntry[] = [];
+        forEachVisibleFrontmatterProperty({
+            properties,
+            visiblePropertyKeys,
+            hiddenPropertyValueNodeId: selectedPropertyValueNodeIdToHide,
+            visitor: property => entries.push(property)
         });
-    }, [properties, visiblePropertyKeys]);
+        return entries;
+    }, [properties, selectedPropertyValueNodeIdToHide, visiblePropertyKeys]);
 
     const propertyColorSignature = useMemo(() => {
-        if (!settings.showFileProperties || !settings.colorFileProperties || !visibleProperties || visibleProperties.length === 0) {
+        if (!settings.showFileProperties || !settings.colorFileProperties || visibleFrontmatterProperties.length === 0) {
             return '';
         }
 
@@ -433,18 +409,12 @@ export function useFileItemPills({
         const seenValueNodeIds = new Set<string>();
         const seenKeyNodeIds = new Set<string>();
 
-        for (const entry of visibleProperties) {
-            const rawValue = entry.value;
-            if (rawValue.trim().length === 0) {
+        for (const property of visibleFrontmatterProperties) {
+            const valueNodeId = property.propertyNodeId;
+            if (!valueNodeId) {
                 continue;
             }
 
-            const normalizedValuePath = normalizePropertyTreeValuePath(rawValue);
-            const isKeyOnlyValue = entry.valueKind === 'boolean' ? false : isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
-            const rawPropertyNodeId = isKeyOnlyValue
-                ? buildPropertyKeyNodeId(entry.fieldKey)
-                : buildPropertyValueNodeId(entry.fieldKey, normalizedValuePath);
-            const valueNodeId = normalizePropertyNodeId(rawPropertyNodeId) ?? rawPropertyNodeId;
             if (!seenValueNodeIds.has(valueNodeId)) {
                 seenValueNodeIds.add(valueNodeId);
                 signatures.push(`v:${valueNodeId}\u0000${colorRecord?.[valueNodeId] ?? ''}\u0000${backgroundRecord?.[valueNodeId] ?? ''}`);
@@ -475,7 +445,7 @@ export function useFileItemPills({
         settings.propertyBackgroundColors,
         settings.propertyColors,
         settings.showFileProperties,
-        visibleProperties
+        visibleFrontmatterProperties
     ]);
 
     const canShowPropertyPills = useMemo(() => {
@@ -514,33 +484,15 @@ export function useFileItemPills({
         const pills: PropertyPill[] = [];
         const frontmatterPills: PropertyPill[] = [];
 
-        if (!canShowPropertyPills || !settings.showFileProperties || !visibleProperties || visibleProperties.length === 0) {
+        if (!canShowPropertyPills || !settings.showFileProperties || visibleFrontmatterProperties.length === 0) {
             return pills;
         }
 
         const colorLookupCache = new Map<string, { color?: string; background?: string }>();
-        for (const entry of visibleProperties) {
-            const rawValue = entry.value;
-            if (rawValue.trim().length === 0) {
-                continue;
-            }
-
-            const trimmedFieldKey = entry.fieldKey.trim();
-            const normalizedValuePath = normalizePropertyTreeValuePath(rawValue);
-            const isKeyOnlyValue = entry.valueKind === 'boolean' ? false : isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
+        for (const property of visibleFrontmatterProperties) {
+            const { entry, rawValue, trimmedFieldKey, normalizedValuePath, isKeyOnlyValue, propertyNodeId } = property;
             const linkTarget = isKeyOnlyValue ? null : parsePropertyLinkTarget(rawValue);
             const label = linkTarget ? linkTarget.displayText : rawValue;
-            const propertyNodeId = (() => {
-                if (!trimmedFieldKey) {
-                    return undefined;
-                }
-
-                const rawPropertyNodeId = isKeyOnlyValue
-                    ? buildPropertyKeyNodeId(trimmedFieldKey)
-                    : buildPropertyValueNodeId(trimmedFieldKey, normalizedValuePath);
-                return normalizePropertyNodeId(rawPropertyNodeId) ?? rawPropertyNodeId;
-            })();
-
             const cacheKey = propertyNodeId ?? `${entry.fieldKey}\u0000${rawValue}`;
             let colorData = colorLookupCache.get(cacheKey);
             if (!colorData) {
@@ -573,10 +525,6 @@ export function useFileItemPills({
                 propertyNodeId !== undefined &&
                 normalizedPropertySearchKey.length > 0 &&
                 visibleNavigationPropertyKeys.has(normalizedPropertySearchKey);
-
-            if (selectedPropertyValueNodeIdToHide && propertyNodeId === selectedPropertyValueNodeIdToHide) {
-                continue;
-            }
 
             frontmatterPills.push({
                 value: rawValue,
@@ -627,9 +575,8 @@ export function useFileItemPills({
         settings.colorFileProperties,
         settings.prioritizeColoredFileProperties,
         settings.showFileProperties,
-        selectedPropertyValueNodeIdToHide,
         visibleNavigationPropertyKeys,
-        visibleProperties
+        visibleFrontmatterProperties
     ]);
 
     const propertyColorData = useMemo(() => {

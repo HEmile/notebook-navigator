@@ -59,6 +59,9 @@ import { getEffectiveSortOption } from '../utils/sortUtils';
 import { calculateCompactListMetrics } from '../utils/listPaneMetrics';
 import {
     getFileItemLayoutState,
+    getSelectedPropertyValuePillToHide,
+    getSelectedTagPillToHide,
+    hasVisibleTagPills,
     getListPaneMeasurements,
     getPropertyRowCount,
     isListPaneCompactMode,
@@ -66,6 +69,8 @@ import {
     shouldShowFileItemParentFolderLine
 } from '../utils/listPaneMeasurements';
 import type { PropertySelectionNodeId } from '../utils/propertyTree';
+import { getCachedFileTags } from '../utils/tagUtils';
+import type { HiddenTagVisibility } from '../utils/tagPrefixMatcher';
 
 /**
  * Parameters for the useListPaneScroll hook
@@ -112,6 +117,8 @@ interface UseListPaneScrollParams {
     visiblePropertyKeys: ReadonlySet<string>;
     /** Stable key signature for visible frontmatter property keys */
     visiblePropertyKeySignature: string;
+    /** Hidden tag filter rules shared with file-item pill rendering */
+    hiddenTagVisibility: HiddenTagVisibility;
     /** Scroll margin used to offset the visible range and scrollToIndex alignment */
     scrollMargin?: number;
     /**
@@ -164,11 +171,12 @@ export function useListPaneScroll({
     includeDescendantNotes,
     visiblePropertyKeys,
     visiblePropertyKeySignature,
+    hiddenTagVisibility,
     scrollMargin = 0,
     scrollPaddingEnd = 0,
     onVirtualizerScrollingChange
 }: UseListPaneScrollParams): UseListPaneScrollResult {
-    const { isMobile } = useServices();
+    const { app, isMobile } = useServices();
     const listMeasurements = getListPaneMeasurements(isMobile);
     const { hasPreview, getDB, isStorageReady } = useFileCache();
     // The list pane only renders after StorageContext marks storage ready.
@@ -229,6 +237,24 @@ export function useListPaneScroll({
     });
     const revealFileOnListChanges = settings.revealFileOnListChanges;
     const hasSelectedFile = Boolean(selectedFile);
+    const selectedTagToHide = useMemo(
+        () =>
+            getSelectedTagPillToHide({
+                selectionType: selectionState.selectionType,
+                selectedTag: selectionState.selectedTag,
+                showSelectedNavigationPills: settings.showSelectedNavigationPills
+            }),
+        [selectionState.selectedTag, selectionState.selectionType, settings.showSelectedNavigationPills]
+    );
+    const selectedPropertyValueNodeIdToHide = useMemo(
+        () =>
+            getSelectedPropertyValuePillToHide({
+                selectionType: selectionState.selectionType,
+                selectedProperty: selectionState.selectedProperty,
+                showSelectedNavigationPills: settings.showSelectedNavigationPills
+            }),
+        [selectionState.selectedProperty, selectionState.selectionType, settings.showSelectedNavigationPills]
+    );
 
     /**
      * Initialize TanStack Virtual virtualizer with dynamic height calculation.
@@ -272,10 +298,25 @@ export function useListPaneScroll({
 
             // For file items - calculate height including all components
             const file = item.type === ListPaneItemType.FILE && item.data instanceof TFile ? item.data : null;
+            const fileRecord = file ? db.getFile(file.path) : null;
 
             // Visibility for tags row
             const shouldShowFileTags = settings.showTags && settings.showFileTags && (!isCompactMode || settings.showFileTagsInCompactMode);
-            const hasTagRow = Boolean(shouldShowFileTags && item.type === ListPaneItemType.FILE && item.hasTags);
+            const hasTagRow = (() => {
+                if (!shouldShowFileTags || item.type !== ListPaneItemType.FILE || !item.hasTags) {
+                    return false;
+                }
+
+                if (!selectedTagToHide || !file) {
+                    return true;
+                }
+
+                return hasVisibleTagPills({
+                    tags: getCachedFileTags({ app, file, db, fileData: fileRecord }),
+                    hiddenTagVisibility,
+                    selectedTagToHide
+                });
+            })();
 
             // Get actual preview status for accurate height calculation
             let hasPreviewText = false;
@@ -292,7 +333,6 @@ export function useListPaneScroll({
 
             // Keep height estimation aligned with FileItem feature image rendering.
             // getFile reads from the in-memory cache; no IndexedDB reads occur during sizing.
-            const fileRecord = file ? db.getFile(file.path) : null;
             const featureImageStatus = fileRecord?.featureImageStatus ?? null;
             const showFeatureImageArea = shouldShowFeatureImageArea({
                 showImage: folderSettings.showImage,
@@ -311,7 +351,8 @@ export function useListPaneScroll({
                 file,
                 wordCount: fileRecord?.wordCount ?? undefined,
                 properties: fileRecord?.properties ?? undefined,
-                visiblePropertyKeys
+                visiblePropertyKeys,
+                hiddenPropertyValueNodeId: selectedPropertyValueNodeIdToHide
             });
 
             const hasVisiblePillRows = hasTagRow || propertyRowCount > 0;
@@ -747,11 +788,15 @@ export function useListPaneScroll({
         settings.showFileProperties,
         settings.showPropertiesOnSeparateRows,
         settings.showFilePropertiesInCompactMode,
+        settings.showSelectedNavigationPills,
         visiblePropertyKeySignature,
         settings.showParentFolder,
         settings.showTags,
         settings.showFileTags,
         settings.showFileTagsInCompactMode,
+        selectionState.selectionType,
+        selectedTagToHide,
+        selectedPropertyValueNodeIdToHide,
         settings.optimizeNoteHeight,
         settings.compactItemHeight,
         settings.compactItemHeightScaleText,

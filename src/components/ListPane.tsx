@@ -375,6 +375,7 @@ export const ListPane = React.memo(
             includeDescendantNotes,
             visiblePropertyKeys: visibleListPropertyKeys,
             visiblePropertyKeySignature: visibleListPropertyKeySignature,
+            hiddenTagVisibility,
             scrollMargin: 0,
             scrollPaddingEnd,
             onVirtualizerScrollingChange: handleVirtualizerScrollingChange

@@ -19,11 +19,17 @@
 import { describe, expect, it } from 'vitest';
 import {
     getFileItemLayoutState,
+    getSelectedPropertyValuePillToHide,
+    getSelectedTagPillToHide,
+    hasVisibleTagPills,
     getPropertyRowCount,
     isListPaneCompactMode,
     shouldShowFeatureImageArea,
     shouldShowFileItemParentFolderLine
 } from '../../src/utils/listPaneMeasurements';
+import { ItemType } from '../../src/types';
+import { buildPropertyValueNodeId } from '../../src/utils/propertyTree';
+import { createHiddenTagVisibility } from '../../src/utils/tagPrefixMatcher';
 import { createTestTFile } from './createTestTFile';
 
 describe('listPaneMeasurements layout helpers', () => {
@@ -185,6 +191,121 @@ describe('listPaneMeasurements layout helpers', () => {
                 wordCount: null,
                 properties: [{ fieldKey: 'flag', value: 'true', valueKind: 'boolean' }],
                 visiblePropertyKeys: new Set<string>(['flag'])
+            })
+        ).toBe(1);
+    });
+
+    it('hides the selected tag from tag-row visibility checks', () => {
+        const selectedTagToHide = getSelectedTagPillToHide({
+            selectionType: ItemType.TAG,
+            selectedTag: 'ai',
+            showSelectedNavigationPills: false
+        });
+        const hiddenTagVisibility = createHiddenTagVisibility([], false);
+
+        expect(
+            hasVisibleTagPills({
+                tags: ['ai'],
+                hiddenTagVisibility,
+                selectedTagToHide
+            })
+        ).toBe(false);
+
+        expect(
+            hasVisibleTagPills({
+                tags: ['ai', 'ml'],
+                hiddenTagVisibility,
+                selectedTagToHide
+            })
+        ).toBe(true);
+    });
+
+    it('reduces property row counts when the selected property value pill is hidden', () => {
+        const selectedPropertyValueNodeIdToHide = getSelectedPropertyValuePillToHide({
+            selectionType: ItemType.PROPERTY,
+            selectedProperty: buildPropertyValueNodeId('status', 'done'),
+            showSelectedNavigationPills: false
+        });
+
+        expect(
+            getPropertyRowCount({
+                notePropertyType: 'none',
+                showFileProperties: true,
+                showPropertiesOnSeparateRows: false,
+                showFilePropertiesInCompactMode: true,
+                isCompactMode: false,
+                file: createTestTFile('Notes/Status.md'),
+                wordCount: null,
+                properties: [{ fieldKey: 'status', value: 'done', valueKind: 'string' }],
+                visiblePropertyKeys: new Set<string>(['status']),
+                hiddenPropertyValueNodeId: selectedPropertyValueNodeIdToHide
+            })
+        ).toBe(0);
+
+        expect(
+            getPropertyRowCount({
+                notePropertyType: 'none',
+                showFileProperties: true,
+                showPropertiesOnSeparateRows: true,
+                showFilePropertiesInCompactMode: true,
+                isCompactMode: false,
+                file: createTestTFile('Notes/Status.md'),
+                wordCount: null,
+                properties: [
+                    { fieldKey: 'status', value: 'done', valueKind: 'string' },
+                    { fieldKey: 'priority', value: 'high', valueKind: 'string' }
+                ],
+                visiblePropertyKeys: new Set<string>(['status', 'priority']),
+                hiddenPropertyValueNodeId: selectedPropertyValueNodeIdToHide
+            })
+        ).toBe(1);
+    });
+
+    it('keeps property row counts correct across repeated calls with different filters', () => {
+        const properties = [
+            { fieldKey: 'status', value: 'done', valueKind: 'string' as const },
+            { fieldKey: 'priority', value: 'high', valueKind: 'string' as const }
+        ];
+
+        expect(
+            getPropertyRowCount({
+                notePropertyType: 'none',
+                showFileProperties: true,
+                showPropertiesOnSeparateRows: true,
+                showFilePropertiesInCompactMode: true,
+                isCompactMode: false,
+                file: createTestTFile('Notes/Status.md'),
+                wordCount: null,
+                properties,
+                visiblePropertyKeys: new Set<string>(['status'])
+            })
+        ).toBe(1);
+
+        expect(
+            getPropertyRowCount({
+                notePropertyType: 'none',
+                showFileProperties: true,
+                showPropertiesOnSeparateRows: true,
+                showFilePropertiesInCompactMode: true,
+                isCompactMode: false,
+                file: createTestTFile('Notes/Status.md'),
+                wordCount: null,
+                properties,
+                visiblePropertyKeys: new Set<string>(['missing'])
+            })
+        ).toBe(0);
+
+        expect(
+            getPropertyRowCount({
+                notePropertyType: 'none',
+                showFileProperties: true,
+                showPropertiesOnSeparateRows: true,
+                showFilePropertiesInCompactMode: true,
+                isCompactMode: false,
+                file: createTestTFile('Notes/Status.md'),
+                wordCount: null,
+                properties,
+                visiblePropertyKeys: new Set<string>(['status'])
             })
         ).toBe(1);
     });
