@@ -287,6 +287,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     revealFileOnListChanges: true,
     listPaneTitle: 'header',
     noteGrouping: 'date',
+    showSelectedNavigationPills: false,
     filterPinnedByFolder: false,
     showPinnedGroupHeader: true,
     showPinnedIcon: true,

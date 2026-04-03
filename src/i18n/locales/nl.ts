@@ -947,6 +947,10 @@ export const STRINGS_NL = {
                     folder: 'Groeperen op map'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Tag- en eigenschapspillen altijd tonen',
+                desc: 'Wanneer uitgeschakeld, worden pillen die overeenkomen met de huidige navigatieselectie verborgen (bijv. de "recepten"-tagpil wordt verborgen bij het bladeren door de "recepten"-tag). Inschakelen om alle pillen zichtbaar te houden.'
+            },
             showPinnedGroupHeader: {
                 name: 'Vastgepinde groepskop tonen',
                 desc: 'De vastgepinde sectiekop boven vastgepinde notities weergeven.'

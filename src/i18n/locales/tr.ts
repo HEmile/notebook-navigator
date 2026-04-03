@@ -946,6 +946,10 @@ export const STRINGS_TR = {
                     folder: 'Klasöre göre grupla'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Tüm etiket ve özellik rozetlerini her zaman göster',
+                desc: 'Devre dışı bırakıldığında, geçerli gezinme seçimiyle eşleşen rozetler gizlenir (ör. "tarifler" etiketine göz atarken "tarifler" etiketi rozeti gizlenir). Tüm rozetlerin görünür kalması için etkinleştirin.'
+            },
             showPinnedGroupHeader: {
                 name: 'Sabitlenmiş grup başlığını göster',
                 desc: 'Sabitlenmiş notların üzerinde sabitlenmiş bölüm başlığını görüntüle.'

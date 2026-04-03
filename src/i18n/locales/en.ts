@@ -942,6 +942,10 @@ export const STRINGS_EN = {
                     folder: 'Group by folder'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Always show all tag and property pills',
+                desc: 'When disabled, pills matching the current navigation selection are hidden (e.g. the "recipes" tag pill is hidden when browsing the "recipes" tag). Enable to keep all pills visible.'
+            },
             showPinnedGroupHeader: {
                 name: 'Show pinned group header',
                 desc: 'Display the pinned section header above pinned notes.'

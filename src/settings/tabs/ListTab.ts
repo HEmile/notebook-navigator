@@ -294,6 +294,16 @@ export function renderListPaneTab(context: SettingsTabContext): void {
 
     addToggleSetting(
         displayGroup.addSetting,
+        strings.settings.items.showSelectedNavigationPills.name,
+        strings.settings.items.showSelectedNavigationPills.desc,
+        () => plugin.settings.showSelectedNavigationPills,
+        value => {
+            plugin.settings.showSelectedNavigationPills = value;
+        }
+    );
+
+    addToggleSetting(
+        displayGroup.addSetting,
         strings.settings.items.optimizeNoteHeight.name,
         strings.settings.items.optimizeNoteHeight.desc,
         () => plugin.settings.optimizeNoteHeight,

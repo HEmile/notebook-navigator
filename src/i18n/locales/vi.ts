@@ -947,6 +947,10 @@ export const STRINGS_VI = {
                     folder: 'Nhóm theo thư mục'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Luôn hiển thị tất cả nhãn thẻ và thuộc tính',
+                desc: 'Khi tắt, các nhãn khớp với lựa chọn điều hướng hiện tại sẽ bị ẩn (ví dụ: nhãn thẻ "công thức" bị ẩn khi duyệt thẻ "công thức"). Bật để giữ tất cả các nhãn luôn hiển thị.'
+            },
             showPinnedGroupHeader: {
                 name: 'Hiện header nhóm đã ghim',
                 desc: 'Hiển thị header phần đã ghim phía trên ghi chú đã ghim.'

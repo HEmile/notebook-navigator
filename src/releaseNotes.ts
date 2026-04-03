@@ -77,6 +77,13 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '2.5.6',
+        date: '2026-04-03',
+        new: [
+            'New setting: List > Appearance > ==Always show all tag and property pills==. When enabled, tag and property pills remain visible even when they match the current navigation selection.'
+        ]
+    },
+    {
         version: '2.5.5',
         date: '2026-04-02',
         new: [

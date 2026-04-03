@@ -295,6 +295,31 @@ describe('useFileItemPills', () => {
         expect(markup).not.toContain('ai/openai');
     });
 
+    it('shows the selected tag pill when the list setting is enabled', () => {
+        mockSelectionState.selectionType = ItemType.TAG;
+        mockSelectionState.selectedTag = 'ai';
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Tags.md'),
+            isCompactMode: false,
+            tags: ['ai', 'ml'],
+            properties: null,
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showTags: true,
+                showFileTags: true,
+                showSelectedNavigationPills: true
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('>ai<');
+        expect(markup).toContain('>ml<');
+    });
+
     it('renders external property links using their display text', () => {
         const markup = renderPillRows({
             file: createTestTFile('Notes/Links.md'),
@@ -405,6 +430,35 @@ describe('useFileItemPills', () => {
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['status']),
+            visibleNavigationPropertyKeys: new Set<string>(['status'])
+        });
+
+        expect(markup).toContain('>done<');
+    });
+
+    it('shows the selected property value pill when the list setting is enabled', () => {
+        mockSelectionState.selectionType = ItemType.PROPERTY;
+        mockSelectionState.selectedProperty = buildPropertyValueNodeId('status', 'done');
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Status.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'status',
+                    value: 'done',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                showSelectedNavigationPills: true
             },
             visiblePropertyKeys: new Set<string>(['status']),
             visibleNavigationPropertyKeys: new Set<string>(['status'])

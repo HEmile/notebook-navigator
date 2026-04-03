@@ -939,6 +939,10 @@ export const STRINGS_ZH_TW = {
                     folder: '按資料夾分組'
                 }
             },
+            showSelectedNavigationPills: {
+                name: '始終顯示所有標籤和屬性標記',
+                desc: '停用時，與目前導覽選擇相符的標記會被隱藏（例如，瀏覽「食譜」標籤時，「食譜」標籤標記會被隱藏）。啟用後所有標記始終可見。'
+            },
             showPinnedGroupHeader: {
                 name: '顯示釘選群組標題',
                 desc: '在釘選筆記上方顯示分組標題。'

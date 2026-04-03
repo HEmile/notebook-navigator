@@ -946,6 +946,10 @@ export const STRINGS_ID = {
                     folder: 'Kelompokkan berdasarkan folder'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Selalu tampilkan semua pil tag dan properti',
+                desc: 'Saat dinonaktifkan, pil yang cocok dengan pilihan navigasi saat ini disembunyikan (misalnya, pil tag "resep" disembunyikan saat menelusuri tag "resep"). Aktifkan untuk menampilkan semua pil.'
+            },
             showPinnedGroupHeader: {
                 name: 'Tampilkan header grup yang disematkan',
                 desc: 'Tampilkan header bagian yang disematkan di atas catatan yang disematkan.'

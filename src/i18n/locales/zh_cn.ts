@@ -939,6 +939,10 @@ export const STRINGS_ZH_CN = {
                     folder: '按文件夹分组'
                 }
             },
+            showSelectedNavigationPills: {
+                name: '始终显示所有标签和属性标记',
+                desc: '禁用时，与当前导航选择匹配的标记会被隐藏（例如，浏览"食谱"标签时，"食谱"标签标记会被隐藏）。启用后所有标记始终可见。'
+            },
             showPinnedGroupHeader: {
                 name: '显示固定组标题',
                 desc: '在固定笔记上方显示分组标题。'

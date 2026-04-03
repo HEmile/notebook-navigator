@@ -942,6 +942,10 @@ export const STRINGS_IT = {
                     folder: 'Raggruppa per cartella'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Mostra sempre tutti i badge di tag e proprietà',
+                desc: 'Quando disattivato, i badge corrispondenti alla selezione di navigazione corrente vengono nascosti (ad es. il badge del tag "ricette" viene nascosto durante la navigazione nel tag "ricette"). Attiva per mantenere tutti i badge visibili.'
+            },
             showPinnedGroupHeader: {
                 name: 'Mostra intestazione gruppo fissate',
                 desc: "Visualizza l'intestazione della sezione fissate sopra le note fissate."

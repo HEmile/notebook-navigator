@@ -450,6 +450,7 @@ export interface NotebookNavigatorSettings {
     revealFileOnListChanges: boolean;
     listPaneTitle: ListPaneTitleOption;
     noteGrouping: ListNoteGroupingOption;
+    showSelectedNavigationPills: boolean;
     filterPinnedByFolder: boolean;
     showPinnedGroupHeader: boolean;
     showPinnedIcon: boolean;

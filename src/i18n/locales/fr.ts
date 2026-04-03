@@ -948,6 +948,10 @@ export const STRINGS_FR = {
                     folder: 'Grouper par dossier'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Toujours afficher toutes les pastilles de tags et propriétés',
+                desc: 'Lorsque désactivé, les pastilles correspondant à la sélection de navigation actuelle sont masquées (par ex. la pastille du tag « recettes » est masquée lors de la navigation dans le tag « recettes »). Activer pour garder toutes les pastilles visibles.'
+            },
             showPinnedGroupHeader: {
                 name: "Afficher l'en-tête du groupe épinglé",
                 desc: "Affiche l'en-tête de la section des notes épinglées."

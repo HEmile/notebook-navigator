@@ -123,6 +123,10 @@ export function migrateLegacySyncedSettings(params: {
         settings.noteGrouping = defaultSettings.noteGrouping;
     }
 
+    if (typeof settings.showSelectedNavigationPills !== 'boolean') {
+        settings.showSelectedNavigationPills = defaultSettings.showSelectedNavigationPills;
+    }
+
     // Validate shortcutBadgeDisplay value and reset to default if invalid
     if (
         settings.shortcutBadgeDisplay !== 'index' &&

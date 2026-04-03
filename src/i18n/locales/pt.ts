@@ -946,6 +946,10 @@ export const STRINGS_PT = {
                     folder: 'Agrupar por pasta'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Mostrar sempre todas as etiquetas e propriedades',
+                desc: 'Quando desativado, as etiquetas que correspondem à seleção de navegação atual ficam ocultas (por exemplo, a etiqueta "receitas" fica oculta ao navegar na etiqueta "receitas"). Ative para manter todas as etiquetas visíveis.'
+            },
             showPinnedGroupHeader: {
                 name: 'Mostrar cabeçalho do grupo fixado',
                 desc: 'Exibir o cabeçalho da secção fixada acima das notas fixadas.'

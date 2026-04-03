@@ -948,6 +948,10 @@ export const STRINGS_PL = {
                     folder: 'Grupuj według folderu'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Zawsze pokazuj wszystkie etykiety tagów i właściwości',
+                desc: 'Po wyłączeniu etykiety odpowiadające bieżącemu wyborowi nawigacji są ukrywane (np. etykieta tagu „przepisy" jest ukrywana podczas przeglądania tagu „przepisy"). Włącz, aby wszystkie etykiety były zawsze widoczne.'
+            },
             showPinnedGroupHeader: {
                 name: 'Pokaż nagłówek grupy przypiętych',
                 desc: 'Wyświetla nagłówek sekcji przypiętych notatek.'

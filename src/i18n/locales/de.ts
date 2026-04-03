@@ -947,6 +947,10 @@ export const STRINGS_DE = {
                     folder: 'Nach Ordner gruppieren'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Tag- und Eigenschaftspillen immer anzeigen',
+                desc: 'Wenn deaktiviert, werden Pillen ausgeblendet, die der aktuellen Navigationsauswahl entsprechen (z.\u00a0B. wird die „Rezepte"-Tag-Pille beim Durchsuchen des „Rezepte"-Tags ausgeblendet). Aktivieren, um alle Pillen sichtbar zu halten.'
+            },
             showPinnedGroupHeader: {
                 name: 'Überschrift für angeheftete Notizen anzeigen',
                 desc: 'Zeigt die Überschrift des Abschnitts für angeheftete Notizen an.'

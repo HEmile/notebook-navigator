@@ -947,6 +947,10 @@ export const STRINGS_ES = {
                     folder: 'Agrupar por carpeta'
                 }
             },
+            showSelectedNavigationPills: {
+                name: 'Mostrar siempre todas las etiquetas y propiedades',
+                desc: 'Cuando está desactivado, las etiquetas que coinciden con la selección de navegación actual se ocultan (p. ej., la etiqueta "recetas" se oculta al navegar por la etiqueta "recetas"). Activar para mantener todas las etiquetas visibles.'
+            },
             showPinnedGroupHeader: {
                 name: 'Mostrar encabezado del grupo anclado',
                 desc: 'Muestra el encabezado de la sección de notas ancladas.'

@@ -186,13 +186,21 @@ export function useFileItemPills({
     const { navigateToTag, navigateToProperty } = useTagNavigation();
     const wordCountPillIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'file-word-count'), [settings.interfaceIcons]);
     const selectedTagToHide = useMemo(() => {
+        if (settings.showSelectedNavigationPills) {
+            return null;
+        }
+
         if (selectionState.selectionType !== ItemType.TAG) {
             return null;
         }
 
         return normalizeTagPath(selectionState.selectedTag);
-    }, [selectionState.selectedTag, selectionState.selectionType]);
+    }, [selectionState.selectedTag, selectionState.selectionType, settings.showSelectedNavigationPills]);
     const selectedPropertyValueNodeIdToHide = useMemo(() => {
+        if (settings.showSelectedNavigationPills) {
+            return null;
+        }
+
         if (selectionState.selectionType !== ItemType.PROPERTY || !selectionState.selectedProperty) {
             return null;
         }
@@ -203,7 +211,7 @@ export function useFileItemPills({
         }
 
         return normalizePropertyNodeId(selectionState.selectedProperty) ?? selectionState.selectedProperty;
-    }, [selectionState.selectedProperty, selectionState.selectionType]);
+    }, [selectionState.selectedProperty, selectionState.selectionType, settings.showSelectedNavigationPills]);
 
     const handleTagClick = useCallback(
         (event: React.MouseEvent, tag: string) => {
