@@ -77,6 +77,14 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '2.5.7',
+        date: '2026-04-10',
+        showOnUpdate: false,
+        improved: [
+            'Added informative text on hover for the unfinished task icon in list pane, showing number of unfinished tasks. If note tooltips are enabled the unfinished note count is included in the note tooltip.'
+        ]
+    },
+    {
         version: '2.5.6',
         date: '2026-04-03',
         showOnUpdate: false,

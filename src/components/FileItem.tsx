@@ -382,6 +382,14 @@ export const FileItem = React.memo(function FileItem({
     const hasUnfinishedTasks = typeof taskUnfinished === 'number' && taskUnfinished > 0;
     const showFileIconUnfinishedTask = settings.showFileIconUnfinishedTask && hasUnfinishedTasks;
     const unfinishedTaskIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'file-unfinished-task'), [settings.interfaceIcons]);
+    const unfinishedTaskLabel = strings.modals.interfaceIcons.items['file-unfinished-task'];
+    const unfinishedTaskTooltipText = useMemo(() => {
+        if (!hasUnfinishedTasks || typeof taskUnfinished !== 'number') {
+            return null;
+        }
+
+        return `${unfinishedTaskLabel}: ${taskUnfinished}`;
+    }, [hasUnfinishedTasks, taskUnfinished, unfinishedTaskLabel]);
 
     // Get display name from RAM cache (handles frontmatter title)
     const displayName = useMemo(() => {
@@ -806,6 +814,10 @@ export const FileItem = React.memo(function FileItem({
             tooltipLines.push(parentPath);
         }
 
+        if (unfinishedTaskTooltipText) {
+            tooltipLines.push(unfinishedTaskTooltipText);
+        }
+
         // Add empty line separator and date information
         tooltipLines.push('', datesTooltip);
         const tooltip = tooltipLines.join('\n');
@@ -824,7 +836,8 @@ export const FileItem = React.memo(function FileItem({
         getFileTimestamps,
         sortOption,
         metadataVersion,
-        file.name
+        file.name,
+        unfinishedTaskTooltipText
     ]);
 
     // Reveals the file by selecting its folder in navigation pane and showing the file in list pane
@@ -1090,6 +1103,11 @@ export const FileItem = React.memo(function FileItem({
                                     className={fileIconClassName}
                                     data-has-color={fileIconHasColor ? 'true' : 'false'}
                                     style={fileIconStyle}
+                                    title={
+                                        !isMobile && !settings.showTooltips && showFileIconUnfinishedTask
+                                            ? (unfinishedTaskTooltipText ?? undefined)
+                                            : undefined
+                                    }
                                 />
                             ) : null}
                         </div>
