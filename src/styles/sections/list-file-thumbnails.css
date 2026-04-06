@@ -1,11 +1,11 @@
-/* Source: src/styles/sections/list-feature-images.css */
+/* Source: src/styles/sections/list-file-thumbnails.css */
 
 /* ========================================================================
-   Feature Image Styles
+   File Thumbnail Styles
    ======================================================================== */
 
-/* Feature image container - right-aligned image thumbnail */
-.nn-feature-image {
+/* File thumbnail container - right-aligned thumbnail slot */
+.nn-file-thumbnail {
     flex-shrink: 0;
     border-radius: min(32px, var(--nn-theme-file-feature-border-radius));
     overflow: hidden;
@@ -15,59 +15,72 @@
     align-self: center;
 }
 
-.nn-feature-image--square {
-    width: var(--nn-feature-image-min-size);
-    height: var(--nn-feature-image-min-size);
+.nn-file-thumbnail--square {
+    width: var(--nn-file-thumbnail-min-size);
+    height: var(--nn-file-thumbnail-min-size);
 }
 
-.nn-feature-image--natural {
+.nn-file-thumbnail--natural {
     width: auto;
-    height: var(--nn-feature-image-min-size);
-    aspect-ratio: var(--nn-feature-image-aspect-ratio, 1);
+    height: var(--nn-file-thumbnail-min-size);
+    aspect-ratio: var(--nn-file-thumbnail-aspect-ratio, 1);
 }
 
-.nn-feature-image--hidden {
+.nn-file-thumbnail--hidden {
     display: none;
 }
 
 /* Dynamic sizing based on calculated item height */
-.nn-virtual-file-item .nn-feature-image {
+.nn-virtual-file-item .nn-file-thumbnail {
     /* Size based on item height minus total padding */
     --image-size: clamp(
-        var(--nn-feature-image-min-size),
+        var(--nn-file-thumbnail-min-size),
         calc(var(--item-height) - var(--nn-file-padding-total-mobile, var(--nn-file-padding-total))),
-        var(--nn-feature-image-max-size)
+        var(--nn-file-thumbnail-max-size)
     );
 }
 
-.nn-virtual-file-item .nn-feature-image--square {
+.nn-virtual-file-item .nn-file-thumbnail--square {
     width: var(--image-size);
     height: var(--image-size);
 }
 
-.nn-virtual-file-item .nn-feature-image--natural {
+.nn-virtual-file-item .nn-file-thumbnail--natural {
     height: var(--image-size);
     max-height: var(--image-size);
 }
 
-/* Feature image element - covers container with proper aspect ratio */
-.nn-feature-image-img {
+/* Thumbnail image element - covers container with proper aspect ratio */
+.nn-file-thumbnail-img {
     width: 100%;
     height: 100%;
 }
 
-.nn-feature-image--square .nn-feature-image-img {
+.nn-file-thumbnail--inset-highlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.nn-file-thumbnail--square .nn-file-thumbnail-img {
     object-fit: cover;
     object-position: center top;
 }
 
-.nn-feature-image--natural .nn-feature-image-img {
+.nn-file-thumbnail--natural .nn-file-thumbnail-img {
     object-fit: contain;
     object-position: center;
 }
 
 /* Selected file image - slightly transparent when selected */
-.nn-file.nn-selected .nn-feature-image {
+.nn-file.nn-selected .nn-file-thumbnail {
     opacity: 0.9;
 }
 

@@ -1301,7 +1301,7 @@ export const NotebookNavigatorComponent = React.memo(
                 const featureImageDisplayMeasurements = getFeatureImageDisplayMeasurements(settings.featureImageSize);
                 // This is only the rendered image ceiling.
                 // The image still scales with the row height and content layout until it reaches this max.
-                containerRef.current.style.setProperty('--nn-feature-image-max-size', `${featureImageDisplayMeasurements.listMaxSize}px`);
+                containerRef.current.style.setProperty('--nn-file-thumbnail-max-size', `${featureImageDisplayMeasurements.listMaxSize}px`);
 
                 // Calculate compact list padding and font sizes based on configured item height
                 const { titleLineHeight } = getListPaneMeasurements(isMobile);

@@ -58,8 +58,8 @@ Keep this list ordered: later files override earlier ones.
 @import './sections/list-tags.css';
 /* list-compact-mode.css: compact file row layout (`.nn-file.nn-compact`) and extension badge alignment. */
 @import './sections/list-compact-mode.css';
-/* list-feature-images.css: feature image thumbnails (`.nn-feature-image*`) and extension badge rendering for non-markdown files. */
-@import './sections/list-feature-images.css';
+/* list-file-thumbnails.css: file thumbnails (`.nn-file-thumbnail*`) and extension badge rendering for non-markdown files. */
+@import './sections/list-file-thumbnails.css';
 /* list-date-headers.css: date group headers (`.nn-date-group-header*`) plus skeleton view layout during load. */
 @import './sections/list-date-headers.css';
 /* ui-empty-state.css: empty state layout for the list pane (`.nn-empty-state`, `.nn-empty-message`). */

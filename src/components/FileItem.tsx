@@ -679,15 +679,18 @@ export const FileItem = React.memo(function FileItem({
     }, [featureImageUrl]);
 
     const featureImageContainerClassName = useMemo(() => {
-        const classes = ['nn-feature-image'];
+        const classes = ['nn-file-thumbnail'];
         if (!featureImageUrl || settings.forceSquareFeatureImage) {
-            classes.push('nn-feature-image--square');
+            classes.push('nn-file-thumbnail--square');
         } else {
-            classes.push('nn-feature-image--natural');
+            classes.push('nn-file-thumbnail--natural');
+        }
+        if (featureImageUrl) {
+            classes.push('nn-file-thumbnail--inset-highlight');
         }
         // Hide container if image failed to load
         if (isFeatureImageHidden) {
-            classes.push('nn-feature-image--hidden');
+            classes.push('nn-file-thumbnail--hidden');
         }
         return classes.join(' ');
     }, [featureImageUrl, settings.forceSquareFeatureImage, isFeatureImageHidden]);
@@ -699,7 +702,7 @@ export const FileItem = React.memo(function FileItem({
 
         const aspectRatio = featureImageAspectRatio ?? 1;
         return {
-            '--nn-feature-image-aspect-ratio': aspectRatio
+            '--nn-file-thumbnail-aspect-ratio': aspectRatio
         } as React.CSSProperties;
     }, [featureImageAspectRatio, featureImageUrl, settings.forceSquareFeatureImage]);
 
@@ -1220,7 +1223,7 @@ export const FileItem = React.memo(function FileItem({
                                         <img
                                             src={featureImageUrl}
                                             alt={strings.common.featureImageAlt}
-                                            className="nn-feature-image-img"
+                                            className="nn-file-thumbnail-img"
                                             ref={featureImageImgRef}
                                             draggable={false}
                                             onDragStart={e => e.preventDefault()}

@@ -212,7 +212,7 @@
     flex-direction: column;
     gap: 0;
     order: 1; /* Ensure it appears on the left */
-    min-height: var(--nn-feature-image-min-size); /* Minimum height to match minimum image size */
+    min-height: var(--nn-file-thumbnail-min-size); /* Minimum height to match minimum thumbnail size */
     justify-content: flex-start; /* Top-align content */
     /* No align-self - let it stretch naturally */
 }

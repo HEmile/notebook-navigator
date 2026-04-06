@@ -60,7 +60,7 @@ describe('List pane measurements stay in sync with CSS', () => {
         const tagRowGap = extractPxVariableValue(coreVars, 'nn-file-tag-row-gap-base');
         expect(desktop.tagRowHeight).toBe(tagRowHeight + tagRowGap);
 
-        expect(desktop.featureImageHeight).toBe(extractPxVariableValue(coreVars, 'nn-feature-image-min-size'));
+        expect(desktop.featureImageHeight).toBe(extractPxVariableValue(coreVars, 'nn-file-thumbnail-min-size'));
 
         expect(desktop.firstHeader).toBe(extractPxVariableValue(coreVars, 'nn-date-header-height'));
         expect(desktop.subsequentHeader).toBe(extractPxVariableValue(coreVars, 'nn-date-header-height-subsequent'));
@@ -86,7 +86,7 @@ describe('List pane measurements stay in sync with CSS', () => {
         const tagRowGap = extractPxVariableValue(coreVars, 'nn-file-tag-row-gap-base');
         expect(mobile.tagRowHeight).toBe(tagRowHeight + tagRowGap);
 
-        expect(mobile.featureImageHeight).toBe(extractPxVariableValue(coreVars, 'nn-feature-image-min-size'));
+        expect(mobile.featureImageHeight).toBe(extractPxVariableValue(coreVars, 'nn-file-thumbnail-min-size'));
 
         const headerIncrement = extractCalcAddPx(mobileVars, 'nn-date-header-height-mobile', 'nn-date-header-height');
         const subsequentHeaderIncrement = extractCalcAddPx(
