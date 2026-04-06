@@ -5,9 +5,12 @@
    ======================================================================== */
 
 /* Compact file item - more compact list appearance */
+.nn-file.nn-compact {
+    --nn-file-item-border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+}
+
 .nn-file.nn-compact .nn-file-content {
     padding: var(--nn-file-padding-vertical-compact) var(--nn-file-item-padding-horizontal); /* Reduced vertical padding */
-    border-radius: min(14px, var(--nn-theme-navitem-border-radius));
 }
 
 /* Compact file name - no bold, smaller font like folder items */

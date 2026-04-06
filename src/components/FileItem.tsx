@@ -116,6 +116,7 @@ interface FileItemProps {
     onToggleNoteShortcut: (file: TFile, shortcutKey: string | undefined) => Promise<void>;
     folderDecorationModel: FolderDecorationModel;
     fileItemPillDecorationModel: FileItemPillDecorationModel;
+    getSolidBackground: (color?: string | null) => string | undefined;
 }
 
 export interface FileItemStorageHelpers {
@@ -331,7 +332,8 @@ export const FileItem = React.memo(function FileItem({
     shortcutKey,
     onToggleNoteShortcut,
     folderDecorationModel,
-    fileItemPillDecorationModel
+    fileItemPillDecorationModel,
+    getSolidBackground
 }: FileItemProps) {
     // === Hooks (all hooks together at the top) ===
     const { app, isMobile, plugin, commandQueue, tagOperations } = useServices();
@@ -411,7 +413,8 @@ export const FileItem = React.memo(function FileItem({
     const customFileBackgroundColor = metadataService.getFileBackgroundColor(file.path);
     const unfinishedTaskBackgroundColor =
         settings.showFileBackgroundUnfinishedTask && hasUnfinishedTasks ? settings.unfinishedTaskBackgroundColor : undefined;
-    const fileBackgroundColor = unfinishedTaskBackgroundColor ?? customFileBackgroundColor;
+    const rawFileBackgroundColor = unfinishedTaskBackgroundColor ?? customFileBackgroundColor;
+    const fileBackgroundColor = useMemo(() => getSolidBackground(rawFileBackgroundColor), [getSolidBackground, rawFileBackgroundColor]);
     const fileExtension = file.extension.toLowerCase();
     const isBaseFile = fileExtension === 'base';
     const isCanvasFile = fileExtension === 'canvas';

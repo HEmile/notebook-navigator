@@ -86,6 +86,7 @@ import { getActivePropertyKeySet } from '../utils/vaultProfiles';
 import { DateUtils } from '../utils/dateUtils';
 import type { NavigateToFolderOptions, RevealPropertyOptions, RevealTagOptions } from '../hooks/useNavigatorReveal';
 import type { FileItemPillDecorationModel } from '../utils/fileItemPillDecoration';
+import { compositeWithBase } from '../utils/colorUtils';
 
 /**
  * Renders the list pane displaying files from the selected folder.
@@ -199,11 +200,12 @@ export const ListPane = React.memo(
         // Android uses toolbar at top, iOS at bottom
         const isAndroid = Platform.isAndroidApp;
         /** Maps semi-transparent theme color variables to computed opaque equivalents (see constants/surfaceColorMappings). */
-        useSurfaceColorVariables(listPaneRef, {
+        const { color: listSurfaceColor, version: listSurfaceVersion } = useSurfaceColorVariables(listPaneRef, {
             app,
             rootContainerRef: props.rootContainerRef,
             variables: LIST_PANE_SURFACE_COLOR_MAPPINGS
         });
+        const solidBackgroundCacheRef = useRef<Map<string, string | undefined>>(new Map());
         const [calendarWeekCount, setCalendarWeekCount] = useState<number>(() => settings.calendarWeeksToShow);
         const [isListScrolling, setIsListScrolling] = useState(false);
         const [hoveredFilePath, setHoveredFilePath] = useState<string | null>(null);
@@ -236,6 +238,31 @@ export const ListPane = React.memo(
                 setCalendarWeekCount(settings.calendarWeeksToShow);
             }
         }, [settings.calendarWeeksToShow]);
+
+        useEffect(() => {
+            solidBackgroundCacheRef.current.clear();
+        }, [listSurfaceColor, listSurfaceVersion]);
+
+        const getSolidBackground = useMemo(() => {
+            return (color?: string | null) => {
+                void listSurfaceVersion;
+                if (!color) {
+                    return undefined;
+                }
+                const trimmed = color.trim();
+                if (!trimmed) {
+                    return undefined;
+                }
+                const cache = solidBackgroundCacheRef.current;
+                if (cache.has(trimmed)) {
+                    return cache.get(trimmed);
+                }
+                const pane = listPaneRef.current;
+                const solidColor = compositeWithBase(listSurfaceColor, trimmed, { container: pane ?? null });
+                cache.set(trimmed, solidColor);
+                return solidColor;
+            };
+        }, [listSurfaceColor, listSurfaceVersion]);
 
         const isIosObsidian111Plus = Platform.isIosApp && requireApiVersion('1.11.0');
         const shouldUseFloatingToolbars = isIosObsidian111Plus && settings.useFloatingToolbars;
@@ -622,6 +649,7 @@ export const ListPane = React.memo(
                         onNavigateToFolder={onNavigateToFolder}
                         folderDecorationModel={folderDecorationModel}
                         fileItemPillDecorationModel={fileItemPillDecorationModel}
+                        getSolidBackground={getSolidBackground}
                     />
                     {/* iOS (Obsidian 1.11+): keep the floating toolbar inside the panel */}
                     {shouldRenderBottomToolbarInsidePanel ? <div className="nn-pane-bottom-toolbar">{listToolbar}</div> : null}

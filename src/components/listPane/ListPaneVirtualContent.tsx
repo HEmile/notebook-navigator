@@ -87,6 +87,7 @@ interface ListPaneVirtualContentProps {
     onNavigateToFolder: (folderPath: string, options?: NavigateToFolderOptions) => void;
     folderDecorationModel: FolderDecorationModel;
     fileItemPillDecorationModel: FileItemPillDecorationModel;
+    getSolidBackground: (color?: string | null) => string | undefined;
 }
 
 function getItemAt<T>(items: T[], index: number): T | undefined {
@@ -174,7 +175,8 @@ export function ListPaneVirtualContent({
     onToggleNoteShortcut,
     onNavigateToFolder,
     folderDecorationModel,
-    fileItemPillDecorationModel
+    fileItemPillDecorationModel,
+    getSolidBackground
 }: ListPaneVirtualContentProps) {
     const { app, commandQueue, isMobile } = useServices();
 
@@ -465,6 +467,7 @@ export function ListPaneVirtualContent({
                                             onToggleNoteShortcut={onToggleNoteShortcut}
                                             folderDecorationModel={folderDecorationModel}
                                             fileItemPillDecorationModel={fileItemPillDecorationModel}
+                                            getSolidBackground={getSolidBackground}
                                         />
                                     ) : null}
                                 </div>

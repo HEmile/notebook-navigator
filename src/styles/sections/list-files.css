@@ -67,6 +67,7 @@
 
 /* File - container for each file in the list */
 .nn-file {
+    --nn-file-item-border-radius: min(16px, var(--nn-theme-file-border-radius));
     background: transparent;
     padding: 0;
     -webkit-user-select: none;
@@ -88,18 +89,31 @@
 .nn-file-content {
     padding: var(--nn-file-padding-vertical-mobile, var(--nn-file-padding-vertical)) var(--nn-file-item-padding-horizontal);
     margin: 0;
-    border-radius: min(16px, var(--nn-theme-file-border-radius));
+    border-radius: var(--nn-file-item-border-radius);
     background: transparent;
     position: relative; /* For absolute positioning of reveal overlay */
 }
 
-.nn-file.nn-has-custom-background .nn-file-content {
+.nn-file.nn-has-custom-background::before {
+    content: '';
+    position: absolute;
+    top: 0px;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    /* Extend slightly beyond bottom item bounds (height rounding issue) to prevent hairline gaps when zoomed */
+    bottom: -0.2px;
     background-color: var(--nn-file-custom-bg-color);
-    border-top-left-radius: var(--nn-file-top-left-radius, min(16px, var(--nn-theme-file-border-radius)));
-    border-top-right-radius: var(--nn-file-top-right-radius, min(16px, var(--nn-theme-file-border-radius)));
-    border-bottom-left-radius: var(--nn-file-bottom-left-radius, min(16px, var(--nn-theme-file-border-radius)));
-    border-bottom-right-radius: var(--nn-file-bottom-right-radius, min(16px, var(--nn-theme-file-border-radius)));
+    border-top-left-radius: var(--nn-file-top-left-radius, var(--nn-file-item-border-radius));
+    border-top-right-radius: var(--nn-file-top-right-radius, var(--nn-file-item-border-radius));
+    border-bottom-left-radius: var(--nn-file-bottom-left-radius, var(--nn-file-item-border-radius));
+    border-bottom-right-radius: var(--nn-file-bottom-right-radius, var(--nn-file-item-border-radius));
     box-shadow: inset 0 0 0 var(--nn-theme-file-border-width) transparent;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.nn-file.nn-has-custom-background > .nn-file-content {
+    z-index: 2;
 }
 
 .nn-virtual-file-item:has(> .nn-file.nn-has-custom-background)::after,

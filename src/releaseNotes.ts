@@ -82,6 +82,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
         showOnUpdate: false,
         improved: [
             'Added informative text on hover for the unfinished task icon in list pane, showing number of unfinished tasks. If note tooltips are enabled the unfinished note count is included in the note tooltip.'
+        ],
+        fixed: [
+            'List pane: fixed hairline gaps between adjacent notes with the same custom background color and incorrect border radius in compact mode.'
         ]
     },
     {
