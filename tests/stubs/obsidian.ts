@@ -187,6 +187,21 @@ export const Platform = {
 
 export const normalizePath = (value: string) => value;
 export const setIcon = () => {};
+export const getIconIds = () => [
+    'lucide-home',
+    'lucide-user',
+    'lucide-search',
+    'lucide-star',
+    'lucide-tag',
+    'lucide-tags',
+    'lucide-circle-alert',
+    'lucide-building-2',
+    'lucide-brain',
+    'lucide-calendar',
+    'lucide-check-circle',
+    'lucide-receipt',
+    'lucide-book-open'
+];
 export const getLanguage = () => 'en';
 type RequestUrlResponse = {
     status: number;

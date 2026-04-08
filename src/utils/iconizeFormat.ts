@@ -16,7 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { getIconIds } from 'obsidian';
+import { GENERATED_ICONIZE_EXCEPTION_MAPS } from '../generated/iconizeReverseMaps';
 import { extractFirstEmoji } from './emojiUtils';
+import {
+    IDENTIFIER_NORMALIZATION_RULES,
+    decodeCompactNameToKebab,
+    normalizeIdentifierFromIconize,
+    normalizeIconizeCompactName,
+    stripAllLeadingPrefixes
+} from './iconizeNormalization';
 import { casefold, casefoldPreservingWhitespace, sanitizeRecord } from './recordUtils';
 
 /**
@@ -30,16 +39,8 @@ interface IconizeMapping {
 }
 
 const LUCIDE_PROVIDER_ID = 'lucide';
-const LUCIDE_ICON_PREFIX = 'lucide-';
 const VAULT_PROVIDER_ID = 'vault';
 const VAULT_SVG_EXTENSION = '.svg';
-
-type CanonicalDelimiter = 'kebab' | 'snake';
-
-interface IdentifierNormalizationRule {
-    redundantPrefixes?: string[];
-    canonicalDelimiter?: CanonicalDelimiter;
-}
 
 /**
  * List of icon providers and their corresponding pack names
@@ -118,34 +119,6 @@ PREFIX_SORTED_MAPPINGS.forEach(mapping => {
     PREFIX_TO_MAPPING.set(mapping.prefix, mapping);
 });
 
-const IDENTIFIER_NORMALIZATION_RULES = new Map<string, IdentifierNormalizationRule>([
-    [
-        LUCIDE_PROVIDER_ID,
-        {
-            redundantPrefixes: [LUCIDE_ICON_PREFIX]
-        }
-    ],
-    [
-        'phosphor',
-        {
-            redundantPrefixes: ['ph-']
-        }
-    ],
-    [
-        'rpg-awesome',
-        {
-            redundantPrefixes: ['ra-']
-        }
-    ],
-    [
-        'material-icons',
-        {
-            redundantPrefixes: [],
-            canonicalDelimiter: 'snake'
-        }
-    ]
-]);
-
 function stripProviderPrefixForIconize(identifier: string, providerId: string): string {
     const rule = IDENTIFIER_NORMALIZATION_RULES.get(providerId);
     if (!rule) {
@@ -154,58 +127,85 @@ function stripProviderPrefixForIconize(identifier: string, providerId: string): 
     return stripAllLeadingPrefixes(identifier, rule.redundantPrefixes ?? []);
 }
 
-function stripAllLeadingPrefixes(identifier: string, prefixes: string[]): string {
-    let normalized = identifier;
-    if (normalized.length === 0 || prefixes.length === 0) {
-        return normalized;
-    }
-
-    const loweredPrefixes = prefixes.map(prefix => prefix.toLowerCase());
-
-    let removed = true;
-    while (removed && normalized.length > 0) {
-        removed = false;
-        for (let i = 0; i < prefixes.length; i++) {
-            const prefix = prefixes[i];
-            if (!prefix) {
-                continue;
-            }
-            const loweredPrefix = loweredPrefixes[i];
-            if (normalized.toLowerCase().startsWith(loweredPrefix)) {
-                normalized = normalized.substring(prefix.length);
-                removed = true;
-                break;
-            }
-        }
-    }
-
-    return normalized;
-}
-
-function normalizeIdentifierFromIconize(identifier: string, providerId: string): string {
-    const rule = IDENTIFIER_NORMALIZATION_RULES.get(providerId);
-    if (!rule) {
-        return identifier;
-    }
-
-    const normalized = stripAllLeadingPrefixes(identifier, rule.redundantPrefixes ?? []);
-    if (!rule.canonicalDelimiter) {
-        return normalized;
-    }
-
-    if (rule.canonicalDelimiter === 'snake') {
-        return normalized.replace(/-/g, '_');
-    }
-
-    if (rule.canonicalDelimiter === 'kebab') {
-        return normalized.replace(/_/g, '-');
-    }
-
-    return normalized;
-}
-
 function normalizeIdentifierForProvider(identifier: string, providerId: string): string {
     return normalizeIdentifierFromIconize(identifier, providerId);
+}
+
+const ICONIZE_EXCEPTION_CACHE = new Map<string, ReadonlyMap<string, string>>();
+const ICONIZE_COMPACT_PREFIX_CACHE = new Map<string, string[]>();
+
+function getCompactRedundantPrefixes(providerId: string): string[] {
+    const cached = ICONIZE_COMPACT_PREFIX_CACHE.get(providerId);
+    if (cached) {
+        return cached;
+    }
+
+    const compactPrefixes = (IDENTIFIER_NORMALIZATION_RULES.get(providerId)?.redundantPrefixes ?? [])
+        .map(prefix => normalizeIconizeCompactName(prefix))
+        .filter(prefix => prefix.length > 0);
+
+    ICONIZE_COMPACT_PREFIX_CACHE.set(providerId, compactPrefixes);
+    return compactPrefixes;
+}
+
+function stripProviderPrefixForIconizeLookup(identifier: string, providerId: string): string {
+    return stripAllLeadingPrefixes(identifier, getCompactRedundantPrefixes(providerId));
+}
+
+function buildIconizeExceptionMap(iconIds: string[], providerId: string): ReadonlyMap<string, string> {
+    const exceptionMap = new Map<string, string>();
+
+    iconIds.forEach(iconId => {
+        const compactName = normalizeIconizeCompactName(iconId);
+        const heuristicIdentifier = normalizeIdentifierFromIconize(decodeCompactNameToKebab(compactName), providerId);
+        if (heuristicIdentifier !== iconId) {
+            exceptionMap.set(compactName, iconId);
+        }
+    });
+
+    return exceptionMap;
+}
+
+function getIconizeExceptionMap(providerId: string): ReadonlyMap<string, string> | null {
+    const cached = ICONIZE_EXCEPTION_CACHE.get(providerId);
+    if (cached) {
+        return cached;
+    }
+
+    if (providerId === LUCIDE_PROVIDER_ID) {
+        if (typeof getIconIds !== 'function') {
+            return null;
+        }
+
+        const lucideExceptionMap = buildIconizeExceptionMap(
+            getIconIds()
+                .map(iconId => normalizeCanonicalIconId(iconId))
+                .filter(iconId => iconId.length > 0),
+            providerId
+        );
+        ICONIZE_EXCEPTION_CACHE.set(providerId, lucideExceptionMap);
+        return lucideExceptionMap;
+    }
+
+    const generatedExceptionMap = GENERATED_ICONIZE_EXCEPTION_MAPS[providerId as keyof typeof GENERATED_ICONIZE_EXCEPTION_MAPS];
+    if (!generatedExceptionMap) {
+        return null;
+    }
+
+    const exceptionMap = new Map<string, string>(Object.entries(generatedExceptionMap));
+    ICONIZE_EXCEPTION_CACHE.set(providerId, exceptionMap);
+    return exceptionMap;
+}
+
+function resolveExceptionIconizeIdentifier(iconName: string, providerId: string): string | null {
+    const normalizedIconName = stripProviderPrefixForIconizeLookup(iconName, providerId);
+    const exceptionMap = getIconizeExceptionMap(providerId);
+    const exceptionMatch = exceptionMap?.get(iconName) ?? exceptionMap?.get(normalizedIconName) ?? null;
+    if (exceptionMatch) {
+        return exceptionMatch;
+    }
+
+    return null;
 }
 
 /**
@@ -223,59 +223,6 @@ function findIconizePrefixLength(value: string): number {
     }
 
     return searchIndex + 1;
-}
-
-/**
- * Converts an Iconize PascalCase identifier to kebab-case.
- * Examples:
- * - "Home" -> "home"
- * - "ChevronRight" -> "chevron-right"
- * - "FileJSON" -> "file-json"
- */
-function pascalToKebab(value: string): string {
-    if (!value) {
-        return '';
-    }
-
-    const withHyphenSeparators = value
-        .replace(/([a-z])([A-Z])/g, '$1-$2') // Handle camelCase transitions, excluding digit uppercase boundaries
-        .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2') // Handle acronyms like "JSON" -> "json"
-        .replace(/_/g, '-'); // Replace underscores with hyphens
-
-    return withHyphenSeparators.toLowerCase();
-}
-
-/**
- * Converts a kebab-case identifier to Iconize PascalCase format.
- * Examples:
- * - "home" -> "Home"
- * - "chevron-right" -> "ChevronRight"
- * - "file-json" -> "FileJson"
- */
-function kebabToPascal(value: string): string {
-    if (!value) {
-        return '';
-    }
-
-    return value
-        .split(/[ -]|[ _]/g) // Split on hyphens, spaces, or underscores
-        .map(part => {
-            if (!part) {
-                return '';
-            }
-
-            const digitMatch = part.match(/^(\d+)(.*)$/);
-            if (digitMatch) {
-                const [, digits, remainder] = digitMatch;
-                if (!remainder) {
-                    return digits;
-                }
-                return `${digits}${remainder.charAt(0).toUpperCase()}${remainder.slice(1)}`;
-            }
-
-            return part.charAt(0).toUpperCase() + part.slice(1);
-        })
-        .join('');
 }
 
 /**
@@ -310,7 +257,16 @@ export function convertIconizeToIconId(value: string): string | null {
         return null;
     }
 
-    const identifier = pascalToKebab(iconName);
+    const exceptionIdentifier = resolveExceptionIconizeIdentifier(iconName, mapping.providerId);
+    if (exceptionIdentifier) {
+        if (mapping.isDefaultProvider) {
+            return exceptionIdentifier;
+        }
+
+        return `${mapping.providerId}:${exceptionIdentifier}`;
+    }
+
+    const identifier = decodeCompactNameToKebab(iconName);
     if (!identifier) {
         return null;
     }
@@ -370,13 +326,13 @@ export function convertIconIdToIconize(iconId: string): string | null {
         return null;
     }
 
-    const pascalName = kebabToPascal(normalizedIdentifier);
-    if (!pascalName) {
+    const compactName = normalizeIconizeCompactName(normalizedIdentifier);
+    if (!compactName) {
         return null;
     }
 
     // Combine prefix and icon name
-    return `${mapping.prefix}${pascalName}`;
+    return `${mapping.prefix}${compactName}`;
 }
 
 /**

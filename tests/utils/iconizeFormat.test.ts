@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
     convertIconizeToIconId,
@@ -30,6 +32,35 @@ import {
 } from '../../src/utils/iconizeFormat';
 
 const ENGLAND_FLAG_TAG_SEQUENCE = '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}';
+const EXTERNAL_PROVIDER_METADATA: Array<{ providerId: string; relativePath: string }> = [
+    { providerId: 'bootstrap-icons', relativePath: 'icon-assets/bootstrap-icons/bootstrap-icons.json' },
+    { providerId: 'fontawesome-solid', relativePath: 'icon-assets/fontawesome/icons-solid.json' },
+    { providerId: 'material-icons', relativePath: 'icon-assets/material-icons/icons.json' },
+    { providerId: 'phosphor', relativePath: 'icon-assets/phosphor/icons.json' },
+    { providerId: 'rpg-awesome', relativePath: 'icon-assets/rpg-awesome/icons.json' },
+    { providerId: 'simple-icons', relativePath: 'icon-assets/simple-icons/simple-icons.json' }
+];
+
+function readProviderIconIds(relativePath: string): string[] {
+    const absolutePath = path.resolve(process.cwd(), relativePath);
+    const raw = JSON.parse(readFileSync(absolutePath, 'utf8')) as unknown;
+
+    if (Array.isArray(raw)) {
+        return raw.flatMap(entry => {
+            if (!entry || typeof entry !== 'object' || typeof (entry as { id?: unknown }).id !== 'string') {
+                return [];
+            }
+
+            return [(entry as { id: string }).id];
+        });
+    }
+
+    if (!raw || typeof raw !== 'object') {
+        return [];
+    }
+
+    return Object.keys(raw as Record<string, unknown>);
+}
 
 describe('convertIconizeToIconId', () => {
     it('converts lucide identifiers without provider prefix', () => {
@@ -48,9 +79,23 @@ describe('convertIconizeToIconId', () => {
         expect(convertIconizeToIconId('FarUser')).toBe('fontawesome-solid:user');
     });
 
-    it('converts Simple Icons identifiers with numeric prefixes', () => {
+    it('converts Simple Icons identifiers with numeric prefixes in Iconize casing', () => {
+        expect(convertIconizeToIconId('Si500px')).toBe('simple-icons:500px');
+        expect(convertIconizeToIconId('Si1password')).toBe('simple-icons:1password');
+    });
+
+    it('falls back to heuristic decoding for malformed external Iconize identifiers', () => {
         expect(convertIconizeToIconId('Si500Px')).toBe('simple-icons:500px');
         expect(convertIconizeToIconId('Si1Password')).toBe('simple-icons:1password');
+    });
+
+    it('converts numeric Lucide and Bootstrap identifiers using exception aliases', () => {
+        expect(convertIconizeToIconId('LiBuilding2')).toBe('building-2');
+        expect(convertIconizeToIconId('BiDiagram3Fill')).toBe('bootstrap-icons:diagram-3-fill');
+    });
+
+    it('converts numeric Material Icons identifiers using exception aliases', () => {
+        expect(convertIconizeToIconId('MiCrop169')).toBe('material-icons:crop_16_9');
     });
 
     it('converts phosphor identifiers and collapses duplicate prefixes', () => {
@@ -67,6 +112,18 @@ describe('convertIconizeToIconId', () => {
         expect(convertIconizeToIconId('Li')).toBeNull();
         expect(convertIconizeToIconId('📝')).toBeNull();
     });
+
+    it('round-trips bundled external provider identifiers through Iconize format', () => {
+        EXTERNAL_PROVIDER_METADATA.forEach(({ providerId, relativePath }) => {
+            readProviderIconIds(relativePath).forEach(identifier => {
+                const canonical = `${providerId}:${identifier}`;
+                const iconize = convertIconIdToIconize(canonical);
+
+                expect(iconize, canonical).not.toBeNull();
+                expect(convertIconizeToIconId(iconize as string), canonical).toBe(canonical);
+            });
+        });
+    });
 });
 
 describe('convertIconIdToIconize', () => {
@@ -82,9 +139,9 @@ describe('convertIconIdToIconize', () => {
         expect(convertIconIdToIconize('fontawesome-solid:user')).toBe('FasUser');
     });
 
-    it('converts Simple Icons identifiers that start with numbers', () => {
-        expect(convertIconIdToIconize('simple-icons:500px')).toBe('Si500Px');
-        expect(convertIconIdToIconize('simple-icons:1password')).toBe('Si1Password');
+    it('converts Simple Icons identifiers that start with numbers using Iconize casing', () => {
+        expect(convertIconIdToIconize('simple-icons:500px')).toBe('Si500px');
+        expect(convertIconIdToIconize('simple-icons:1password')).toBe('Si1password');
     });
 
     it('converts icon brew identifiers with hyphenated names', () => {

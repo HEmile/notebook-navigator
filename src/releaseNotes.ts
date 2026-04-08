@@ -83,7 +83,11 @@ const RELEASE_NOTES: ReleaseNote[] = [
         improved: [
             'Added informative text on hover for the unfinished task icon in list pane, showing number of unfinished tasks. If note tooltips are enabled the unfinished note count is included in the note tooltip.'
         ],
+        changed: [
+            'Iconize icon identifiers are now serialized using exact Iconize casing. Examples: **Si1Password** → **Si1password**, **Si500Px** → **Si500px**. Previously stored values in either casing continue to work.'
+        ],
         fixed: [
+            'Icons with numbers in their name — such as **BiDiagram3Fill** or **MiCrop169** — now display correctly when set via Iconize. Previously these could decode to the wrong icon or fail to display.',
             'List pane: fixed hairline gaps between adjacent notes with the same custom background color and incorrect border radius in compact mode.'
         ]
     },

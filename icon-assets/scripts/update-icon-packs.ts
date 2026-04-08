@@ -1,5 +1,10 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import {
+    decodeCompactNameToKebab,
+    normalizeIdentifierFromIconize,
+    normalizeIconizeCompactName
+} from '../../src/utils/iconizeNormalization';
 import { IconPackConfig, ProcessContext, compareVersions, downloadText, downloadBinary } from './shared';
 
 // Import all icon pack configs
@@ -15,6 +20,7 @@ const ICON_PACKS = [bootstrapIcons, fontAwesome, materialIcons, phosphor, rpgAwe
 const ICON_ASSETS_ROOT = path.resolve(__dirname, '..');
 const PUBLIC_BASE_URL = 'https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets';
 const BUNDLED_MANIFEST_OUTPUT = path.resolve(__dirname, '..', '..', 'src/services/icons/external/bundledManifests.ts');
+const ICONIZE_REVERSE_MAP_OUTPUT = path.resolve(__dirname, '..', '..', 'src/generated/iconizeReverseMaps.ts');
 
 const PACK_ID_TO_PROVIDER_ID: Record<string, string> = {
     'bootstrap-icons': 'bootstrap-icons',
@@ -29,7 +35,142 @@ const PACK_ID_TO_PROVIDER_ID: Record<string, string> = {
 const args = process.argv.slice(2);
 const checkOnly = args.includes('--check-only');
 const forceUpdate = args.includes('--force');
+const generateOnly = args.includes('--generate-only');
 const requestedIds = new Set(args.filter(arg => !arg.startsWith('--')));
+
+function extractMetadataIconIds(raw: string): string[] {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+        return parsed
+            .flatMap(entry => {
+                if (!entry || typeof entry !== 'object' || typeof (entry as { id?: unknown }).id !== 'string') {
+                    return [];
+                }
+
+                return [(entry as { id: string }).id];
+            })
+            .sort((a, b) => a.localeCompare(b));
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+        return [];
+    }
+
+    return Object.keys(parsed as Record<string, unknown>).sort((a, b) => a.localeCompare(b));
+}
+
+function addExceptionAlias(exceptionMap: Record<string, string>, providerId: string, compactName: string, canonicalId: string): void {
+    const existing = exceptionMap[compactName];
+    if (existing && existing !== canonicalId) {
+        throw new Error(`[${providerId}] exception alias collision for ${compactName}: ${existing} vs ${canonicalId}`);
+    }
+
+    exceptionMap[compactName] = canonicalId;
+}
+
+async function writeIconizeReverseMaps(): Promise<void> {
+    const exceptionMaps: Record<string, Record<string, string>> = {};
+
+    for (const pack of ICON_PACKS) {
+        const providerId = PACK_ID_TO_PROVIDER_ID[pack.id];
+        if (!providerId) {
+            continue;
+        }
+
+        const metadataPath = path.join(ICON_ASSETS_ROOT, pack.id, pack.files.metadata);
+        const metadataRaw = await fs.readFile(metadataPath, 'utf8');
+        const iconIds = extractMetadataIconIds(metadataRaw);
+        const providerExceptionMap: Record<string, string> = {};
+
+        iconIds.forEach(iconId => {
+            const iconizeCompact = normalizeIconizeCompactName(iconId);
+            const heuristicCanonical = normalizeIdentifierFromIconize(decodeCompactNameToKebab(iconizeCompact), providerId);
+            if (heuristicCanonical !== iconId) {
+                addExceptionAlias(providerExceptionMap, providerId, iconizeCompact, iconId);
+            }
+        });
+
+        exceptionMaps[providerId] = Object.fromEntries(Object.entries(providerExceptionMap).sort(([a], [b]) => a.localeCompare(b)));
+    }
+
+    const exceptionLines = Object.entries(exceptionMaps)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([providerId, map]) => {
+            const mapString = JSON.stringify(map, null, 4)
+                .split('\n')
+                .map((line, index) => (index === 0 ? line : `        ${line}`))
+                .join('\n');
+
+            return `    '${providerId}': ${mapString}`;
+        });
+    const contents = [
+        '/*',
+        ' * Notebook Navigator - Plugin for Obsidian',
+        ' * Copyright (c) 2025-2026 Johan Sanneblad',
+        ' *',
+        ' * This program is free software: you can redistribute it and/or modify',
+        ' * it under the terms of the GNU General Public License as published by',
+        ' * the Free Software Foundation, either version 3 of the License, or',
+        ' * (at your option) any later version.',
+        ' *',
+        ' * This program is distributed in the hope that it will be useful,',
+        ' * but WITHOUT ANY WARRANTY; without even the implied warranty of',
+        ' * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the',
+        ' * GNU General Public License for more details.',
+        ' *',
+        ' * You should have received a copy of the GNU General Public License',
+        ' * along with this program.  If not, see <https://www.gnu.org/licenses/>.',
+        ' *',
+        ' * ========================================================================',
+        ' * GENERATED FILE - DO NOT EDIT src/generated/iconizeReverseMaps.ts',
+        ' * ========================================================================',
+        ' * Generated by: icon-assets/scripts/update-icon-packs.ts',
+        ' */',
+        '',
+        "import type { ExternalIconProviderId } from '../services/icons/external/providerRegistry';",
+        '',
+        '// Compact Iconize aliases that cannot be reconstructed algorithmically.',
+        'export const GENERATED_ICONIZE_EXCEPTION_MAPS: Record<ExternalIconProviderId, Record<string, string>> = {',
+        exceptionLines.join(',\n\n'),
+        '};',
+        ''
+    ].join('\n');
+
+    await fs.mkdir(path.dirname(ICONIZE_REVERSE_MAP_OUTPUT), { recursive: true });
+    await fs.writeFile(ICONIZE_REVERSE_MAP_OUTPUT, contents);
+}
+
+function formatTsPropertyKey(key: string): string {
+    if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) {
+        return key;
+    }
+
+    return `'${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+}
+
+function formatTsScalar(value: unknown): string {
+    if (typeof value === 'string') {
+        return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+    }
+
+    return JSON.stringify(value);
+}
+
+function formatTsObjectLiteral(record: Record<string, unknown>, indent: string): string {
+    const entries = Object.entries(record);
+    if (entries.length === 0) {
+        return '{}';
+    }
+
+    return [
+        '{',
+        ...entries.map(([key, value], index) => {
+            const suffix = index === entries.length - 1 ? '' : ',';
+            return `${indent}${formatTsPropertyKey(key)}: ${formatTsScalar(value)}${suffix}`;
+        }),
+        `${indent.slice(4)}}`
+    ].join('\n');
+}
 
 async function updateConfigVersion(configPath: string, newVersion: string): Promise<void> {
     const content = await fs.readFile(configPath, 'utf8');
@@ -147,14 +288,34 @@ async function writeBundledManifest(): Promise<void> {
     entries.sort((a, b) => a.providerId.localeCompare(b.providerId));
 
     const lines = entries.map(entry => {
-        const manifestString = JSON.stringify(entry.manifest, null, 4)
-            .split('\n')
-            .map((line, index) => (index === 0 ? line : `        ${line}`))
-            .join('\n');
+        const manifestString = formatTsObjectLiteral(entry.manifest, '        ');
         return `    '${entry.providerId}': ${manifestString}`;
     });
 
     const contents = [
+        '/*',
+        ' * Notebook Navigator - Plugin for Obsidian',
+        ' * Copyright (c) 2025-2026 Johan Sanneblad',
+        ' *',
+        ' * This program is free software: you can redistribute it and/or modify',
+        ' * it under the terms of the GNU General Public License as published by',
+        ' * the Free Software Foundation, either version 3 of the License, or',
+        ' * (at your option) any later version.',
+        ' *',
+        ' * This program is distributed in the hope that it will be useful,',
+        ' * but WITHOUT ANY WARRANTY; without even the implied warranty of',
+        ' * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the',
+        ' * GNU General Public License for more details.',
+        ' *',
+        ' * You should have received a copy of the GNU General Public License',
+        ' * along with this program.  If not, see <https://www.gnu.org/licenses/>.',
+        ' *',
+        ' * ========================================================================',
+        ' * GENERATED FILE - DO NOT EDIT src/services/icons/external/bundledManifests.ts',
+        ' * ========================================================================',
+        ' * Generated by: icon-assets/scripts/update-icon-packs.ts',
+        ' */',
+        '',
         "import { ExternalIconManifest, ExternalIconProviderId } from './providerRegistry';",
         '',
         '// Bundled icon manifests keyed by provider id',
@@ -176,13 +337,15 @@ async function main(): Promise<void> {
         throw new Error(`No matching icon packs. Available packs: ${available}`);
     }
 
-    for (const pack of packs) {
-        try {
-            await processIconPack(pack);
-        } catch (error) {
-            console.error(`[${pack.id}] Error:`, error);
-            if (!forceUpdate) {
-                throw error;
+    if (!generateOnly) {
+        for (const pack of packs) {
+            try {
+                await processIconPack(pack);
+            } catch (error) {
+                console.error(`[${pack.id}] Error:`, error);
+                if (!forceUpdate) {
+                    throw error;
+                }
             }
         }
     }
@@ -193,6 +356,7 @@ async function main(): Promise<void> {
     }
 
     await writeBundledManifest();
+    await writeIconizeReverseMaps();
 }
 
 main().catch(error => {
