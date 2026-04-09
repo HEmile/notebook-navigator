@@ -80,7 +80,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.5.7',
         date: '2026-04-09',
         showOnUpdate: true,
-        new: ['General > Homepage now lets you open a daily, weekly, monthly, or quarterly note on startup, or a specific file.'],
+        new: ['Setting: General > Homepage now lets you open a daily, weekly, monthly, or quarterly note on startup.'],
         improved: [
             'Added informative text on hover for the unfinished task icon in list pane, showing the number of unfinished tasks. If note tooltips are enabled the unfinished note count is included in the note tooltip.',
             'Calendar now shows the active-note outline for weekly, monthly, quarterly, and yearly notes.'
