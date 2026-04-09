@@ -103,11 +103,11 @@ describe('FileMetadataService frontmatter integration', () => {
         service = new FileMetadataService(app, settingsProvider);
     });
 
-    it('saves phosphor icons in Iconize format and extracts canonical metadata', async () => {
+    it('saves phosphor icons in the short prefixed format and extracts canonical metadata', async () => {
         await service.setFileIcon(file.path, 'phosphor:ph-apple-logo');
 
         expect(processFrontMatter).toHaveBeenCalledTimes(1);
-        expect(frontmatter.icon).toBe('PhAppleLogo');
+        expect(frontmatter.icon).toBe('ph:apple-logo');
         expect(updateFileMetadata).toHaveBeenCalledWith(file.path, { icon: 'phosphor:apple-logo' });
 
         const metadata = extractMetadataFromCache({ frontmatter: { icon: frontmatter.icon } } as CachedMetadata, settingsProvider.settings);

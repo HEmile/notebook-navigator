@@ -32,14 +32,14 @@ describe('resolveUXIcon', () => {
 });
 
 describe('normalizeUXIconMapRecord', () => {
-    it('stores overrides in Iconize format and drops unknown keys', () => {
+    it('stores overrides in the frontmatter format and drops unknown keys', () => {
         const normalized = normalizeUXIconMapRecord({
             'list-search': 'star',
             'not-a-real-key': 'LiHome'
         });
 
         expect(Object.keys(normalized)).toEqual(['list-search']);
-        expect(normalized['list-search']).toBe('LiStar');
+        expect(normalized['list-search']).toBe('star');
     });
 
     it('drops values that resolve to the default icon', () => {

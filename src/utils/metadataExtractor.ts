@@ -143,7 +143,7 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
     if (settings.frontmatterIconField && settings.frontmatterIconField.trim()) {
         const iconValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterIconField);
 
-        // Helper to extract and convert icon value from Iconize format to canonical format
+        // Helper to extract and convert a stored icon value to canonical format
         const extractIconValue = (value: unknown): string | undefined => {
             if (typeof value !== 'string') {
                 return undefined;

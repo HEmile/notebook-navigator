@@ -224,7 +224,7 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         });
 
         expect(processFrontMatter).toHaveBeenCalledTimes(1);
-        expect(frontmatter.icon).toBe('PhAppleLogo');
+        expect(frontmatter.icon).toBe('ph:apple-logo');
         expect(frontmatter.color).toBe('#112233');
         expect(frontmatter.background).toBe('#223344');
         expect(updateFileMetadataMock).toHaveBeenCalledWith(folderNoteFile.path, {
@@ -241,7 +241,7 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         await service.setFolderColor('Projects', '#112233');
 
         expect(processFrontMatter).toHaveBeenCalledTimes(1);
-        expect(frontmatter.icon).toBe('PhAppleLogo');
+        expect(frontmatter.icon).toBe('ph:apple-logo');
         expect(frontmatter.color).toBe('#112233');
         expect(frontmatter.background).toBe('#223344');
         expect(updateFileMetadataMock).toHaveBeenCalledWith(folderNoteFile.path, {
@@ -277,7 +277,7 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         });
 
         expect(processFrontMatter).toHaveBeenCalledTimes(1);
-        expect(frontmatter.icon).toBe('PhAppleLogo');
+        expect(frontmatter.icon).toBe('ph:apple-logo');
         expect(Reflect.has(frontmatter, 'color')).toBe(false);
         expect(updateFileMetadataMock).toHaveBeenCalledWith(folderNoteFile.path, {
             icon: 'phosphor:apple-logo'

@@ -47,12 +47,12 @@ describe('resolveFileNameMatchIconId', () => {
 
     it('breaks ties by needle sort order', () => {
         const iconMap = {
-            ab: 'custom-pack:icon-ab',
-            aa: 'custom-pack:icon-aa'
+            ab: 'LiReceipt',
+            aa: 'LiCalendar'
         };
 
         const needles = buildFileNameIconNeedles(iconMap);
-        expect(resolveFileNameMatchIconIdFromNeedles('aab', needles)).toBe('custom-pack:icon-aa');
+        expect(resolveFileNameMatchIconIdFromNeedles('aab', needles)).toBe('calendar');
     });
 
     it('ignores empty needles and empty icon IDs', () => {
