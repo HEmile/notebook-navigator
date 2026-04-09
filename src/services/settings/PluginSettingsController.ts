@@ -38,6 +38,7 @@ import {
     type CalendarLeftPlacement,
     type CalendarPlacement,
     type CalendarWeeksToShow,
+    type HomepageSetting,
     SYNC_MODE_SETTING_IDS,
     type SettingSyncMode,
     type SortOption,
@@ -51,6 +52,7 @@ import {
     isCalendarWeekendDays,
     isFeatureImagePixelSizeSetting,
     isFeatureImageSizeSetting,
+    isHomepageSource,
     isMouseBackForwardAction,
     isPropertySortSecondaryOption,
     isRecentNotesHideMode,
@@ -85,6 +87,7 @@ import { normalizeNavigationSeparatorKey } from '../../utils/navigationSeparator
 import { normalizeUXIconMapRecord } from '../../utils/uxIcons';
 import { sanitizeKeyboardShortcuts } from '../../utils/keyboardShortcuts';
 import { isRecord } from '../../utils/typeGuards';
+import { normalizeOptionalVaultFilePath } from '../../utils/pathUtils';
 import {
     MAX_PANE_TRANSITION_DURATION_MS,
     MIN_PANE_TRANSITION_DURATION_MS,
@@ -218,6 +221,12 @@ export class PluginSettingsController {
         const storedData: Record<string, unknown> | null = isRecord(rawData) ? rawData : null;
         const hadLegacyPropertyFieldsInStoredData = Boolean(
             storedData && Object.prototype.hasOwnProperty.call(storedData, 'propertyFields')
+        );
+        const hadLegacyHomepageSettingsInStoredData = Boolean(
+            storedData &&
+                (typeof storedData['homepage'] === 'string' ||
+                    Object.prototype.hasOwnProperty.call(storedData, 'mobileHomepage') ||
+                    Object.prototype.hasOwnProperty.call(storedData, 'useMobileHomepage'))
         );
         const storedSettings = storedData as Partial<NotebookNavigatorSettings> | null;
         const isFirstLaunch = storedData === null;
@@ -392,6 +401,7 @@ export class PluginSettingsController {
             hadLegacySearchProviderInSettings ||
             hadLegacyLastAnnouncedReleaseInSettings ||
             hadLegacyPropertyFieldsInStoredData ||
+            hadLegacyHomepageSettingsInStoredData ||
             uiScaleMigrated ||
             migratedMomentFormats ||
             migratedShortcutNegationSyntax;
@@ -541,6 +551,7 @@ export class PluginSettingsController {
     public async saveSettings(): Promise<void> {
         ensureVaultProfiles(this.currentSettings);
         this.refreshMatcherCachesIfNeeded();
+        localStorage.set(this.options.keys.homepageKey, this.currentSettings.homepage);
         await this.options.saveData(this.getPersistableSettings());
     }
 
@@ -632,6 +643,21 @@ export class PluginSettingsController {
 
     private sanitizeBooleanSetting(value: unknown, fallback: boolean): boolean {
         return typeof value === 'boolean' ? value : fallback;
+    }
+
+    private sanitizeHomepageSetting(value: unknown): HomepageSetting {
+        if (typeof value !== 'object' || value === null) {
+            return { ...DEFAULT_SETTINGS.homepage };
+        }
+
+        const record = value as Record<string, unknown>;
+        const source = isHomepageSource(record.source) ? record.source : DEFAULT_SETTINGS.homepage.source;
+        const file = normalizeOptionalVaultFilePath(typeof record.file === 'string' ? record.file : null);
+
+        return {
+            source,
+            file
+        };
     }
 
     private sanitizeDualPaneOrientationSetting(value: unknown) {
@@ -805,6 +831,7 @@ export class PluginSettingsController {
             parseDualPanePreference: raw => this.parseDualPanePreference(raw),
             parseDualPaneOrientation: raw => this.parseDualPaneOrientation(raw),
             sanitizeBooleanSetting: (value, fallback) => this.sanitizeBooleanSetting(value, fallback),
+            sanitizeHomepageSetting: value => this.sanitizeHomepageSetting(value),
             sanitizeDualPaneOrientationSetting: value => this.sanitizeDualPaneOrientationSetting(value),
             sanitizeTagSortOrderSetting: value => this.sanitizeTagSortOrderSetting(value),
             sanitizeFolderSortOrderSetting: value => this.sanitizeFolderSortOrderSetting(value),

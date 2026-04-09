@@ -1402,13 +1402,20 @@ export const STRINGS_EN = {
             },
             homepage: {
                 name: 'Homepage',
-                desc: 'Choose the file that Notebook Navigator opens automatically, such as a dashboard.',
+                desc: 'Choose what Notebook Navigator opens automatically on startup.',
                 current: 'Current: {path}',
-                currentMobile: 'Mobile: {path}',
                 chooseButton: 'Choose file',
-                separateMobile: {
-                    name: 'Separate mobile homepage',
-                    desc: 'Use a different homepage for mobile devices.'
+                options: {
+                    none: 'None',
+                    file: 'File',
+                    dailyNote: 'Daily note',
+                    weeklyNote: 'Weekly note',
+                    monthlyNote: 'Monthly note',
+                    quarterlyNote: 'Quarterly note'
+                },
+                file: {
+                    name: 'Startup file',
+                    empty: 'No file selected'
                 }
             },
             excludedNotes: {

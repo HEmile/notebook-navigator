@@ -1406,14 +1406,20 @@ export const STRINGS_ID = {
             },
             homepage: {
                 name: 'Beranda',
-                desc: 'Pilih file yang Notebook Navigator buka secara otomatis, seperti dasbor.',
+                desc: 'Pilih apa yang Notebook Navigator buka secara otomatis saat memulai.',
                 current: 'Saat ini: {path}',
-                currentMobile: 'Mobile: {path}',
                 chooseButton: 'Pilih file',
-
-                separateMobile: {
-                    name: 'Beranda mobile terpisah',
-                    desc: 'Gunakan beranda berbeda untuk perangkat mobile.'
+                options: {
+                    none: 'Tidak ada',
+                    file: 'File',
+                    dailyNote: 'Catatan harian',
+                    weeklyNote: 'Catatan mingguan',
+                    monthlyNote: 'Catatan bulanan',
+                    quarterlyNote: 'Catatan kuartalan'
+                },
+                file: {
+                    name: 'File awal',
+                    empty: 'Tidak ada file dipilih'
                 }
             },
             excludedNotes: {

@@ -1456,14 +1456,20 @@ export const STRINGS_FR = {
             },
             homepage: {
                 name: 'Page d’accueil',
-                desc: 'Sélectionnez le fichier que Notebook Navigator ouvre automatiquement, par exemple un tableau de bord.',
+                desc: 'Choisissez ce que Notebook Navigator ouvre automatiquement au démarrage.',
                 current: 'Actuel : {path}',
-                currentMobile: 'Mobile : {path}',
                 chooseButton: 'Choisir un fichier',
-
-                separateMobile: {
-                    name: "Page d'accueil mobile séparée",
-                    desc: "Utiliser une page d'accueil différente pour les appareils mobiles."
+                options: {
+                    none: 'Aucun',
+                    file: 'Fichier',
+                    dailyNote: 'Note quotidienne',
+                    weeklyNote: 'Note hebdomadaire',
+                    monthlyNote: 'Note mensuelle',
+                    quarterlyNote: 'Note trimestrielle'
+                },
+                file: {
+                    name: 'Fichier de démarrage',
+                    empty: 'Aucun fichier sélectionné'
                 }
             },
             showFileDate: {

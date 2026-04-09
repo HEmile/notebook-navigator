@@ -1443,14 +1443,20 @@ export const STRINGS_ZH_CN = {
             },
             homepage: {
                 name: '主页',
-                desc: '选择自动打开的文件，例如仪表板。',
+                desc: '选择 Notebook Navigator 启动时自动打开的内容。',
                 current: '当前：{path}',
-                currentMobile: '移动端：{path}',
                 chooseButton: '选择文件',
-
-                separateMobile: {
-                    name: '单独的移动端主页',
-                    desc: '为移动设备使用不同的主页。'
+                options: {
+                    none: '无',
+                    file: '文件',
+                    dailyNote: '日记',
+                    weeklyNote: '周记',
+                    monthlyNote: '月记',
+                    quarterlyNote: '季度笔记'
+                },
+                file: {
+                    name: '启动文件',
+                    empty: '未选择文件'
                 }
             },
             showFileDate: {

@@ -38,6 +38,7 @@ import {
 import type { NotebookNavigatorSettings, SyncModeSettingId } from '../../settings/types';
 import type { DualPaneOrientation, LocalStorageKeys, UXPreferences } from '../../types';
 import { localStorage } from '../../utils/localStorage';
+import { normalizeOptionalVaultFilePath } from '../../utils/pathUtils';
 import { sanitizeUIScale } from '../../utils/uiScale';
 
 export interface SyncModeRegistryEntry {
@@ -63,6 +64,7 @@ interface CreateSyncModeRegistryParams {
     parseDualPaneOrientation: (raw: unknown) => DualPaneOrientation | null;
 
     sanitizeBooleanSetting: (value: unknown, fallback: boolean) => boolean;
+    sanitizeHomepageSetting: (value: unknown) => NotebookNavigatorSettings['homepage'];
     sanitizeDualPaneOrientationSetting: (value: unknown) => DualPaneOrientation;
     sanitizeTagSortOrderSetting: (value: unknown) => NotebookNavigatorSettings['tagSortOrder'];
     sanitizeFolderSortOrderSetting: (value: unknown) => NotebookNavigatorSettings['folderSortOrder'];
@@ -147,12 +149,14 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
         getCurrent: () => T;
         setCurrent: (value: T) => void;
         cleanupOnLoad?: boolean;
+        hasPersistedValue?: (storedData: Record<string, unknown>) => boolean;
         deleteFromPersisted?: (persisted: Record<string, unknown>) => void;
     }) => {
         return createEntry({
             persistedKeys: entryParams.persistedKeys,
             loadPhase: entryParams.loadPhase,
             cleanupOnLoad: entryParams.cleanupOnLoad,
+            hasPersistedValue: entryParams.hasPersistedValue,
             deleteFromPersisted: entryParams.deleteFromPersisted,
             resolveOnLoad: ({ storedData }) => {
                 if (params.isLocal(entryParams.settingId)) {
@@ -177,6 +181,7 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
         resolveDeviceLocal: (storedData: Record<string, unknown> | null) => { value: NotebookNavigatorSettings[K]; migrated: boolean };
         sanitizeSynced: () => NotebookNavigatorSettings[K];
         cleanupOnLoad?: boolean;
+        hasPersistedValue?: (storedData: Record<string, unknown>) => boolean;
         deleteFromPersisted?: (persisted: Record<string, unknown>) => void;
     }) => {
         return createResolvedLocalStorageEntry<NotebookNavigatorSettings[K]>({
@@ -191,6 +196,7 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
                 params.getSettings()[entryParams.settingId] = value;
             },
             cleanupOnLoad: entryParams.cleanupOnLoad,
+            hasPersistedValue: entryParams.hasPersistedValue,
             deleteFromPersisted: entryParams.deleteFromPersisted
         });
     };
@@ -229,6 +235,27 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
         });
     };
 
+    const resolveLegacyHomepageLocal = (storedData: Record<string, unknown> | null): NotebookNavigatorSettings['homepage'] => {
+        const useMobileHomepage = storedData?.['useMobileHomepage'] === true;
+        const mobileHomepage = normalizeOptionalVaultFilePath(
+            typeof storedData?.['mobileHomepage'] === 'string' ? storedData.mobileHomepage : null
+        );
+        const homepage = normalizeOptionalVaultFilePath(typeof storedData?.['homepage'] === 'string' ? storedData.homepage : null);
+        const resolvedMobileHomepage = mobileHomepage ?? homepage;
+
+        if (useMobileHomepage) {
+            return {
+                source: Platform.isMobile ? (resolvedMobileHomepage ? 'file' : 'none') : homepage ? 'file' : 'none',
+                file: Platform.isMobile ? resolvedMobileHomepage : homepage
+            };
+        }
+
+        return {
+            source: homepage ? 'file' : 'none',
+            file: homepage
+        };
+    };
+
     return {
         vaultProfile: createEntry({
             persistedKeys: ['vaultProfile'],
@@ -243,6 +270,37 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
                 return { migrated: false };
             },
             mirrorToLocalStorage: mirrorFromSettings(params.keys.vaultProfileKey, () => params.getSettings().vaultProfile)
+        }),
+        homepage: createResolvedLocalStorageSettingEntry({
+            settingId: 'homepage',
+            loadPhase: 'preProfiles',
+            localStorageKey: params.keys.homepageKey,
+            resolveDeviceLocal: storedData => {
+                const storedLocal = localStorage.get<unknown>(params.keys.homepageKey);
+                const migrated = storedData
+                    ? 'homepage' in storedData || 'mobileHomepage' in storedData || 'useMobileHomepage' in storedData
+                    : false;
+                const resolved = params.sanitizeHomepageSetting(storedLocal);
+                const hasStructuredPersistedHomepage =
+                    typeof storedData?.['homepage'] === 'object' &&
+                    storedData?.['homepage'] !== null &&
+                    !Array.isArray(storedData?.['homepage']);
+                const nextValue =
+                    storedLocal === null
+                        ? hasStructuredPersistedHomepage
+                            ? params.sanitizeHomepageSetting(storedData?.['homepage'])
+                            : resolveLegacyHomepageLocal(storedData)
+                        : resolved;
+                setLocalStorage(params.keys.homepageKey, nextValue);
+                return { value: nextValue, migrated };
+            },
+            sanitizeSynced: () => params.sanitizeHomepageSetting(params.getSettings().homepage),
+            deleteFromPersisted: persisted => {
+                delete persisted['homepage'];
+                delete persisted['mobileHomepage'];
+                delete persisted['useMobileHomepage'];
+            },
+            hasPersistedValue: storedData => 'homepage' in storedData || 'mobileHomepage' in storedData || 'useMobileHomepage' in storedData
         }),
         folderSortOrder: createResolvedLocalStorageSettingEntry({
             settingId: 'folderSortOrder',

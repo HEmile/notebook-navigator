@@ -66,9 +66,23 @@ export function isFeatureImagePixelSizeSetting(value: unknown): value is Feature
     return typeof value === 'string' && FEATURE_IMAGE_PIXEL_SIZE_OPTIONS.includes(value as FeatureImagePixelSizeSetting);
 }
 
+const HOMEPAGE_SOURCES = ['none', 'file', 'daily-note', 'weekly-note', 'monthly-note', 'quarterly-note'] as const;
+
+type HomepageSource = (typeof HOMEPAGE_SOURCES)[number];
+
+export function isHomepageSource(value: unknown): value is HomepageSource {
+    return typeof value === 'string' && HOMEPAGE_SOURCES.includes(value as HomepageSource);
+}
+
+export interface HomepageSetting {
+    source: HomepageSource;
+    file: string | null;
+}
+
 /** Identifiers for settings that can be switched between synced and local storage. */
 export const SYNC_MODE_SETTING_IDS = [
     'vaultProfile',
+    'homepage',
     'folderSortOrder',
     'tagSortOrder',
     'propertySortOrder',
@@ -340,9 +354,7 @@ export interface NotebookNavigatorSettings {
     showInfoButtons: boolean;
 
     // General tab - Homepage
-    homepage: string | null;
-    mobileHomepage: string | null;
-    useMobileHomepage: boolean;
+    homepage: HomepageSetting;
 
     // General tab - Desktop appearance
     dualPane: boolean;

@@ -1450,14 +1450,20 @@ export const STRINGS_JA = {
             },
             homepage: {
                 name: 'ホームページ',
-                desc: '自動で開く、ダッシュボードなどのファイルを選びます。',
+                desc: '起動時に自動で開く対象を選択します。',
                 current: '現在: {path}',
-                currentMobile: 'モバイル: {path}',
                 chooseButton: 'ファイルを選択',
-
-                separateMobile: {
-                    name: '個別のモバイルホームページ',
-                    desc: 'モバイルデバイス用に別のホームページを使用します。'
+                options: {
+                    none: 'なし',
+                    file: 'ファイル',
+                    dailyNote: 'デイリーノート',
+                    weeklyNote: 'ウィークリーノート',
+                    monthlyNote: 'マンスリーノート',
+                    quarterlyNote: 'クォータリーノート'
+                },
+                file: {
+                    name: '起動ファイル',
+                    empty: 'ファイルが選択されていません'
                 }
             },
             showFileDate: {

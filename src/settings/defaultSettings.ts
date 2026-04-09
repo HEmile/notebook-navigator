@@ -159,9 +159,10 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showInfoButtons: true,
 
     // General tab - Homepage
-    homepage: null,
-    mobileHomepage: null,
-    useMobileHomepage: false,
+    homepage: {
+        source: 'none',
+        file: null
+    },
 
     // General tab - Desktop appearance
     dualPane: true,

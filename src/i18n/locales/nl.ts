@@ -1408,14 +1408,20 @@ export const STRINGS_NL = {
             },
             homepage: {
                 name: 'Startpagina',
-                desc: 'Kies het bestand dat Notebook Navigator automatisch opent, zoals een dashboard.',
+                desc: 'Kies wat Notebook Navigator automatisch opent bij het opstarten.',
                 current: 'Huidig: {path}',
-                currentMobile: 'Mobiel: {path}',
                 chooseButton: 'Bestand kiezen',
-
-                separateMobile: {
-                    name: 'Aparte mobiele startpagina',
-                    desc: 'Een andere startpagina gebruiken voor mobiele apparaten.'
+                options: {
+                    none: 'Geen',
+                    file: 'Bestand',
+                    dailyNote: 'Dagnotitie',
+                    weeklyNote: 'Weeknotitie',
+                    monthlyNote: 'Maandnotitie',
+                    quarterlyNote: 'Kwartaalnotitie'
+                },
+                file: {
+                    name: 'Opstartbestand',
+                    empty: 'Geen bestand geselecteerd'
                 }
             },
             excludedNotes: {

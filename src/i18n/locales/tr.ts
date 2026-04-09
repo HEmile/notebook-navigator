@@ -1406,14 +1406,20 @@ export const STRINGS_TR = {
             },
             homepage: {
                 name: 'Ana sayfa',
-                desc: "Notebook Navigator'ın otomatik olarak açtığı dosyayı seçin, örneğin bir kontrol paneli.",
+                desc: "Notebook Navigator'ın başlangıçta otomatik olarak ne açacağını seçin.",
                 current: 'Mevcut: {path}',
-                currentMobile: 'Mobil: {path}',
                 chooseButton: 'Dosya seç',
-
-                separateMobile: {
-                    name: 'Ayrı mobil ana sayfası',
-                    desc: 'Mobil cihazlar için farklı bir ana sayfa kullan.'
+                options: {
+                    none: 'Yok',
+                    file: 'Dosya',
+                    dailyNote: 'Günlük not',
+                    weeklyNote: 'Haftalık not',
+                    monthlyNote: 'Aylık not',
+                    quarterlyNote: 'Çeyreklik not'
+                },
+                file: {
+                    name: 'Başlangıç dosyası',
+                    empty: 'Dosya seçilmedi'
                 }
             },
             excludedNotes: {

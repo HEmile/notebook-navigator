@@ -1407,14 +1407,20 @@ export const STRINGS_VI = {
             },
             homepage: {
                 name: 'Trang chủ',
-                desc: 'Chọn tệp mà Notebook Navigator mở tự động, như bảng điều khiển.',
+                desc: 'Chọn nội dung Notebook Navigator mở tự động khi khởi động.',
                 current: 'Hiện tại: {path}',
-                currentMobile: 'Di động: {path}',
                 chooseButton: 'Chọn tệp',
-
-                separateMobile: {
-                    name: 'Trang chủ di động riêng',
-                    desc: 'Dùng trang chủ khác cho thiết bị di động.'
+                options: {
+                    none: 'Không',
+                    file: 'Tệp',
+                    dailyNote: 'Ghi chú hàng ngày',
+                    weeklyNote: 'Ghi chú hàng tuần',
+                    monthlyNote: 'Ghi chú hàng tháng',
+                    quarterlyNote: 'Ghi chú hàng quý'
+                },
+                file: {
+                    name: 'Tệp khởi động',
+                    empty: 'Chưa chọn tệp'
                 }
             },
             excludedNotes: {

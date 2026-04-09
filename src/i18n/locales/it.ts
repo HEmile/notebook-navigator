@@ -1405,14 +1405,20 @@ export const STRINGS_IT = {
             },
             homepage: {
                 name: 'Homepage',
-                desc: 'Scegli il file che Notebook Navigator apre automaticamente, come una dashboard.',
+                desc: 'Scegli cosa Notebook Navigator apre automaticamente all\u2019avvio.',
                 current: 'Attuale: {path}',
-                currentMobile: 'Mobile: {path}',
                 chooseButton: 'Scegli file',
-
-                separateMobile: {
-                    name: 'Homepage mobile separata',
-                    desc: 'Usa una homepage diversa per dispositivi mobili.'
+                options: {
+                    none: 'Nessuno',
+                    file: 'File',
+                    dailyNote: 'Nota giornaliera',
+                    weeklyNote: 'Nota settimanale',
+                    monthlyNote: 'Nota mensile',
+                    quarterlyNote: 'Nota trimestrale'
+                },
+                file: {
+                    name: 'File di avvio',
+                    empty: 'Nessun file selezionato'
                 }
             },
             excludedNotes: {

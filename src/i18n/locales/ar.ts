@@ -1404,14 +1404,20 @@ export const STRINGS_AR = {
             },
             homepage: {
                 name: 'الصفحة الرئيسية',
-                desc: 'اختر الملف الذي يفتحه متصفح الدفتر تلقائيًا، مثل لوحة المعلومات.',
+                desc: 'اختر ما يفتحه Notebook Navigator تلقائيًا عند بدء التشغيل.',
                 current: 'الحالي: {path}',
-                currentMobile: 'الجوال: {path}',
                 chooseButton: 'اختيار ملف',
-
-                separateMobile: {
-                    name: 'صفحة رئيسية منفصلة للجوال',
-                    desc: 'استخدام صفحة رئيسية مختلفة للأجهزة المحمولة.'
+                options: {
+                    none: 'لا شيء',
+                    file: 'ملف',
+                    dailyNote: 'ملاحظة يومية',
+                    weeklyNote: 'ملاحظة أسبوعية',
+                    monthlyNote: 'ملاحظة شهرية',
+                    quarterlyNote: 'ملاحظة ربع سنوية'
+                },
+                file: {
+                    name: 'ملف بدء التشغيل',
+                    empty: 'لم يتم اختيار ملف'
                 }
             },
             excludedNotes: {

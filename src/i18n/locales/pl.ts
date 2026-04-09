@@ -1409,14 +1409,20 @@ export const STRINGS_PL = {
             },
             homepage: {
                 name: 'Strona główna',
-                desc: 'Wybierz plik, który Notebook Navigator otwiera automatycznie, np. dashboard.',
+                desc: 'Wybierz, co Notebook Navigator otwiera automatycznie przy uruchomieniu.',
                 current: 'Aktywny: {path}',
-                currentMobile: 'Mobilny: {path}',
                 chooseButton: 'Wybierz plik',
-
-                separateMobile: {
-                    name: 'Osobna strona główna dla urządzeń mobilnych',
-                    desc: 'Użyj innej strony głównej dla urządzeń mobilnych.'
+                options: {
+                    none: 'Brak',
+                    file: 'Plik',
+                    dailyNote: 'Notatka dzienna',
+                    weeklyNote: 'Notatka tygodniowa',
+                    monthlyNote: 'Notatka miesięczna',
+                    quarterlyNote: 'Notatka kwartalna'
+                },
+                file: {
+                    name: 'Plik startowy',
+                    empty: 'Nie wybrano pliku'
                 }
             },
             excludedNotes: {

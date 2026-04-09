@@ -1402,14 +1402,20 @@ export const STRINGS_TH = {
             },
             homepage: {
                 name: 'หน้าแรก',
-                desc: 'เลือกไฟล์ที่ Notebook Navigator เปิดอัตโนมัติ เช่น แดชบอร์ด',
+                desc: 'เลือกสิ่งที่ Notebook Navigator เปิดอัตโนมัติเมื่อเริ่มต้น',
                 current: 'ปัจจุบัน: {path}',
-                currentMobile: 'มือถือ: {path}',
                 chooseButton: 'เลือกไฟล์',
-
-                separateMobile: {
-                    name: 'หน้าแรกมือถือแยก',
-                    desc: 'ใช้หน้าแรกต่างกันสำหรับอุปกรณ์มือถือ'
+                options: {
+                    none: 'ไม่มี',
+                    file: 'ไฟล์',
+                    dailyNote: 'บันทึกรายวัน',
+                    weeklyNote: 'บันทึกรายสัปดาห์',
+                    monthlyNote: 'บันทึกรายเดือน',
+                    quarterlyNote: 'บันทึกรายไตรมาส'
+                },
+                file: {
+                    name: 'ไฟล์เริ่มต้น',
+                    empty: 'ไม่ได้เลือกไฟล์'
                 }
             },
             excludedNotes: {

@@ -1406,14 +1406,20 @@ export const STRINGS_FA = {
             },
             homepage: {
                 name: 'صفحه اصلی',
-                desc: 'فایلی که Notebook Navigator به طور خودکار باز می‌کند، مانند داشبورد را انتخاب کنید.',
+                desc: 'انتخاب کنید Notebook Navigator هنگام راه‌اندازی چه چیزی را به طور خودکار باز کند.',
                 current: 'فعلی: {path}',
-                currentMobile: 'موبایل: {path}',
                 chooseButton: 'انتخاب فایل',
-
-                separateMobile: {
-                    name: 'صفحه اصلی جداگانه موبایل',
-                    desc: 'صفحه اصلی متفاوتی برای دستگاه‌های موبایل استفاده کنید.'
+                options: {
+                    none: 'هیچ',
+                    file: 'فایل',
+                    dailyNote: 'یادداشت روزانه',
+                    weeklyNote: 'یادداشت هفتگی',
+                    monthlyNote: 'یادداشت ماهانه',
+                    quarterlyNote: 'یادداشت فصلی'
+                },
+                file: {
+                    name: 'فایل راه‌اندازی',
+                    empty: 'فایلی انتخاب نشده'
                 }
             },
             excludedNotes: {

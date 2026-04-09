@@ -136,7 +136,7 @@ show progress.
    - `registerWorkspaceEvents` adds editor context menu actions, the ribbon icon, recent-note tracking, and
      rename/delete handlers.
 11. Wait for `workspace.onLayoutReady()`.
-   - `HomepageController.handleWorkspaceReady()` activates the view on first launch and opens the configured homepage (if set).
+   - `HomepageController.handleWorkspaceReady()` activates the view on first launch and opens the configured homepage target when it resolves.
    - On first launch, the Welcome modal is opened after the workspace is ready.
    - Triggers Style Settings parsing, version notice checks, and optional release polling.
   - `applyCalendarPlacementView({ force: true, reveal: false })` syncs the calendar right-sidebar leaf with the

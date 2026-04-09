@@ -80,11 +80,15 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.5.7',
         date: '2026-04-09',
         showOnUpdate: true,
+        new: [
+            'General > Homepage now lets you open a daily, weekly, monthly, or quarterly note on startup, or a specific file.'
+        ],
         improved: [
             'Added informative text on hover for the unfinished task icon in list pane, showing the number of unfinished tasks. If note tooltips are enabled the unfinished note count is included in the note tooltip.'
         ],
         changed: [
-            'Changed the format used for storing icon values in frontmatter to a deterministic format. For example, the Material icon crop_16_9 is now saved as **mi:crop_16_9** instead of **MiCrop169**. The previous format could not reliably round-trip icon names with numbers. Existing supported legacy values are still read automatically through legacy Iconize mappings.'
+            'Changed the format used for storing icon values in frontmatter to a deterministic format. For example, the Material icon crop_16_9 is now saved as **mi:crop_16_9** instead of **MiCrop169**. The previous format could not reliably round-trip icon names with numbers. Existing supported legacy values are still read automatically through legacy Iconize mappings.',
+            'The homepage setting was redesigned. Previously, you could only choose a specific file as the homepage. Now you can choose between ==None==, ==File==, ==Daily note==, ==Weekly note==, ==Monthly note==, and ==Quarterly note==. The separate mobile homepage option was removed — use local setting overrides to configure a different homepage per device. Existing settings are migrated automatically.'
         ],
         fixed: [
             'Fixed icons with numbers in their name, such as **crop_16_9** and **badge-3d**, not displaying correctly after being saved to frontmatter.',

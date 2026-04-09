@@ -1454,14 +1454,20 @@ export const STRINGS_DE = {
             },
             homepage: {
                 name: 'Startseite',
-                desc: 'Datei auswählen, die Notebook Navigator automatisch öffnet, z. B. ein Dashboard.',
+                desc: 'Wählen Sie, was Notebook Navigator beim Start automatisch öffnet.',
                 current: 'Aktuell: {path}',
-                currentMobile: 'Mobil: {path}',
                 chooseButton: 'Datei auswählen',
-
-                separateMobile: {
-                    name: 'Separate mobile Startseite',
-                    desc: 'Verwenden Sie eine andere Startseite für Mobilgeräte.'
+                options: {
+                    none: 'Keine',
+                    file: 'Datei',
+                    dailyNote: 'Tagesnotiz',
+                    weeklyNote: 'Wochennotiz',
+                    monthlyNote: 'Monatsnotiz',
+                    quarterlyNote: 'Quartalsnotiz'
+                },
+                file: {
+                    name: 'Startdatei',
+                    empty: 'Keine Datei ausgewählt'
                 }
             },
             showFileDate: {

@@ -96,7 +96,7 @@ describe('applyModifiedSettingsTransfer', () => {
             folderNoteTemplate: 123
         });
 
-        expect(nextSettings.homepage).toBeNull();
+        expect(nextSettings.homepage).toEqual(DEFAULT_SETTINGS.homepage);
         expect(nextSettings.folderNoteTemplate).toBeNull();
     });
 

@@ -1403,14 +1403,20 @@ export const STRINGS_UK = {
             },
             homepage: {
                 name: 'Домашня сторінка',
-                desc: 'Виберіть файл, який Notebook Navigator відкриває автоматично, наприклад панель керування.',
+                desc: 'Виберіть, що Notebook Navigator відкриває автоматично під час запуску.',
                 current: 'Поточний: {path}',
-                currentMobile: 'Мобільний: {path}',
                 chooseButton: 'Вибрати файл',
-
-                separateMobile: {
-                    name: 'Окрема мобільна домашня сторінка',
-                    desc: 'Використовувати іншу домашню сторінку для мобільних пристроїв.'
+                options: {
+                    none: 'Немає',
+                    file: 'Файл',
+                    dailyNote: 'Щоденна нотатка',
+                    weeklyNote: 'Щотижнева нотатка',
+                    monthlyNote: 'Щомісячна нотатка',
+                    quarterlyNote: 'Щоквартальна нотатка'
+                },
+                file: {
+                    name: 'Файл запуску',
+                    empty: 'Файл не вибрано'
                 }
             },
             excludedNotes: {

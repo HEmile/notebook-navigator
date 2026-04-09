@@ -1403,14 +1403,20 @@ export const STRINGS_RU = {
             },
             homepage: {
                 name: 'Домашняя страница',
-                desc: 'Выберите файл, который Notebook Navigator открывает автоматически, например панель управления.',
+                desc: 'Выберите, что Notebook Navigator открывает автоматически при запуске.',
                 current: 'Текущая: {path}',
-                currentMobile: 'Мобильная: {path}',
                 chooseButton: 'Выбрать файл',
-
-                separateMobile: {
-                    name: 'Отдельная мобильная домашняя страница',
-                    desc: 'Использовать другую домашнюю страницу для мобильных устройств.'
+                options: {
+                    none: 'Нет',
+                    file: 'Файл',
+                    dailyNote: 'Ежедневная заметка',
+                    weeklyNote: 'Еженедельная заметка',
+                    monthlyNote: 'Ежемесячная заметка',
+                    quarterlyNote: 'Ежеквартальная заметка'
+                },
+                file: {
+                    name: 'Файл запуска',
+                    empty: 'Файл не выбран'
                 }
             },
             excludedNotes: {

@@ -931,89 +931,105 @@ export function renderGeneralTab(context: SettingsTabContext): void {
     const homepageSetting = viewGroup.addSetting(setting => {
         setting.setName(strings.settings.items.homepage.name);
     });
-    homepageSetting.setDesc('');
+    homepageSetting.setDesc(strings.settings.items.homepage.desc).addDropdown(dropdown =>
+        dropdown
+            .addOption('none', strings.settings.items.homepage.options.none)
+            .addOption('file', strings.settings.items.homepage.options.file)
+            .addOption('daily-note', strings.settings.items.homepage.options.dailyNote)
+            .addOption('weekly-note', strings.settings.items.homepage.options.weeklyNote)
+            .addOption('monthly-note', strings.settings.items.homepage.options.monthlyNote)
+            .addOption('quarterly-note', strings.settings.items.homepage.options.quarterlyNote)
+            .setValue(plugin.settings.homepage.source)
+            .onChange(async value => {
+                if (
+                    value !== 'none' &&
+                    value !== 'file' &&
+                    value !== 'daily-note' &&
+                    value !== 'weekly-note' &&
+                    value !== 'monthly-note' &&
+                    value !== 'quarterly-note'
+                ) {
+                    return;
+                }
 
-    const homepageDescEl = homepageSetting.descEl;
-    homepageDescEl.empty();
-    homepageDescEl.createDiv({ text: strings.settings.items.homepage.desc });
+                plugin.settings.homepage = {
+                    ...plugin.settings.homepage,
+                    source: value
+                };
+                renderHomepageFileSetting();
+                await plugin.saveSettingsAndUpdate();
+            })
+    );
 
-    const homepageValueEl = homepageDescEl.createDiv();
+    const homepageFileSubSettingsEl = createSubSettingsContainer(homepageSetting);
+    const homepageFileSetting = new Setting(homepageFileSubSettingsEl);
+    let homepageFileValueEl: HTMLDivElement | null = null;
     let clearHomepageButton: ButtonComponent | null = null;
 
-    /** Updates the displayed homepage path and button state */
-    const renderHomepageValue = () => {
-        const { homepage, mobileHomepage, useMobileHomepage } = plugin.settings;
-        const isMobile = Platform.isMobile;
+    homepageFileSetting.setName(strings.settings.items.homepage.file.name);
+    homepageFileSetting.setDesc('');
 
-        const activePath = isMobile && useMobileHomepage ? mobileHomepage : homepage;
-        const labelTemplate =
-            isMobile && useMobileHomepage
-                ? (strings.settings.items.homepage.currentMobile ?? strings.settings.items.homepage.current)
-                : strings.settings.items.homepage.current;
+    const homepageFileDescEl = homepageFileSetting.descEl;
+    homepageFileDescEl.empty();
+    homepageFileValueEl = homepageFileDescEl.createDiv();
 
-        homepageValueEl.setText('');
-        if (activePath) {
-            homepageValueEl.setText(labelTemplate.replace('{path}', activePath));
-        }
-
-        if (clearHomepageButton) {
-            const canClear = isMobile && useMobileHomepage ? Boolean(mobileHomepage) : Boolean(homepage);
-            clearHomepageButton.setDisabled(!canClear);
-        }
-    };
-
-    homepageSetting.addButton(button => {
+    homepageFileSetting.addButton(button => {
         button.setButtonText(strings.settings.items.homepage.chooseButton);
         button.onClick(() => {
+            if (plugin.settings.homepage.source !== 'file') {
+                return;
+            }
+
             new HomepageModal(context.app, file => {
-                if (Platform.isMobile && plugin.settings.useMobileHomepage) {
-                    plugin.settings.mobileHomepage = file.path;
-                } else {
-                    plugin.settings.homepage = file.path;
-                }
-                renderHomepageValue();
-                // Save homepage setting without blocking the UI
+                plugin.settings.homepage = {
+                    ...plugin.settings.homepage,
+                    file: file.path
+                };
+                renderHomepageFileSetting();
                 runAsyncAction(() => plugin.saveSettingsAndUpdate());
             }).open();
         });
     });
 
-    homepageSetting.addButton(button => {
+    homepageFileSetting.addButton(button => {
         button.setButtonText(strings.common.clear);
         clearHomepageButton = button;
-        // Clear homepage file without blocking the UI
         button.onClick(() => {
             runAsyncAction(async () => {
-                if (Platform.isMobile && plugin.settings.useMobileHomepage) {
-                    if (!plugin.settings.mobileHomepage) {
-                        return;
-                    }
-                    plugin.settings.mobileHomepage = null;
-                } else {
-                    if (!plugin.settings.homepage) {
-                        return;
-                    }
-                    plugin.settings.homepage = null;
+                if (plugin.settings.homepage.source !== 'file' || !plugin.settings.homepage.file) {
+                    return;
                 }
-                renderHomepageValue();
+
+                plugin.settings.homepage = {
+                    ...plugin.settings.homepage,
+                    file: null
+                };
+                renderHomepageFileSetting();
                 await plugin.saveSettingsAndUpdate();
             });
         });
     });
 
-    renderHomepageValue();
+    addSettingSyncModeToggle({ setting: homepageFileSetting, plugin, settingId: 'homepage' });
 
-    const homepageSubSettingsEl = createSubSettingsContainer(homepageSetting);
-    new Setting(homepageSubSettingsEl)
-        .setName(strings.settings.items.homepage.separateMobile.name)
-        .setDesc(strings.settings.items.homepage.separateMobile.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.useMobileHomepage).onChange(async value => {
-                plugin.settings.useMobileHomepage = value;
-                await plugin.saveSettingsAndUpdate();
-                renderHomepageValue();
-            })
-        );
+    const renderHomepageFileSetting = () => {
+        const isFileHomepage = plugin.settings.homepage.source === 'file';
+        setElementVisible(homepageFileSubSettingsEl, isFileHomepage);
+
+        if (homepageFileValueEl) {
+            homepageFileValueEl.setText(
+                plugin.settings.homepage.file
+                    ? strings.settings.items.homepage.current.replace('{path}', plugin.settings.homepage.file)
+                    : strings.settings.items.homepage.file.empty
+            );
+        }
+
+        if (clearHomepageButton) {
+            clearHomepageButton.setDisabled(!plugin.settings.homepage.file);
+        }
+    };
+
+    renderHomepageFileSetting();
 
     viewGroup
         .addSetting(setting => {

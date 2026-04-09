@@ -1405,14 +1405,20 @@ export const STRINGS_KO = {
             },
             homepage: {
                 name: '홈페이지',
-                desc: '자동으로 열릴 대시보드 같은 파일을 선택합니다.',
+                desc: '시작 시 자동으로 열 대상을 선택합니다.',
                 current: '현재: {path}',
-                currentMobile: '모바일: {path}',
                 chooseButton: '파일 선택',
-
-                separateMobile: {
-                    name: '별도 모바일 홈페이지',
-                    desc: '모바일 기기에서 다른 홈페이지를 사용합니다.'
+                options: {
+                    none: '없음',
+                    file: '파일',
+                    dailyNote: '일간 노트',
+                    weeklyNote: '주간 노트',
+                    monthlyNote: '월간 노트',
+                    quarterlyNote: '분기 노트'
+                },
+                file: {
+                    name: '시작 파일',
+                    empty: '선택된 파일 없음'
                 }
             },
             excludedNotes: {

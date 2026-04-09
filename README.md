@@ -245,7 +245,7 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 
 - `Notebook Navigator: Open` Opens Notebook Navigator in left sidebar. If already open, moves keyboard focus over to the list pane. **Suggestion:** Bind to a shortcut key like `Cmd/Ctrl+Shift+E` to move keyboard focus to the list pane - **this is essential for full keyboard navigation**
 - `Notebook Navigator: Toggle left sidebar` Toggles the left sidebar. When opening, sets the left sidebar view to Notebook Navigator (unlike Obsidian's built-in "Toggle left sidebar" command which restores the previous left sidebar view)
-- `Notebook Navigator: Open homepage` Opens the Notebook Navigator view and loads the homepage file configured in settings
+- `Notebook Navigator: Open homepage` Opens the Notebook Navigator view and loads the homepage target configured in settings
 - `Notebook Navigator: Select vault profile` Opens modal to switch between vault profiles
 - `Notebook Navigator: Reveal file` Reveals current file in navigator. Expands parent folders and scrolls to file. This command is useful if you have the setting `Auto-reveal active note` switched off and want to reveal notes manually. **Suggestion:** Bind to a shortcut key like `Cmd/Ctrl+Shift+R` to quickly change the selected folder or tag to the current file
 - `Notebook Navigator: Open all files` Opens all notes in the currently selected folder or tag. When opening 15 or more files, shows a confirmation dialog

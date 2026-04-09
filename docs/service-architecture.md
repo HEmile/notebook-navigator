@@ -575,7 +575,7 @@ revealFileInNearestFolder(file: TFile, options?: RevealFileOptions): void
 
 **Responsibilities:**
 
-- Resolves configured homepage files, applies mobile overrides, and opens them at startup or via command.
+- Resolves the configured homepage target and opens it at startup or via command.
 - Works with `WorkspaceCoordinator` and `CommandQueueService` to open files and reveal them in the navigator.
 - Handles deferred triggers while the workspace loads.
 

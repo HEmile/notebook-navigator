@@ -268,6 +268,7 @@ export interface LocalStorageKeys {
     vaultProfileKey: string;
     releaseCheckTimestampKey: string;
     searchProviderKey: string;
+    homepageKey: string;
     folderSortOrderKey: string;
     tagSortOrderKey: string;
     propertySortOrderKey: string;
@@ -322,6 +323,7 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     vaultProfileKey: 'notebook-navigator-vault-profile',
     releaseCheckTimestampKey: 'notebook-navigator-release-check-timestamp',
     searchProviderKey: 'notebook-navigator-search-provider',
+    homepageKey: 'notebook-navigator-homepage',
     folderSortOrderKey: 'notebook-navigator-folder-sort-order',
     tagSortOrderKey: 'notebook-navigator-tag-sort-order',
     propertySortOrderKey: 'notebook-navigator-property-sort-order',

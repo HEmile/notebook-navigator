@@ -140,3 +140,53 @@ describe('PluginSettingsController.prepareImportedUiScalePersistence', () => {
         expect(storedData?.['mobileScale']).toBe(0.9);
     });
 });
+
+describe('PluginSettingsController.saveSettings', () => {
+    it('updates local homepage storage when homepage is local', async () => {
+        let storedData: Record<string, unknown> | null = null;
+
+        const controller = new PluginSettingsController({
+            keys: STORAGE_KEYS,
+            loadData: vi.fn(async () => (storedData ? structuredClone(storedData) : null)),
+            saveData: vi.fn(async data => {
+                storedData = structuredClone(data) as Record<string, unknown>;
+            }),
+            mirrorUXPreferences: vi.fn()
+        });
+        const settings = structuredClone(DEFAULT_SETTINGS);
+
+        settings.syncModes.homepage = 'local';
+        settings.homepage = {
+            source: 'daily-note',
+            file: null
+        };
+
+        mockLocalStorageStore.set(STORAGE_KEYS.homepageKey, {
+            source: 'file',
+            file: 'old-note.md'
+        });
+
+        controller.settings = settings;
+        await controller.saveSettings();
+
+        expect(mockLocalStorageStore.get(STORAGE_KEYS.homepageKey)).toEqual({
+            source: 'daily-note',
+            file: null
+        });
+        expect(storedData?.['homepage']).toBeUndefined();
+
+        const reloadedController = new PluginSettingsController({
+            keys: STORAGE_KEYS,
+            loadData: vi.fn(async () => (storedData ? structuredClone(storedData) : null)),
+            saveData: vi.fn().mockResolvedValue(undefined),
+            mirrorUXPreferences: vi.fn()
+        });
+
+        await reloadedController.loadSettings();
+
+        expect(reloadedController.settings.homepage).toEqual({
+            source: 'daily-note',
+            file: null
+        });
+    });
+});

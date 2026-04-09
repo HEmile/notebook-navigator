@@ -118,6 +118,26 @@ export function migrateLegacySyncedSettings(params: {
     }
     delete mutableSettings['autoExpandFoldersTags'];
 
+    const hasStructuredHomepage =
+        typeof mutableSettings['homepage'] === 'object' &&
+        mutableSettings['homepage'] !== null &&
+        !Array.isArray(mutableSettings['homepage']);
+    const legacyHomepage = normalizeOptionalVaultFilePath(
+        typeof mutableSettings['homepage'] === 'string' ? mutableSettings['homepage'] : null
+    );
+    const legacyUseMobileHomepage = mutableSettings['useMobileHomepage'] === true;
+    if (!hasStructuredHomepage) {
+        settings.homepage = {
+            source: legacyHomepage ? 'file' : 'none',
+            file: legacyHomepage
+        };
+    }
+    if (legacyUseMobileHomepage) {
+        settings.syncModes.homepage = 'local';
+    }
+    delete mutableSettings['mobileHomepage'];
+    delete mutableSettings['useMobileHomepage'];
+
     // Validate noteGrouping value and reset to default if invalid
     if (settings.noteGrouping !== 'none' && settings.noteGrouping !== 'date' && settings.noteGrouping !== 'folder') {
         settings.noteGrouping = defaultSettings.noteGrouping;

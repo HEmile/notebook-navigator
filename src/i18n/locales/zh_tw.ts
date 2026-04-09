@@ -1443,14 +1443,20 @@ export const STRINGS_ZH_TW = {
             },
             homepage: {
                 name: '首頁',
-                desc: '選擇自動開啟的檔案，例如儀表板。',
+                desc: '選擇 Notebook Navigator 啟動時自動開啟的內容。',
                 current: '目前：{path}',
-                currentMobile: '行動裝置：{path}',
                 chooseButton: '選擇檔案',
-
-                separateMobile: {
-                    name: '單獨的行動裝置首頁',
-                    desc: '為行動裝置使用不同的首頁。'
+                options: {
+                    none: '無',
+                    file: '檔案',
+                    dailyNote: '日記',
+                    weeklyNote: '週記',
+                    monthlyNote: '月記',
+                    quarterlyNote: '季度筆記'
+                },
+                file: {
+                    name: '啟動檔案',
+                    empty: '未選擇檔案'
                 }
             },
             showFileDate: {
