@@ -28,6 +28,7 @@ interface CalendarYearPanelProps {
     activeYearValue: number;
     activeMonthIndex: number;
     hasYearPeriodNote: boolean;
+    isYearPeriodActive: boolean;
     yearMonthEntries: CalendarYearMonthEntry[];
     highlightedMonthFeatureImageKeys: Set<string>;
     highlightedMonthImageUrls: Record<string, string>;
@@ -44,6 +45,7 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
     activeYearValue,
     activeMonthIndex,
     hasYearPeriodNote,
+    isYearPeriodActive,
     yearMonthEntries,
     highlightedMonthFeatureImageKeys,
     highlightedMonthImageUrls,
@@ -72,7 +74,8 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                     className={[
                         'nn-navigation-calendar-year-label',
                         'nn-navigation-calendar-period-button',
-                        hasYearPeriodNote ? 'has-period-note' : ''
+                        hasYearPeriodNote ? 'has-period-note' : '',
+                        isYearPeriodActive ? 'is-active-editor-file' : ''
                     ]
                         .filter(Boolean)
                         .join(' ')}

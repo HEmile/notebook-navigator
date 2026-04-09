@@ -31,6 +31,9 @@ interface CalendarHeaderProps {
     hasMonthPeriodNote: boolean;
     hasQuarterPeriodNote: boolean;
     hasYearPeriodNote: boolean;
+    isMonthPeriodActive: boolean;
+    isQuarterPeriodActive: boolean;
+    isYearPeriodActive: boolean;
     showInlineMonthNavigation: boolean;
     showCompactQuarterInMonthRow: boolean;
     showHeaderPeriodDetails: boolean;
@@ -53,6 +56,9 @@ export const CalendarHeader = React.memo(function CalendarHeader({
     hasMonthPeriodNote,
     hasQuarterPeriodNote,
     hasYearPeriodNote,
+    isMonthPeriodActive,
+    isQuarterPeriodActive,
+    isYearPeriodActive,
     showInlineMonthNavigation,
     showCompactQuarterInMonthRow,
     showHeaderPeriodDetails,
@@ -81,7 +87,8 @@ export const CalendarHeader = React.memo(function CalendarHeader({
             className={[
                 'nn-navigation-calendar-period-button',
                 'nn-navigation-calendar-period-year',
-                hasYearPeriodNote ? 'has-period-note' : ''
+                hasYearPeriodNote ? 'has-period-note' : '',
+                isYearPeriodActive ? 'is-active-editor-file' : ''
             ]
                 .filter(Boolean)
                 .join(' ')}
@@ -101,7 +108,8 @@ export const CalendarHeader = React.memo(function CalendarHeader({
                     'nn-navigation-calendar-period-button',
                     'nn-navigation-calendar-quarter-button',
                     isInline ? 'nn-navigation-calendar-quarter-inline' : '',
-                    hasQuarterPeriodNote ? 'has-period-note' : ''
+                    hasQuarterPeriodNote ? 'has-period-note' : '',
+                    isQuarterPeriodActive ? 'is-active-editor-file' : ''
                 ]
                     .filter(Boolean)
                     .join(' ')}
@@ -148,7 +156,8 @@ export const CalendarHeader = React.memo(function CalendarHeader({
                         className={[
                             'nn-navigation-calendar-period-button',
                             'nn-navigation-calendar-period-month',
-                            hasMonthPeriodNote ? 'has-period-note' : ''
+                            hasMonthPeriodNote ? 'has-period-note' : '',
+                            isMonthPeriodActive ? 'is-active-editor-file' : ''
                         ]
                             .filter(Boolean)
                             .join(' ')}

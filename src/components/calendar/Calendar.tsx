@@ -40,7 +40,11 @@ import { CalendarGrid } from './CalendarGrid';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarHoverTooltip } from './CalendarHoverTooltip';
 import { CalendarYearPanel } from './CalendarYearPanel';
-import { createCalendarNotePathResolverContext, getExistingCalendarNoteFile } from './calendarNoteResolution';
+import {
+    createCalendarNotePathResolverContext,
+    getExistingCalendarNoteFile,
+    parseCalendarNoteDateFromPath
+} from './calendarNoteResolution';
 import {
     buildDateFilterToken,
     clamp,
@@ -413,6 +417,9 @@ export function Calendar({
 
     const isCustomCalendar = settings.calendarIntegrationMode === 'notebook-navigator';
     const weekNotesEnabled = isCustomCalendar && settings.calendarCustomWeekPattern.trim() !== '';
+    const monthNotesEnabled = isCustomCalendar && settings.calendarCustomMonthPattern.trim() !== '';
+    const quarterNotesEnabled = isCustomCalendar && settings.calendarCustomQuarterPattern.trim() !== '';
+    const yearNotesEnabled = isCustomCalendar && settings.calendarCustomYearPattern.trim() !== '';
 
     const effectiveWeekMode = useMemo<'iso' | 'locale'>(() => {
         if (!weekNotesEnabled) {
@@ -592,6 +599,73 @@ export function Calendar({
         ]
     );
 
+    const resolveActiveEditorCustomNoteDate = useCallback(
+        (filePath: string): MomentInstance | null => {
+            if (!momentApi || settings.calendarIntegrationMode !== 'notebook-navigator') {
+                return null;
+            }
+
+            const activePeriodKinds: {
+                enabled: boolean;
+                kind: Extract<CalendarNoteKind, 'week' | 'month' | 'quarter' | 'year'>;
+                parseLocale: string;
+            }[] = [
+                { kind: 'week', enabled: weekNotesEnabled, parseLocale: calendarRulesLocale },
+                { kind: 'month', enabled: monthNotesEnabled, parseLocale: displayLocale },
+                { kind: 'quarter', enabled: quarterNotesEnabled, parseLocale: displayLocale },
+                { kind: 'year', enabled: yearNotesEnabled, parseLocale: displayLocale }
+            ];
+
+            for (const { enabled, kind, parseLocale } of activePeriodKinds) {
+                if (!enabled) {
+                    continue;
+                }
+
+                const resolverContext = createCalendarNotePathResolverContext(kind, settings);
+                const parsedDate = parseCalendarNoteDateFromPath({
+                    filePath,
+                    kind,
+                    resolverContext,
+                    displayLocale,
+                    weekLocale: calendarRulesLocale,
+                    customCalendarRootFolderSettings,
+                    momentApi,
+                    parseLocale
+                });
+                if (!parsedDate) {
+                    continue;
+                }
+
+                switch (kind) {
+                    case 'week':
+                        return parsedDate
+                            .clone()
+                            .locale(calendarRulesLocale)
+                            .startOf(getCalendarCustomWeekAnchorUnit(resolverContext.momentPattern));
+                    case 'month':
+                        return parsedDate.clone().locale(displayLocale).startOf('month');
+                    case 'quarter':
+                        return parsedDate.clone().locale(displayLocale).startOf('quarter');
+                    case 'year':
+                        return parsedDate.clone().locale(displayLocale).startOf('year');
+                }
+            }
+
+            return null;
+        },
+        [
+            displayLocale,
+            calendarRulesLocale,
+            momentApi,
+            settings,
+            weekNotesEnabled,
+            monthNotesEnabled,
+            quarterNotesEnabled,
+            yearNotesEnabled,
+            customCalendarRootFolderSettings
+        ]
+    );
+
     const weeks = useMemo<CalendarWeek[]>(() => {
         if (!momentApi || !cursorDate) {
             return [];
@@ -660,8 +734,8 @@ export function Calendar({
             }
         }
 
-        return resolveActiveEditorCalendarDayDate(activeEditorFilePath);
-    }, [activeEditorFilePath, resolveActiveEditorCalendarDayDate, weeks]);
+        return resolveActiveEditorCalendarDayDate(activeEditorFilePath) ?? resolveActiveEditorCustomNoteDate(activeEditorFilePath);
+    }, [activeEditorFilePath, resolveActiveEditorCalendarDayDate, resolveActiveEditorCustomNoteDate, weeks]);
     const activeEditorDateKey =
         activeEditorFilePath && activeEditorDate ? `${activeEditorFilePath}::${formatIsoDate(activeEditorDate)}` : null;
 
@@ -975,9 +1049,6 @@ export function Calendar({
     const showCompactHeaderInlineInfoButton = showHeaderHelpButton;
     const showInfoInNavRow = false;
 
-    const monthNotesEnabled = isCustomCalendar && settings.calendarCustomMonthPattern.trim() !== '';
-    const quarterNotesEnabled = isCustomCalendar && settings.calendarCustomQuarterPattern.trim() !== '';
-    const yearNotesEnabled = isCustomCalendar && settings.calendarCustomYearPattern.trim() !== '';
     const displayedYear = yearPanelYear ?? cursorDate?.year() ?? null;
 
     const yearMonthBaseEntries = useMemo<CalendarYearMonthBaseEntry[]>(() => {
@@ -1446,6 +1517,10 @@ export function Calendar({
     const yearLabel = monthYearHeaderDate.format('YYYY');
     const quarterLabel = monthYearHeaderDate.format('[Q]Q');
     const canCreateDayNotes = settings.calendarIntegrationMode !== 'daily-notes' || Boolean(dailyNoteSettings);
+    const isMonthPeriodActive = Boolean(activeEditorFilePath && headerPeriodNoteFiles.month?.path === activeEditorFilePath);
+    const isQuarterPeriodActive = Boolean(activeEditorFilePath && headerPeriodNoteFiles.quarter?.path === activeEditorFilePath);
+    const isYearPeriodActive = Boolean(activeEditorFilePath && headerPeriodNoteFiles.year?.path === activeEditorFilePath);
+    const isYearPanelPeriodActive = Boolean(activeEditorFilePath && yearPanelPeriodNoteFile?.path === activeEditorFilePath);
 
     return (
         <>
@@ -1479,6 +1554,9 @@ export function Calendar({
                     hasMonthPeriodNote={Boolean(headerPeriodNoteFiles.month)}
                     hasQuarterPeriodNote={Boolean(headerPeriodNoteFiles.quarter)}
                     hasYearPeriodNote={Boolean(headerPeriodNoteFiles.year)}
+                    isMonthPeriodActive={isMonthPeriodActive}
+                    isQuarterPeriodActive={isQuarterPeriodActive}
+                    isYearPeriodActive={isYearPeriodActive}
                     showInlineMonthNavigation={showInlineMonthNavigation}
                     showCompactQuarterInMonthRow={showCompactQuarterInMonthRow}
                     showHeaderPeriodDetails={showHeaderPeriodDetails}
@@ -1528,6 +1606,7 @@ export function Calendar({
                     activeYearValue={activeYearValue}
                     activeMonthIndex={cursorDate.month()}
                     hasYearPeriodNote={Boolean(yearPanelPeriodNoteFile)}
+                    isYearPeriodActive={isYearPanelPeriodActive}
                     yearMonthEntries={yearMonthEntries}
                     highlightedMonthFeatureImageKeys={highlightedMonthFeatureImageKeys}
                     highlightedMonthImageUrls={highlightedMonthImageUrls}

@@ -97,6 +97,7 @@ export const CalendarGrid = React.memo(function CalendarGrid({
                 {weeks.map((week, weekIndex) => {
                     const weekNoteFile = weekNoteFilesByKey.get(week.key) ?? null;
                     const weekHasUnfinishedTasks = (weekUnfinishedTaskCountByKey.get(week.key) ?? 0) > 0;
+                    const isActiveEditorWeek = Boolean(weekNoteFile && activeEditorFilePath === weekNoteFile.path);
                     const previousWeek = weekIndex > 0 ? weeks[weekIndex - 1] : null;
                     const nextWeek = weekIndex < weeks.length - 1 ? weeks[weekIndex + 1] : null;
 
@@ -114,6 +115,7 @@ export const CalendarGrid = React.memo(function CalendarGrid({
                                                 'nn-navigation-calendar-weeknumber',
                                                 'nn-navigation-calendar-weeknumber-button',
                                                 weekNoteFile ? 'has-period-note' : '',
+                                                isActiveEditorWeek ? 'is-active-editor-file' : '',
                                                 weekHasUnfinishedTasks ? 'has-unfinished-tasks' : ''
                                             ]
                                                 .filter(Boolean)

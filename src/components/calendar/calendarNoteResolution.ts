@@ -16,8 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, TFile } from 'obsidian';
+import { App, TFile, normalizePath } from 'obsidian';
 import type { NotebookNavigatorSettings } from '../../settings/types';
+import { escapeMomentLiteralPath } from '../../utils/calendarCustomNotePatterns';
 import {
     buildCustomCalendarFilePathForPattern,
     buildCustomCalendarMomentPattern,
@@ -54,6 +55,116 @@ interface ResolveCalendarNotePathOptions {
 
 interface GetExistingCalendarNoteFileOptions extends ResolveCalendarNotePathOptions {
     app: App;
+}
+
+interface ParseCalendarNoteDateFromPathOptions extends Omit<ResolveCalendarNotePathOptions, 'date'> {
+    filePath: string;
+    parseLocale: string;
+}
+
+function stripMarkdownExtension(path: string): string {
+    return path.replace(/\.md$/iu, '');
+}
+
+function normalizeVaultRelativePath(path: string): string {
+    return normalizePath(path).replace(/^\/+/u, '').replace(/\/+$/u, '');
+}
+
+function stripMomentLiterals(pattern: string): string {
+    let result = '';
+    let inLiteral = false;
+
+    for (const character of pattern) {
+        if (character === '[') {
+            inLiteral = true;
+            continue;
+        }
+
+        if (character === ']') {
+            inLiteral = false;
+            continue;
+        }
+
+        if (!inLiteral) {
+            result += character;
+        }
+    }
+
+    return result;
+}
+
+function hasWeekParseTokens(pattern: string): boolean {
+    const tokenSource = stripMomentLiterals(pattern);
+    return /[YgG]/u.test(tokenSource) && /[wW]/u.test(tokenSource);
+}
+
+function getCalendarNotePathRelativeToRoot(filePath: string, rootFolder: string): string | null {
+    const normalizedPath = normalizeVaultRelativePath(filePath);
+    const normalizedRootFolder = normalizeVaultRelativePath(rootFolder);
+
+    if (!normalizedRootFolder) {
+        return normalizedPath;
+    }
+
+    if (normalizedPath === normalizedRootFolder) {
+        return '';
+    }
+
+    if (!normalizedPath.startsWith(`${normalizedRootFolder}/`)) {
+        return null;
+    }
+
+    return normalizedPath.slice(normalizedRootFolder.length + 1);
+}
+
+function parseWeeklyCalendarNoteDateFromPath({
+    filePath,
+    resolverContext,
+    parseLocale,
+    displayLocale,
+    weekLocale,
+    customCalendarRootFolderSettings,
+    momentApi
+}: Omit<ParseCalendarNoteDateFromPathOptions, 'momentApi'> & { momentApi: MomentApi }): MomentInstance | null {
+    const pathWithoutExtension = stripMarkdownExtension(filePath);
+    const relativePath = getCalendarNotePathRelativeToRoot(pathWithoutExtension, customCalendarRootFolderSettings.calendarCustomRootFolder);
+    if (!relativePath) {
+        return null;
+    }
+
+    const patternSegments = resolverContext.momentPattern.split('/').filter(Boolean);
+    const pathSegments = relativePath.split('/').filter(Boolean);
+    if (patternSegments.length !== pathSegments.length) {
+        return null;
+    }
+
+    for (let startIndex = patternSegments.length - 1; startIndex >= 0; startIndex--) {
+        const suffixPattern = patternSegments.slice(startIndex).join('/');
+        if (!hasWeekParseTokens(suffixPattern)) {
+            continue;
+        }
+
+        const suffixPath = pathSegments.slice(startIndex).join('/');
+        const parsedDate = momentApi(suffixPath, suffixPattern, parseLocale, true);
+        if (!parsedDate.isValid()) {
+            continue;
+        }
+
+        const resolved = resolveCalendarNotePath({
+            kind: 'week',
+            date: parsedDate,
+            resolverContext,
+            displayLocale,
+            weekLocale,
+            customCalendarRootFolderSettings,
+            momentApi
+        });
+        if (resolved?.filePath === filePath) {
+            return parsedDate;
+        }
+    }
+
+    return null;
 }
 
 export function createCalendarNotePathResolverContext(
@@ -113,4 +224,60 @@ export function getExistingCalendarNoteFile({
 
     const existing = app.vault.getAbstractFileByPath(resolved.filePath);
     return existing instanceof TFile ? existing : null;
+}
+
+export function parseCalendarNoteDateFromPath({
+    filePath,
+    kind,
+    resolverContext,
+    displayLocale,
+    weekLocale,
+    customCalendarRootFolderSettings,
+    momentApi,
+    parseLocale
+}: ParseCalendarNoteDateFromPathOptions): MomentInstance | null {
+    if (!momentApi || !filePath.toLowerCase().endsWith('.md')) {
+        return null;
+    }
+
+    const normalizedFilePath = normalizePath(filePath);
+    const { config, momentPattern } = resolverContext;
+    if (!config.isPatternValid(momentPattern, momentApi)) {
+        return null;
+    }
+
+    if (kind === 'week') {
+        return parseWeeklyCalendarNoteDateFromPath({
+            filePath: normalizedFilePath,
+            kind,
+            resolverContext,
+            displayLocale,
+            weekLocale,
+            customCalendarRootFolderSettings,
+            momentApi,
+            parseLocale
+        });
+    }
+
+    const rootFolderPattern = escapeMomentLiteralPath(customCalendarRootFolderSettings.calendarCustomRootFolder);
+    const fullPattern = rootFolderPattern ? `${rootFolderPattern}/${momentPattern}` : momentPattern;
+    const parsedDate = momentApi(stripMarkdownExtension(normalizedFilePath), fullPattern, parseLocale, true);
+    if (!parsedDate.isValid()) {
+        return null;
+    }
+
+    const resolved = resolveCalendarNotePath({
+        kind,
+        date: parsedDate,
+        resolverContext,
+        displayLocale,
+        weekLocale,
+        customCalendarRootFolderSettings,
+        momentApi
+    });
+    if (!resolved || resolved.filePath !== normalizedFilePath) {
+        return null;
+    }
+
+    return parsedDate;
 }
