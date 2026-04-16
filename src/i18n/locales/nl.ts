@@ -1193,7 +1193,7 @@ export const STRINGS_NL = {
             },
             calendarLocale: {
                 name: 'Taal',
-                desc: 'Bepaalt weeknummering en eerste dag van de week.',
+                desc: 'Bepaalt datumopmaak van de kalender, weeknummering en eerste dag van de week.',
                 incompatibleWeekPatternWarning:
                     'Het patroon voor wekelijkse notities gebruikt ISO-weektokens ("W" of "G"). De kalender toont weken beginnend op maandag in plaats van de eerste dag van de week van deze taal.',
                 options: {

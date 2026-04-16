@@ -27,7 +27,7 @@ import { getDBInstanceOrNull, isShutdownInProgress, waitForDatabaseInitializatio
 import { runAsyncAction } from '../../utils/async';
 import { getCalendarCustomWeekAnchorUnit } from '../../utils/calendarCustomNotePatterns';
 import { getDailyNoteFile, getDailyNoteSettings as getCoreDailyNoteSettings } from '../../utils/dailyNotes';
-import { getMomentApi, resolveMomentLocale, type MomentInstance } from '../../utils/moment';
+import { getMomentApi, resolveCalendarLocales, type MomentInstance } from '../../utils/moment';
 import { useFileOpener } from '../../hooks/useFileOpener';
 import { useLocalDayKey } from '../../hooks/useLocalDayKey';
 import { extractFrontmatterName } from '../../utils/metadataExtractor';
@@ -393,27 +393,15 @@ export function Calendar({
         setYearPanelYear(previousYear => (previousYear === cursorDate.year() ? previousYear : cursorDate.year()));
     }, [cursorDate]);
 
-    const displayLocale = useMemo(() => {
-        if (!momentApi) {
-            return 'en';
-        }
+    const currentLanguage = getCurrentLanguage();
+    const { displayLocale, calendarRulesLocale } = useMemo(
+        () => resolveCalendarLocales(settings.calendarLocale, momentApi, currentLanguage),
+        [currentLanguage, momentApi, settings.calendarLocale]
+    );
 
-        // Month name / weekday labels follow the current UI language by default.
-        const currentLanguage = getCurrentLanguage();
-        const fallback = momentApi.locale() || 'en';
-        const requested = (currentLanguage || fallback).replace(/_/g, '-');
-
-        return resolveMomentLocale(requested, momentApi, fallback);
-    }, [momentApi]);
-
-    const calendarRulesLocale = useMemo(() => {
-        if (!momentApi) {
-            return 'en';
-        }
-        // Week rules (week starts on, week number calculation) can differ from display locale; allow override.
-        const requested = settings.calendarLocale === 'system-default' ? displayLocale : settings.calendarLocale;
-        return resolveMomentLocale(requested, momentApi, displayLocale);
-    }, [displayLocale, momentApi, settings.calendarLocale]);
+    useEffect(() => {
+        setCursorDate(previousCursorDate => previousCursorDate?.clone().locale(displayLocale) ?? previousCursorDate);
+    }, [displayLocale]);
 
     const isCustomCalendar = settings.calendarIntegrationMode === 'notebook-navigator';
     const weekNotesEnabled = isCustomCalendar && settings.calendarCustomWeekPattern.trim() !== '';
@@ -694,7 +682,7 @@ export function Calendar({
 
             const days: CalendarDay[] = [];
             for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-                const date = weekStart.clone().add(dayOffset, 'day');
+                const date = weekStart.clone().add(dayOffset, 'day').locale(displayLocale);
                 const inMonth = date.month() === targetMonth && date.year() === targetYear;
                 const iso = formatIsoDate(date);
                 const file = getExistingDayNoteFile(date);
@@ -713,6 +701,7 @@ export function Calendar({
     }, [
         calendarRulesLocale,
         cursorDate,
+        displayLocale,
         effectiveWeekMode,
         getExistingDayNoteFile,
         isRightSidebar,
@@ -729,13 +718,13 @@ export function Calendar({
         for (const week of weeks) {
             for (const day of week.days) {
                 if (day.file?.path === activeEditorFilePath) {
-                    return day.date.clone().startOf('day');
+                    return day.date.clone().startOf('day').locale(displayLocale);
                 }
             }
         }
 
         return resolveActiveEditorCalendarDayDate(activeEditorFilePath) ?? resolveActiveEditorCustomNoteDate(activeEditorFilePath);
-    }, [activeEditorFilePath, resolveActiveEditorCalendarDayDate, resolveActiveEditorCustomNoteDate, weeks]);
+    }, [activeEditorFilePath, displayLocale, resolveActiveEditorCalendarDayDate, resolveActiveEditorCustomNoteDate, weeks]);
     const activeEditorDateKey =
         activeEditorFilePath && activeEditorDate ? `${activeEditorFilePath}::${formatIsoDate(activeEditorDate)}` : null;
 
@@ -751,7 +740,7 @@ export function Calendar({
 
         lastAppliedActiveEditorDateKeyRef.current = activeEditorDateKey;
         setCursorDate(previousCursorDate => {
-            const nextCursorDate = activeEditorDate.clone().startOf('day');
+            const nextCursorDate = activeEditorDate.clone().startOf('day').locale(displayLocale);
             if (
                 previousCursorDate &&
                 previousCursorDate.year() === nextCursorDate.year() &&
@@ -762,7 +751,7 @@ export function Calendar({
 
             return nextCursorDate;
         });
-    }, [activeEditorDate, activeEditorDateKey, activeEditorFilePath]);
+    }, [activeEditorDate, activeEditorDateKey, activeEditorFilePath, displayLocale]);
 
     const visibleDayNotePaths = useMemo(() => {
         const paths = new Set<string>();
@@ -912,10 +901,10 @@ export function Calendar({
             const unit = weeksToShow === 6 ? 'month' : 'week';
             const step = weeksToShow === 6 ? delta : delta * weeksToShow;
 
-            setCursorDate(prev => (prev ?? momentApi().startOf('day')).clone().add(step, unit));
+            setCursorDate(prev => (prev ?? momentApi().startOf('day').locale(displayLocale)).clone().add(step, unit).locale(displayLocale));
             onNavigationAction?.();
         },
-        [clearHoverTooltip, momentApi, onNavigationAction, weeksToShowSetting]
+        [clearHoverTooltip, displayLocale, momentApi, onNavigationAction, weeksToShowSetting]
     );
 
     const handleNavigateYear = useCallback(
@@ -973,11 +962,11 @@ export function Calendar({
             }
 
             clearHoverTooltip();
-            setCursorDate(date.clone().startOf('day'));
+            setCursorDate(date.clone().startOf('day').locale(displayLocale));
             setYearPanelYear(date.year());
             onNavigationAction?.();
         },
-        [clearHoverTooltip, handleDateFilterModifiedClick, onNavigationAction]
+        [clearHoverTooltip, displayLocale, handleDateFilterModifiedClick, onNavigationAction]
     );
 
     const onVaultChange = useCallback(() => {
@@ -1032,9 +1021,9 @@ export function Calendar({
             return;
         }
         clearHoverTooltip();
-        setCursorDate(momentApi().startOf('day'));
+        setCursorDate(momentApi().startOf('day').locale(displayLocale));
         onNavigationAction?.();
-    }, [clearHoverTooltip, momentApi, onNavigationAction]);
+    }, [clearHoverTooltip, displayLocale, momentApi, onNavigationAction]);
 
     const showWeekNumbers = settings.calendarShowWeekNumber;
     const highlightToday = settings.calendarHighlightToday;

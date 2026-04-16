@@ -1193,7 +1193,7 @@ export const STRINGS_VI = {
             },
             calendarLocale: {
                 name: 'Ngôn ngữ',
-                desc: 'Điều khiển đánh số tuần và ngày đầu tuần.',
+                desc: 'Điều khiển định dạng ngày trong lịch, đánh số tuần và ngày đầu tuần.',
                 incompatibleWeekPatternWarning:
                     'Mẫu ghi chú hàng tuần sử dụng token tuần ISO ("W" hoặc "G"). Lịch sẽ hiển thị tuần bắt đầu từ thứ Hai thay vì ngày đầu tuần của ngôn ngữ này.',
                 options: {

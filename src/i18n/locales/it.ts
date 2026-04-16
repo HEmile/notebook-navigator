@@ -1188,7 +1188,7 @@ export const STRINGS_IT = {
             },
             calendarLocale: {
                 name: 'Lingua',
-                desc: 'Controlla la numerazione delle settimane e il primo giorno della settimana.',
+                desc: 'Controlla la formattazione delle date del calendario, la numerazione delle settimane e il primo giorno della settimana.',
                 incompatibleWeekPatternWarning:
                     'Il modello delle note settimanali utilizza token di settimana ISO ("W" o "G"). Il calendario mostrerà le settimane a partire da lunedì invece del primo giorno della settimana di questa lingua.',
                 options: {

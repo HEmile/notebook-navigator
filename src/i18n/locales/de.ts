@@ -1193,7 +1193,7 @@ export const STRINGS_DE = {
             },
             calendarLocale: {
                 name: 'Gebietsschema',
-                desc: 'Steuert Wochennummerierung und ersten Wochentag.',
+                desc: 'Steuert Kalenderdatumsformat, Wochennummerierung und ersten Wochentag.',
                 incompatibleWeekPatternWarning:
                     'Das Muster f\u00fcr w\u00f6chentliche Notizen verwendet ISO-Wochen-Token ("W" oder "G"). Der Kalender zeigt Wochen ab Montag statt ab dem ersten Wochentag dieses Gebietsschemas an.',
                 options: {

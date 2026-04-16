@@ -1194,7 +1194,7 @@ export const STRINGS_FR = {
             },
             calendarLocale: {
                 name: 'Langue',
-                desc: 'Contrôle la numérotation des semaines et le premier jour de la semaine.',
+                desc: 'Contrôle le formatage des dates du calendrier, la numérotation des semaines et le premier jour de la semaine.',
                 incompatibleWeekPatternWarning:
                     'Le modèle de notes hebdomadaires utilise des jetons de semaine ISO ("W" ou "G"). Le calendrier affichera les semaines commençant le lundi au lieu du premier jour de la semaine de cette langue.',
                 options: {

@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { getCurrentLanguage } from '../i18n';
+
 export interface MomentLocaleData {
     firstDayOfWeek(): number;
     weekdaysMin(): string[];
@@ -169,4 +171,20 @@ export function resolveMomentLocale(requestedLocale: string, momentApi: MomentAp
     const resolved = fallbackLocale || momentApi.locale() || 'en';
     resolvedCache.set(cacheKey, resolved);
     return resolved;
+}
+
+export function resolveCalendarLocales(
+    calendarLocale: string,
+    momentApi: MomentApi | null,
+    currentLanguage: string = getCurrentLanguage()
+): { displayLocale: string; calendarRulesLocale: string } {
+    const fallbackLocale = momentApi?.locale() || 'en';
+    const requestedDisplayLocale =
+        calendarLocale === 'system-default' ? (currentLanguage || fallbackLocale).replace(/_/g, '-') : calendarLocale;
+    const displayLocale = resolveMomentLocale(requestedDisplayLocale, momentApi, fallbackLocale);
+
+    return {
+        displayLocale,
+        calendarRulesLocale: displayLocale
+    };
 }

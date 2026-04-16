@@ -1191,7 +1191,7 @@ export const STRINGS_KO = {
             },
             calendarLocale: {
                 name: '지역',
-                desc: '주 번호와 한 주의 첫 번째 요일을 제어합니다.',
+                desc: '달력 날짜 형식, 주 번호, 그리고 한 주의 첫 번째 요일을 제어합니다.',
                 incompatibleWeekPatternWarning:
                     '주간 노트 패턴이 ISO 주 토큰("W" 또는 "G")을 사용합니다. 캘린더는 이 지역의 시작 요일 대신 월요일부터 시작하는 주를 표시합니다.',
                 options: {

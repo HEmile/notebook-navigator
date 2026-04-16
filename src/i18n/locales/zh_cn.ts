@@ -1185,7 +1185,7 @@ export const STRINGS_ZH_CN = {
             },
             calendarLocale: {
                 name: '日历语言',
-                desc: '选择日历显示的语言。',
+                desc: '控制日历日期格式、周编号和每周的第一天。',
                 incompatibleWeekPatternWarning:
                     '周记模式使用了 ISO 周标记（"W" 或 "G"）。日历将从星期一开始显示每周，而不是此语言设置的每周第一天。',
                 options: {

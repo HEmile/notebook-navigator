@@ -1192,7 +1192,7 @@ export const STRINGS_ID = {
             },
             calendarLocale: {
                 name: 'Bahasa',
-                desc: 'Mengontrol penomoran minggu dan hari pertama dalam seminggu.',
+                desc: 'Mengontrol format tanggal kalender, penomoran minggu, dan hari pertama dalam seminggu.',
                 incompatibleWeekPatternWarning:
                     'Pola catatan mingguan menggunakan token minggu ISO ("W" atau "G"). Kalender akan menampilkan minggu dimulai dari Senin, bukan hari pertama minggu dari bahasa ini.',
                 options: {

@@ -1194,7 +1194,7 @@ export const STRINGS_PL = {
             },
             calendarLocale: {
                 name: 'Ustawienia regionalne',
-                desc: 'Kontroluje numerację tygodni i pierwszy dzień tygodnia.',
+                desc: 'Kontroluje formatowanie dat kalendarza, numerację tygodni i pierwszy dzień tygodnia.',
                 incompatibleWeekPatternWarning:
                     'Wzór notatek tygodniowych używa tokenów tygodnia ISO ("W" lub "G"). Kalendarz będzie wyświetlał tygodnie zaczynające się od poniedziałku zamiast od pierwszego dnia tygodnia tych ustawień regionalnych.',
                 options: {

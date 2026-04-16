@@ -42,7 +42,7 @@ import { getFolderNote, getFolderNoteDetectionSettings, isFolderNote, isSupporte
 import { createFrontmatterPropertyExclusionMatcher, isFolderInExcludedFolder, shouldExcludeFileWithMatcher } from '../../utils/fileFilters';
 import { getEffectiveFrontmatterExclusions } from '../../utils/exclusionUtils';
 import { runAsyncAction } from '../../utils/async';
-import { getMomentApi, resolveMomentLocale, type MomentInstance } from '../../utils/moment';
+import { getMomentApi, resolveCalendarLocales, type MomentInstance } from '../../utils/moment';
 import { NotebookNavigatorView } from '../../view/NotebookNavigatorView';
 import { getActiveHiddenFolders, getActiveVaultProfile } from '../../utils/vaultProfiles';
 import { showNotice } from '../../utils/noticeUtils';
@@ -510,14 +510,9 @@ async function openCalendarNoteForToday(plugin: NotebookNavigatorPlugin, kind: C
         return;
     }
 
-    const date: MomentInstance = momentApi().startOf('day');
     const currentLanguage = getCurrentLanguage();
-    const fallbackLocale = momentApi.locale() || 'en';
-    const requestedDisplayLocale = (currentLanguage || fallbackLocale).replace(/_/g, '-');
-    const displayLocale = resolveMomentLocale(requestedDisplayLocale, momentApi, fallbackLocale);
-    const requestedCalendarRulesLocale =
-        plugin.settings.calendarLocale === 'system-default' ? displayLocale : plugin.settings.calendarLocale;
-    const calendarRulesLocale = resolveMomentLocale(requestedCalendarRulesLocale, momentApi, displayLocale);
+    const { displayLocale, calendarRulesLocale } = resolveCalendarLocales(plugin.settings.calendarLocale, momentApi, currentLanguage);
+    const date: MomentInstance = momentApi().startOf('day').locale(displayLocale);
 
     if (kind === 'day' && plugin.settings.calendarIntegrationMode === 'daily-notes') {
         const dailyNoteSettings = getCoreDailyNoteSettings(plugin.app);

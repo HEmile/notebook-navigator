@@ -1191,7 +1191,7 @@ export const STRINGS_JA = {
             },
             calendarLocale: {
                 name: 'ロケール',
-                desc: '週番号と週の開始曜日を制御します。',
+                desc: 'カレンダーの日付形式、週番号、週の開始曜日を制御します。',
                 incompatibleWeekPatternWarning:
                     'ウィークリーノートのパターンがISO週トークン（"W" または "G"）を使用しています。カレンダーはこのロケールの週の開始曜日ではなく、月曜日から始まる週を表示します。',
                 options: {

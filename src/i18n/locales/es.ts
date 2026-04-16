@@ -1193,7 +1193,7 @@ export const STRINGS_ES = {
             },
             calendarLocale: {
                 name: 'Configuración regional',
-                desc: 'Controla la numeración de semanas y el primer día de la semana.',
+                desc: 'Controla el formato de fechas del calendario, la numeración de semanas y el primer día de la semana.',
                 incompatibleWeekPatternWarning:
                     'El patrón de notas semanales usa tokens de semana ISO ("W" o "G"). El calendario mostrará las semanas empezando en lunes en lugar del primer día de la semana de esta configuración regional.',
                 options: {

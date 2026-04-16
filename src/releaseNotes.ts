@@ -77,6 +77,14 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '2.5.8',
+        date: '2026-04-16',
+        showOnUpdate: true,
+        changed: [
+            'Calendar > Locale now also controls calendar date formatting. Set it to **Default** to follow the Obsidian interface language.'
+        ]
+    },
+    {
         version: '2.5.7',
         date: '2026-04-09',
         showOnUpdate: true,

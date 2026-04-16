@@ -51,7 +51,7 @@ import { getActiveVaultProfile } from '../../utils/vaultProfiles';
 import { createSettingGroupFactory } from '../settingGroups';
 import { addSettingSyncModeToggle } from '../syncModeToggle';
 import { createSubSettingsContainer, setElementVisible } from '../subSettings';
-import { getMomentApi, resolveMomentLocale, type MomentApi } from '../../utils/moment';
+import { getMomentApi, resolveCalendarLocales, type MomentApi } from '../../utils/moment';
 import { runAsyncAction } from '../../utils/async';
 import { CalendarTemplateModal } from '../../modals/CalendarTemplateModal';
 import { createInlineExternalLinkText } from './externalLink';
@@ -543,16 +543,8 @@ export function renderCalendarTab(context: SettingsTabContext): void {
         return folderPattern ? `${folderPattern}/${filePattern}` : filePattern;
     };
 
-    const resolveCalendarLocales = (momentApi: MomentApi): { displayLocale: string; calendarRulesLocale: string } => {
-        const currentLanguage = getCurrentLanguage();
-        const fallbackLocale = momentApi.locale() || 'en';
-        const requestedDisplayLocale = (currentLanguage || fallbackLocale).replace(/_/g, '-');
-        const displayLocale = resolveMomentLocale(requestedDisplayLocale, momentApi, fallbackLocale);
-        const requestedCalendarRulesLocale =
-            plugin.settings.calendarLocale === 'system-default' ? displayLocale : plugin.settings.calendarLocale;
-        const calendarRulesLocale = resolveMomentLocale(requestedCalendarRulesLocale, momentApi, displayLocale);
-
-        return { displayLocale, calendarRulesLocale };
+    const resolveSelectedCalendarLocales = (momentApi: MomentApi): { displayLocale: string; calendarRulesLocale: string } => {
+        return resolveCalendarLocales(plugin.settings.calendarLocale, momentApi, getCurrentLanguage());
     };
 
     const templateTargets = [
@@ -619,7 +611,7 @@ export function renderCalendarTab(context: SettingsTabContext): void {
             return;
         }
 
-        const { displayLocale, calendarRulesLocale } = resolveCalendarLocales(momentApi);
+        const { displayLocale, calendarRulesLocale } = resolveSelectedCalendarLocales(momentApi);
 
         const sampleDate = momentApi('2026-01-19', 'YYYY-MM-DD', true);
         if (!sampleDate.isValid()) {
@@ -698,7 +690,7 @@ export function renderCalendarTab(context: SettingsTabContext): void {
             return;
         }
 
-        const { calendarRulesLocale } = resolveCalendarLocales(momentApi);
+        const { calendarRulesLocale } = resolveSelectedCalendarLocales(momentApi);
         const localeData = momentApi().locale(calendarRulesLocale).localeData();
         const localeFirstDayOfWeek = localeData.firstDayOfWeek();
         const showWarning = doesCalendarCustomWeekPatternOverrideLocaleWeekStart(weekCustomPattern, localeFirstDayOfWeek);

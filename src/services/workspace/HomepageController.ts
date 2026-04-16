@@ -30,7 +30,7 @@ import {
 } from '../../utils/calendarNotes';
 import { getDailyNoteFile, getDailyNoteSettings } from '../../utils/dailyNotes';
 import { getCurrentLanguage } from '../../i18n';
-import { getMomentApi, resolveMomentLocale } from '../../utils/moment';
+import { getMomentApi, resolveCalendarLocales } from '../../utils/moment';
 import { getActiveVaultProfile } from '../../utils/vaultProfiles';
 
 // Indicates what triggered the homepage opening
@@ -234,7 +234,13 @@ export default class HomepageController {
             return null;
         }
 
-        const date = momentApi().startOf('day');
+        const currentLanguage = getCurrentLanguage();
+        const { displayLocale, calendarRulesLocale } = resolveCalendarLocales(
+            this.plugin.settings.calendarLocale,
+            momentApi,
+            currentLanguage
+        );
+        const date = momentApi().startOf('day').locale(displayLocale);
 
         if (kind === 'day' && this.plugin.settings.calendarIntegrationMode === 'daily-notes') {
             const dailyNoteSettings = getDailyNoteSettings(this.plugin.app);
@@ -245,13 +251,6 @@ export default class HomepageController {
             return getDailyNoteFile(this.plugin.app, date, dailyNoteSettings);
         }
 
-        const currentLanguage = getCurrentLanguage();
-        const fallbackLocale = momentApi.locale() || 'en';
-        const requestedDisplayLocale = (currentLanguage || fallbackLocale).replace(/_/g, '-');
-        const displayLocale = resolveMomentLocale(requestedDisplayLocale, momentApi, fallbackLocale);
-        const requestedCalendarRulesLocale =
-            this.plugin.settings.calendarLocale === 'system-default' ? displayLocale : this.plugin.settings.calendarLocale;
-        const calendarRulesLocale = resolveMomentLocale(requestedCalendarRulesLocale, momentApi, displayLocale);
         const config = getCalendarNoteConfig(kind, this.plugin.settings);
         const momentPattern = buildCustomCalendarMomentPattern(config.calendarCustomFilePattern, config.fallbackPattern);
 

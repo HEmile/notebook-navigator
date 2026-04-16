@@ -1192,7 +1192,7 @@ export const STRINGS_TR = {
             },
             calendarLocale: {
                 name: 'Dil',
-                desc: 'Hafta numaralandırmasını ve haftanın ilk gününü kontrol eder.',
+                desc: 'Takvim tarih biçimlendirmesini, hafta numaralandırmasını ve haftanın ilk gününü kontrol eder.',
                 incompatibleWeekPatternWarning:
                     'Haftalık not deseni ISO hafta belirteçleri ("W" veya "G") kullanıyor. Takvim, bu dilin haftanın ilk günü yerine Pazartesi\'den başlayan haftaları gösterecek.',
                 options: {
