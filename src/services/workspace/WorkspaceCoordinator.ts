@@ -54,22 +54,33 @@ export default class WorkspaceCoordinator {
             return null;
         }
 
-        const leaf = await workspace.ensureSideLeaf(NOTEBOOK_NAVIGATOR_CALENDAR_VIEW, 'right', {
-            active: activate,
-            reveal,
-            split: true
-        });
-        if (!shouldContinue()) {
-            this.detachCalendarViewLeaves();
+        const existingLeaf = workspace.getLeavesOfType(NOTEBOOK_NAVIGATOR_CALENDAR_VIEW)[0] ?? null;
+        if (existingLeaf) {
+            if (reveal) {
+                await workspace.revealLeaf(existingLeaf);
+            } else if (activate) {
+                workspace.setActiveLeaf(existingLeaf, { focus: true });
+            }
+
+            return shouldContinue() ? existingLeaf : null;
+        }
+
+        const leaf = workspace.getRightLeaf(false);
+        if (!leaf) {
             return null;
         }
 
-        const leaves = workspace.getLeavesOfType(NOTEBOOK_NAVIGATOR_CALENDAR_VIEW);
-        for (const existingLeaf of leaves) {
-            if (existingLeaf === leaf) {
-                continue;
-            }
-            existingLeaf.detach();
+        await leaf.setViewState({
+            type: NOTEBOOK_NAVIGATOR_CALENDAR_VIEW,
+            active: activate
+        });
+        if (!shouldContinue()) {
+            leaf.detach();
+            return null;
+        }
+
+        if (reveal) {
+            await workspace.revealLeaf(leaf);
         }
 
         return leaf;

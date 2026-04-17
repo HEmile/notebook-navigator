@@ -83,6 +83,9 @@ const RELEASE_NOTES: ReleaseNote[] = [
         changed: [
             'Calendar auto-reveal now changes the month view only for daily, weekly, and monthly notes.',
             'Calendar > Locale now also controls calendar date formatting. Set it to **Default** to follow the Obsidian interface language.'
+        ],
+        fixed: [
+            'Fixed the calendar view in the right sidebar being moved to the bottom and resized when the plugin reloads after an update.'
         ]
     },
     {
