@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isDateFilterModifierPressed } from '../../src/components/calendar/calendarUtils';
+import { isDateFilterModifierPressed, shouldAutoRevealCalendarNoteKind } from '../../src/components/calendar/calendarUtils';
 
 describe('calendarUtils', () => {
     describe('isDateFilterModifierPressed', () => {
@@ -85,6 +85,19 @@ describe('calendarUtils', () => {
                     false
                 )
             ).toBe(false);
+        });
+    });
+
+    describe('shouldAutoRevealCalendarNoteKind', () => {
+        it('keeps auto-reveal enabled for day, week, and month notes', () => {
+            expect(shouldAutoRevealCalendarNoteKind('day')).toBe(true);
+            expect(shouldAutoRevealCalendarNoteKind('week')).toBe(true);
+            expect(shouldAutoRevealCalendarNoteKind('month')).toBe(true);
+        });
+
+        it('disables auto-reveal for quarter and year notes', () => {
+            expect(shouldAutoRevealCalendarNoteKind('quarter')).toBe(false);
+            expect(shouldAutoRevealCalendarNoteKind('year')).toBe(false);
         });
     });
 });

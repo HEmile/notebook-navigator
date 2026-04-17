@@ -81,6 +81,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
         date: '2026-04-16',
         showOnUpdate: true,
         changed: [
+            'Calendar auto-reveal now changes the month view only for daily, weekly, and monthly notes.',
             'Calendar > Locale now also controls calendar date formatting. Set it to **Default** to follow the Obsidian interface language.'
         ]
     },

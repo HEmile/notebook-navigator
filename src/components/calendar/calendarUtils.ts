@@ -53,6 +53,10 @@ export function buildDateFilterToken(kind: CalendarNoteKind, date: MomentInstanc
     }
 }
 
+export function shouldAutoRevealCalendarNoteKind(kind: CalendarNoteKind): boolean {
+    return kind === 'day' || kind === 'week' || kind === 'month';
+}
+
 export function isDateFilterModifierPressed(
     event: { altKey: boolean; ctrlKey: boolean; metaKey: boolean },
     modifierSetting: MultiSelectModifier,

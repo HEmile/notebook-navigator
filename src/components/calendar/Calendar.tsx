@@ -51,6 +51,7 @@ import {
     formatIsoDate,
     isDateFilterModifierPressed,
     resolveCalendarWeekWindow,
+    shouldAutoRevealCalendarNoteKind,
     setUnfinishedTaskCount
 } from './calendarUtils';
 import { useCalendarFeatureImages, type CalendarFeatureImageTarget } from './useCalendarFeatureImages';
@@ -77,6 +78,11 @@ interface CalendarYearMonthBaseEntry {
     key: string;
     monthIndex: number;
     shortLabel: string;
+}
+
+interface ActiveEditorCalendarTarget {
+    date: MomentInstance;
+    shouldAutoReveal: boolean;
 }
 
 function getWorkspaceActiveFile(workspace: Workspace): TFile | null {
@@ -587,8 +593,8 @@ export function Calendar({
         ]
     );
 
-    const resolveActiveEditorCustomNoteDate = useCallback(
-        (filePath: string): MomentInstance | null => {
+    const resolveActiveEditorCustomNoteTarget = useCallback(
+        (filePath: string): ActiveEditorCalendarTarget | null => {
             if (!momentApi || settings.calendarIntegrationMode !== 'notebook-navigator') {
                 return null;
             }
@@ -626,16 +632,28 @@ export function Calendar({
 
                 switch (kind) {
                     case 'week':
-                        return parsedDate
-                            .clone()
-                            .locale(calendarRulesLocale)
-                            .startOf(getCalendarCustomWeekAnchorUnit(resolverContext.momentPattern));
+                        return {
+                            date: parsedDate
+                                .clone()
+                                .locale(calendarRulesLocale)
+                                .startOf(getCalendarCustomWeekAnchorUnit(resolverContext.momentPattern)),
+                            shouldAutoReveal: shouldAutoRevealCalendarNoteKind(kind)
+                        };
                     case 'month':
-                        return parsedDate.clone().locale(displayLocale).startOf('month');
+                        return {
+                            date: parsedDate.clone().locale(displayLocale).startOf('month'),
+                            shouldAutoReveal: shouldAutoRevealCalendarNoteKind(kind)
+                        };
                     case 'quarter':
-                        return parsedDate.clone().locale(displayLocale).startOf('quarter');
+                        return {
+                            date: parsedDate.clone().locale(displayLocale).startOf('quarter'),
+                            shouldAutoReveal: shouldAutoRevealCalendarNoteKind(kind)
+                        };
                     case 'year':
-                        return parsedDate.clone().locale(displayLocale).startOf('year');
+                        return {
+                            date: parsedDate.clone().locale(displayLocale).startOf('year'),
+                            shouldAutoReveal: shouldAutoRevealCalendarNoteKind(kind)
+                        };
                 }
             }
 
@@ -710,7 +728,7 @@ export function Calendar({
         weeksToShowSetting,
         weekStartsOn
     ]);
-    const activeEditorDate = useMemo(() => {
+    const activeEditorCalendarTarget = useMemo<ActiveEditorCalendarTarget | null>(() => {
         if (!activeEditorFilePath) {
             return null;
         }
@@ -718,18 +736,31 @@ export function Calendar({
         for (const week of weeks) {
             for (const day of week.days) {
                 if (day.file?.path === activeEditorFilePath) {
-                    return day.date.clone().startOf('day').locale(displayLocale);
+                    return {
+                        date: day.date.clone().startOf('day').locale(displayLocale),
+                        shouldAutoReveal: true
+                    };
                 }
             }
         }
 
-        return resolveActiveEditorCalendarDayDate(activeEditorFilePath) ?? resolveActiveEditorCustomNoteDate(activeEditorFilePath);
-    }, [activeEditorFilePath, displayLocale, resolveActiveEditorCalendarDayDate, resolveActiveEditorCustomNoteDate, weeks]);
+        const activeEditorDayDate = resolveActiveEditorCalendarDayDate(activeEditorFilePath);
+        if (activeEditorDayDate) {
+            return {
+                date: activeEditorDayDate,
+                shouldAutoReveal: true
+            };
+        }
+
+        return resolveActiveEditorCustomNoteTarget(activeEditorFilePath);
+    }, [activeEditorFilePath, displayLocale, resolveActiveEditorCalendarDayDate, resolveActiveEditorCustomNoteTarget, weeks]);
     const activeEditorDateKey =
-        activeEditorFilePath && activeEditorDate ? `${activeEditorFilePath}::${formatIsoDate(activeEditorDate)}` : null;
+        activeEditorFilePath && activeEditorCalendarTarget
+            ? `${activeEditorFilePath}::${formatIsoDate(activeEditorCalendarTarget.date)}`
+            : null;
 
     useLayoutEffect(() => {
-        if (!activeEditorDate || !activeEditorDateKey) {
+        if (!activeEditorCalendarTarget || !activeEditorDateKey || !activeEditorCalendarTarget.shouldAutoReveal) {
             lastAppliedActiveEditorDateKeyRef.current = null;
             return;
         }
@@ -740,7 +771,7 @@ export function Calendar({
 
         lastAppliedActiveEditorDateKeyRef.current = activeEditorDateKey;
         setCursorDate(previousCursorDate => {
-            const nextCursorDate = activeEditorDate.clone().startOf('day').locale(displayLocale);
+            const nextCursorDate = activeEditorCalendarTarget.date.clone().startOf('day').locale(displayLocale);
             if (
                 previousCursorDate &&
                 previousCursorDate.year() === nextCursorDate.year() &&
@@ -751,7 +782,7 @@ export function Calendar({
 
             return nextCursorDate;
         });
-    }, [activeEditorDate, activeEditorDateKey, activeEditorFilePath, displayLocale]);
+    }, [activeEditorCalendarTarget, activeEditorDateKey, displayLocale]);
 
     const visibleDayNotePaths = useMemo(() => {
         const paths = new Set<string>();
