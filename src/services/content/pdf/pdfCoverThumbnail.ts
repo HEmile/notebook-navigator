@@ -21,6 +21,7 @@ import { LIMITS } from '../../../constants/limits';
 import { isPromiseLike } from '../../../utils/async';
 import { isRecord } from '../../../utils/typeGuards';
 import { createOnceLogger, createRenderLimiter } from '../thumbnail/thumbnailRuntimeUtils';
+import { clearPdfProcessingInProgress, markPdfProcessingInProgress } from './pdfCrashDiagnostics';
 import { preflightPdfCoverThumbnailStageA, preflightPdfCoverThumbnailStageB, type PdfByteScanMetrics } from './pdfPreflight';
 
 // Options for rendering a PDF cover page thumbnail
@@ -303,6 +304,7 @@ export async function renderPdfCoverThumbnail(app: App, pdfFile: TFile, options:
 
     clearWorkerIdleTimer();
     const release = await renderLimiter.acquire();
+    const pdfProcessingDiagnosticHandle = markPdfProcessingInProgress(pdfFile.path);
 
     let doc: PdfDocument | null = null;
     let page: PdfPage | null = null;
@@ -489,6 +491,9 @@ export async function renderPdfCoverThumbnail(app: App, pdfFile: TFile, options:
     } catch {
         return null;
     } finally {
+        // PDF_CRASH_DIAGNOSTICS: normal exits clear the active PDF marker.
+        clearPdfProcessingInProgress(pdfProcessingDiagnosticHandle);
+
         try {
             page?.cleanup?.();
         } catch {

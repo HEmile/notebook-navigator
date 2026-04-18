@@ -72,6 +72,7 @@ import {
 import { NOTEBOOK_NAVIGATOR_ICON_ID, NOTEBOOK_NAVIGATOR_ICON_SVG } from './constants/notebookNavigatorIcon';
 import { PluginSettingsController } from './services/settings/PluginSettingsController';
 import { PluginPreferencesController } from './services/settings/PluginPreferencesController';
+import { consumePendingPdfProcessingDiagnostic } from './services/content/pdf/pdfCrashDiagnostics';
 import { applyModifiedSettingsTransfer, createModifiedSettingsTransfer } from './settings/transfer';
 
 /**
@@ -488,6 +489,20 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
                 if (isFirstLaunch) {
                     const { WelcomeModal } = await import('./modals/WelcomeModal');
                     new WelcomeModal(this.app).open();
+                }
+
+                // PDF_CRASH_DIAGNOSTICS: show the last unfinished mobile PDF path from the previous session.
+                const pendingPdfPath = consumePendingPdfProcessingDiagnostic();
+                if (pendingPdfPath) {
+                    const { InfoModal } = await import('./modals/InfoModal');
+                    new InfoModal(this.app, {
+                        title: 'PDF processing from previous run',
+                        intro: 'The previous app session ended while this PDF thumbnail was being processed.',
+                        items: [
+                            `\`${pendingPdfPath}\``,
+                            'This can also happen if Obsidian or Android closed the app before cleanup finished.'
+                        ]
+                    }).open();
                 }
 
                 // Check for version updates after a short delay.
