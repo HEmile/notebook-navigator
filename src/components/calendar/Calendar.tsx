@@ -1057,14 +1057,13 @@ export function Calendar({
 
     const showWeekNumbers = settings.calendarShowWeekNumber;
     const highlightToday = settings.calendarHighlightToday;
+    const useRightSidebarYearHeaderInlineDetails = isRightSidebar && showYearCalendar;
     const showYearInHeader = !isRightSidebar || !showYearCalendar;
-    const useRightSidebarYearCalendarHeaderLayout = isRightSidebar && showYearCalendar;
-    const useSplitHeaderLayout = !useRightSidebarYearCalendarHeaderLayout;
-    const showHeaderHelpButton = settings.showInfoButtons && !isMobile && useRightSidebarYearCalendarHeaderLayout;
-    const showInlineMonthNavigation = useRightSidebarYearCalendarHeaderLayout;
-    const showCompactQuarterInMonthRow = useRightSidebarYearCalendarHeaderLayout && settings.calendarShowQuarter;
-    const showHeaderPeriodDetails = useSplitHeaderLayout;
-    const showHeaderNavRow = useSplitHeaderLayout;
+    const showHeaderHelpButton = settings.showInfoButtons && !isMobile && useRightSidebarYearHeaderInlineDetails;
+    const showInlineMonthNavigation = false;
+    const showCompactQuarterInMonthRow = useRightSidebarYearHeaderInlineDetails && settings.calendarShowQuarter;
+    const showHeaderPeriodDetails = !useRightSidebarYearHeaderInlineDetails;
+    const showHeaderNavRow = true;
     const showCompactHeaderInlineInfoButton = showHeaderHelpButton;
     const showInfoInNavRow = false;
 
@@ -1558,8 +1557,7 @@ export function Calendar({
                 aria-labelledby={calendarLabelId}
                 data-highlight-today={highlightToday ? 'true' : undefined}
                 data-weeknumbers={showWeekNumbers ? 'true' : undefined}
-                data-compact-header={useRightSidebarYearCalendarHeaderLayout ? 'true' : undefined}
-                data-split-header={useSplitHeaderLayout ? 'true' : undefined}
+                data-split-header="true"
             >
                 <span id={calendarLabelId} className="nn-visually-hidden">
                     {strings.navigationCalendar.ariaLabel}

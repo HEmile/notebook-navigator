@@ -78,14 +78,17 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
     {
         version: '2.5.8',
-        date: '2026-04-16',
+        date: '2026-04-19',
         showOnUpdate: true,
+        improved: [
+            'Calendar in the right sidebar now always shows a Today button in top right corner.'
+        ],
         changed: [
-            'Calendar auto-reveal now changes the month view only for daily, weekly, and monthly notes.',
-            'Calendar > Locale now also controls calendar date formatting. Set it to **Default** to follow the Obsidian interface language.'
+            'Calendar auto-reveal no longer changes the current month for quarterly and yearly notes.',
+            'Calendar > Locale now also controls daily note file name formatting to match other calendar plugins.'
         ],
         fixed: [
-            'Fixed the calendar view in the right sidebar being moved to the bottom and resized when the plugin reloads after an update.'
+            'Fixed the calendar view in the right sidebar being moved to the bottom when the plugin reloads after an update.'
         ]
     },
     {
