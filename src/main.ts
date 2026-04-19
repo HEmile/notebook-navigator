@@ -1391,7 +1391,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             const { WhatsNewModal } = await import('./modals/WhatsNewModal');
 
             const releaseNotes = getLatestReleaseNotes();
-            new WhatsNewModal(this.app, releaseNotes, this.settings.dateFormat, () => {
+            new WhatsNewModal(this.app, releaseNotes, () => {
                 // Save version after 1 second delay when user closes the modal
                 setTimeout(() => {
                     // Wrap in runAsyncAction to handle async without blocking callback
@@ -1439,7 +1439,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             }
 
             // Show the info modal when version changes
-            new WhatsNewModal(this.app, releaseNotes, this.settings.dateFormat, () => {
+            new WhatsNewModal(this.app, releaseNotes, () => {
                 // Save version after 1 second delay when user closes the modal
                 setTimeout(() => {
                     // Wrap in runAsyncAction to handle async without blocking callback

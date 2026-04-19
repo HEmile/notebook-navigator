@@ -80,15 +80,13 @@ const RELEASE_NOTES: ReleaseNote[] = [
         version: '2.5.8',
         date: '2026-04-19',
         showOnUpdate: true,
-        improved: [
-            'Calendar in the right sidebar now always shows a Today button in top right corner.'
-        ],
+        improved: ['Calendar in the right sidebar now always shows a Today button in top right corner.'],
         changed: [
             'Calendar auto-reveal no longer changes the current month for quarterly and yearly notes.',
             'Calendar > Locale now also controls daily note file name formatting to match other calendar plugins.'
         ],
         fixed: [
-            'Fixed the calendar view in the right sidebar being moved to the bottom when the plugin reloads after an update.'
+            'The calendar in right sidebar will now keep its position after plugin reloads or calendar is moved to left sidebar and back.'
         ]
     },
     {

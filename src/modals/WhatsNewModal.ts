@@ -18,15 +18,14 @@
 
 import { App, Modal } from 'obsidian';
 import { getReleaseBannerUrl, SUPPORT_BUY_ME_A_COFFEE_URL } from '../constants/urls';
-import { strings } from '../i18n';
+import { getCurrentLanguage, strings } from '../i18n';
 import { ReleaseNote } from '../releaseNotes';
-import { DateUtils } from '../utils/dateUtils';
 import { addAsyncEventListener } from '../utils/domEventListeners';
+import { DateUtils } from '../utils/dateUtils';
 import { getYoutubeThumbnailUrl, getYoutubeVideoId } from '../utils/youtubeUtils';
 
 export class WhatsNewModal extends Modal {
     private releaseNotes: ReleaseNote[];
-    private dateFormat: string;
     private thanksButton: HTMLButtonElement | null = null;
     private onCloseCallback?: () => void;
     private domDisposers: (() => void)[] = [];
@@ -146,10 +145,9 @@ export class WhatsNewModal extends Modal {
         thumbnail.createDiv({ cls: 'nn-whats-new-youtube-play' }).setAttr('aria-hidden', 'true');
     }
 
-    constructor(app: App, releaseNotes: ReleaseNote[], dateFormat: string, onCloseCallback?: () => void) {
+    constructor(app: App, releaseNotes: ReleaseNote[], onCloseCallback?: () => void) {
         super(app);
         this.releaseNotes = releaseNotes;
-        this.dateFormat = dateFormat;
         this.onCloseCallback = onCloseCallback;
     }
 
@@ -164,21 +162,18 @@ export class WhatsNewModal extends Modal {
 
         const scrollContainer = contentEl.createDiv('nn-whats-new-scroll');
 
+        const displayLocale = (getCurrentLanguage() || 'en').replace(/_/g, '-');
+
         this.releaseNotes.forEach(note => {
             const versionContainer = scrollContainer.createDiv('nn-whats-new-version');
+            let headerText = `Version ${note.version}`;
 
-            versionContainer.createEl('h3', {
-                text: `Version ${note.version}`
-            });
-
-            // Parse the date string and format according to user preference
-            const parsedDate = new Date(note.date);
-            const formattedDate = DateUtils.formatDate(parsedDate.getTime(), this.dateFormat);
-
-            versionContainer.createEl('small', {
-                text: formattedDate,
-                cls: 'nn-whats-new-date'
-            });
+            const parsedDate = DateUtils.parseLocalDayKey(note.date);
+            if (parsedDate) {
+                const formattedDate = DateUtils.formatLocalizedMonthDay(parsedDate, displayLocale);
+                headerText = `${headerText} (${formattedDate})`;
+            }
+            versionContainer.createEl('h3', { text: headerText });
 
             const bannerUrl = getReleaseBannerUrl(note.bannerUrl, note.version);
             if (bannerUrl) {

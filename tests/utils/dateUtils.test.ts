@@ -159,6 +159,15 @@ vi.mock('obsidian', () => ({
 
 import { DateUtils } from '../../src/utils/dateUtils';
 
+describe('DateUtils.formatLocalizedMonthDay', () => {
+    it.each([
+        ['en-US', 'April 19'],
+        ['sv-SE', '19 april']
+    ])('formats localized month/day order for %s', (locale, expected) => {
+        expect(DateUtils.formatLocalizedMonthDay(new Date(2026, 3, 19, 12, 0, 0, 0), locale)).toBe(expected);
+    });
+});
+
 describe('DateUtils.parseFrontmatterDate', () => {
     beforeEach(() => {
         Object.defineProperty(globalThis, 'window', {

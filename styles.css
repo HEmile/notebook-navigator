@@ -5389,22 +5389,23 @@ body.nn-resizing {
 /* Version container */
 .nn-whats-new-version {
     margin-bottom: 16px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--background-modifier-border);
 }
 
-/* Version container - last child no border */
+/* Version container - last child no margin */
 .nn-whats-new-version:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 /* Version header */
 .nn-whats-new-version h3 {
+    display: block;
     font-size: 14px;
     font-weight: 600;
     color: var(--nn-theme-foreground);
+    background: var(--background-secondary);
     margin: 0 0 4px 0;
+    padding: 6px 10px;
+    border-radius: 6px;
 }
 
 /* Feature list */
@@ -5433,14 +5434,6 @@ body.nn-resizing {
     border-top: 1px solid var(--background-modifier-border);
     margin-top: 0;
     margin-bottom: 16px;
-}
-
-/* Version date */
-.nn-whats-new-date {
-    color: var(--nn-theme-foreground-muted);
-    font-size: 12px;
-    display: block;
-    margin-bottom: 8px;
 }
 
 /* Release banner image */
@@ -5623,13 +5616,9 @@ body.nn-resizing {
         font-size: 16px;
     }
 
-    /* Version header and date sizes on mobile */
+    /* Version header size on mobile */
     .nn-whats-new-version h3 {
         font-size: 15px;
-    }
-
-    .nn-whats-new-date {
-        font-size: 14px;
     }
 }
 
@@ -5651,11 +5640,6 @@ body.nn-resizing {
     /* Version header */
     .nn-whats-new-version h3 {
         font-size: 15px;
-    }
-
-    /* Date line */
-    .nn-whats-new-date {
-        font-size: 14px;
     }
 }
 /* Source: src/styles/sections/modal-icon-picker.css */

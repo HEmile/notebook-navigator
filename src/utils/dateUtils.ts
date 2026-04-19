@@ -104,6 +104,13 @@ export class DateUtils {
         return DateUtils.formatWithFallback(date, dateFormat, 'date');
     }
 
+    static formatLocalizedMonthDay(date: Date, locale: string): string {
+        return new Intl.DateTimeFormat(locale || undefined, {
+            month: 'long',
+            day: 'numeric'
+        }).format(date);
+    }
+
     /**
      * Capitalize the first letter of a string
      * @param str - String to capitalize
