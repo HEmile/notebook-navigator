@@ -611,7 +611,7 @@ export function renderCalendarTab(context: SettingsTabContext): void {
             return;
         }
 
-        const { displayLocale, calendarRulesLocale } = resolveSelectedCalendarLocales(momentApi);
+        const { calendarRulesLocale } = resolveSelectedCalendarLocales(momentApi);
 
         const sampleDate = momentApi('2026-01-19', 'YYYY-MM-DD', true);
         if (!sampleDate.isValid()) {
@@ -631,7 +631,13 @@ export function renderCalendarTab(context: SettingsTabContext): void {
             const fileFormatter = createCalendarCustomDateFormatter(filePattern);
 
             const momentPattern = folderPattern ? `${folderPattern}/${filePattern}` : filePattern;
-            const dateForPath = resolveCalendarCustomNotePathDate(kind, sampleDate, momentPattern, displayLocale, calendarRulesLocale);
+            const dateForPath = resolveCalendarCustomNotePathDate(
+                kind,
+                sampleDate,
+                momentPattern,
+                calendarRulesLocale,
+                calendarRulesLocale
+            );
             const folderSuffix = folderFormatter(dateForPath);
             const folderPath = normalizeCalendarVaultFolderPath(folderSuffix || '/');
             const folderPathRelative = folderPath === '/' ? '' : folderPath;

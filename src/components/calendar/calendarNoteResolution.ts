@@ -47,7 +47,7 @@ interface ResolveCalendarNotePathOptions {
     kind: CustomCalendarNoteKind;
     date: MomentInstance;
     resolverContext: CalendarNotePathResolverContext;
-    displayLocale: string;
+    calendarLocale: string;
     weekLocale: string;
     customCalendarRootFolderSettings: CalendarNoteRootFolderSettings;
     momentApi: MomentApi | null;
@@ -121,7 +121,7 @@ function parseWeeklyCalendarNoteDateFromPath({
     filePath,
     resolverContext,
     parseLocale,
-    displayLocale,
+    calendarLocale,
     weekLocale,
     customCalendarRootFolderSettings,
     momentApi
@@ -154,7 +154,7 @@ function parseWeeklyCalendarNoteDateFromPath({
             kind: 'week',
             date: parsedDate,
             resolverContext,
-            displayLocale,
+            calendarLocale,
             weekLocale,
             customCalendarRootFolderSettings,
             momentApi
@@ -180,7 +180,7 @@ export function resolveCalendarNotePath({
     kind,
     date,
     resolverContext,
-    displayLocale,
+    calendarLocale,
     weekLocale,
     customCalendarRootFolderSettings,
     momentApi
@@ -190,7 +190,7 @@ export function resolveCalendarNotePath({
         return null;
     }
 
-    const dateForPath = resolveCalendarCustomNotePathDate(kind, date, momentPattern, displayLocale, weekLocale);
+    const dateForPath = resolveCalendarCustomNotePathDate(kind, date, momentPattern, calendarLocale, weekLocale);
     return buildCustomCalendarFilePathForPattern(
         dateForPath,
         customCalendarRootFolderSettings,
@@ -204,7 +204,7 @@ export function getExistingCalendarNoteFile({
     kind,
     date,
     resolverContext,
-    displayLocale,
+    calendarLocale,
     weekLocale,
     customCalendarRootFolderSettings,
     momentApi
@@ -213,7 +213,7 @@ export function getExistingCalendarNoteFile({
         kind,
         date,
         resolverContext,
-        displayLocale,
+        calendarLocale,
         weekLocale,
         customCalendarRootFolderSettings,
         momentApi
@@ -230,7 +230,7 @@ export function parseCalendarNoteDateFromPath({
     filePath,
     kind,
     resolverContext,
-    displayLocale,
+    calendarLocale,
     weekLocale,
     customCalendarRootFolderSettings,
     momentApi,
@@ -251,7 +251,7 @@ export function parseCalendarNoteDateFromPath({
             filePath: normalizedFilePath,
             kind,
             resolverContext,
-            displayLocale,
+            calendarLocale,
             weekLocale,
             customCalendarRootFolderSettings,
             momentApi,
@@ -270,7 +270,7 @@ export function parseCalendarNoteDateFromPath({
         kind,
         date: parsedDate,
         resolverContext,
-        displayLocale,
+        calendarLocale,
         weekLocale,
         customCalendarRootFolderSettings,
         momentApi

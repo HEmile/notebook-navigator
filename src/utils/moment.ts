@@ -179,12 +179,13 @@ export function resolveCalendarLocales(
     currentLanguage: string = getCurrentLanguage()
 ): { displayLocale: string; calendarRulesLocale: string } {
     const fallbackLocale = momentApi?.locale() || 'en';
-    const requestedDisplayLocale =
-        calendarLocale === 'system-default' ? (currentLanguage || fallbackLocale).replace(/_/g, '-') : calendarLocale;
+    const requestedDisplayLocale = (currentLanguage || fallbackLocale).replace(/_/g, '-');
     const displayLocale = resolveMomentLocale(requestedDisplayLocale, momentApi, fallbackLocale);
+    const requestedCalendarRulesLocale = calendarLocale === 'system-default' ? displayLocale : calendarLocale;
+    const resolvedCalendarRulesLocale = resolveMomentLocale(requestedCalendarRulesLocale, momentApi, displayLocale);
 
     return {
         displayLocale,
-        calendarRulesLocale: displayLocale
+        calendarRulesLocale: resolvedCalendarRulesLocale
     };
 }

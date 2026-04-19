@@ -47,7 +47,7 @@ interface UseCalendarNoteActionsOptions {
     settings: NotebookNavigatorSettings;
     dailyNoteSettings: DailyNoteSettings | null;
     momentApi: MomentApi | null;
-    displayLocale: string;
+    calendarLocale: string;
     weekLocale: string;
     customCalendarRootFolderSettings: CalendarNoteRootFolderSettings;
     openFile: (file: TFile | null, options?: { active?: boolean }) => void;
@@ -73,7 +73,7 @@ export function useCalendarNoteActions({
     settings,
     dailyNoteSettings,
     momentApi,
-    displayLocale,
+    calendarLocale,
     weekLocale,
     customCalendarRootFolderSettings,
     openFile,
@@ -104,13 +104,13 @@ export function useCalendarNoteActions({
                 kind,
                 date,
                 resolverContext: getCustomCalendarResolverContext(kind),
-                displayLocale,
+                calendarLocale,
                 weekLocale,
                 customCalendarRootFolderSettings,
                 momentApi
             });
         },
-        [app, customCalendarRootFolderSettings, displayLocale, getCustomCalendarResolverContext, momentApi, weekLocale]
+        [app, calendarLocale, customCalendarRootFolderSettings, getCustomCalendarResolverContext, momentApi, weekLocale]
     );
 
     const openOrCreateCustomCalendarNote = useCallback(
@@ -126,7 +126,7 @@ export function useCalendarNoteActions({
                 kind,
                 date,
                 resolverContext,
-                displayLocale,
+                calendarLocale,
                 weekLocale,
                 customCalendarRootFolderSettings,
                 momentApi
@@ -182,7 +182,7 @@ export function useCalendarNoteActions({
             clearHoverTooltip,
             collapseNavigationIfMobile,
             customCalendarRootFolderSettings,
-            displayLocale,
+            calendarLocale,
             getCustomCalendarResolverContext,
             momentApi,
             onVaultChange,
@@ -207,10 +207,11 @@ export function useCalendarNoteActions({
                     return;
                 }
 
-                const filename = getDailyNoteFilename(date, resolvedDailySettings);
+                const localizedDate = date.clone().locale(calendarLocale);
+                const filename = getDailyNoteFilename(localizedDate, resolvedDailySettings);
 
                 const createFile = async () => {
-                    const created = await createDailyNote(app, date, resolvedDailySettings);
+                    const created = await createDailyNote(app, localizedDate, resolvedDailySettings);
                     if (!created) {
                         return;
                     }
@@ -240,7 +241,16 @@ export function useCalendarNoteActions({
 
             openOrCreateCustomCalendarNote('day', date, null);
         },
-        [app, collapseNavigationIfMobile, dailyNoteSettings, onVaultChange, openFile, openOrCreateCustomCalendarNote, settings]
+        [
+            app,
+            calendarLocale,
+            collapseNavigationIfMobile,
+            dailyNoteSettings,
+            onVaultChange,
+            openFile,
+            openOrCreateCustomCalendarNote,
+            settings
+        ]
     );
 
     const addCalendarNoteOpenOptions = useCallback(

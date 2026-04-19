@@ -511,8 +511,8 @@ async function openCalendarNoteForToday(plugin: NotebookNavigatorPlugin, kind: C
     }
 
     const currentLanguage = getCurrentLanguage();
-    const { displayLocale, calendarRulesLocale } = resolveCalendarLocales(plugin.settings.calendarLocale, momentApi, currentLanguage);
-    const date: MomentInstance = momentApi().startOf('day').locale(displayLocale);
+    const { calendarRulesLocale } = resolveCalendarLocales(plugin.settings.calendarLocale, momentApi, currentLanguage);
+    const date: MomentInstance = momentApi().startOf('day').locale(calendarRulesLocale);
 
     if (kind === 'day' && plugin.settings.calendarIntegrationMode === 'daily-notes') {
         const dailyNoteSettings = getCoreDailyNoteSettings(plugin.app);
@@ -562,7 +562,7 @@ async function openCalendarNoteForToday(plugin: NotebookNavigatorPlugin, kind: C
         return;
     }
 
-    const dateForPath = resolveCalendarCustomNotePathDate(kind, date, momentPattern, displayLocale, calendarRulesLocale);
+    const dateForPath = resolveCalendarCustomNotePathDate(kind, date, momentPattern, calendarRulesLocale, calendarRulesLocale);
 
     const settings = { calendarCustomRootFolder: getActiveVaultProfile(plugin.settings).periodicNotesFolder };
     const expected = buildCustomCalendarFilePathForPattern(dateForPath, settings, config.calendarCustomFilePattern, config.fallbackPattern);

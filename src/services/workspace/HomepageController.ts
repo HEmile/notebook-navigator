@@ -235,12 +235,8 @@ export default class HomepageController {
         }
 
         const currentLanguage = getCurrentLanguage();
-        const { displayLocale, calendarRulesLocale } = resolveCalendarLocales(
-            this.plugin.settings.calendarLocale,
-            momentApi,
-            currentLanguage
-        );
-        const date = momentApi().startOf('day').locale(displayLocale);
+        const { calendarRulesLocale } = resolveCalendarLocales(this.plugin.settings.calendarLocale, momentApi, currentLanguage);
+        const date = momentApi().startOf('day').locale(calendarRulesLocale);
 
         if (kind === 'day' && this.plugin.settings.calendarIntegrationMode === 'daily-notes') {
             const dailyNoteSettings = getDailyNoteSettings(this.plugin.app);
@@ -258,7 +254,7 @@ export default class HomepageController {
             return null;
         }
 
-        const dateForPath = resolveCalendarCustomNotePathDate(kind, date, momentPattern, displayLocale, calendarRulesLocale);
+        const dateForPath = resolveCalendarCustomNotePathDate(kind, date, momentPattern, calendarRulesLocale, calendarRulesLocale);
         const expected = buildCustomCalendarFilePathForPattern(
             dateForPath,
             { calendarCustomRootFolder: getActiveVaultProfile(this.plugin.settings).periodicNotesFolder },

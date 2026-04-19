@@ -59,11 +59,11 @@ function createMomentStub(locales: string[], currentLocale: string): MomentApi {
 }
 
 describe('resolveCalendarLocales', () => {
-    test('uses the selected calendar locale for display formatting and week rules', () => {
+    test('keeps the Obsidian language for display and uses the selected calendar locale for calendar rules', () => {
         const momentApi = createMomentStub(['en', 'ar'], 'ar');
 
         expect(resolveCalendarLocales('en', momentApi, 'ar')).toEqual({
-            displayLocale: 'en',
+            displayLocale: 'ar',
             calendarRulesLocale: 'en'
         });
     });

@@ -480,7 +480,7 @@ export function Calendar({
         customCalendarRootFolderSettings,
         dailyNoteSettings,
         dayNoteResolverContext,
-        displayLocale,
+        calendarRulesLocale,
         momentApi,
         settings.calendarIntegrationMode,
         vaultVersion
@@ -501,13 +501,13 @@ export function Calendar({
                     kind: 'day',
                     date,
                     resolverContext: dayNoteResolverContext,
-                    displayLocale,
+                    calendarLocale: calendarRulesLocale,
                     weekLocale: calendarRulesLocale,
                     customCalendarRootFolderSettings,
                     momentApi
                 });
             } else if (settings.calendarIntegrationMode === 'daily-notes' && dailyNoteSettings) {
-                existingFile = getDailyNoteFile(app, date, dailyNoteSettings);
+                existingFile = getDailyNoteFile(app, date.clone().locale(calendarRulesLocale), dailyNoteSettings);
             }
 
             dayNoteFileLookupCacheRef.current.set(iso, existingFile);
@@ -519,7 +519,6 @@ export function Calendar({
             customCalendarRootFolderSettings,
             dailyNoteSettings,
             dayNoteResolverContext,
-            displayLocale,
             calendarRulesLocale,
             momentApi,
             settings.calendarIntegrationMode
@@ -542,7 +541,7 @@ export function Calendar({
 
                 const folderPattern = escapeMomentLiteralPath(dailyNoteSettings.folder);
                 const fullPattern = folderPattern ? `${folderPattern}/${dailyNoteSettings.format}` : dailyNoteSettings.format;
-                const parsedDate = momentApi(pathWithoutExtension, fullPattern, displayLocale, true);
+                const parsedDate = momentApi(pathWithoutExtension, fullPattern, calendarRulesLocale, true);
                 if (!parsedDate.isValid()) {
                     return null;
                 }
@@ -568,7 +567,7 @@ export function Calendar({
             const fullPattern = rootFolderPattern
                 ? `${rootFolderPattern}/${dayNoteResolverContext.momentPattern}`
                 : dayNoteResolverContext.momentPattern;
-            const parsedDate = momentApi(pathWithoutExtension, fullPattern, displayLocale, true);
+            const parsedDate = momentApi(pathWithoutExtension, fullPattern, calendarRulesLocale, true);
             if (!parsedDate.isValid()) {
                 return null;
             }
@@ -586,7 +585,7 @@ export function Calendar({
             customCalendarRootFolderSettings.calendarCustomRootFolder,
             dailyNoteSettings,
             dayNoteResolverContext.momentPattern,
-            displayLocale,
+            calendarRulesLocale,
             getExistingDayNoteFile,
             momentApi,
             settings.calendarIntegrationMode
@@ -605,9 +604,9 @@ export function Calendar({
                 parseLocale: string;
             }[] = [
                 { kind: 'week', enabled: weekNotesEnabled, parseLocale: calendarRulesLocale },
-                { kind: 'month', enabled: monthNotesEnabled, parseLocale: displayLocale },
-                { kind: 'quarter', enabled: quarterNotesEnabled, parseLocale: displayLocale },
-                { kind: 'year', enabled: yearNotesEnabled, parseLocale: displayLocale }
+                { kind: 'month', enabled: monthNotesEnabled, parseLocale: calendarRulesLocale },
+                { kind: 'quarter', enabled: quarterNotesEnabled, parseLocale: calendarRulesLocale },
+                { kind: 'year', enabled: yearNotesEnabled, parseLocale: calendarRulesLocale }
             ];
 
             for (const { enabled, kind, parseLocale } of activePeriodKinds) {
@@ -620,7 +619,7 @@ export function Calendar({
                     filePath,
                     kind,
                     resolverContext,
-                    displayLocale,
+                    calendarLocale: calendarRulesLocale,
                     weekLocale: calendarRulesLocale,
                     customCalendarRootFolderSettings,
                     momentApi,
@@ -1036,7 +1035,7 @@ export function Calendar({
             settings,
             dailyNoteSettings,
             momentApi,
-            displayLocale,
+            calendarLocale: calendarRulesLocale,
             weekLocale: calendarRulesLocale,
             customCalendarRootFolderSettings,
             openFile,

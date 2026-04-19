@@ -60,14 +60,14 @@ describe('calendar note locale policy', () => {
         return stub;
     };
 
-    test('localizes day/month/quarter/year path dates', () => {
-        const displayLocale = 'fr';
+    test('localizes day/month/quarter/year path dates with the calendar locale', () => {
+        const calendarLocale = 'fr';
 
         for (const kind of ['day', 'month', 'quarter', 'year'] as const) {
             const context = { localeCalls: [] as string[], startOfCalls: [] as string[] };
             const date = createMoment(context);
-            resolveCalendarCustomNotePathDate(kind, date, 'YYYY/MM', displayLocale);
-            expect(context.localeCalls).toEqual([displayLocale]);
+            resolveCalendarCustomNotePathDate(kind, date, 'YYYY/MM', calendarLocale);
+            expect(context.localeCalls).toEqual([calendarLocale]);
             expect(context.startOfCalls).toEqual([]);
         }
     });
