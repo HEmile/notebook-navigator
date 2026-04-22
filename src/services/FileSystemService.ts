@@ -361,8 +361,8 @@ export class FileSystemOperations {
             const { getFilesForTag } = await import('../utils/fileFinder');
             currentFiles = getFilesForTag(selectionContext.selectedTag, settings, this.app, this.getTagTreeService());
         } else if (selectionContext.selectionType === ItemType.TOPIC && selectionContext.selectedTopic) {
-            const { getFilesForTopic } = await import('../utils/fileFinder');
-            currentFiles = getFilesForTopic(selectionContext.selectedTopic, settings, this.app, this.getTopicService());
+            const { getFilesForTopicByPath } = await import('../utils/fileFinder');
+            currentFiles = getFilesForTopicByPath(selectionContext.selectedTopic, settings, this.app, this.getTopicService());
         }
         // Find next file to select
         let nextFileToSelect: TFile | null = null;
