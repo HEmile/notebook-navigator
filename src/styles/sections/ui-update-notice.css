@@ -1,0 +1,102 @@
+/* Source: src/styles/sections/ui-update-notice.css */
+
+/* ========================================================================
+   Update notice banner
+   ======================================================================== */
+
+.nn-update-banner {
+    position: absolute;
+    top: calc(var(--nn-date-header-height-mobile, var(--nn-date-header-height)) + 8px);
+    left: 50%;
+    transform: translate(-50%, 0);
+    z-index: 10;
+    min-width: 220px;
+    max-width: calc(100% - 32px);
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    padding: 12px 20px;
+    height: auto;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font: inherit;
+    text-align: left;
+    opacity: 1;
+    transition:
+        opacity 0.4s ease,
+        transform 0.4s ease;
+}
+
+.nn-split-container .nn-update-banner {
+    background: var(--interactive-accent);
+    border: none;
+    color: var(--text-on-accent);
+    padding: 12px 20px;
+    appearance: none;
+}
+
+.nn-update-banner:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 2px var(--background-primary),
+        0 0 0 4px var(--interactive-accent),
+        0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.nn-update-banner.fade-out {
+    opacity: 0;
+    transform: translate(-50%, -18px);
+}
+
+.nn-update-banner__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nn-update-banner__label {
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.nn-update-banner__instruction {
+    font-size: 11px;
+    color: var(--text-on-accent);
+    opacity: 0.9;
+}
+
+.nn-update-status {
+    margin-top: 6px;
+    font-weight: 600;
+    color: var(--color-red);
+}
+
+.nn-update-status.is-hidden {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .nn-update-banner {
+        left: 8px;
+        right: 8px;
+        transform: none;
+        max-width: none;
+        width: auto;
+        justify-content: center;
+        top: 8px;
+    }
+
+    .nn-update-banner__text {
+        align-items: center;
+        text-align: center;
+    }
+
+    .nn-update-banner.fade-out {
+        transform: translateY(-12px);
+    }
+}

@@ -1,0 +1,49 @@
+/* Source: src/styles/sections/state-context-menu.css */
+
+/* ========================================================================
+   Context Menu States
+   ======================================================================== */
+
+/* Context menu active folder - prepares for outline */
+.nn-navitem.nn-context-menu-active {
+    position: relative;
+}
+
+/* Context menu outline for folders - shows which item menu affects */
+.nn-navitem.nn-context-menu-active:not(.nn-selected)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    bottom: 0;
+    /* Use pre-composited solid color for consistent border appearance */
+    border: 2px solid var(--nn-computed-navitem-selected-bg, var(--nn-theme-navitem-selected-bg));
+    border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Context menu active file - prepares for outline */
+.nn-file.nn-context-menu-active .nn-file-content {
+    position: relative;
+}
+
+/* Context menu outline for files - shows which item menu affects */
+.nn-file.nn-context-menu-active:not(.nn-selected) .nn-file-content::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    bottom: 0; /* Extend to bottom edge to cover separator space */
+    /* Use pre-composited solid color for consistent border appearance */
+    border: 2px solid var(--nn-computed-navitem-selected-bg, var(--nn-theme-navitem-selected-bg));
+    border-radius: min(16px, var(--nn-theme-file-border-radius));
+    pointer-events: none;
+    z-index: 10;
+}
+
+.nn-file.nn-compact.nn-context-menu-active:not(.nn-selected) .nn-file-content::after {
+    border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+}

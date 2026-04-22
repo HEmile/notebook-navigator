@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,144 +16,411 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { DEFAULT_CUSTOM_COLORS } from '../constants/colorPalette';
 import { getDefaultKeyboardShortcuts } from '../utils/keyboardShortcuts';
 import { FILE_VISIBILITY } from '../utils/fileTypeUtils';
-import { NAVPANE_MEASUREMENTS, type PinnedNotes } from '../types';
+import { LISTPANE_MEASUREMENTS, NAVPANE_MEASUREMENTS, type PinnedNotes } from '../types';
+import { DEFAULT_UI_SCALE } from '../utils/uiScale';
 import type { FolderAppearance, TagAppearance } from '../hooks/useListPaneAppearance';
-import type { NotebookNavigatorSettings } from './types';
+import { SYNC_MODE_SETTING_IDS, type NavRainbowSettings, type NotebookNavigatorSettings, type SettingSyncMode } from './types';
+import { sanitizeRecord } from '../utils/recordUtils';
+import {
+    DEFAULT_CALENDAR_CUSTOM_FILE_PATTERN,
+    DEFAULT_CALENDAR_CUSTOM_MONTH_PATTERN,
+    DEFAULT_CALENDAR_CUSTOM_QUARTER_PATTERN,
+    DEFAULT_CALENDAR_CUSTOM_WEEK_PATTERN,
+    DEFAULT_CALENDAR_CUSTOM_YEAR_PATTERN
+} from '../utils/calendarCustomNotePatterns';
+
+const defaultSettingsSync = sanitizeRecord<SettingSyncMode>(undefined);
+SYNC_MODE_SETTING_IDS.forEach(settingId => {
+    defaultSettingsSync[settingId] = 'synced';
+});
+
+const NAV_RAINBOW_FIRST_COLOR_DEFAULT = '#ef4444';
+const NAV_RAINBOW_LAST_COLOR_DEFAULT = '#8b5cf6';
+const NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT = '#fb7185';
+const NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT = '#c084fc';
+const UNFINISHED_TASK_BACKGROUND_COLOR_DEFAULT = '#ef000050';
+
+export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
+    mode: 'none',
+    balanceHueLuminance: true,
+    separateThemeColors: false,
+
+    shortcuts: {
+        enabled: false,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        transitionStyle: 'rgb'
+    },
+
+    recent: {
+        enabled: false,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        transitionStyle: 'rgb'
+    },
+
+    folders: {
+        enabled: true,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT,
+        transitionStyle: 'hue',
+        scope: 'root'
+    },
+
+    tags: {
+        enabled: false,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT,
+        transitionStyle: 'hue',
+        scope: 'root'
+    },
+
+    properties: {
+        enabled: false,
+        firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
+        lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT,
+        transitionStyle: 'hue',
+        scope: 'root'
+    }
+};
+
+function createDefaultNavRainbowSettings(): NavRainbowSettings {
+    return {
+        mode: NAV_RAINBOW_DEFAULTS.mode,
+        balanceHueLuminance: NAV_RAINBOW_DEFAULTS.balanceHueLuminance,
+        separateThemeColors: NAV_RAINBOW_DEFAULTS.separateThemeColors,
+        shortcuts: { ...NAV_RAINBOW_DEFAULTS.shortcuts },
+        recent: { ...NAV_RAINBOW_DEFAULTS.recent },
+        folders: { ...NAV_RAINBOW_DEFAULTS.folders },
+        tags: { ...NAV_RAINBOW_DEFAULTS.tags },
+        properties: { ...NAV_RAINBOW_DEFAULTS.properties }
+    };
+}
 
 /**
  * Default settings for the plugin
  * Used when plugin is first installed or settings are reset
  */
 export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
-    // General tab - Startup & layout
-    startView: 'files',
-    showTooltips: false,
-
-    // General tab - Homepage
-    homepage: null,
-    mobileHomepage: null,
-    useMobileHomepage: false,
+    // General tab - Filtering
+    vaultProfiles: [
+        {
+            id: 'default',
+            name: '',
+            fileVisibility: FILE_VISIBILITY.SUPPORTED,
+            propertyKeys: [],
+            hiddenFolders: [],
+            hiddenTags: [],
+            hiddenFileNames: [],
+            hiddenFileTags: [],
+            hiddenFileProperties: [],
+            navigationBanner: null,
+            periodicNotesFolder: '',
+            shortcuts: [],
+            navRainbow: createDefaultNavRainbowSettings()
+        }
+    ],
+    vaultProfile: 'default',
+    vaultTitle: 'navigation',
+    syncModes: defaultSettingsSync,
 
     // General tab - Behavior
+    createNewNotesInNewTab: false,
     autoRevealActiveFile: true,
+    autoRevealShortestPath: true,
     autoRevealIgnoreRightSidebar: true,
-    autoSelectFirstFileOnFocusChange: false,
+    autoRevealIgnoreOtherWindows: true,
+    paneTransitionDuration: 150,
 
-    // General tab - Filtering
-    fileVisibility: FILE_VISIBILITY.DOCUMENTS,
-    excludedFolders: [],
-    excludedFiles: [],
+    // General tab - Keyboard navigation
+    multiSelectModifier: 'cmdCtrl',
+    enterToOpenFiles: false,
+    shiftEnterOpenContext: 'tab',
+    cmdCtrlEnterOpenContext: 'split',
+
+    // General tab - Mouse buttons
+    mouseBackForwardAction: 'history',
+
+    // General tab - View
+    startView: 'files',
+    showInfoButtons: true,
+
+    // General tab - Homepage
+    homepage: {
+        source: 'none',
+        file: null
+    },
+
+    // General tab - Desktop appearance
+    dualPane: true,
+    dualPaneOrientation: 'horizontal',
+    showTooltips: false,
+    showTooltipPath: true,
+    desktopBackground: 'separate',
+    desktopScale: DEFAULT_UI_SCALE,
+
+    mobileScale: DEFAULT_UI_SCALE,
+
+    // General tab - Mobile appearance
+    useFloatingToolbars: true,
+
+    // General tab - Toolbar buttons
+    toolbarVisibility: {
+        navigation: {
+            toggleDualPane: true,
+            expandCollapse: true,
+            calendar: true,
+            hiddenItems: true,
+            rootReorder: true,
+            newFolder: true
+        },
+        list: {
+            back: true,
+            search: true,
+            descendants: true,
+            sort: true,
+            appearance: true,
+            newNote: true
+        }
+    },
+
+    // General tab - Icons
+    interfaceIcons: sanitizeRecord<string>(undefined),
+    colorIconOnly: false,
 
     // General tab - Formatting
-    dateFormat: 'MMM d, yyyy',
+    dateFormat: 'MMM D, YYYY',
     timeFormat: 'h:mm a',
+    calendarTemplateFolder: '',
 
-    // Navigation pane tab
-    navigationBanner: null,
-    showShortcuts: true,
-    showRecentNotes: true,
-    recentNotesCount: 5,
-    autoExpandFoldersTags: false,
-    collapseBehavior: 'all',
-    smartCollapse: true,
-    showIcons: true,
-    colorIconOnly: false,
+    // Files tab
+    confirmBeforeDelete: true,
+    deleteAttachments: 'ask',
+    moveFileConflicts: 'ask',
+
+    // Icon packs tab
+    externalIconProviders: sanitizeRecord<boolean>(undefined),
+
+    // Advanced tab
+    checkForUpdatesOnStart: true,
+
+    // Navigation pane tab - Appearance
+    pinNavigationBanner: true,
     showNoteCount: true,
+    separateNoteCounts: true,
+    showIndentGuides: false,
+    rootLevelSpacing: 0,
     navIndent: NAVPANE_MEASUREMENTS.defaultIndent,
     navItemHeight: NAVPANE_MEASUREMENTS.defaultItemHeight,
     navItemHeightScaleText: true,
-    showHiddenItems: false,
 
-    // Folders & tags tab
+    // Navigation pane tab - Behavior
+    collapseBehavior: 'all',
+    smartCollapse: true,
+    autoSelectFirstFileOnFocusChange: false,
+    autoExpandNavItems: false,
+    springLoadedFolders: true,
+    springLoadedFoldersInitialDelay: 0.5,
+    springLoadedFoldersSubsequentDelay: 0.5,
+
+    // Shortcuts tab
+    showSectionIcons: true,
+    showShortcuts: true,
+    shortcutBadgeDisplay: 'index',
+    skipAutoScroll: false,
+    showRecentNotes: true,
+    hideRecentNotes: 'none',
+    pinRecentNotesWithShortcuts: false,
+    recentNotesCount: 5,
+
+    // Folders tab
+    showFolderIcons: true,
     showRootFolder: true,
-    inheritFolderColors: false,
+    inheritFolderColors: true,
+    folderSortOrder: 'alpha-asc',
     enableFolderNotes: false,
     folderNoteType: 'markdown',
     folderNoteName: '',
-    folderNoteProperties: [],
+    folderNoteNamePattern: '',
+    folderNoteTemplate: null,
+    enableFolderNoteLinks: true,
     hideFolderNoteInList: true,
     pinCreatedFolderNote: false,
+    openFolderNotesInNewTab: false,
+
+    // Tags tab
     showTags: true,
-    showTagsAboveFolders: false,
+    showTagIcons: true,
     showAllTagsFolder: true,
-    showUntagged: false,
+    showUntagged: true,
+    scopeTagsToCurrentContext: false,
     tagSortOrder: 'alpha-asc',
-    hiddenTags: [],
+    inheritTagColors: true,
+    keepEmptyTagsProperty: false,
+
+    // Properties tab
+    showProperties: true,
+    showPropertyIcons: true,
+    inheritPropertyColors: true,
+    propertySortOrder: 'alpha-asc',
+    showAllPropertiesFolder: true,
+    scopePropertiesToCurrentContext: false,
 
     // List pane tab
+    defaultListMode: 'standard',
+    includeDescendantNotes: false,
     defaultFolderSort: 'modified-desc',
+    propertySortKey: '',
+    propertySortSecondary: 'title',
+    revealFileOnListChanges: true,
     listPaneTitle: 'header',
-    multiSelectModifier: 'cmdCtrl',
-    includeDescendantNotes: true,
-    separateNoteCounts: true,
-    groupByDate: true,
+    noteGrouping: 'date',
+    showSelectedNavigationPills: false,
+    filterPinnedByFolder: false,
+    showPinnedGroupHeader: true,
+    showPinnedIcon: true,
     optimizeNoteHeight: true,
+    compactItemHeight: LISTPANE_MEASUREMENTS.defaultCompactItemHeight,
+    compactItemHeightScaleText: true,
     showQuickActions: true,
-    quickActionRevealInFolder: true,
+    quickActionRevealInFolder: false,
+    quickActionAddTag: true,
+    quickActionAddToShortcuts: true,
     quickActionPinNote: true,
-    quickActionOpenInNewTab: true,
+    quickActionOpenInNewTab: false,
 
-    // Notes tab
+    // Frontmatter tab
     useFrontmatterMetadata: false,
     frontmatterIconField: 'icon',
     frontmatterColorField: 'color',
+    frontmatterBackgroundField: 'background',
     frontmatterNameField: '',
     frontmatterCreatedField: '',
     frontmatterModifiedField: '',
     frontmatterDateFormat: '',
-    saveMetadataToFrontmatter: false,
-    iconizeFormat: false,
+
+    // Notes tab
+    showFileIconUnfinishedTask: false,
+    showFileBackgroundUnfinishedTask: false,
+    unfinishedTaskBackgroundColor: UNFINISHED_TASK_BACKGROUND_COLOR_DEFAULT,
+    showFileIcons: true,
+    showFilenameMatchIcons: false,
+    fileNameIconMap: sanitizeRecord<string>(undefined),
+    showCategoryIcons: false,
+    fileTypeIconMap: sanitizeRecord<string>(undefined),
     fileNameRows: 1,
-    showFileDate: true,
-    showFileTags: true,
-    showFileTagAncestors: true,
-    colorFileTags: true,
-    showFileTagsInSlimMode: false,
-    showParentFolderNames: true,
     showFilePreview: true,
     skipHeadingsInPreview: true,
     skipCodeBlocksInPreview: true,
-    previewProperties: [],
+    stripHtmlInPreview: true,
+    stripLatexInPreview: true,
     previewRows: 2,
+    previewProperties: [],
+    previewPropertiesFallback: true,
     showFeatureImage: true,
-    featureImageProperties: ['thumbnail', 'featureResized', 'feature'],
+    featureImageProperties: [],
+    featureImageExcludeProperties: [],
+    featureImageSize: '64',
+    featureImagePixelSize: '256',
     forceSquareFeatureImage: true,
-    useEmbeddedImageFallback: true,
+    downloadExternalFeatureImages: true,
+    showFileTags: true,
+    colorFileTags: true,
+    prioritizeColoredFileTags: true,
+    showFileTagAncestors: false,
+    showFileTagsInCompactMode: false,
+    showFileProperties: true,
+    colorFileProperties: true,
+    prioritizeColoredFileProperties: true,
+    showFilePropertiesInCompactMode: false,
+    showPropertiesOnSeparateRows: false,
+    enablePropertyInternalLinks: true,
+    enablePropertyExternalLinks: true,
+    notePropertyType: 'none',
+    showFileDate: true,
+    // Default to showing modified date when sorting alphabetically
+    alphabeticalDateMode: 'modified',
+    showParentFolder: true,
+    parentFolderClickRevealsFile: false,
+    showParentFolderColor: false,
+    showParentFolderIcon: false,
 
-    // Icon packs tab
-    externalIconProviders: {},
+    // Calendar tab - Calendar
+    calendarEnabled: true,
+    calendarPlacement: 'left-sidebar',
+    calendarConfirmBeforeCreate: true,
+    calendarLocale: 'system-default',
+    calendarWeekendDays: 'sat-sun',
+    calendarMonthHeadingFormat: 'full',
+    calendarHighlightToday: true,
+    calendarShowFeatureImage: true,
+    calendarMonthHighlights: sanitizeRecord<string>(undefined),
+    calendarShowWeekNumber: false,
+    calendarShowQuarter: false,
+    calendarShowYearCalendar: true,
+    calendarLeftPlacement: 'navigation',
+    calendarWeeksToShow: 1,
 
-    // Search & hotkeys tab
+    // Calendar tab - Calendar integration
+    calendarIntegrationMode: 'notebook-navigator',
+    calendarCustomFilePattern: DEFAULT_CALENDAR_CUSTOM_FILE_PATTERN,
+    calendarCustomWeekPattern: DEFAULT_CALENDAR_CUSTOM_WEEK_PATTERN,
+    calendarCustomMonthPattern: DEFAULT_CALENDAR_CUSTOM_MONTH_PATTERN,
+    calendarCustomQuarterPattern: DEFAULT_CALENDAR_CUSTOM_QUARTER_PATTERN,
+    calendarCustomYearPattern: DEFAULT_CALENDAR_CUSTOM_YEAR_PATTERN,
+    calendarCustomFileTemplate: null,
+    calendarCustomWeekTemplate: null,
+    calendarCustomMonthTemplate: null,
+    calendarCustomQuarterTemplate: null,
+    calendarCustomYearTemplate: null,
+
+    // Search settings and hotkeys
     searchProvider: 'internal',
     keyboardShortcuts: getDefaultKeyboardShortcuts(),
-    shortcuts: [],
-
-    // Advanced tab
-    checkForUpdatesOnStart: true,
-    confirmBeforeDelete: true,
 
     // Runtime state and cached data
-    searchActive: false,
     customVaultName: '',
-    pinnedNotes: {} as PinnedNotes,
-    fileIcons: {},
-    fileColors: {},
-    folderIcons: {},
-    folderColors: {},
-    folderBackgroundColors: {},
-    folderSortOverrides: {},
-    folderAppearances: {} as Record<string, FolderAppearance>,
-    tagIcons: {},
-    tagColors: {},
-    tagBackgroundColors: {},
-    tagSortOverrides: {},
-    tagAppearances: {} as Record<string, TagAppearance>,
-    recentColors: [],
+    pinnedNotes: sanitizeRecord<PinnedNotes[string]>(undefined),
+    fileIcons: sanitizeRecord<string>(undefined),
+    fileColors: sanitizeRecord<string>(undefined),
+    fileBackgroundColors: sanitizeRecord<string>(undefined),
+    folderIcons: sanitizeRecord<string>(undefined),
+    folderColors: sanitizeRecord<string>(undefined),
+    folderBackgroundColors: sanitizeRecord<string>(undefined),
+    folderSortOverrides: sanitizeRecord<NotebookNavigatorSettings['folderSortOverrides'][string]>(undefined),
+    folderTreeSortOverrides: sanitizeRecord<NotebookNavigatorSettings['folderTreeSortOverrides'][string]>(undefined),
+    folderAppearances: sanitizeRecord<FolderAppearance>(undefined),
+    tagIcons: sanitizeRecord<string>(undefined),
+    tagColors: sanitizeRecord<string>(undefined),
+    tagBackgroundColors: sanitizeRecord<string>(undefined),
+    tagSortOverrides: sanitizeRecord<NotebookNavigatorSettings['tagSortOverrides'][string]>(undefined),
+    tagTreeSortOverrides: sanitizeRecord<NotebookNavigatorSettings['tagTreeSortOverrides'][string]>(undefined),
+    tagAppearances: sanitizeRecord<TagAppearance>(undefined),
+    propertyIcons: sanitizeRecord<string>(undefined),
+    propertyColors: sanitizeRecord<string>(undefined),
+    propertyBackgroundColors: sanitizeRecord<string>(undefined),
+    propertySortOverrides: sanitizeRecord<NotebookNavigatorSettings['propertySortOverrides'][string]>(undefined),
+    propertyTreeSortOverrides: sanitizeRecord<NotebookNavigatorSettings['propertyTreeSortOverrides'][string]>(undefined),
+    propertyAppearances: sanitizeRecord<FolderAppearance>(undefined),
+    virtualFolderColors: sanitizeRecord<string>(undefined),
+    virtualFolderBackgroundColors: sanitizeRecord<string>(undefined),
+    navigationSeparators: sanitizeRecord<boolean>(undefined),
+    userColors: [...DEFAULT_CUSTOM_COLORS],
     lastShownVersion: '',
-    latestKnownRelease: '',
-    lastAnnouncedRelease: '',
-    lastReleaseCheckAt: null,
-    rootFolderOrder: []
+    rootFolderOrder: [],
+    rootTagOrder: [],
+    rootPropertyOrder: []
 };

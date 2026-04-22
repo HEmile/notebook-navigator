@@ -1,7 +1,7 @@
 {
   "version": "0.2.0",
-  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/rpg-awesome/0.2.0/rpgawesome-webfont.woff",
-  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/rpg-awesome/0.2.0/icons.json",
+  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/rpg-awesome/rpgawesome-webfont.woff",
+  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/rpg-awesome/icons.json",
   "fontMimeType": "font/woff",
   "metadataFormat": "json"
 }

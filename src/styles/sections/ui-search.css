@@ -1,0 +1,151 @@
+/* Source: src/styles/sections/ui-search.css */
+
+/* ========================================================================
+   Mobile Search Styles
+   ======================================================================== */
+
+/* Mobile search input wrapper - inherits padding from base styles */
+.notebook-navigator-mobile .nn-search-input-wrapper {
+    height: 48px;
+    background-color: var(--nn-theme-list-bg);
+}
+
+/* Mobile search bar container */
+.notebook-navigator-mobile .nn-search-bar-container {
+    background-color: var(--nn-theme-list-bg);
+}
+
+.notebook-navigator-mobile .nn-search-bar-container.nn-search-bar-visible {
+    height: 48px;
+}
+
+/* Mobile search input container */
+.notebook-navigator-mobile .nn-search-input-container {
+    height: 36px;
+}
+
+/* Mobile search input field */
+.notebook-navigator-mobile .nn-search-input {
+    height: 36px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 4px 60px 4px 36px !important;
+    border-radius: 999px !important;
+}
+
+/* Mobile search icon */
+.notebook-navigator-mobile .nn-search-input-icon {
+    top: 10px;
+}
+
+/* Mobile clear button */
+.notebook-navigator-mobile .nn-search-clear-button {
+    top: 0;
+}
+
+.nn-search-clear-button,
+.nn-search-star-button,
+.nn-search-help-button {
+    position: absolute;
+    top: 8px;
+    cursor: pointer;
+    color: var(--nn-theme-foreground-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nn-search-clear-button:focus-visible,
+.nn-search-star-button:focus-visible,
+.nn-search-help-button:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+}
+
+.nn-search-clear-button svg,
+.nn-search-star-button svg,
+.nn-search-help-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.nn-search-clear-button {
+    right: 10px;
+}
+
+.nn-search-star-button {
+    right: 34px;
+}
+
+.nn-search-help-button {
+    right: 10px;
+}
+
+.nn-search-star-button--active {
+    color: var(--interactive-accent);
+}
+
+.notebook-navigator-mobile .nn-search-clear-button,
+.notebook-navigator-mobile .nn-search-star-button,
+.notebook-navigator-mobile .nn-search-help-button {
+    top: 0;
+    height: 36px;
+}
+
+.notebook-navigator-mobile .nn-search-clear-button {
+    right: 10px;
+}
+
+.notebook-navigator-mobile .nn-search-star-button {
+    right: 44px;
+}
+
+.notebook-navigator-mobile .nn-search-help-button {
+    right: 10px;
+}
+
+.notebook-navigator-mobile .nn-search-input-container--has-shortcut .nn-search-input {
+    padding-right: 94px !important;
+}
+
+/* Clickable path segments in header */
+.nn-path-segment {
+    cursor: pointer;
+}
+
+/* On mobile, use link color for clickable segments */
+.is-mobile .nn-path-segment {
+    color: var(--nn-theme-mobile-list-header-link-color);
+    text-decoration: none;
+}
+
+/* Prevent underline on mobile tap/active state */
+.is-mobile .nn-path-segment:active,
+.is-mobile .nn-path-segment:focus {
+    text-decoration: none;
+}
+
+/* Mobile search icon touch target */
+.notebook-navigator-mobile .nn-search-input-icon {
+    top: 0;
+    height: 36px;
+    width: 36px;
+    left: 0;
+}
+
+/* Hover effects only apply on hover-capable devices (prevents "stuck hover" on touch). */
+@media (hover: hover) and (pointer: fine) {
+    .nn-search-input-icon:hover {
+        color: var(--nn-theme-header-button-active-icon-color);
+    }
+
+    .nn-search-clear-button:hover,
+    .nn-search-star-button:hover,
+    .nn-search-help-button:hover {
+        color: var(--nn-theme-header-button-active-icon-color);
+        opacity: 1;
+    }
+
+    .nn-path-segment:hover {
+        text-decoration: underline;
+    }
+}

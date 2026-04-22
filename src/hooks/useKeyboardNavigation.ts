@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@
  * This hook provides:
  * - Common keyboard event setup and teardown
  * - Event filtering (navigator focus, modal handling, input field detection)
- * - Debouncing logic
  * - RTL support
  * - Common navigation utilities
  * - Scroll handling through virtualizer
@@ -31,11 +30,10 @@
  * to provide consistent keyboard behavior across the plugin.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Virtualizer } from '@tanstack/react-virtual';
 import { useUIState } from '../context/UIStateContext';
-import { TIMEOUTS } from '../types/obsidian-extended';
-import { isTypingInInput } from '../utils/domUtils';
+import { isKeyboardEventContextBlocked } from '../utils/domUtils';
 
 /**
  * Common item type for virtualized lists
@@ -174,6 +172,8 @@ export interface UseKeyboardNavigationParams<T> {
     _getCurrentIndex: () => number;
     /** Keyboard handler provided by the specific pane implementation */
     onKeyDown: (e: KeyboardEvent, helpers: KeyboardNavigationHelpers<T>) => void;
+    /** Optional keyup handler provided by the specific pane implementation */
+    onKeyUp?: (e: KeyboardEvent, helpers: KeyboardNavigationHelpers<T>) => void;
 }
 
 /**
@@ -204,10 +204,25 @@ export function useKeyboardNavigation<T>({
     focusedPane,
     containerRef,
     isSelectable,
-    onKeyDown
+    onKeyDown,
+    onKeyUp
 }: UseKeyboardNavigationParams<T>) {
     const uiState = useUIState();
-    const lastKeyPressTime = useRef(0);
+
+    const createHelpers = useCallback((): KeyboardNavigationHelpers<T> => {
+        return {
+            findNextIndex: (currentIndex: number, includeCurrent = false) =>
+                findNextSelectableIndex(items, currentIndex, isSelectable, includeCurrent),
+            findPreviousIndex: (currentIndex: number, includeCurrent = false) =>
+                findPreviousSelectableIndex(items, currentIndex, isSelectable, includeCurrent),
+            getPageSize: () => getVisiblePageSize(virtualizer),
+            scrollToIndex: (index: number) => {
+                virtualizer.scrollToIndex(index, { align: 'auto' });
+            },
+            getItemAt: (index: number) => safeGetItem(items, index),
+            isRTL: () => document.body.classList.contains('mod-rtl')
+        };
+    }, [items, isSelectable, virtualizer]);
 
     /**
      * Main keyboard event handler with common filtering
@@ -219,46 +234,50 @@ export function useKeyboardNavigation<T>({
             // 1. Check if the navigator is focused
             const navigatorContainer = containerRef.current;
             const navigatorFocused = navigatorContainer?.getAttribute('data-navigator-focused');
+            // Ignore global key events unless navigator focus state is active.
             if (navigatorFocused !== 'true') return;
 
-            // 2. Skip if user is typing in an input field
-            if (isTypingInInput(e)) return;
-
-            // 3. Skip if a modal is open
-            const activeElement = document.activeElement as HTMLElement;
-            if (activeElement && activeElement.closest('.modal-container')) {
+            // 2. Skip if keyboard handling is blocked in the current context.
+            if (isKeyboardEventContextBlocked(e)) {
+                // Block typing contexts and modal focus to avoid stealing keystrokes.
                 return;
             }
 
-            // 4. Only handle events for the currently focused pane
+            // 3. Only handle events for the currently focused pane
+            // Navigation and file panes share one container; this routes events to active pane only.
             if (uiState.focusedPane !== focusedPane) return;
 
-            // Debounce rapid key presses with a more reasonable threshold
-            const now = Date.now();
-            if (now - lastKeyPressTime.current < TIMEOUTS.KEYBOARD_THROTTLE) {
-                // ~60fps threshold
+            // Delegate to pane-specific handler
+            onKeyDown(e, createHelpers());
+        },
+        [containerRef, uiState.focusedPane, focusedPane, onKeyDown, createHelpers]
+    );
+
+    const handleKeyUp = useCallback(
+        (e: KeyboardEvent) => {
+            if (!onKeyUp) {
                 return;
             }
-            lastKeyPressTime.current = now;
 
-            // Create helper functions for keyboard handlers
-            const helpers: KeyboardNavigationHelpers<T> = {
-                findNextIndex: (currentIndex: number, includeCurrent = false) =>
-                    findNextSelectableIndex(items, currentIndex, isSelectable, includeCurrent),
-                findPreviousIndex: (currentIndex: number, includeCurrent = false) =>
-                    findPreviousSelectableIndex(items, currentIndex, isSelectable, includeCurrent),
-                getPageSize: () => getVisiblePageSize(virtualizer),
-                scrollToIndex: (index: number) => {
-                    virtualizer.scrollToIndex(index, { align: 'auto' });
-                },
-                getItemAt: (index: number) => safeGetItem(items, index),
-                isRTL: () => document.body.classList.contains('mod-rtl')
-            };
+            // 1. Check if the navigator is focused
+            const navigatorContainer = containerRef.current;
+            const navigatorFocused = navigatorContainer?.getAttribute('data-navigator-focused');
+            // Ignore keyup unless navigator focus state is active.
+            if (navigatorFocused !== 'true') return;
 
-            // Delegate to pane-specific handler
-            onKeyDown(e, helpers);
+            // 2. Skip if keyboard handling is blocked in the current context.
+            if (isKeyboardEventContextBlocked(e)) {
+                // Block typing contexts and modal focus to avoid stealing keystrokes.
+                return;
+            }
+
+            // 3. Only handle events for the currently focused pane
+            // Navigation and file panes share one container; this routes events to active pane only.
+            if (uiState.focusedPane !== focusedPane) return;
+
+            onKeyUp(e, createHelpers());
         },
-        [containerRef, uiState.focusedPane, focusedPane, onKeyDown, items, isSelectable, virtualizer]
+        [containerRef, uiState.focusedPane, focusedPane, onKeyUp, createHelpers]
     );
 
     /**
@@ -269,8 +288,10 @@ export function useKeyboardNavigation<T>({
         if (!container) return;
 
         container.addEventListener('keydown', handleKeyDown);
+        container.addEventListener('keyup', handleKeyUp);
         return () => {
             container.removeEventListener('keydown', handleKeyDown);
+            container.removeEventListener('keyup', handleKeyUp);
         };
-    }, [handleKeyDown, containerRef]);
+    }, [handleKeyDown, handleKeyUp, containerRef]);
 }

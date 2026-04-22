@@ -1,0 +1,528 @@
+/* Source: src/styles/sections/modal-color-picker.css */
+
+/* ========================================================================
+   Color Picker Modal - Compact Mobile-Friendly Design
+   ======================================================================== */
+
+/* Modal size - use natural width */
+.modal.nn-color-picker-modal {
+    max-height: 80vh;
+}
+
+/* Modal content padding */
+.modal.nn-color-picker-modal .modal-content {
+    padding: 16px;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+}
+
+.modal.nn-color-picker-modal .modal-close-button {
+    z-index: 10;
+    pointer-events: auto;
+}
+
+/* Header */
+.nn-color-picker-header,
+.nn-icon-picker-header {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.nn-color-picker-header h3,
+.nn-icon-picker-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--nn-theme-foreground);
+}
+
+/* Two column layout */
+.nn-color-picker-content {
+    display: flex;
+    gap: 20px;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding-bottom: 8px;
+}
+
+.nn-color-picker-left,
+.nn-color-picker-right {
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-color-picker-left {
+    flex: 0 1 250px;
+    min-width: 180px;
+}
+
+.nn-color-picker-right {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+/* Preview section */
+.nn-color-preview-section {
+    margin-bottom: auto; /* Push preset colors to bottom */
+}
+
+.nn-color-preview-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nn-preview-current,
+.nn-preview-new {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.nn-preview-label,
+.nn-rgb-label,
+.nn-rgb-title,
+.nn-hex-title {
+    font-size: 11px;
+    color: var(--nn-theme-foreground-muted);
+    font-weight: 500;
+}
+
+.nn-preview-color {
+    width: 100%;
+    height: 50px;
+    border-radius: var(--radius-m);
+    border: 1px solid var(--background-modifier-border);
+}
+
+.nn-color-swatch {
+    position: relative;
+    overflow: hidden;
+}
+
+.nn-color-swatch::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--nn-color-swatch-color, transparent);
+    pointer-events: none;
+}
+
+.nn-checkerboard,
+.nn-preview-color.nn-no-color {
+    background-image:
+        linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc),
+        linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc);
+    background-size: 10px 10px;
+    background-position:
+        0 0,
+        5px 5px;
+    background-color: #fff;
+}
+
+.theme-dark .nn-checkerboard,
+.theme-dark .nn-preview-color.nn-no-color {
+    background-image:
+        linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444 75%, #444),
+        linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444 75%, #444);
+    background-color: #222;
+}
+
+.nn-preview-arrow {
+    width: 20px;
+    height: 20px;
+    color: var(--nn-theme-foreground-muted);
+    flex-shrink: 0;
+    margin-top: 18px;
+}
+
+.nn-preview-arrow svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* RGB sliders section */
+.nn-rgb-section,
+.nn-color-preview-section {
+    padding-bottom: 15px;
+}
+
+.nn-rgb-section {
+    margin-bottom: auto; /* Push everything below to the bottom */
+}
+
+.nn-rgb-title {
+    margin-bottom: 6px;
+}
+
+.nn-rgb-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.nn-rgb-row:last-child {
+    margin-bottom: 0;
+}
+
+.nn-rgb-label {
+    width: 16px;
+}
+
+.nn-rgb-slider {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--background-modifier-border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+/* Slider thumb */
+.nn-rgb-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--interactive-accent);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.nn-rgb-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--interactive-accent);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* RGB value display */
+.nn-rgb-value {
+    width: 32px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--nn-theme-foreground-muted);
+    font-family: var(--font-monospace);
+}
+
+/* Color gradients for sliders */
+.nn-rgb-slider-r {
+    background: linear-gradient(to right, #000000, #ff0000);
+}
+
+.nn-rgb-slider-g {
+    background: linear-gradient(to right, #000000, #00ff00);
+}
+
+.nn-rgb-slider-b {
+    background: linear-gradient(to right, #000000, #0000ff);
+}
+
+/* Hex input section */
+.nn-hex-section {
+    margin-bottom: 20px;
+}
+
+.nn-hex-title {
+    display: block;
+    margin-bottom: 6px;
+    height: 17px; /* Match the preview label height for alignment */
+}
+
+.nn-hex-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nn-hex-label {
+    font-size: 14px;
+    color: var(--nn-theme-foreground);
+    font-weight: 500;
+}
+
+.nn-hex-input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background: var(--background-primary);
+    color: var(--nn-theme-foreground);
+    font-family: var(--font-monospace);
+    font-size: 13px;
+}
+
+.nn-hex-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
+/* Recent colors header */
+.nn-preset-header,
+.nn-recent-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.nn-section-label {
+    font-size: 12px;
+    color: var(--nn-theme-foreground-muted);
+    font-weight: 500;
+}
+
+.nn-preset-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.nn-preset-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nn-preset-toggle-label {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12px;
+    color: var(--nn-theme-foreground-muted);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.nn-preset-toggle-label.nn-preset-toggle-active {
+    color: var(--nn-theme-foreground);
+    font-weight: 700;
+}
+
+.nn-preset-toggle-separator {
+    color: var(--nn-theme-foreground-muted);
+    font-size: 12px;
+    line-height: 1;
+}
+
+.nn-preset-action-button,
+.nn-clear-recent {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    color: var(--nn-theme-foreground-muted);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.nn-preset-action-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.nn-preset-action-hidden {
+    display: none;
+}
+
+.nn-preset-action-button:hover,
+.nn-clear-recent:hover {
+    background: var(--background-modifier-hover);
+    color: var(--nn-theme-foreground);
+    border-color: var(--background-modifier-border-hover);
+}
+
+.nn-preset-action-button svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Preset and Recent colors sections */
+.nn-preset-section,
+.nn-recent-section {
+    margin-top: auto; /* Align to bottom */
+}
+
+.nn-preset-colors,
+.nn-recent-colors {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    overflow: hidden;
+}
+
+.nn-preset-colors {
+    margin-top: 8px;
+}
+
+/* Color dots */
+.nn-color-dot {
+    aspect-ratio: 1;
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+}
+
+.nn-recent-remove-button {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--nn-theme-foreground-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .nn-recent-remove-button {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 120ms ease;
+    }
+
+    .nn-color-dot:hover .nn-recent-remove-button,
+    .nn-color-dot:focus-within .nn-recent-remove-button {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+}
+
+.nn-recent-remove-button:hover {
+    color: var(--nn-theme-foreground);
+    border-color: var(--interactive-accent);
+}
+
+.nn-recent-remove-button:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 1px;
+}
+
+.nn-recent-remove-glyph {
+    font-size: 11px;
+    line-height: 1;
+    transform: translateY(-1px);
+    pointer-events: none;
+}
+
+/* Touch target enhancement for mobile */
+.nn-color-dot::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+}
+
+.nn-color-dot:hover::after {
+    outline: 3px solid var(--interactive-accent);
+    outline-offset: -3px;
+}
+
+.nn-user-color-selected::after {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -2px;
+}
+
+/* Empty color slot */
+.nn-color-dot.nn-color-empty {
+    background: var(--background-secondary);
+    border: 1px dashed var(--background-modifier-border);
+    cursor: default;
+    opacity: 0.3;
+}
+
+.nn-color-dot.nn-color-empty:hover::after {
+    outline: none;
+}
+
+.nn-color-dot.nn-drop-hover {
+    outline: 3px solid var(--interactive-accent);
+    outline-offset: -3px;
+}
+
+.nn-drag-preview {
+    width: 36px;
+    height: 36px;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
+}
+
+/* Button container */
+.nn-color-button-container {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--background-modifier-border);
+    justify-content: center;
+}
+
+/* Dark theme adjustments */
+.theme-dark .nn-preview-color {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+    .nn-color-picker-content {
+        flex-direction: column;
+        gap: 16px;
+        padding-bottom: 0;
+        overflow-y: hidden;
+        overflow-x: hidden;
+        touch-action: none;
+    }
+
+    .nn-color-picker-left,
+    .nn-color-picker-right {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+
+    .nn-preset-colors,
+    .nn-recent-colors {
+        grid-template-columns: repeat(8, 1fr);
+    }
+
+    .modal.nn-color-picker-modal .modal-content {
+        padding: 16px 16px 12px;
+        gap: 12px;
+    }
+
+    .nn-color-button-container {
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+}

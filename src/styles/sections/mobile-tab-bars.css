@@ -1,0 +1,120 @@
+/* Source: src/styles/sections/mobile-tab-bars.css */
+
+/* ========================================================================
+   Mobile Tab Bars - iOS-style bottom navigation
+   ======================================================================== */
+
+/* Mobile toolbar container */
+.nn-mobile-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--nn-theme-list-bg);
+    flex-shrink: 0;
+    padding: 0 8px;
+
+    /* Use platform-specific safe area variable */
+    padding-bottom: var(--nn-mobile-safe-area-bottom);
+
+    /* Adjust height to include safe area padding */
+    height: calc(49px + var(--nn-mobile-safe-area-bottom));
+    min-height: calc(49px + var(--nn-mobile-safe-area-bottom));
+}
+
+/* Mobile toolbars: distribute buttons evenly; Obsidian 1.11+ iOS overrides this via platform stylesheet. */
+.notebook-navigator-mobile .nn-mobile-toolbar {
+    justify-content: space-evenly;
+}
+
+.nn-pane-bottom-toolbar {
+    flex-shrink: 0;
+}
+
+.notebook-navigator-mobile .nn-mobile-toolbar-left,
+.notebook-navigator-mobile .nn-mobile-toolbar-right,
+.notebook-navigator-mobile .nn-mobile-toolbar-pill,
+.notebook-navigator-mobile .nn-mobile-toolbar-circle {
+    display: contents;
+}
+
+/* Mobile toolbar grouping containers */
+.nn-mobile-toolbar-left {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+}
+
+.nn-mobile-toolbar-right {
+    display: flex;
+    flex: 0 0 auto;
+}
+
+/* Mobile toolbar button grouping container */
+.nn-mobile-toolbar-pill {
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.nn-mobile-toolbar-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mobile toolbar buttons */
+.nn-mobile-toolbar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none;
+    border-radius: var(--radius-m);
+    color: var(--nn-theme-mobile-toolbar-button-icon-color);
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: none !important;
+}
+
+.nn-mobile-toolbar-button-circle {
+    border-radius: 999px;
+}
+
+/* Mobile toolbar button icons */
+.nn-mobile-toolbar-button svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 1.5;
+    stroke: var(--nn-theme-mobile-toolbar-button-icon-color);
+}
+
+/* Mobile toolbar button tap feedback */
+.nn-mobile-toolbar-button:active {
+    opacity: 0.7;
+}
+
+/* Active mobile toolbar button state - toggled on */
+.nn-mobile-toolbar-button-active {
+    color: var(--nn-theme-mobile-toolbar-button-active-icon-color) !important;
+    background-color: var(--nn-theme-mobile-toolbar-button-active-bg) !important;
+}
+
+.nn-mobile-toolbar-button-active svg {
+    stroke: var(--nn-theme-mobile-toolbar-button-active-icon-color) !important;
+    stroke-width: 2;
+}
+
+/* Disabled mobile toolbar button */
+.nn-mobile-toolbar-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

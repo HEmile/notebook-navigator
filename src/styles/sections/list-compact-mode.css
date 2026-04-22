@@ -1,0 +1,53 @@
+/* Source: src/styles/sections/list-compact-mode.css */
+
+/* ========================================================================
+   Compact Mode Styles - When date, preview, and image are all disabled
+   ======================================================================== */
+
+/* Compact file item - more compact list appearance */
+.nn-file.nn-compact {
+    --nn-file-item-border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+}
+
+.nn-file.nn-compact .nn-file-content {
+    padding: var(--nn-file-padding-vertical-compact) var(--nn-file-item-padding-horizontal); /* Reduced vertical padding */
+}
+
+/* Compact file name - no bold, smaller font like folder items */
+.nn-file.nn-compact .nn-file-name {
+    font-size: var(--nn-compact-font-size, var(--nn-file-small-size-mobile, var(--nn-file-small-size)));
+    font-weight: var(--nn-theme-file-compact-name-font-weight);
+    margin-bottom: 0;
+    line-height: var(--nn-file-title-line-height);
+}
+
+/* Apply standard font weight to colored file names in compact mode */
+.nn-file.nn-compact .nn-file-name[data-has-color='true'] {
+    font-weight: var(--nn-theme-file-name-font-weight);
+}
+
+.nn-compact-file-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nn-compact-file-header .nn-file-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.nn-compact-extension-badge {
+    margin-left: auto;
+    display: flex;
+}
+
+/* Selected compact file - maintain selection styles */
+.nn-file.nn-compact.nn-selected .nn-file-name {
+    color: var(--nn-selected-file-name-color);
+}
+
+/* Preserve custom color for colored file names even when selected in compact mode */
+.nn-file.nn-compact.nn-selected .nn-file-name[data-has-color='true'] {
+    color: var(--nn-file-name-custom-color);
+}

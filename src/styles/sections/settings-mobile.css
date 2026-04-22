@@ -1,0 +1,11 @@
+/* Source: src/styles/sections/settings-mobile.css */
+
+/* ========================================================================
+   Mobile Styles
+   ======================================================================== */
+
+/* Mobile-specific wide input fields - full width on mobile */
+.is-mobile .nn-setting-wide-input input[type='text'],
+.is-mobile .nn-setting-wide-input textarea {
+    width: 100%;
+}

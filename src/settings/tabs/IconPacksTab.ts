@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,28 +16,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Notice, Setting } from 'obsidian';
 import { strings } from '../../i18n';
-import { EXTERNAL_ICON_PROVIDERS, type ExternalIconProviderId } from '../../services/icons/external/providerRegistry';
+import { EXTERNAL_ICON_PROVIDERS } from '../../services/icons/external/providerRegistry';
 import type { SettingsTabContext } from './SettingsTabContext';
+import { runAsyncAction } from '../../utils/async';
+import { showNotice } from '../../utils/noticeUtils';
+import { createSettingGroupFactory } from '../settingGroups';
 
 /** Renders the icon packs settings tab */
 export function renderIconPacksTab(context: SettingsTabContext): void {
-    const { containerEl, plugin } = context;
+    const { containerEl, plugin, addInfoSetting } = context;
     containerEl.empty();
 
-    const providerLinks: Record<ExternalIconProviderId, string> = {
-        'bootstrap-icons': strings.settings.items.externalIcons.providers.bootstrapIconsDesc,
-        'fontawesome-regular': strings.settings.items.externalIcons.providers.fontAwesomeDesc,
-        'material-icons': strings.settings.items.externalIcons.providers.materialIconsDesc,
-        phosphor: strings.settings.items.externalIcons.providers.phosphorDesc,
-        'rpg-awesome': strings.settings.items.externalIcons.providers.rpgAwesomeDesc,
-        'simple-icons': strings.settings.items.externalIcons.providers.simpleIconsDesc
-    };
-
-    const infoContainer = containerEl.createDiv('nn-setting-info-container');
-    const infoContent = infoContainer.createEl('div', { cls: 'setting-item-description' });
-    infoContent.createDiv({ text: strings.settings.items.externalIcons.infoNote });
+    const createGroup = createSettingGroupFactory(containerEl);
+    const iconPacksGroup = createGroup(undefined);
 
     Object.values(EXTERNAL_ICON_PROVIDERS).forEach(config => {
         const isInstalled = plugin.isExternalIconProviderInstalled(config.id);
@@ -51,15 +43,18 @@ export function renderIconPacksTab(context: SettingsTabContext): void {
               )
             : strings.settings.items.externalIcons.statusNotInstalled;
 
-        const setting = new Setting(containerEl).setName(config.name).setDesc('');
+        const setting = iconPacksGroup.addSetting(setting => {
+            setting.setName(config.name).setDesc('');
+        });
 
         const descriptionEl = setting.descEl;
         descriptionEl.empty();
 
         const linkRow = descriptionEl.createDiv();
+        const catalogUrl = config.catalogUrl;
         const linkEl = linkRow.createEl('a', {
-            text: providerLinks[config.id],
-            href: providerLinks[config.id]
+            text: catalogUrl,
+            href: catalogUrl
         });
         linkEl.setAttr('rel', 'noopener noreferrer');
         linkEl.setAttr('target', '_blank');
@@ -70,16 +65,21 @@ export function renderIconPacksTab(context: SettingsTabContext): void {
             setting.addButton(button => {
                 button.setButtonText(strings.settings.items.externalIcons.removeButton);
                 button.setDisabled(isDownloading);
-                button.onClick(async () => {
-                    button.setDisabled(true);
-                    try {
-                        await plugin.removeExternalIconProvider(config.id);
-                        renderIconPacksTab(context);
-                    } catch (error) {
-                        console.error('Failed to remove icon provider', error);
-                        new Notice(strings.settings.items.externalIcons.removeFailed.replace('{name}', config.name));
-                        button.setDisabled(false);
-                    }
+                // Remove icon pack without blocking the UI
+                button.onClick(() => {
+                    runAsyncAction(async () => {
+                        button.setDisabled(true);
+                        try {
+                            await plugin.removeExternalIconProvider(config.id);
+                            renderIconPacksTab(context);
+                        } catch (error) {
+                            console.error('Failed to remove icon provider', error);
+                            showNotice(strings.settings.items.externalIcons.removeFailed.replace('{name}', config.name), {
+                                variant: 'warning'
+                            });
+                            button.setDisabled(false);
+                        }
+                    });
                 });
             });
         } else {
@@ -90,18 +90,27 @@ export function renderIconPacksTab(context: SettingsTabContext): void {
                         : strings.settings.items.externalIcons.downloadButton
                 );
                 button.setDisabled(isDownloading);
-                button.onClick(async () => {
-                    button.setDisabled(true);
-                    try {
-                        await plugin.downloadExternalIconProvider(config.id);
-                        renderIconPacksTab(context);
-                    } catch (error) {
-                        console.error('Failed to download icon provider', error);
-                        new Notice(strings.settings.items.externalIcons.downloadFailed.replace('{name}', config.name));
-                        button.setDisabled(false);
-                    }
+                // Download icon pack without blocking the UI
+                button.onClick(() => {
+                    runAsyncAction(async () => {
+                        button.setDisabled(true);
+                        try {
+                            await plugin.downloadExternalIconProvider(config.id);
+                            renderIconPacksTab(context);
+                        } catch (error) {
+                            console.error('Failed to download icon provider', error);
+                            showNotice(strings.settings.items.externalIcons.downloadFailed.replace('{name}', config.name), {
+                                variant: 'warning'
+                            });
+                            button.setDisabled(false);
+                        }
+                    });
                 });
             });
         }
+    });
+
+    addInfoSetting(iconPacksGroup.addSetting, 'nn-setting-info-container', descEl => {
+        descEl.createDiv({ text: strings.settings.items.externalIcons.infoNote });
     });
 }

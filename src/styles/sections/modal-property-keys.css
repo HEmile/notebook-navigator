@@ -1,0 +1,243 @@
+/* Source: src/styles/sections/modal-property-keys.css */
+
+/* ========================================================================
+   Property Keys Modal
+   ======================================================================== */
+
+.modal.nn-property-keys-modal {
+    width: 560px;
+    max-width: calc(100vw - 40px);
+    height: min(580px, calc(100vh - 40px));
+}
+
+.is-mobile .modal.nn-property-keys-modal {
+    max-width: calc(100vw - 24px);
+    height: min(520px, calc(100vh - 24px));
+}
+
+.modal.nn-property-keys-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    padding: var(--size-4-4);
+    gap: var(--size-2-2);
+    overflow: hidden;
+}
+
+.modal.nn-property-keys-modal .modal-title {
+    width: 100%;
+    text-align: center;
+}
+
+.nn-property-keys-description {
+    text-align: center;
+    color: var(--nn-theme-foreground-muted);
+    font-size: var(--font-smallest);
+    margin: var(--size-4-2) 0 0;
+    line-height: 1.4;
+}
+
+.is-mobile .modal.nn-property-keys-modal .modal-content {
+    gap: var(--size-2-3);
+    padding: var(--size-4-6);
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-search-container {
+    position: relative;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-search {
+    margin: 0;
+    height: 32px;
+    padding: 4px 36px 4px 12px !important;
+    border-radius: 999px !important;
+    border: 1px solid var(--nn-theme-list-search-border-color) !important;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-search.is-active {
+    background: var(--nn-theme-list-search-active-bg) !important;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-search:focus {
+    border-color: var(--nn-theme-list-search-border-color) !important;
+    box-shadow: 0 0 0 2px var(--nn-theme-list-search-border-color) !important;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-search-clear {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    color: var(--nn-theme-foreground-muted);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    cursor: pointer;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-search-clear.is-visible {
+    display: inline-flex;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-search-clear:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-search-clear svg {
+    width: 16px;
+    height: 16px;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-search-clear:hover:not(:disabled) {
+    color: var(--nn-theme-foreground);
+}
+
+.nn-property-keys-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    margin-top: var(--size-4-2);
+    padding-right: 4px;
+    padding-bottom: var(--size-1-5);
+}
+
+.is-mobile .modal.nn-property-keys-modal .nn-property-keys-scroll {
+    padding-bottom: var(--size-2-2);
+}
+
+.nn-property-keys-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1-5);
+    width: 100%;
+}
+
+.is-mobile .modal.nn-property-keys-modal .nn-property-keys-list {
+    gap: var(--size-2-2);
+}
+
+.nn-property-keys-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    padding-left: var(--size-2-2);
+    padding-right: var(--size-2-2);
+    border-radius: var(--radius-s);
+    transition: background-color 120ms ease;
+}
+
+.is-mobile .modal.nn-property-keys-modal .nn-property-keys-row {
+    gap: var(--size-2-3);
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-list .nn-property-keys-row:hover {
+    background: var(--nn-theme-foreground-faint);
+}
+
+.nn-property-keys-label {
+    flex: 1;
+    min-width: 0;
+    color: var(--nn-theme-foreground-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nn-property-keys-row.is-enabled .nn-property-keys-label {
+    color: var(--nn-theme-foreground);
+}
+
+.nn-property-keys-row.is-enabled {
+    font-weight: var(--font-semibold);
+}
+
+.nn-property-keys-row.is-enabled .nn-property-keys-count {
+    color: var(--nn-theme-foreground);
+}
+
+.nn-property-keys-header-row {
+    margin-bottom: var(--size-1-2);
+    background: var(--nn-theme-foreground-faint);
+    border-radius: var(--radius-s);
+}
+
+.nn-property-keys-select-all-row {
+    margin-top: var(--size-1-2);
+    padding-top: var(--size-2-2);
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.nn-property-keys-count {
+    color: var(--nn-theme-foreground-muted);
+}
+
+.nn-property-keys-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--size-1-3);
+}
+
+.is-mobile .modal.nn-property-keys-modal .nn-property-keys-toggle {
+    min-width: 36px;
+    min-height: 36px;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-toggle {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--nn-theme-foreground-muted);
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-toggle:focus-visible {
+    outline: 1px solid var(--interactive-accent);
+    outline-offset: 1px;
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-toggle:hover:not(:disabled) {
+    background: var(--background-modifier-hover);
+}
+
+.modal.nn-property-keys-modal .nn-property-keys-toggle.is-enabled {
+    color: var(--nn-theme-foreground);
+    background: transparent;
+}
+
+.nn-property-keys-header-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+.nn-property-keys-header-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.nn-property-keys-empty {
+    padding: var(--size-2-3);
+    text-align: center;
+    color: var(--nn-theme-foreground-muted);
+}
+
+.nn-property-keys-footer {
+    flex-shrink: 0;
+    margin-top: var(--size-2-2);
+    padding-top: var(--size-2-2);
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.is-mobile .modal.nn-property-keys-modal .nn-property-keys-footer {
+    padding-top: var(--size-2-3);
+}

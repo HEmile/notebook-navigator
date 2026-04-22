@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ import { App, TFolder } from 'obsidian';
 import { strings } from '../i18n';
 import { BaseSuggestModal } from './BaseSuggestModal';
 import { naturalCompare } from '../utils/sortUtils';
+import { type MaybePromise } from '../utils/async';
 
 /**
  * Modal for selecting a folder to move files to
@@ -38,7 +39,7 @@ export class FolderSuggestModal extends BaseSuggestModal<TFolder> {
      */
     constructor(
         app: App,
-        onChooseFolder: (folder: TFolder) => void,
+        onChooseFolder: (folder: TFolder) => MaybePromise,
         placeholderText: string,
         actionText: string,
         excludePaths?: Set<string>

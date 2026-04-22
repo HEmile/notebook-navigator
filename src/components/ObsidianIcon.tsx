@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ interface ObsidianIconProps {
     name: string;
     className?: string;
     'aria-label'?: string;
+    'aria-hidden'?: boolean;
 }
 
 /**
@@ -34,9 +35,10 @@ interface ObsidianIconProps {
  * @param props.name - The name of the Obsidian icon to display
  * @param props.className - Optional CSS class name
  * @param props['aria-label'] - Optional aria-label for accessibility
+ * @param props['aria-hidden'] - Optional aria-hidden flag for decorative icons
  * @returns A span element that will contain the icon
  */
-export function ObsidianIcon({ name, className, 'aria-label': ariaLabel }: ObsidianIconProps) {
+export function ObsidianIcon({ name, className, 'aria-label': ariaLabel, 'aria-hidden': ariaHidden }: ObsidianIconProps) {
     const ref = useRef<HTMLSpanElement>(null);
 
     useEffect(() => {
@@ -48,5 +50,5 @@ export function ObsidianIcon({ name, className, 'aria-label': ariaLabel }: Obsid
         }
     }, [name]);
 
-    return <span ref={ref} className={className} aria-label={ariaLabel} />;
+    return <span ref={ref} className={className} aria-label={ariaLabel} aria-hidden={ariaHidden} />;
 }

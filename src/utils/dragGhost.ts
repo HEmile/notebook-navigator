@@ -1,6 +1,23 @@
-import { App, setIcon } from 'obsidian';
+/*
+ * Notebook Navigator - Plugin for Obsidian
+ * Copyright (c) 2025-2026 Johan Sanneblad
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+import { setIcon } from 'obsidian';
 import { ItemType } from '../types';
-import { getDBInstance } from '../storage/fileOperations';
 import { getIconService } from '../services/icons';
 
 /**
@@ -17,6 +34,8 @@ export interface DragGhostOptions {
     itemCount?: number;
     icon?: string;
     iconColor?: string;
+    customElement?: HTMLElement;
+    cursorOffset?: { x: number; y: number };
 }
 
 /**
@@ -31,31 +50,43 @@ export interface DragGhostManager {
 
 /**
  * Creates a drag ghost manager that displays custom drag previews.
- * Shows icons, images, or badges depending on the dragged content.
+ * Shows icons or badges depending on the dragged content.
  */
-export function createDragGhostManager(app: App): DragGhostManager {
+export function createDragGhostManager(): DragGhostManager {
     let dragGhostElement: HTMLElement | null = null;
     let windowDragEndHandler: ((event: DragEvent) => void) | null = null;
     let windowDropHandler: ((event: DragEvent) => void) | null = null;
+    let cursorOffset: { x: number; y: number } = { x: 10, y: 10 };
+
+    /**
+     * Updates ghost position using CSS custom properties for transform-based positioning
+     */
+    const setGhostPosition = (x: number, y: number) => {
+        if (!dragGhostElement) {
+            return;
+        }
+        dragGhostElement.style.setProperty('--nn-drag-ghost-x', `${x}px`);
+        dragGhostElement.style.setProperty('--nn-drag-ghost-y', `${y}px`);
+    };
 
     /**
      * Updates the ghost element position to follow the cursor
      */
     const updateDragGhostPosition = (event: MouseEvent | DragEvent) => {
-        if (!dragGhostElement) {
-            return;
-        }
-        dragGhostElement.style.left = `${event.clientX + 10}px`;
-        dragGhostElement.style.top = `${event.clientY + 10}px`;
+        setGhostPosition(event.clientX + cursorOffset.x, event.clientY + cursorOffset.y);
     };
+    // Options for mousemove event listener to mark as passive for better performance
+    const mouseMoveListenerOptions: AddEventListenerOptions = { passive: true };
+    // Capture phase flag for dragover event listener to intercept events early
+    const dragOverListenerCapture = true;
 
     /**
      * Removes the ghost element and cleans up event listeners
      */
     const hideGhost = () => {
         if (dragGhostElement) {
-            document.removeEventListener('mousemove', updateDragGhostPosition);
-            document.removeEventListener('dragover', updateDragGhostPosition);
+            document.removeEventListener('mousemove', updateDragGhostPosition, mouseMoveListenerOptions);
+            document.removeEventListener('dragover', updateDragGhostPosition, dragOverListenerCapture);
             dragGhostElement.remove();
             dragGhostElement = null;
         }
@@ -109,136 +140,77 @@ export function createDragGhostManager(app: App): DragGhostManager {
     const showGhost = (event: DragEvent, options: DragGhostOptions) => {
         hideGhost();
 
-        const ghost = document.createElement('div');
-        ghost.className = 'nn-drag-ghost';
-        ghost.style.left = `${event.clientX + 10}px`;
-        ghost.style.top = `${event.clientY + 10}px`;
+        cursorOffset = {
+            x: options.cursorOffset?.x ?? 10,
+            y: options.cursorOffset?.y ?? 10
+        };
 
         const iconService = getIconService();
-
-        if (options.itemCount && options.itemCount > 1) {
-            const info = document.createElement('div');
-            info.className = 'nn-drag-ghost-badge';
-            info.textContent = `${options.itemCount}`;
-            ghost.appendChild(info);
-        } else {
-            const iconWrapper = document.createElement('div');
-            iconWrapper.className = 'nn-drag-ghost-icon';
-            const iconColor = options.iconColor ?? '#ffffff';
-            iconWrapper.style.color = iconColor;
-            iconWrapper.style.setProperty('--icon-color', iconColor);
-            iconWrapper.style.fill = iconColor;
-            iconWrapper.style.stroke = iconColor;
-
-            if (options.itemType === ItemType.FILE && options.path) {
-                let featureImagePath = '';
-                try {
-                    featureImagePath = getDBInstance().getCachedFeatureImageUrl(options.path);
-                } catch (error) {
-                    void error;
-                    // Ignore cache errors and fall back to icon rendering
-                }
-                let imageLoaded = false;
-                if (featureImagePath) {
-                    const imageFile = app.vault.getFileByPath(featureImagePath);
-                    if (imageFile) {
-                        try {
-                            const resourceUrl = app.vault.getResourcePath(imageFile);
-                            iconWrapper.className = 'nn-drag-ghost-icon nn-drag-ghost-featured-image';
-                            const img = document.createElement('img');
-                            img.src = resourceUrl;
-                            iconWrapper.appendChild(img);
-                            imageLoaded = true;
-                        } catch (error) {
-                            imageLoaded = false;
-                            void error;
-                        }
-                    }
-                }
-
-                if (!imageLoaded) {
-                    /**
-                     * Attempts to render an icon using various methods (icon service, emoji, or setIcon).
-                     * Returns true if successfully rendered, false otherwise.
-                     */
-                    const renderIcon = (iconId: string | null | undefined): boolean => {
-                        if (!iconId) {
-                            return false;
-                        }
-                        iconWrapper.innerHTML = '';
-                        try {
-                            iconService.renderIcon(iconWrapper, iconId);
-                            if (iconWrapper.childNodes.length > 0 || iconWrapper.innerHTML.trim() !== '') {
-                                return true;
-                            }
-                        } catch (error) {
-                            void error;
-                        }
-                        const emoji = asEmoji(iconId);
-                        if (emoji) {
-                            iconWrapper.textContent = emoji;
-                            return true;
-                        }
-                        try {
-                            setIcon(iconWrapper, iconId);
-                            return iconWrapper.childNodes.length > 0;
-                        } catch (error) {
-                            void error;
-                        }
-                        return false;
-                    };
-
-                    const resolvedIcon = resolveIcon(options);
-                    if (!renderIcon(options.icon) && !renderIcon(resolvedIcon)) {
-                        iconWrapper.innerHTML = '';
-                    }
-                }
-            } else {
-                /**
-                 * Attempts to render an icon using various methods (icon service, emoji, or setIcon).
-                 * Returns true if successfully rendered, false otherwise.
-                 */
-                const renderIcon = (iconId: string | null | undefined): boolean => {
-                    if (!iconId) {
-                        return false;
-                    }
-                    iconWrapper.innerHTML = '';
-                    try {
-                        iconService.renderIcon(iconWrapper, iconId);
-                        if (iconWrapper.childNodes.length > 0 || iconWrapper.innerHTML.trim() !== '') {
-                            return true;
-                        }
-                    } catch (error) {
-                        void error;
-                    }
-                    const emoji = asEmoji(iconId);
-                    if (emoji) {
-                        iconWrapper.textContent = emoji;
-                        return true;
-                    }
-                    try {
-                        setIcon(iconWrapper, iconId);
-                        return iconWrapper.childNodes.length > 0;
-                    } catch (error) {
-                        void error;
-                    }
-                    return false;
-                };
-
-                const resolvedIcon = resolveIcon(options);
-                if (!renderIcon(options.icon) && !renderIcon(resolvedIcon)) {
-                    iconWrapper.innerHTML = '';
-                }
+        /**
+         * Attempts to render an icon using icon service, emoji, or Obsidian setIcon
+         */
+        const renderIcon = (iconId: string | null | undefined, target: HTMLElement): boolean => {
+            if (!iconId) {
+                return false;
             }
+            target.innerHTML = '';
+            try {
+                iconService.renderIcon(target, iconId);
+                if (target.childNodes.length > 0 || target.innerHTML.trim() !== '') {
+                    return true;
+                }
+            } catch (error) {
+                void error;
+            }
+            const emoji = asEmoji(iconId);
+            if (emoji) {
+                target.textContent = emoji;
+                return true;
+            }
+            try {
+                setIcon(target, iconId);
+                return target.childNodes.length > 0;
+            } catch (error) {
+                void error;
+            }
+            return false;
+        };
+        const resolvedIcon = resolveIcon(options);
 
-            ghost.appendChild(iconWrapper);
+        const baseGhost = options.customElement ?? document.createElement('div');
+        if (!baseGhost.classList.contains('nn-drag-ghost')) {
+            baseGhost.classList.add('nn-drag-ghost');
         }
 
-        document.body.appendChild(ghost);
-        dragGhostElement = ghost;
+        if (!options.customElement) {
+            if (options.itemCount && options.itemCount > 1) {
+                const info = document.createElement('div');
+                info.className = 'nn-drag-ghost-badge';
+                info.textContent = `${options.itemCount}`;
+                baseGhost.appendChild(info);
+            } else {
+                const iconWrapper = document.createElement('div');
+                iconWrapper.className = 'nn-drag-ghost-icon';
+                const iconColor = options.iconColor ?? '#ffffff';
+                iconWrapper.style.color = iconColor;
+                iconWrapper.style.setProperty('--icon-color', iconColor);
+                iconWrapper.style.fill = iconColor;
+                iconWrapper.style.stroke = iconColor;
 
-        document.addEventListener('mousemove', updateDragGhostPosition, { passive: true });
-        document.addEventListener('dragover', updateDragGhostPosition);
+                if (!renderIcon(options.icon, iconWrapper) && !renderIcon(resolvedIcon, iconWrapper)) {
+                    iconWrapper.innerHTML = '';
+                }
+
+                baseGhost.appendChild(iconWrapper);
+            }
+        }
+
+        document.body.appendChild(baseGhost);
+        dragGhostElement = baseGhost;
+        setGhostPosition(event.clientX + cursorOffset.x, event.clientY + cursorOffset.y);
+
+        document.addEventListener('mousemove', updateDragGhostPosition, mouseMoveListenerOptions);
+        document.addEventListener('dragover', updateDragGhostPosition, dragOverListenerCapture);
 
         const onGlobalEnd = () => hideGhost();
         windowDragEndHandler = onGlobalEnd;

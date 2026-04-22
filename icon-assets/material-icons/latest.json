@@ -1,7 +1,7 @@
 {
-  "version": "140",
-  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/material-icons/140/MaterialIcons-Regular.woff2",
-  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/material-icons/140/icons.json",
+  "version": "145",
+  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/material-icons/MaterialIcons-Regular.woff2",
+  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/material-icons/icons.json",
   "fontMimeType": "font/woff2",
   "metadataFormat": "json"
 }

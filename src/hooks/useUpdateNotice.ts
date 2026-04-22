@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@ import type { ReleaseUpdateNotice } from '../services/ReleaseCheckService';
 
 /** State returned by the useUpdateNotice hook */
 interface UpdateNoticeState {
-    notice: ReleaseUpdateNotice | null;
-    markAsDisplayed: (version: string) => Promise<void>;
+    bannerNotice: ReleaseUpdateNotice | null;
+    markAsDisplayed: (version: string) => void;
 }
 
 /**
@@ -31,14 +31,14 @@ interface UpdateNoticeState {
  */
 export function useUpdateNotice(): UpdateNoticeState {
     const { plugin } = useServices();
-    const [notice, setNotice] = useState<ReleaseUpdateNotice | null>(() => plugin.getPendingUpdateNotice());
+    const [bannerNotice, setBannerNotice] = useState<ReleaseUpdateNotice | null>(() => plugin.getPendingUpdateNotice());
 
     // Subscribe to update notice changes
     useEffect(() => {
         // Generate unique listener ID to avoid conflicts
         const id = `update-notice-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const listener = (value: ReleaseUpdateNotice | null) => {
-            setNotice(value);
+            setBannerNotice(value);
         };
 
         plugin.registerUpdateNoticeListener(id, listener);
@@ -50,14 +50,14 @@ export function useUpdateNotice(): UpdateNoticeState {
 
     // Callback to mark a specific version as having been displayed to the user
     const markAsDisplayed = useCallback(
-        async (version: string) => {
-            await plugin.markUpdateNoticeAsDisplayed(version);
+        (version: string) => {
+            plugin.markUpdateNoticeAsDisplayed(version);
         },
         [plugin]
     );
 
     return {
-        notice,
+        bannerNotice,
         markAsDisplayed
     };
 }

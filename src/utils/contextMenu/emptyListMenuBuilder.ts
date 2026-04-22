@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,12 @@
  */
 
 import { FolderMenuBuilderParams } from './menuTypes';
-import { addFolderCreationMenuItems } from './folderMenuBuilder';
+import { buildFolderCreationMenu } from './folderMenuBuilder';
 
 /**
  * Builds the context menu for empty space inside the list pane.
- * Reuses folder creation commands to match the folder context menu.
+ * Reuses the folder creation builder so options stay in sync with folder context menus.
  */
 export function buildEmptyListMenu(params: FolderMenuBuilderParams): void {
-    addFolderCreationMenuItems(params);
+    buildFolderCreationMenu(params);
 }

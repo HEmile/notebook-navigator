@@ -7,6 +7,9 @@ build/
 main.js
 *.js.map
 
+# Documentation
+docs/
+
 # Obsidian
 .obsidian/
 *.obsidian/

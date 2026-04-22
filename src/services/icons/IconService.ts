@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,28 +17,19 @@
  */
 
 import { IconProvider, IconDefinition, ParsedIconId, IconServiceConfig } from './types';
+import { getIconRenderToken, setIconRenderToken } from './providers/providerUtils';
 
 /**
- * Central service for managing icon providers and rendering icons.
+ * Registry for icon providers and icon rendering.
  *
- * The IconService acts as a registry and coordinator for multiple icon providers,
- * allowing the plugin to support different icon sets (Lucide, Emoji, etc.) through
- * a unified interface. Key features include:
- *
- * - Provider registration and management
- * - Icon ID parsing with provider prefixes (e.g., "emoji:📁" or plain "folder")
- * - Recent icons tracking for improved user experience
- * - Fallback to default provider for unprefixed icons
- * - Unified search across all providers
- *
- * The service uses a singleton pattern to ensure consistent state across the plugin.
+ * Handles provider registration, icon id parsing/formatting, searching, and render refresh notifications.
  */
 export class IconService {
     private static instance: IconService;
     private providers = new Map<string, IconProvider>();
     private config: IconServiceConfig;
     private static readonly DEFAULT_PROVIDER = 'lucide';
-    private static readonly FALLBACK_ICON_ID = 'lucide-image-off';
+    private static readonly FALLBACK_ICON_ID = 'image-off';
     private version = 0;
     private listeners = new Set<() => void>();
 
@@ -144,6 +135,9 @@ export class IconService {
      * @param size - Optional size in pixels
      */
     renderIcon(container: HTMLElement, iconId: string, size?: number): void {
+        const token = Symbol('icon-render');
+        setIconRenderToken(container, token);
+
         if (!iconId) {
             container.empty();
             return;
@@ -158,8 +152,30 @@ export class IconService {
         }
 
         try {
-            provider.render(container, parsed.identifier, size);
-            if (!this.hasRenderedContent(container)) {
+            const result = provider.render(container, parsed.identifier, size);
+
+            if (result instanceof Promise) {
+                void result
+                    .then(finalResult => {
+                        if (getIconRenderToken(container) !== token) {
+                            return;
+                        }
+
+                        if (finalResult === 'not-found' || !this.hasRenderedContent(container)) {
+                            this.renderFallbackIcon(container, size);
+                        }
+                    })
+                    .catch(error => {
+                        if (getIconRenderToken(container) !== token) {
+                            return;
+                        }
+                        console.error(`[IconService] Error rendering icon ${iconId}:`, error);
+                        this.renderFallbackIcon(container, size);
+                    });
+                return;
+            }
+
+            if (result === 'not-found' || !this.hasRenderedContent(container)) {
                 this.renderFallbackIcon(container, size);
             }
         } catch (error) {
@@ -237,6 +253,15 @@ export class IconService {
     }
 
     /**
+     * Notifies subscribers that icon rendering should be refreshed.
+     *
+     * Used when icon assets change without affecting plugin settings, such as vault SVG icon files being deleted.
+     */
+    notifyIconAssetsChanged(): void {
+        this.notifyListeners();
+    }
+
+    /**
      * Notifies all subscribers when providers change.
      */
     private notifyListeners(): void {
@@ -265,6 +290,7 @@ export class IconService {
             return;
         }
 
+        const token = getIconRenderToken(container);
         const fallbackProviderId = this.config.defaultProvider || IconService.DEFAULT_PROVIDER;
         const fallbackProvider = this.providers.get(fallbackProviderId);
 
@@ -274,7 +300,29 @@ export class IconService {
         }
 
         try {
-            fallbackProvider.render(container, IconService.FALLBACK_ICON_ID, size);
+            const result = fallbackProvider.render(container, IconService.FALLBACK_ICON_ID, size);
+
+            if (result instanceof Promise) {
+                void result
+                    .then(finalResult => {
+                        if (token && getIconRenderToken(container) !== token) {
+                            return;
+                        }
+
+                        if (finalResult === 'not-found' || !this.hasRenderedContent(container)) {
+                            container.empty();
+                        }
+                    })
+                    .catch(error => {
+                        if (token && getIconRenderToken(container) !== token) {
+                            return;
+                        }
+                        console.error('[IconService] Error rendering fallback icon', error);
+                        container.empty();
+                    });
+                return;
+            }
+
             if (!this.hasRenderedContent(container)) {
                 container.empty();
             }

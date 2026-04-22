@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,6 +51,7 @@ import { useServices } from '../context/ServicesContext';
 import { useSelectionState } from '../context/SelectionContext';
 import { useUIState } from '../context/UIStateContext';
 import { useSettingsState } from '../context/SettingsContext';
+import { useUXPreferences } from '../context/UXPreferencesContext';
 import { NavigationPaneItemType, ItemType, NAVPANE_MEASUREMENTS, OVERSCAN } from '../types';
 import { Align, NavScrollIntent, getNavAlign } from '../types/scroll';
 import type { CombinedNavigationItem } from '../types/virtualization';
@@ -68,8 +69,24 @@ interface UseNavigationPaneScrollParams {
     isVisible: boolean;
     /** Currently active shortcut id (if any) */
     activeShortcutKey: string | null;
-    /** Measured height of the navigation banner (if configured) */
-    bannerHeight: number;
+    /**
+     * Height of non-virtualized content rendered above the virtual list inside the scroll container.
+     *
+     * This should include any normal-flow content that sits above the virtualized tree rows, such as
+     * an unpinned navigation banner rendered inside the scroller.
+     *
+     * TanStack Virtual uses this to align:
+     * - visible range calculations with the first tree row,
+     * - scrollToIndex offsets relative to the start of the tree rows.
+     */
+    scrollMargin: number;
+    /**
+     * Bottom inset reserved by overlays that cover the scroll content.
+     *
+     * Use this when a bottom overlay can sit on top of the scroller and cover tree rows. TanStack Virtual uses this as
+     * scrollPaddingEnd, and it is also used by post-scroll safety adjustments.
+     */
+    scrollPaddingEnd: number;
 }
 
 /**
@@ -102,12 +119,15 @@ export function useNavigationPaneScroll({
     pathToIndex,
     isVisible,
     activeShortcutKey,
-    bannerHeight
+    scrollMargin,
+    scrollPaddingEnd
 }: UseNavigationPaneScrollParams): UseNavigationPaneScrollResult {
     const { isMobile } = useServices();
     const selectionState = useSelectionState();
     const uiState = useUIState();
     const settings = useSettingsState();
+    const uxPreferences = useUXPreferences();
+    const showHiddenItems = uxPreferences.showHiddenItems;
 
     // Reference to the scroll container DOM element
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -189,7 +209,12 @@ export function useNavigationPaneScroll({
                 return folderIndex;
             }
 
-            return getNavigationIndex(pathToIndex, ItemType.TAG, path);
+            const tagIndex = getNavigationIndex(pathToIndex, ItemType.TAG, path);
+            if (tagIndex !== undefined) {
+                return tagIndex;
+            }
+
+            return getNavigationIndex(pathToIndex, ItemType.PROPERTY, path);
         },
         [pathToIndex]
     );
@@ -218,34 +243,52 @@ export function useNavigationPaneScroll({
     const prevSelectedPathRef = useRef<string | null>(null);
     const prevVisibleRef = useRef<boolean>(false);
     const prevFocusedPaneRef = useRef<string | null>(null);
-    const prevSelectedTagRef = useRef<string | null>(null);
+    const prevSelectedDeferredPathRef = useRef<string | null>(null);
     const prevNavSettingsKeyRef = useRef<string>('');
-    const prevShowHiddenItemsRef = useRef<boolean>(settings.showHiddenItems);
+    const prevShowHiddenItemsRef = useRef<boolean>(showHiddenItems);
     const prevPathToIndexSizeRef = useRef<number>(pathToIndex.size);
-
-    /**
-     * Increment indexVersion when tree structure changes.
-     * This is critical for version gating - ensures pending scrolls wait for
-     * the new tree structure before executing.
-     */
-    useEffect(() => {
-        const sizeChanged = prevPathToIndexSizeRef.current !== pathToIndex.size;
-        const identityChanged = prevPathToIndexObjRef.current !== pathToIndex;
-
-        if (sizeChanged || identityChanged) {
-            const prevVersion = indexVersionRef.current;
-            indexVersionRef.current = prevVersion + 1;
-            prevPathToIndexSizeRef.current = pathToIndex.size;
-            prevPathToIndexObjRef.current = pathToIndex;
-        }
-    }, [pathToIndex, pathToIndex.size]);
 
     /**
      * Initialize TanStack Virtual virtualizer with dynamic heights for navigation items
      */
+    const effectiveScrollMargin = Number.isFinite(scrollMargin) && scrollMargin > 0 ? scrollMargin : 0;
+    const effectiveScrollPaddingEnd = Number.isFinite(scrollPaddingEnd) && scrollPaddingEnd > 0 ? scrollPaddingEnd : 0;
+
+    const ensureIndexNotCovered = useCallback(
+        (index: number) => {
+            const scrollElement = scrollContainerRef.current;
+            if (!scrollElement) {
+                return;
+            }
+
+            if (effectiveScrollPaddingEnd <= 0) {
+                return;
+            }
+
+            // Navigation rows set `data-index` in `src/components/NavigationPane.tsx`; use it to find the rendered row
+            // TanStack Virtual scrolled to so we can keep it within the safe viewport (scrollPaddingEnd).
+            const row = scrollElement.querySelector(`[data-index="${index}"]`);
+            if (!(row instanceof HTMLElement)) {
+                return;
+            }
+
+            const containerRect = scrollElement.getBoundingClientRect();
+            const rowRect = row.getBoundingClientRect();
+            const safeBottom = containerRect.bottom - effectiveScrollPaddingEnd;
+
+            if (rowRect.bottom > safeBottom) {
+                scrollElement.scrollTop += Math.round(rowRect.bottom - safeBottom);
+            }
+        },
+        [effectiveScrollPaddingEnd]
+    );
+
     const rowVirtualizer = useVirtualizer({
         count: items.length,
         getScrollElement: () => scrollContainerRef.current,
+        // Align virtualizer scroll math with the start of the tree rows (excluding non-virtualized scroll content).
+        scrollMargin: effectiveScrollMargin,
+        scrollPaddingEnd: effectiveScrollPaddingEnd,
         estimateSize: index => {
             const item = items[index];
 
@@ -259,9 +302,8 @@ export function useNavigationPaneScroll({
                     return NAVPANE_MEASUREMENTS.bottomSpacer;
                 case NavigationPaneItemType.LIST_SPACER:
                     return NAVPANE_MEASUREMENTS.listSpacer;
-                case NavigationPaneItemType.BANNER:
-                    // Fall back to a small spacer height until ResizeObserver reports the real banner height
-                    return bannerHeight > 0 ? bannerHeight : NAVPANE_MEASUREMENTS.topSpacer;
+                case NavigationPaneItemType.ROOT_SPACER:
+                    return item.spacing;
                 case NavigationPaneItemType.FOLDER:
                 case NavigationPaneItemType.VIRTUAL_FOLDER:
                     return itemHeight;
@@ -274,6 +316,43 @@ export function useNavigationPaneScroll({
         },
         overscan: OVERSCAN
     });
+
+    /**
+     * Increment indexVersion and invalidate cached row measurements when tree structure changes.
+     * This is critical for version gating and for selection-scoped nav rebuilds where the row
+     * types or spacer layout can change without a height-setting change.
+     */
+    useEffect(() => {
+        const sizeChanged = prevPathToIndexSizeRef.current !== pathToIndex.size;
+        const identityChanged = prevPathToIndexObjRef.current !== pathToIndex;
+
+        if (sizeChanged || identityChanged) {
+            const prevVersion = indexVersionRef.current;
+            indexVersionRef.current = prevVersion + 1;
+            prevPathToIndexSizeRef.current = pathToIndex.size;
+            prevPathToIndexObjRef.current = pathToIndex;
+            rowVirtualizer.measure();
+        }
+    }, [pathToIndex, pathToIndex.size, rowVirtualizer]);
+
+    const scrollToIndexSafely = useCallback(
+        (index: number, align: Align) => {
+            // Use TanStack Virtual for the primary scroll, then run a small post-adjustment step to keep the selected
+            // row within the safe viewport defined by scrollPaddingEnd.
+            rowVirtualizer.scrollToIndex(index, { align });
+
+            let attempts = 0;
+            const adjust = () => {
+                attempts += 1;
+                ensureIndexNotCovered(index);
+                if (attempts < 3) {
+                    requestAnimationFrame(adjust);
+                }
+            };
+            requestAnimationFrame(adjust);
+        },
+        [ensureIndexNotCovered, rowVirtualizer]
+    );
 
     /**
      * Scroll to top handler for mobile header tap
@@ -300,13 +379,24 @@ export function useNavigationPaneScroll({
         setPendingScrollVersion(v => v + 1);
     }, []);
 
+    const selectedItemType: ItemType | null =
+        selectionState.selectionType === ItemType.TAG
+            ? ItemType.TAG
+            : selectionState.selectionType === ItemType.PROPERTY
+              ? ItemType.PROPERTY
+              : selectionState.selectionType === ItemType.FOLDER
+                ? ItemType.FOLDER
+                : null;
+
     // Extract and normalize the currently selected path from selection state
     const selectedPath =
         selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder
             ? normalizeNavigationPath(ItemType.FOLDER, selectionState.selectedFolder.path)
             : selectionState.selectionType === ItemType.TAG && selectionState.selectedTag
               ? normalizeNavigationPath(ItemType.TAG, selectionState.selectedTag)
-              : null;
+              : selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty
+                ? selectionState.selectedProperty
+                : null;
 
     /**
      * Scroll to selected folder/tag when needed
@@ -319,7 +409,17 @@ export function useNavigationPaneScroll({
     useEffect(() => {
         if (!selectedPath || !rowVirtualizer || !isScrollContainerReady) return;
 
-        const currentSelectionType = selectionState.selectionType === ItemType.TAG ? ItemType.TAG : ItemType.FOLDER;
+        if (selectionState.isRevealOperation) {
+            // Reveal operations issue explicit `requestScroll(...)` calls. Keep the previous-state refs in sync but
+            // skip selection-driven auto-scroll while the reveal flag is set.
+            prevSelectedPathRef.current = selectedPath;
+            prevVisibleRef.current = isScrollContainerReady;
+            prevFocusedPaneRef.current = uiState.focusedPane;
+            return;
+        }
+
+        const currentSelectionType = selectedItemType ?? ItemType.FOLDER;
+        const suppressShortcutScroll = settings.skipAutoScroll && selectionState.revealSource === 'shortcut';
 
         // Check if this is an actual selection change vs just a tree structure update
         const isSelectionChange = prevSelectedPathRef.current !== selectedPath;
@@ -333,6 +433,10 @@ export function useNavigationPaneScroll({
         prevVisibleRef.current = isScrollContainerReady;
         prevFocusedPaneRef.current = uiState.focusedPane;
 
+        if (suppressShortcutScroll) {
+            return;
+        }
+
         // Only scroll on actual selection changes or visibility/focus changes
         if (!isSelectionChange && !justBecameVisible && !justGainedFocus) return;
 
@@ -344,7 +448,7 @@ export function useNavigationPaneScroll({
         // CRITICAL: Guard against race condition during visibility toggle
         // When showHiddenItems changes, the tree will rebuild with different indices.
         // We must defer this scroll until AFTER the rebuild completes.
-        if (prevShowHiddenItemsRef.current !== settings.showHiddenItems) {
+        if (prevShowHiddenItemsRef.current !== showHiddenItems) {
             pendingScrollRef.current = {
                 path: selectedPath,
                 align: 'auto',
@@ -359,71 +463,91 @@ export function useNavigationPaneScroll({
         const index = resolveIndex(selectedPath, currentSelectionType);
 
         if (index !== undefined && index >= 0) {
-            rowVirtualizer.scrollToIndex(index, { align: getNavAlign('selection') });
+            scrollToIndexSafely(index, getNavAlign('selection'));
         }
     }, [
         selectedPath,
         rowVirtualizer,
         isScrollContainerReady,
+        selectionState.isRevealOperation,
         uiState.focusedPane,
-        settings.showHiddenItems,
-        selectionState.selectionType,
+        showHiddenItems,
+        selectedItemType,
+        selectionState.revealSource,
         resolveIndex,
-        activeShortcutKey
+        activeShortcutKey,
+        settings.skipAutoScroll,
+        scrollToIndexSafely
     ]);
 
     /**
-     * Special handling for startup tag scrolling
-     * Tags load after folders, so we need a separate effect to catch when they become available
-     * NAV_SCROLL_STARTUP_TAG: Scrolls to selected tag after tags load
+     * Special handling for startup deferred scrolling.
+     * Tag/property selections can be restored before their navigation rows are available,
+     * so this retries scrolling when indices are rebuilt.
      */
     useEffect(() => {
-        if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag && rowVirtualizer && isScrollContainerReady) {
-            // Skip tag scrolling when a shortcut is active
-            if (activeShortcutKey) {
-                prevSelectedTagRef.current = selectionState.selectedTag;
-                return;
-            }
-            // Check if this is an actual tag selection change
-            const isTagSelectionChange = prevSelectedTagRef.current !== selectionState.selectedTag;
+        if (!selectedPath || !selectedItemType || !rowVirtualizer || !isScrollContainerReady) {
+            return;
+        }
 
-            // Update the ref for next comparison
-            prevSelectedTagRef.current = selectionState.selectedTag;
+        if (selectionState.isRevealOperation) {
+            // Tag/property reveals request scroll explicitly. This deferred-scroll effect is for restored selections
+            // where the navigation rows may not exist yet.
+            prevSelectedDeferredPathRef.current = selectedPath;
+            return;
+        }
 
-            // Only scroll on actual tag selection changes
-            if (!isTagSelectionChange) return;
+        if (selectedItemType !== ItemType.TAG && selectedItemType !== ItemType.PROPERTY) {
+            return;
+        }
 
-            // During a hidden-items toggle, defer immediate tag scroll and queue a toggle-intent pending
-            if (prevShowHiddenItemsRef.current !== settings.showHiddenItems) {
-                if (selectedPath) {
-                    pendingScrollRef.current = {
-                        path: selectedPath,
-                        align: 'auto',
-                        intent: 'visibilityToggle',
-                        minIndexVersion: indexVersionRef.current + 1,
-                        itemType: ItemType.TAG
-                    };
-                    setPendingScrollVersion(v => v + 1);
-                }
-                return;
-            }
+        if (activeShortcutKey) {
+            prevSelectedDeferredPathRef.current = selectedPath;
+            return;
+        }
 
-            const tagIndex = resolveIndex(selectionState.selectedTag, ItemType.TAG);
+        const suppressShortcutScroll = settings.skipAutoScroll && selectionState.revealSource === 'shortcut';
+        if (suppressShortcutScroll) {
+            prevSelectedDeferredPathRef.current = selectedPath;
+            return;
+        }
 
-            if (tagIndex !== undefined && tagIndex >= 0) {
-                rowVirtualizer.scrollToIndex(tagIndex, { align: getNavAlign('selection') });
-            }
+        const isSelectionChange = prevSelectedDeferredPathRef.current !== selectedPath;
+        prevSelectedDeferredPathRef.current = selectedPath;
+        if (!isSelectionChange) {
+            return;
+        }
+
+        if (prevShowHiddenItemsRef.current !== showHiddenItems) {
+            pendingScrollRef.current = {
+                path: selectedPath,
+                align: 'auto',
+                intent: 'visibilityToggle',
+                minIndexVersion: indexVersionRef.current + 1,
+                itemType: selectedItemType
+            };
+            setPendingScrollVersion(v => v + 1);
+            return;
+        }
+
+        const index = resolveIndex(selectedPath, selectedItemType);
+
+        if (index !== undefined && index >= 0) {
+            scrollToIndexSafely(index, getNavAlign('selection'));
         }
     }, [
         pathToIndex,
-        selectionState.selectionType,
-        selectionState.selectedTag,
+        selectedItemType,
+        selectedPath,
         rowVirtualizer,
         isScrollContainerReady,
-        settings.showHiddenItems,
-        selectedPath,
+        selectionState.isRevealOperation,
+        showHiddenItems,
         resolveIndex,
-        activeShortcutKey
+        activeShortcutKey,
+        selectionState.revealSource,
+        settings.skipAutoScroll,
+        scrollToIndexSafely
     ]);
 
     /**
@@ -443,7 +567,7 @@ export function useNavigationPaneScroll({
 
         // Priority check: During visibility toggle, only process toggle-intent scrolls
         // This prevents stale selection scrolls from executing with wrong indices
-        if (prevShowHiddenItemsRef.current !== settings.showHiddenItems && intent !== 'visibilityToggle') {
+        if (prevShowHiddenItemsRef.current !== showHiddenItems && intent !== 'visibilityToggle') {
             return;
         }
 
@@ -456,7 +580,7 @@ export function useNavigationPaneScroll({
 
         if (index !== undefined && index !== -1) {
             const finalAlign: Align = align ?? getNavAlign(intent);
-            rowVirtualizer.scrollToIndex(index, { align: finalAlign });
+            scrollToIndexSafely(index, finalAlign);
             pendingScrollRef.current = null;
 
             // Stabilization mechanism: Handle rare double rebuilds
@@ -482,7 +606,7 @@ export function useNavigationPaneScroll({
             }
         }
         // If index not found, keep the pending scroll for next rebuild
-    }, [rowVirtualizer, isScrollContainerReady, pendingScrollVersion, settings.showHiddenItems, resolveIndex]);
+    }, [rowVirtualizer, isScrollContainerReady, pendingScrollVersion, showHiddenItems, resolveIndex, scrollToIndexSafely]);
 
     /**
      * Listen for mobile drawer visibility events
@@ -501,12 +625,12 @@ export function useNavigationPaneScroll({
                 return;
             }
 
-            const targetType = selectionState.selectionType === ItemType.TAG ? ItemType.TAG : ItemType.FOLDER;
+            const targetType = selectedItemType ?? ItemType.FOLDER;
 
             if (rowVirtualizer && isScrollContainerReady) {
                 const index = resolveIndex(selectedPath, targetType);
                 if (index !== undefined && index >= 0) {
-                    rowVirtualizer.scrollToIndex(index, { align: 'auto' });
+                    scrollToIndexSafely(index, 'auto');
                     return;
                 }
             }
@@ -524,7 +648,16 @@ export function useNavigationPaneScroll({
 
         window.addEventListener('notebook-navigator-visible', handleVisible);
         return () => window.removeEventListener('notebook-navigator-visible', handleVisible);
-    }, [isMobile, selectedPath, rowVirtualizer, selectionState.selectionType, resolveIndex, activeShortcutKey, isScrollContainerReady]);
+    }, [
+        isMobile,
+        selectedPath,
+        rowVirtualizer,
+        selectedItemType,
+        resolveIndex,
+        activeShortcutKey,
+        isScrollContainerReady,
+        scrollToIndexSafely
+    ]);
 
     /**
      * Re-measure all items when line height settings change
@@ -535,14 +668,14 @@ export function useNavigationPaneScroll({
 
         // Re-measure all items with new heights
         rowVirtualizer.measure();
-    }, [settings.navItemHeight, settings.navIndent, rowVirtualizer]);
+    }, [settings.navItemHeight, settings.navIndent, settings.rootLevelSpacing, rowVirtualizer]);
 
     /**
      * Scroll to maintain position only when settings actually change
      * Uses a settings key to detect real changes
      */
     useEffect(() => {
-        const settingsKey = `${settings.navItemHeight}-${settings.navIndent}`;
+        const settingsKey = `${settings.navItemHeight}-${settings.navIndent}-${settings.rootLevelSpacing}`;
         const settingsChanged = prevNavSettingsKeyRef.current && prevNavSettingsKeyRef.current !== settingsKey;
 
         // Skip settings-triggered scroll when a shortcut is active
@@ -553,11 +686,11 @@ export function useNavigationPaneScroll({
 
         if (settingsChanged) {
             if (selectedPath && isScrollContainerReady && rowVirtualizer) {
-                const index = resolveIndex(selectedPath, selectionState.selectionType === ItemType.TAG ? ItemType.TAG : ItemType.FOLDER);
+                const index = resolveIndex(selectedPath, selectedItemType ?? ItemType.FOLDER);
                 if (index !== undefined && index >= 0) {
                     // Use requestAnimationFrame to ensure measurements are complete
                     requestAnimationFrame(() => {
-                        rowVirtualizer.scrollToIndex(index, { align: 'auto' });
+                        scrollToIndexSafely(index, 'auto');
                     });
                 }
             }
@@ -567,12 +700,60 @@ export function useNavigationPaneScroll({
     }, [
         settings.navItemHeight,
         settings.navIndent,
+        settings.rootLevelSpacing,
         selectedPath,
         isScrollContainerReady,
         rowVirtualizer,
         resolveIndex,
-        selectionState.selectionType,
-        activeShortcutKey
+        selectedItemType,
+        activeShortcutKey,
+        scrollToIndexSafely
+    ]);
+
+    const prevScrollInsetsRef = useRef<{ top: number; bottom: number } | null>(null);
+    useEffect(() => {
+        if (!isScrollContainerReady) {
+            return;
+        }
+
+        const prevInsets = prevScrollInsetsRef.current;
+        const nextInsets = { top: effectiveScrollMargin, bottom: effectiveScrollPaddingEnd };
+        prevScrollInsetsRef.current = nextInsets;
+
+        if (!prevInsets) {
+            return;
+        }
+
+        if (prevInsets.top === nextInsets.top && prevInsets.bottom === nextInsets.bottom) {
+            return;
+        }
+
+        if (activeShortcutKey) {
+            return;
+        }
+
+        if (!selectedPath) {
+            return;
+        }
+
+        const selectedType = selectedItemType ?? ItemType.FOLDER;
+        const index = resolveIndex(selectedPath, selectedType);
+        if (index === undefined || index < 0) {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            scrollToIndexSafely(index, 'auto');
+        });
+    }, [
+        activeShortcutKey,
+        effectiveScrollMargin,
+        effectiveScrollPaddingEnd,
+        isScrollContainerReady,
+        resolveIndex,
+        scrollToIndexSafely,
+        selectedPath,
+        selectedItemType
     ]);
 
     /**
@@ -580,24 +761,30 @@ export function useNavigationPaneScroll({
      * This is what triggers the tag tree rebuild issue
      */
     useEffect(() => {
-        if (prevShowHiddenItemsRef.current !== settings.showHiddenItems) {
-            // When showHiddenItems changes and we have a selected tag, defer scrolling until the tree rebuilds
-            if (selectedPath && selectionState.selectionType === ItemType.TAG && isScrollContainerReady && rowVirtualizer) {
+        if (prevShowHiddenItemsRef.current !== showHiddenItems) {
+            // When showHiddenItems changes and we have a selected tag/property item, defer scrolling until the tree rebuilds
+            if (
+                selectedPath &&
+                (selectionState.selectionType === ItemType.TAG || selectionState.selectionType === ItemType.PROPERTY) &&
+                isScrollContainerReady &&
+                rowVirtualizer
+            ) {
                 // Set a pending scroll to be processed after the next index rebuild
                 pendingScrollRef.current = {
                     path: selectedPath,
                     align: 'auto',
                     intent: 'visibilityToggle',
                     minIndexVersion: indexVersionRef.current + 1,
-                    itemType: ItemType.TAG
+                    itemType: selectedItemType ?? ItemType.FOLDER
                 };
                 setPendingScrollVersion(v => v + 1);
             }
 
-            prevShowHiddenItemsRef.current = settings.showHiddenItems;
+            prevShowHiddenItemsRef.current = showHiddenItems;
         }
     }, [
-        settings.showHiddenItems,
+        selectedItemType,
+        showHiddenItems,
         selectedPath,
         isScrollContainerReady,
         rowVirtualizer,

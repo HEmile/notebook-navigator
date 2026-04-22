@@ -1,0 +1,496 @@
+/* Source: src/styles/sections/list-files.css */
+
+/* ========================================================================
+   File List Styles
+   ======================================================================== */
+
+/* File list container - scrollable area for files */
+.nn-list-pane-chrome {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-list-pane-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-list-pane-scroller {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 0 var(--nn-scroller-padding);
+    background-color: var(--nn-theme-list-bg); /* Opaque background for GPU scroll layer optimization */
+    position: relative;
+}
+
+.nn-list-pane-content {
+    flex: 1 0 auto;
+}
+
+.nn-list-title-area {
+    background-color: var(--nn-theme-list-bg);
+    padding: var(--nn-list-title-padding-block) var(--nn-scroller-padding) 8px;
+}
+
+.nn-list-title-content {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--nn-file-item-padding-horizontal);
+    font-size: var(--nn-list-title-font-size);
+    font-weight: var(--nn-theme-list-heading-font-weight);
+    color: var(--nn-theme-list-heading-color);
+}
+
+.nn-list-title-text {
+    line-height: 1.2;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nn-list-title-label--folder-note {
+    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration) !important;
+}
+
+.nn-list-title-label--folder-note:hover {
+    cursor: pointer;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration) !important;
+}
+
+/* File - container for each file in the list */
+.nn-file {
+    --nn-file-item-border-radius: min(16px, var(--nn-theme-file-border-radius));
+    background: transparent;
+    padding: 0;
+    -webkit-user-select: none;
+    user-select: none;
+    position: relative;
+
+    /* CSS Custom Properties for file items - themes can override these */
+    /* Isolate layout and style calculations per item while allowing ::before to extend beyond bounds */
+    contain: layout style;
+}
+
+/* Remove shadows */
+.nn-file,
+.nn-desktop .nn-file:hover {
+    box-shadow: none;
+}
+
+/* File content wrapper - contains all file information */
+.nn-file-content {
+    padding: var(--nn-file-padding-vertical-mobile, var(--nn-file-padding-vertical)) var(--nn-file-item-padding-horizontal);
+    margin: 0;
+    border-radius: var(--nn-file-item-border-radius);
+    background: transparent;
+    position: relative; /* For absolute positioning of reveal overlay */
+}
+
+.nn-file.nn-has-custom-background::before {
+    content: '';
+    position: absolute;
+    top: 0px;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    /* Extend slightly beyond bottom item bounds (height rounding issue) to prevent hairline gaps when zoomed */
+    bottom: -0.2px;
+    background-color: var(--nn-file-custom-bg-color);
+    border-top-left-radius: var(--nn-file-top-left-radius, var(--nn-file-item-border-radius));
+    border-top-right-radius: var(--nn-file-top-right-radius, var(--nn-file-item-border-radius));
+    border-bottom-left-radius: var(--nn-file-bottom-left-radius, var(--nn-file-item-border-radius));
+    border-bottom-right-radius: var(--nn-file-bottom-right-radius, var(--nn-file-item-border-radius));
+    box-shadow: inset 0 0 0 var(--nn-theme-file-border-width) transparent;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.nn-file.nn-has-custom-background > .nn-file-content {
+    z-index: 2;
+}
+
+.nn-virtual-file-item:has(> .nn-file.nn-has-custom-background)::after,
+.nn-virtual-file-item:has(+ .nn-virtual-file-item > .nn-file.nn-has-custom-background)::after {
+    display: none;
+}
+
+.nn-virtual-file-item:has(> .nn-file.nn-has-custom-background)
+    + .nn-virtual-file-item:has(> .nn-file.nn-has-custom-background)
+    > .nn-file.nn-has-custom-background {
+    --nn-file-top-left-radius: 0;
+    --nn-file-top-right-radius: 0;
+}
+
+.nn-virtual-file-item:has(> .nn-file.nn-has-custom-background):has(+ .nn-virtual-file-item > .nn-file.nn-has-custom-background)
+    > .nn-file.nn-has-custom-background {
+    --nn-file-bottom-left-radius: 0;
+    --nn-file-bottom-right-radius: 0;
+}
+
+/* File inner content - flex container for actual content */
+.nn-file-inner-content {
+    display: flex;
+    flex-direction: row;
+    gap: var(--nn-file-row-gap);
+    align-items: flex-start;
+    position: relative;
+}
+
+.nn-file-icon-slot {
+    width: var(--nn-file-icon-slot-width-mobile, var(--nn-file-icon-slot-width));
+    flex: 0 0 var(--nn-file-icon-slot-width-mobile, var(--nn-file-icon-slot-width));
+    display: flex;
+    align-items: center;
+    align-self: flex-start;
+    justify-content: center;
+    margin-inline-end: max(0px, calc(var(--nn-file-icon-slot-gap) - var(--nn-file-row-gap)));
+    margin-top: max(0px, calc((var(--nn-file-title-line-height) - var(--nn-file-icon-size-mobile, var(--nn-file-icon-size))) / 2));
+}
+
+.nn-file-icon-rectangle {
+    min-width: 18px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-inline: 4px;
+    border-radius: 4px;
+    background-color: var(--background-secondary);
+    box-sizing: border-box;
+}
+
+.nn-file-icon-rectangle-text {
+    font-family: var(--font-monospace);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--nn-theme-foreground-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1px;
+    line-height: 1;
+}
+
+/* Virtual list file separator */
+
+.nn-virtual-file-item:not(.nn-last-file)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    inset-inline-start: calc(
+        var(--nn-file-item-padding-horizontal) + var(--nn-file-icon-slot-width-mobile, var(--nn-file-icon-slot-width)) +
+            var(--nn-file-icon-slot-gap)
+    );
+    inset-inline-end: var(--nn-file-item-padding-horizontal);
+    height: var(--nn-separator-height);
+    background-color: var(--nn-theme-list-separator-color);
+    z-index: 100; /* Very high to ensure it's always on top */
+    pointer-events: none; /* Ensure it doesn't interfere with clicks */
+}
+
+/* Hide separator when flagged by renderer (selection) or context menu */
+.nn-virtual-file-item.nn-hide-separator-selection::after,
+.nn-virtual-file-item.nn-hide-separator-context-menu::after {
+    display: none;
+}
+
+/* Hide separators in compact mode */
+.nn-compact-mode .nn-virtual-file-item::after {
+    display: none;
+}
+
+/* File text content - left side container for name and preview */
+.nn-file-text-content {
+    flex: 1;
+    min-width: 0; /* Enable text truncation */
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    order: 1; /* Ensure it appears on the left */
+    min-height: var(--nn-file-thumbnail-min-size); /* Minimum height to match minimum thumbnail size */
+    justify-content: flex-start; /* Top-align content */
+    /* No align-self - let it stretch naturally */
+}
+
+/* Compact mode file text content - same as above but without min-height */
+.nn-compact-file-text-content {
+    flex: 1;
+    min-width: 0; /* Enable text truncation */
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    order: 1; /* Ensure it appears on the left */
+    justify-content: flex-start; /* Top-align content */
+}
+
+/* File name - primary text with ellipsis overflow */
+.nn-file-name {
+    font-size: var(--nn-file-name-size-mobile, var(--nn-file-name-size));
+    font-weight: var(--nn-theme-file-name-font-weight);
+    color: var(--nn-theme-file-name-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: var(--filename-rows, 1);
+    -webkit-box-orient: vertical;
+    line-height: var(--nn-file-title-line-height);
+    word-break: break-word;
+    min-height: calc(var(--nn-file-title-line-height) * var(--filename-rows, 1));
+    height: calc(var(--nn-file-title-line-height) * var(--filename-rows, 1));
+}
+
+.nn-file-name[data-title-rows='1'] {
+    display: block;
+    white-space: nowrap;
+    word-break: normal;
+}
+
+.nn-file-name[data-has-color='true'] {
+    color: var(--nn-file-name-custom-color);
+}
+
+.nn-file-icon {
+    width: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+    height: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--nn-theme-navitem-icon-color);
+}
+
+.nn-file-icon svg {
+    width: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+    height: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+}
+
+.nn-file-icon.nn-emoji-icon,
+.nn-file-icon .nn-emoji-icon {
+    font-size: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+    width: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+    height: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+    line-height: var(--nn-file-icon-size-mobile, var(--nn-file-icon-size));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nn-file-icon[data-has-color='false'] {
+    color: var(--nn-theme-navitem-icon-color);
+}
+
+.nn-file.nn-selected .nn-file-icon[data-has-color='false'] {
+    color: var(--nn-theme-navitem-selected-icon-color);
+}
+
+.nn-file-icon.nn-file-icon-unfinished-task[data-has-color='false'] {
+    color: var(--nn-theme-file-task-icon-color);
+}
+
+.nn-file.nn-selected .nn-file-icon.nn-file-icon-unfinished-task[data-has-color='false'] {
+    color: var(--nn-theme-file-task-icon-color);
+}
+
+.nn-file-icon[data-has-color='true'] svg {
+    stroke-width: 2.4;
+}
+
+/* Quick actions panel - horizontal container for action icons */
+.nn-quick-actions-panel {
+    position: absolute;
+    top: 8px; /* Default: 8px for normal mode */
+    inset-inline-end: 8px;
+    height: 20px;
+    display: flex;
+    background: var(--nn-theme-quick-actions-bg);
+    border: 1px solid var(--nn-theme-quick-actions-border);
+    border-radius: min(12px, var(--nn-theme-quick-actions-border-radius));
+    z-index: 10;
+    flex-direction: row;
+    align-items: center;
+    /* Dynamic padding that scales with border radius for better visual balance (clamped to max 6px at 12px radius) */
+    padding: 0 max(4px, calc(min(12px, var(--nn-theme-quick-actions-border-radius)) * 0.5));
+    gap: 0;
+}
+
+/* Individual quick action items */
+.nn-quick-action-item {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    color: var(--nn-theme-quick-actions-icon-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Icon highlights when hovering directly on it */
+.nn-quick-action-item:hover {
+    color: var(--nn-theme-quick-actions-icon-hover-color);
+}
+
+/* Separator between quick actions */
+.nn-quick-action-separator {
+    width: 1px;
+    height: 14px;
+    background: var(--nn-theme-quick-actions-separator-color);
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
+/* Compact mode with 1 title row and no tags: center vertically */
+.nn-quick-actions-panel.nn-compact-mode[data-title-rows='1'][data-has-tags='false'] {
+    top: max(0px, calc((var(--nn-file-title-line-height) + var(--nn-file-padding-vertical-compact) * 2 - 20px) / 2));
+}
+
+/* Compact mode with tags or 2 title rows: align with compact padding */
+.nn-quick-actions-panel.nn-compact-mode[data-title-rows='2'],
+.nn-quick-actions-panel.nn-compact-mode[data-has-tags='true'] {
+    top: var(--nn-file-padding-vertical-compact);
+}
+
+/* Second line container - holds date and preview text */
+.nn-file-second-line {
+    display: flex;
+    align-items: center; /* Center align for better icon/text alignment */
+    gap: 4px;
+}
+
+/* File date - modification date display */
+.nn-file-date {
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    font-weight: var(--nn-theme-file-date-font-weight);
+    color: var(--nn-theme-file-date-color);
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin-inline-end: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: auto;
+    line-height: var(--nn-file-single-text-line-height);
+}
+
+/* Date + preview (same line): match legacy spacing. */
+.nn-file-second-line > .nn-file-date + .nn-file-preview {
+    margin-inline-start: 8px;
+}
+
+/* Date + parent folder (same line): match legacy spacing when dot separator is disabled. */
+.nn-file-second-line > .nn-file-date + .nn-parent-folder[data-dot-separator='false'] {
+    margin-inline-start: 8px;
+}
+
+/* Date + parent folder (same line): dot separator */
+.nn-file-second-line > .nn-file-date + .nn-parent-folder[data-dot-separator='true']::before {
+    content: '•';
+    flex-shrink: 0;
+    margin-inline-end: 4px;
+    font-size: 0.65em;
+}
+
+/* File preview text - secondary line showing file content */
+.nn-file-preview {
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    font-weight: var(--nn-theme-file-preview-font-weight);
+    color: var(--nn-theme-file-preview-color);
+    line-height: var(--nn-file-multiline-text-line-height);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: var(--preview-rows, 1);
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+    flex: 1;
+}
+
+/* Multi-line preview - always take up configured number of lines */
+.nn-file-preview:not(.nn-file-second-line .nn-file-preview) {
+    min-height: calc(var(--nn-file-multiline-text-line-height) * var(--preview-rows, 1));
+    height: calc(var(--nn-file-multiline-text-line-height) * var(--preview-rows, 1));
+}
+
+/* Preview on same line as date - match date line-height for alignment */
+.nn-file-second-line .nn-file-preview {
+    line-height: var(--nn-file-single-text-line-height);
+    display: block;
+    white-space: nowrap;
+    word-break: normal;
+}
+
+/* Parent folder indicator shown under file names */
+.nn-parent-folder {
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    font-weight: var(--nn-theme-file-parent-font-weight);
+    color: var(--nn-theme-file-parent-color);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    line-height: var(--nn-file-single-text-line-height); /* Use second line height for consistent spacing */
+    flex: 1;
+    min-width: 0;
+}
+
+.nn-parent-folder-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 1 auto;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.nn-parent-folder-content[data-has-background='true'] {
+    border-radius: 4px;
+    padding: 1px 4px;
+}
+
+.nn-parent-folder-content[data-reveal='true'] {
+    cursor: pointer;
+    user-select: none;
+}
+
+.nn-parent-folder-content[data-reveal='true']:hover .nn-parent-folder-label,
+.nn-parent-folder-content[data-reveal='true']:focus-visible .nn-parent-folder-label {
+    text-decoration: underline;
+}
+
+.nn-parent-folder-content[data-reveal='true']:focus-visible {
+    outline: 1px solid var(--interactive-accent);
+    outline-offset: 2px;
+}
+
+/* Folder indicator text */
+.nn-parent-folder span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Folder icon styling */
+.nn-parent-folder-icon {
+    width: calc(var(--icon-size) * 0.8);
+    height: calc(var(--icon-size) * 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.nn-parent-folder-icon[data-has-color='true'] svg {
+    stroke-width: 2.4;
+}
+
+.nn-parent-folder-label {
+    font-weight: var(--nn-theme-file-parent-font-weight);
+}
+
+.nn-parent-folder-label.nn-parent-folder-label--colored {
+    font-weight: var(--nn-theme-navitem-custom-color-name-font-weight);
+}

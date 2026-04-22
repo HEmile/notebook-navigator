@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,11 +16,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Platform, type TFile } from 'obsidian';
+import { FileView, TFile, type WorkspaceLeaf } from 'obsidian';
 import type NotebookNavigatorPlugin from '../../main';
 import { isSupportedHomepageFile } from '../../utils/homepageUtils';
 import type { RevealFileOptions } from '../../hooks/useNavigatorReveal';
 import WorkspaceCoordinator from './WorkspaceCoordinator';
+import { getSupportedLeaves } from '../../types';
+import {
+    buildCustomCalendarFilePathForPattern,
+    buildCustomCalendarMomentPattern,
+    getCalendarNoteConfig,
+    resolveCalendarCustomNotePathDate
+} from '../../utils/calendarNotes';
+import { getDailyNoteFile, getDailyNoteSettings } from '../../utils/dailyNotes';
+import { getCurrentLanguage } from '../../i18n';
+import { getMomentApi, resolveCalendarLocales } from '../../utils/moment';
+import { getActiveVaultProfile } from '../../utils/vaultProfiles';
 
 // Indicates what triggered the homepage opening
 type HomepageTrigger = 'startup' | 'command';
@@ -47,11 +58,10 @@ export default class HomepageController {
     }
 
     /**
-     * Resolves the configured homepage path to a file object if valid
+     * Resolves the configured homepage target to a file object if valid
      */
     resolveHomepageFile(): TFile | null {
-        const { homepage, mobileHomepage, useMobileHomepage } = this.plugin.settings;
-        const useMobileOverride = Platform.isMobile && useMobileHomepage;
+        const { homepage } = this.plugin.settings;
 
         const resolvePath = (path: string | null): TFile | null => {
             if (!path) {
@@ -66,19 +76,20 @@ export default class HomepageController {
             return candidate;
         };
 
-        const primaryFile = resolvePath(useMobileOverride ? mobileHomepage : homepage);
-        if (primaryFile) {
-            return primaryFile;
+        switch (homepage.source) {
+            case 'none':
+                return null;
+            case 'file':
+                return resolvePath(homepage.file);
+            case 'daily-note':
+                return this.resolvePeriodicHomepageFile('day');
+            case 'weekly-note':
+                return this.resolvePeriodicHomepageFile('week');
+            case 'monthly-note':
+                return this.resolvePeriodicHomepageFile('month');
+            case 'quarterly-note':
+                return this.resolvePeriodicHomepageFile('quarter');
         }
-
-        if (useMobileOverride) {
-            const fallbackFile = resolvePath(homepage);
-            if (fallbackFile) {
-                return fallbackFile;
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -103,7 +114,7 @@ export default class HomepageController {
     }
 
     /**
-     * Opens the configured homepage file if it exists and conditions are met
+     * Opens the configured homepage target if it resolves and conditions are met
      */
     async open(trigger: HomepageTrigger): Promise<boolean> {
         if (this.plugin.isShuttingDown()) {
@@ -121,14 +132,32 @@ export default class HomepageController {
             return false;
         }
 
+        const shouldRevealInNavigator = trigger !== 'startup' || this.plugin.settings.autoRevealActiveFile;
         const revealOptions: RevealFileOptions = {
             source: trigger === 'startup' ? 'startup' : 'manual',
             isStartupReveal: trigger === 'startup',
             preserveNavigationFocus: this.plugin.settings.startView === 'navigation' && trigger === 'startup'
         };
+        let alreadyRevealedInNavigator = false;
+
+        if (trigger === 'startup') {
+            const existingLeaf = this.findExistingHomepageLeaf(homepageFile);
+            if (existingLeaf) {
+                const { workspace } = this.plugin.app;
+                await workspace.revealLeaf(existingLeaf);
+                workspace.setActiveLeaf(existingLeaf, { focus: true });
+                if (shouldRevealInNavigator) {
+                    this.workspace.revealFileInNearestFolder(homepageFile, revealOptions);
+                    alreadyRevealedInNavigator = true;
+                }
+                return true;
+            }
+        }
 
         // Reveal homepage in navigator
-        this.workspace.revealFileInNearestFolder(homepageFile, revealOptions);
+        if (shouldRevealInNavigator && !alreadyRevealedInNavigator) {
+            this.workspace.revealFileInNearestFolder(homepageFile, revealOptions);
+        }
 
         // Open homepage file in the editor
         // Use command queue to track the homepage open operation if available
@@ -144,5 +173,95 @@ export default class HomepageController {
         // Fallback for when command queue is not available
         await this.plugin.app.workspace.openLinkText(homepageFile.path, '', false);
         return true;
+    }
+
+    /**
+     * Finds an open workspace leaf that already hosts the resolved homepage file.
+     * Restricting this check to supported file leaves avoids iterating every workspace tab.
+     */
+    private findExistingHomepageLeaf(homepageFile: TFile): WorkspaceLeaf | null {
+        const leaves = getSupportedLeaves(this.plugin.app);
+        const targetPath = homepageFile.path;
+
+        for (const leaf of leaves) {
+            const resolvedPath = this.getLeafFilePath(leaf);
+            if (resolvedPath === targetPath) {
+                return leaf;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Gets the file path currently associated with a workspace leaf, falling back to stored view state.
+     */
+    private getLeafFilePath(leaf: WorkspaceLeaf): string | null {
+        const { view } = leaf;
+        if (view instanceof FileView && view.file) {
+            return view.file.path;
+        }
+
+        const liveState = view?.getState?.();
+        const liveStateFile = this.extractFilePath(liveState);
+        if (liveStateFile) {
+            return liveStateFile;
+        }
+
+        const persistedState = leaf.getViewState();
+        return this.extractFilePath(persistedState.state);
+    }
+
+    /**
+     * Extracts a file path from a view state object when available.
+     */
+    private extractFilePath(state: unknown): string | null {
+        if (typeof state !== 'object' || state === null) {
+            return null;
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(state, 'file')) {
+            return null;
+        }
+
+        const stateRecord = state as Record<string, unknown>;
+        const fileValue = stateRecord.file;
+        return typeof fileValue === 'string' ? fileValue : null;
+    }
+
+    private resolvePeriodicHomepageFile(kind: 'day' | 'week' | 'month' | 'quarter'): TFile | null {
+        const momentApi = getMomentApi();
+        if (!momentApi) {
+            return null;
+        }
+
+        const currentLanguage = getCurrentLanguage();
+        const { calendarRulesLocale } = resolveCalendarLocales(this.plugin.settings.calendarLocale, momentApi, currentLanguage);
+        const date = momentApi().startOf('day').locale(calendarRulesLocale);
+
+        if (kind === 'day' && this.plugin.settings.calendarIntegrationMode === 'daily-notes') {
+            const dailyNoteSettings = getDailyNoteSettings(this.plugin.app);
+            if (!dailyNoteSettings) {
+                return null;
+            }
+
+            return getDailyNoteFile(this.plugin.app, date, dailyNoteSettings);
+        }
+
+        const config = getCalendarNoteConfig(kind, this.plugin.settings);
+        const momentPattern = buildCustomCalendarMomentPattern(config.calendarCustomFilePattern, config.fallbackPattern);
+
+        if (!config.isPatternValid(momentPattern, momentApi)) {
+            return null;
+        }
+
+        const dateForPath = resolveCalendarCustomNotePathDate(kind, date, momentPattern, calendarRulesLocale, calendarRulesLocale);
+        const expected = buildCustomCalendarFilePathForPattern(
+            dateForPath,
+            { calendarCustomRootFolder: getActiveVaultProfile(this.plugin.settings).periodicNotesFolder },
+            config.calendarCustomFilePattern,
+            config.fallbackPattern
+        );
+        const file = this.plugin.app.vault.getAbstractFileByPath(expected.filePath);
+        return file instanceof TFile ? file : null;
     }
 }

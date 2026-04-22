@@ -1,0 +1,111 @@
+/* Source: src/styles/sections/ui-buttons.css */
+
+/* ========================================================================
+   Button Styles
+   ======================================================================== */
+
+/* Icon button base style - transparent buttons matching Obsidian's design */
+.nn-icon-button {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: var(--radius-s);
+    padding: 0 8px;
+    color: var(--nn-theme-header-button-icon-color);
+    opacity: 0.85;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Desktop pane header buttons - enforce Obsidian-muted icon color */
+.nn-desktop .nn-pane-header .nn-icon-button {
+    color: var(--nn-theme-header-button-icon-color);
+}
+
+.nn-desktop .nn-pane-header .nn-icon-button svg {
+    stroke: currentColor;
+}
+
+/* Header buttons - match Obsidian's standard dimensions */
+.nn-header-actions button.nn-icon-button {
+    padding: 0 8px;
+    width: auto;
+    min-width: 34px;
+    height: 25px;
+}
+
+/* iPad-specific adjustment for icon buttons in headers */
+@media (min-width: 768px) {
+    .notebook-navigator-mobile .nn-header-actions button.nn-icon-button {
+        /* Maintain same dimensions as desktop for consistency */
+        padding: 0 8px;
+        width: auto;
+        min-width: 34px;
+        height: 25px;
+    }
+}
+
+/* Icon button hover state - subtle background on hover - desktop only */
+.nn-desktop .nn-icon-button:hover {
+    background-color: var(--nn-theme-header-button-hover-bg) !important;
+    opacity: 1;
+}
+
+/* Icon button active state - feedback on click */
+.nn-icon-button:active {
+    opacity: 0.8;
+}
+
+/* Icon button active state - for toggle buttons that are "ON" */
+.nn-icon-button-active {
+    background-color: var(--nn-theme-header-button-active-bg) !important;
+    color: var(--nn-theme-header-button-active-icon-color) !important;
+}
+
+/* Active button icon color */
+.nn-icon-button-active svg {
+    stroke: var(--nn-theme-header-button-active-icon-color) !important;
+}
+
+/* Icon button disabled state - visual indicator for unavailable actions */
+.nn-icon-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: var(--nn-theme-header-button-disabled-icon-color);
+}
+
+/* Disabled icon svg stroke color */
+.nn-icon-button:disabled svg {
+    stroke: currentColor;
+}
+
+/* Disabled hover state - no hover effect when disabled */
+.nn-desktop .nn-icon-button:disabled:hover {
+    background-color: transparent;
+    color: var(--nn-theme-header-button-disabled-icon-color);
+}
+
+/* Disabled icon color - maintains muted appearance */
+.nn-desktop .nn-icon-button:disabled:hover svg {
+    stroke: currentColor;
+}
+
+/* Icon styling - consistent size and appearance for all button icons */
+.nn-icon-button > span {
+    color: inherit;
+}
+
+.nn-icon-button > span > svg {
+    color: inherit;
+}
+
+.nn-icon-button svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}

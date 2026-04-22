@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,11 +17,14 @@
  */
 
 import { App } from 'obsidian';
-import { NotebookNavigatorSettings, SortOption } from '../../settings';
+import { NotebookNavigatorSettings, SortOption, type AlphaSortOrder } from '../../settings';
 import { ItemType } from '../../types';
 import { ISettingsProvider } from '../../interfaces/ISettingsProvider';
 import { FolderAppearance, TagAppearance } from '../../hooks/useListPaneAppearance';
 import type { ShortcutEntry } from '../../types/shortcuts';
+import { mutateVaultProfileShortcuts } from '../../utils/vaultProfiles';
+import { normalizeCanonicalIconId } from '../../utils/iconizeFormat';
+import { ensureRecord, isStringRecordValue, sanitizeRecord } from '../../utils/recordUtils';
 
 /**
  * Type helper for metadata fields in settings
@@ -32,17 +35,34 @@ type MetadataFields = {
     folderColors: Record<string, string>;
     folderBackgroundColors: Record<string, string>;
     folderSortOverrides: Record<string, SortOption>;
+    folderTreeSortOverrides: Record<string, AlphaSortOrder>;
     folderAppearances: Record<string, FolderAppearance>;
     fileIcons: Record<string, string>;
     fileColors: Record<string, string>;
+    fileBackgroundColors: Record<string, string>;
     tagColors: Record<string, string>;
     tagIcons: Record<string, string>;
     tagBackgroundColors: Record<string, string>;
     tagSortOverrides: Record<string, SortOption>;
+    tagTreeSortOverrides: Record<string, AlphaSortOrder>;
     tagAppearances: Record<string, TagAppearance>;
+    propertyIcons: Record<string, string>;
+    propertyColors: Record<string, string>;
+    propertyBackgroundColors: Record<string, string>;
+    propertySortOverrides: Record<string, SortOption>;
+    propertyTreeSortOverrides: Record<string, AlphaSortOrder>;
+    propertyAppearances: Record<string, FolderAppearance>;
 };
 
-type ColorRecordKey = 'folderColors' | 'tagColors' | 'folderBackgroundColors' | 'tagBackgroundColors' | 'fileColors';
+type ColorRecordKey =
+    | 'folderColors'
+    | 'tagColors'
+    | 'propertyColors'
+    | 'folderBackgroundColors'
+    | 'tagBackgroundColors'
+    | 'propertyBackgroundColors'
+    | 'fileColors'
+    | 'fileBackgroundColors';
 type ColorVariant = 'color' | 'background';
 
 type MetadataKey = keyof MetadataFields;
@@ -50,7 +70,7 @@ type MetadataKey = keyof MetadataFields;
 /**
  * Type for entity that can have metadata (folder or tag)
  */
-export type EntityType = typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.FILE;
+export type EntityType = typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.PROPERTY | typeof ItemType.FILE;
 
 /**
  * Base class for metadata services
@@ -71,12 +91,15 @@ export abstract class BaseMetadataService {
      * Saves settings and triggers UI update
      * Uses a queue to serialize updates and prevent race conditions
      */
-    protected async saveAndUpdate(updater: (settings: NotebookNavigatorSettings) => void): Promise<void> {
+    protected async saveAndUpdate(updater: (settings: NotebookNavigatorSettings) => void | boolean): Promise<void> {
         // Queue this update to run after any pending updates
         this.updateQueue = this.updateQueue
             .then(async () => {
                 // Update settings
-                updater(this.settingsProvider.settings);
+                const result = updater(this.settingsProvider.settings);
+                if (result === false) {
+                    return;
+                }
                 // Save settings
                 await this.settingsProvider.saveSettingsAndUpdate();
             })
@@ -100,32 +123,28 @@ export abstract class BaseMetadataService {
         settings: NotebookNavigatorSettings,
         mutate: (shortcut: ShortcutEntry) => ShortcutEntry | null | undefined
     ): boolean {
-        const shortcuts = settings.shortcuts;
-        if (!Array.isArray(shortcuts) || shortcuts.length === 0) {
-            return false;
-        }
+        // Updates shortcuts across all vault profiles using the mutation function
+        return mutateVaultProfileShortcuts(settings.vaultProfiles, shortcuts => {
+            let changed = false;
+            const next: ShortcutEntry[] = [];
 
-        let changed = false;
-        const next: ShortcutEntry[] = [];
+            for (const shortcut of shortcuts) {
+                const result = mutate(shortcut);
+                // undefined means keep the shortcut unchanged
+                if (result === undefined) {
+                    next.push(shortcut);
+                    continue;
+                }
 
-        for (const shortcut of shortcuts) {
-            const result = mutate(shortcut);
-            if (result === undefined) {
-                next.push(shortcut);
-                continue;
+                changed = true;
+                // null means remove the shortcut, otherwise replace it
+                if (result !== null) {
+                    next.push(result);
+                }
             }
 
-            changed = true;
-            if (result !== null) {
-                next.push(result);
-            }
-        }
-
-        if (changed) {
-            settings.shortcuts = next;
-        }
-
-        return changed;
+            return changed ? next : null;
+        });
     }
 
     /**
@@ -205,15 +224,18 @@ export abstract class BaseMetadataService {
         if (entityType === ItemType.TAG) {
             return variant === 'color' ? 'tagColors' : 'tagBackgroundColors';
         }
-        return 'fileColors';
+        if (entityType === ItemType.PROPERTY) {
+            return variant === 'color' ? 'propertyColors' : 'propertyBackgroundColors';
+        }
+        return variant === 'color' ? 'fileColors' : 'fileBackgroundColors';
     }
 
     // Ensures a color record exists in settings and returns it
     private ensureColorRecord(settings: NotebookNavigatorSettings, key: ColorRecordKey): Record<string, string> {
-        if (!settings[key]) {
-            settings[key] = {};
-        }
-        return settings[key];
+        // Converts to null prototype and validates all values are strings
+        const record = ensureRecord(settings[key], isStringRecordValue);
+        settings[key] = record;
+        return record;
     }
 
     // Sets a color or background color for an entity after validation
@@ -260,22 +282,31 @@ export abstract class BaseMetadataService {
      * @param iconId - Lucide icon identifier
      */
     protected async setEntityIcon(entityType: EntityType, path: string, iconId: string): Promise<void> {
+        const normalizedIcon = normalizeCanonicalIconId(iconId);
+        if (!normalizedIcon) {
+            return;
+        }
+
         await this.saveAndUpdate(settings => {
             if (entityType === ItemType.FOLDER) {
-                if (!settings.folderIcons) {
-                    settings.folderIcons = {};
-                }
-                settings.folderIcons[path] = iconId;
+                // Ensure null prototype and validate string values before adding icon
+                const icons = ensureRecord(settings.folderIcons, isStringRecordValue);
+                icons[path] = normalizedIcon;
+                settings.folderIcons = icons;
             } else if (entityType === ItemType.TAG) {
-                if (!settings.tagIcons) {
-                    settings.tagIcons = {};
-                }
-                settings.tagIcons[path] = iconId;
+                // Ensure null prototype and validate string values before adding icon
+                const icons = ensureRecord(settings.tagIcons, isStringRecordValue);
+                icons[path] = normalizedIcon;
+                settings.tagIcons = icons;
+            } else if (entityType === ItemType.PROPERTY) {
+                const icons = ensureRecord(settings.propertyIcons, isStringRecordValue);
+                icons[path] = normalizedIcon;
+                settings.propertyIcons = icons;
             } else {
-                if (!settings.fileIcons) {
-                    settings.fileIcons = {};
-                }
-                settings.fileIcons[path] = iconId;
+                // Ensure null prototype and validate string values before adding icon
+                const icons = ensureRecord(settings.fileIcons, isStringRecordValue);
+                icons[path] = normalizedIcon;
+                settings.fileIcons = icons;
             }
         });
     }
@@ -298,6 +329,12 @@ export abstract class BaseMetadataService {
                     delete settings.tagIcons[path];
                 }
             });
+        } else if (entityType === ItemType.PROPERTY && this.settingsProvider.settings.propertyIcons?.[path]) {
+            await this.saveAndUpdate(settings => {
+                if (settings.propertyIcons) {
+                    delete settings.propertyIcons[path];
+                }
+            });
         } else if (entityType === ItemType.FILE && this.settingsProvider.settings.fileIcons?.[path]) {
             await this.saveAndUpdate(settings => {
                 if (settings.fileIcons) {
@@ -305,6 +342,20 @@ export abstract class BaseMetadataService {
                 }
             });
         }
+    }
+
+    // Reads an icon entry while ignoring inherited properties and non-string values
+    private readIconRecord(record: Record<string, string> | undefined, path: string): string | undefined {
+        // Check if property exists as own property to prevent reading from prototype chain
+        if (!record || !Object.prototype.hasOwnProperty.call(record, path)) {
+            return undefined;
+        }
+        const icon = record[path];
+        // Validate that stored value is a string to handle corrupted data
+        if (typeof icon !== 'string') {
+            return undefined;
+        }
+        return normalizeCanonicalIconId(icon);
     }
 
     /**
@@ -315,62 +366,86 @@ export abstract class BaseMetadataService {
      */
     protected getEntityIcon(entityType: EntityType, path: string): string | undefined {
         if (entityType === ItemType.FOLDER) {
-            return this.settingsProvider.settings.folderIcons?.[path];
+            return this.readIconRecord(this.settingsProvider.settings.folderIcons, path);
         }
         if (entityType === ItemType.TAG) {
-            return this.settingsProvider.settings.tagIcons?.[path];
+            return this.readIconRecord(this.settingsProvider.settings.tagIcons, path);
         }
-        return this.settingsProvider.settings.fileIcons?.[path];
+        if (entityType === ItemType.PROPERTY) {
+            return this.readIconRecord(this.settingsProvider.settings.propertyIcons, path);
+        }
+        return this.readIconRecord(this.settingsProvider.settings.fileIcons, path);
     }
 
     // ========== Generic Sort Override Management ==========
 
     /**
-     * Sets a custom sort order for an entity (folder or tag)
-     * @param entityType - Type of entity ('folder' or 'tag')
+     * Sets a custom sort order for an entity.
+     * @param entityType - Type of entity ('folder', 'tag', or 'property')
      * @param path - Path of the entity
      * @param sortOption - Sort option to apply
      */
     protected async setEntitySortOverride(entityType: EntityType, path: string, sortOption: SortOption): Promise<void> {
         await this.saveAndUpdate(settings => {
             if (entityType === ItemType.FOLDER) {
-                if (!settings.folderSortOverrides) {
-                    settings.folderSortOverrides = {};
-                }
-                settings.folderSortOverrides[path] = sortOption;
-            } else {
-                if (!settings.tagSortOverrides) {
-                    settings.tagSortOverrides = {};
-                }
-                settings.tagSortOverrides[path] = sortOption;
+                const overrides = ensureRecord(settings.folderSortOverrides);
+                const next = sanitizeRecord(overrides);
+                next[path] = sortOption;
+                settings.folderSortOverrides = next;
+                return;
             }
+            if (entityType === ItemType.TAG) {
+                const overrides = ensureRecord(settings.tagSortOverrides);
+                const next = sanitizeRecord(overrides);
+                next[path] = sortOption;
+                settings.tagSortOverrides = next;
+                return;
+            }
+            if (entityType === ItemType.PROPERTY) {
+                const overrides = ensureRecord(settings.propertySortOverrides);
+                const next = sanitizeRecord(overrides);
+                next[path] = sortOption;
+                settings.propertySortOverrides = next;
+                return;
+            }
+
+            return false;
         });
     }
 
     /**
-     * Removes the custom sort order from an entity
-     * @param entityType - Type of entity ('folder' or 'tag')
+     * Removes the custom sort order from an entity.
+     * @param entityType - Type of entity ('folder', 'tag', or 'property')
      * @param path - Path of the entity
      */
     protected async removeEntitySortOverride(entityType: EntityType, path: string): Promise<void> {
         if (entityType === ItemType.FOLDER && this.settingsProvider.settings.folderSortOverrides?.[path]) {
             await this.saveAndUpdate(settings => {
-                if (settings.folderSortOverrides) {
-                    delete settings.folderSortOverrides[path];
-                }
+                const overrides = ensureRecord(settings.folderSortOverrides);
+                const next = sanitizeRecord(overrides);
+                delete next[path];
+                settings.folderSortOverrides = next;
             });
         } else if (entityType === ItemType.TAG && this.settingsProvider.settings.tagSortOverrides?.[path]) {
             await this.saveAndUpdate(settings => {
-                if (settings.tagSortOverrides) {
-                    delete settings.tagSortOverrides[path];
-                }
+                const overrides = ensureRecord(settings.tagSortOverrides);
+                const next = sanitizeRecord(overrides);
+                delete next[path];
+                settings.tagSortOverrides = next;
+            });
+        } else if (entityType === ItemType.PROPERTY && this.settingsProvider.settings.propertySortOverrides?.[path]) {
+            await this.saveAndUpdate(settings => {
+                const overrides = ensureRecord(settings.propertySortOverrides);
+                const next = sanitizeRecord(overrides);
+                delete next[path];
+                settings.propertySortOverrides = next;
             });
         }
     }
 
     /**
      * Gets the sort override for an entity
-     * @param entityType - Type of entity ('folder' or 'tag')
+     * @param entityType - Type of entity ('folder', 'tag', or 'property')
      * @param path - Path of the entity
      * @returns The sort option or undefined
      */
@@ -378,7 +453,118 @@ export abstract class BaseMetadataService {
         if (entityType === ItemType.FOLDER) {
             return this.settingsProvider.settings.folderSortOverrides?.[path];
         }
-        return this.settingsProvider.settings.tagSortOverrides?.[path];
+        if (entityType === ItemType.TAG) {
+            return this.settingsProvider.settings.tagSortOverrides?.[path];
+        }
+        if (entityType === ItemType.PROPERTY) {
+            return this.settingsProvider.settings.propertySortOverrides?.[path];
+        }
+        return undefined;
+    }
+
+    // ========== Generic Child Sort Order Overrides (Navigation Tree) ==========
+
+    /**
+     * Sets a custom alphabetical sort order for an entity's children in the navigation pane.
+     * @param entityType - Type of entity ('folder' or 'tag')
+     * @param path - Path of the entity
+     * @param sortOrder - Alphabetical order to apply
+     */
+    protected async setEntityChildSortOrderOverride(
+        entityType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.PROPERTY,
+        path: string,
+        sortOrder: AlphaSortOrder
+    ) {
+        await this.saveAndUpdate(settings => {
+            if (entityType === ItemType.FOLDER) {
+                const overrides = ensureRecord(settings.folderTreeSortOverrides);
+                const next = sanitizeRecord(overrides);
+                next[path] = sortOrder;
+                settings.folderTreeSortOverrides = next;
+            } else if (entityType === ItemType.TAG) {
+                const overrides = ensureRecord(settings.tagTreeSortOverrides);
+                const next = sanitizeRecord(overrides);
+                next[path] = sortOrder;
+                settings.tagTreeSortOverrides = next;
+            } else {
+                const overrides = ensureRecord(settings.propertyTreeSortOverrides);
+                const next = sanitizeRecord(overrides);
+                next[path] = sortOrder;
+                settings.propertyTreeSortOverrides = next;
+            }
+        });
+    }
+
+    /**
+     * Removes the custom child sort order from an entity.
+     * @param entityType - Type of entity ('folder' or 'tag')
+     * @param path - Path of the entity
+     */
+    protected async removeEntityChildSortOrderOverride(
+        entityType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.PROPERTY,
+        path: string
+    ) {
+        if (entityType === ItemType.FOLDER) {
+            const current = this.settingsProvider.settings.folderTreeSortOverrides;
+            if (!current || !Object.prototype.hasOwnProperty.call(current, path)) {
+                return;
+            }
+            await this.saveAndUpdate(settings => {
+                const overrides = ensureRecord(settings.folderTreeSortOverrides);
+                const next = sanitizeRecord(overrides);
+                delete next[path];
+                settings.folderTreeSortOverrides = next;
+            });
+            return;
+        }
+
+        if (entityType === ItemType.TAG) {
+            const current = this.settingsProvider.settings.tagTreeSortOverrides;
+            if (!current || !Object.prototype.hasOwnProperty.call(current, path)) {
+                return;
+            }
+            await this.saveAndUpdate(settings => {
+                const overrides = ensureRecord(settings.tagTreeSortOverrides);
+                const next = sanitizeRecord(overrides);
+                delete next[path];
+                settings.tagTreeSortOverrides = next;
+            });
+            return;
+        }
+
+        const current = this.settingsProvider.settings.propertyTreeSortOverrides;
+        if (!current || !Object.prototype.hasOwnProperty.call(current, path)) {
+            return;
+        }
+        await this.saveAndUpdate(settings => {
+            const overrides = ensureRecord(settings.propertyTreeSortOverrides);
+            const next = sanitizeRecord(overrides);
+            delete next[path];
+            settings.propertyTreeSortOverrides = next;
+        });
+    }
+
+    /**
+     * Gets the child sort order override for an entity.
+     * @param entityType - Type of entity ('folder' or 'tag')
+     * @param path - Path of the entity
+     * @returns The alphabetical sort order override or undefined
+     */
+    protected getEntityChildSortOrderOverride(
+        entityType: typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.PROPERTY,
+        path: string
+    ): AlphaSortOrder | undefined {
+        if (entityType === ItemType.FOLDER) {
+            const record = this.settingsProvider.settings.folderTreeSortOverrides;
+            return record && Object.prototype.hasOwnProperty.call(record, path) ? record[path] : undefined;
+        }
+        if (entityType === ItemType.TAG) {
+            const record = this.settingsProvider.settings.tagTreeSortOverrides;
+            return record && Object.prototype.hasOwnProperty.call(record, path) ? record[path] : undefined;
+        }
+
+        const record = this.settingsProvider.settings.propertyTreeSortOverrides;
+        return record && Object.prototype.hasOwnProperty.call(record, path) ? record[path] : undefined;
     }
 
     // ========== Generic Metadata Cleanup Utilities ==========
@@ -403,13 +589,15 @@ export abstract class BaseMetadataService {
         let hasChanges = false;
         // We know metadata is an object with string keys
         const metadataObj = metadata as Record<string, unknown>;
+        const metadataPaths = Object.keys(metadataObj);
 
-        for (const path in metadataObj) {
+        for (const path of metadataPaths) {
             if (!validator(path)) {
                 delete metadataObj[path];
                 hasChanges = true;
             }
         }
+
         return hasChanges;
     }
 
@@ -417,14 +605,19 @@ export abstract class BaseMetadataService {
      * Updates nested paths when a parent is renamed
      * Handles both direct matches and nested children
      */
-    protected updateNestedPaths<T>(metadata: Record<string, T> | undefined, oldPath: string, newPath: string): boolean {
+    protected updateNestedPaths<T>(
+        metadata: Record<string, T> | undefined,
+        oldPath: string,
+        newPath: string,
+        preserveExisting = false
+    ): boolean {
         if (!metadata) return false;
 
         const oldPrefix = `${oldPath}/`;
         const updates: { oldPath: string; newPath: string; value: T }[] = [];
 
         // First, handle direct path match
-        if (oldPath in metadata) {
+        if (Object.prototype.hasOwnProperty.call(metadata, oldPath)) {
             updates.push({
                 oldPath: oldPath,
                 newPath: newPath,
@@ -433,7 +626,8 @@ export abstract class BaseMetadataService {
         }
 
         // Then handle nested paths
-        for (const path in metadata) {
+        const metadataKeys = Object.keys(metadata);
+        for (const path of metadataKeys) {
             if (path.startsWith(oldPrefix)) {
                 const newNestedPath = `${newPath}/${path.slice(oldPrefix.length)}`;
                 updates.push({
@@ -444,13 +638,30 @@ export abstract class BaseMetadataService {
             }
         }
 
+        let changed = false;
+
         // Apply all updates
         for (const update of updates) {
+            if (update.oldPath === update.newPath) {
+                continue;
+            }
+
+            // Check if the new path already has metadata (converts to boolean for clarity)
+            const newPathExists = Boolean(Object.prototype.hasOwnProperty.call(metadata, update.newPath));
+            if (newPathExists && preserveExisting) {
+                if (update.oldPath !== update.newPath) {
+                    delete metadata[update.oldPath];
+                    changed = true;
+                }
+                continue;
+            }
+
             metadata[update.newPath] = update.value;
             delete metadata[update.oldPath];
+            changed = true;
         }
 
-        return updates.length > 0;
+        return changed;
     }
 
     /**

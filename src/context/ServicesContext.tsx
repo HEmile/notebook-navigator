@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,10 @@ import { App, Platform } from 'obsidian';
 import NotebookNavigatorPlugin from '../main';
 import { FileSystemOperations } from '../services/FileSystemService';
 import { MetadataService } from '../services/MetadataService';
+import { PropertyOperations } from '../services/PropertyOperations';
 import { TagOperations } from '../services/TagOperations';
 import { TagTreeService } from '../services/TagTreeService';
+import { PropertyTreeService } from '../services/PropertyTreeService';
 import { CommandQueueService } from '../services/CommandQueueService';
 import { OmnisearchService } from '../services/OmnisearchService';
 import ReleaseCheckService from '../services/ReleaseCheckService';
@@ -45,8 +47,12 @@ interface Services {
     metadataService: MetadataService | null;
     /** Tag operations service for renaming and deleting tags */
     tagOperations: TagOperations | null;
+    /** Property operations service for renaming and deleting property keys */
+    propertyOperations: PropertyOperations | null;
     /** Tag tree service for accessing the current tag tree */
     tagTreeService: TagTreeService | null;
+    /** Property tree service for accessing the current property tree */
+    propertyTreeService: PropertyTreeService | null;
     /** Command queue service for managing operations and their context */
     commandQueue: CommandQueueService | null;
     /** Omnisearch integration service */
@@ -76,25 +82,30 @@ export function ServicesProvider({ children, plugin }: { children: React.ReactNo
      * Use the single MetadataService instance from the plugin
      * This ensures consistency between vault event handlers and UI
      */
-    const services = useMemo(
-        () => ({
+    // Create services object with all plugin services
+    const services = useMemo<Services>(() => {
+        // Get FileSystemOperations instance from plugin
+        const fileSystemOps = plugin.fileSystemOps;
+        if (!fileSystemOps) {
+            throw new Error('FileSystemOperations not initialized');
+        }
+
+        // Return services object with all required service instances
+        return {
             app: plugin.app,
             plugin,
             isMobile,
-            fileSystemOps: new FileSystemOperations(
-                plugin.app,
-                () => plugin.tagTreeService,
-                () => plugin.commandQueue
-            ),
-            metadataService: plugin.metadataService, // Use the single instance from plugin
-            tagOperations: plugin.tagOperations, // Use the single instance from plugin
-            tagTreeService: plugin.tagTreeService, // Use the single instance from plugin
-            commandQueue: plugin.commandQueue, // Use the single instance from plugin
-            omnisearchService: plugin.omnisearchService, // Use the single instance from plugin
+            fileSystemOps,
+            metadataService: plugin.metadataService,
+            tagOperations: plugin.tagOperations,
+            propertyOperations: plugin.propertyOperations,
+            tagTreeService: plugin.tagTreeService,
+            propertyTreeService: plugin.propertyTreeService,
+            commandQueue: plugin.commandQueue,
+            omnisearchService: plugin.omnisearchService,
             releaseCheckService: plugin.releaseCheckService
-        }),
-        [plugin, isMobile]
-    );
+        };
+    }, [plugin, isMobile]);
 
     return <ServicesContext.Provider value={services}>{children}</ServicesContext.Provider>;
 }
@@ -151,6 +162,14 @@ export function useTagOperations() {
         throw new Error('TagOperations not initialized');
     }
     return tagOperations;
+}
+
+export function usePropertyOperations() {
+    const { propertyOperations } = useServices();
+    if (!propertyOperations) {
+        throw new Error('PropertyOperations not initialized');
+    }
+    return propertyOperations;
 }
 
 /**

@@ -1,5 +1,7 @@
 # Notebook Navigator Rendering Architecture
 
+Updated: March 23, 2026
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -13,121 +15,150 @@
 
 ## Overview
 
-The Notebook Navigator plugin uses React components with virtual scrolling to handle large vaults. The architecture uses
-virtualization, memoization, and synchronous data access patterns for performance.
+The Notebook Navigator plugin renders React applications inside two Obsidian `ItemView` implementations:
+`NotebookNavigatorView` (main navigator) and `NotebookNavigatorCalendarView` (calendar right sidebar). Both trees are
+mounted with `createRoot` and wrapped in `React.StrictMode`.
+
+The main navigator UI renders `NavigationPane` and `ListPane` in dual-pane and single-pane layouts, and can also mount
+an inline `Calendar` panel in single-pane mode when the left-sidebar calendar placement is configured below the panes.
+Both panes combine pane-level chrome with a virtualized scroll region for rows. Both panes use `@tanstack/react-virtual`
+to mount only the rows required for the viewport plus overscan.
+
+The calendar right-sidebar view renders `CalendarRightSidebar`, which hosts `Calendar` in sidebar mode and forwards
+date-filter actions to the main navigator view.
+
+Storage is provided through `StorageContext`, which coordinates `IndexedDBStorage`, an in-memory mirror, and the
+`ContentProviderRegistry`. Components read cached preview data, metadata, and tag/property trees synchronously during render, and
+row components that need live content updates subscribe to the storage instance (`IndexedDBStorage.onFileContentChange`).
+
+Context providers isolate concerns such as settings, UX preferences, recent data, services, shortcuts, expansion state,
+selection state, and pane layout. Derived data and behaviors live in dedicated hooks, leaving components to focus on
+presentation and wiring.
 
 ## Core Principles
 
-### 1. Virtual Scrolling
+### 1. Virtualized Panes
 
-Both navigation and file list panes use **TanStack Virtual** to render only visible items, enabling smooth performance
-with thousands of files and folders.
+`useNavigationPaneScroll` and `useListPaneScroll` wrap `useVirtualizer` from `@tanstack/react-virtual`. These hooks own
+the scroll container refs, gate scroll execution on physical container visibility, keep version counters for list
+rebuilds, and queue scroll intents (reveal requests, navigation jumps, configuration changes) so they run only after the
+corresponding virtual items exist.
 
-### 2. Synchronous Data Access
+Both virtualizers use `scrollMargin`, and the list pane also uses `scrollPaddingStart`. The navigation pane uses
+`scrollPaddingEnd` when bottom overlays need extra space. The list pane uses `scrollPaddingEnd` for the iOS floating
+toolbar only; calendar overlay changes are handled by a follow-up scroll after the layout updates.
 
-All data needed for rendering is available synchronously from the **Memory Cache**, eliminating layout shifts and
-enabling accurate height calculations for virtual scrolling.
+### 2. Synchronous Storage Mirror
 
-### 3. Component Memoization
+`StorageContext` (`src/context/StorageContext.tsx`) coordinates `IndexedDBStorage`, the `ContentProviderRegistry`, and
+the memory mirror. Components call helpers such as `getFile`, `getFiles`, `getTagTree`, `getFileDisplayName`,
+`getFileCreatedTime`/`getFileModifiedTime`, `hasPreview`, and `findTagInTree` directly during render.
 
-Every component uses **React.memo** to prevent unnecessary re-renders. Props are carefully designed to be stable
-references.
+Components that need push-based updates (for example `FileItem`) subscribe to the `IndexedDBStorage` instance returned by
+`getDB` and update local state when cached content changes.
 
-### 4. Context-Based State Management
+### 3. Derived Data Hooks
 
-Six React contexts provide specialized state management:
+Expensive data shaping lives outside component bodies. Examples:
 
-- **SettingsContext**: User preferences and configuration
-- **ServicesContext**: Dependency injection for services
-- **StorageContext**: Data management and caching
-- **SelectionContext**: Selected folder/tag/file tracking
-- **ExpansionContext**: Expanded/collapsed state
-- **UIStateContext**: UI-specific state (focus, pane width)
+- `useNavigationPaneData` builds the combined folder/tag/property/shortcut tree, computes note counts, resolves icons and
+  colours, and tracks virtual folders, banners, pinned shortcuts, and section ordering.
+- `useNavigationRootReorder` exposes drag-and-drop reorder state and render helpers for root folders, tags, properties, and section
+  headers.
+- `useListPaneData` assembles list pane items (pinned files, top spacer, date headers, search metadata, hidden item
+  flags) and keeps lookup maps for virtualized scrolling and multi-selection.
+- `useListPaneAppearance`, `useListPaneTitle`, `useListActions`, `useNavigationPaneKeyboard`, `useListPaneKeyboard`,
+  `useNavigatorReveal`, and `useNavigatorEventHandlers` encapsulate behavior that would otherwise live inside
+  components.
+
+### 4. Context-Based State Layers
+
+Nine providers wrap the primary navigator React tree:
+
+- `SettingsContext` – persisted plugin settings and mutation helpers
+- `UXPreferencesContext` – runtime-only preferences (search active, include descendant notes, show hidden items, pin
+  shortcuts, calendar visibility)
+- `RecentDataContext` – recent notes list and recent icon history sourced from local storage
+- `ServicesContext` – Obsidian app handles plus file system operations, command queue, metadata service, tag operations,
+  property operations, tag tree service, property tree service, Omnisearch integration, and release check service
+- `ShortcutsContext` – pinned shortcut hydration, add/remove/reorder operations, and lookup maps
+- `StorageContext` – IndexedDB mirror, tag/property trees, synchronous metadata accessors, cache rebuild entry points
+- `ExpansionContext` – expanded folders, tags, properties, shortcuts, recent notes, and virtual folders
+- `SelectionContext` – selected folder/tag/property/file, multi-selection tracking, reveal targets, and selection dispatchers
+- `UIStateContext` – pane mode (single vs dual), focused pane, current single-pane view, navigation pane width, pinned
+  shortcuts toggle
+
+The calendar right-sidebar tree uses `SettingsContext` and `ServicesContext` only.
+
+### 5. Stable Rendering Contracts
+
+Heavy components (`NavigationPane`, `ListPane`, `FolderItem`, `TagTreeItem`, `FileItem`, `ShortcutItem`,
+`VirtualFolderComponent`) use `React.memo` with stable props. Event handlers are memoized with `useCallback`, derived
+class names and counts use `useMemo`, and DOM measurements (navigation item height, indentation, scale transforms) are
+applied via effects in `NotebookNavigatorComponent`, `useMeasuredElementHeight`, and `useNavigatorScale` so render output
+stays pure.
+
+Both panes use `useSurfaceColorVariables` to map semi-transparent theme variables to solid equivalents and expose surface
+colors used for background compositing.
 
 ## Component Hierarchy
 
+### Navigator view stack
+
 ```mermaid
 graph TD
-    subgraph "Obsidian Integration"
-        OV[NotebookNavigatorView<br/>• ItemView wrapper<br/>• React app host<br/>• Lifecycle management]
-    end
+    OV["NotebookNavigatorView"] --> SM["React.StrictMode"] --> SP["SettingsProvider"] --> UX["UXPreferencesProvider"] --> RD["RecentDataProvider"];
+    RD --> SVC["ServicesProvider"] --> SHC["ShortcutsProvider"] --> ST["StorageProvider"] --> EP["ExpansionProvider"] --> SEL["SelectionProvider"];
+    SEL --> UI["UIStateProvider"] --> NC["NotebookNavigatorContainer"];
 
-    subgraph "React Application"
-        subgraph "Context Providers"
-            SP[SettingsProvider]
-            SVC[ServicesProvider]
-            ST[StorageProvider]
-            EP[ExpansionProvider]
-            SEL[SelectionProvider]
-            UI[UIStateProvider]
-        end
+    NC -->|isStorageReady=false| SK["SkeletonView"];
+    NC -->|isStorageReady=true| NNC["NotebookNavigatorComponent"];
+    NNC --> UNB["UpdateNoticeBanner"];
+    NNC --> NPR["NavigationPane"];
+    NNC --> LPR["ListPane"];
+    NNC --> SPC["Single-pane Calendar (optional)"];
+```
 
-        subgraph "Main Container"
-            NC[NotebookNavigatorContainer<br/>• Storage initialization<br/>• Skeleton view during loading]
-            NNC[NotebookNavigatorComponent<br/>• Split-pane layout<br/>• Keyboard handling<br/>• Drag-and-drop]
-            SK[SkeletonView<br/>• Loading placeholders<br/>• Preserves layout<br/>• Prevents layout shift]
-        end
+### Calendar right-sidebar stack
 
-        subgraph "Panes"
-            subgraph "List Pane (Right)"
-                LPH[ListPaneHeader<br/>• Desktop: Toolbar buttons<br/>• Mobile: Back arrow<br/>• Both: Clickable path]
-                LTB[ListToolbar<br/>• Toolbar buttons<br/>• Mobile only]
-                LP[ListPane<br/>• Virtual scrolling<br/>• File sorting<br/>• Multi-selection<br/>• Resize handle for dual-pane]
+```mermaid
+graph TD
+    CV["NotebookNavigatorCalendarView"] --> SM["React.StrictMode"] --> SP["SettingsProvider"] --> SVC["ServicesProvider"] --> CRS["CalendarRightSidebar"];
+    CRS --> CAL["Calendar"];
+```
 
-                subgraph "List Items"
-                    FILE[FileItem<br/>• Preview text<br/>• Tags display<br/>• Feature image<br/>• Metadata<br/>• Quick actions on hover]
-                    DG[DateGroup<br/>• Date headers<br/>• Group separator]
-                end
-            end
+### NavigationPane subtree
 
-            subgraph "Navigation Pane (Left)"
-                NPH[NavigationPaneHeader<br/>• Toolbar buttons<br/>• Desktop only]
-                NTB[NavigationToolbar<br/>• Toolbar buttons<br/>• Mobile only]
-                NP[NavigationPane<br/>• Virtual scrolling<br/>• Tree building<br/>• Item rendering]
+```mermaid
+graph TD
+    NPR["NavigationPane"] --> CH["Navigation pane chrome"];
+    CH --> NPH["NavigationPaneHeader"];
+    CH --> VTA["VaultTitleArea"];
+    CH --> NTBA["NavigationToolbar Android"];
+    CH --> PB["NavigationBanner pinned"];
+    CH --> PINNED["Pinned shortcuts and recent notes"];
+    NPR --> PANEL["Navigation pane panel"];
+    PANEL --> SC["Scroll container"];
+    SC --> NB["NavigationBanner unpinned"];
+    SC -->|normal mode| NPL["Virtualized navigation list"];
+    SC -->|root reorder| NRP["NavigationRootReorderPanel"];
+    NPR --> NTBI["NavigationToolbar iOS / bottom toolbar"];
+    NPR --> CAL["Calendar overlay"];
+```
 
-                subgraph "Navigation Items"
-                    FI[FolderItem<br/>• Folder display<br/>• Expand/collapse<br/>• Context menu]
-                    TTI[TagTreeItem<br/>• Tag display<br/>• Hierarchical tags<br/>• File counts]
-                    VFI[VirtualFolderItem<br/>• Tags virtual folder<br/>• Container only]
-                end
-            end
-        end
-    end
+### ListPane subtree
 
-    %% Relationships
-    OV --> SP
-    SP --> SVC
-    SVC --> ST
-    ST --> EP
-    EP --> SEL
-    SEL --> UI
-    UI --> NC
-    NC --> SK
-    NC --> NNC
-    NNC --> NPH
-    NNC --> NTB
-    NNC --> NP
-    NNC --> LPH
-    NNC --> LTB
-    NNC --> LP
-    NP --> FI
-    NP --> TTI
-    NP --> VFI
-    LP --> FILE
-    LP --> DG
-
-    %% Styling
-    classDef obsidian fill:#e8f4f8,stroke:#0ea5e9,stroke-width:2px
-    classDef context fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
-    classDef container fill:#e9d5ff,stroke:#a855f7,stroke-width:2px
-    classDef pane fill:#dcfce7,stroke:#22c55e,stroke-width:2px
-    classDef item fill:#fee2e2,stroke:#ef4444,stroke-width:2px
-
-    class OV obsidian
-    class SP,SVC,ST,EP,SEL,UI context
-    class NC,NNC,SK container
-    class NPH,NTB,NP,LPH,LTB,LP pane
-    class FI,TTI,VFI,FILE,DG item
+```mermaid
+graph TD
+    LPR["ListPane"] --> CH["List pane chrome"];
+    CH --> LPH["ListPaneHeader"];
+    CH --> LTBA["ListToolbar Android"];
+    CH --> SI["SearchInput"];
+    CH --> LTA["ListPaneTitleArea"];
+    LPR --> PANEL["List pane panel"];
+    PANEL --> LPL["ListPaneVirtualContent"];
+    LPR --> LTBI["ListToolbar iOS / bottom toolbar"];
+    LPR --> CAL["Calendar overlay"];
 ```
 
 ## Component Responsibilities
@@ -136,379 +167,394 @@ graph TD
 
 **Location**: `src/view/NotebookNavigatorView.tsx`
 
-The Obsidian `ItemView` that hosts the React application:
+- Creates the React root with `createRoot`, wraps it in `React.StrictMode`, applies mobile/platform classes, and mounts
+  the provider stack
+  (`Settings → UXPreferences → RecentData → Services → Shortcuts → Storage → Expansion → Selection → UIState`).
+- Applies Android font compensation to the view container and propagates it to the rendered mobile root.
+- Exposes imperative handlers to the plugin (cache rebuild, reveal actions, folder/tag/property modal navigation, search toggle,
+  delete/move operations, shortcut creation).
+- Dispatches `notebook-navigator-visible` on mobile when the drawer becomes visible so scroll hooks can resume pending
+  reveal operations.
+- Cleans up container classes and unmounts the React tree on view close.
 
-- Creates and manages the React root
-- Handles view lifecycle (onOpen, onClose)
-- Provides navigation methods (navigateToFile, navigateToFolderWithModal)
-- Manages mobile-specific styles
+### NotebookNavigatorCalendarView
+
+**Location**: `src/view/NotebookNavigatorCalendarView.tsx`
+
+- Creates a React root for the calendar right-sidebar leaf and mounts `SettingsProvider` + `ServicesProvider`.
+- Renders `CalendarRightSidebar` as the calendar-only UI surface.
+- Registers a settings listener to keep platform-specific container classes in sync.
+- Unregisters listeners, unmounts the React tree, and tears down view container classes on close.
+
+### CalendarRightSidebar
+
+**Location**: `src/components/CalendarRightSidebar.tsx`
+
+- Hosts the `Calendar` component configured for right-sidebar mode (`weeksToShowOverride={6}`, `isRightSidebar={true}`).
+- Resolves the primary navigator leaf, opening it through `plugin.activateView()` when needed.
+- Forwards calendar date-filter actions to `NotebookNavigatorView.addDateFilterToSearch(...)` and reveals the navigator leaf when applicable.
 
 ### NotebookNavigatorContainer
 
 **Location**: `src/components/NotebookNavigatorContainer.tsx`
 
-The wrapper that handles storage initialization:
-
-- Shows SkeletonView while storage is loading
-- Loads saved pane width from localStorage
-- Transitions to NotebookNavigatorComponent when ready
-- Prevents layout shift during initial load
+- Reads `isStorageReady` from `StorageContext` and pane mode from `UIStateContext`.
+- Applies the scale wrapper returned by `useNavigatorScale` when rendering `SkeletonView` so loading layout matches the
+  final scale.
+- Restores the saved navigation pane size for the active orientation via `localStorage` helpers and
+  `getNavigationPaneSizing`.
+- Chooses between the skeleton layout and `NotebookNavigatorComponent`, ensuring layout parity (single vs dual pane,
+  orientation, search state) while storage warms up.
 
 ### SkeletonView
 
 **Location**: `src/components/SkeletonView.tsx`
 
-Placeholder UI shown during storage initialization:
-
-- Displays skeleton panes with saved dimensions
-- Maintains layout structure (single or dual pane)
-- Provides immediate visual feedback
-- Smooth transition when data loads
-
-```typescript
-// Show skeleton during loading
-if (!isStorageReady) {
-  return <SkeletonView paneWidth={savedWidth} singlePane={singlePane} />;
-}
-// Show full UI when ready
-return <NotebookNavigatorComponent />;
-```
+- Mirrors the active layout with placeholder panes, respecting vertical vs horizontal splits and single-pane mode.
+- Shows a search bar placeholder when search is enabled through `UXPreferences`.
+- Uses the stored `paneSize` to match navigation pane width while storage loads.
 
 ### NotebookNavigatorComponent
 
 **Location**: `src/components/NotebookNavigatorComponent.tsx`
 
-The main container managing the two-pane layout:
+- Wires selection, settings, services, shortcuts, UX preferences, and storage into pane components.
+- Manages pane sizing and drag handles via `useResizablePane`, propagating resize props to `ListPane`.
+- Shares a root container ref with both panes for keyboard handling and focus tracking.
+- Runs `useDragAndDrop`, `useDragNavigationPaneActivation`, `useMobileSwipeNavigation`, `useNavigatorReveal`,
+  `useNavigatorEventHandlers`, `useNavigationActions`, `useNavigatorScale`, and `useUpdateNotice` to provide navigation
+  commands, drag activation, swipe gestures, and update notices.
+- Bridges list search filters into `NavigationPane` for tag and property highlighting via `searchNavFilters`.
+- Applies CSS custom properties for navigation item height, indentation, and font sizes once per settings change.
+- Renders `UpdateNoticeBanner`, `NavigationPane`, `ListPane`, and the optional inline single-pane `Calendar` in the
+  correct pane arrangement.
 
-- Split-pane with resizable divider
-- Global keyboard event handling
-- Drag-and-drop coordination
-- Focus management between panes
-- Command execution (delete, move, create)
-- Platform-specific UI rendering (headers vs toolbars)
+### UpdateNoticeBanner
 
-**Key Features**:
+**Location**: `src/components/UpdateNoticeBanner.tsx`
 
-- Resizable panes with persisted widths
-- Mobile swipe navigation support
-- Keyboard shortcuts for all operations
-- File reveal and auto-scroll
-- Automatic mobile detection for UI adaptation
-- Passes resize handle props to ListPane in dual-pane mode
+- Displays a temporary banner when `ReleaseCheckService` reports an available update.
+- Uses `useAutoDismissFade` to manage banner visibility and fade-out timing.
+- Opens Obsidian’s plugin manager via `obsidian://show-plugin?id=notebook-navigator` when clicked.
 
 ### NavigationPaneHeader
 
 **Location**: `src/components/NavigationPaneHeader.tsx`
 
-**Desktop only** - The header toolbar for the navigation pane:
+- Desktop header providing dual/single pane toggle, profile menu trigger, expand/collapse all, hidden item toggle, root
+  reorder toggle, calendar toggle, and new folder action.
+- Mobile variant renders a simplified profile menu trigger when multiple profiles exist.
+- Defers tree-refresh callbacks with `requestAnimationFrame` so scroll hooks can remeasure after batch operations.
 
-- Collapse/expand all folders and tags
-- Toggle auto-expand behavior
-- Create new folder button
+### VaultTitleArea
+
+**Location**: `src/components/VaultTitleArea.tsx`
+
+- Renders the active vault profile name in the navigation pane on desktop when multiple profiles exist.
+- Uses `useVaultProfileMenu` to open the profile menu from a clickable trigger.
 
 ### NavigationToolbar
 
 **Location**: `src/components/NavigationToolbar.tsx`
 
-**Mobile only** - The bottom toolbar for the navigation pane:
-
-- Same toolbar buttons as NavigationPaneHeader
-- Positioned at the bottom of the pane
-- Mobile-optimized touch targets
+- Mobile toolbar providing expand/collapse, hidden item toggle, root reorder toggle, calendar toggle, and new folder
+  action.
+- Rendered at the top on Android. On iOS, floating toolbars render inside the pane; non-floating toolbars render in the
+  bottom toolbar container.
 
 ### NavigationPane
 
-**Location**: `src/components/NavigationPane.tsx`
+**Location**: `src/components/navigationPane/NavigationPaneContent.tsx` (`src/components/NavigationPane.tsx` re-exports it)
 
-The left pane showing folders and tags:
+- Consumes data from `useNavigationPaneData`, `useNavigationRootReorder`, `useNavigationPaneScroll`,
+  and `useNavigationPaneKeyboard`.
+- Renders pane chrome outside the scroller (header, vault title, Android toolbar, pinned banner, pinned
+  shortcuts/recent), keeps the optional unpinned `NavigationBanner` inside the scroller, and shows either the
+  virtualized tree or `NavigationRootReorderPanel`.
+- Handles folder/tag/property drag targets and uses dnd-kit sortable contexts for shortcut reordering.
+- Integrates context menus (`buildFolderMenu`, `buildTagMenu`, `buildPropertyMenu`, `buildFileMenu`) and frontmatter exclusion logic for
+  hidden items.
+- Measures the unpinned banner height via `useMeasuredElementHeight` and passes it as `scrollMargin` to
+  `useNavigationPaneScroll`. `scrollPaddingEnd` is used for the iOS floating-toolbar case.
 
-**Responsibilities**:
+### NavigationBanner
 
-- Build navigation tree from vault structure
-- Virtual scrolling for performance
-- Expand/collapse state management
-- Search filtering
-- Item selection
+**Location**: `src/components/NavigationBanner.tsx`
 
-**Optimization Strategy**:
+- Renders the configured banner image by resolving the vault file path to a resource URL.
 
-```typescript
-// Tree building with memoization
-const navigationItems = useMemo(() => {
-  // 1. Build folder tree
-  // 2. Filter by search
-  // 3. Add virtual folders (Tags section)
-  // 4. Flatten for virtualizer
-  return flattenedItems;
-}, [folders, tags, search, expansionState]);
+### Calendar
 
-// Virtual scrolling with dynamic heights
-const virtualizer = useVirtualizer({
-  count: navigationItems.length,
-  getScrollElement: () => scrollContainerRef.current,
-  estimateSize: index => {
-    const item = navigationItems[index];
-    return NAVITEM_HEIGHTS[item.type];
-  },
-  overscan: 10
-});
-```
+**Location**: `src/components/calendar/Calendar.tsx`
+
+- Renders the calendar overlay and integrates daily note creation/opening workflows.
+- Calls `onWeekCountChange` so parent panes can update scroll padding and CSS variables for the calendar layout.
+- Delegates presentation to `src/components/calendar/CalendarHeader.tsx`, `src/components/calendar/CalendarGrid.tsx`,
+  and `src/components/calendar/CalendarYearPanel.tsx`.
+
+### NavigationRootReorderPanel
+
+**Location**: `src/components/NavigationRootReorderPanel.tsx`
+
+- Displays reorderable sections, folder lists, tag lists, and property lists when root reorder mode is active.
+- Provides drop indicators, drag handle labels, and reset buttons that reset root ordering to alphabetical defaults.
+- Updates scroll container data attributes to reflect drop targets for visual feedback.
 
 ### ListPaneHeader
 
 **Location**: `src/components/ListPaneHeader.tsx`
 
-The header for the list pane (visible on both desktop and mobile):
-
-- **Desktop**: Toolbar buttons for subfolders, sort, appearance, new note
-- **Mobile**: Back arrow for navigation
-- **Both**: Clickable breadcrumb path showing current folder/tag
+- Desktop header showing breadcrumb title (with optional icon), search toggle, descendant toggle, sort menu, appearance
+  menu, and new note button.
+- Mobile variant shows a back button to the navigation pane and renders breadcrumb segments horizontally scrollable with
+  fade indicators.
+- Uses `useListPaneTitle` to build the breadcrumb segments and `useListActions` for button handlers.
 
 ### ListToolbar
 
 **Location**: `src/components/ListToolbar.tsx`
 
-**Mobile only** - The bottom toolbar for the list pane:
-
-- Toolbar buttons for common operations
-- Toggle showing notes from subfolders
-- Sort order menu
-- Appearance customization menu
-- Create new note button
+- Mobile toolbar (top on Android, bottom on iOS) exposing search, descendant toggle, sort, appearance, and new note
+  actions.
+- Shares command logic with the header through `useListActions`.
 
 ### ListPane
 
 **Location**: `src/components/ListPane.tsx`
 
-The right pane showing files:
+- Consumes data and behavior from `useListPaneData`, `useListPaneScroll`, `useListPaneKeyboard`,
+  `useListPaneAppearance`, `useMultiSelection`, `useContextMenu`, and `useListPaneSelectionCoordinator`.
+- Renders pane chrome outside the scroller (`SearchInput`, `ListPaneTitleArea`, mobile toolbars), plus empty states and
+  the virtual list with top spacer, date headers, file rows, and bottom spacer.
+- Integrates Omnisearch results when configured, including excerpt matches and highlight metadata.
+- Computes pane-level row inputs once (appearance settings, hidden-tag visibility, file-icon needles, shortcut lookup,
+  storage helpers) and passes them to virtual rows as stable props.
+- Attaches the list-pane context menu to the scroll container and lets delegated target resolution switch between empty
+  space actions and file menus.
+- Maintains drop-zone attributes for drag-and-drop moves and exposes scroll handlers for reveal operations and search
+  reset behavior.
+- Uses `scrollMargin: 0` with `useListPaneScroll`. `scrollPaddingEnd` covers the iOS floating toolbar only; calendar
+  overlay changes trigger a follow-up scroll instead of participating in `scrollPaddingEnd`.
+- Persists search active state through `UXPreferences` and debounces input before triggering expensive filtering.
 
-**Responsibilities**:
+### SearchInput
 
-- Display files from selected folder/tag
-- Sort files by various criteria
-- Group files by date
-- Handle pinned notes
-- Multi-selection support
-- Contains resize handle for pane resizing (dual-pane mode only)
+**Location**: `src/components/SearchInput.tsx`
 
-**Dynamic Height Calculation**:
+- Renders the list pane search field and dispatches `UIStateContext` focus updates for keyboard navigation.
+- Initializes `SearchTagInputSuggest` when tag suggestions are enabled and a tag tree service is available.
+- Handles search keyboard shortcuts using the configured `settings.keyboardShortcuts`.
 
-```typescript
-// Calculate item height based on content
-function estimateSize(index: number): number {
-  const item = listItems[index];
+### ListPaneTitleArea
 
-  if (item.type === 'date-header') {
-    return 30; // Fixed height for date headers
-  }
+**Location**: `src/components/ListPaneTitleArea.tsx`
 
-  const file = item as TFile;
-  const fileData = memoryCache.get(file.path);
+- Renders the desktop title area when enabled, using `useListPaneTitle` output.
 
-  // Base height
-  let height = 80;
-
-  // Add preview text height
-  if (settings.showPreview && fileData?.preview) {
-    height += settings.previewRows * 20;
-  }
-
-  // Add feature image height
-  if (settings.showFeatureImage && fileData?.featureImage) {
-    height += 200;
-  }
-
-  // Add tags height
-  if (fileData?.tags?.length) {
-    height += 30;
-  }
-
-  return height;
-}
-```
-
-### Item Components
-
-#### NavigationPane: FolderItem
-
-**Location**: `src/components/FolderItem.tsx`
-
-Renders individual folders with:
-
-- Chevron for expand/collapse
-- Custom icons and colors
-- File count badges
-- Folder note indicators
-- Context menu integration
-
-#### NavigationPane: TagTreeItem
-
-**Location**: `src/components/TagTreeItem.tsx`
-
-Renders hierarchical tags with:
-
-- Nested tag structure
-- File counts (including children)
-- Custom icons and colors
-- Tag shortcuts integration
-
-#### NavigationPane: VirtualFolderItem
-
-**Location**: `src/components/VirtualFolderItem.tsx`
-
-Renders virtual containers:
-
-- "Tags" virtual folder when the section is collapsed
-- No file operations (purely organizational)
-
-#### ListPane: FileItem
+### FileItem
 
 **Location**: `src/components/FileItem.tsx`
 
-Renders file entries with:
+- Renders file title, Omnisearch highlights, preview text, feature image, tag pills, parent folder label, and date
+  metadata based on appearance settings and optimization flags.
+- Reads pane-owned shared inputs from props and keeps row-local subscriptions limited to cached file content.
+- Subscribes to content updates from `IndexedDBStorage` to refresh preview text, tags, feature image status, custom
+  property values, and word counts.
+- Provides quick actions (reveal, pin/unpin, open in new tab) on desktop hover and handles drag-and-drop metadata for
+  file moves.
+- Uses `createHiddenTagVisibility` to filter/style tag pills based on hidden tag rules and “show hidden items”.
 
-- Title with custom names from frontmatter
-- Preview text (configurable rows)
-- Feature images
-- Tag pills (sorted alphabetically with priority: colored → uncolored)
-- Date display
-- File type badges
-- Quick action buttons on hover (desktop only):
-  - Reveal in folder
-  - Pin/unpin note
-  - Open in new tab
+### FolderItem
 
-#### ListPane: DateGroup
+**Location**: `src/components/FolderItem.tsx`
 
-Renders date separators in the file list:
+- Displays folder name, icon, colours, note counts, folder note indicator, and tooltip counts.
+- Handles expand/collapse, selection, sibling toggles (Alt+click), context menus, and hidden/excluded state rendering.
+- Uses `nav-folder-open` / `nav-folder-closed` interface icons for expanded/collapsed folders when no custom folder icon is set.
+- Sets Obsidian icons in `useEffect` to avoid blocking React renders and updates tooltips only on desktop.
 
-- Groups files by date when grouping is enabled
-- Shows relative dates (Today, Yesterday, etc.)
-- Visual separator between groups
+### TagTreeItem
+
+**Location**: `src/components/TagTreeItem.tsx`
+
+- Renders hierarchical tags with indentation, note counts (current vs descendants), tag icons/colours, and missing-state
+  styles for hidden tags.
+- Supports expand/collapse, context menus, tag reveal, drag-and-drop, and optional shortcut drag handles.
+
+### PropertyTreeItem
+
+**Location**: `src/components/PropertyTreeItem.tsx`
+
+- Renders property key/value nodes with indentation, note counts, icons/colours, and missing-state styling.
+- Supports expand/collapse, context menus, property reveal, drag-and-drop, and child sort override indicators.
+
+### ShortcutItem
+
+**Location**: `src/components/ShortcutItem.tsx`
+
+- Presents folder, note, search, tag, and property shortcuts with labels, counts, drag handles, and missing indicators.
+- Shares styling with navigation rows through `NavigationListRow` and participates in dnd-kit sortable reordering.
+
+### RootFolderReorderItem
+
+**Location**: `src/components/RootFolderReorderItem.tsx`
+
+- Specialized `NavigationListRow` wrapper for root reorder mode with drag handles and reset actions.
+- Supports folders, tags, properties, and section headers, including missing-item styling, inside dnd-kit sortable lists.
 
 ## Virtualization Strategy
 
 ### Navigation Pane Virtualization
 
-The navigation pane uses a single virtualizer for both folders and tags:
+- `useNavigationPaneData` returns `items: CombinedNavigationItem[]` plus lookup maps (`pathToIndex`) and pinned-section
+  arrays (`shortcutItems`, `pinnedRecentNotesItems`) used by the pane chrome.
+- `NavigationPane` measures the unpinned banner height via `useMeasuredElementHeight`, then passes:
+  - `scrollMargin` (unpinned banner height),
+  - `scrollPaddingEnd` (iOS floating-toolbar inset when present),
+  into `useNavigationPaneScroll`.
+- `useNavigationPaneScroll` initializes the virtualizer with `NAVPANE_MEASUREMENTS` and exposes `requestScroll` for reveal
+  operations.
+- `NavigationPaneContent` delegates virtual row layout to `NavigationPaneLayout`, which maps
+  `rowVirtualizer.getVirtualItems()` and renders rows through `NavigationPaneItemRenderer`.
+- Because `virtualItem.start` includes `scrollMargin`, row wrappers subtract it when positioning inside the virtual
+  container (`virtualItem.start - scrollMargin`).
+- Root reorder mode swaps the virtual list for `NavigationRootReorderPanel` (non-virtualized), which renders
+  `RootFolderReorderItem` rows.
+- `pathToIndex` is passed to `useNavigationPaneScroll` so scroll targets resolve to indices at execution time.
 
 ```typescript
-// Combined items array
-type CombinedNavigationItem =
-  | { type: 'folder'; item: TFolder; level: number }
-  | { type: 'tag'; item: TagTreeNode; level: number }
-  | { type: 'virtual'; item: VirtualFolder; level: number };
+const { items, pathToIndex, shortcutItems } = useNavigationPaneData({
+  settings,
+  activeProfile,
+  isVisible: navigationVisible,
+  shortcutsExpanded,
+  recentNotesExpanded,
+  pinShortcuts,
+  sectionOrder
+});
 
-// Single virtualizer handles all types
-const virtualizer = useVirtualizer({
-  count: items.length,
-  estimateSize: index => getItemHeight(items[index]),
-  getScrollElement: () => scrollContainer
+const { rowVirtualizer, scrollContainerRefCallback, requestScroll } = useNavigationPaneScroll({
+  items,
+  pathToIndex,
+  isVisible: navigationVisible,
+  activeShortcutKey,
+  scrollMargin: navigationScrollMargin,
+  scrollPaddingEnd
 });
 ```
 
 ### List Pane Virtualization
 
-The list pane virtualizes files with dynamic heights:
+- `useListPaneData` emits `ListPaneItem[]` composed of top/bottom spacers, date headers, and file items with pinned and
+  hidden flags plus lookup maps (`filePathToIndex`, `fileIndexMap`).
+- `useListPaneScroll` feeds `listItems` into `useVirtualizer`, calculating heights with `getListPaneMeasurements`,
+  preview availability (`hasPreview`), search metadata, and appearance settings. The current implementation uses
+  `scrollMargin: 0`; the calendar overlay is handled by a follow-up `scrollToIndex` when its height changes.
+- The hook maintains a single pending scroll request with ranked priorities: `top`, `list-structure-change`,
+  `visibility-change`, `folder-navigation`, then `reveal`. It executes the selected request after the index version
+  matches the expected rebuild.
+- `ListPane` delegates virtual row rendering to `ListPaneVirtualContent`, which switches on `item.type` and passes
+  search metadata and pane-owned shared row props to `FileItem`; headers are inline
+  `<div className="nn-date-group-header">` nodes, matching the measurement logic.
+- `ListPaneVirtualContent` tracks hovered file path at the scroller level and `ListPane` suppresses quick-action hover
+  panels while the virtualizer reports active scrolling.
+- Because `virtualItem.start` includes `scrollMargin`, row wrappers subtract it when positioning inside the virtual
+  container (`virtualItem.start - scrollMargin`).
 
 ```typescript
-// List items include files and date headers
-type ListItem = TFile | { type: 'date-header'; date: string };
+const { listItems, filePathToIndex, orderedFiles } = useListPaneData({
+  selectionType,
+  selectedFolder,
+  selectedTag,
+  settings,
+  activeProfile,
+  searchProvider,
+  searchQuery: isSearchActive ? debouncedSearchQuery : undefined,
+  searchTokens: isSearchActive ? debouncedSearchTokens : undefined,
+  visibility: { includeDescendantNotes, showHiddenItems }
+});
 
-// Dynamic height based on content
-const virtualizer = useVirtualizer({
-  count: listItems.length,
-  estimateSize: index => calculateHeight(listItems[index]),
-  measureElement: el => el.getBoundingClientRect().height
+const { rowVirtualizer, scrollContainerRefCallback, handleScrollToTop } = useListPaneScroll({
+  listItems,
+  filePathToIndex,
+  selectedFile,
+  selectedFolder,
+  selectedTag,
+  settings,
+  folderSettings: appearanceSettings,
+  isVisible,
+  selectionState,
+  selectionDispatch,
+  searchQuery: isSearchActive ? debouncedSearchQuery : undefined,
+  suppressSearchTopScrollRef,
+  topSpacerHeight,
+  includeDescendantNotes,
+  scrollMargin: 0,
+  scrollPaddingEnd
 });
 ```
 
 ## Performance Optimizations
 
-### 1. React.memo Everything
+### 1. Scroll-Oriented Hooks
 
-Every component is wrapped in `React.memo`:
+`useNavigationPaneScroll` and `useListPaneScroll` keep pending scroll intents, overscan settings, and index version
+counters. Both hooks watch container visibility (via `ResizeObserver`) to avoid failed virtualizer calls when panes are
+hidden (mobile drawers, dual-pane toggles).
 
-```typescript
-export const FolderItem = React.memo(function FolderItem(props) {
-  // Component only re-renders when props change
-});
-```
+### 2. Derived Data Caches
 
-### 2. Stable Props
+`useNavigationPaneData` and `useListPaneData` debounce vault-driven rebuilds with `debounce` from Obsidian, reuse `Map`
+instances for lookup tables, and return shortcut/selection metadata so `React.memo` components receive stable props.
+`StorageContext` batches diff calculations, content provider queues, and tag/property tree rebuilds so UI components only react
+to finalized updates.
 
-Props are designed to be referentially stable:
+### 3. Memoized Components
 
-```typescript
-// BAD - Creates new object every render
-<FolderItem style={{ color: folder.color }} />
+Virtualized row components (`FolderItem`, `TagTreeItem`, `ShortcutItem`, `FileItem`) memoize expensive derived values
+(class names, tooltip data, highlight ranges, tag colours) and rely on stable props to avoid unnecessary renders. Parent
+components memoize handler factories, service descriptors, and pane-owned row inputs to keep prop identity stable.
 
-// GOOD - Passes primitive values
-<FolderItem color={folder.color} />
-```
+### 4. Debounced User Input
 
-### 3. Memoized Callbacks
+Search queries are debounced before triggering data rebuilds, and Omnisearch results are ignored when a newer request is
+in flight.
 
-Event handlers are memoized with `useCallback`:
+### 5. CSS Variables and Scale
 
-```typescript
-const handleClick = useCallback(() => {
-  selectFolder(folder);
-}, [folder, selectFolder]);
-```
-
-### 4. Synchronous Data Access
-
-All rendering data comes from memory cache:
-
-```typescript
-// Synchronous access during render
-const fileData = memoryCache.get(file.path);
-const preview = fileData?.preview || '';
-const tags = fileData?.tags || [];
-```
-
-### 5. Deferred Updates
-
-Non-critical updates use deferred scheduling with `setTimeout`:
-
-```typescript
-// Update preview text in background
-setTimeout(() => {
-  generatePreviewText(file);
-}, 0);
-```
-
-### 6. Batch DOM Updates
-
-Icon rendering uses `useEffect` to avoid blocking:
-
-```typescript
-useEffect(() => {
-  // Set icons after render to avoid blocking
-  setIcon(iconEl.current, 'folder');
-}, [isExpanded]);
-```
+Navigation item height, indentation, and font sizes are written to CSS custom properties once per settings change,
+keeping render output pure. `useNavigatorScale` applies global scaling for the navigator wrapper rather than
+recalculating layout inside virtualized items.
 
 ## Data Flow
 
 ### Initial Render
 
+`NotebookNavigatorContainer` renders `SkeletonView` until `StorageContext` sets `isStorageReady`, then mounts
+`NotebookNavigatorComponent`.
+
 ```mermaid
 sequenceDiagram
     participant V as Vault
-    participant DB as IndexedDB
+    participant DB as IndexedDBStorage
     participant MC as Memory Cache
-    participant RC as React Context
-    participant UI as UI Components
+    participant ST as StorageContext
+    participant NC as NotebookNavigatorContainer
+    participant SK as SkeletonView
+    participant DH as Data Hooks
+    participant UI as Virtualized Panes
 
-    V->>DB: Load file metadata
-    DB->>MC: Sync to memory
-    MC->>RC: Provide data
-    RC->>UI: Trigger render
-    UI->>MC: Synchronous read
-    MC-->>UI: Immediate data
-    UI->>UI: Render with data
+    NC->>SK: Render while isStorageReady=false
+    ST->>DB: Open IndexedDB and load cached records
+    DB->>MC: Seed in-memory mirror
+    ST->>V: Enumerate vault files (diff input)
+    ST->>DB: Reconcile initial diff
+    ST->>ST: Register vault + settings listeners
+    ST->>NC: Set isStorageReady=true
+    NC->>UI: Mount NotebookNavigatorComponent
+    ST->>DH: Expose synchronous getters and tag/property trees
+    DH->>UI: Build navigation/list item arrays
+    UI->>MC: Read data synchronously during render
 ```
 
 ### File Change
@@ -516,22 +562,21 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant V as Vault
-    participant CP as Content Provider
-    participant DB as IndexedDB
+    participant ST as StorageContext
+    participant CP as ContentProviderRegistry
+    participant DB as IndexedDBStorage
     participant MC as Memory Cache
-    participant RC as React Context
-    participant UI as UI Components
+    participant DH as Data Hooks
+    participant UI as Components
 
-    V->>V: File modified
-    V->>CP: Change event
-    CP->>CP: Generate content
-    CP->>DB: Update database
-    DB->>MC: Sync change
-    MC->>RC: Notify change
-    RC->>UI: Re-render affected
-    UI->>MC: Read new data
-    MC-->>UI: Updated data
-    UI->>UI: Update display
+    V->>ST: File event (create/modify/delete/rename)
+    ST->>DB: Reconcile cache records (diff + rename handling)
+    ST->>CP: Queue derived content generation
+    CP->>DB: Persist derived content updates
+    DB->>MC: Mirror changes in memory
+    ST->>DH: Increment change versions, rebuild tag/property trees if needed
+    DH->>UI: Recompute virtualized item arrays
+    UI->>UI: Rerender affected rows via virtualization
 ```
 
 ### User Interaction
@@ -539,25 +584,22 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant UI as UI Component
-    participant CTX as React Context
-    participant SVC as Service
+    participant UI as Virtual Row
+    participant CTX as Selection/UIState/UXPreferences
+    participant SVC as ServicesContext
     participant V as Vault
+    participant ST as StorageContext
 
-    U->>UI: Click folder
-    UI->>CTX: Dispatch selection
-    CTX->>CTX: Update state
-    CTX->>UI: Trigger re-render
-    UI->>UI: Highlight selected
-
-    U->>UI: Right-click file
-    UI->>SVC: Show context menu
-    U->>SVC: Select "Delete"
-    SVC->>V: Delete file
-    V->>CTX: File removed event
-    CTX->>UI: Update file list
+    U->>UI: Click/keyboard action
+    UI->>CTX: Dispatch selection or preference update
+    CTX->>UI: Update focused pane, reveal targets, search state
+    UI->>SVC: Invoke command queue / file system / metadata services
+    SVC->>V: Execute vault operation (move, create, delete, tag update)
+    V->>ST: Emit vault event
+    ST->>UI: Propagate updated cache state to virtualization hooks
 ```
 
-## Scroll Orchestration
+## Scroll Management System
 
-See the dedicated document: `docs/scroll-orchestration.md`.
+Detailed scroll orchestration for both panes (intent queues, version gating, reveal flows) is documented in
+`docs/scroll-orchestration.md`.

@@ -1,0 +1,53 @@
+/* Source: src/styles/sections/modal-action-button.css */
+
+/* ========================================================================
+   Shared Modal Action Button
+   ======================================================================== */
+
+.nn-action-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background-color: transparent;
+    color: var(--nn-theme-foreground-muted);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.nn-action-btn:hover:not(:disabled):not(.mod-warning) {
+    background: var(--background-modifier-hover);
+    color: var(--nn-theme-foreground);
+    border-color: var(--background-modifier-border-hover);
+}
+
+.nn-action-btn:disabled {
+    color: var(--nn-theme-foreground);
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.nn-action-btn.mod-warning:disabled {
+    color: var(--text-error);
+}
+
+.nn-action-btn.mod-warning {
+    background: transparent;
+    color: var(--text-error);
+    border-color: var(--background-modifier-border);
+}
+
+.nn-action-btn.mod-warning:hover:not(:disabled) {
+    background: var(--background-modifier-error);
+    color: var(--text-error);
+    border-color: var(--background-modifier-error-hover);
+}
+
+.nn-action-btn svg {
+    width: 16px;
+    height: 16px;
+}

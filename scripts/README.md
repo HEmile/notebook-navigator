@@ -118,3 +118,19 @@ Custom local deployment script (not included in repository).
 # Copy built files to Obsidian vault
 cp main.js manifest.json styles.css ~/Documents/ObsidianVault/.obsidian/plugins/notebook-navigator/
 ```
+
+## check-unused-strings.mjs
+
+Finds unused i18n keys in `src/i18n/locales/en.ts` by scanning for `strings.<keyPath>` usage across `src` (excluding `src/i18n/locales`). Prompts to remove unused keys from all locale files.
+
+```bash
+node scripts/check-unused-strings.mjs
+```
+
+## check-unused-css.mjs
+
+Scans `styles.css` and `src` for unused plugin CSS classes and variables.
+
+```bash
+node scripts/check-unused-css.mjs
+```

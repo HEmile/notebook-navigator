@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +17,7 @@
  */
 
 /**
- * Type definitions for the icon service system.
- *
- * This file defines the core interfaces and types used throughout the icon
- * service module, establishing contracts for icon providers and the service.
+ * Types for the icon service system.
  */
 
 /**
@@ -33,9 +30,14 @@ export interface IconDefinition {
     displayName: string;
     /** Optional preview of the icon (e.g., emoji character or SVG) */
     preview?: string;
-    /** Optional keywords for improved search */
+    /** Optional search keywords */
     keywords?: string[];
 }
+
+/**
+ * Result of rendering an icon into a container.
+ */
+export type IconRenderResult = 'rendered' | 'not-found';
 
 /**
  * Maximum number of recent icons stored per provider
@@ -44,12 +46,6 @@ export const RECENT_ICONS_PER_PROVIDER_LIMIT = 15;
 
 /**
  * Interface that icon providers must implement.
- *
- * Icon providers are responsible for:
- * - Rendering icons into HTML elements
- * - Searching for icons based on queries
- * - Providing a list of all available icons
- * - Reporting their availability status
  */
 export interface IconProvider {
     /** Unique identifier for the provider */
@@ -63,7 +59,7 @@ export interface IconProvider {
      * @param iconId - The icon identifier
      * @param size - Optional size in pixels
      */
-    render(container: HTMLElement, iconId: string, size?: number): void;
+    render(container: HTMLElement, iconId: string, size?: number): IconRenderResult | Promise<IconRenderResult>;
     /**
      * Searches for icons matching a query.
      *
@@ -83,6 +79,10 @@ export interface IconProvider {
      * @returns True if the provider can be used
      */
     isAvailable(): boolean;
+    /**
+     * Optionally reports the provider version displayed to users.
+     */
+    getVersion?(): string | null;
 }
 
 /**

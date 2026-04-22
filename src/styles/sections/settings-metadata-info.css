@@ -1,0 +1,37 @@
+/* Source: src/styles/sections/settings-metadata-info.css */
+
+/* ========================================================================
+   Metadata Info Styles
+   ======================================================================== */
+
+/* Container for metadata parsing info - flex row layout */
+.nn-metadata-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Text container - takes up available space */
+.nn-metadata-info-text {
+    flex: 1;
+}
+
+/* Error text styling */
+.nn-metadata-error-text {
+    color: var(--text-error);
+    font-weight: bold;
+}
+
+/* Export button - stays on the right */
+.nn-metadata-export-button {
+    flex-shrink: 0;
+}
+
+/* Make delete menu items red (items with trash icon) */
+.menu-item:has(.menu-item-icon svg.lucide-trash) {
+    color: var(--text-error);
+}
+.menu-item:has(.menu-item-icon svg.lucide-trash) .menu-item-icon {
+    color: var(--text-error);
+}

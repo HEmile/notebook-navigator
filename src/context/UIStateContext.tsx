@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,13 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React, { createContext, useContext, useReducer, ReactNode, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useMemo, useEffect, useCallback, useRef } from 'react';
 import { NAVIGATION_PANE_DIMENSIONS } from '../types';
 // Storage keys
 import { STORAGE_KEYS } from '../types';
 import { localStorage } from '../utils/localStorage';
 import { useServices } from './ServicesContext';
 import type { NotebookNavigatorSettings } from '../settings';
+import { useUXPreferenceActions, useUXPreferences } from './UXPreferencesContext';
 
 /**
  * Gets the initial view preference for single pane mode.
@@ -88,11 +89,11 @@ interface UIStateProviderProps {
 
 export function UIStateProvider({ children, isMobile }: UIStateProviderProps) {
     const { plugin } = useServices();
+    const uxPreferences = useUXPreferences();
+    const { setPinShortcuts } = useUXPreferenceActions();
 
     const loadInitialState = (): UIState => {
         const savedWidth = localStorage.get<number>(STORAGE_KEYS.navigationPaneWidthKey);
-        // Load persisted shortcuts pinned state from local storage
-        const savedShortcutPin = localStorage.get<string>(STORAGE_KEYS.shortcutsPinnedKey);
 
         const paneWidth = savedWidth ?? NAVIGATION_PANE_DIMENSIONS.defaultWidth;
         const startView = getStartView(plugin.settings);
@@ -104,14 +105,19 @@ export function UIStateProvider({ children, isMobile }: UIStateProviderProps) {
             dualPanePreference: plugin.useDualPane(),
             dualPane: false, // Will be computed later
             singlePane: false, // Will be computed later
-            // Parse pinShortcuts from local storage (stored as '1' for true, '0' for false)
-            pinShortcuts: savedShortcutPin === '1'
+            pinShortcuts: uxPreferences.pinShortcuts
         };
 
         return initialState;
     };
 
-    const [state, dispatch] = useReducer(uiStateReducer, undefined, loadInitialState);
+    const [state, internalDispatch] = useReducer(uiStateReducer, undefined, loadInitialState);
+    // Tracks latest shortcuts state so we can detect actual transitions before notifying the plugin
+    const pinShortcutsRef = useRef(state.pinShortcuts);
+
+    useEffect(() => {
+        pinShortcutsRef.current = state.pinShortcuts;
+    }, [state.pinShortcuts]);
 
     // Compute dualPane and singlePane based on isMobile and settings
     const stateWithPaneMode = useMemo(() => {
@@ -124,10 +130,25 @@ export function UIStateProvider({ children, isMobile }: UIStateProviderProps) {
         };
     }, [state, isMobile]);
 
+    // Wraps reducer dispatch to forward real changes to the plugin while ignoring redundant writes
+    const dispatch = useCallback(
+        (action: UIAction) => {
+            if (action.type === 'SET_PIN_SHORTCUTS') {
+                const nextValue = action.value;
+                if (nextValue !== pinShortcutsRef.current) {
+                    pinShortcutsRef.current = nextValue;
+                    setPinShortcuts(nextValue);
+                }
+            }
+            internalDispatch(action);
+        },
+        [internalDispatch, setPinShortcuts]
+    );
+
     useEffect(() => {
         const id = `ui-state-${Date.now()}`;
         const handleUpdate = () => {
-            dispatch({ type: 'SET_DUAL_PANE', value: plugin.useDualPane() });
+            internalDispatch({ type: 'SET_DUAL_PANE', value: plugin.useDualPane() });
         };
 
         plugin.registerSettingsUpdateListener(id, handleUpdate);
@@ -137,10 +158,14 @@ export function UIStateProvider({ children, isMobile }: UIStateProviderProps) {
         };
     }, [plugin]);
 
-    // Persist pinShortcuts state to local storage whenever it changes
+    // Pulls fresh plugin preference into local state when an external update is observed
     useEffect(() => {
-        localStorage.set(STORAGE_KEYS.shortcutsPinnedKey, state.pinShortcuts ? '1' : '0');
-    }, [state.pinShortcuts]);
+        if (pinShortcutsRef.current === uxPreferences.pinShortcuts) {
+            return;
+        }
+        pinShortcutsRef.current = uxPreferences.pinShortcuts;
+        internalDispatch({ type: 'SET_PIN_SHORTCUTS', value: uxPreferences.pinShortcuts });
+    }, [internalDispatch, uxPreferences.pinShortcuts]);
 
     // Note: Pane width persistence is handled by useResizablePane hook
     // to avoid duplicate writes during drag operations
@@ -153,9 +178,9 @@ export function UIStateProvider({ children, isMobile }: UIStateProviderProps) {
         const view = state.currentSinglePaneView;
         const focused = state.focusedPane;
         if (view === 'navigation' && focused !== 'navigation') {
-            dispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+            internalDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
         } else if (view === 'files' && focused === 'navigation') {
-            dispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
+            internalDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
         }
     }, [isMobile, state.currentSinglePaneView, state.focusedPane]);
 

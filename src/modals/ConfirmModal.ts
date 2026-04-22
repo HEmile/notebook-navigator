@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 
 import { App, Modal } from 'obsidian';
 import { strings } from '../i18n';
+import { runAsyncAction, type MaybePromise } from '../utils/async';
 
 /**
  * Modal dialog for confirming destructive actions
@@ -29,6 +30,8 @@ export class ConfirmModal extends Modal {
     private cancelHandler: () => void;
     private confirmBtn: HTMLButtonElement;
     private confirmHandler: () => void;
+    private didConfirm: boolean = false;
+    private readonly onCancel?: () => MaybePromise;
 
     /**
      * Creates a confirmation modal with title, message, and callback
@@ -42,20 +45,34 @@ export class ConfirmModal extends Modal {
         app: App,
         title: string,
         message: string,
-        private onConfirm: () => void,
-        confirmButtonText?: string
+        private onConfirm: () => MaybePromise,
+        confirmButtonText?: string,
+        options?: {
+            buildContent?: (container: HTMLElement) => void;
+            // Allows callers to use Obsidian button intent classes like `mod-cta` instead of always warning.
+            confirmButtonClass?: string;
+            onCancel?: () => MaybePromise;
+        }
     ) {
         super(app);
+        this.onCancel = options?.onCancel;
         this.titleEl.setText(title);
-        this.contentEl.createEl('p', { text: message });
+        if (message) {
+            this.contentEl.createEl('p', { text: message });
+        }
+
+        if (options?.buildContent) {
+            options.buildContent(this.contentEl);
+        }
 
         const buttonContainer = this.contentEl.createDiv('nn-button-container');
 
         // Store references for cleanup
         this.cancelHandler = () => this.close();
         this.confirmHandler = () => {
+            this.didConfirm = true;
             this.close();
-            this.onConfirm();
+            this.triggerConfirm();
         };
 
         this.cancelBtn = buttonContainer.createEl('button', { text: strings.common.cancel });
@@ -63,15 +80,16 @@ export class ConfirmModal extends Modal {
 
         this.confirmBtn = buttonContainer.createEl('button', {
             text: confirmButtonText || strings.common.delete,
-            cls: 'mod-warning'
+            cls: options?.confirmButtonClass ?? 'mod-warning'
         });
         this.confirmBtn.addEventListener('click', this.confirmHandler);
 
         // Keyboard shortcuts
         this.scope.register([], 'Enter', evt => {
             evt.preventDefault();
+            this.didConfirm = true;
             this.close();
-            this.onConfirm();
+            this.triggerConfirm();
         });
         this.scope.register([], 'Escape', evt => {
             evt.preventDefault();
@@ -90,5 +108,16 @@ export class ConfirmModal extends Modal {
         if (this.confirmBtn && this.confirmHandler) {
             this.confirmBtn.removeEventListener('click', this.confirmHandler);
         }
+
+        if (!this.didConfirm && this.onCancel) {
+            runAsyncAction(() => this.onCancel?.());
+        }
+    }
+
+    /**
+     * Executes the confirmation callback asynchronously
+     */
+    private triggerConfirm(): void {
+        runAsyncAction(() => this.onConfirm());
     }
 }

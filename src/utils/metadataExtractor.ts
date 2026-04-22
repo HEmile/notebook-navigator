@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,8 +20,10 @@ import { App, TFile, CachedMetadata } from 'obsidian';
 import { NotebookNavigatorSettings } from '../settings';
 import { METADATA_SENTINEL } from '../storage/IndexedDBStorage';
 import { DateUtils } from './dateUtils';
-import { convertIconizeToIconId } from './iconizeFormat';
-import { extractFirstEmoji } from './emojiUtils';
+import { getCachedCommaSeparatedList } from './commaSeparatedListUtils';
+import { deserializeIconFromFrontmatterCompat } from './iconizeFormat';
+import { getMatchingRecordValue } from './recordUtils';
+import { isRecord } from './typeGuards';
 
 /**
  * Processed metadata from frontmatter
@@ -32,6 +34,7 @@ export interface ProcessedMetadata {
     fm?: number; // frontmatter modified timestamp
     icon?: string; // frontmatter icon
     color?: string; // frontmatter color
+    background?: string; // frontmatter background color
 }
 
 /**
@@ -44,6 +47,68 @@ export interface ProcessedMetadata {
 export function extractMetadata(app: App, file: TFile, settings: NotebookNavigatorSettings): ProcessedMetadata {
     const metadata = app.metadataCache.getFileCache(file);
     return extractMetadataFromCache(metadata, settings);
+}
+
+export function extractFrontmatterName(app: App, file: TFile, frontmatterNameField: string): string {
+    const metadata = app.metadataCache.getFileCache(file);
+    return extractFrontmatterNameFromCache(metadata, frontmatterNameField);
+}
+
+function extractFrontmatterNameFromCache(metadata: CachedMetadata | null, frontmatterNameField: string): string {
+    const frontmatter = metadata?.frontmatter;
+    if (!frontmatter) {
+        return '';
+    }
+
+    const frontmatterValue: unknown = frontmatter;
+    if (!isRecord(frontmatterValue)) {
+        return '';
+    }
+    const frontmatterRecord = frontmatterValue;
+
+    const nameFields = getCachedCommaSeparatedList(frontmatterNameField);
+    if (nameFields.length === 0) {
+        return '';
+    }
+
+    for (const field of nameFields) {
+        const nameValue = getMatchingRecordValue(frontmatterRecord, field);
+
+        if (typeof nameValue === 'string') {
+            const trimmedName = nameValue.trim();
+            if (trimmedName) {
+                return trimmedName;
+            }
+        } else if (Array.isArray(nameValue)) {
+            for (const entry of nameValue) {
+                if (typeof entry === 'string') {
+                    const trimmedName = entry.trim();
+                    if (trimmedName) {
+                        return trimmedName;
+                    }
+                }
+            }
+        }
+    }
+
+    return '';
+}
+
+function extractTrimmedFrontmatterString(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    if (Array.isArray(value)) {
+        const firstValue: unknown = value[0];
+        if (typeof firstValue === 'string') {
+            const trimmed = firstValue.trim();
+            return trimmed.length > 0 ? trimmed : undefined;
+        }
+    }
+
+    return undefined;
 }
 
 /**
@@ -60,36 +125,25 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
     }
 
     const result: ProcessedMetadata = {};
+    // Validate frontmatter is a record before accessing properties
+    const frontmatterValue: unknown = frontmatter;
+    if (!isRecord(frontmatterValue)) {
+        return {};
+    }
+    const frontmatterRecord = frontmatterValue;
 
     // Extract name if field is specified
-    if (settings.frontmatterNameField && settings.frontmatterNameField.trim()) {
-        const nameValue = frontmatter[settings.frontmatterNameField];
-
-        if (typeof nameValue === 'string') {
-            const trimmedName = nameValue.trim();
-            if (trimmedName) {
-                result.fn = trimmedName;
-            }
-        } else if (Array.isArray(nameValue)) {
-            const firstValue = nameValue[0];
-            if (typeof firstValue === 'string') {
-                const trimmedName = firstValue.trim();
-                if (trimmedName) {
-                    result.fn = trimmedName;
-                }
-            }
-        }
-    } else {
-        // Field is empty, don't set name field (leave undefined)
-        result.fn = undefined;
+    const frontmatterName = extractFrontmatterNameFromCache(metadata, settings.frontmatterNameField);
+    if (frontmatterName) {
+        result.fn = frontmatterName;
     }
 
     // Extract icon if field is specified
     // Extract icon from frontmatter field
     if (settings.frontmatterIconField && settings.frontmatterIconField.trim()) {
-        const iconValue = frontmatter[settings.frontmatterIconField];
+        const iconValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterIconField);
 
-        // Helper to extract and convert icon value from Iconize format to canonical format
+        // Helper to extract and convert a stored icon value to canonical format
         const extractIconValue = (value: unknown): string | undefined => {
             if (typeof value !== 'string') {
                 return undefined;
@@ -98,19 +152,9 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
             if (!trimmed) {
                 return undefined;
             }
-            // Convert from Iconize format (e.g. LiHome) to canonical format (e.g. home)
-            const converted = convertIconizeToIconId(trimmed);
-            if (converted) {
-                return converted;
-            }
 
-            // Normalize plain emoji values (🔭 -> emoji:🔭)
-            const emojiOnly = extractFirstEmoji(trimmed);
-            if (emojiOnly && emojiOnly === trimmed) {
-                return `emoji:${emojiOnly}`;
-            }
-
-            return trimmed;
+            const parsed = deserializeIconFromFrontmatterCompat(trimmed);
+            return parsed ?? undefined;
         };
 
         if (typeof iconValue === 'string') {
@@ -119,8 +163,9 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
                 result.icon = normalizedIcon;
             }
         } else if (Array.isArray(iconValue)) {
+            const iconArray: unknown[] = iconValue;
             // Handle array values - use first valid icon
-            for (const entry of iconValue) {
+            for (const entry of iconArray) {
                 const normalizedIcon = extractIconValue(entry);
                 if (normalizedIcon) {
                     result.icon = normalizedIcon;
@@ -132,27 +177,25 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
 
     // Extract color if field is specified
     if (settings.frontmatterColorField && settings.frontmatterColorField.trim()) {
-        const colorValue = frontmatter[settings.frontmatterColorField];
+        const colorValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterColorField);
+        const parsedColor = extractTrimmedFrontmatterString(colorValue);
+        if (parsedColor) {
+            result.color = parsedColor;
+        }
+    }
 
-        if (typeof colorValue === 'string') {
-            const trimmedColor = colorValue.trim();
-            if (trimmedColor) {
-                result.color = trimmedColor;
-            }
-        } else if (Array.isArray(colorValue)) {
-            const firstValue = colorValue[0];
-            if (typeof firstValue === 'string') {
-                const trimmedColor = firstValue.trim();
-                if (trimmedColor) {
-                    result.color = trimmedColor;
-                }
-            }
+    // Extract background color if field is specified
+    if (settings.frontmatterBackgroundField && settings.frontmatterBackgroundField.trim()) {
+        const backgroundValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterBackgroundField);
+        const parsedBackground = extractTrimmedFrontmatterString(backgroundValue);
+        if (parsedBackground) {
+            result.background = parsedBackground;
         }
     }
 
     // Extract created date if field is specified
     if (settings.frontmatterCreatedField && settings.frontmatterCreatedField.trim()) {
-        const createdValue = frontmatter[settings.frontmatterCreatedField];
+        const createdValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterCreatedField);
 
         if (createdValue !== undefined) {
             // Field exists, try to parse it
@@ -171,7 +214,7 @@ export function extractMetadataFromCache(metadata: CachedMetadata | null, settin
 
     // Extract modified date if field is specified
     if (settings.frontmatterModifiedField && settings.frontmatterModifiedField.trim()) {
-        const modifiedValue = frontmatter[settings.frontmatterModifiedField];
+        const modifiedValue = getMatchingRecordValue(frontmatterRecord, settings.frontmatterModifiedField);
 
         if (modifiedValue !== undefined) {
             // Field exists, try to parse it

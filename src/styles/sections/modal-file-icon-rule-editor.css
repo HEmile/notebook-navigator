@@ -1,0 +1,56 @@
+/* Source: src/styles/sections/modal-file-icon-rule-editor.css */
+
+/* ========================================================================
+   File Icon Rule Editor Modal
+   ======================================================================== */
+
+.modal.nn-file-icon-rule-editor-modal {
+    width: 420px;
+    max-width: calc(100vw - 40px);
+    max-height: 500px;
+}
+
+.modal.nn-file-icon-rule-editor-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-2);
+    padding: var(--size-4-4);
+    overflow: hidden;
+}
+
+.nn-file-icon-rule-editor-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+    padding-bottom: var(--size-1-5);
+}
+
+.nn-file-icon-rule-editor-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1-5);
+    width: 100%;
+}
+
+.nn-file-icon-rule-editor-footer {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding-top: var(--size-2-2);
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.nn-file-icon-rule-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+}
+
+.nn-file-icon-rule-key {
+    flex: 1;
+    min-width: 0;
+}
+
+.nn-file-icon-rule-row-invalid .nn-file-icon-rule-key {
+    border-color: var(--background-modifier-error);
+}

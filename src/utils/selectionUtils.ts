@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,10 +18,11 @@
 
 import { TFile, App } from 'obsidian';
 import { SelectionDispatch, SelectionState } from '../context/SelectionContext';
-import { ItemType } from '../types';
+import { ItemType, type NavigationItemType, type NavigatorContext, type VisibilityPreferences } from '../types';
 import { NotebookNavigatorSettings } from '../settings';
-import { TagTreeService } from '../services/TagTreeService';
-import { getFilesForFolder, getFilesForTag } from './fileFinder';
+import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
+import type { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
+import { getFilesForFolder, getFilesForProperty, getFilesForTag } from './fileFinder';
 
 /**
  * Utilities for managing file selection operations
@@ -39,6 +40,9 @@ export function getSelectedPath(selectionState: SelectionState): string | null {
     if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
         return selectionState.selectedTag;
     }
+    if (selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty) {
+        return selectionState.selectedProperty;
+    }
     return null;
 }
 
@@ -46,6 +50,7 @@ export function getSelectedPath(selectionState: SelectionState): string | null {
  * Get all files for the current selection (folder or tag)
  * @param selectionState The current selection state
  * @param settings Plugin settings
+ * @param visibility Visibility preferences for descendant notes and hidden items display
  * @param app Obsidian app instance
  * @param tagTreeService Tag tree service for tag operations
  * @returns Array of files in the selected folder or with the selected tag
@@ -53,14 +58,66 @@ export function getSelectedPath(selectionState: SelectionState): string | null {
 export function getFilesForSelection(
     selectionState: SelectionState,
     settings: NotebookNavigatorSettings,
+    visibility: VisibilityPreferences,
     app: App,
-    tagTreeService: TagTreeService | null
+    tagTreeService: ITagTreeProvider | null,
+    propertyTreeService: IPropertyTreeProvider | null
 ): TFile[] {
-    if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
-        return getFilesForFolder(selectionState.selectedFolder, settings, app);
+    return getFilesForNavigationSelection(
+        {
+            selectionType: selectionState.selectionType,
+            selectedFolder: selectionState.selectedFolder,
+            selectedTag: selectionState.selectedTag,
+            selectedProperty: selectionState.selectedProperty
+        },
+        settings,
+        visibility,
+        app,
+        tagTreeService,
+        propertyTreeService
+    );
+}
+
+export interface NavigationSelectionScope {
+    selectionType: NavigationItemType | ItemType | null;
+    selectedFolder?: SelectionState['selectedFolder'];
+    selectedTag?: SelectionState['selectedTag'];
+    selectedProperty?: SelectionState['selectedProperty'];
+}
+
+interface NavigationSelectionOptions {
+    orderResults?: boolean;
+}
+
+export function getNavigatorPinContext(selectionType: NavigationSelectionScope['selectionType']): NavigatorContext {
+    if (selectionType === ItemType.TAG) {
+        return ItemType.TAG;
     }
-    if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
-        return getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
+
+    if (selectionType === ItemType.PROPERTY) {
+        return ItemType.PROPERTY;
+    }
+
+    return ItemType.FOLDER;
+}
+
+export function getFilesForNavigationSelection(
+    selectionScope: NavigationSelectionScope,
+    settings: NotebookNavigatorSettings,
+    visibility: VisibilityPreferences,
+    app: App,
+    tagTreeService: ITagTreeProvider | null,
+    propertyTreeService: IPropertyTreeProvider | null,
+    options?: NavigationSelectionOptions
+): TFile[] {
+    if (selectionScope.selectionType === ItemType.FOLDER && selectionScope.selectedFolder) {
+        return getFilesForFolder(selectionScope.selectedFolder, settings, visibility, app, options);
+    }
+    if (selectionScope.selectionType === ItemType.TAG && selectionScope.selectedTag) {
+        return getFilesForTag(selectionScope.selectedTag, settings, visibility, app, tagTreeService, options);
+    }
+    if (selectionScope.selectionType === ItemType.PROPERTY && selectionScope.selectedProperty) {
+        return getFilesForProperty(selectionScope.selectedProperty, settings, visibility, app, propertyTreeService, options);
     }
     return [];
 }
@@ -134,6 +191,26 @@ export function getFilesInRange(files: TFile[], startIndex: number, endIndex: nu
 export function findFileIndex(files: TFile[], targetFile: TFile | null): number {
     if (!targetFile) return -1;
     return files.findIndex(f => f.path === targetFile.path);
+}
+
+/**
+ * Resolve the adjacent file in a visible file order.
+ * Returns the first or last file when there is no current selection.
+ */
+export function getAdjacentFile(files: TFile[], targetFile: TFile | null, direction: 'next' | 'previous'): TFile | null {
+    if (files.length === 0) {
+        return null;
+    }
+
+    const currentIndex = findFileIndex(files, targetFile);
+    const targetIndex =
+        currentIndex === -1 ? (direction === 'next' ? 0 : files.length - 1) : direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+    if (targetIndex < 0 || targetIndex >= files.length) {
+        return null;
+    }
+
+    return files[targetIndex] ?? null;
 }
 
 /**

@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, Plugin, View, WorkspaceLeaf, TFile } from 'obsidian';
+import type { App, Plugin, View, WorkspaceLeaf, TFile } from 'obsidian';
+
+declare module 'obsidian' {
+    interface MenuItem {
+        setSubmenu?: (submenu?: import('obsidian').Menu) => import('obsidian').Menu | void;
+    }
+}
+
+/** MIME type identifier for tag drag-and-drop operations */
+export const TAG_DRAG_MIME = 'application/x-notebook-navigator-tag';
+/** MIME type identifier for property drag-and-drop operations */
+export const PROPERTY_DRAG_MIME = 'application/x-notebook-navigator-property';
 
 /**
  * Extended Obsidian type definitions for internal/undocumented APIs
@@ -81,7 +92,7 @@ type DragManagerPayloadValue =
     | (() => void);
 
 export interface DragManagerPayload {
-    type?: 'file' | 'files' | 'link'; // Type of drag operation
+    type?: 'file' | 'files' | 'link' | 'tag'; // Type of drag operation
     file?: TFile; // Single file being dragged
     files?: TFile[]; // Multiple files being dragged
     title?: string; // Display title for the drag operation
@@ -102,6 +113,11 @@ export interface AppWithDragManager extends App {
     dragManager: DragManagerState;
 }
 
+// Type guard that checks if a value is a non-null object
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
+
 /**
  * Type guard that detects if the Obsidian app exposes the drag manager.
  * Uses reflection to safely check for the presence of internal drag manager API.
@@ -119,8 +135,8 @@ export function hasDragManager(app: App): app is AppWithDragManager {
     }
 
     // Validate dragManager is an object
-    const dragManager = Reflect.get(candidate, 'dragManager');
-    if (typeof dragManager !== 'object' || dragManager === null) {
+    const dragManager: unknown = Reflect.get(candidate, 'dragManager');
+    if (!isObjectRecord(dragManager)) {
         return false;
     }
 
@@ -130,7 +146,7 @@ export function hasDragManager(app: App): app is AppWithDragManager {
     }
 
     // Validate draggable is null or an object (the payload)
-    const draggableValue = Reflect.get(dragManager, 'draggable');
+    const draggableValue: unknown = Reflect.get(dragManager, 'draggable');
     return draggableValue === null || typeof draggableValue === 'object';
 }
 
@@ -163,8 +179,12 @@ export const TIMEOUTS = {
     // Debounce Delays
     /** Debounce for keyboard, focus, and search input */
     DEBOUNCE_KEYBOARD: 100,
+    /** Debounce for opening files during keyboard scrolling */
+    DEBOUNCE_KEYBOARD_FILE_OPEN: 500,
     /** Debounce for content processing and tree updates */
     DEBOUNCE_CONTENT: 300,
+    /** Debounce for tag tree rebuild requests */
+    DEBOUNCE_TAG_TREE: 500,
     /** Debounce for settings text input */
     DEBOUNCE_SETTINGS: 1000,
 
@@ -177,8 +197,8 @@ export const TIMEOUTS = {
     FILE_OPERATION_DELAY: 100,
 
     // Intervals
-    /** Interval for statistics refresh */
-    INTERVAL_STATISTICS: 1000,
+    /** Interval for cache statistics refresh (Advanced settings tab) */
+    INTERVAL_STATISTICS: 5000,
 
     // Notice Durations
     /** Duration for error messages */
@@ -198,6 +218,12 @@ export const OBSIDIAN_COMMANDS = {
     EDIT_FILE_TITLE: 'workspace:edit-file-title',
     VERSION_HISTORY: 'sync:view-version-history'
 } as const;
+
+declare module 'obsidian' {
+    interface FileManager {
+        createNewMarkdownFile(folder: import('obsidian').TFolder, fileName: string): Promise<TFile>;
+    }
+}
 
 /**
  * Extend the global Window interface for plugin state

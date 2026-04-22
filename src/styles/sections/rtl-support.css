@@ -1,0 +1,33 @@
+/* Source: src/styles/sections/rtl-support.css */
+
+/* ========================================================================
+   RTL (Right-to-Left) Support
+   ======================================================================== */
+
+/* Single-pane slide animations for RTL */
+.mod-rtl .nn-split-container.nn-single-pane.show-navigation .nn-list-pane {
+    transform: translateX(-100%);
+}
+
+.mod-rtl .nn-split-container.nn-single-pane.show-files .nn-navigation-pane {
+    transform: translateX(100%);
+}
+
+.mod-rtl .nn-file-name,
+.mod-rtl .nn-file-preview {
+    text-align: right;
+}
+
+/* Bidi-safe text runs */
+.nn-navitem-name,
+.nn-file-name,
+.nn-file-preview,
+.nn-file-date,
+.nn-parent-folder,
+.nn-date-group-header {
+    unicode-bidi: plaintext;
+}
+
+/* Fix icon mirroring - Obsidian auto-mirrors icons, but we may need to prevent it for some icons */
+
+/* Currently, all our icons (chevrons, folders, etc.) should be mirrored in RTL, so no overrides needed */

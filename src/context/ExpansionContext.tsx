@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +17,14 @@
  */
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { STORAGE_KEYS } from '../types';
+import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, STORAGE_KEYS, TAGS_ROOT_VIRTUAL_FOLDER_ID } from '../types';
 import { localStorage } from '../utils/localStorage';
 
 // State interface
 interface ExpansionState {
     expandedFolders: Set<string>;
     expandedTags: Set<string>;
+    expandedProperties: Set<string>;
     expandedVirtualFolders: Set<string>;
 }
 
@@ -31,20 +32,47 @@ interface ExpansionState {
 export type ExpansionAction =
     | { type: 'SET_EXPANDED_FOLDERS'; folders: Set<string> }
     | { type: 'SET_EXPANDED_TAGS'; tags: Set<string> }
+    | { type: 'SET_EXPANDED_PROPERTIES'; properties: Set<string> }
     | { type: 'SET_EXPANDED_VIRTUAL_FOLDERS'; folders: Set<string> }
     | { type: 'TOGGLE_FOLDER_EXPANDED'; folderPath: string }
     | { type: 'TOGGLE_TAG_EXPANDED'; tagPath: string }
+    | { type: 'TOGGLE_PROPERTY_EXPANDED'; propertyNodeId: string }
     | { type: 'TOGGLE_VIRTUAL_FOLDER_EXPANDED'; folderId: string }
     | { type: 'EXPAND_FOLDERS'; folderPaths: string[] }
     | { type: 'EXPAND_TAGS'; tagPaths: string[] }
+    | { type: 'EXPAND_PROPERTIES'; propertyNodeIds: string[] }
     | { type: 'TOGGLE_DESCENDANT_FOLDERS'; descendantPaths: string[]; expand: boolean }
     | { type: 'TOGGLE_DESCENDANT_TAGS'; descendantPaths: string[]; expand: boolean }
+    | { type: 'TOGGLE_DESCENDANT_PROPERTIES'; descendantNodeIds: string[]; expand: boolean }
     | { type: 'CLEANUP_DELETED_FOLDERS'; existingPaths: Set<string> }
-    | { type: 'CLEANUP_DELETED_TAGS'; existingTags: Set<string> };
+    | { type: 'CLEANUP_DELETED_TAGS'; existingTags: Set<string> }
+    | { type: 'CLEANUP_DELETED_PROPERTIES'; existingPropertyNodeIds: Set<string> };
 
 // Create contexts
 const ExpansionContext = createContext<ExpansionState | null>(null);
 const ExpansionDispatchContext = createContext<React.Dispatch<ExpansionAction> | null>(null);
+
+function filterExpandedSet(currentValues: Set<string>, validValues: Set<string>): Set<string> | null {
+    let changed = false;
+    currentValues.forEach(value => {
+        if (!validValues.has(value)) {
+            changed = true;
+        }
+    });
+
+    if (!changed) {
+        return null;
+    }
+
+    const filteredValues = new Set<string>();
+    currentValues.forEach(value => {
+        if (validValues.has(value)) {
+            filteredValues.add(value);
+        }
+    });
+
+    return filteredValues;
+}
 
 // Reducer
 function expansionReducer(state: ExpansionState, action: ExpansionAction): ExpansionState {
@@ -54,6 +82,9 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
 
         case 'SET_EXPANDED_TAGS':
             return { ...state, expandedTags: action.tags };
+
+        case 'SET_EXPANDED_PROPERTIES':
+            return { ...state, expandedProperties: action.properties };
 
         case 'SET_EXPANDED_VIRTUAL_FOLDERS':
             return { ...state, expandedVirtualFolders: action.folders };
@@ -78,6 +109,16 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
             return { ...state, expandedTags: newExpanded };
         }
 
+        case 'TOGGLE_PROPERTY_EXPANDED': {
+            const newExpanded = new Set(state.expandedProperties);
+            if (newExpanded.has(action.propertyNodeId)) {
+                newExpanded.delete(action.propertyNodeId);
+            } else {
+                newExpanded.add(action.propertyNodeId);
+            }
+            return { ...state, expandedProperties: newExpanded };
+        }
+
         case 'TOGGLE_VIRTUAL_FOLDER_EXPANDED': {
             const newExpanded = new Set(state.expandedVirtualFolders);
             if (newExpanded.has(action.folderId)) {
@@ -98,6 +139,12 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
             const newExpanded = new Set(state.expandedTags);
             action.tagPaths.forEach(path => newExpanded.add(path));
             return { ...state, expandedTags: newExpanded };
+        }
+
+        case 'EXPAND_PROPERTIES': {
+            const newExpanded = new Set(state.expandedProperties);
+            action.propertyNodeIds.forEach(nodeId => newExpanded.add(nodeId));
+            return { ...state, expandedProperties: newExpanded };
         }
 
         case 'TOGGLE_DESCENDANT_FOLDERS': {
@@ -124,14 +171,40 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
             return { ...state, expandedTags: newExpanded };
         }
 
+        case 'TOGGLE_DESCENDANT_PROPERTIES': {
+            const newExpanded = new Set(state.expandedProperties);
+            action.descendantNodeIds.forEach(nodeId => {
+                if (action.expand) {
+                    newExpanded.add(nodeId);
+                } else {
+                    newExpanded.delete(nodeId);
+                }
+            });
+            return { ...state, expandedProperties: newExpanded };
+        }
+
         case 'CLEANUP_DELETED_FOLDERS': {
-            const cleaned = new Set(Array.from(state.expandedFolders).filter(path => action.existingPaths.has(path)));
+            const cleaned = filterExpandedSet(state.expandedFolders, action.existingPaths);
+            if (!cleaned) {
+                return state;
+            }
             return { ...state, expandedFolders: cleaned };
         }
 
         case 'CLEANUP_DELETED_TAGS': {
-            const cleaned = new Set(Array.from(state.expandedTags).filter(tag => action.existingTags.has(tag)));
+            const cleaned = filterExpandedSet(state.expandedTags, action.existingTags);
+            if (!cleaned) {
+                return state;
+            }
             return { ...state, expandedTags: cleaned };
+        }
+
+        case 'CLEANUP_DELETED_PROPERTIES': {
+            const cleaned = filterExpandedSet(state.expandedProperties, action.existingPropertyNodeIds);
+            if (!cleaned) {
+                return state;
+            }
+            return { ...state, expandedProperties: cleaned };
         }
 
         default:
@@ -149,13 +222,17 @@ export function ExpansionProvider({ children }: ExpansionProviderProps) {
     const loadInitialState = (): ExpansionState => {
         const savedExpandedFolders = localStorage.get<string[]>(STORAGE_KEYS.expandedFoldersKey);
         const savedExpandedTags = localStorage.get<string[]>(STORAGE_KEYS.expandedTagsKey);
+        const savedExpandedProperties = localStorage.get<string[]>(STORAGE_KEYS.expandedPropertiesKey);
         const savedExpandedVirtualFolders = localStorage.get<string[]>(STORAGE_KEYS.expandedVirtualFoldersKey);
 
         const expandedFolders = new Set<string>(savedExpandedFolders || []);
         const expandedTags = new Set<string>(savedExpandedTags || []);
-        const expandedVirtualFolders = new Set<string>(savedExpandedVirtualFolders || ['tags-root']); // Default expand tags-root
+        const expandedProperties = new Set<string>(savedExpandedProperties || []);
+        const expandedVirtualFolders = new Set<string>(
+            savedExpandedVirtualFolders || [TAGS_ROOT_VIRTUAL_FOLDER_ID, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID]
+        ); // Default expand tag/property roots
 
-        return { expandedFolders, expandedTags, expandedVirtualFolders };
+        return { expandedFolders, expandedTags, expandedProperties, expandedVirtualFolders };
     };
 
     const [state, dispatch] = useReducer(expansionReducer, undefined, loadInitialState);
@@ -168,6 +245,10 @@ export function ExpansionProvider({ children }: ExpansionProviderProps) {
     useEffect(() => {
         localStorage.set(STORAGE_KEYS.expandedTagsKey, Array.from(state.expandedTags));
     }, [state.expandedTags]);
+
+    useEffect(() => {
+        localStorage.set(STORAGE_KEYS.expandedPropertiesKey, Array.from(state.expandedProperties));
+    }, [state.expandedProperties]);
 
     useEffect(() => {
         localStorage.set(STORAGE_KEYS.expandedVirtualFoldersKey, Array.from(state.expandedVirtualFolders));

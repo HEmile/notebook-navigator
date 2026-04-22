@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,11 +25,15 @@
  * - PATCH: Bug fixes (backwards compatible)
  */
 
+function formatApiVersion(version: { major: number; minor: number; patch: number }): string {
+    return `${version.major}.${version.minor}.${version.patch}`;
+}
+
 export const API_VERSION = {
-    major: 1,
+    major: 2,
     minor: 0,
-    patch: 1,
+    patch: 0,
     toString(): string {
-        return `${this.major}.${this.minor}.${this.patch}`;
+        return formatApiVersion(API_VERSION);
     }
-};
+} as const;

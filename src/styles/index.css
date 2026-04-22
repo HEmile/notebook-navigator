@@ -1,0 +1,148 @@
+/*
+Notebook Navigator - Plugin for Obsidian
+Copyright (c) 2025-2026 Johan Sanneblad
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+/*
+Source list for the generated styles.css file.
+Keep this list ordered: later files override earlier ones.
+*/
+
+/* Core */
+/* core-variables.css: body-level --nn-* tokens (spacing, sizing, theme colors), plus `.nn-visually-hidden` and `.nn-color-resolver`. */
+@import './sections/core-variables.css';
+
+/* Layout + shared UI */
+/* layout-base.css: root containers (`.notebook-navigator`, `.nn-split-container`), focus/selection CSS variables, UI scale wrapper. */
+@import './sections/layout-base.css';
+/* ui-update-notice.css: update banner (`.nn-update-banner`) with mobile breakpoints. */
+@import './sections/ui-update-notice.css';
+/* ui-notices.css: custom Obsidian notices (cache rebuild progress notice). */
+@import './sections/ui-notices.css';
+/* layout-panes.css: pane sizing and orientation (`.nn-navigation-pane`, `.nn-list-pane`), background modes, resize handle. */
+@import './sections/layout-panes.css';
+/* ui-headers.css: pane headers, breadcrumb/profile header, search bar container + input, tag suggestion popover. */
+@import './sections/ui-headers.css';
+/* ui-search.css: mobile search overrides, clear/star buttons, clickable header path segments. */
+@import './sections/ui-search.css';
+/* ui-buttons.css: header icon buttons (`.nn-icon-button`), active/disabled states, SVG sizing. */
+@import './sections/ui-buttons.css';
+/* layout-spacers.css: navigation/list spacer rows and separators (`.nn-nav-*-spacer`, `.nn-list-*-spacer`). */
+@import './sections/layout-spacers.css';
+
+/* Navigation + list */
+/* navigation-scroller.css: navigation scroller chrome (`.nn-navigation-pane-scroller`), overlay stack, pinned shortcuts container, nav banner. */
+@import './sections/navigation-scroller.css';
+/* navigation-tree.css: navigation rows (`.nn-navitem`), chevrons/icons/counts, shortcut rows, root reorder panel. */
+@import './sections/navigation-tree.css';
+/* navigation-properties.css: property-tree row refinements (`.nn-navitem.nn-property`). */
+@import './sections/navigation-properties.css';
+/* calendar.css: bottom overlay calendar in navigation pane (`.nn-navigation-calendar*`). */
+@import './sections/calendar.css';
+/* list-files.css: list scroller (`.nn-list-pane-scroller`), overlay stack, list title area, file rows (`.nn-file`), separators, quick actions panel. */
+@import './sections/list-files.css';
+/* list-tags.css: file tag pills (`.nn-file-tag*`) and selected file text color rules. */
+@import './sections/list-tags.css';
+/* list-compact-mode.css: compact file row layout (`.nn-file.nn-compact`) and extension badge alignment. */
+@import './sections/list-compact-mode.css';
+/* list-file-thumbnails.css: file thumbnails (`.nn-file-thumbnail*`) and extension badge rendering for non-markdown files. */
+@import './sections/list-file-thumbnails.css';
+/* list-date-headers.css: date group headers (`.nn-date-group-header*`) plus skeleton view layout during load. */
+@import './sections/list-date-headers.css';
+/* ui-empty-state.css: empty state layout for the list pane (`.nn-empty-state`, `.nn-empty-message`). */
+@import './sections/ui-empty-state.css';
+
+/* States */
+/* state-selection.css: selection overlays for files and nav items; rounded-corner trimming for multi-select. */
+@import './sections/state-selection.css';
+/* state-focus.css: selected nav item colors (chevron/icon/name/count) driven by focus state variables. */
+@import './sections/state-focus.css';
+/* state-hover.css: desktop hover rules for file rows. */
+@import './sections/state-hover.css';
+/* state-drag-and-drop.css: drag ghost + drop target styling, plus resize user-select suppression and header action layout variants. */
+@import './sections/state-drag-and-drop.css';
+/* state-context-menu.css: context menu outlines for active file/nav items. */
+@import './sections/state-context-menu.css';
+/* state-hidden-items.css: dimmed styling for excluded folders/tags and surfaced hidden files. */
+@import './sections/state-hidden-items.css';
+
+/* Modals */
+/* modal-base.css: shared modal inputs and button rows, plus folder note type modal layout. */
+@import './sections/modal-base.css';
+/* modal-select-vault-profile.css: vault profile chooser modal layout and focus styles. */
+@import './sections/modal-select-vault-profile.css';
+/* modal-action-button.css: shared 32x32 action button styling used in modal rows. */
+@import './sections/modal-action-button.css';
+/* modal-edit-vault-profiles.css: edit profiles modal row layout (input + actions). */
+@import './sections/modal-edit-vault-profiles.css';
+/* modal-file-icon-rule-editor.css: file icon rule editor modal sizing and scroll container. */
+@import './sections/modal-file-icon-rule-editor.css';
+/* modal-ux-icon-map.css: UX icon map modal layout, mobile sizing, scroll container. */
+@import './sections/modal-ux-icon-map.css';
+/* modal-welcome.css: welcome modal layout, video thumbnail sizing, and button row. */
+@import './sections/modal-welcome.css';
+/* modal-whats-new.css: “What’s new” modal layout, list formatting, and release notes typography. */
+@import './sections/modal-whats-new.css';
+/* modal-icon-picker.css: icon picker modal layout, search input, results grid, and category headers. */
+@import './sections/modal-icon-picker.css';
+/* modal-property-keys.css: property key visibility modal layout (navigation/list toggles). */
+@import './sections/modal-property-keys.css';
+/* modal-settings-transfer.css: settings import/export modal sizing and JSON editor layout. */
+@import './sections/modal-settings-transfer.css';
+
+/* Virtualization */
+/* layout-virtual-list.css: TanStack Virtual container wrappers and absolute positioned row elements. */
+@import './sections/layout-virtual-list.css';
+
+/* Settings */
+/* settings-page.css: settings tab layout, sub-setting indentation, toolbar visibility controls, and settings helpers. */
+@import './sections/settings-page.css';
+/* settings-sponsor-button.css: hover styling for the settings support button. */
+@import './sections/settings-sponsor-button.css';
+/* settings-mobile.css: mobile-only settings overrides (wide inputs). */
+@import './sections/settings-mobile.css';
+/* settings-database-statistics.css: database statistics section layout, tables, and export controls. */
+@import './sections/settings-database-statistics.css';
+
+/* Additional modals */
+/* modal-color-picker.css: color picker modal layout, palette grid, recent colors, and input rows. */
+@import './sections/modal-color-picker.css';
+
+/* Theme + platform */
+/* theme-folder-colors.css: placeholder section for folder color rules (currently empty). */
+@import './sections/theme-folder-colors.css';
+/* mobile-variables.css: mobile typography and spacing variables, mobile nav row padding adjustments. */
+@import './sections/mobile-variables.css';
+/* mobile-tab-bars.css: mobile bottom navigation tabs, safe-area handling, and toolbar positioning rules. */
+@import './sections/mobile-tab-bars.css';
+/* platform-ios-obsidian-1-11.css: iOS safe areas + Obsidian 1.11+ iOS glass toolbar/overlays. */
+@import './sections/platform-ios-obsidian-1-11.css';
+/* platform-android-obsidian-1-11.css: Android tweaks for Obsidian 1.11+ view chrome. */
+@import './sections/platform-android-obsidian-1-11.css';
+/* android-toolbar.css: Android toolbar positioning overrides. */
+@import './sections/android-toolbar.css';
+/* android-textzoom.css: Android `textZoom` compensation variables and overrides. */
+@import './sections/android-textzoom.css';
+/* rtl-support.css: RTL transforms for single-pane slides and bidi-safe text (`unicode-bidi: plaintext`). */
+@import './sections/rtl-support.css';
+/* icons-system.css: emoji/icon font rendering, icon provider tabs, and shared icon UI primitives. */
+@import './sections/icons-system.css';
+/* settings-metadata-info.css: metadata info row styles and menu item trash coloring. */
+@import './sections/settings-metadata-info.css';
+
+/* Style settings */
+/* settings-style-settings.css: Style Settings metadata block (`@settings`) for variables and class toggles. */
+@import './sections/settings-style-settings.css';

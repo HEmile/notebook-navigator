@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,35 +16,64 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Plugin, TFile, FileView } from 'obsidian';
-import { NotebookNavigatorSettings, DEFAULT_SETTINGS, NotebookNavigatorSettingTab } from './settings';
-import { LocalStorageKeys, NOTEBOOK_NAVIGATOR_VIEW, STORAGE_KEYS } from './types';
+import { Platform, Plugin, TFile, FileView, TFolder, WorkspaceLeaf, addIcon } from 'obsidian';
+import { NotebookNavigatorSettings, NotebookNavigatorSettingTab } from './settings';
+import {
+    LocalStorageKeys,
+    NOTEBOOK_NAVIGATOR_CALENDAR_VIEW,
+    NOTEBOOK_NAVIGATOR_VIEW,
+    STORAGE_KEYS,
+    type DualPaneOrientation,
+    type UXPreferences,
+    type VisibilityPreferences
+} from './types';
 import { ISettingsProvider } from './interfaces/ISettingsProvider';
 import { MetadataService, type MetadataCleanupSummary } from './services/MetadataService';
+import { PropertyOperations } from './services/PropertyOperations';
 import { TagOperations } from './services/TagOperations';
 import { TagTreeService } from './services/TagTreeService';
+import { PropertyTreeService } from './services/PropertyTreeService';
 import { CommandQueueService } from './services/CommandQueueService';
 import { OmnisearchService } from './services/OmnisearchService';
 import { FileSystemOperations } from './services/FileSystemService';
 import { getIconService } from './services/icons';
+import { VaultIconProvider } from './services/icons/providers/VaultIconProvider';
 import { RecentNotesService } from './services/RecentNotesService';
-import RecentDataManager from './services/recent/RecentDataManager';
 import { ExternalIconProviderController } from './services/icons/external/ExternalIconProviderController';
 import { ExternalIconProviderId } from './services/icons/external/providerRegistry';
+import type { NavigateToFolderOptions } from './hooks/useNavigatorReveal';
 import ReleaseCheckService, { type ReleaseUpdateNotice } from './services/ReleaseCheckService';
 import { NotebookNavigatorView } from './view/NotebookNavigatorView';
-import { getDefaultDateFormat, getDefaultTimeFormat } from './i18n';
-import { localStorage, LOCALSTORAGE_VERSION } from './utils/localStorage';
-import { NotebookNavigatorAPI } from './api/NotebookNavigatorAPI';
+import { NotebookNavigatorCalendarView } from './view/NotebookNavigatorCalendarView';
+import { localStorage } from './utils/localStorage';
+import { INTERNAL_NOTEBOOK_NAVIGATOR_API, NotebookNavigatorAPI } from './api/NotebookNavigatorAPI';
 import { initializeDatabase, shutdownDatabase } from './storage/fileOperations';
 import { ExtendedApp } from './types/obsidian-extended';
 import { getLeafSplitLocation } from './utils/workspaceSplit';
-import { sanitizeKeyboardShortcuts } from './utils/keyboardShortcuts';
+import { sanitizeRecord } from './utils/recordUtils';
+import { runAsyncAction } from './utils/async';
 import WorkspaceCoordinator from './services/workspace/WorkspaceCoordinator';
 import HomepageController from './services/workspace/HomepageController';
 import registerNavigatorCommands from './services/commands/registerNavigatorCommands';
 import registerWorkspaceEvents from './services/workspace/registerWorkspaceEvents';
 import type { RevealFileOptions } from './hooks/useNavigatorReveal';
+import {
+    type CalendarPlacement,
+    type CalendarLeftPlacement,
+    type CalendarWeeksToShow,
+    type AlphaSortOrder,
+    type FeatureImagePixelSizeSetting,
+    type FeatureImageSizeSetting,
+    isSettingSyncMode,
+    type SettingSyncMode,
+    type SyncModeSettingId,
+    type TagSortOrder
+} from './settings/types';
+import { NOTEBOOK_NAVIGATOR_ICON_ID, NOTEBOOK_NAVIGATOR_ICON_SVG } from './constants/notebookNavigatorIcon';
+import { PluginSettingsController } from './services/settings/PluginSettingsController';
+import { PluginPreferencesController } from './services/settings/PluginPreferencesController';
+import { consumePendingPdfProcessingDiagnostic } from './services/content/pdf/pdfCrashDiagnostics';
+import { applyModifiedSettingsTransfer, createModifiedSettingsTransfer } from './settings/transfer';
 
 /**
  * Main plugin class for Notebook Navigator
@@ -52,11 +81,12 @@ import type { RevealFileOptions } from './hooks/useNavigatorReveal';
  * Manages plugin lifecycle, settings, and view registration
  */
 export default class NotebookNavigatorPlugin extends Plugin implements ISettingsProvider {
-    settings: NotebookNavigatorSettings;
     ribbonIconEl: HTMLElement | undefined = undefined;
     metadataService: MetadataService | null = null;
     tagOperations: TagOperations | null = null;
+    propertyOperations: PropertyOperations | null = null;
     tagTreeService: TagTreeService | null = null;
+    propertyTreeService: PropertyTreeService | null = null;
     commandQueue: CommandQueueService | null = null;
     fileSystemOps: FileSystemOperations | null = null;
     omnisearchService: OmnisearchService | null = null;
@@ -64,26 +94,88 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     api: NotebookNavigatorAPI | null = null;
     recentNotesService: RecentNotesService | null = null;
     releaseCheckService: ReleaseCheckService | null = null;
+    // Keys used for persisting UI state in browser localStorage
+    keys: LocalStorageKeys = STORAGE_KEYS;
     // Map of callbacks to notify open React views when settings change
     private settingsUpdateListeners = new Map<string, () => void>();
     // Map of callbacks to notify open React views when files are renamed
     private fileRenameListeners = new Map<string, (oldPath: string, newPath: string) => void>();
-    private recentDataListeners = new Map<string, () => void>();
     private updateNoticeListeners = new Map<string, (notice: ReleaseUpdateNotice | null) => void>();
     // Flag indicating plugin is being unloaded to prevent operations during shutdown
     private isUnloading = false;
-    // User preference for dual-pane mode (persisted in localStorage, not settings)
-    private dualPanePreference = true;
-    // Manages recent notes and icons data persistence
-    private recentDataManager: RecentDataManager | null = null;
+    private isHandlingExternalSettingsUpdate = false;
     // Coordinates workspace interactions with the navigator view
     private workspaceCoordinator: WorkspaceCoordinator | null = null;
     // Handles homepage file opening and startup behavior
     private homepageController: HomepageController | null = null;
     private pendingUpdateNotice: ReleaseUpdateNotice | null = null;
+    private hasWorkspaceLayoutReady = false;
+    private lastCalendarPlacement: CalendarPlacement | null = null;
+    private calendarPlacementRequestId = 0;
+    private readonly settingsController = new PluginSettingsController({
+        keys: this.keys,
+        loadData: () => this.loadData(),
+        saveData: data => this.saveData(data),
+        mirrorUXPreferences: update => this.preferencesController.mirrorUXPreferences(update)
+    });
+    private readonly preferencesController = new PluginPreferencesController({
+        keys: this.keys,
+        getSettings: () => this.settings,
+        notifySettingsUpdate: () => this.notifySettingsUpdate(),
+        saveSettings: () => this.settingsController.saveSettings(),
+        isShuttingDown: () => this.isUnloading,
+        isLocal: settingId => this.isLocal(settingId),
+        persistSyncModeSettingUpdate: settingId => this.persistSyncModeSettingUpdate(settingId),
+        persistSyncModeSettingUpdateAsync: settingId => this.persistSyncModeSettingUpdateAsync(settingId),
+        isOmnisearchAvailable: () => this.omnisearchService?.isAvailable() ?? false,
+        refreshMatcherCachesIfNeeded: () => this.settingsController.refreshMatcherCachesIfNeeded()
+    });
 
-    // Keys used for persisting UI state in browser localStorage
-    keys: LocalStorageKeys = STORAGE_KEYS;
+    public get settings(): NotebookNavigatorSettings {
+        return this.settingsController.settings;
+    }
+
+    public set settings(settings: NotebookNavigatorSettings) {
+        this.settingsController.settings = settings;
+    }
+
+    public getSyncMode(settingId: SyncModeSettingId): SettingSyncMode {
+        return this.settingsController.getSyncMode(settingId);
+    }
+
+    public isLocal(settingId: SyncModeSettingId): boolean {
+        return this.settingsController.isLocal(settingId);
+    }
+
+    public isSynced(settingId: SyncModeSettingId): boolean {
+        return this.settingsController.isSynced(settingId);
+    }
+
+    public async setSyncMode(settingId: SyncModeSettingId, mode: SettingSyncMode): Promise<void> {
+        const changed = await this.settingsController.setSyncMode(settingId, mode);
+        if (!changed) {
+            return;
+        }
+        await this.saveSettingsAndUpdate();
+    }
+
+    private persistSyncModeSettingUpdate(settingId: SyncModeSettingId): void {
+        if (this.isLocal(settingId)) {
+            this.notifySettingsUpdate();
+            return;
+        }
+
+        runAsyncAction(() => this.saveSettingsAndUpdate());
+    }
+
+    private async persistSyncModeSettingUpdateAsync(settingId: SyncModeSettingId): Promise<void> {
+        if (this.isLocal(settingId)) {
+            this.notifySettingsUpdate();
+            return;
+        }
+
+        await this.saveSettingsAndUpdate();
+    }
 
     /**
      * Called when external changes to settings are detected (e.g., from sync)
@@ -91,10 +183,16 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
      * is modified externally while the plugin is running
      */
     async onExternalSettingsChange() {
-        if (!this.isUnloading) {
-            await this.loadSettings();
-            this.initializeRecentDataManager();
-            this.onSettingsUpdate();
+        if (this.isUnloading) {
+            return;
+        }
+
+        await this.loadSettings();
+        const includeDescendantNotesChanged = this.preferencesController.syncMirrorsFromSettings();
+        this.preferencesController.initializeRecentDataManager();
+        this.notifySettingsUpdateWithFullRefresh();
+        if (includeDescendantNotesChanged) {
+            this.preferencesController.notifyUXPreferencesUpdate();
         }
     }
 
@@ -103,106 +201,42 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
      * Returns true if this is the first launch (no saved data)
      */
     async loadSettings(): Promise<boolean> {
-        const data = await this.loadData();
-        const isFirstLaunch = !data; // No saved data means first launch
-
-        // Start with default settings
-        this.settings = { ...DEFAULT_SETTINGS, ...(data || {}) };
-        // Validate and normalize keyboard shortcuts to use standard modifier names
-        this.settings.keyboardShortcuts = sanitizeKeyboardShortcuts(this.settings.keyboardShortcuts);
-
-        // Remove deprecated fields from settings object
-        const mutableSettings = this.settings as unknown as Record<string, unknown>;
-        delete mutableSettings.recentNotes;
-        delete mutableSettings.recentIcons;
-
-        const legacyColorFileTags = mutableSettings['applyTagColorsToFileTags'];
-        if (typeof legacyColorFileTags === 'boolean') {
-            this.settings.colorFileTags = legacyColorFileTags;
-        }
-        delete mutableSettings['applyTagColorsToFileTags'];
-
-        // Migrate legacy navigationBannerPath field to navigationBanner
-        const legacyBanner = data && typeof data === 'object' ? (data as Record<string, unknown>).navigationBannerPath : undefined;
-        if (!this.settings.navigationBanner && typeof legacyBanner === 'string' && legacyBanner.length > 0) {
-            this.settings.navigationBanner = legacyBanner;
-        }
-        delete mutableSettings.navigationBannerPath;
-
-        // Set language-specific date/time formats if not already set
-        if (!this.settings.dateFormat) {
-            this.settings.dateFormat = getDefaultDateFormat();
-        }
-        if (!this.settings.timeFormat) {
-            this.settings.timeFormat = getDefaultTimeFormat();
-        }
-
-        if (typeof this.settings.recentNotesCount !== 'number' || this.settings.recentNotesCount <= 0) {
-            this.settings.recentNotesCount = DEFAULT_SETTINGS.recentNotesCount;
-        }
-
-        if (!Array.isArray(this.settings.rootFolderOrder)) {
-            this.settings.rootFolderOrder = [];
-        }
-
-        // Initialize update check setting with default value for existing users
-        if (typeof this.settings.checkForUpdatesOnStart !== 'boolean') {
-            this.settings.checkForUpdatesOnStart = true;
-        }
-
-        return isFirstLaunch;
-    }
-
-    /**
-     * Sets up the recent data manager and loads persisted data.
-     */
-    private initializeRecentDataManager(): void {
-        // Create manager instance on first call
-        if (!this.recentDataManager) {
-            this.recentDataManager = new RecentDataManager({
-                settings: this.settings,
-                keys: this.keys,
-                onRecentDataChange: () => this.notifyRecentDataUpdate()
-            });
-        }
-
-        // Load recent notes and icons from local storage
-        this.recentDataManager.initialize();
+        return this.settingsController.loadSettings();
     }
 
     /**
      * Returns the list of recent note paths from local storage
      */
     public getRecentNotes(): string[] {
-        return this.recentDataManager?.getRecentNotes() ?? [];
+        return this.preferencesController.getRecentNotes();
     }
 
     /**
      * Stores the list of recent note paths to local storage
      */
     public setRecentNotes(recentNotes: string[]): void {
-        this.recentDataManager?.setRecentNotes(recentNotes);
+        this.preferencesController.setRecentNotes(recentNotes);
     }
 
     /**
      * Trims the recent notes list to the configured maximum count
      */
     public applyRecentNotesLimit(): void {
-        this.recentDataManager?.applyRecentNotesLimit();
+        this.preferencesController.applyRecentNotesLimit();
     }
 
     /**
      * Registers a listener to be notified when recent data changes
      */
     public registerRecentDataListener(id: string, callback: () => void): void {
-        this.recentDataListeners.set(id, callback);
+        this.preferencesController.registerRecentDataListener(id, callback);
     }
 
     /**
      * Unregisters a recent data change listener
      */
     public unregisterRecentDataListener(id: string): void {
-        this.recentDataListeners.delete(id);
+        this.preferencesController.unregisterRecentDataListener(id);
     }
 
     /**
@@ -227,34 +261,26 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     }
 
     /**
-     * Marks the update notice as shown so it will not display again.
+     * Dismisses the current update notice for the active session.
      */
-    public async markUpdateNoticeAsDisplayed(version: string): Promise<void> {
-        if (this.settings.lastAnnouncedRelease === version) {
-            return;
-        }
-
-        this.settings.lastAnnouncedRelease = version;
-
+    public markUpdateNoticeAsDisplayed(version: string): void {
         if (this.pendingUpdateNotice && this.pendingUpdateNotice.version === version) {
             this.setPendingUpdateNotice(null);
         }
-
-        await this.saveSettingsAndUpdate();
     }
 
     /**
      * Returns the map of recent icon IDs per provider from local storage
      */
     public getRecentIcons(): Record<string, string[]> {
-        return this.recentDataManager?.getRecentIcons() ?? {};
+        return this.preferencesController.getRecentIcons();
     }
 
     /**
      * Stores the map of recent icon IDs per provider to local storage
      */
     public setRecentIcons(recentIcons: Record<string, string[]>): void {
-        this.recentDataManager?.setRecentIcons(recentIcons);
+        this.preferencesController.setRecentIcons(recentIcons);
     }
 
     /**
@@ -281,34 +307,51 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         // Initialize localStorage before database so version checks work
         localStorage.init(this.app);
 
-        // Initialize database early for StorageContext consumers
-        try {
-            const appId = (this.app as ExtendedApp).appId || '';
-            await initializeDatabase(appId);
-        } catch (e) {
-            console.error('Failed to initialize database during plugin load:', e);
-            // Fail fast: abort plugin load if database cannot initialize
-            throw e instanceof Error ? e : new Error(String(e));
+        if (typeof addIcon === 'function') {
+            addIcon(NOTEBOOK_NAVIGATOR_ICON_ID, NOTEBOOK_NAVIGATOR_ICON_SVG);
         }
+
+        // Initialize database early for StorageContext consumers
+        const appId = (this.app as ExtendedApp).appId || '';
+        // Use a fixed per-platform LRU size for feature image blobs.
+        const featureImageCacheMaxEntries = Platform.isMobile ? 200 : 1000;
+        // Use a fixed per-platform LRU size for preview text strings.
+        const previewTextCacheMaxEntries = Platform.isMobile ? 10000 : 50000;
+        // Limit the number of preview text paths processed per load flush.
+        const previewLoadMaxBatch = Platform.isMobile ? 20 : 50;
+        runAsyncAction(
+            async () => {
+                try {
+                    await initializeDatabase(appId, { featureImageCacheMaxEntries, previewTextCacheMaxEntries, previewLoadMaxBatch });
+                } catch (error: unknown) {
+                    console.error('Failed to initialize database:', error);
+                }
+            },
+            {
+                onError: (error: unknown) => {
+                    console.error('Failed to initialize database:', error);
+                }
+            }
+        );
 
         // Load settings and check if this is first launch
         const isFirstLaunch = await this.loadSettings();
-        const storedDualPane = localStorage.get<unknown>(this.keys.dualPaneKey);
-        const parsedDualPane = this.parseDualPanePreference(storedDualPane);
-        this.dualPanePreference = parsedDualPane ?? true;
-
-        const storedLocalStorageVersion = localStorage.get<number>(STORAGE_KEYS.localStorageVersionKey);
+        this.preferencesController.syncMirrorsFromSettings();
+        const storedLocalStorageVersion = this.settingsController.getStoredLocalStorageVersion();
+        this.preferencesController.loadUXPreferences();
+        this.settingsController.normalizeTagSettings();
+        this.settingsController.normalizePropertySettings();
+        this.settingsController.normalizeNavigationSeparatorSettings();
 
         // Handle first launch initialization
         if (isFirstLaunch) {
-            // Normalize all tag settings to lowercase
-            this.normalizeTagSettings();
-
             // Clear all localStorage data (if plugin was reinstalled)
-            this.clearAllLocalStorage();
+            this.settingsController.clearAllLocalStorage();
 
-            // Reset dual-pane preference to default on fresh install
-            this.dualPanePreference = true;
+            // Re-seed per-device mirrors cleared above
+            this.preferencesController.resetUXPreferencesToDefaults();
+            this.settingsController.mirrorAllSyncModeSettingsToLocalStorage();
+            this.preferencesController.syncMirrorsFromSettings();
 
             // Ensure root folder is expanded on first launch (default is enabled)
             if (this.settings.showRootFolder) {
@@ -317,19 +360,20 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             }
 
             // Set localStorage version
-            localStorage.set(STORAGE_KEYS.localStorageVersionKey, LOCALSTORAGE_VERSION);
+            this.settingsController.setLocalStorageVersion();
+            await this.saveData(this.settingsController.getPersistableSettings());
         } else {
             // Check localStorage version for potential migrations
             const versionNumber =
                 typeof storedLocalStorageVersion === 'number' ? storedLocalStorageVersion : Number(storedLocalStorageVersion ?? Number.NaN);
-            if (!versionNumber || versionNumber !== LOCALSTORAGE_VERSION) {
+            if (!versionNumber || versionNumber !== this.settingsController.getCurrentLocalStorageVersion()) {
                 // Future localStorage migration logic can go here
-                localStorage.set(STORAGE_KEYS.localStorageVersionKey, LOCALSTORAGE_VERSION);
+                this.settingsController.setLocalStorageVersion();
             }
         }
 
         // Initialize recent data management
-        this.initializeRecentDataManager();
+        this.preferencesController.initializeRecentDataManager();
 
         this.recentNotesService = new RecentNotesService(this);
 
@@ -338,31 +382,85 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.homepageController = new HomepageController(this, this.workspaceCoordinator);
 
         // Initialize services
-        this.metadataService = new MetadataService(this.app, this, () => this.tagTreeService);
-        this.tagOperations = new TagOperations(this.app);
         this.tagTreeService = new TagTreeService();
-        this.commandQueue = new CommandQueueService(this.app);
+        this.propertyTreeService = new PropertyTreeService();
+        this.metadataService = new MetadataService(
+            this.app,
+            this,
+            () => this.tagTreeService,
+            () => this.propertyTreeService
+        );
+        this.tagOperations = new TagOperations(
+            this.app,
+            () => this.settings,
+            () => this.tagTreeService,
+            () => this.metadataService
+        );
+        this.propertyOperations = new PropertyOperations(
+            this.app,
+            () => this.settings,
+            () => this.saveSettingsAndUpdate(),
+            () => this.propertyTreeService
+        );
+        this.commandQueue = new CommandQueueService();
         this.fileSystemOps = new FileSystemOperations(
             this.app,
             () => this.tagTreeService,
-            () => this.commandQueue
+            () => this.propertyTreeService,
+            () => this.commandQueue,
+            () => this.metadataService,
+            (): VisibilityPreferences => ({
+                includeDescendantNotes: this.preferencesController.getUXPreferences().includeDescendantNotes,
+                showHiddenItems: this.preferencesController.getUXPreferences().showHiddenItems
+            }),
+            this
         );
         this.omnisearchService = new OmnisearchService(this.app);
+        if (this.settings.searchProvider === 'omnisearch' && !this.omnisearchService.isAvailable()) {
+            this.setSearchProvider('internal');
+        }
         this.api = new NotebookNavigatorAPI(this, this.app);
+        this.metadataService.setFolderStyleChangeListener(folderPath => {
+            if (this.isUnloading || !this.api) {
+                return;
+            }
+
+            this.api[INTERNAL_NOTEBOOK_NAVIGATOR_API].metadata.emitFolderChangedForPath(folderPath);
+        });
         this.releaseCheckService = new ReleaseCheckService(this);
 
         const iconService = getIconService();
+        iconService.registerProvider(new VaultIconProvider(this.app));
         this.externalIconController = new ExternalIconProviderController(this.app, iconService, this);
-        await this.externalIconController.initialize();
-        void this.externalIconController.syncWithSettings();
+        const iconController = this.externalIconController;
+        if (iconController) {
+            runAsyncAction(
+                async () => {
+                    await iconController.initialize();
+                    await iconController.syncWithSettings();
+                },
+                {
+                    onError: (error: unknown) => {
+                        console.error('External icon controller init failed:', error);
+                    }
+                }
+            );
+        }
 
+        // Re-sync icon settings when settings update
         this.registerSettingsUpdateListener('external-icon-controller', () => {
-            void this.externalIconController?.syncWithSettings();
+            const controller = this.externalIconController;
+            if (controller) {
+                runAsyncAction(() => controller.syncWithSettings());
+            }
         });
 
         // Register view
         this.registerView(NOTEBOOK_NAVIGATOR_VIEW, leaf => {
             return new NotebookNavigatorView(leaf, this);
+        });
+        this.registerView(NOTEBOOK_NAVIGATOR_CALENDAR_VIEW, leaf => {
+            return new NotebookNavigatorCalendarView(leaf, this);
         });
 
         // Register commands
@@ -378,23 +476,61 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         // Only auto-create the navigator view on first launch; upgrades restore existing leaves themselves
         const shouldActivateOnStartup = isFirstLaunch;
 
-        this.app.workspace.onLayoutReady(async () => {
-            if (this.isUnloading) {
-                return;
-            }
+        this.app.workspace.onLayoutReady(() => {
+            this.hasWorkspaceLayoutReady = true;
+            // Execute startup tasks asynchronously to avoid blocking the layout
+            runAsyncAction(async () => {
+                if (this.isUnloading) {
+                    return;
+                }
 
-            await this.homepageController?.handleWorkspaceReady({ shouldActivateOnStartup });
+                await this.homepageController?.handleWorkspaceReady({ shouldActivateOnStartup });
 
-            // Check for version updates
-            await this.checkForVersionUpdate();
+                if (isFirstLaunch) {
+                    const { WelcomeModal } = await import('./modals/WelcomeModal');
+                    new WelcomeModal(this.app).open();
+                }
 
-            // Trigger Style Settings plugin to parse our settings
-            this.app.workspace.trigger('parse-style-settings');
+                // PDF_CRASH_DIAGNOSTICS: show the last unfinished mobile PDF path from the previous session.
+                const pendingPdfPath = consumePendingPdfProcessingDiagnostic();
+                if (pendingPdfPath) {
+                    const { InfoModal } = await import('./modals/InfoModal');
+                    new InfoModal(this.app, {
+                        title: 'PDF processing from previous run',
+                        intro: 'The previous app session ended while this PDF thumbnail was being processed.',
+                        items: [
+                            `\`${pendingPdfPath}\``,
+                            'This can also happen if Obsidian or Android closed the app before cleanup finished.'
+                        ]
+                    }).open();
+                }
 
-            // Check for new GitHub releases if enabled
-            if (this.settings.checkForUpdatesOnStart) {
-                void this.runReleaseUpdateCheck();
-            }
+                // Check for version updates after a short delay.
+                // Obsidian Sync can update the plugin settings shortly after startup, so defer the check to avoid using cached settings.
+                const versionUpdateGracePeriodMs = 1000;
+                if (typeof window === 'undefined') {
+                    await this.checkForVersionUpdate({ isFirstLaunch });
+                } else {
+                    window.setTimeout(() => {
+                        runAsyncAction(async () => {
+                            if (this.isUnloading) {
+                                return;
+                            }
+                            await this.checkForVersionUpdate({ isFirstLaunch });
+                        });
+                    }, versionUpdateGracePeriodMs);
+                }
+
+                // Trigger Style Settings plugin to parse our settings
+                this.app.workspace.trigger('parse-style-settings');
+
+                this.applyCalendarPlacementView({ force: true, reveal: false });
+
+                // Check for new GitHub releases if enabled, without blocking startup
+                if (this.settings.checkForUpdatesOnStart) {
+                    runAsyncAction(() => this.runReleaseUpdateCheck());
+                }
+            });
         });
     }
 
@@ -406,11 +542,15 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.settingsUpdateListeners.set(id, callback);
     }
 
+    public isExternalSettingsUpdate(): boolean {
+        return this.isHandlingExternalSettingsUpdate;
+    }
+
     /**
      * Returns whether dual-pane mode is enabled
      */
     public useDualPane(): boolean {
-        return this.dualPanePreference;
+        return this.preferencesController.useDualPane();
     }
 
     public isShuttingDown(): boolean {
@@ -421,31 +561,269 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
      * Updates the dual-pane preference and persists to local storage
      */
     public setDualPanePreference(enabled: boolean): void {
-        if (this.dualPanePreference === enabled) {
-            return;
-        }
-
-        this.dualPanePreference = enabled;
-        localStorage.set(this.keys.dualPaneKey, enabled ? '1' : '0');
-        this.notifySettingsUpdate();
+        this.preferencesController.setDualPanePreference(enabled);
     }
 
     /**
      * Toggles the dual-pane preference between enabled and disabled
      */
     public toggleDualPanePreference(): void {
-        this.setDualPanePreference(!this.dualPanePreference);
+        this.preferencesController.toggleDualPanePreference();
     }
 
     /**
-     * Parses dual-pane preference from local storage string value
+     * Returns the active dual-pane orientation for this device
      */
-    private parseDualPanePreference(raw: unknown): boolean | null {
-        if (typeof raw === 'string') {
-            return raw === '1';
-        }
+    public getDualPaneOrientation(): DualPaneOrientation {
+        return this.preferencesController.getDualPaneOrientation();
+    }
 
-        return false;
+    /**
+     * Updates the dual-pane orientation and persists to vault-scoped local storage.
+     */
+    public async setDualPaneOrientation(orientation: DualPaneOrientation): Promise<void> {
+        await this.preferencesController.setDualPaneOrientation(orientation);
+    }
+
+    /**
+     * Returns the UI scale for this device.
+     */
+    public getUIScale(): number {
+        return this.preferencesController.getUIScale();
+    }
+
+    /**
+     * Updates the UI scale for this device and persists to vault-local storage.
+     */
+    public setUIScale(scale: number): void {
+        this.preferencesController.setUIScale(scale);
+    }
+
+    /**
+     * Returns the current tag sort order preference.
+     */
+    public getTagSortOrder(): TagSortOrder {
+        return this.preferencesController.getTagSortOrder();
+    }
+
+    /**
+     * Returns the current property sort order preference.
+     */
+    public getPropertySortOrder(): TagSortOrder {
+        return this.preferencesController.getPropertySortOrder();
+    }
+
+    /**
+     * Returns the current folder sort order preference.
+     */
+    public getFolderSortOrder(): AlphaSortOrder {
+        return this.preferencesController.getFolderSortOrder();
+    }
+
+    /**
+     * Updates the tag sort order preference and persists to local storage.
+     */
+    public setTagSortOrder(order: TagSortOrder): void {
+        this.preferencesController.setTagSortOrder(order);
+    }
+
+    /**
+     * Updates the property sort order preference and persists to local storage.
+     */
+    public setPropertySortOrder(order: TagSortOrder): void {
+        this.preferencesController.setPropertySortOrder(order);
+    }
+
+    /**
+     * Updates the folder sort order preference and persists to local storage.
+     */
+    public setFolderSortOrder(order: AlphaSortOrder): void {
+        this.preferencesController.setFolderSortOrder(order);
+    }
+
+    /**
+     * Returns the timestamp of the last release check (local-only).
+     */
+    public getReleaseCheckTimestamp(): number | null {
+        return this.preferencesController.getReleaseCheckTimestamp();
+    }
+
+    /**
+     * Persists the last release check timestamp to local storage.
+     */
+    public setReleaseCheckTimestamp(timestamp: number): void {
+        this.preferencesController.setReleaseCheckTimestamp(timestamp);
+    }
+
+    /**
+     * Retrieves recent colors history from vault-local storage.
+     */
+    public getRecentColors(): string[] {
+        return this.preferencesController.getRecentColors();
+    }
+
+    /**
+     * Persists recent colors history to vault-local storage.
+     */
+    public setRecentColors(recentColors: string[]): void {
+        this.preferencesController.setRecentColors(recentColors);
+    }
+
+    /**
+     * Returns the active search provider preference.
+     */
+    public getSearchProvider(): 'internal' | 'omnisearch' {
+        return this.preferencesController.getSearchProvider();
+    }
+
+    /**
+     * Updates the search provider preference and persists to local storage.
+     */
+    public setSearchProvider(provider: 'internal' | 'omnisearch'): void {
+        this.preferencesController.setSearchProvider(provider);
+    }
+
+    /**
+     * Updates the single-pane transition duration and persists to local storage.
+     */
+    public setPaneTransitionDuration(durationMs: number): void {
+        this.preferencesController.setPaneTransitionDuration(durationMs);
+    }
+
+    /**
+     * Persists toolbar button visibility to local storage.
+     */
+    public persistToolbarVisibility(): void {
+        this.preferencesController.persistToolbarVisibility();
+    }
+
+    /**
+     * Updates whether floating toolbars are used.
+     */
+    public setUseFloatingToolbars(enabled: boolean): void {
+        this.preferencesController.setUseFloatingToolbars(enabled);
+    }
+
+    /**
+     * Updates whether the navigation banner is pinned to the top of the navigation pane.
+     */
+    public setPinNavigationBanner(enabled: boolean): void {
+        this.preferencesController.setPinNavigationBanner(enabled);
+    }
+
+    /**
+     * Updates navigation tree indentation and persists to local storage.
+     */
+    public setNavIndent(indent: number): void {
+        this.preferencesController.setNavIndent(indent);
+    }
+
+    /**
+     * Updates navigation item height and persists to local storage.
+     */
+    public setNavItemHeight(height: number): void {
+        this.preferencesController.setNavItemHeight(height);
+    }
+
+    /**
+     * Updates navigation text scaling with item height and persists to local storage.
+     */
+    public setNavItemHeightScaleText(enabled: boolean): void {
+        this.preferencesController.setNavItemHeightScaleText(enabled);
+    }
+
+    /**
+     * Updates calendar weeks to show and persists to local storage.
+     */
+    public setCalendarWeeksToShow(weeks: CalendarWeeksToShow): void {
+        this.preferencesController.setCalendarWeeksToShow(weeks);
+    }
+
+    public setCalendarPlacement(placement: CalendarPlacement): void {
+        this.preferencesController.setCalendarPlacement(placement);
+    }
+
+    public setCalendarLeftPlacement(placement: CalendarLeftPlacement): void {
+        this.preferencesController.setCalendarLeftPlacement(placement);
+    }
+
+    /**
+     * Updates compact list item height and persists to local storage.
+     */
+    public setCompactItemHeight(height: number): void {
+        this.preferencesController.setCompactItemHeight(height);
+    }
+
+    /**
+     * Updates compact list text scaling with item height and persists to local storage.
+     */
+    public setCompactItemHeightScaleText(enabled: boolean): void {
+        this.preferencesController.setCompactItemHeightScaleText(enabled);
+    }
+
+    /**
+     * Updates the feature image display size and persists to local storage.
+     */
+    public setFeatureImageSize(size: FeatureImageSizeSetting): void {
+        this.preferencesController.setFeatureImageSize(size);
+    }
+
+    /**
+     * Updates the feature image thumbnail pixel size and persists to local storage.
+     */
+    public setFeatureImagePixelSize(size: FeatureImagePixelSizeSetting): void {
+        this.preferencesController.setFeatureImagePixelSize(size);
+    }
+
+    /**
+     * Sets the active vault profile and synchronizes hidden folder, tag, and note patterns.
+     */
+    public setVaultProfile(profileId: string): void {
+        this.preferencesController.setVaultProfile(profileId);
+    }
+
+    public getUXPreferences(): UXPreferences {
+        return this.preferencesController.getUXPreferences();
+    }
+
+    public registerUXPreferencesListener(id: string, callback: () => void): void {
+        this.preferencesController.registerUXPreferencesListener(id, callback);
+    }
+
+    public unregisterUXPreferencesListener(id: string): void {
+        this.preferencesController.unregisterUXPreferencesListener(id);
+    }
+
+    public setSearchActive(value: boolean): void {
+        this.preferencesController.setSearchActive(value);
+    }
+
+    public setIncludeDescendantNotes(value: boolean): void {
+        this.preferencesController.setIncludeDescendantNotes(value);
+    }
+
+    public toggleIncludeDescendantNotes(): void {
+        this.preferencesController.toggleIncludeDescendantNotes();
+    }
+
+    public setShowHiddenItems(value: boolean): void {
+        this.preferencesController.setShowHiddenItems(value);
+    }
+
+    public toggleShowHiddenItems(): void {
+        this.preferencesController.toggleShowHiddenItems();
+    }
+
+    public setPinShortcuts(value: boolean): void {
+        this.preferencesController.setPinShortcuts(value);
+    }
+
+    public setShowCalendar(value: boolean): void {
+        this.preferencesController.setShowCalendar(value);
+    }
+
+    public toggleShowCalendar(): void {
+        this.preferencesController.toggleShowCalendar();
     }
 
     /**
@@ -480,6 +858,10 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         const { view } = leaf;
         if (!(view instanceof NotebookNavigatorView)) {
             throw new Error('Notebook Navigator view not found');
+        }
+
+        if (!(await view.whenReady())) {
+            throw new Error('Notebook Navigator view not ready');
         }
 
         await view.rebuildCache();
@@ -538,20 +920,73 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     }
 
     /**
+     * Guards against duplicate teardown and flushes critical services before
+     * either Obsidian quits or the plugin unloads.
+     */
+    private initiateShutdown(): void {
+        if (this.isUnloading) {
+            return;
+        }
+
+        this.isUnloading = true;
+
+        try {
+            // Ensure recent notes/icons hit disk before the process exits
+            this.preferencesController.flushPendingPersists();
+        } catch (error) {
+            console.error('Failed to flush recent data during shutdown:', error);
+        }
+
+        if (this.commandQueue) {
+            // Drop any queued operations so listeners stop reacting
+            this.commandQueue.clearAllOperations();
+        }
+
+        this.stopNavigatorContentProcessing();
+
+        shutdownDatabase();
+    }
+
+    /**
+     * Stops background processing inside every mounted navigator view to avoid
+     * running content providers while shutdown is in progress.
+     */
+    private stopNavigatorContentProcessing(): void {
+        try {
+            const navigatorLeaves = this.app.workspace.getLeavesOfType(NOTEBOOK_NAVIGATOR_VIEW);
+            for (const leaf of navigatorLeaves) {
+                const view = leaf.view;
+                if (view instanceof NotebookNavigatorView) {
+                    // Halt preview/tag generation loops inside each React view
+                    view.stopContentProcessing();
+                }
+            }
+
+            const calendarLeaves = this.app.workspace.getLeavesOfType(NOTEBOOK_NAVIGATOR_CALENDAR_VIEW);
+            for (const leaf of calendarLeaves) {
+                const view = leaf.view;
+                if (view instanceof NotebookNavigatorCalendarView) {
+                    view.stopContentProcessing();
+                }
+            }
+        } catch (error) {
+            console.error('Failed stopping content processing during shutdown:', error);
+        }
+    }
+
+    /**
      * Plugin cleanup - called when plugin is disabled or updated
      * Removes ribbon icon but preserves open views to maintain user workspace
      * Per Obsidian guidelines: leaves should not be detached in onunload
      */
     onunload() {
-        // Set unloading flag to prevent any new operations
-        this.isUnloading = true;
+        this.initiateShutdown();
 
-        this.recentDataManager?.dispose();
+        this.preferencesController.dispose();
 
         // Clear all listeners first to prevent any callbacks during cleanup
         this.settingsUpdateListeners.clear();
         this.fileRenameListeners.clear();
-        this.recentDataListeners.clear();
 
         if (this.externalIconController) {
             this.externalIconController.dispose();
@@ -560,6 +995,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
 
         // Clean up the metadata service
         if (this.metadataService) {
+            this.metadataService.dispose();
             // Clear the reference to break circular dependencies
             this.metadataService = null;
         }
@@ -569,23 +1005,17 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             this.tagOperations = null;
         }
 
-        // Clean up the command queue service
-        if (this.commandQueue) {
-            this.commandQueue.clearAllOperations();
-            this.commandQueue = null;
+        if (this.propertyOperations) {
+            this.propertyOperations = null;
         }
 
-        // First, stop any background content processing in all navigator views
-        try {
-            const leaves = this.app.workspace.getLeavesOfType(NOTEBOOK_NAVIGATOR_VIEW);
-            for (const leaf of leaves) {
-                const view = leaf.view;
-                if (view instanceof NotebookNavigatorView) {
-                    view.stopContentProcessing();
-                }
-            }
-        } catch (e) {
-            console.error('Failed stopping content processing during unload:', e);
+        if (this.propertyTreeService) {
+            this.propertyTreeService = null;
+        }
+
+        // Clean up the command queue service
+        if (this.commandQueue) {
+            this.commandQueue = null;
         }
 
         // Clean up the ribbon icon
@@ -593,81 +1023,87 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.ribbonIconEl = undefined;
 
         this.omnisearchService = null;
-        this.recentDataManager = null;
-
-        // Shutdown database after all processing is stopped
-        shutdownDatabase();
     }
 
-    /**
-     * Clears all localStorage data for the plugin
-     * Called on fresh install to ensure a clean start
-     */
-    private clearAllLocalStorage() {
-        // Clear all known localStorage keys
-        Object.values(STORAGE_KEYS).forEach(key => {
-            localStorage.remove(key);
-        });
-    }
-
-    /**
-     * Normalizes tag-related settings to use lowercase keys
-     * Ensures consistency regardless of manual edits or external changes
-     * Preserves values while standardizing keys to lowercase
-     */
-    private normalizeTagSettings() {
-        const normalizeRecord = <T>(record: Record<string, T> | undefined): Record<string, T> => {
-            if (!record) return {};
-
-            const normalized: Record<string, T> = {};
-            for (const [key, value] of Object.entries(record)) {
-                const lowerKey = key.toLowerCase();
-                // If there's a conflict (e.g., both "TODO" and "todo"), last one wins
-                normalized[lowerKey] = value;
-            }
-            return normalized;
-        };
-
-        const normalizeArray = (array: string[] | undefined): string[] => {
-            if (!array) return [];
-            // Use Set to deduplicate in case of "TODO" and "todo" both present
-            return [...new Set(array.map(s => s.toLowerCase()))];
-        };
-
-        if (this.settings.tagColors) {
-            this.settings.tagColors = normalizeRecord(this.settings.tagColors);
-        }
-
-        if (this.settings.tagBackgroundColors) {
-            this.settings.tagBackgroundColors = normalizeRecord(this.settings.tagBackgroundColors);
-        }
-
-        if (this.settings.tagIcons) {
-            this.settings.tagIcons = normalizeRecord(this.settings.tagIcons);
-        }
-
-        if (this.settings.tagSortOverrides) {
-            this.settings.tagSortOverrides = normalizeRecord(this.settings.tagSortOverrides);
-        }
-
-        if (this.settings.tagAppearances) {
-            this.settings.tagAppearances = normalizeRecord(this.settings.tagAppearances);
-        }
-
-        if (this.settings.hiddenTags) {
-            this.settings.hiddenTags = normalizeArray(this.settings.hiddenTags);
-        }
-    }
-
-    /**
-     * Saves current plugin settings to Obsidian's data storage and notifies listeners
-     * Persists user preferences between sessions and triggers UI updates
-     * Called whenever settings are modified
-     */
     async saveSettingsAndUpdate() {
-        await this.saveData(this.settings);
-        // Notify all listeners that settings have been updated
+        await this.settingsController.saveSettings();
         this.onSettingsUpdate();
+    }
+
+    public createSettingsTransferJson(): string {
+        return JSON.stringify(createModifiedSettingsTransfer(this.settings), null, 2);
+    }
+
+    public async importSettingsTransfer(transferData: unknown): Promise<void> {
+        if (this.isUnloading) {
+            throw new Error('Plugin is unloading');
+        }
+
+        this.settings = applyModifiedSettingsTransfer(this.settings, transferData);
+        this.settingsController.normalizeTagSettings();
+        this.settingsController.normalizePropertySettings();
+        this.settingsController.normalizeNavigationSeparatorSettings();
+        this.settingsController.prepareImportedUiScalePersistence();
+        this.settingsController.mirrorAllSyncModeSettingsToLocalStorage();
+        await this.settingsController.saveSettings();
+        await this.loadSettings();
+        this.settingsController.normalizeTagSettings();
+        this.settingsController.normalizePropertySettings();
+        this.settingsController.normalizeNavigationSeparatorSettings();
+        const includeDescendantNotesChanged = this.preferencesController.syncMirrorsFromSettings();
+        this.preferencesController.initializeRecentDataManager();
+        await this.settingsController.saveSettings();
+        this.notifySettingsUpdateWithFullRefresh();
+
+        if (includeDescendantNotesChanged) {
+            this.preferencesController.notifyUXPreferencesUpdate();
+        }
+    }
+
+    private notifySettingsUpdateWithFullRefresh(): void {
+        try {
+            this.isHandlingExternalSettingsUpdate = true;
+            this.onSettingsUpdate();
+        } finally {
+            this.isHandlingExternalSettingsUpdate = false;
+        }
+    }
+
+    /**
+     * Resets all persisted settings and local preferences back to defaults.
+     * Clears plugin localStorage state (except IndexedDB version markers) and clears persisted settings so defaults apply.
+     */
+    public async resetAllSettings(): Promise<void> {
+        if (this.isUnloading) {
+            throw new Error('Plugin is unloading');
+        }
+
+        const preservedSyncModes = sanitizeRecord<SettingSyncMode>(this.settings.syncModes, isSettingSyncMode);
+
+        // Clear local storage first so subsequent loads seed fresh defaults.
+        this.settingsController.clearAllLocalStorage();
+
+        // Clear persisted settings; loadSettings will repopulate from DEFAULT_SETTINGS.
+        await this.saveData({});
+        await this.loadSettings();
+        this.settingsController.normalizeTagSettings();
+        this.settingsController.normalizePropertySettings();
+        this.settingsController.normalizeNavigationSeparatorSettings();
+        this.settings.syncModes = preservedSyncModes;
+        await this.saveSettingsAndUpdate();
+
+        this.preferencesController.resetUXPreferencesToDefaults();
+        this.settingsController.mirrorAllSyncModeSettingsToLocalStorage();
+        this.preferencesController.syncMirrorsFromSettings();
+        this.settingsController.setLocalStorageVersion();
+
+        if (this.settings.showRootFolder) {
+            localStorage.set(STORAGE_KEYS.expandedFoldersKey, ['/']);
+        }
+
+        this.preferencesController.initializeRecentDataManager();
+        this.onSettingsUpdate();
+        this.preferencesController.notifyUXPreferencesUpdate();
     }
 
     /**
@@ -675,6 +1111,56 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
      */
     public notifySettingsUpdate(): void {
         this.onSettingsUpdate();
+    }
+
+    private isObsidianSettingsModalOpen(): boolean {
+        if (typeof document === 'undefined') {
+            return false;
+        }
+
+        return document.querySelector('.modal.mod-settings, .modal-container.mod-settings') !== null;
+    }
+
+    private applyCalendarPlacementView(options: { force?: boolean; reveal?: boolean; activate?: boolean } = {}): void {
+        if (this.isUnloading || !this.hasWorkspaceLayoutReady) {
+            return;
+        }
+
+        const coordinator = this.workspaceCoordinator;
+        if (!coordinator) {
+            return;
+        }
+
+        const nextPlacement = this.settings.calendarEnabled ? this.settings.calendarPlacement : null;
+        const previousPlacement = this.lastCalendarPlacement;
+        const force = options.force ?? false;
+
+        if (!force && previousPlacement === nextPlacement) {
+            return;
+        }
+
+        this.lastCalendarPlacement = nextPlacement;
+        const requestId = ++this.calendarPlacementRequestId;
+
+        if (nextPlacement === 'right-sidebar') {
+            const reveal = options.reveal ?? false;
+            const activate = options.activate ?? reveal;
+            runAsyncAction(() =>
+                coordinator.ensureCalendarViewInRightSidebar({
+                    reveal,
+                    activate,
+                    shouldContinue: () =>
+                        !this.isUnloading &&
+                        this.hasWorkspaceLayoutReady &&
+                        this.calendarPlacementRequestId === requestId &&
+                        this.settings.calendarEnabled &&
+                        this.settings.calendarPlacement === 'right-sidebar'
+                })
+            );
+            return;
+        }
+
+        coordinator.detachCalendarViewLeaves();
     }
 
     /**
@@ -698,7 +1184,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
      */
     public async getMetadataCleanupSummary(): Promise<MetadataCleanupSummary> {
         if (!this.metadataService || this.isUnloading) {
-            return { folders: 0, tags: 0, files: 0, pinnedNotes: 0, total: 0 };
+            return { folders: 0, tags: 0, properties: 0, files: 0, pinnedNotes: 0, separators: 0, total: 0 };
         }
 
         return this.metadataService.getCleanupSummary();
@@ -713,9 +1199,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
 
         // Update API caches with new settings
         if (this.api) {
-            if (this.api.metadata) {
-                this.api.metadata.updateFromSettings(this.settings);
-            }
+            this.api[INTERNAL_NOTEBOOK_NAVIGATOR_API].metadata.updateFromSettings(this.settings);
         }
 
         // Create a copy of listeners to avoid issues if a callback modifies the map
@@ -727,34 +1211,13 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
                 // Silently ignore errors from settings update callbacks
             }
         });
-    }
 
-    /**
-     * Notifies all registered listeners about recent data changes
-     */
-    private notifyRecentDataUpdate(): void {
-        if (this.isUnloading) {
-            return;
-        }
-
-        // Call each registered listener callback
-        const listeners = Array.from(this.recentDataListeners.values());
-        listeners.forEach(callback => {
-            try {
-                callback();
-            } catch {
-                // Silently ignore errors from recent data callbacks
-            }
-        });
-    }
-
-    /**
-     * Sets the visibility of hidden items (folders and/or tags)
-     * @param value - The new value for showHiddenItems setting
-     */
-    public async showHiddenItems(value: boolean) {
-        this.settings.showHiddenItems = value;
-        await this.saveSettingsAndUpdate();
+        const shouldRevealCalendarView =
+            this.lastCalendarPlacement !== 'right-sidebar' &&
+            this.settings.calendarEnabled &&
+            this.settings.calendarPlacement === 'right-sidebar';
+        const shouldActivateCalendarView = shouldRevealCalendarView && !this.isObsidianSettingsModalOpen();
+        this.applyCalendarPlacementView({ reveal: shouldRevealCalendarView, activate: shouldActivateCalendarView });
     }
 
     /**
@@ -768,9 +1231,36 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     }
 
     /**
+     * Gets all workspace leaves containing the navigator view
+     */
+    public getNavigatorLeaves(): WorkspaceLeaf[] {
+        return this.workspaceCoordinator?.getNavigatorLeaves() ?? this.app.workspace.getLeavesOfType(NOTEBOOK_NAVIGATOR_VIEW);
+    }
+
+    /**
+     * Opens the navigator view, focuses the navigation pane, and selects the given folder
+     * @param folder - Folder instance to highlight
+     */
+    async navigateToFolder(folder: TFolder, options?: NavigateToFolderOptions): Promise<void> {
+        await this.activateView();
+
+        const navigatorLeaves = this.app.workspace.getLeavesOfType(NOTEBOOK_NAVIGATOR_VIEW);
+        if (navigatorLeaves.length === 0) {
+            return;
+        }
+
+        const leaf = navigatorLeaves[0];
+        const view = leaf.view;
+        if (view instanceof NotebookNavigatorView) {
+            view.navigateToFolder(folder, options);
+        }
+    }
+
+    /**
      * Navigates to a specific file in the navigator
      * Expands parent folders and scrolls to make the file visible
      * Note: This does NOT activate/show the view - callers must do that if needed
+     * Hidden files are not revealable while hidden items are off
      * @param file - The file to navigate to in the navigator
      */
     async revealFileInActualFolder(file: TFile, options?: RevealFileOptions) {
@@ -874,26 +1364,65 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     /**
      * Check if the plugin has been updated and show release notes if needed
      */
-    private async checkForVersionUpdate(): Promise<void> {
+    private async checkForVersionUpdate(params: { isFirstLaunch: boolean }): Promise<void> {
+        const { isFirstLaunch } = params;
         // Get current version from manifest
         const currentVersion = this.manifest.version;
 
         // Get last shown version from settings
         const lastShownVersion = this.settings.lastShownVersion;
 
-        // Don't show on first install (when lastShownVersion is empty)
+        // Initialize lastShownVersion on first install.
         if (!lastShownVersion) {
+            if (isFirstLaunch) {
+                this.settings.lastShownVersion = currentVersion;
+                await this.saveSettingsAndUpdate();
+                return;
+            }
+
+            const { getLatestReleaseNotes, isReleaseAutoDisplayEnabled } = await import('./releaseNotes');
+
+            if (!isReleaseAutoDisplayEnabled(currentVersion)) {
+                this.settings.lastShownVersion = currentVersion;
+                await this.saveSettingsAndUpdate();
+                return;
+            }
+
+            const { WhatsNewModal } = await import('./modals/WhatsNewModal');
+
+            const releaseNotes = getLatestReleaseNotes();
+            new WhatsNewModal(this.app, releaseNotes, () => {
+                // Save version after 1 second delay when user closes the modal
+                setTimeout(() => {
+                    // Wrap in runAsyncAction to handle async without blocking callback
+                    runAsyncAction(async () => {
+                        this.settings.lastShownVersion = currentVersion;
+                        await this.saveSettingsAndUpdate();
+                    });
+                }, 1000);
+            }).open();
             return;
         }
 
         // Check if version has changed
         if (lastShownVersion !== currentVersion) {
             // Import release notes helpers dynamically
-            const { getReleaseNotesBetweenVersions, getLatestReleaseNotes, compareVersions, isReleaseAutoDisplayEnabled } = await import(
-                './releaseNotes'
-            );
+            const {
+                getReleaseNotesBetweenVersions,
+                getLatestReleaseNotes,
+                compareVersions,
+                isReleaseAutoDisplayEnabled,
+                shouldAutoDisplayReleaseNotesForUpdate
+            } = await import('./releaseNotes');
 
-            if (!isReleaseAutoDisplayEnabled(currentVersion)) {
+            const isUpgrade = compareVersions(currentVersion, lastShownVersion) > 0;
+            if (isUpgrade) {
+                // For upgrades, auto-display is enabled when any release note in (lastShownVersion, currentVersion]
+                // has showOnUpdate not explicitly set to false.
+                if (!shouldAutoDisplayReleaseNotesForUpdate(lastShownVersion, currentVersion)) {
+                    return;
+                }
+            } else if (!isReleaseAutoDisplayEnabled(currentVersion)) {
                 return;
             }
 
@@ -901,7 +1430,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
 
             // Get release notes between versions
             let releaseNotes;
-            if (compareVersions(currentVersion, lastShownVersion) > 0) {
+            if (isUpgrade) {
                 // Show notes from last shown to current
                 releaseNotes = getReleaseNotesBetweenVersions(lastShownVersion, currentVersion);
             } else {
@@ -910,11 +1439,14 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             }
 
             // Show the info modal when version changes
-            new WhatsNewModal(this.app, releaseNotes, this.settings.dateFormat, () => {
+            new WhatsNewModal(this.app, releaseNotes, () => {
                 // Save version after 1 second delay when user closes the modal
-                setTimeout(async () => {
-                    this.settings.lastShownVersion = currentVersion;
-                    await this.saveSettingsAndUpdate();
+                setTimeout(() => {
+                    // Wrap in runAsyncAction to handle async without blocking callback
+                    runAsyncAction(async () => {
+                        this.settings.lastShownVersion = currentVersion;
+                        await this.saveSettingsAndUpdate();
+                    });
                 }, 1000);
             }).open();
         }

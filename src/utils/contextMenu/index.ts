@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,5 +19,7 @@
 export * from './menuTypes';
 export { buildFolderMenu } from './folderMenuBuilder';
 export { buildTagMenu } from './tagMenuBuilder';
+export { buildPropertyMenu } from './propertyMenuBuilder';
 export { buildFileMenu } from './fileMenuBuilder';
 export { buildEmptyListMenu } from './emptyListMenuBuilder';
+export { showNavigationSectionContextMenu } from './navigationSectionMenuBuilder';

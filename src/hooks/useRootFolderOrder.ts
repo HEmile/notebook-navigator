@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,11 @@ import { useServices } from '../context/ServicesContext';
 import { useSettingsUpdate } from '../context/SettingsContext';
 import type { NotebookNavigatorSettings } from '../settings';
 import { naturalCompare } from '../utils/sortUtils';
+import { areStringArraysEqual, createIndexMap } from '../utils/arrayUtils';
 import { compareFolderOrderWithFallback } from '../utils/treeFlattener';
 import { TIMEOUTS } from '../types/obsidian-extended';
+import { stripTrailingSlash } from '../utils/pathUtils';
+import { runAsyncAction } from '../utils/async';
 
 const ROOT_PATH = '/';
 
@@ -39,9 +42,15 @@ interface PendingRootOrderChanges {
 /**
  * Parameters for the useRootFolderOrder hook
  */
+export interface RootFileChangeEvent {
+    type: 'create' | 'delete' | 'rename';
+    path: string;
+    oldPath?: string;
+}
+
 export interface UseRootFolderOrderParams {
     settings: NotebookNavigatorSettings;
-    onFileChange?: () => void; // Callback triggered when files change
+    onFileChange?: (change: RootFileChangeEvent) => void; // Callback triggered when files change
 }
 
 /**
@@ -52,16 +61,6 @@ export interface RootFolderOrderState {
     rootLevelFolders: TFolder[]; // All top-level folders in custom order
     rootFolderOrderMap: Map<string, number>; // Maps folder paths to their order index
     missingRootFolderPaths: string[]; // Stored paths that are not currently present in the vault
-}
-
-/**
- * Removes trailing slash from path, except for root path
- */
-function stripTrailingSlash(path: string): string {
-    if (path === ROOT_PATH) {
-        return path;
-    }
-    return path.endsWith('/') ? path.slice(0, -1) : path;
 }
 
 /**
@@ -139,31 +138,10 @@ function normalizeRootFolderOrder(existingOrder: string[], folders: TFolder[]): 
 }
 
 /**
- * Creates a map from folder paths to their order index for efficient sorting
- */
-function createRootOrderMap(order: string[]): Map<string, number> {
-    const map = new Map<string, number>();
-    order.forEach((path, index) => {
-        map.set(path, index);
-    });
-    return map;
-}
-
-/**
  * Sorts folders according to the custom order map with fallback to natural sorting
  */
 function sortFoldersByOrder(folders: TFolder[], orderMap: Map<string, number>): TFolder[] {
     return folders.slice().sort((a, b) => compareFolderOrderWithFallback(a, b, orderMap));
-}
-
-/**
- * Checks if two string arrays are equal in both content and order
- */
-function arraysEqual(first: string[], second: string[]): boolean {
-    if (first.length !== second.length) {
-        return false;
-    }
-    return first.every((value, index) => value === second[index]);
 }
 
 /**
@@ -223,7 +201,8 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
             }
 
             if (rootFolderOrderRef.current.length === 0) {
-                const alphabeticalChildren = rootChildren.slice().sort((a, b) => naturalCompare(a.name, b.name));
+                const direction = settings.folderSortOrder === 'alpha-desc' ? -1 : 1;
+                const alphabeticalChildren = rootChildren.slice().sort((a, b) => naturalCompare(a.name, b.name) * direction);
 
                 pendingChanges.renames.clear();
                 pendingChanges.removals.clear();
@@ -243,17 +222,19 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
             }
 
             const { normalizedOrder, missingPaths } = normalizeRootFolderOrder(workingOrder, rootChildren);
-            const orderMap = createRootOrderMap(normalizedOrder);
+            const orderMap = createIndexMap(normalizedOrder);
             const orderedChildren = sortFoldersByOrder(rootChildren, orderMap);
 
-            if (!arraysEqual(normalizedOrder, rootFolderOrderRef.current)) {
+            if (!areStringArraysEqual(normalizedOrder, rootFolderOrderRef.current)) {
                 rootFolderOrderRef.current = normalizedOrder;
-                void updateSettings(current => {
-                    current.rootFolderOrder = normalizedOrder;
+                runAsyncAction(async () => {
+                    await updateSettings(current => {
+                        current.rootFolderOrder = normalizedOrder;
+                    });
                 });
             }
 
-            setMissingRootFolderPaths(prev => (arraysEqual(prev, missingPaths) ? prev : missingPaths));
+            setMissingRootFolderPaths(prev => (areStringArraysEqual(prev, missingPaths) ? prev : missingPaths));
             setRootLevelFolders(orderedChildren);
 
             if (settings.showRootFolder) {
@@ -266,9 +247,9 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
         };
 
         // Notifies parent component of file changes
-        const notifyFileChange = () => {
+        const notifyFileChange = (change: RootFileChangeEvent) => {
             if (onFileChange) {
-                onFileChange();
+                onFileChange(change);
             }
         };
 
@@ -320,7 +301,7 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
                     handleFolderCreate(file);
                 }
                 if (file instanceof TFile) {
-                    notifyFileChange();
+                    notifyFileChange({ type: 'create', path: file.path });
                 }
             }),
             app.vault.on('delete', file => {
@@ -328,7 +309,7 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
                     handleFolderDelete(file);
                 }
                 if (file instanceof TFile) {
-                    notifyFileChange();
+                    notifyFileChange({ type: 'delete', path: file.path });
                 }
             }),
             app.vault.on('rename', (file, oldPath) => {
@@ -336,7 +317,7 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
                     handleFolderRename(file, oldPath);
                 }
                 if (file instanceof TFile) {
-                    notifyFileChange();
+                    notifyFileChange({ type: 'rename', path: file.path, oldPath });
                 }
             })
         ];
@@ -345,7 +326,7 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
             events.forEach(eventRef => app.vault.offref(eventRef));
             rebuildFolders.cancel();
         };
-    }, [app, onFileChange, settings.showRootFolder, settings.rootFolderOrder, updateSettings]);
+    }, [app, onFileChange, settings.showRootFolder, settings.rootFolderOrder, settings.folderSortOrder, updateSettings]);
 
     return {
         rootFolders,

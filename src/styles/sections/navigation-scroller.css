@@ -1,0 +1,235 @@
+/* Source: src/styles/sections/navigation-scroller.css */
+
+/* ========================================================================
+   Navigation Pane Scroller
+   ======================================================================== */
+
+/* Scroller container for both folder tree and tag list */
+
+.nn-navigation-pane-chrome {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-navigation-pane-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-navigation-pane-scroller {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 var(--nn-scroller-padding);
+    line-height: 1; /* Reset to 1 - we'll use fixed line-heights on individual elements */
+    background-color: var(--nn-theme-nav-bg); /* Opaque background for GPU scroll layer optimization */
+
+    /* Ensure scroll events work properly with virtualization */
+    position: relative;
+}
+
+.nn-navigation-pane-content {
+    flex: 1 0 auto;
+}
+
+.nn-navigation-pane-scroller[data-banner='true'] {
+    /* Classic Windows scrollbars consume layout width when they appear. Setting a stable gutter
+       keeps the width constant so TanStack Virtual's ResizeObserver doesn't retrigger endlessly
+       when the navigation banner forces the content to overflow during resizing. */
+    scrollbar-gutter: stable;
+}
+
+/* Container for pinned shortcuts displayed above the scrollable navigation tree */
+.nn-shortcut-pinned {
+    flex: 0 1 auto;
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
+    background-color: var(--nn-theme-nav-bg);
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-shortcut-pinned-scroll {
+    flex: 0 1 auto;
+    min-height: 0;
+    padding: 8px var(--nn-scroller-padding) 4px;
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
+
+.nn-shortcut-pinned[data-scroll='true'] .nn-shortcut-pinned-scroll {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* Remove top padding when banner is present to avoid double spacing */
+.nn-shortcut-pinned[data-has-banner='true'] .nn-shortcut-pinned-scroll {
+    padding-top: 0;
+}
+
+/* Add top margin to banner inside pinned shortcuts area for consistent spacing */
+.nn-shortcut-pinned[data-has-banner='true'] .nn-nav-banner {
+    margin-top: 8px;
+}
+
+/* Inner wrapper for pinned shortcut items */
+.nn-shortcut-pinned-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.nn-shortcut-pinned::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 1px);
+    height: 4px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, var(--nn-theme-pinned-shortcut-shadow-color) 0%, transparent 100%);
+}
+
+.nn-shortcuts-resize-handle {
+    height: 3px;
+    cursor: row-resize;
+    background-color: transparent;
+    touch-action: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 2;
+}
+
+.nn-shortcuts-resize-handle:hover {
+    background-color: var(--nn-theme-divider-resize-handle-hover-bg);
+}
+
+.nn-navigation-pane[data-shortcuts-resizing='true'] .nn-shortcuts-resize-handle {
+    background-color: var(--nn-theme-divider-resize-handle-hover-bg);
+}
+
+.notebook-navigator-mobile .nn-shortcuts-resize-handle {
+    height: 14px;
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    flex-shrink: 0;
+    z-index: 0;
+}
+
+.notebook-navigator-mobile .nn-navigation-pane[data-shortcuts-resizing='true'] .nn-shortcuts-resize-handle {
+    background-color: transparent;
+}
+
+.notebook-navigator-mobile .nn-shortcuts-resize-handle:hover {
+    background-color: transparent;
+}
+
+@media (hover: none) {
+    .nn-shortcuts-resize-handle:hover {
+        background-color: transparent;
+    }
+}
+
+.notebook-navigator-mobile .nn-shortcuts-resize-handle::before {
+    content: '';
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    bottom: 3px;
+    height: 5px;
+    background-color: var(--nn-theme-divider-border-color);
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.notebook-navigator-mobile .nn-shortcut-pinned {
+    background-color: var(--nn-theme-nav-bg);
+    border-bottom: none;
+}
+
+/* Vault title displayed below the navigation header (desktop only). */
+.nn-vault-title-area {
+    background-color: var(--nn-theme-nav-bg);
+    padding: var(--nn-list-title-padding-block) var(--nn-scroller-padding) 8px;
+}
+
+.nn-vault-title-content {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--nn-nav-item-padding-horizontal);
+    font-size: var(--nn-list-title-font-size);
+    font-weight: var(--nn-theme-list-heading-font-weight);
+    color: var(--nn-theme-list-heading-color);
+    gap: 4px;
+    max-width: 100%;
+}
+
+.nn-vault-title-trigger {
+    cursor: pointer;
+}
+
+.nn-vault-title-trigger:focus-visible {
+    outline: 1px solid var(--interactive-accent);
+    outline-offset: 1px;
+    border-radius: 6px;
+}
+
+.nn-vault-title-text {
+    line-height: 1.2;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nn-vault-title-chevron {
+    width: var(--nn-nav-icon-size);
+    height: var(--nn-nav-icon-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--nn-theme-list-heading-color);
+}
+
+/* Mobile-only: hide the pinned shortcuts shadow overlay. */
+.notebook-navigator-mobile .nn-shortcut-pinned::after {
+    content: none;
+}
+
+/* Navigation banner displayed above tree items */
+.nn-nav-banner {
+    padding: var(--nn-nav-banner-padding-vertical, 8px) var(--nn-nav-item-padding-horizontal);
+    box-sizing: border-box;
+}
+
+.nn-navigation-pane-banner {
+    margin-inline-start: calc(-1 * var(--nn-scroller-padding));
+    margin-inline-end: calc(-1 * var(--nn-scroller-padding));
+}
+
+.nn-nav-banner-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+    background-color: var(--background-tertiary);
+}

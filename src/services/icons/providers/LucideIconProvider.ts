@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,26 +16,37 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { IconProvider, IconDefinition } from '../types';
+import { IconProvider, IconDefinition, IconRenderResult } from '../types';
 import { getIconIds, setIcon } from 'obsidian';
+import { resetIconContainer } from './providerUtils';
+
+// Obsidian exposes Lucide identifiers with this prefix, but the rest of the
+// plugin stores bare slugs. Keeping the prefix definition here keeps the
+// translation logic in one place.
+const LUCIDE_PREFIX = 'lucide-';
 
 /**
  * Icon provider for Lucide icons.
  *
- * This provider integrates with Obsidian's built-in Lucide icon set,
- * providing access to hundreds of vector icons. Features include:
- * - Full access to all Lucide icons available in Obsidian
- * - Intelligent keyword-based search with synonyms
- * - Automatic icon name formatting for display
- * - Efficient caching of available icons
- *
- * The provider uses Obsidian's native icon rendering for consistent
- * appearance across the application.
+ * This provider is the only place that talks to Obsidian's Lucide APIs and knows
+ * about their prefixed identifiers (e.g., "lucide-folder"). Every method exposes
+ * and consumes the plugin's canonical format ("folder") so storage, settings,
+ * and UI never have to worry about the prefix.
  */
 export class LucideIconProvider implements IconProvider {
     id = 'lucide';
     name = 'Lucide';
+    // Caches the raw prefixed identifiers returned by Obsidian so we avoid
+    // extra `getIconIds()` calls.
     private iconCache: string[] | null = null;
+
+    /**
+     * Lucide icons are bundled with Obsidian and have no separate version
+     * @returns Always null for Lucide provider
+     */
+    getVersion(): string | null {
+        return null;
+    }
 
     /**
      * Checks if the Lucide provider is available.
@@ -48,13 +59,21 @@ export class LucideIconProvider implements IconProvider {
     /**
      * Renders a Lucide icon into the specified container.
      *
+     * All callers pass canonical identifiers. Obsidian accepts these values
+     * directly (no prefix required), so we simply forward the normalized ID
+     * to keep the rest of the codebase prefix-agnostic.
+     *
      * @param container - The HTML element to render the icon into
      * @param iconId - The Lucide icon identifier (e.g., 'folder', 'file-text')
      * @param size - Optional size in pixels for the icon
      */
-    render(container: HTMLElement, iconId: string, size?: number): void {
-        container.empty();
-        setIcon(container, iconId);
+    render(container: HTMLElement, iconId: string, size?: number): IconRenderResult {
+        resetIconContainer(container);
+        const canonicalId = this.normalizeIconId(iconId);
+        if (!canonicalId) {
+            return 'not-found';
+        }
+        setIcon(container, canonicalId);
 
         if (size) {
             // Using inline styles here because size is dynamic and passed as parameter
@@ -62,12 +81,21 @@ export class LucideIconProvider implements IconProvider {
             container.style.setProperty('--icon-size', `${size}px`);
             container.style.width = `${size}px`;
             container.style.height = `${size}px`;
+        } else {
+            container.style.removeProperty('--icon-size');
+            container.style.removeProperty('width');
+            container.style.removeProperty('height');
         }
+
+        return container.childElementCount > 0 ? 'rendered' : 'not-found';
     }
 
     /**
      * Searches for Lucide icons based on a query string.
      * Searches both icon names and associated keywords.
+     *
+     * `getIconIds()` always returns prefixed identifiers. We normalize them
+     * at the start of the loop so the search logic and results remain canonical.
      *
      * @param query - The search query
      * @returns Array of matching icon definitions, limited to 50 results
@@ -84,10 +112,11 @@ export class LucideIconProvider implements IconProvider {
         const matches: { icon: IconDefinition; score: number; name: string; id: string }[] = [];
 
         for (const id of allIcons) {
-            const keywords = this.getKeywords(id);
+            const canonicalId = this.normalizeIconId(id);
+            const keywords = this.getKeywords(canonicalId);
             const normalizedKeywords = keywords.map(keyword => keyword.toLowerCase());
-            const displayName = this.formatDisplayName(id);
-            const normalizedId = id.toLowerCase();
+            const displayName = this.formatDisplayName(canonicalId);
+            const normalizedId = canonicalId.toLowerCase();
             const normalizedDisplay = displayName.toLowerCase();
             // Calculate match relevance score (lower score = better match)
             const score = this.resolveMatchScore(normalizedQuery, normalizedId, normalizedDisplay, normalizedKeywords);
@@ -98,13 +127,13 @@ export class LucideIconProvider implements IconProvider {
 
             matches.push({
                 icon: {
-                    id,
+                    id: canonicalId,
                     displayName,
                     keywords
                 },
                 score,
                 name: normalizedDisplay || normalizedId,
-                id
+                id: canonicalId
             });
         }
 
@@ -132,21 +161,31 @@ export class LucideIconProvider implements IconProvider {
     /**
      * Gets all available Lucide icons.
      *
+     * The raw Obsidian list carries prefixes, but consumers expect canonical IDs.
+     * Normalizing here means contexts like the icon picker, metadata services,
+     * and storage always receive the same identifier format.
+     *
      * @returns Array of all Lucide icon definitions with formatted names and keywords
      */
     getAll(): IconDefinition[] {
         const allIcons = this.getIconList();
 
-        return allIcons.map(id => ({
-            id,
-            displayName: this.formatDisplayName(id),
-            keywords: this.getKeywords(id)
-        }));
+        return allIcons.map(id => {
+            const canonicalId = this.normalizeIconId(id);
+            return {
+                id: canonicalId,
+                displayName: this.formatDisplayName(canonicalId),
+                keywords: this.getKeywords(canonicalId)
+            };
+        });
     }
 
     /**
      * Gets the cached list of available Lucide icons.
      * Lazy-loads the icon list on first access.
+     *
+     * The cache stores what Obsidian returns so we can keep reusing the same
+     * array without repeatedly touching the API.
      */
     private getIconList(): string[] {
         if (!this.iconCache) {
@@ -247,6 +286,23 @@ export class LucideIconProvider implements IconProvider {
         });
 
         return [...keywords, ...additionalKeywords];
+    }
+
+    /**
+     * Converts Obsidian's prefixed identifier into the canonical form.
+     * The rest of the plugin always works with these normalized values.
+     */
+    private normalizeIconId(iconId: string): string {
+        if (!iconId) {
+            return iconId;
+        }
+
+        const trimmed = iconId.trim();
+        if (!trimmed) {
+            return trimmed;
+        }
+
+        return trimmed.startsWith(LUCIDE_PREFIX) ? trimmed.substring(LUCIDE_PREFIX.length) : trimmed;
     }
 
     /**

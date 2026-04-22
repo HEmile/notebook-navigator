@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,9 +17,10 @@
  */
 
 import { IndexedDBStorage } from '../storage/IndexedDBStorage';
+import type { NoteCountInfo } from '../types/noteCounts';
 import { TagTreeNode } from '../types/storage';
 import { isPathInExcludedFolder } from './fileFilters';
-import { HiddenTagMatcher, matchesHiddenTagPattern, normalizeTagPathValue } from './tagPrefixMatcher';
+import { HiddenTagMatcher, matchesHiddenTagPattern, normalizeTagPathValue, createHiddenTagVisibility } from './tagPrefixMatcher';
 import { naturalCompare } from './sortUtils';
 
 /**
@@ -49,6 +50,78 @@ function getNoteCountCache(): WeakMap<TagTreeNode, number> {
     return noteCountCache;
 }
 
+function buildTreeFromTagList(tagPaths: string[], tagFiles: Map<string, Set<string>>): Map<string, TagTreeNode> {
+    const allNodes = new Map<string, TagTreeNode>();
+    const tree = new Map<string, TagTreeNode>();
+
+    // Sort tags (natural order) to ensure parents are processed before children.
+    // Use a lexical tie-breaker so collation-equivalent paths still get a deterministic order.
+    tagPaths.sort((a, b) => {
+        const naturalResult = naturalCompare(a, b);
+        if (naturalResult !== 0) {
+            return naturalResult;
+        }
+        return a.localeCompare(b);
+    });
+
+    for (const tagPath of tagPaths) {
+        const parts = tagPath.split('/');
+        let currentPath = '';
+
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            currentPath = i === 0 ? part : `${currentPath}/${part}`;
+            if (!part) {
+                // Inline + frontmatter mixes can emit empty fragments (e.g. #tag//child); skip them so we never
+                // create phantom nodes while keeping currentPath aligned for the next real fragment.
+                continue;
+            }
+            const normalizedCurrentPath = normalizeTagPathValue(currentPath);
+            if (normalizedCurrentPath.length === 0) {
+                continue;
+            }
+
+            let node = allNodes.get(normalizedCurrentPath);
+            if (!node) {
+                node = {
+                    name: part,
+                    path: normalizedCurrentPath,
+                    displayPath: currentPath,
+                    children: new Map(),
+                    notesWithTag: new Set()
+                };
+                allNodes.set(normalizedCurrentPath, node);
+
+                if (i === 0) {
+                    tree.set(normalizedCurrentPath, node);
+                }
+            }
+
+            if (i === parts.length - 1) {
+                const files = tagFiles.get(currentPath);
+                if (files) {
+                    node.notesWithTag = files;
+                }
+            }
+
+            if (i > 0) {
+                const parentPath = normalizeTagPathValue(parts.slice(0, i).join('/'));
+                if (!parentPath || parentPath === normalizedCurrentPath) {
+                    // Empty fragments or repeated names (/#tag/#tag) can collapse to the same normalized path.
+                    // Skipping avoids wiring a node as its own child which previously created recursion loops.
+                    continue;
+                }
+                const parent = allNodes.get(parentPath);
+                if (parent && parent.children.get(normalizedCurrentPath) !== node) {
+                    parent.children.set(normalizedCurrentPath, node);
+                }
+            }
+        }
+    }
+
+    return tree;
+}
+
 /**
  * Build tag tree from database
  * @param db - IndexedDBStorage instance
@@ -58,29 +131,76 @@ function getNoteCountCache(): WeakMap<TagTreeNode, number> {
 export function buildTagTreeFromDatabase(
     db: IndexedDBStorage,
     excludedFolderPatterns?: string[],
-    includedPaths?: Set<string>
-): { tagTree: Map<string, TagTreeNode>; untagged: number } {
+    includedPaths?: Set<string>,
+    hiddenTagPatterns: string[] = [],
+    showHiddenItems = false,
+    resetNoteCountCache = true
+): { tagTree: Map<string, TagTreeNode>; tagged: number; untagged: number; hiddenRootTags: Map<string, TagTreeNode> } {
     // Track all unique tags that exist in the vault
     const allTagsSet = new Set<string>();
     let untaggedCount = 0;
+    let taggedCount = 0;
 
     const caseMap = new Map<string, string>();
+    const hiddenTagVisibility = createHiddenTagVisibility(hiddenTagPatterns, showHiddenItems);
+    const shouldFilterHiddenTags = hiddenTagVisibility.shouldFilterHiddenTags;
 
     // Map to store file associations for each tag
     const tagFiles = new Map<string, Set<string>>();
+    const hiddenRootTags = new Map<string, TagTreeNode>();
+    const hasExcludedFolders = Array.isArray(excludedFolderPatterns) && excludedFolderPatterns.length > 0;
+    const excludedPatterns: string[] | null = hasExcludedFolders && excludedFolderPatterns ? excludedFolderPatterns : null;
 
-    // Get all files from cache
-    const allFiles = db.getAllFiles();
+    // Records root tags from files in excluded folders for reordering purposes
+    const recordHiddenRootTag = (tagValue: string, filePath: string) => {
+        const canonical = (tagValue.startsWith('#') ? tagValue.substring(1) : tagValue).replace(/^\/+|\/+$/g, '');
+        if (canonical.length === 0) {
+            return;
+        }
+        const [rootCanonical] = canonical.split('/');
+        if (!rootCanonical) {
+            return;
+        }
+        const normalizedRoot = normalizeTagPathValue(rootCanonical);
+        if (normalizedRoot.length === 0) {
+            return;
+        }
+
+        // Create or update hidden root tag node
+        let node = hiddenRootTags.get(normalizedRoot);
+        if (!node) {
+            node = {
+                name: rootCanonical,
+                path: normalizedRoot,
+                displayPath: rootCanonical,
+                children: new Map(),
+                notesWithTag: new Set()
+            };
+            hiddenRootTags.set(normalizedRoot, node);
+        }
+        node.notesWithTag.add(filePath);
+    };
 
     // First pass: collect all tags and their file associations
-    for (const { path, data: fileData } of allFiles) {
+    db.forEachFile((path, fileData) => {
+        const isExcluded = excludedPatterns ? isPathInExcludedFolder(path, excludedPatterns) : false;
+
         // Defense-in-depth: skip files not in the included set (e.g., frontmatter-excluded)
         if (includedPaths && !includedPaths.has(path)) {
-            continue;
+            return;
         }
-        // Skip files in excluded folders if patterns provided
-        if (excludedFolderPatterns && isPathInExcludedFolder(path, excludedFolderPatterns)) {
-            continue;
+
+        // Process tags from excluded files for hidden root tag tracking
+        if (isExcluded) {
+            const tags = fileData.tags;
+            if (!hasExcludedFolders || !tags || tags.length === 0) {
+                return;
+            }
+            // Record root tags from excluded files for reordering
+            for (const tag of tags) {
+                recordHiddenRootTag(tag, path);
+            }
+            return;
         }
 
         const tags = fileData.tags;
@@ -91,8 +211,10 @@ export function buildTagTreeFromDatabase(
             if (tags !== null && path.endsWith('.md')) {
                 untaggedCount++;
             }
-            continue;
+            return;
         }
+
+        let hasVisibleTagForFile = false;
 
         // Process each tag
         for (const tag of tags) {
@@ -100,6 +222,10 @@ export function buildTagTreeFromDatabase(
             const normalizedPath = normalizeTagPathValue(tag);
             if (canonicalPath.length === 0 || normalizedPath.length === 0) {
                 continue;
+            }
+
+            if (!shouldFilterHiddenTags || hiddenTagVisibility.isTagVisible(tag, canonicalPath.split('/').pop())) {
+                hasVisibleTagForFile = true;
             }
 
             let storedCanonical = caseMap.get(normalizedPath);
@@ -120,77 +246,110 @@ export function buildTagTreeFromDatabase(
                 fileSet.add(path);
             }
         }
-    }
 
-    // Convert to list for building tree
-    const tagList = Array.from(allTagsSet);
+        if (path.endsWith('.md') && hasVisibleTagForFile) {
+            taggedCount++;
+        }
+    });
 
-    // Helper function to build a tree from a flat list
-    const buildTreeFromList = (tagPaths: string[]): Map<string, TagTreeNode> => {
-        const allNodes = new Map<string, TagTreeNode>();
-        const tree = new Map<string, TagTreeNode>();
+    const tagTree = buildTreeFromTagList(Array.from(allTagsSet), tagFiles);
 
-        // Sort tags (natural order) to ensure parents are processed before children
-        tagPaths.sort((a, b) => naturalCompare(a, b));
-
-        for (const tagPath of tagPaths) {
-            const parts = tagPath.split('/');
-            let currentPath = '';
-
-            for (let i = 0; i < parts.length; i++) {
-                const part = parts[i];
-                currentPath = i === 0 ? part : `${currentPath}/${part}`;
-                const normalizedCurrentPath = normalizeTagPathValue(currentPath);
-                if (normalizedCurrentPath.length === 0) {
-                    continue;
-                }
-
-                // Get or create the node
-                let node = allNodes.get(normalizedCurrentPath);
-                if (!node) {
-                    node = {
-                        name: part,
-                        path: normalizedCurrentPath,
-                        displayPath: currentPath,
-                        children: new Map(),
-                        notesWithTag: new Set()
-                    };
-                    allNodes.set(normalizedCurrentPath, node);
-
-                    // Only add root-level tags to the tree Map
-                    if (i === 0) {
-                        tree.set(normalizedCurrentPath, node);
-                    }
-                }
-
-                // Add files only to the exact tag (not ancestors)
-                if (i === parts.length - 1) {
-                    const files = tagFiles.get(currentPath);
-                    if (files) {
-                        node.notesWithTag = files;
-                    }
-                }
-
-                // Link to parent
-                if (i > 0) {
-                    const parentPath = normalizeTagPathValue(parts.slice(0, i).join('/'));
-                    const parent = allNodes.get(parentPath);
-                    if (parent && !parent.children.has(normalizedCurrentPath)) {
-                        parent.children.set(normalizedCurrentPath, node);
-                    }
-                }
+    if (hiddenRootTags.size > 0) {
+        // Remove hidden roots that also exist in the visible tag tree
+        for (const path of Array.from(hiddenRootTags.keys())) {
+            if (tagTree.has(path)) {
+                hiddenRootTags.delete(path);
             }
         }
+    }
 
-        return tree;
+    if (resetNoteCountCache) {
+        // Clear note count cache since tree structure has changed.
+        // Scoped navigation builds can skip this because they create isolated node graphs.
+        clearNoteCountCache();
+    }
+
+    return { tagTree, tagged: taggedCount, untagged: untaggedCount, hiddenRootTags };
+}
+
+/**
+ * Build a tag tree from a known set of markdown file paths.
+ * This keeps scoped builds proportional to the selected files instead of the whole vault.
+ */
+export function buildTagTreeFromFilePaths(
+    db: IndexedDBStorage,
+    filePaths: Iterable<string>,
+    hiddenTagPatterns: string[] = [],
+    showHiddenItems = false,
+    resetNoteCountCache = true
+): { tagTree: Map<string, TagTreeNode>; tagged: number; untagged: number; hiddenRootTags: Map<string, TagTreeNode> } {
+    const allTagsSet = new Set<string>();
+    let untaggedCount = 0;
+    let taggedCount = 0;
+
+    const caseMap = new Map<string, string>();
+    const tagFiles = new Map<string, Set<string>>();
+    const hiddenTagVisibility = createHiddenTagVisibility(hiddenTagPatterns, showHiddenItems);
+    const shouldFilterHiddenTags = hiddenTagVisibility.shouldFilterHiddenTags;
+
+    for (const path of filePaths) {
+        const fileData = db.getFile(path);
+        if (!fileData) {
+            continue;
+        }
+
+        const tags = fileData.tags;
+        if (tags === null || tags.length === 0) {
+            if (tags !== null && path.endsWith('.md')) {
+                untaggedCount++;
+            }
+            continue;
+        }
+
+        let hasVisibleTagForFile = false;
+
+        for (const tag of tags) {
+            const canonicalPath = (tag.startsWith('#') ? tag.substring(1) : tag).replace(/^\/+|\/+$/g, '');
+            const normalizedPath = normalizeTagPathValue(tag);
+            if (canonicalPath.length === 0 || normalizedPath.length === 0) {
+                continue;
+            }
+
+            if (!shouldFilterHiddenTags || hiddenTagVisibility.isTagVisible(tag, canonicalPath.split('/').pop())) {
+                hasVisibleTagForFile = true;
+            }
+
+            let storedCanonical = caseMap.get(normalizedPath);
+            if (!storedCanonical) {
+                storedCanonical = canonicalPath;
+                caseMap.set(normalizedPath, storedCanonical);
+            }
+
+            allTagsSet.add(storedCanonical);
+
+            if (!tagFiles.has(storedCanonical)) {
+                tagFiles.set(storedCanonical, new Set());
+            }
+            tagFiles.get(storedCanonical)?.add(path);
+        }
+
+        if (path.endsWith('.md') && hasVisibleTagForFile) {
+            taggedCount++;
+        }
+    }
+
+    const tagTree = buildTreeFromTagList(Array.from(allTagsSet), tagFiles);
+
+    if (resetNoteCountCache) {
+        clearNoteCountCache();
+    }
+
+    return {
+        tagTree,
+        tagged: taggedCount,
+        untagged: untaggedCount,
+        hiddenRootTags: new Map<string, TagTreeNode>()
     };
-
-    const tagTree = buildTreeFromList(tagList);
-
-    // Clear note count cache since tree structure has changed
-    clearNoteCountCache();
-
-    return { tagTree, untagged: untaggedCount };
 }
 
 /**
@@ -206,57 +365,103 @@ export function getTotalNoteCount(node: TagTreeNode): number {
         return cachedCount;
     }
 
-    // Calculate count
-    let count = node.notesWithTag.size;
+    const allFiles = new Set<string>();
+    const visited = new Set<TagTreeNode>();
 
-    // Collect all unique files from this node and all descendants
-    const allFiles = new Set(node.notesWithTag);
-
-    // Helper to collect files from children
-    function collectFromChildren(n: TagTreeNode): void {
-        for (const child of n.children.values()) {
-            child.notesWithTag.forEach(file => allFiles.add(file));
-            collectFromChildren(child);
+    // Recursively visits nodes while tracking visited set to handle circular references
+    const visit = (current: TagTreeNode): void => {
+        if (visited.has(current)) {
+            return;
         }
-    }
+        visited.add(current);
 
-    collectFromChildren(node);
-    count = allFiles.size;
+        current.notesWithTag.forEach(path => allFiles.add(path));
+        for (const child of current.children.values()) {
+            visit(child);
+        }
+    };
 
-    // Cache the result
+    visit(node);
+
+    const count = allFiles.size;
     cache.set(node, count);
 
     return count;
 }
 
 /**
+ * Builds current/descendant/total note counts for a tag node.
+ */
+export function createTagNoteCountInfo(node: TagTreeNode, includeDescendantNotes: boolean): NoteCountInfo {
+    const current = node.notesWithTag.size;
+    if (!includeDescendantNotes) {
+        return { current, descendants: 0, total: current };
+    }
+
+    const total = getTotalNoteCount(node);
+    return {
+        current,
+        descendants: Math.max(total - current, 0),
+        total
+    };
+}
+
+/**
  * Collect all tag paths from a node and its descendants
  * Returns lowercase paths for logic operations
  */
-export function collectAllTagPaths(node: TagTreeNode, paths: Set<string> = new Set()): Set<string> {
+export function collectAllTagPaths(node: TagTreeNode, paths: Set<string> = new Set(), visited: Set<TagTreeNode> = new Set()): Set<string> {
+    // Guard against circular references in tree structure
+    if (visited.has(node)) {
+        return paths;
+    }
+    visited.add(node);
+
     paths.add(node.path);
     for (const child of node.children.values()) {
-        collectAllTagPaths(child, paths);
+        collectAllTagPaths(child, paths, visited);
     }
     return paths;
+}
+
+/**
+ * Collects all file paths associated with a tag node and its descendants.
+ * Returns a set to avoid duplicate paths when tags overlap.
+ */
+export function collectTagFilePaths(node: TagTreeNode, files: Set<string> = new Set(), visited: Set<TagTreeNode> = new Set()): Set<string> {
+    // Guard against circular references in tree structure
+    if (visited.has(node)) {
+        return files;
+    }
+    visited.add(node);
+
+    node.notesWithTag.forEach(path => files.add(path));
+    for (const child of node.children.values()) {
+        collectTagFilePaths(child, files, visited);
+    }
+    return files;
 }
 
 /**
  * Find a tag node by its path
  */
 export function findTagNode(tree: Map<string, TagTreeNode>, tagPath: string): TagTreeNode | null {
-    // Remove # prefix if present
-    const cleanPath = tagPath.startsWith('#') ? tagPath.substring(1) : tagPath;
-    const lowerPath = cleanPath.toLowerCase();
+    const lowerPath = normalizeTagPathValue(tagPath);
 
     // Helper function to search recursively
-    function searchNode(nodes: Map<string, TagTreeNode>): TagTreeNode | null {
+    function searchNode(nodes: Map<string, TagTreeNode>, visited: Set<TagTreeNode>): TagTreeNode | null {
         for (const node of nodes.values()) {
+            if (visited.has(node)) {
+                // Corrupted caches (or intentionally malformed tests) can contain cycles.
+                // Tracking visited nodes keeps recursion finite even if a node reappears.
+                continue;
+            }
+            visited.add(node);
             if (node.path === lowerPath) {
                 return node;
             }
             // Search in children
-            const found = searchNode(node.children);
+            const found = searchNode(node.children, visited);
             if (found) {
                 return found;
             }
@@ -264,7 +469,7 @@ export function findTagNode(tree: Map<string, TagTreeNode>, tagPath: string): Ta
         return null;
     }
 
-    return searchNode(tree);
+    return searchNode(tree, new Set());
 }
 
 /**
@@ -278,7 +483,12 @@ export function findTagNode(tree: Map<string, TagTreeNode>, tagPath: string): Ta
  * @returns A new tree with excluded tags and empty parents removed
  */
 export function excludeFromTagTree(tree: Map<string, TagTreeNode>, matcher: HiddenTagMatcher): Map<string, TagTreeNode> {
-    if (matcher.prefixes.length === 0 && matcher.startsWithNames.length === 0 && matcher.endsWithNames.length === 0) {
+    if (
+        matcher.pathPatterns.length === 0 &&
+        matcher.prefixes.length === 0 &&
+        matcher.startsWithNames.length === 0 &&
+        matcher.endsWithNames.length === 0
+    ) {
         return tree;
     }
 

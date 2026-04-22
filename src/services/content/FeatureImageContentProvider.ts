@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,47 +16,182 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { TFile, CachedMetadata } from 'obsidian';
-import { ContentType } from '../../interfaces/IContentProvider';
+import { App, Platform, RequestUrlParam, RequestUrlResponse, requestUrl, TFile } from 'obsidian';
+import { type ContentProviderType } from '../../interfaces/IContentProvider';
 import { NotebookNavigatorSettings } from '../../settings';
+import type { FeatureImagePixelSizeSetting } from '../../settings/types';
 import { FileData } from '../../storage/IndexedDBStorage';
 import { getDBInstance } from '../../storage/fileOperations';
-import { isImageFile } from '../../utils/fileTypeUtils';
-import { BaseContentProvider } from './BaseContentProvider';
+import { isPdfFile } from '../../utils/fileTypeUtils';
+import { getYoutubeThumbnailUrl } from '../../utils/youtubeUtils';
+import { BaseContentProvider, type ContentProviderProcessResult } from './BaseContentProvider';
+import type { ContentReadCache } from './ContentReadCache';
+import { isValidHttpsUrl, type FeatureImageReference } from './featureImageReferenceResolver';
+import { renderExcalidrawThumbnail } from './excalidraw/excalidrawThumbnail';
+import { renderPdfCoverThumbnail } from './pdf/pdfCoverThumbnail';
+import { detectImageMimeTypeFromBuffer, getImageDimensionsPairFromBuffer, normalizeImageMimeType } from './thumbnail/imageDimensions';
+import { createOnceLogger, createRenderBudgetLimiter, createRenderLimiter } from './thumbnail/thumbnailRuntimeUtils';
+import { LIMITS } from '../../constants/limits';
+
+type FeatureImageThumbnailDimensions = {
+    width: number;
+    height: number;
+};
+
+const FEATURE_IMAGE_THUMBNAIL_DIMENSIONS: Readonly<Record<FeatureImagePixelSizeSetting, FeatureImageThumbnailDimensions>> = Object.freeze({
+    '256': Object.freeze({ width: 256, height: 144 }),
+    '384': Object.freeze({ width: 384, height: 216 }),
+    '512': Object.freeze({ width: 512, height: 288 })
+});
+
+const THUMBNAIL_OUTPUT_MIME = LIMITS.thumbnails.featureImage.output.mimeType;
+// iOS Safari has issues with WebP encoding in some contexts, so use PNG as fallback
+const IOS_THUMBNAIL_OUTPUT_MIME = LIMITS.thumbnails.featureImage.output.iosMimeType;
+const THUMBNAIL_OUTPUT_QUALITY = LIMITS.thumbnails.featureImage.output.quality;
+// Per-request timeout for external image fetches.
+// YouTube thumbnails try multiple candidates, so total time can exceed this value.
+const EXTERNAL_REQUEST_TIMEOUT_MS = LIMITS.thumbnails.featureImage.externalRequest.timeoutMs;
+// Maximum lifetime for an external request before releasing the concurrency slot.
+// `requestUrl()` does not accept an AbortSignal, so timed-out requests can continue running in the background.
+const EXTERNAL_REQUEST_MAX_LIFETIME_MS = LIMITS.thumbnails.featureImage.externalRequest.maxLifetimeMs;
+// Maximum number of timed-out external requests that may continue running while new requests proceed.
+// This bounds oversubscription when releasing limiter slots on timeout.
+const EXTERNAL_REQUEST_TIMEOUT_DEBT_MAX = Platform.isMobile
+    ? LIMITS.thumbnails.featureImage.externalRequest.timeoutDebtMax.mobile
+    : LIMITS.thumbnails.featureImage.externalRequest.timeoutDebtMax.desktop;
+// Maximum total pixels that can be decoded concurrently on mobile devices.
+const MOBILE_IMAGE_DECODE_BUDGET_PIXELS = LIMITS.thumbnails.featureImage.imageDecodeBudgetPixels.mobile;
+const DESKTOP_IMAGE_DECODE_BUDGET_PIXELS = LIMITS.thumbnails.featureImage.imageDecodeBudgetPixels.desktop;
+// Maximum size (in bytes) of images read into memory before decoding/resizing.
+const MAX_LOCAL_IMAGE_BYTES = Platform.isMobile
+    ? LIMITS.thumbnails.featureImage.maxImageBytes.local.mobile
+    : LIMITS.thumbnails.featureImage.maxImageBytes.local.desktop;
+const MAX_EXTERNAL_IMAGE_BYTES = Platform.isMobile
+    ? LIMITS.thumbnails.featureImage.maxImageBytes.external.mobile
+    : LIMITS.thumbnails.featureImage.maxImageBytes.external.desktop;
+
+const SUPPORTED_IMAGE_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml',
+    'image/avif',
+    'image/heic',
+    'image/heif',
+    'image/bmp'
+]);
+
+const MIME_TYPE_BY_EXTENSION: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    avif: 'image/avif',
+    heic: 'image/heic',
+    heif: 'image/heif',
+    bmp: 'image/bmp'
+};
+
+type ImageBuffer = { buffer: ArrayBuffer; mimeType: string };
+
+type ThumbnailSourceKind = 'local' | 'external';
+
+export type FeatureImageThumbnailRuntime = {
+    externalRequestLimiter: ReturnType<typeof createRenderLimiter>;
+    imageDecodeLimiter: ReturnType<typeof createRenderBudgetLimiter>;
+    thumbnailCanvasLimiter: ReturnType<typeof createRenderLimiter>;
+    thumbnailCanvasPool: (HTMLCanvasElement | OffscreenCanvas)[];
+    logOnce: ReturnType<typeof createOnceLogger>;
+    inFlightDownloads: Map<string, Promise<ImageBuffer | null>>;
+    externalRequestTimeoutDebt: number;
+};
+
+export function createFeatureImageThumbnailRuntime(): FeatureImageThumbnailRuntime {
+    return {
+        externalRequestLimiter: createRenderLimiter(LIMITS.thumbnails.featureImage.externalRequest.parallelLimit),
+        imageDecodeLimiter: createRenderBudgetLimiter(
+            Platform.isMobile ? MOBILE_IMAGE_DECODE_BUDGET_PIXELS : DESKTOP_IMAGE_DECODE_BUDGET_PIXELS
+        ),
+        thumbnailCanvasLimiter: createRenderLimiter(LIMITS.thumbnails.featureImage.thumbnailCanvasParallelLimit),
+        thumbnailCanvasPool: [],
+        logOnce: createOnceLogger(),
+        inFlightDownloads: new Map<string, Promise<ImageBuffer | null>>(),
+        externalRequestTimeoutDebt: 0
+    };
+}
+
+export function getLocalFeatureImageKey(file: TFile): string {
+    return `f:${file.path}@${file.stat.mtime}`;
+}
 
 /**
  * Content provider for finding and storing feature images
  */
 export class FeatureImageContentProvider extends BaseContentProvider {
-    getContentType(): ContentType {
-        return 'featureImage';
+    protected readonly PARALLEL_LIMIT: number = LIMITS.contentProvider.parallelLimit;
+
+    private readonly thumbnailRuntime: FeatureImageThumbnailRuntime;
+
+    constructor(
+        app: App,
+        readCache: ContentReadCache | null = null,
+        thumbnailRuntime: FeatureImageThumbnailRuntime = createFeatureImageThumbnailRuntime()
+    ) {
+        super(app, readCache);
+        this.thumbnailRuntime = thumbnailRuntime;
+    }
+
+    /**
+     * Returns a response header value using a case-insensitive lookup.
+     *
+     * HTTP header names are case-insensitive, but `requestUrl()` returns headers as a plain object
+     * whose keys are not guaranteed to be normalized. Observed on iOS: the response includes `Content-Type`
+     * (capitalized) rather than `content-type` (lowercase), so a direct `headers['content-type']` lookup
+     * can return `undefined`.
+     */
+    private getHeaderValue(headers: Record<string, string>, headerName: string): string | undefined {
+        const direct = headers[headerName];
+        if (direct !== undefined) {
+            return direct;
+        }
+
+        const needle = headerName.toLowerCase();
+        for (const [key, value] of Object.entries(headers)) {
+            if (key.toLowerCase() === needle) {
+                return value;
+            }
+        }
+
+        return undefined;
+    }
+
+    getContentType(): ContentProviderType {
+        return 'fileThumbnails';
     }
 
     getRelevantSettings(): (keyof NotebookNavigatorSettings)[] {
-        return ['showFeatureImage', 'featureImageProperties', 'useEmbeddedImageFallback'];
+        return ['showFeatureImage', 'featureImagePixelSize'];
     }
 
     shouldRegenerate(oldSettings: NotebookNavigatorSettings, newSettings: NotebookNavigatorSettings): boolean {
+        if (oldSettings.featureImagePixelSize !== newSettings.featureImagePixelSize) {
+            return true;
+        }
+
         // Clear if feature image is disabled
         if (!newSettings.showFeatureImage && oldSettings.showFeatureImage) {
             return true;
         }
 
-        // Regenerate if feature image is enabled and settings changed
-        if (newSettings.showFeatureImage) {
-            return (
-                oldSettings.showFeatureImage !== newSettings.showFeatureImage ||
-                JSON.stringify(oldSettings.featureImageProperties) !== JSON.stringify(newSettings.featureImageProperties) ||
-                oldSettings.useEmbeddedImageFallback !== newSettings.useEmbeddedImageFallback
-            );
-        }
-
         return false;
     }
 
-    async clearContent(): Promise<void> {
+    async clearContent(_context?: { oldSettings: NotebookNavigatorSettings; newSettings: NotebookNavigatorSettings }): Promise<void> {
         const db = getDBInstance();
-        await db.batchClearAllFileContent('featureImage');
+        await db.batchClearFeatureImageContent('nonMarkdown');
     }
 
     protected needsProcessing(fileData: FileData | null, file: TFile, settings: NotebookNavigatorSettings): boolean {
@@ -64,113 +199,807 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             return false;
         }
 
-        const fileModified = fileData !== null && fileData.mtime !== file.stat.mtime;
-        return !fileData || fileData.featureImage === null || fileModified;
+        if (file.extension === 'md') {
+            return false;
+        }
+
+        const fileModified = fileData !== null && fileData.fileThumbnailsMtime !== file.stat.mtime;
+
+        if (isPdfFile(file)) {
+            // PDFs can have generated thumbnails; changes need reprocessing.
+            const expectedKey = this.getFeatureImageKey({ kind: 'local', file });
+            return (
+                fileModified ||
+                !fileData ||
+                fileData.featureImageStatus === 'unprocessed' ||
+                fileData.featureImageKey === null ||
+                fileData.featureImageKey !== expectedKey
+            );
+        }
+
+        // The featureImageKey is the durable "processed" marker even when no blob is stored.
+        return fileModified || !fileData || fileData.featureImageKey === null;
     }
 
     protected async processFile(
-        job: { file: TFile; path: string[] },
+        job: { file: TFile; path: string },
         fileData: FileData | null,
         settings: NotebookNavigatorSettings
-    ): Promise<{
-        path: string;
-        tags?: string[] | null;
-        preview?: string;
-        featureImage?: string;
-        metadata?: FileData['metadata'];
-    } | null> {
+    ): Promise<ContentProviderProcessResult> {
         if (!settings.showFeatureImage) {
+            return { update: null, processed: true };
+        }
+
+        if (job.file.extension === 'md') {
+            return { update: null, processed: true };
+        }
+
+        // Generate cover thumbnail for PDF files using the first page
+        if (isPdfFile(job.file)) {
+            const reference: FeatureImageReference = { kind: 'local', file: job.file };
+            const featureImageKey = this.getFeatureImageKey(reference);
+
+            // For PDFs, `featureImageKey` is the durable marker for the selected source (it includes the PDF mtime).
+            // Forced provider-mtime resets must still re-render thumbnails when `fileThumbnailsMtime` is stale.
+            const isUpToDate =
+                fileData &&
+                fileData.featureImageKey === featureImageKey &&
+                fileData.fileThumbnailsMtime === job.file.stat.mtime &&
+                fileData.featureImageStatus !== 'unprocessed';
+            if (isUpToDate) {
+                return { update: null, processed: true };
+            }
+
+            const thumbnail = await this.createThumbnailBlob(reference, settings);
+            if (!thumbnail) {
+                const empty = this.createEmptyBlob();
+                return { update: { path: job.path, featureImage: empty, featureImageKey }, processed: true };
+            }
+
+            return { update: { path: job.path, featureImage: thumbnail, featureImageKey }, processed: true };
+        }
+
+        const nextKey = '';
+        const nextImage = this.createEmptyBlob();
+        // Empty blobs are used as a processed marker; storage drops them and keeps the key.
+        // A new key (reference change) is required before another attempt is recorded.
+        if (fileData && fileData.featureImageKey === nextKey) {
+            return { update: null, processed: true };
+        }
+        return { update: { path: job.path, featureImage: nextImage, featureImageKey: nextKey }, processed: true };
+    }
+
+    protected createEmptyBlob(): Blob {
+        return new Blob([]);
+    }
+
+    // Creates a cache key for Excalidraw files based on path and modification time
+    protected getExcalidrawFeatureImageKey(file: TFile): string {
+        return `x:${file.path}@${file.stat.mtime}`;
+    }
+
+    // Renders an Excalidraw file to a resized thumbnail blob
+    protected async createExcalidrawThumbnail(file: TFile): Promise<Blob | null> {
+        const pngBlob = await renderExcalidrawThumbnail(this.app, file, { padding: 0 });
+        if (!pngBlob) {
             return null;
         }
 
         try {
-            const metadata = this.app.metadataCache.getFileCache(job.file);
-            const imageUrl = this.getFeatureImageUrlFromMetadata(job.file, metadata, settings);
-            const imageUrlStr = imageUrl || '';
+            const mimeType = pngBlob.type || 'image/png';
+            const buffer = await pngBlob.arrayBuffer();
+            const thumbnail = await this.createThumbnailBlobFromBuffer(
+                buffer,
+                mimeType,
+                file.path,
+                'local',
+                this.getThumbnailDimensions(this.currentBatchSettings?.featureImagePixelSize)
+            );
+            return thumbnail ?? pngBlob;
+        } catch {
+            return pngBlob;
+        }
+    }
 
-            // Only return update if feature image changed
-            if (fileData && fileData.featureImage === imageUrlStr) {
+    protected getFeatureImageKey(reference: FeatureImageReference): string {
+        if (reference.kind === 'local') {
+            // Local references include the source mtime so edits to the image invalidate the key.
+            return getLocalFeatureImageKey(reference.file);
+        }
+
+        if (reference.kind === 'external') {
+            // External references use a normalized https URL as the key.
+            return `e:${reference.url}`;
+        }
+
+        // YouTube references use the video ID so all thumbnail URLs for a video map to one key.
+        return `y:${reference.videoId}`;
+    }
+
+    protected async createThumbnailBlob(reference: FeatureImageReference, settings: NotebookNavigatorSettings): Promise<Blob | null> {
+        const thumbnailDimensions = this.getThumbnailDimensions(settings.featureImagePixelSize);
+
+        if (reference.kind === 'local') {
+            if (isPdfFile(reference.file)) {
+                return await renderPdfCoverThumbnail(this.app, reference.file, {
+                    maxWidth: thumbnailDimensions.width,
+                    maxHeight: thumbnailDimensions.height,
+                    mimeType: Platform.isIosApp ? IOS_THUMBNAIL_OUTPUT_MIME : THUMBNAIL_OUTPUT_MIME,
+                    quality: THUMBNAIL_OUTPUT_QUALITY
+                });
+            }
+
+            const imageData = await this.readLocalImage(reference.file);
+            if (!imageData) {
                 return null;
             }
 
-            return {
-                path: job.file.path,
-                featureImage: imageUrlStr
-            };
+            return await this.createThumbnailBlobFromBuffer(
+                imageData.buffer,
+                imageData.mimeType,
+                reference.file.path,
+                'local',
+                thumbnailDimensions
+            );
+        }
+
+        if (reference.kind === 'external') {
+            if (!settings.downloadExternalFeatureImages) {
+                return null;
+            }
+            const imageData = await this.downloadExternalImage(reference.url);
+            if (!imageData) {
+                return null;
+            }
+            return await this.createThumbnailBlobFromBuffer(
+                imageData.buffer,
+                imageData.mimeType,
+                reference.url,
+                'external',
+                thumbnailDimensions
+            );
+        }
+
+        if (!settings.downloadExternalFeatureImages) {
+            return null;
+        }
+        const imageData = await this.downloadYoutubeThumbnail(reference.videoId);
+        if (!imageData) {
+            return null;
+        }
+        return await this.createThumbnailBlobFromBuffer(
+            imageData.buffer,
+            imageData.mimeType,
+            `youtube:${reference.videoId}`,
+            'external',
+            thumbnailDimensions
+        );
+    }
+
+    private async readLocalImage(file: TFile): Promise<ImageBuffer | null> {
+        const mimeType = this.getMimeTypeFromExtension(file.extension);
+        if (!mimeType) {
+            return null;
+        }
+
+        if (file.stat.size > MAX_LOCAL_IMAGE_BYTES) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-local-too-large:${MAX_LOCAL_IMAGE_BYTES}`,
+                `[${file.path}] Skipping local image (${file.stat.size} bytes) - file too large`
+            );
+            return null;
+        }
+
+        try {
+            const buffer = await this.app.vault.adapter.readBinary(file.path);
+            return { buffer, mimeType };
         } catch (error) {
-            console.error(`Error finding feature image for ${job.file.path}:`, error);
+            console.error(`Failed to read image ${file.path}:`, error);
             return null;
         }
     }
 
     /**
-     * Extract feature image URL from file metadata
-     * Checks frontmatter properties defined in settings
+     * Fetches a URL with a timeout and concurrency limit to prevent overwhelming the network.
      */
-    private getFeatureImageUrlFromMetadata(
-        file: TFile,
-        metadata: CachedMetadata | null,
-        settings: NotebookNavigatorSettings
-    ): string | null {
-        // Only process markdown files for feature images
-        if (file.extension !== 'md') {
+    private async requestUrlWithTimeout(request: RequestUrlParam, timeoutMs: number): Promise<RequestUrlResponse | null> {
+        // Acquire limiter slot to control concurrent external requests
+        const releaseLimiter = await this.thumbnailRuntime.externalRequestLimiter.acquire();
+        let limiterReleased = false;
+        let hardReleaseId: ReturnType<typeof globalThis.setTimeout> | null = null;
+        let timeoutDebtAdded = false;
+        let timeoutDebtTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
+
+        const safeReleaseLimiter = () => {
+            if (limiterReleased) {
+                return;
+            }
+            limiterReleased = true;
+            if (hardReleaseId !== null) {
+                globalThis.clearTimeout(hardReleaseId);
+                hardReleaseId = null;
+            }
+            releaseLimiter();
+        };
+
+        const safeReleaseTimeoutDebt = () => {
+            if (!timeoutDebtAdded) {
+                return;
+            }
+            timeoutDebtAdded = false;
+            if (timeoutDebtTimerId !== null) {
+                globalThis.clearTimeout(timeoutDebtTimerId);
+                timeoutDebtTimerId = null;
+            }
+            this.thumbnailRuntime.externalRequestTimeoutDebt = Math.max(0, this.thumbnailRuntime.externalRequestTimeoutDebt - 1);
+        };
+
+        const tryAddTimeoutDebt = (): boolean => {
+            if (timeoutDebtAdded) {
+                return true;
+            }
+
+            if (this.thumbnailRuntime.externalRequestTimeoutDebt >= EXTERNAL_REQUEST_TIMEOUT_DEBT_MAX) {
+                return false;
+            }
+
+            this.thumbnailRuntime.externalRequestTimeoutDebt += 1;
+            timeoutDebtAdded = true;
+            timeoutDebtTimerId = globalThis.setTimeout(() => safeReleaseTimeoutDebt(), EXTERNAL_REQUEST_MAX_LIFETIME_MS);
+            return true;
+        };
+
+        hardReleaseId = globalThis.setTimeout(() => safeReleaseLimiter(), EXTERNAL_REQUEST_MAX_LIFETIME_MS);
+
+        let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
+        const timeoutPromise = new Promise<null>(resolve => {
+            timeoutId = globalThis.setTimeout(() => {
+                // When a request times out, optionally free the limiter slot so other requests can proceed.
+                // This can oversubscribe real in-flight requests since `requestUrl()` cannot be aborted, so it is bounded
+                // by EXTERNAL_REQUEST_TIMEOUT_DEBT_MAX. When the debt budget is exhausted, we keep the limiter slot until
+                // the request settles or the hard release timer fires.
+                if (tryAddTimeoutDebt()) {
+                    safeReleaseLimiter();
+                }
+                resolve(null);
+            }, timeoutMs);
+        });
+
+        try {
+            // `requestUrl` does not accept an AbortSignal, so we use Promise.race with a timer and ignore late results.
+            const rawPromise = requestUrl(request);
+            const requestPromise = rawPromise
+                .then(response => response)
+                .catch(() => null)
+                .finally(() => {
+                    safeReleaseLimiter();
+                    safeReleaseTimeoutDebt();
+                });
+
+            const responseOrNull = await Promise.race([requestPromise, timeoutPromise]);
+            return responseOrNull ?? null;
+        } catch {
+            safeReleaseLimiter();
+            safeReleaseTimeoutDebt();
+            return null;
+        } finally {
+            if (timeoutId !== null) {
+                globalThis.clearTimeout(timeoutId);
+            }
+        }
+    }
+
+    private async downloadExternalImage(imageUrl: string): Promise<ImageBuffer | null> {
+        const trimmedUrl = imageUrl.trim();
+        if (!isValidHttpsUrl(trimmedUrl)) {
             return null;
         }
 
-        // Try each property in order until we find an image
-        for (const property of settings.featureImageProperties) {
-            const imagePath = metadata?.frontmatter?.[property];
+        return await this.getOrCreateDownload(`ext:${trimmedUrl}`, async () => {
+            try {
+                const response = await this.requestUrlWithTimeout(
+                    {
+                        url: trimmedUrl,
+                        method: 'GET',
+                        throw: false
+                    },
+                    EXTERNAL_REQUEST_TIMEOUT_MS
+                );
 
-            if (!imagePath) {
-                continue;
-            }
-
-            const resolvedPath = this.normalizeLinkPath(imagePath);
-
-            if (!resolvedPath) {
-                continue;
-            }
-
-            const imageFile = this.app.metadataCache.getFirstLinkpathDest(resolvedPath, file.path);
-
-            if (imageFile) {
-                // Store just the path, not the full app:// URL
-                return imageFile.path;
-            }
-        }
-
-        // Check embedded images as fallback
-        if (settings.useEmbeddedImageFallback && metadata?.embeds && metadata.embeds.length > 0) {
-            for (const embed of metadata.embeds) {
-                const embedPath = embed.link;
-                const embedFile = this.app.metadataCache.getFirstLinkpathDest(embedPath, file.path);
-                if (embedFile && isImageFile(embedFile)) {
-                    // Store just the path, not the full app:// URL
-                    return embedFile.path;
+                if (!response || response.status !== 200) {
+                    return null;
                 }
+
+                // Determine the image type from the response headers.
+                // iOS can return `Content-Type` instead of `content-type`, so use a case-insensitive lookup.
+                const contentTypeHeader = this.getHeaderValue(response.headers, 'content-type');
+                if (!contentTypeHeader) {
+                    this.thumbnailRuntime.logOnce(
+                        `featureImage-external-missing-content-type:${trimmedUrl}`,
+                        `[${trimmedUrl}] Skipping external image - missing Content-Type header`
+                    );
+                    return null;
+                }
+
+                const mimeType = this.getMimeTypeFromContentType(contentTypeHeader);
+                if (!mimeType) {
+                    this.thumbnailRuntime.logOnce(
+                        `featureImage-external-unsupported-content-type:${contentTypeHeader}:${trimmedUrl}`,
+                        `[${trimmedUrl}] Skipping external image - unsupported Content-Type: ${contentTypeHeader}`
+                    );
+                    return null;
+                }
+
+                if (!response.arrayBuffer) {
+                    this.thumbnailRuntime.logOnce(
+                        `featureImage-external-missing-arrayBuffer:${mimeType}:${trimmedUrl}`,
+                        `[${trimmedUrl}] Skipping external image - response missing arrayBuffer for ${mimeType}`
+                    );
+                    return null;
+                }
+
+                if (response.arrayBuffer.byteLength > MAX_EXTERNAL_IMAGE_BYTES) {
+                    this.thumbnailRuntime.logOnce(
+                        `featureImage-external-too-large:${MAX_EXTERNAL_IMAGE_BYTES}:${trimmedUrl}`,
+                        `[${trimmedUrl}] Skipping external image (${response.arrayBuffer.byteLength} bytes) - file too large`
+                    );
+                    return null;
+                }
+
+                return { buffer: response.arrayBuffer, mimeType };
+            } catch {
+                return null;
+            }
+        });
+    }
+
+    private async downloadYoutubeThumbnail(videoId: string): Promise<ImageBuffer | null> {
+        const candidates: { quality: string; mimeType: string }[] = [
+            { quality: 'maxresdefault.jpg', mimeType: 'image/jpeg' },
+            { quality: 'hqdefault.jpg', mimeType: 'image/jpeg' }
+        ];
+
+        for (const candidate of candidates) {
+            const url = getYoutubeThumbnailUrl(videoId, candidate.quality);
+            if (!isValidHttpsUrl(url)) {
+                continue;
+            }
+
+            const result = await this.getOrCreateDownload(`yt:${url}|${candidate.mimeType}`, async () => {
+                try {
+                    const response = await this.requestUrlWithTimeout(
+                        {
+                            url,
+                            method: 'GET',
+                            headers: { Accept: candidate.mimeType },
+                            throw: false
+                        },
+                        EXTERNAL_REQUEST_TIMEOUT_MS
+                    );
+
+                    if (response && response.status === 200 && response.arrayBuffer) {
+                        return { buffer: response.arrayBuffer, mimeType: candidate.mimeType };
+                    }
+                    return null;
+                } catch {
+                    return null;
+                }
+            });
+
+            if (result) {
+                return result;
             }
         }
 
         return null;
     }
 
-    private normalizeLinkPath(rawPath: string): string {
-        let normalized = rawPath.trim();
-
-        if (normalized.startsWith('!')) {
-            normalized = normalized.slice(1).trim();
+    // Deduplicates concurrent download requests by returning an existing promise for the same key
+    private async getOrCreateDownload(key: string, request: () => Promise<ImageBuffer | null>): Promise<ImageBuffer | null> {
+        const existing = this.thumbnailRuntime.inFlightDownloads.get(key);
+        if (existing) {
+            return existing;
         }
 
-        if (normalized.startsWith('[[') && normalized.endsWith(']]')) {
-            normalized = normalized.slice(2, -2).trim();
+        const promise = request().finally(() => {
+            this.thumbnailRuntime.inFlightDownloads.delete(key);
+        });
+
+        this.thumbnailRuntime.inFlightDownloads.set(key, promise);
+        return promise;
+    }
+
+    // Resizes an image buffer to thumbnail dimensions with platform-aware pixel limits
+    private async createThumbnailBlobFromBuffer(
+        buffer: ArrayBuffer,
+        mimeType: string,
+        source: string,
+        sourceKind: ThumbnailSourceKind,
+        thumbnailDimensions: FeatureImageThumbnailDimensions
+    ): Promise<Blob | null> {
+        const normalizedMimeType = normalizeImageMimeType(mimeType);
+        const detectedMimeType = detectImageMimeTypeFromBuffer(buffer);
+        const effectiveMimeType =
+            detectedMimeType && SUPPORTED_IMAGE_MIME_TYPES.has(detectedMimeType) ? detectedMimeType : normalizedMimeType;
+
+        if (
+            sourceKind === 'local' &&
+            detectedMimeType &&
+            detectedMimeType !== normalizedMimeType &&
+            SUPPORTED_IMAGE_MIME_TYPES.has(detectedMimeType)
+        ) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-mime-mismatch:${normalizedMimeType}:${detectedMimeType}:${source}`,
+                `[${source}] Detected ${detectedMimeType} content for declared ${normalizedMimeType}`
+            );
         }
 
-        const aliasSeparatorIndex = normalized.indexOf('|');
-
-        if (aliasSeparatorIndex !== -1) {
-            normalized = normalized.slice(0, aliasSeparatorIndex).trim();
+        if (effectiveMimeType === 'image/svg+xml') {
+            // Keep SVG data as-is without raster encoding.
+            return new Blob([buffer], { type: effectiveMimeType });
         }
 
-        return normalized;
+        // Extract dimensions from the image header to determine if resizing is needed.
+        // Skip images with unknown dimensions to avoid memory issues during decoding.
+        const dimensionsPair = getImageDimensionsPairFromBuffer(buffer, effectiveMimeType);
+        if (!dimensionsPair) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-unknown-dimensions:${effectiveMimeType}:${source}`,
+                `[${source}] Skipping ${effectiveMimeType} (${buffer.byteLength} bytes) - unable to determine image dimensions`
+            );
+            return null;
+        }
+
+        const { display: displayDimensions, coded: codedDimensions } = dimensionsPair;
+        const pixelCount = codedDimensions.width * codedDimensions.height;
+
+        const maxFallbackPixels = Platform.isMobile
+            ? LIMITS.thumbnails.featureImage.maxFallbackPixels.mobile
+            : LIMITS.thumbnails.featureImage.maxFallbackPixels.desktop;
+
+        const { width: targetWidth, height: targetHeight } = this.calculateThumbnailDimensions(
+            displayDimensions.width,
+            displayDimensions.height,
+            thumbnailDimensions
+        );
+
+        const shouldSkipDecode =
+            targetWidth === displayDimensions.width && targetHeight === displayDimensions.height && pixelCount <= maxFallbackPixels;
+
+        const sourceBlob = new Blob([buffer], { type: effectiveMimeType });
+
+        if (shouldSkipDecode) {
+            // Skip decoding when the image is already within thumbnail limits.
+            //
+            // When the container metadata indicates a display transform (crop/rotation), attempt a re-encode so thumbnails
+            // bake the transform into pixels. Fall back to the original blob when decoding is unavailable or fails.
+            const hasTransformMetadata =
+                displayDimensions.width !== codedDimensions.width || displayDimensions.height !== codedDimensions.height;
+
+            if (!hasTransformMetadata) {
+                return sourceBlob;
+            }
+
+            const releaseDecodeBudget = await this.thumbnailRuntime.imageDecodeLimiter.acquire(pixelCount);
+            try {
+                const reencoded = await this.tryCreateThumbnailFromBitmap(sourceBlob, thumbnailDimensions, true);
+                return reencoded ?? sourceBlob;
+            } finally {
+                releaseDecodeBudget();
+            }
+        }
+
+        const releaseDecodeBudget = await this.thumbnailRuntime.imageDecodeLimiter.acquire(pixelCount);
+
+        try {
+            // Attempt direct bitmap resize which is more memory-efficient for large images.
+            const resizedBitmapResult = await this.tryCreateThumbnailFromResizedBitmap(sourceBlob, targetWidth, targetHeight);
+            if (resizedBitmapResult) {
+                return resizedBitmapResult;
+            }
+
+            // Fallback decoding loads the full image into memory, so apply stricter limits.
+            if (pixelCount > maxFallbackPixels) {
+                const fallbackReason = typeof createImageBitmap === 'undefined' ? 'createImageBitmap unavailable' : 'resize bitmap failed';
+                this.thumbnailRuntime.logOnce(
+                    `featureImage-fallback-skip:${effectiveMimeType}:${codedDimensions.width}x${codedDimensions.height}:${source}`,
+                    `[${source}] Skipping ${effectiveMimeType} (${codedDimensions.width}x${codedDimensions.height}, ${pixelCount} px) - ${fallbackReason}; fallback decode capped at ${maxFallbackPixels} px`
+                );
+                return null;
+            }
+
+            const bitmapResult = await this.tryCreateThumbnailFromBitmap(sourceBlob, thumbnailDimensions);
+            if (bitmapResult) {
+                return bitmapResult;
+            }
+
+            return await this.withImageFromBlob(sourceBlob, async image => {
+                const sourceWidth = image.naturalWidth || image.width || 0;
+                const sourceHeight = image.naturalHeight || image.height || 0;
+
+                if (sourceWidth <= 0 || sourceHeight <= 0) {
+                    return null;
+                }
+
+                const { width, height } = this.calculateThumbnailDimensions(sourceWidth, sourceHeight, thumbnailDimensions);
+                if (width === sourceWidth && height === sourceHeight) {
+                    // Skip re-encoding when the image is already within thumbnail limits.
+                    return sourceBlob;
+                }
+                return await this.resizeImageToBlob(image, width, height);
+            });
+        } finally {
+            releaseDecodeBudget();
+        }
+    }
+
+    // Decodes and resizes an image in a single step using createImageBitmap resize options.
+    // This approach avoids loading the full-resolution image into memory.
+    private async tryCreateThumbnailFromResizedBitmap(blob: Blob, targetWidth: number, targetHeight: number): Promise<Blob | null> {
+        if (typeof createImageBitmap === 'undefined') {
+            return null;
+        }
+
+        if (targetWidth <= 0 || targetHeight <= 0) {
+            return null;
+        }
+
+        let bitmap: ImageBitmap | null = null;
+        try {
+            bitmap = await createImageBitmap(blob, {
+                imageOrientation: 'from-image',
+                resizeWidth: targetWidth,
+                resizeHeight: targetHeight,
+                resizeQuality: 'high'
+            });
+        } catch {
+            return null;
+        }
+
+        try {
+            return await this.resizeSourceToBlob(bitmap, targetWidth, targetHeight);
+        } finally {
+            this.closeBitmap(bitmap);
+        }
+    }
+
+    // Decodes a blob to an ImageBitmap and resizes it to thumbnail dimensions
+    private async tryCreateThumbnailFromBitmap(
+        blob: Blob,
+        thumbnailDimensions: FeatureImageThumbnailDimensions,
+        forceReencode = false
+    ): Promise<Blob | null> {
+        if (typeof createImageBitmap === 'undefined') {
+            return null;
+        }
+
+        let bitmap: ImageBitmap | null = null;
+        try {
+            bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+        } catch {
+            return null;
+        }
+
+        try {
+            const sourceWidth = bitmap.width || 0;
+            const sourceHeight = bitmap.height || 0;
+
+            if (sourceWidth <= 0 || sourceHeight <= 0) {
+                return null;
+            }
+
+            const { width, height } = this.calculateThumbnailDimensions(sourceWidth, sourceHeight, thumbnailDimensions);
+            if (!forceReencode && width === sourceWidth && height === sourceHeight) {
+                // Skip re-encoding when the image is already within thumbnail limits.
+                return blob;
+            }
+
+            return await this.resizeSourceToBlob(bitmap, width, height);
+        } finally {
+            this.closeBitmap(bitmap);
+        }
+    }
+
+    // Releases the resources held by an ImageBitmap
+    private closeBitmap(bitmap: ImageBitmap | null): void {
+        if (!bitmap) {
+            return;
+        }
+
+        try {
+            bitmap.close();
+        } catch {
+            // ignore
+        }
+    }
+
+    // Loads a blob as an HTMLImageElement and passes it to the handler for processing
+    private async withImageFromBlob<T>(blob: Blob, handler: (image: HTMLImageElement) => Promise<T>): Promise<T> {
+        const imageUrl = URL.createObjectURL(blob);
+
+        try {
+            // Decode the image via an object URL and pass it to the handler.
+            const image = await this.loadImage(imageUrl);
+            return await handler(image);
+        } finally {
+            // Always revoke the object URL after decoding.
+            URL.revokeObjectURL(imageUrl);
+        }
+    }
+
+    private async resizeImageToBlob(image: HTMLImageElement, width: number, height: number): Promise<Blob | null> {
+        return await this.resizeSourceToBlob(image, width, height);
+    }
+
+    private async resizeSourceToBlob(source: CanvasImageSource, width: number, height: number): Promise<Blob | null> {
+        if (width <= 0 || height <= 0) {
+            return null;
+        }
+
+        const canvasResult = await this.acquireThumbnailCanvas(width, height);
+        if (!canvasResult) {
+            return null;
+        }
+
+        const { canvas, ctx, release } = canvasResult;
+
+        try {
+            ctx.clearRect(0, 0, width, height);
+            if ('imageSmoothingQuality' in ctx) {
+                ctx.imageSmoothingQuality = 'high';
+            }
+            ctx.drawImage(source, 0, 0, width, height);
+
+            const outputMimeType = Platform.isIosApp ? IOS_THUMBNAIL_OUTPUT_MIME : THUMBNAIL_OUTPUT_MIME;
+
+            // Encode to the primary thumbnail mime type; fall back to PNG when encoding fails.
+            const primary =
+                outputMimeType === 'image/png'
+                    ? await this.canvasToBlob(canvas, outputMimeType)
+                    : await this.canvasToBlob(canvas, outputMimeType, THUMBNAIL_OUTPUT_QUALITY);
+            if (primary) {
+                return primary;
+            }
+
+            if (outputMimeType !== 'image/png') {
+                return this.canvasToBlob(canvas, 'image/png');
+            }
+
+            return null;
+        } finally {
+            release();
+        }
+    }
+
+    private createCanvas(width: number, height: number): HTMLCanvasElement | OffscreenCanvas {
+        if (typeof OffscreenCanvas !== 'undefined') {
+            const canvas = new OffscreenCanvas(width, height);
+            if (typeof canvas.convertToBlob === 'function') {
+                return canvas;
+            }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
+    }
+
+    protected getThumbnailDimensions(featureImagePixelSize: FeatureImagePixelSizeSetting | undefined): FeatureImageThumbnailDimensions {
+        return FEATURE_IMAGE_THUMBNAIL_DIMENSIONS[featureImagePixelSize ?? '256'];
+    }
+
+    private calculateThumbnailDimensions(
+        srcWidth: number,
+        srcHeight: number,
+        thumbnailDimensions: FeatureImageThumbnailDimensions
+    ): { width: number; height: number } {
+        let width = srcWidth;
+        let height = srcHeight;
+
+        // Constrain the thumbnail to the max dimensions while preserving aspect ratio.
+        if (srcWidth > thumbnailDimensions.width || srcHeight > thumbnailDimensions.height) {
+            const aspectRatio = srcWidth / srcHeight;
+
+            if (thumbnailDimensions.width / thumbnailDimensions.height > aspectRatio) {
+                height = thumbnailDimensions.height;
+                width = Math.round(height * aspectRatio);
+            } else {
+                width = thumbnailDimensions.width;
+                height = Math.round(width / aspectRatio);
+            }
+        }
+
+        return { width: Math.max(1, width), height: Math.max(1, height) };
+    }
+
+    private loadImage(url: string): Promise<HTMLImageElement> {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = url;
+        });
+    }
+
+    /**
+     * Acquires a canvas from the pool for thumbnail rendering with concurrency limiting.
+     * Returns a canvas, context, and release function that must be called when done.
+     */
+    private async acquireThumbnailCanvas(
+        width: number,
+        height: number
+    ): Promise<{
+        canvas: HTMLCanvasElement | OffscreenCanvas;
+        ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+        release: () => void;
+    } | null> {
+        const releaseLimiter = await this.thumbnailRuntime.thumbnailCanvasLimiter.acquire();
+        let released = false;
+
+        // Reuse pooled canvas or create new one if pool is empty
+        const canvas = this.thumbnailRuntime.thumbnailCanvasPool.pop() ?? this.createCanvas(Math.max(1, width), Math.max(1, height));
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            // Return canvas to pool and release limiter on context failure
+            this.thumbnailRuntime.thumbnailCanvasPool.push(canvas);
+            releaseLimiter();
+            return null;
+        }
+
+        // Release function returns canvas to pool and frees limiter slot
+        const release = () => {
+            if (released) {
+                return;
+            }
+            released = true;
+            this.thumbnailRuntime.thumbnailCanvasPool.push(canvas);
+            releaseLimiter();
+        };
+
+        return { canvas, ctx, release };
+    }
+
+    private isOffscreenCanvas(canvas: HTMLCanvasElement | OffscreenCanvas): canvas is OffscreenCanvas {
+        return typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas;
+    }
+
+    private async canvasToBlob(canvas: HTMLCanvasElement | OffscreenCanvas, mimeType: string, quality?: number): Promise<Blob | null> {
+        // Wrap canvas.toBlob in a promise-based API.
+        if (this.isOffscreenCanvas(canvas)) {
+            try {
+                return await canvas.convertToBlob({ type: mimeType, quality });
+            } catch {
+                return null;
+            }
+        }
+
+        return await new Promise<Blob | null>(resolve => {
+            canvas.toBlob(resolve, mimeType, quality);
+        });
+    }
+
+    private getMimeTypeFromExtension(extension: string): string | null {
+        if (!extension) {
+            return null;
+        }
+        const key = extension.toLowerCase();
+        return MIME_TYPE_BY_EXTENSION[key] ?? null;
+    }
+
+    private getMimeTypeFromContentType(contentType: string | undefined): string | null {
+        if (!contentType) {
+            return null;
+        }
+
+        const rawMimeType = contentType.split(';')[0].trim();
+        const mimeType = normalizeImageMimeType(rawMimeType);
+        if (!SUPPORTED_IMAGE_MIME_TYPES.has(mimeType)) {
+            return null;
+        }
+
+        return mimeType;
     }
 }

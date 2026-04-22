@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,12 +43,13 @@ export default class RecentDataManager {
     /**
      * Creates a new storage service instance and loads recent data from local storage
      */
-    initialize(): void {
+    initialize(activeVaultProfileId: string): void {
         this.dispose();
         this.storage = new RecentStorageService({
             settings: this.options.settings,
             keys: this.options.keys,
-            notifyChange: this.options.onRecentDataChange
+            notifyChange: this.options.onRecentDataChange,
+            vaultProfileId: activeVaultProfileId
         });
         this.storage.hydrate();
         this.options.onRecentDataChange();

@@ -1,0 +1,28 @@
+/* Source: src/styles/sections/state-focus.css */
+
+/* ========================================================================
+   Focus States
+   ======================================================================== */
+
+/* Navigation selection adornments follow the container focus state */
+.nn-navitem.nn-selected .nn-navitem-chevron {
+    color: var(--nn-selected-navitem-chevron-color);
+}
+
+.nn-navitem.nn-selected .nn-navitem-icon {
+    color: var(--nn-selected-navitem-icon-color);
+}
+
+.nn-navitem.nn-selected .nn-navitem-name {
+    color: var(--nn-selected-navitem-name-color);
+}
+
+.nn-navitem.nn-selected[data-nav-item-type='note'] .nn-navitem-name {
+    color: var(--nn-selected-file-name-color);
+}
+
+.nn-navitem.nn-selected .nn-navitem-count {
+    color: var(--nn-selected-navitem-count-color);
+    background-color: var(--nn-selected-navitem-count-bg);
+    box-shadow: inset 0 0 0 var(--nn-theme-navitem-count-border-width) var(--nn-selected-navitem-count-border-color);
+}

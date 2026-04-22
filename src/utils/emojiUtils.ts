@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,20 +20,24 @@
  * Utility functions for emoji handling.
  *
  * This module provides functions for validating and extracting emojis from text,
- * supporting the emoji icon provider's functionality. The validation is intentionally
- * permissive to support a wide range of emoji variations and combinations.
+ * supporting the emoji icon provider's functionality.
  */
+
+import emojiRegex from 'emoji-regex';
+
+const EMOJI_SEQUENCE_PATTERN = emojiRegex();
+const EMOJI_SEQUENCE_SOURCE = EMOJI_SEQUENCE_PATTERN.source;
+const EMOJI_SEQUENCE_FLAGS = EMOJI_SEQUENCE_PATTERN.flags.replace(/g/g, '');
+const VALID_EMOJI_SEQUENCE_REGEX = new RegExp(`^(?:${EMOJI_SEQUENCE_SOURCE})+$`, EMOJI_SEQUENCE_FLAGS);
+const LEADING_EMOJI_SEQUENCE_REGEX = new RegExp(`^(?:${EMOJI_SEQUENCE_SOURCE})`, EMOJI_SEQUENCE_FLAGS);
 
 /**
  * Tests if a string contains only emoji characters.
  *
- * This is a permissive check that:
- * - Allows any string that contains high Unicode characters typical of emojis
- * - Rejects strings containing basic ASCII letters or numbers
- * - Handles emoji variations, skin tones, and composite emojis
+ * Supports Unicode emoji sequences, including keycaps, flags, and ZWJ sequences.
  *
  * @param str - The string to test
- * @returns True if the string appears to be an emoji
+ * @returns True when the full string is one or more emoji sequences
  */
 export function isValidEmoji(str: string): boolean {
     if (!str || str.length === 0) {
@@ -46,21 +50,7 @@ export function isValidEmoji(str: string): boolean {
         return false;
     }
 
-    // Check if the string contains basic text characters (a-z, A-Z, 0-9)
-    // If it does, it's probably not just an emoji
-    const hasText = /[a-zA-Z0-9]/.test(trimmed);
-    if (hasText) {
-        return false;
-    }
-
-    // More permissive check: if it doesn't contain regular text and has some Unicode,
-    // we'll assume it's an emoji. This handles edge cases and newer emojis better.
-    // The actual rendering will validate if it's truly an emoji
-    // NOTE TO REVIEWER: Unicode ranges are safe here - detecting emoji characters
-    // eslint-disable-next-line no-misleading-character-class
-    const hasHighUnicode = /[\u{1F000}-\u{1FAFF}\u{2000}-\u{3300}\u{FE00}-\u{FE0F}]/u.test(trimmed);
-
-    return hasHighUnicode;
+    return VALID_EMOJI_SEQUENCE_REGEX.test(trimmed);
 }
 
 /**
@@ -74,21 +64,22 @@ export function isValidEmoji(str: string): boolean {
  * @returns The first emoji found, or null if no emoji is present
  */
 export function extractFirstEmoji(str: string): string | null {
-    if (!str) return null;
+    if (!str) {
+        return null;
+    }
 
     // Trim the string
     const trimmed = str.trim();
+    if (trimmed.length === 0) {
+        return null;
+    }
 
     // If the whole string is valid emoji, return it
     if (isValidEmoji(trimmed)) {
         return trimmed;
     }
 
-    // Try to extract emoji-like characters from the beginning
-    // This regex is intentionally broad to catch various emoji formats
-    // NOTE TO REVIEWER: Unicode ranges are safe here - extracting emoji characters
-    // eslint-disable-next-line no-misleading-character-class
-    const match = trimmed.match(/^[\u{1F000}-\u{1FAFF}\u{2000}-\u{3300}\u{FE00}-\u{FE0F}\u{200D}]+/u);
+    const match = trimmed.match(LEADING_EMOJI_SEQUENCE_REGEX);
 
     if (match && match[0].length > 0) {
         return match[0];

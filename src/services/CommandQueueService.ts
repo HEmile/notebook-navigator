@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, TFile, TFolder, PaneType } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
+import type { PaneType } from 'obsidian';
+
+const RECENT_BACKGROUND_OPEN_MARKER_TTL_MS = 250;
 
 /**
  * Types of operations that can be tracked by the command queue
@@ -88,6 +91,7 @@ interface OpenInNewContextOperation extends BaseOperation {
 interface OpenActiveFileOperation extends BaseOperation {
     type: OperationType.OPEN_ACTIVE_FILE;
     file: TFile;
+    active: boolean;
 }
 
 /**
@@ -115,6 +119,14 @@ export interface CommandResult<T = unknown> {
     error?: Error;
 }
 
+export interface MoveFilesCommandData {
+    movedCount: number;
+    skippedCount: number;
+    cancelledCount: number;
+    movedSourcePaths: string[];
+    errors: { filePath: string; error: unknown }[];
+}
+
 /**
  * Service for managing operations and their context, replacing global window flags.
  * This provides a centralized, encapsulated way to track ongoing operations
@@ -128,8 +140,17 @@ export class CommandQueueService {
     private activeCounts = new Map<OperationType, number>();
     private openActiveFileQueue: Promise<void> = Promise.resolve();
     private latestOpenActiveFileOperationId: string | null = null;
+    private recentBackgroundOpenByPath = new Map<string, number>();
 
-    constructor(private app: App) {}
+    constructor() {}
+
+    private cleanupRecentBackgroundOpens(now: number): void {
+        for (const [path, openedAt] of this.recentBackgroundOpenByPath) {
+            if (now - openedAt > RECENT_BACKGROUND_OPEN_MARKER_TTL_MS) {
+                this.recentBackgroundOpenByPath.delete(path);
+            }
+        }
+    }
 
     /**
      * Generate a unique operation ID
@@ -248,12 +269,39 @@ export class CommandQueueService {
     }
 
     /**
+     * Check if opening a file in the active leaf as a preview (active: false)
+     */
+    isOpeningActiveFileInBackground(filePath: string): boolean {
+        for (const operation of this.activeOperations.values()) {
+            if (operation.type === OperationType.OPEN_ACTIVE_FILE) {
+                if (operation.file.path !== filePath) {
+                    continue;
+                }
+
+                return operation.active === false;
+            }
+        }
+
+        const now = Date.now();
+        const openedAt = this.recentBackgroundOpenByPath.get(filePath);
+        if (openedAt !== undefined) {
+            if (now - openedAt <= RECENT_BACKGROUND_OPEN_MARKER_TTL_MS) {
+                return true;
+            }
+            this.recentBackgroundOpenByPath.delete(filePath);
+        }
+
+        return false;
+    }
+
+    /**
      * Execute a file move operation with proper context tracking
      */
     async executeMoveFiles(
         files: TFile[],
-        targetFolder: TFolder
-    ): Promise<CommandResult<{ movedCount: number; skippedCount: number; errors: { filePath: string; error: unknown }[] }>> {
+        targetFolder: TFolder,
+        performMove: () => Promise<MoveFilesCommandData>
+    ): Promise<CommandResult<MoveFilesCommandData>> {
         const operationId = this.generateOperationId();
         const operation: MoveFileOperation = {
             id: operationId,
@@ -267,48 +315,8 @@ export class CommandQueueService {
         this.markActive(OperationType.MOVE_FILE);
 
         try {
-            let movedCount = 0;
-            let skippedCount = 0;
-            const errors: { filePath: string; error: unknown }[] = [];
-
-            // First, collect all valid moves (non-conflicting files)
-            const filesToMove: { file: TFile; newPath: string }[] = [];
-
-            for (const file of files) {
-                const base = targetFolder.path === '/' ? '' : `${targetFolder.path}/`;
-                const newPath = `${base}${file.name}`;
-
-                // Check for name conflicts
-                if (this.app.vault.getFileByPath(newPath)) {
-                    skippedCount++;
-                    continue;
-                }
-
-                filesToMove.push({ file, newPath });
-            }
-
-            // Move all non-conflicting files in parallel for instant operation
-            await Promise.allSettled(
-                filesToMove.map(async ({ file, newPath }) => {
-                    // Re-check just before move to avoid TOCTOU conflicts
-                    if (this.app.vault.getAbstractFileByPath(newPath)) {
-                        skippedCount++;
-                        return;
-                    }
-                    try {
-                        await this.app.fileManager.renameFile(file, newPath);
-                        movedCount++;
-                    } catch (err) {
-                        console.error('Error moving file:', file.path, err);
-                        errors.push({ filePath: file.path, error: err });
-                    }
-                })
-            );
-
-            return {
-                success: true,
-                data: { movedCount, skippedCount, errors }
-            };
+            const data = await performMove();
+            return { success: true, data };
         } catch (error) {
             return {
                 success: false,
@@ -439,13 +447,19 @@ export class CommandQueueService {
      * Execute opening a file in the active leaf. Ensures only the latest request runs
      * while preserving execution order to prevent stale opens from winning the race.
      */
-    async executeOpenActiveFile(file: TFile, openFile: () => Promise<void>): Promise<CommandResult<{ skipped: boolean }>> {
+    async executeOpenActiveFile(
+        file: TFile,
+        openFile: () => Promise<void>,
+        options?: { active?: boolean }
+    ): Promise<CommandResult<{ skipped: boolean }>> {
+        const active = options?.active ?? true;
         const operationId = this.generateOperationId();
         const operation: OpenActiveFileOperation = {
             id: operationId,
             type: OperationType.OPEN_ACTIVE_FILE,
             timestamp: Date.now(),
-            file
+            file,
+            active
         };
 
         this.latestOpenActiveFileOperationId = operationId;
@@ -461,6 +475,11 @@ export class CommandQueueService {
 
             try {
                 await openFile();
+                if (active === false) {
+                    const now = Date.now();
+                    this.recentBackgroundOpenByPath.set(file.path, now);
+                    this.cleanupRecentBackgroundOpens(now);
+                }
                 // Clear tracking if this is still the latest
                 if (this.latestOpenActiveFileOperationId === operationId) {
                     this.latestOpenActiveFileOperationId = null;

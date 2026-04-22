@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,55 @@ export function getPathFromDataAttribute(element: HTMLElement | null, attribute:
  * @param e - The keyboard event
  * @returns True if typing in an input field, false otherwise
  */
-export function isTypingInInput(e: KeyboardEvent): boolean {
-    const target = e.target as HTMLElement;
-    return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true';
+function isTypingInInput(e: KeyboardEvent): boolean {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) {
+        // Events from non-HTMLElement targets are treated as non-typing contexts.
+        return false;
+    }
+    // Input/textarea/contenteditable elements own text-entry keyboard behavior.
+    return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+}
+
+/**
+ * Checks whether keyboard handling should be ignored for this event context.
+ * Blocks shortcuts while typing or when a modal currently has focus.
+ *
+ * @param e - The keyboard event
+ * @returns True when pane keyboard handlers should ignore the event
+ */
+export function isKeyboardEventContextBlocked(e: KeyboardEvent): boolean {
+    if (isTypingInInput(e)) {
+        // Never run pane keyboard shortcuts while typing in editable controls.
+        return true;
+    }
+
+    if (typeof document === 'undefined') {
+        // Non-DOM environments cannot have modal focus; treat as unblocked.
+        return false;
+    }
+
+    const activeElement = document.activeElement;
+    // Obsidian modals should receive keyboard input without pane interception.
+    return activeElement instanceof HTMLElement && activeElement.closest('.modal-container') !== null;
+}
+
+/**
+ * Focuses an element without scrolling it into view when supported.
+ * On desktop (Electron/Chromium), focusing can trigger implicit scroll-into-view behavior.
+ * During single-pane pane transitions (translateX), that can cause horizontal overscroll/bounce.
+ */
+export function focusElementPreventScroll(element: HTMLElement): void {
+    try {
+        element.focus({ preventScroll: true });
+    } catch {
+        element.focus();
+    }
+}
+
+export function getTooltipPlacement(): 'left' | 'right' {
+    if (typeof document === 'undefined' || !document.body) {
+        return 'right';
+    }
+    return document.body.classList.contains('mod-rtl') ? 'left' : 'right';
 }

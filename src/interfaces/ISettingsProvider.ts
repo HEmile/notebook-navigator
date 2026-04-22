@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,4 +61,15 @@ export interface ISettingsProvider {
      * @param recentIcons - Map of provider id to ordered icon id list
      */
     setRecentIcons(recentIcons: Record<string, string[]>): void;
+
+    /**
+     * Gets the cached list of recently used colors stored outside of synced settings
+     */
+    getRecentColors(): string[];
+
+    /**
+     * Persists the cached list of recently used colors to vault-local storage
+     * @param recentColors - Ordered array of recent color values
+     */
+    setRecentColors(recentColors: string[]): void;
 }

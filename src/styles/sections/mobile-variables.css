@@ -1,0 +1,49 @@
+/* Source: src/styles/sections/mobile-variables.css */
+
+/* ========================================================================
+   Mobile-specific Folder Text Size
+   ======================================================================== */
+
+/* Mobile root variables */
+.nn-mobile {
+    --nn-nav-icon-size: 20px;
+    --nn-file-name-size-mobile: 16px;
+    --nn-file-small-size-mobile: 15px;
+    --nn-file-padding-vertical-mobile: calc(var(--nn-file-padding-vertical) + 4px);
+    --nn-file-padding-total-mobile: calc(var(--nn-file-padding-vertical-mobile) * 2);
+    --nn-file-icon-size-mobile: calc(var(--nn-file-icon-size) + 4px);
+    --nn-file-icon-slot-width-mobile: var(--nn-file-icon-size-mobile);
+    --nn-file-title-line-height: var(--nn-file-title-line-height-mobile);
+    --nn-file-single-text-line-height: var(--nn-file-single-text-line-height-mobile);
+    --nn-file-multiline-text-line-height: var(--nn-file-multiline-text-line-height-mobile);
+    --nn-date-header-height-mobile: calc(var(--nn-date-header-height) + 8px);
+    --nn-date-header-height-subsequent-mobile: calc(var(--nn-date-header-height-subsequent) + 8px);
+    --nn-date-header-padding-top-mobile: calc(var(--nn-date-header-padding-top) + 4px);
+    --nn-date-header-padding-bottom-mobile: calc(var(--nn-date-header-padding-bottom) + 2px);
+}
+
+/* Folder text size on mobile */
+.notebook-navigator-mobile .nn-navitem-name {
+    font-size: var(--nn-setting-nav-font-size-mobile);
+}
+
+/* Increase folder count size on mobile to match folder text */
+.notebook-navigator-mobile .nn-navitem-count {
+    font-size: var(--nn-navitem-count-font-size-mobile);
+}
+
+/* Mobile folder content padding adjustment for proper selection height */
+.notebook-navigator-mobile .nn-navitem-content {
+    padding: 0 var(--nn-nav-item-padding-horizontal);
+    padding-inline-start: 4px;
+    height: 100%;
+}
+
+.notebook-navigator-mobile .nn-navitem-indent-guide {
+    --nn-indent-guide-padding-inline-start: 4px;
+    --nn-indent-guide-chevron-slot-width: 32px;
+}
+
+.notebook-navigator-mobile .nn-root-reorder-remove {
+    font-size: var(--nn-setting-nav-font-size-mobile);
+}

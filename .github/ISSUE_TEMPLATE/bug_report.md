@@ -6,7 +6,7 @@ labels: 'bug'
 assignees: ''
 ---
 
-**Before submitting** Please check [⚠️ IMPORTANT! READ BEFORE POSTING NEW ISSUES ⚠️](https://github.com/johansan/notebook-navigator/issues/335) to see if this bug has already been fixed.
+**Important! Before submitting:** There are known issues with other plugins and sync services. Check: [Known issues with plugins, sync and themes](https://github.com/johansan/notebook-navigator/issues/363)
 
 **Describe the bug**
 
@@ -16,6 +16,7 @@ assignees: ''
 
 **Environment:**
 
-- Obsidian version:
-- Plugin version:
-- OS:
+- Obsidian version: 
+- Plugin version: 
+- Sync provider: 
+- OS: 

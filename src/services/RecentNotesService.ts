@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,9 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { TFile } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 import type { ISettingsProvider } from '../interfaces/ISettingsProvider';
 import { DEFAULT_SETTINGS } from '../settings';
+import { isFolderNote } from '../utils/folderNotes';
 
 /**
  * Manages the recent notes list stored in vault-local storage
@@ -31,6 +32,10 @@ export class RecentNotesService {
      * @returns true when the list changed
      */
     recordFileOpen(file: TFile): boolean {
+        if (this.shouldSkipFile(file)) {
+            return false;
+        }
+
         const path = file.path;
         const current = this.settingsProvider.getRecentNotes();
         const filtered = current.filter(entry => entry !== path);
@@ -48,6 +53,23 @@ export class RecentNotesService {
 
         this.settingsProvider.setRecentNotes(filtered);
         return true;
+    }
+
+    private shouldSkipFile(file: TFile): boolean {
+        if (this.settingsProvider.settings.hideRecentNotes !== 'folder-notes') {
+            return false;
+        }
+
+        const parent = file.parent;
+        if (!(parent instanceof TFolder)) {
+            return false;
+        }
+
+        return isFolderNote(file, parent, {
+            enableFolderNotes: true,
+            folderNoteName: this.settingsProvider.settings.folderNoteName,
+            folderNoteNamePattern: this.settingsProvider.settings.folderNoteNamePattern
+        });
     }
 
     /**

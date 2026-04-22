@@ -1,0 +1,127 @@
+/* Source: src/styles/sections/state-drag-and-drop.css */
+
+/* ========================================================================
+   Drag and Drop States
+   ======================================================================== */
+
+/* Dragging state - visual feedback during drag operations */
+.nn-dragging {
+    opacity: 0.5;
+}
+
+/* Resizing state - prevents text selection during pane resize */
+body.nn-resizing {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Drag over state - highlights valid drop targets */
+.nn-navitem.nn-drag-over {
+    background-color: var(--text-selection);
+    border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+}
+
+.nn-list-pane-scroller.nn-drag-over {
+    outline: 2px solid var(--text-selection);
+    outline-offset: -2px;
+}
+
+/* Disable drag and drop feedback on mobile */
+.notebook-navigator-mobile [draggable='true'] {
+    cursor: default !important;
+}
+
+.notebook-navigator-mobile .nn-drag-over {
+    background-color: transparent !important;
+}
+
+/* Special visual feedback for tag drop zones - uses pre-composited solid color */
+[data-drop-zone='tag'].nn-drag-over {
+    background-color: var(--nn-computed-tag-positive-bg, var(--nn-theme-tag-positive-bg));
+    border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+}
+
+[data-drop-zone='tag-root'].nn-drag-over {
+    background-color: var(--nn-computed-tag-positive-bg, var(--nn-theme-tag-positive-bg));
+    border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+}
+
+/* Different style for untagged drop zone - uses pre-composited solid color */
+[data-drop-zone='tag'][data-tag='__untagged__'].nn-drag-over {
+    background-color: var(--nn-computed-tag-negative-bg, var(--nn-theme-tag-negative-bg));
+    border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+}
+
+/* Empty placeholder to hide browser's default drag preview */
+.nn-drag-empty-placeholder {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    left: -9999px;
+    top: -9999px;
+    opacity: 0;
+}
+
+/* Drag ghost element - follows the cursor during drag */
+.nn-drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 999999;
+    opacity: 0.9;
+    will-change: transform;
+    left: 0;
+    top: 0;
+    transform: translate(var(--nn-drag-ghost-x, -1000px), var(--nn-drag-ghost-y, -1000px));
+}
+
+/* Badge shown on drag ghost for multiple files - Apple-style red badge */
+.nn-drag-ghost-badge {
+    background-color: #dc3545;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Icon shown on drag ghost for single file/folder - dark circular background */
+.nn-drag-ghost-icon {
+    background-color: #000000; /* Default black for light mode */
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode: use dark gray background */
+.theme-dark .nn-drag-ghost-icon {
+    background-color: var(--background-modifier-border-hover);
+}
+
+/* Style the Lucide icon inside drag ghost - white icon */
+.nn-drag-ghost-icon svg {
+    width: 16px;
+    height: 16px;
+    color: #ffffff;
+    stroke: #ffffff;
+    stroke-width: 2.5;
+    fill: none;
+}
+
+/* Header actions layout variations 
+   Different layouts are needed for mobile vs desktop views:
+   - space-between: Mobile file pane (back button + folder name + actions)
+*/
+.nn-header-actions--space-between {
+    width: 100%;
+    justify-content: space-between;
+}

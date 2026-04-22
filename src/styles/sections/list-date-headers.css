@@ -1,0 +1,142 @@
+/* Source: src/styles/sections/list-date-headers.css */
+
+/* ========================================================================
+   Date Group Headers
+   ======================================================================== */
+
+/* Date group headers for grouped files */
+.nn-date-group-header {
+    height: var(--nn-date-header-height-subsequent-mobile, var(--nn-date-header-height-subsequent));
+    box-sizing: border-box;
+    padding: var(--nn-date-header-padding-top-mobile, var(--nn-date-header-padding-top)) var(--nn-file-item-padding-horizontal)
+        var(--nn-date-header-padding-bottom-mobile, var(--nn-date-header-padding-bottom)) var(--nn-file-item-padding-horizontal);
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    font-weight: var(--nn-theme-list-group-header-font-weight);
+    color: var(--nn-theme-list-group-header-color);
+    background-color: transparent !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+/* First date header - no top margin or extra padding for first group */
+.nn-date-group-header.nn-first-header {
+    height: var(--nn-date-header-height-mobile, var(--nn-date-header-height));
+    padding: 0 var(--nn-file-item-padding-horizontal);
+    align-items: center;
+}
+
+.nn-date-group-header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--nn-date-header-icon-size, var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)));
+    height: var(--nn-date-header-icon-size, var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)));
+    color: var(--nn-theme-list-group-header-color);
+    flex: 0 0 auto;
+}
+
+.nn-date-group-header-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.nn-date-group-header-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nn-date-group-header-text--folder-note {
+    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration) !important;
+}
+
+.nn-date-group-header-text--folder-note:hover {
+    cursor: pointer;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration) !important;
+}
+
+.nn-pinned-section-header {
+    align-items: center;
+}
+
+/* Virtual list item - absolute positioning for list pane items */
+.nn-list-pane-scroller .nn-virtual-item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+/* Skeleton view - minimal loading state */
+.nn-skeleton-navigation-pane {
+    background-color: var(--nn-theme-nav-bg);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-skeleton-list-pane {
+    background-color: var(--nn-theme-list-bg);
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-skeleton-navigation-pane-vertical {
+    width: 100%;
+    min-height: var(--nn-navigation-pane-min-height);
+    flex: 0 1 auto;
+}
+
+.nn-skeleton-list-pane-vertical {
+    min-height: var(--nn-list-pane-min-height);
+}
+
+.nn-skeleton-nav-header {
+    height: 32px;
+    background-color: var(--nn-theme-nav-bg);
+    flex-shrink: 0;
+}
+
+/* Add right border to nav header in dual pane mode */
+.nn-split-container.nn-orientation-horizontal:not(.nn-single-pane) .nn-skeleton-nav-header {
+    border-right: 1px solid var(--nn-theme-divider-border-color);
+}
+
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-skeleton-nav-header {
+    border-right: none;
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
+}
+
+.nn-skeleton-list-header {
+    height: 32px;
+    background-color: var(--nn-theme-list-bg);
+    flex-shrink: 0;
+}
+
+.nn-skeleton-content {
+    flex: 1;
+    overflow: hidden;
+    background-color: inherit;
+}
+
+.nn-skeleton-search-bar {
+    height: 40px;
+    background-color: var(--nn-theme-list-bg);
+    flex-shrink: 0;
+}
+
+/* Add right border only to nav content area in dual pane mode */
+.nn-split-container.nn-orientation-horizontal:not(.nn-single-pane) .nn-skeleton-navigation-pane .nn-skeleton-content {
+    border-right: 1px solid var(--nn-theme-divider-border-color);
+}
+
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-skeleton-navigation-pane .nn-skeleton-content {
+    border-right: none;
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
+}

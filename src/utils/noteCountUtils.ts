@@ -1,19 +1,43 @@
+/*
+ * Notebook Navigator - Plugin for Obsidian
+ * Copyright (c) 2025-2026 Johan Sanneblad
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import type { App } from 'obsidian';
 import { TFile, TFolder } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../settings/types';
 import type { NoteCountInfo } from '../types/noteCounts';
-import { shouldDisplayFile } from './fileTypeUtils';
-import { shouldExcludeFile, shouldExcludeFolder } from './fileFilters';
+import { shouldDisplayFile, type FileVisibility } from './fileTypeUtils';
+import type { HiddenFileNameMatcher } from './fileFilters';
+import { createFrontmatterPropertyExclusionMatcher, shouldExcludeFileWithMatcher, shouldExcludeFolder } from './fileFilters';
 import { isFolderNote, type FolderNoteDetectionSettings } from './folderNotes';
+import type { HiddenTagVisibility } from './tagPrefixMatcher';
+import { type CachedFileTagsDB, getCachedFileTags } from './tagUtils';
 
 /**
  * Options for calculating note counts in folders
  */
 export interface FolderNoteCountOptions {
     app: App;
-    fileVisibility: NotebookNavigatorSettings['fileVisibility'];
-    excludedFiles: NotebookNavigatorSettings['excludedFiles'];
-    excludedFolders: NotebookNavigatorSettings['excludedFolders'];
+    db?: CachedFileTagsDB | null;
+    fileVisibility: FileVisibility;
+    excludedFiles: string[];
+    excludedFileMatcher?: ReturnType<typeof createFrontmatterPropertyExclusionMatcher>;
+    excludedFolders: string[];
+    fileNameMatcher: HiddenFileNameMatcher | null;
+    hiddenFileTagVisibility: HiddenTagVisibility | null;
     includeDescendants: boolean;
     showHiddenFolders: boolean;
     hideFolderNoteInList: boolean;
@@ -34,6 +58,7 @@ export function calculateFolderNoteCounts(folder: TFolder, options: FolderNoteCo
 
     let current = 0;
     let descendants = 0;
+    const excludedFileMatcher = options.excludedFileMatcher ?? createFrontmatterPropertyExclusionMatcher(options.excludedFiles);
 
     // Process each child item in the folder
     for (const child of folder.children) {
@@ -47,10 +72,21 @@ export function calculateFolderNoteCounts(folder: TFolder, options: FolderNoteCo
                 continue;
             }
 
+            const hiddenFileTagVisibility = options.hiddenFileTagVisibility;
+            let hiddenByTags = false;
+            if (hiddenFileTagVisibility && hiddenFileTagVisibility.hasHiddenRules && child.extension === 'md') {
+                const tags = getCachedFileTags({ app: options.app, file: child, db: options.db });
+                if (tags.some(tag => !hiddenFileTagVisibility.isTagVisible(tag))) {
+                    hiddenByTags = true;
+                }
+            }
+
             // Count files that pass visibility and exclusion checks
             if (
                 shouldDisplayFile(child, options.fileVisibility, options.app) &&
-                !shouldExcludeFile(child, options.excludedFiles, options.app)
+                !(options.fileNameMatcher && options.fileNameMatcher.matches(child)) &&
+                !shouldExcludeFileWithMatcher(child, excludedFileMatcher, options.app) &&
+                !hiddenByTags
             ) {
                 current += 1;
             }

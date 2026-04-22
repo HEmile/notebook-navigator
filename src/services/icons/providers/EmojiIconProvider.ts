@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,25 +16,33 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { IconProvider, IconDefinition } from '../types';
-import { isValidEmoji, extractFirstEmoji } from '../../../utils/emojiUtils';
+import { IconProvider, IconDefinition, IconRenderResult } from '../types';
+import { extractFirstEmoji } from '../../../utils/emojiUtils';
 import * as emojilib from 'emojilib';
+import { resetIconContainer } from './providerUtils';
+
+/**
+ * Type guard to check if a value is an array of strings.
+ * Used to validate emoji keyword data from the emojilib library.
+ */
+function isKeywordList(value: unknown): value is string[] {
+    return Array.isArray(value) && value.every(entry => typeof entry === 'string');
+}
 
 /**
  * Icon provider for emoji icons.
- *
- * This provider allows users to use any emoji as an icon for folders and tags.
- * It supports:
- * - Direct emoji input (e.g., "📁", "🏠", "⭐")
- * - Emoji search by keyword using the emojilib library
- * - Automatic validation and extraction of emojis from mixed input
- *
- * The provider integrates seamlessly with the icon service, rendering emojis
- * as text with appropriate sizing and styling.
  */
 export class EmojiIconProvider implements IconProvider {
     id = 'emoji';
     name = 'Emoji';
+
+    /**
+     * Emojis have no version information
+     * @returns Always null for emoji provider
+     */
+    getVersion(): string | null {
+        return null;
+    }
 
     /**
      * Checks if the emoji provider is available.
@@ -51,8 +59,12 @@ export class EmojiIconProvider implements IconProvider {
      * @param emojiId - The emoji character(s) to render
      * @param size - Optional size in pixels for the emoji
      */
-    render(container: HTMLElement, emojiId: string, size?: number): void {
-        container.empty();
+    render(container: HTMLElement, emojiId: string, size?: number): IconRenderResult {
+        resetIconContainer(container);
+        if (!emojiId) {
+            return 'not-found';
+        }
+
         container.addClass('nn-emoji-icon');
         container.setText(emojiId);
 
@@ -63,7 +75,14 @@ export class EmojiIconProvider implements IconProvider {
             container.style.width = `${size}px`;
             container.style.height = `${size}px`;
             container.style.lineHeight = `${size}px`;
+        } else {
+            container.style.removeProperty('font-size');
+            container.style.removeProperty('width');
+            container.style.removeProperty('height');
+            container.style.removeProperty('line-height');
         }
+
+        return 'rendered';
     }
 
     /**
@@ -77,11 +96,8 @@ export class EmojiIconProvider implements IconProvider {
             return [];
         }
 
-        // Check if the query itself is a valid emoji or can be extracted as one
-        const extractedEmoji = extractFirstEmoji(query);
-        const isValid = isValidEmoji(query);
-
-        const emoji = extractedEmoji || (isValid ? query : null);
+        // Check if the query itself is a valid emoji or starts with one
+        const emoji = extractFirstEmoji(query);
 
         if (emoji) {
             // Return the emoji as a search result
@@ -100,8 +116,10 @@ export class EmojiIconProvider implements IconProvider {
 
         // Search through emojilib
         for (const [emoji, keywords] of Object.entries(emojilib)) {
-            // Skip non-emoji entries (like the _lib key)
-            if (!Array.isArray(keywords)) continue;
+            // Skip non-emoji entries and entries without keywords
+            if (!isKeywordList(keywords) || keywords.length === 0) {
+                continue;
+            }
 
             // Check if any keyword matches the search query
             const matches = keywords.some(keyword => keyword.toLowerCase().includes(searchLower));

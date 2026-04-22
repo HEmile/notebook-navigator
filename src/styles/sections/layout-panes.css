@@ -1,0 +1,192 @@
+/* Source: src/styles/sections/layout-panes.css */
+
+/* ========================================================================
+   Pane Layout
+   ======================================================================== */
+
+/* Navigation pane - contains the folder tree navigation */
+.nn-navigation-pane {
+    flex: 0 0 auto; /* Don't grow or shrink, use explicit width */
+    min-width: var(--nn-navigation-pane-min-width);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: var(--nn-theme-nav-bg);
+    border-right: 1px solid var(--nn-theme-divider-border-color);
+    position: relative; /* Enables absolute positioning for resize handles */
+
+    /* Performance optimization for virtualized content */
+    contain: layout style;
+}
+
+/* Right pane - contains the file list */
+.nn-list-pane {
+    flex: 1;
+    min-width: var(--nn-list-pane-min-width);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: var(--nn-theme-list-bg);
+    position: relative; /* Enable absolute positioning for resize handle */
+
+    /* Performance optimization for virtualized content */
+    contain: layout style;
+}
+
+/* Override backgrounds when desktop background mode is set to primary or secondary */
+/* Primary mode: use list background for navigation pane */
+.nn-split-container.nn-desktop.nn-bg-primary {
+    --nn-theme-nav-bg: var(--nn-theme-list-bg);
+}
+
+/* Secondary mode: use navigation background for list pane */
+.nn-split-container.nn-desktop.nn-bg-secondary {
+    --nn-theme-list-bg: var(--nn-theme-nav-bg);
+}
+
+/* Mobile pane backgrounds follow --nn-theme-mobile-bg */
+.nn-split-container.nn-mobile {
+    --nn-theme-nav-bg: var(--nn-theme-mobile-bg);
+    --nn-theme-list-bg: var(--nn-theme-mobile-bg);
+}
+
+.notebook-navigator-mobile .nn-navigation-pane {
+    border-right: none;
+}
+
+.nn-split-container.nn-orientation-vertical {
+    flex-direction: column;
+}
+
+.nn-split-container.nn-orientation-vertical .nn-navigation-pane {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--nn-navigation-pane-min-height);
+    flex: 0 1 auto;
+}
+
+.nn-split-container.nn-orientation-vertical .nn-list-pane {
+    min-width: 0;
+    width: 100%;
+    min-height: var(--nn-list-pane-min-height);
+}
+
+.nn-split-container.nn-orientation-vertical .nn-navigation-pane {
+    border-right: none;
+}
+
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-navigation-pane {
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
+}
+
+/* Pane divider resize handle - overlay on the left edge of list pane */
+.nn-resize-handle {
+    width: 3px;
+    background-color: transparent;
+    cursor: col-resize;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.nn-split-container.nn-orientation-vertical .nn-resize-handle {
+    width: 100%;
+    height: 3px;
+    cursor: row-resize;
+    bottom: auto;
+    right: 0;
+}
+
+/* Pane divider resize handle hover state - provides visual feedback */
+.nn-resize-handle:hover {
+    background-color: var(--nn-theme-divider-resize-handle-hover-bg);
+}
+
+/* Pane divider resize handle active state - maintains visibility during resize */
+.nn-split-container.nn-resizing .nn-resize-handle {
+    background-color: var(--nn-theme-divider-resize-handle-hover-bg);
+}
+
+/* ========================================================================
+   Single-pane Layout
+   ======================================================================== */
+
+/* Single-pane container - use grid for consistent structure while allowing sliding */
+.nn-split-container.nn-single-pane {
+    display: grid;
+    grid-template-columns: 100%;
+    grid-template-rows: minmax(0, 1fr) auto;
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+}
+
+/* Single-pane panes - positioned in grid and animated with transforms */
+.nn-split-container.nn-single-pane .nn-navigation-pane,
+.nn-split-container.nn-single-pane .nn-list-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100%;
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 0;
+    transition: transform var(--nn-pane-transition-duration) var(--nn-pane-transition-timing);
+}
+
+.nn-split-container.nn-single-pane .nn-single-pane-calendar {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+/* Disable transitions for one-frame mode changes (dual-pane -> single-pane) */
+.nn-split-container.nn-single-pane.nn-suppress-pane-transitions .nn-navigation-pane,
+.nn-split-container.nn-single-pane.nn-suppress-pane-transitions .nn-list-pane {
+    transition: none;
+}
+
+.nn-split-container.nn-single-pane.nn-pane-transitioning .nn-navigation-pane,
+.nn-split-container.nn-single-pane.nn-pane-transitioning .nn-list-pane {
+    will-change: transform;
+}
+
+/* Single-pane view states - show navigation view */
+.nn-split-container.nn-single-pane.show-navigation .nn-navigation-pane {
+    transform: none;
+}
+
+.nn-split-container.nn-single-pane.show-navigation .nn-list-pane {
+    transform: translateX(100%);
+}
+
+/* Single-pane view states - show files view */
+.nn-split-container.nn-single-pane.show-files .nn-navigation-pane {
+    transform: translateX(-100%);
+}
+
+.nn-split-container.nn-single-pane.show-files .nn-list-pane {
+    transform: none;
+}
+
+/* ========================================================================
+   Mobile Layout
+   ======================================================================== */
+
+/* Make navigation pane flexible on mobile to handle resize gracefully */
+.notebook-navigator-mobile .nn-navigation-pane {
+    flex: 1;
+    background-color: var(--nn-theme-nav-bg) !important;
+}
+
+/* Hide resize handle on mobile */
+.notebook-navigator-mobile .nn-resize-handle {
+    display: none !important;
+}
+
+/* Add touch-action to prevent browser gestures interfering */
+.notebook-navigator-mobile .nn-split-container {
+    touch-action: pan-y;
+}

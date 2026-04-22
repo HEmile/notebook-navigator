@@ -1,0 +1,58 @@
+/* Source: src/styles/sections/layout-spacers.css */
+
+/* ========================================================================
+   Pane Spacers
+   ======================================================================== */
+
+/* Navigation pane spacers - provide visual breathing room in the list */
+.nn-nav-top-spacer {
+    height: 8px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.nn-nav-bottom-spacer {
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.nn-nav-list-spacer {
+    height: 8px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.nn-nav-root-spacer {
+    height: var(--nn-nav-root-spacing, 0px);
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+.nn-nav-spacer--with-separator::after {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--nn-scroller-padding));
+    right: calc(-1 * var(--nn-scroller-padding));
+    top: calc(50% - (var(--nn-theme-nav-separator-height, 1px) / 2));
+    height: var(--nn-theme-nav-separator-height, 1px);
+    background: var(
+        --nn-theme-nav-separator-background,
+        linear-gradient(
+            90deg,
+            transparent 0%,
+            var(--nn-theme-nav-separator-color) 15%,
+            var(--nn-theme-nav-separator-color) 85%,
+            transparent 100%
+        )
+    );
+    opacity: var(--nn-theme-nav-separator-opacity, 0.3);
+}
+
+/* List pane spacers - match navigation pane for consistency */
+.nn-list-top-spacer {
+    height: 8px;
+}
+
+.nn-list-bottom-spacer {
+    height: 20px;
+}

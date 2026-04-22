@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,6 +52,27 @@ interface OmnisearchApi {
     registerOnIndexed: (callback: () => void) => void;
     unregisterOnIndexed: (callback: () => void) => void;
 }
+
+/**
+ * Optional query-shaping options for Omnisearch requests.
+ *
+ * `pathScope` appends a `path:"..."` filter to the outgoing query when it is
+ * safe to do so. This lets Omnisearch apply folder restriction internally
+ * before returning ranked results.
+ */
+interface OmnisearchSearchOptions {
+    pathScope?: string;
+}
+
+// Restrict scope injection to printable ASCII only.
+// This avoids known path-filter issues when Omnisearch normalizes diacritics.
+const ASCII_PATH_SCOPE_REGEX = /^[\x20-\x7E]+$/;
+// Restrict to simple path characters so the appended query segment remains stable.
+// Quotes and escape sequences are intentionally excluded.
+const SIMPLE_PATH_SCOPE_REGEX = /^[A-Za-z0-9 _./-]+$/;
+// Detect user-supplied path filters and preserve user intent.
+// Supports both `path:` and `-path:`.
+const HAS_PATH_FILTER_REGEX = /(^|\s)-?path\s*:/i;
 
 /**
  * Type guard to verify that a file is a regular file (TFile) and not a folder.
@@ -141,6 +162,47 @@ function normalizeMatches(matches: SearchMatchApi[]): OmnisearchMatch[] {
 }
 
 /**
+ * Checks whether a folder scope is safe to inject into an Omnisearch query.
+ *
+ * The safety rules intentionally conservative:
+ * - empty strings are rejected
+ * - only printable ASCII is accepted
+ * - only basic path characters are accepted
+ *
+ * If this check fails we keep the original query unchanged.
+ */
+function isSafePathScope(path: string): boolean {
+    const normalized = path.trim();
+    if (!normalized) {
+        return false;
+    }
+    return ASCII_PATH_SCOPE_REGEX.test(normalized) && SIMPLE_PATH_SCOPE_REGEX.test(normalized);
+}
+
+/**
+ * Builds the query that will be sent to Omnisearch.
+ *
+ * Rules:
+ * - if no valid scope is provided, return the query unchanged
+ * - if the user already included `path:` in their query, do not override it
+ * - otherwise append a scoped `path:"..."` clause
+ *
+ * Appending a path clause allows Omnisearch to apply path filtering within its
+ * own search pipeline. Notebook Navigator still performs post-filtering by the
+ * current view scope after results are returned.
+ */
+function buildScopedQuery(query: string, options?: OmnisearchSearchOptions): string {
+    const pathScope = options?.pathScope?.trim();
+    if (!pathScope || !isSafePathScope(pathScope)) {
+        return query;
+    }
+    if (HAS_PATH_FILTER_REGEX.test(query)) {
+        return query;
+    }
+    return `${query} path:"${pathScope}"`;
+}
+
+/**
  * Service wrapper around the Omnisearch community plugin API.
  * Provides type-safe access to Omnisearch functionality with automatic fallback handling.
  *
@@ -197,6 +259,7 @@ export class OmnisearchService {
      * Executes a full-text search through the Omnisearch API.
      *
      * @param query - The search query string to execute
+     * @param options - Optional query shaping options
      * @returns Promise resolving to an array of search hits with file references and match data.
      *          Returns empty array if Omnisearch is unavailable or if an error occurs.
      *
@@ -204,37 +267,45 @@ export class OmnisearchService {
      * - Invalid or non-file results are filtered out silently
      * - Results include match excerpts and highlighted segments
      * - Files that no longer exist in the vault are automatically excluded
+     * - pathScope is appended as path:"..." only for ASCII/simple folder paths
      */
-    public async search(query: string): Promise<OmnisearchHit[]> {
+    public async search(query: string, options?: OmnisearchSearchOptions): Promise<OmnisearchHit[]> {
         const api = this.resolveApi();
         if (!api) {
             return [];
         }
 
-        const rawResults = await api.search(query);
-        const hits: OmnisearchHit[] = [];
+        try {
+            // Use the scoped query when safe; otherwise this is exactly `query`.
+            const scopedQuery = buildScopedQuery(query, options);
+            // Omnisearch's public API accepts one query string and returns ranked hits.
+            const rawResults = await api.search(scopedQuery);
+            const hits: OmnisearchHit[] = [];
 
-        for (const raw of rawResults) {
-            if (!isResultNoteApi(raw)) {
-                continue;
-            }
-            const file = this.app.vault.getAbstractFileByPath(raw.path);
-            if (!isTFile(file)) {
-                continue;
+            for (const raw of rawResults) {
+                if (!isResultNoteApi(raw)) {
+                    continue;
+                }
+                const file = this.app.vault.getAbstractFileByPath(raw.path);
+                if (!isTFile(file)) {
+                    continue;
+                }
+
+                hits.push({
+                    file,
+                    path: raw.path,
+                    basename: raw.basename,
+                    score: raw.score,
+                    excerpt: raw.excerpt,
+                    matches: normalizeMatches(raw.matches),
+                    foundWords: Array.isArray(raw.foundWords) ? raw.foundWords.filter(word => typeof word === 'string') : []
+                });
             }
 
-            hits.push({
-                file,
-                path: raw.path,
-                basename: raw.basename,
-                score: raw.score,
-                excerpt: raw.excerpt,
-                matches: normalizeMatches(raw.matches),
-                foundWords: Array.isArray(raw.foundWords) ? raw.foundWords.filter(word => typeof word === 'string') : []
-            });
+            return hits;
+        } catch {
+            return [];
         }
-
-        return hits;
     }
 
     /**

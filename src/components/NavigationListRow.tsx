@@ -1,8 +1,27 @@
+/*
+ * Notebook Navigator - Plugin for Obsidian
+ * Copyright (c) 2025-2026 Johan Sanneblad
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import React, { useMemo, useEffect, useRef, useCallback } from 'react';
-import type { CSSProperties, DragEvent } from 'react';
+import type { CSSProperties } from 'react';
+import type { DraggableSyntheticListeners } from '@dnd-kit/core';
 import { useSettingsState } from '../context/SettingsContext';
 import { getIconService, useIconServiceVersion } from '../services/icons';
-import type { ListReorderHandlers } from '../hooks/useListReorder';
+import type { ListReorderHandlers } from '../types/listReorder';
 import { ObsidianIcon } from './ObsidianIcon';
 import { setIcon } from 'obsidian';
 
@@ -10,19 +29,25 @@ import { setIcon } from 'obsidian';
  * Configuration for the drag handle element that appears in reorderable rows
  */
 export interface DragHandleConfig {
-    label: string; // Accessibility label for the drag handle
     only?: boolean; // If true, only the handle is draggable, not the entire row
     disabled?: boolean; // Disables drag functionality
     visible?: boolean; // Controls visibility of the drag handle
     icon?: string; // Custom icon for the drag handle
+    interactive?: boolean; // Forces interactive styling even when drag is disabled
+    events?: {
+        // Event handlers for click and context menu on the drag handle
+        onClick?: (event: React.MouseEvent<HTMLSpanElement>) => void;
+        onContextMenu?: (event: React.MouseEvent<HTMLSpanElement>) => void;
+    };
 }
 
 /**
- * Props for a navigation list row component that supports icons, counts, actions, and drag-and-drop reordering
+ * Props for a navigation list row component that supports icons, counts, trailing accessories, and drag-and-drop reordering
  */
 interface NavigationListRowProps {
     icon: string;
     color?: string;
+    backgroundColor?: string;
     label: string;
     description?: string;
     level: number;
@@ -30,33 +55,40 @@ interface NavigationListRowProps {
     role?: 'treeitem' | 'listitem';
     tabIndex?: number;
     ariaDisabled?: boolean;
-    ariaGrabbed?: boolean;
     isDisabled?: boolean;
     isExcluded?: boolean;
     onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
     onMouseDown?: (event: React.MouseEvent<HTMLDivElement>) => void;
     onContextMenu?: (event: React.MouseEvent<HTMLDivElement>) => void;
     dragHandlers?: ListReorderHandlers;
-    showDropIndicatorBefore?: boolean;
-    showDropIndicatorAfter?: boolean;
     isDragSource?: boolean;
     showCount?: boolean;
     count?: number | string;
-    actions?: React.ReactNode;
+    countSlot?: React.ReactNode;
     dragHandleConfig?: DragHandleConfig;
     className?: string;
     chevronIcon?: string;
     labelClassName?: string;
     onLabelClick?: (event: React.MouseEvent<HTMLSpanElement>) => void;
+    onLabelMouseDown?: (event: React.MouseEvent<HTMLSpanElement>) => void;
+    trailingAccessory?: React.ReactNode;
+    showIcon?: boolean;
+    dragRef?: (node: HTMLDivElement | null) => void;
+    dragHandleRef?: (node: HTMLSpanElement | null) => void;
+    dragAttributes?: React.HTMLAttributes<HTMLElement>;
+    dragListeners?: DraggableSyntheticListeners;
+    dragStyle?: CSSProperties;
+    isSorting?: boolean;
 }
 
 /**
- * Renders a navigation list row with support for icons, counts, actions, and drag-and-drop reordering.
+ * Renders a navigation list row with support for icons, counts, trailing accessories, and drag-and-drop reordering.
  * Used for displaying items in navigation panes like shortcuts, tags, and folders.
  */
 export function NavigationListRow({
     icon,
     color,
+    backgroundColor,
     label,
     level,
     itemType,
@@ -67,21 +99,27 @@ export function NavigationListRow({
     onMouseDown,
     onContextMenu,
     dragHandlers,
-    showDropIndicatorBefore,
-    showDropIndicatorAfter,
     isDragSource,
     showCount,
     count,
-    actions,
+    countSlot,
     dragHandleConfig,
     className,
     chevronIcon,
     role = 'treeitem',
     tabIndex,
     ariaDisabled,
-    ariaGrabbed,
     labelClassName,
-    onLabelClick
+    onLabelClick,
+    onLabelMouseDown,
+    trailingAccessory,
+    showIcon = true,
+    dragRef,
+    dragHandleRef,
+    dragAttributes,
+    dragListeners,
+    dragStyle,
+    isSorting
 }: NavigationListRowProps) {
     const settings = useSettingsState();
     const chevronRef = useRef<HTMLSpanElement>(null);
@@ -106,16 +144,16 @@ export function NavigationListRow({
             classList.push('nn-shortcut-disabled');
         }
         if (isExcluded) {
-            classList.push('nn-shortcut-excluded');
-        }
-        if (isDragSource) {
-            classList.push('nn-shortcut-drag-source');
+            classList.push('nn-excluded');
         }
         if (dragHandleConfig?.visible) {
             classList.push('nn-drag-item-has-handle');
         }
+        if (backgroundColor) {
+            classList.push('nn-has-custom-background');
+        }
         return classList.join(' ');
-    }, [className, dragHandleConfig?.visible, isDisabled, isDragSource, isExcluded]);
+    }, [backgroundColor, className, dragHandleConfig?.visible, isDisabled, isExcluded]);
 
     // Builds CSS classes for the label element, combining base class with optional custom class
     const labelClasses = useMemo(() => {
@@ -123,8 +161,11 @@ export function NavigationListRow({
         if (labelClassName) {
             classList.push(labelClassName);
         }
+        if (applyColorToLabel && color) {
+            classList.push('nn-has-custom-color');
+        }
         return classList.join(' ');
-    }, [labelClassName]);
+    }, [applyColorToLabel, color, labelClassName]);
 
     // Renders chevron icon when provided, clearing it for rows without chevrons
     useEffect(() => {
@@ -147,49 +188,30 @@ export function NavigationListRow({
             return;
         }
 
-        if (!settings.showIcons) {
+        if (!showIcon) {
             iconRef.current.textContent = '';
             return;
         }
 
         const iconService = getIconService();
         iconService.renderIcon(iconRef.current, icon);
-    }, [icon, iconVersion, settings.showIcons]);
+    }, [icon, iconVersion, showIcon]);
 
     // Determines drag and drop behavior based on handlers and configuration
     // Supports both full-row dragging and handle-only dragging modes
-    const draggable = dragHandlers?.draggable ?? false;
+    const hasDndKitListeners = Boolean(dragListeners);
     const handleVisible = Boolean(dragHandleConfig?.visible);
     const handleOnly = dragHandleConfig?.only === true;
     const handleDisabled = dragHandleConfig?.disabled === true;
-    const handleInteractive = handleVisible && draggable && !handleDisabled;
-    const rowDraggable = draggable && !handleOnly;
+    const handleAllowsDrag = handleVisible && !handleDisabled && hasDndKitListeners;
+    const handleLooksInteractive = handleAllowsDrag || dragHandleConfig?.interactive === true;
+    const handleOnlyActive = handleOnly && hasDndKitListeners;
+    const bindToHandle = handleOnlyActive;
     // Check if count has a valid value - supports both numeric counts and string labels
     const hasCountValue = typeof count === 'number' ? count > 0 : typeof count === 'string' ? count.length > 0 : false;
-    // Determine if count badge should be displayed based on settings and valid count value
-    const shouldShowCount = Boolean(showCount && hasCountValue);
-
-    // Handles drag start event for the drag handle - sets custom drag image from parent row
-    // This ensures the entire row appears as the drag image, not just the handle
-    const handleDragStart =
-        handleInteractive && dragHandlers?.onDragStart
-            ? (event: DragEvent<HTMLElement>) => {
-                  const parentRow = event.currentTarget.closest('.nn-drag-item');
-                  if (parentRow instanceof HTMLElement) {
-                      try {
-                          const rect = parentRow.getBoundingClientRect();
-                          const offsetX = event.clientX - rect.left;
-                          const offsetY = event.clientY - rect.top;
-                          event.dataTransfer.setDragImage(parentRow, offsetX, offsetY);
-                      } catch {
-                          // Ignore platforms that do not support custom drag images
-                      }
-                  }
-                  dragHandlers.onDragStart(event);
-              }
-            : undefined;
-
-    const handleDragEnd = handleInteractive ? dragHandlers?.onDragEnd : undefined;
+    const hasCountSlot = countSlot !== undefined && countSlot !== null;
+    // Determine if count badge should be displayed based on settings and valid count content
+    const shouldShowCount = Boolean(showCount && (hasCountValue || hasCountSlot));
 
     // Handles click events on the label element, preventing event propagation to parent row
     const handleLabelClick = useCallback(
@@ -203,32 +225,86 @@ export function NavigationListRow({
         [onLabelClick]
     );
 
+    const handleLabelMouseDown = useCallback(
+        (event: React.MouseEvent<HTMLSpanElement>) => {
+            if (!onLabelMouseDown) {
+                return;
+            }
+            event.stopPropagation();
+            onLabelMouseDown(event);
+        },
+        [onLabelMouseDown]
+    );
+
+    const rowStyle = useMemo(() => {
+        if (!backgroundColor) {
+            return { '--level': level } as CSSProperties;
+        }
+        return {
+            '--level': level,
+            '--nn-navitem-custom-bg-color': backgroundColor
+        } as CSSProperties;
+    }, [backgroundColor, level]);
+
+    const combinedRowStyle = useMemo(() => {
+        if (!dragStyle) {
+            return rowStyle;
+        }
+        return { ...rowStyle, ...dragStyle };
+    }, [dragStyle, rowStyle]);
+
+    const rowDragAttributes = useMemo(() => {
+        if (!dragAttributes) {
+            return undefined;
+        }
+        const { role: _role, tabIndex: _tabIndex, ...rest } = dragAttributes;
+        void _role;
+        void _tabIndex;
+        return rest;
+    }, [dragAttributes]);
+
+    const setRowRef = useCallback(
+        (node: HTMLDivElement | null) => {
+            if (dragRef) {
+                dragRef(node);
+            }
+        },
+        [dragRef]
+    );
+
+    const setHandleRef = useCallback(
+        (node: HTMLSpanElement | null) => {
+            if (dragHandleRef) {
+                dragHandleRef(node);
+            }
+        },
+        [dragHandleRef]
+    );
+
+    const handleActive = isDragSource || isSorting;
+
     return (
         <div
+            ref={setRowRef}
             className={classes}
             role={role}
             tabIndex={tabIndex}
             aria-disabled={ariaDisabled || undefined}
-            aria-grabbed={ariaGrabbed ? true : undefined}
             data-nav-item-type={itemType}
             data-nav-item-disabled={isDisabled ? 'true' : undefined}
             data-nav-item-excluded={isExcluded ? 'true' : undefined}
             data-nav-item-level={level}
             data-level={level}
-            data-reorder-draggable={rowDraggable ? 'true' : undefined}
-            data-reorder-drop-before={showDropIndicatorBefore ? 'true' : undefined}
-            data-reorder-drop-after={showDropIndicatorAfter ? 'true' : undefined}
             aria-level={level + 1}
-            draggable={rowDraggable}
             onClick={onClick}
             onMouseDown={onMouseDown}
             onContextMenu={onContextMenu}
-            onDragStart={rowDraggable ? dragHandlers?.onDragStart : undefined}
             onDragOver={dragHandlers?.onDragOver}
             onDragLeave={dragHandlers?.onDragLeave}
             onDrop={dragHandlers?.onDrop}
-            onDragEnd={rowDraggable ? dragHandlers?.onDragEnd : undefined}
-            style={{ '--level': level } as CSSProperties}
+            style={combinedRowStyle}
+            {...(!bindToHandle ? rowDragAttributes : undefined)}
+            {...(!bindToHandle ? dragListeners : undefined)}
         >
             <div className="nn-navitem-content">
                 <span
@@ -236,7 +312,7 @@ export function NavigationListRow({
                     className={`nn-navitem-chevron${chevronIcon ? '' : ' nn-navitem-chevron--no-children'}`}
                     aria-hidden="true"
                 />
-                {settings.showIcons ? (
+                {showIcon ? (
                     <span
                         ref={iconRef}
                         className="nn-navitem-icon"
@@ -245,27 +321,31 @@ export function NavigationListRow({
                         style={color ? { color } : undefined}
                     />
                 ) : null}
-                <span className={labelClasses} onClick={onLabelClick ? handleLabelClick : undefined}>
+                <span
+                    className={labelClasses}
+                    onClick={onLabelClick ? handleLabelClick : undefined}
+                    onMouseDown={onLabelMouseDown ? handleLabelMouseDown : undefined}
+                >
                     <span className="nn-shortcut-label" data-has-color={applyColorToLabel ? 'true' : undefined} style={labelStyle}>
                         {label}
                     </span>
                     {description ? <span className="nn-shortcut-description">{description}</span> : null}
                 </span>
                 <span className="nn-navitem-spacer" />
-                {shouldShowCount ? <span className="nn-navitem-count">{count}</span> : null}
-                {actions ? <div className="nn-shortcut-actions">{actions}</div> : null}
+                {shouldShowCount ? (countSlot ?? <span className="nn-navitem-count">{count}</span>) : null}
+                {trailingAccessory ? <div className="nn-navitem-accessory">{trailingAccessory}</div> : null}
                 {handleVisible ? (
                     <span
-                        className={`nn-drag-handle${handleInteractive ? '' : ' nn-drag-handle-disabled'}${
-                            isDragSource ? ' nn-drag-handle-active' : ''
+                        className={`nn-drag-handle${handleLooksInteractive ? '' : ' nn-drag-handle-disabled'}${
+                            handleActive ? ' nn-drag-handle-active' : ''
                         }`}
                         role="button"
                         tabIndex={-1}
-                        aria-label={dragHandleConfig?.label}
-                        data-reorder-handle-draggable={handleInteractive ? 'true' : undefined}
-                        draggable={handleInteractive}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
+                        ref={setHandleRef}
+                        onClick={dragHandleConfig?.events?.onClick}
+                        onContextMenu={dragHandleConfig?.events?.onContextMenu}
+                        {...(bindToHandle ? dragAttributes : undefined)}
+                        {...(bindToHandle ? dragListeners : undefined)}
                     >
                         <ObsidianIcon name={dragHandleConfig?.icon ?? 'lucide-grip-horizontal'} />
                     </span>

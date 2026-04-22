@@ -1,0 +1,323 @@
+/* Source: src/styles/sections/core-variables.css */
+
+/* ========================================================================
+   CSS Variables - Defined at body level for Style Settings compatibility
+   ======================================================================== */
+
+/* Utility class for text that should only be exposed to assistive tech */
+.nn-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/**
+ * Hidden element used to resolve CSS variable colors to computed RGBA values.
+ * Positioned offscreen and invisible to avoid layout impact while allowing getComputedStyle access.
+ */
+.nn-color-resolver {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    z-index: -1;
+    margin: 0;
+    padding: 0;
+    color: var(--nn-color-resolver-value, transparent);
+    background-color: var(--nn-color-resolver-value, transparent);
+}
+
+body {
+    /* ========================================================================
+       Padding Variables for Items and Containers
+       ======================================================================== */
+
+    /* Container/Scroller padding */
+    --nn-scroller-padding: 10px; /* Horizontal padding for scroll containers */
+
+    /* Navigation item padding */
+    --nn-nav-item-padding-horizontal: 8px; /* Horizontal padding for navigation items */
+
+    /* File item padding */
+    --nn-file-item-padding-horizontal: 12px; /* Horizontal padding for file items and date headers */
+    --nn-file-row-gap: 4px; /* Gap between columns inside a file row */
+    --nn-file-icon-size: 16px; /* Leading icon size for file rows and pinned headers */
+    --nn-file-icon-slot-width: var(--nn-file-icon-size); /* Leading icon slot width */
+    --nn-file-icon-slot-gap: 6px; /* Space between leading icon slot and text (matches pinned header) */
+    --nn-file-name-size-mobile: var(--nn-file-name-size); /* Mobile font size override */
+    --nn-file-small-size-mobile: var(--nn-file-small-size); /* Mobile small font override */
+    --nn-file-padding-vertical-mobile: var(--nn-file-padding-vertical); /* Mobile padding per side */
+    --nn-file-padding-total-mobile: var(--nn-file-padding-total); /* Mobile total padding */
+    --nn-file-icon-size-mobile: var(--nn-file-icon-size); /* Mobile icon size */
+    --nn-file-icon-slot-width-mobile: var(--nn-file-icon-slot-width); /* Mobile icon slot width */
+
+    /* ========================================================================
+       Fixed Height Variables for Pixel-Perfect Rendering
+       ======================================================================== */
+
+    /* File item heights - fixed pixel values to prevent fractional rendering */
+    --nn-file-title-line-height: 20px; /* Height of file title text */
+    --nn-file-padding-vertical: 8px; /* 8px */
+    --nn-file-padding-vertical-compact: 4px; /* Desktop compact mode padding */
+    --nn-file-padding-vertical-compact-mobile: 8px; /* Mobile compact mode padding */
+    --nn-file-padding-total: calc(var(--nn-file-padding-vertical) * 2); /* Total vertical padding (top + bottom) */
+    --nn-file-single-text-line-height: 19px; /* Height for single-line text (metadata, date, or single preview) */
+    --nn-file-multiline-text-line-height: 18px; /* Height for multi-line preview text */
+    --nn-file-title-line-height-mobile: 21px; /* Mobile title text height */
+    --nn-file-single-text-line-height-mobile: 20px; /* Mobile single-line text height */
+    --nn-file-multiline-text-line-height-mobile: 19px; /* Mobile preview text height */
+    --nn-file-thumbnail-min-size: 42px; /* Minimum size for file thumbnails */
+    --nn-file-thumbnail-max-size: 64px; /* Maximum size for file thumbnails */
+
+    /* Font sizes - fixed pixel values to prevent scaling with Obsidian font size */
+    --nn-file-name-size: 14px; /* Fixed 14px */
+    --nn-file-small-size: 13px; /* Fixed 13px */
+    --nn-compact-font-size: 13px; /* Compact mode desktop font size */
+    --nn-compact-font-size-mobile: 15px; /* Compact mode mobile font size */
+
+    /* Date header heights and padding */
+    --nn-date-header-height: 35px; /* First header */
+    --nn-date-header-height-subsequent: 50px; /* Headers with margin */
+    --nn-date-header-padding-top: 24px; /* Top padding for subsequent headers */
+    --nn-date-header-padding-bottom: 6px; /* Bottom padding for subsequent headers */
+    --nn-date-header-height-mobile: var(--nn-date-header-height);
+    --nn-date-header-height-subsequent-mobile: var(--nn-date-header-height-subsequent);
+    --nn-date-header-padding-top-mobile: var(--nn-date-header-padding-top);
+    --nn-date-header-padding-bottom-mobile: var(--nn-date-header-padding-bottom);
+
+    /* Navigation item heights - fixed pixel values to prevent fractional rendering */
+    --nn-nav-line-height: 18px; /* Fixed line height for folder/tag names */
+    --nn-navitem-count-font-size: 11px; /* Desktop count font size */
+    --nn-navitem-count-font-size-mobile: 13px; /* Mobile count font size */
+    /* Note: The following are dynamically set by JavaScript based on user settings:
+       --nn-setting-nav-item-height
+       --nn-setting-nav-item-height-mobile
+       --nn-setting-nav-font-size
+       --nn-setting-nav-font-size-mobile
+       --nn-setting-nav-indent
+    */
+
+    /* Navigation icon size */
+    --nn-nav-icon-size: 16px; /* Fixed icon size */
+
+    /* List title area */
+    --nn-list-title-padding-block: 8px; /* Vertical padding around list title */
+    --nn-list-title-font-size: 16px; /* Desktop list title text size */
+    --nn-file-tag-row-height-base: 22px;
+    --nn-file-tag-row-gap-base: 4px;
+    --nn-file-tag-row-height: var(--nn-file-tag-row-height-base);
+    --nn-file-tag-row-gap: var(--nn-file-tag-row-gap-base);
+
+    /* ========================================================================
+       Header Font Sizes
+       ======================================================================== */
+
+    /* Header font sizes */
+    --nn-desktop-header-font-size: 13px; /* Fixed desktop header font size */
+    --nn-mobile-header-font-size: 17px; /* Fixed mobile header font size */
+    --nn-root-reorder-hint-font-size: var(--font-ui-smaller);
+    --nn-root-reorder-hint-font-size-mobile: var(--font-ui-small);
+
+    /* ========================================================================
+       Pane Width Constraints
+       ======================================================================== */
+
+    /* Minimum widths for panes */
+    --nn-navigation-pane-min-width: 150px; /* Minimum width for navigation pane */
+    --nn-list-pane-min-width: 150px; /* Minimum width for list pane */
+    --nn-navigation-pane-min-height: 160px; /* Minimum height for navigation pane (vertical split) */
+    --nn-list-pane-min-height: 250px; /* Minimum height for list pane (vertical split) */
+
+    /* ========================================================================
+       Notebook Navigator Theme Variables
+       ======================================================================== */
+
+    /* -- Theme Foreground -- */
+    --nn-theme-foreground: var(--text-normal);
+    --nn-theme-foreground-muted: color-mix(in srgb, var(--nn-theme-foreground) 70%, transparent);
+    --nn-theme-foreground-faded: color-mix(in srgb, var(--nn-theme-foreground) 50%, transparent);
+    --nn-theme-foreground-faint: color-mix(in srgb, var(--nn-theme-foreground) 10%, transparent);
+
+    /* -- Navigation Pane -- */
+    --nn-theme-nav-bg: var(--background-secondary);
+    --nn-theme-nav-separator-color: var(--nn-theme-foreground);
+    --nn-theme-nav-separator-background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--nn-theme-nav-separator-color) 15%,
+        var(--nn-theme-nav-separator-color) 85%,
+        transparent 100%
+    );
+    --nn-theme-nav-separator-height: 1px;
+    --nn-theme-nav-separator-opacity: 0.3;
+    --nn-theme-pinned-shortcut-shadow-color: rgba(0, 0, 0, 0.03);
+
+    /* -- Navigation Calendar -- */
+    --nn-theme-calendar-header-color: var(--nn-theme-foreground);
+    --nn-theme-calendar-weekday-color: var(--nn-theme-foreground-muted);
+    --nn-theme-calendar-week-color: var(--nn-theme-foreground-muted);
+    --nn-theme-calendar-day-in-month-color: var(--nn-theme-foreground);
+    --nn-theme-calendar-day-outside-month-color: var(--nn-theme-foreground-faded);
+    --nn-theme-calendar-weekend-bg: color-mix(in srgb, var(--nn-theme-foreground) 10%, transparent);
+    --nn-theme-calendar-hover-bg: var(--background-modifier-hover);
+    --nn-theme-calendar-note-indicator-color: var(--nn-theme-foreground-faded);
+    --nn-theme-calendar-unfinished-task-indicator-color: var(--nn-theme-calendar-note-indicator-color);
+    --nn-theme-calendar-feature-image-text-color: white;
+    --nn-theme-calendar-feature-image-overlay-color: rgb(0 0 0 / 0.05);
+    --nn-theme-calendar-day-today-color: var(--nn-theme-calendar-day-in-month-color);
+    --nn-theme-calendar-day-today-bg: var(--text-selection);
+    --nn-theme-calendar-day-active-border-color: var(--nn-theme-foreground-faded);
+
+    /* -- Folder & Tag Items -- */
+    --nn-theme-navitem-chevron-color: var(--nn-theme-foreground-muted);
+    --nn-theme-navitem-icon-color: var(--nn-theme-foreground-muted);
+    --nn-theme-navitem-name-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-file-name-color: var(--nn-theme-navitem-name-color);
+    --nn-theme-navitem-count-color: var(--nn-theme-foreground-muted);
+    --nn-theme-navitem-count-bg: transparent;
+    --nn-theme-navitem-count-border-radius: 8px;
+    --nn-theme-navitem-border-radius: 4px;
+    --nn-theme-navitem-border-width: 0px;
+    --nn-theme-navitem-count-border-width: 0px;
+    --nn-theme-navitem-custom-border-color: transparent;
+    --nn-theme-navitem-hover-border-color: transparent;
+    --nn-theme-navitem-selected-border-color: transparent;
+    --nn-theme-navitem-selected-inactive-border-color: var(--nn-theme-navitem-selected-border-color);
+    --nn-theme-navitem-count-border-color: transparent;
+    --nn-theme-navitem-selected-count-border-color: var(--nn-theme-navitem-count-border-color);
+    --nn-theme-navitem-selected-inactive-count-border-color: var(--nn-theme-navitem-selected-count-border-color);
+    --nn-theme-navitem-hover-bg: var(--background-modifier-hover);
+    --nn-theme-navitem-selected-bg: var(--text-selection);
+    --nn-theme-navitem-selected-chevron-color: var(--nn-theme-navitem-chevron-color);
+    --nn-theme-navitem-selected-icon-color: var(--nn-theme-navitem-icon-color);
+    --nn-theme-navitem-selected-name-color: var(--nn-theme-navitem-name-color);
+    --nn-theme-navitem-selected-count-color: var(--nn-theme-navitem-count-color);
+    --nn-theme-navitem-selected-count-bg: var(--nn-theme-navitem-count-bg);
+    --nn-theme-navitem-selected-inactive-bg: var(--background-modifier-hover);
+    --nn-theme-navitem-selected-inactive-name-color: var(--nn-theme-navitem-name-color);
+    --nn-theme-navitem-selected-inactive-chevron-color: var(--nn-theme-navitem-selected-chevron-color);
+    --nn-theme-navitem-selected-inactive-icon-color: var(--nn-theme-navitem-selected-icon-color);
+    --nn-theme-navitem-selected-inactive-count-color: var(--nn-theme-navitem-selected-count-color);
+    --nn-theme-navitem-selected-inactive-count-bg: var(--nn-theme-navitem-selected-count-bg);
+    --nn-theme-tag-positive-bg: #00800033;
+    --nn-theme-tag-negative-bg: #ff000033;
+
+    /* -- Navigation Item Text Styling -- */
+    --nn-theme-navitem-file-name-font-weight: 400;
+    --nn-theme-navitem-name-font-weight: 400;
+    --nn-theme-navitem-count-font-weight: 400;
+    --nn-theme-navitem-custom-color-file-name-font-weight: 600;
+    --nn-theme-navitem-custom-color-name-font-weight: 600;
+    --nn-theme-navitem-folder-note-name-font-weight: 400;
+    --nn-theme-navitem-folder-note-name-decoration: underline;
+    --nn-theme-navitem-folder-note-name-hover-decoration: underline;
+
+    /* -- Pane Divider -- */
+    --nn-theme-divider-border-color: var(--divider-color);
+    --nn-theme-divider-resize-handle-hover-bg: var(--interactive-accent);
+
+    /* -- List Pane (Files) -- */
+    --nn-theme-list-bg: var(--background-primary);
+    --nn-theme-list-header-icon-color: var(--nn-theme-foreground-muted);
+    --nn-theme-list-header-breadcrumb-color: var(--nn-theme-foreground-muted);
+    --nn-theme-list-header-breadcrumb-font-weight: 600;
+    --nn-theme-list-search-active-bg: var(--text-highlight-bg);
+    --nn-theme-list-search-border-color: var(--background-modifier-border);
+    --nn-theme-list-heading-color: var(--nn-theme-foreground-muted);
+    --nn-theme-list-heading-font-weight: 600;
+    --nn-theme-list-group-header-color: var(--nn-theme-foreground-muted);
+    --nn-theme-list-separator-color: var(--background-modifier-border);
+
+    /* -- File Items -- */
+    --nn-theme-file-name-color: var(--nn-theme-foreground);
+    --nn-theme-file-preview-color: var(--nn-theme-foreground-muted);
+    --nn-theme-file-task-icon-color: var(--nn-theme-navitem-icon-color);
+    --nn-theme-file-feature-border-radius: 4px;
+    --nn-theme-file-date-color: var(--nn-theme-foreground-faded);
+    --nn-theme-file-parent-color: var(--nn-theme-foreground-faded);
+    --nn-theme-file-tag-color: var(--nn-theme-foreground-faded);
+    --nn-theme-file-tag-border-color: color-mix(in srgb, var(--nn-theme-foreground) 30%, transparent);
+    --nn-theme-file-property-border-color: var(--nn-theme-file-tag-border-color);
+    --nn-theme-file-selected-tag-border-color: var(--nn-theme-file-tag-border-color);
+    --nn-theme-file-selected-property-border-color: var(--nn-theme-file-property-border-color);
+    --nn-theme-file-tag-custom-color-text-color: var(--nn-theme-navitem-name-color);
+    --nn-theme-file-tag-bg: transparent;
+    --nn-theme-file-property-color: var(--nn-theme-foreground-faded);
+    --nn-theme-file-property-bg: transparent;
+    --nn-theme-file-tag-border-radius: 10px;
+    --nn-theme-file-property-border-radius: 10px;
+    --nn-theme-file-border-radius: 8px;
+    --nn-theme-file-border-width: 0px;
+    --nn-theme-file-pill-border-width: 1px;
+    --nn-theme-file-selected-border-color: transparent;
+    --nn-theme-file-selected-inactive-border-color: var(--nn-theme-file-selected-border-color);
+    --nn-theme-file-selected-bg: var(--text-selection);
+    --nn-theme-file-selected-name-color: var(--nn-theme-file-name-color);
+    --nn-theme-file-selected-preview-color: var(--nn-theme-file-preview-color);
+    --nn-theme-file-selected-date-color: var(--nn-theme-foreground-muted);
+    --nn-theme-file-selected-parent-color: var(--nn-theme-foreground-muted);
+    --nn-theme-file-selected-tag-color: var(--nn-theme-foreground-muted);
+    --nn-theme-file-selected-tag-bg: var(--nn-theme-file-tag-bg);
+    --nn-theme-file-selected-property-color: var(--nn-theme-foreground-muted);
+    --nn-theme-file-selected-property-bg: var(--nn-theme-file-property-bg);
+    --nn-theme-file-selected-inactive-bg: var(--background-modifier-hover);
+    --nn-theme-file-selected-inactive-name-color: var(--nn-theme-file-selected-name-color);
+    --nn-theme-file-selected-inactive-preview-color: var(--nn-theme-file-selected-preview-color);
+    --nn-theme-file-selected-inactive-date-color: var(--nn-theme-file-selected-date-color);
+    --nn-theme-file-selected-inactive-parent-color: var(--nn-theme-file-selected-parent-color);
+    --nn-theme-file-selected-inactive-tag-color: var(--nn-theme-file-selected-tag-color);
+    --nn-theme-file-selected-inactive-tag-bg: var(--nn-theme-file-tag-bg);
+    --nn-theme-file-selected-inactive-property-color: var(--nn-theme-file-selected-property-color);
+    --nn-theme-file-selected-inactive-property-bg: var(--nn-theme-file-property-bg);
+
+    /* -- File Item Text Styling -- */
+    --nn-theme-list-group-header-font-weight: 600;
+    --nn-theme-file-name-font-weight: 600;
+    --nn-theme-file-compact-name-font-weight: 400;
+    --nn-theme-file-preview-font-weight: 400;
+    --nn-theme-file-date-font-weight: 400;
+    --nn-theme-file-parent-font-weight: 400;
+    --nn-theme-file-tag-font-weight: 400;
+
+    /* -- Quick Actions -- */
+    --nn-theme-quick-actions-bg: color-mix(in srgb, var(--background-primary) 95%, transparent);
+    --nn-theme-quick-actions-border: var(--background-modifier-border);
+    --nn-theme-quick-actions-border-radius: 4px;
+    --nn-theme-quick-actions-icon-color: var(--nn-theme-foreground-muted);
+    --nn-theme-quick-actions-icon-hover-color: var(--nn-theme-foreground);
+    --nn-theme-quick-actions-separator-color: var(--background-modifier-border);
+
+    /* -- Header Buttons -- */
+    --nn-theme-header-button-icon-color: var(--icon-color);
+    --nn-theme-header-button-hover-bg: var(--background-modifier-hover);
+    --nn-theme-header-button-active-bg: var(--background-modifier-hover);
+    --nn-theme-header-button-active-icon-color: var(--text-normal);
+    --nn-theme-header-button-disabled-icon-color: var(--icon-color);
+
+    /* -- Mobile Styles -- */
+    --nn-theme-mobile-bg: var(--mobile-sidebar-background);
+    --nn-theme-mobile-list-header-link-color: var(--link-color);
+    --nn-theme-mobile-list-header-breadcrumb-color: var(--nn-theme-foreground);
+    --nn-theme-mobile-list-header-breadcrumb-font-weight: 600;
+    --nn-theme-mobile-toolbar-bg: var(--background-secondary);
+    --nn-theme-mobile-toolbar-button-icon-color: var(--link-color);
+    --nn-theme-mobile-toolbar-button-active-bg: var(--background-modifier-hover);
+    --nn-theme-mobile-toolbar-button-active-icon-color: var(--link-color);
+    --nn-theme-mobile-toolbar-glass-bg: var(--background-primary);
+
+    /* -- File Separator -- */
+    --nn-separator-height: 1px;
+}
+
+.theme-dark {
+    --nn-theme-pinned-shortcut-shadow-color: rgba(0, 0, 0, 0.18);
+    --nn-theme-calendar-feature-image-overlay-color: rgb(0 0 0 / 0.3);
+}

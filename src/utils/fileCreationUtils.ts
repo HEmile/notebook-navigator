@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, TFile, TFolder, Notice, normalizePath } from 'obsidian';
+import { App, TFile, TFolder, normalizePath } from 'obsidian';
 import { strings } from '../i18n';
 import { TIMEOUTS, OBSIDIAN_COMMANDS } from '../types/obsidian-extended';
 import { executeCommand } from './typeGuards';
+import { showNotice } from './noticeUtils';
+import { normalizeOptionalVaultFilePath } from './pathUtils';
 
 /**
  * Options for creating a new file
@@ -31,10 +33,47 @@ export interface CreateFileOptions {
     content?: string;
     /** Whether to open the file after creation */
     openFile?: boolean;
+    /** Whether to open the file in a new tab when opening */
+    openInNewTab?: boolean;
     /** Whether to trigger rename mode after opening */
     triggerRename?: boolean;
     /** Custom error message key */
     errorKey?: string;
+}
+
+export interface GenerateUniqueFilenameOptions {
+    /** Paths that should be treated as already occupied */
+    occupiedPaths?: ReadonlySet<string>;
+    /** Whether to consult vault contents while checking candidates (default: true) */
+    useVaultLookup?: boolean;
+    /** Optional suffix inserted before numeric increments and extension */
+    baseNameSuffix?: string;
+}
+
+interface CreateMarkdownFileFromTemplateOptions {
+    app: App;
+    folder: TFolder;
+    baseName: string;
+    templatePath?: string | null;
+    templateErrorContext: string;
+}
+
+/**
+ * Builds a normalized path inside a folder.
+ */
+export function buildPathInFolder(folderPath: string, name: string): string {
+    const base = folderPath === '/' || folderPath === '' ? '' : `${folderPath}/`;
+    return normalizePath(`${base}${name}`);
+}
+
+/**
+ * Builds a normalized file path inside a folder from name and extension.
+ */
+export function buildFilePathInFolder(folderPath: string, fileName: string, extension: string): string {
+    if (!extension) {
+        return buildPathInFolder(folderPath, fileName);
+    }
+    return buildPathInFolder(folderPath, `${fileName}.${extension}`);
 }
 
 /**
@@ -43,30 +82,36 @@ export interface CreateFileOptions {
  * @param baseName - The base name of the file (without extension)
  * @param extension - The file extension (without dot)
  * @param app - The Obsidian app instance
+ * @param options - Optional collision controls and naming suffix
  * @returns A unique filename
  */
-export function generateUniqueFilename(folderPath: string, baseName: string, extension: string, app: App): string {
-    let fileName = baseName;
-    let counter = 1;
+export function generateUniqueFilename(
+    folderPath: string,
+    baseName: string,
+    extension: string,
+    app: App,
+    options?: GenerateUniqueFilenameOptions
+): string {
+    const occupiedPaths = options?.occupiedPaths;
+    const useVaultLookup = options?.useVaultLookup !== false;
+    const baseNameSuffix = options?.baseNameSuffix ?? '';
+    let counter = 0;
 
-    const makePath = (name: string) => {
-        const base = folderPath === '/' ? '' : `${folderPath}/`;
-        if (!extension) {
-            return normalizePath(`${base}${name}`);
-        }
-        return normalizePath(`${base}${name}.${extension}`);
-    };
-
-    let path = makePath(fileName);
+    const makePath = (name: string) => buildFilePathInFolder(folderPath, name, extension);
 
     // Keep incrementing until we find a unique name
-    while (app.vault.getFileByPath(path)) {
-        fileName = `${baseName} ${counter}`;
-        path = makePath(fileName);
+    while (true) {
+        const nameWithCounter = counter === 0 ? baseName : `${baseName} ${counter}`;
+        const fileName = `${nameWithCounter}${baseNameSuffix}`;
+        const path = makePath(fileName);
+        const occupied = occupiedPaths?.has(path) ?? false;
+        const existsInVault = useVaultLookup && Boolean(app.vault.getAbstractFileByPath(path));
+        if (!occupied && !existsInVault) {
+            return fileName;
+        }
+
         counter++;
     }
-
-    return fileName;
 }
 
 /**
@@ -79,22 +124,26 @@ export function generateUniqueFilename(folderPath: string, baseName: string, ext
  * @returns The created file or null if creation failed
  */
 export async function createFileWithOptions(parent: TFolder, app: App, options: CreateFileOptions): Promise<TFile | null> {
-    const { extension, content = '', openFile = true, triggerRename = true, errorKey = 'createFile' } = options;
+    const { extension, content = '', openFile = true, openInNewTab = false, triggerRename = true, errorKey = 'createFile' } = options;
 
     try {
         // Generate unique file path
         const baseName = strings.fileSystem.defaultNames.untitled;
         const fileName = generateUniqueFilename(parent.path, baseName, extension, app);
-        const base = parent.path === '/' ? '' : `${parent.path}/`;
-        const path = normalizePath(`${base}${fileName}.${extension}`);
+        let file: TFile;
 
-        // Create the file
-        const file = await app.vault.create(path, content);
+        if (extension === 'md' && content.length === 0) {
+            file = await app.fileManager.createNewMarkdownFile(parent, fileName);
+        } else {
+            const path = buildFilePathInFolder(parent.path, fileName, extension);
+            file = await app.vault.create(path, content);
+        }
 
         // Open the file if requested
         if (openFile) {
-            const leaf = app.workspace.getLeaf(false);
-            await leaf.openFile(file);
+            const leaf = app.workspace.getLeaf(openInNewTab);
+            const openState = extension === 'md' ? { state: { mode: 'source' }, active: true } : undefined;
+            await leaf.openFile(file, openState);
 
             // Trigger rename mode if requested
             if (triggerRename) {
@@ -109,13 +158,50 @@ export async function createFileWithOptions(parent: TFolder, app: App, options: 
         }
 
         return file;
-    } catch (error) {
+    } catch (error: unknown) {
         // Type-safe error message lookup
         const errorMessages = strings.fileSystem.errors as Record<string, string>;
-        const errorMessage = errorMessages[errorKey]?.replace('{error}', error.message) || `Failed to create file: ${error.message}`;
-        new Notice(errorMessage);
+        // Safely extract error message handling non-Error exceptions
+        const errorText = error instanceof Error ? error.message : String(error);
+        const errorMessage = errorMessages[errorKey]?.replace('{error}', errorText) || `Failed to create file: ${errorText}`;
+        showNotice(errorMessage, { variant: 'warning' });
         return null;
     }
+}
+
+export async function createMarkdownFileFromTemplate({
+    app,
+    folder,
+    baseName,
+    templatePath,
+    templateErrorContext
+}: CreateMarkdownFileFromTemplateOptions): Promise<TFile> {
+    const created = await app.fileManager.createNewMarkdownFile(folder, baseName);
+
+    // Create the note first (fires Obsidian vault "create"), then apply template content.
+    // Some plugins read or modify created files asynchronously after creation.
+    if (templatePath) {
+        const normalizedTemplatePath = normalizeOptionalVaultFilePath(templatePath);
+        if (!normalizedTemplatePath) {
+            console.warn(`[${templateErrorContext} template] Invalid template path`, templatePath);
+            return created;
+        }
+
+        try {
+            const entry = app.vault.getAbstractFileByPath(normalizedTemplatePath);
+            if (!(entry instanceof TFile) || entry.extension !== 'md') {
+                console.warn(`[${templateErrorContext} template] Template file not found`, normalizedTemplatePath);
+                return created;
+            }
+
+            const content = await app.vault.read(entry);
+            await app.vault.modify(created, content);
+        } catch (error) {
+            console.error(`Failed to apply ${templateErrorContext} template`, normalizedTemplatePath, error);
+        }
+    }
+
+    return created;
 }
 
 /**

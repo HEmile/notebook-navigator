@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
  */
 
 import { requestUrl } from 'obsidian';
+import { NOTEBOOK_NAVIGATOR_RELEASE_CHECK_URL } from '../constants/urls';
 import { compareVersions } from '../releaseNotes';
 import NotebookNavigatorPlugin from '../main';
 
@@ -36,14 +37,12 @@ interface GithubReleaseResponse {
     prerelease: boolean;
 }
 
-/** GitHub API endpoint for fetching the latest release */
-const GITHUB_RELEASES_ENDPOINT = 'https://api.github.com/repos/johansan/notebook-navigator/releases/latest';
 /** Minimum time between release checks (24 hours) */
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Checks GitHub releases to determine if a newer plugin version exists.
- * Persists metadata about the latest known release and check timestamps.
+ * Persists metadata about release check timestamps.
  */
 export default class ReleaseCheckService {
     private plugin: NotebookNavigatorPlugin;
@@ -70,7 +69,7 @@ export default class ReleaseCheckService {
 
     /**
      * Checks for a newer release if the minimum interval has passed.
-     * Returns the pending notice when a new version is available.
+     * Returns the pending notice when a fresh check finds a newer version.
      */
     public async checkForUpdates(force = false): Promise<ReleaseUpdateNotice | null> {
         // Prevent concurrent checks
@@ -80,31 +79,26 @@ export default class ReleaseCheckService {
 
         // Skip check if minimum interval hasn't passed (unless forced)
         const now = Date.now();
-        const lastCheck = this.plugin.settings.lastReleaseCheckAt ?? 0;
+        const lastCheck = this.plugin.getReleaseCheckTimestamp() ?? 0;
         if (!force && lastCheck && now - lastCheck < CHECK_INTERVAL_MS) {
+            this.pendingNotice = null;
             return this.pendingNotice;
         }
 
         this.isChecking = true;
         try {
             const release = await this.fetchLatestRelease();
-            const previousKnownRelease = this.plugin.settings.latestKnownRelease;
 
-            // Update last check timestamp and track new releases
-            this.plugin.settings.lastReleaseCheckAt = now;
-            let settingsChanged = false;
-            if (release && previousKnownRelease !== release.version) {
-                this.plugin.settings.latestKnownRelease = release.version;
-                settingsChanged = true;
-            }
+            // Update last check timestamp after a fresh check attempt
+            this.plugin.setReleaseCheckTimestamp(now);
 
             // Compare versions if we have a release payload
             if (release) {
                 const currentVersion = this.plugin.manifest.version;
                 const comparison = compareVersions(release.version, currentVersion);
 
-                // Create notice if newer version exists and hasn't been announced yet
-                if (comparison > 0 && this.plugin.settings.lastAnnouncedRelease !== release.version) {
+                // Create notice if a newer version exists
+                if (comparison > 0) {
                     this.pendingNotice = {
                         version: release.version,
                         publishedAt: release.publishedAt,
@@ -117,17 +111,9 @@ export default class ReleaseCheckService {
                 this.pendingNotice = null;
             }
 
-            // Ensure lastReleaseCheckAt update is persisted
-            if (!settingsChanged && this.plugin.settings.lastReleaseCheckAt !== lastCheck) {
-                settingsChanged = true;
-            }
-
-            if (settingsChanged) {
-                await this.plugin.saveSettingsAndUpdate();
-            }
-
             return this.pendingNotice;
         } catch {
+            this.pendingNotice = null;
             return this.pendingNotice;
         } finally {
             this.isChecking = false;
@@ -140,7 +126,7 @@ export default class ReleaseCheckService {
      */
     private async fetchLatestRelease(): Promise<ReleaseUpdateNotice | null> {
         const response = await requestUrl({
-            url: GITHUB_RELEASES_ENDPOINT,
+            url: NOTEBOOK_NAVIGATOR_RELEASE_CHECK_URL,
             method: 'GET',
             headers: {
                 'User-Agent': 'NotebookNavigator/ReleaseCheck (Obsidian Plugin)',

@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
  */
 
 import { App, WorkspaceLeaf } from 'obsidian';
+import type { CSSProperties } from 'react';
 
 /**
  * Shared types and constants for Notebook Navigator
@@ -30,16 +31,42 @@ import { App, WorkspaceLeaf } from 'obsidian';
 export const NOTEBOOK_NAVIGATOR_VIEW = 'notebook-navigator';
 
 /**
- * Special tag identifier for untagged notes
- * Using double underscore to avoid conflicts with real tags
+ * Unique identifier for the Notebook Navigator calendar view type.
+ * Used by Obsidian to register and manage the right sidebar calendar view.
+ */
+export const NOTEBOOK_NAVIGATOR_CALENDAR_VIEW = 'notebook-navigator-calendar';
+
+/**
+ * Virtual tag collection id for notes without tags.
+ * Stored in tag selection state and used as a tag filter token.
  */
 export const UNTAGGED_TAG_ID = '__untagged__';
+
+/**
+ * Virtual tag collection id for notes that have at least one tag.
+ * Stored in tag selection state and used as a tag filter token.
+ */
+export const TAGGED_TAG_ID = '__tagged__';
+
+/**
+ * Virtual folder id for the root Tags row in navigation.
+ * Used by virtual-folder expansion state and tag section rendering.
+ */
+export const TAGS_ROOT_VIRTUAL_FOLDER_ID = 'tags-root';
+
+/**
+ * Virtual folder id for the root Properties row in navigation.
+ * Stored in property selection state for the "all configured properties" view.
+ */
+export const PROPERTIES_ROOT_VIRTUAL_FOLDER_ID = 'properties-root';
 
 /**
  * Identifies which pane currently has keyboard focus
  * Used for keyboard navigation between folder tree and file list
  */
 export type FocusedPane = 'navigation' | 'files';
+
+export type CSSPropertiesWithVars = CSSProperties & Record<`--${string}`, string | number>;
 
 /**
  * Enum for all item types in the navigator
@@ -48,7 +75,8 @@ export type FocusedPane = 'navigation' | 'files';
 export const ItemType = {
     FILE: 'file',
     FOLDER: 'folder',
-    TAG: 'tag'
+    TAG: 'tag',
+    PROPERTY: 'property'
 } as const;
 
 /**
@@ -68,10 +96,15 @@ export const ListPaneItemType = {
 export type ListPaneItemType = (typeof ListPaneItemType)[keyof typeof ListPaneItemType];
 
 /**
+ * Key used for identifying the pinned notes header in list data
+ */
+export const PINNED_SECTION_HEADER_KEY = 'header-pinned';
+
+/**
  * Navigator context type for context-aware features like pinning
  * Represents different browsing contexts in the navigator
  */
-export type NavigatorContext = 'folder' | 'tag';
+export type NavigatorContext = 'folder' | 'tag' | 'property';
 
 /**
  * Type alias for pinned notes storage structure
@@ -88,22 +121,52 @@ export const NavigationPaneItemType = {
     VIRTUAL_FOLDER: 'virtual-folder',
     TAG: 'tag',
     UNTAGGED: 'untagged',
+    PROPERTY_KEY: 'property-key',
+    PROPERTY_VALUE: 'property-value',
     SHORTCUT_HEADER: 'shortcut-header',
     SHORTCUT_FOLDER: 'shortcut-folder',
     SHORTCUT_NOTE: 'shortcut-note',
     SHORTCUT_SEARCH: 'shortcut-search',
     SHORTCUT_TAG: 'shortcut-tag',
+    SHORTCUT_PROPERTY: 'shortcut-property',
     RECENT_NOTE: 'recent-note',
-    BANNER: 'banner',
     TOP_SPACER: 'top-spacer',
     BOTTOM_SPACER: 'bottom-spacer',
-    LIST_SPACER: 'list-spacer'
+    LIST_SPACER: 'list-spacer',
+    ROOT_SPACER: 'root-spacer'
 } as const;
 
 /**
  * Type representing all possible navigation pane item types
  */
 export type NavigationPaneItemType = (typeof NavigationPaneItemType)[keyof typeof NavigationPaneItemType];
+
+/**
+ * Identifiers for navigation pane sections used in ordering
+ */
+export const NavigationSectionId = {
+    SHORTCUTS: 'shortcuts',
+    RECENT: 'recent',
+    FOLDERS: 'folders',
+    TAGS: 'tags',
+    PROPERTIES: 'properties'
+} as const;
+
+/**
+ * Type alias for navigation pane section identifiers
+ */
+export type NavigationSectionId = (typeof NavigationSectionId)[keyof typeof NavigationSectionId];
+
+/**
+ * Default ordering for navigation sections
+ */
+export const DEFAULT_NAVIGATION_SECTION_ORDER: NavigationSectionId[] = [
+    NavigationSectionId.SHORTCUTS,
+    NavigationSectionId.RECENT,
+    NavigationSectionId.FOLDERS,
+    NavigationSectionId.TAGS,
+    NavigationSectionId.PROPERTIES
+];
 
 /**
  * Navigation pane measurements for accurate virtualization
@@ -115,9 +178,6 @@ export const NAVPANE_MEASUREMENTS = {
     defaultItemHeight: 28, // Default item height
     defaultIndent: 16, // Default tree indentation
     defaultFontSize: 13, // Default desktop font size
-
-    // Navigation item components
-    lineHeight: 18, // Fixed line height for folder/tag names (--nn-nav-line-height)
 
     // Mobile adjustments
     mobileHeightIncrement: 12, // Mobile item height is desktop + 12px
@@ -140,24 +200,27 @@ export const OVERSCAN = 10;
  * Used by ListPane component for calculating item heights
  */
 export const LISTPANE_MEASUREMENTS = {
-    // Date group headers
-    firstHeader: 35, // var(--nn-date-header-height)
-    subsequentHeader: 50, // var(--nn-date-header-height-subsequent)
-
-    // File item components
-    basePadding: 16, // var(--nn-file-padding-total) = var(--nn-file-padding-vertical) * 2
-    slimPadding: 10, // var(--nn-file-padding-vertical-slim) * 2
-    slimPaddingMobile: 16, // var(--nn-file-padding-vertical-slim-mobile) * 2
-    titleLineHeight: 20, // var(--nn-file-title-line-height)
-    singleTextLineHeight: 19, // var(--nn-file-single-text-line-height)
-    multilineTextLineHeight: 18, // var(--nn-file-multiline-text-line-height)
-    tagRowHeight: 26, // Height of tag row (20px container + 4px margin-top)
-    featureImageHeight: 42, // var(--nn-feature-image-min-size)
-
-    // Spacers
-    bottomSpacer: 20,
-    topSpacer: 8
+    // Default compact mode metrics
+    defaultCompactItemHeight: 28, // Desktop compact item height
+    defaultCompactFontSize: 13, // Desktop compact mode font size
+    mobileHeightIncrement: 8, // Mobile compact item height is desktop + 8px
+    mobileFontSizeIncrement: 2, // Mobile compact font size is desktop + 2px
+    minCompactPaddingVerticalMobile: 6 // Minimum mobile padding per side
 };
+
+/**
+ * Platform measurements used for mobile layout math.
+ *
+ * Keep in sync with CSS in `src/styles/sections/platform-ios-obsidian-1-11.css`.
+ */
+export const IOS_OBSIDIAN_1_11_PLUS_GLASS_TOOLBAR_HEIGHT_PX = 58;
+
+/**
+ * Pane transition duration limits for single-pane view animations (milliseconds)
+ */
+export const MIN_PANE_TRANSITION_DURATION_MS = 50;
+export const MAX_PANE_TRANSITION_DURATION_MS = 350;
+export const PANE_TRANSITION_DURATION_STEP_MS = 10;
 
 /**
  * Type representing all possible item types
@@ -169,7 +232,7 @@ export type ItemType = (typeof ItemType)[keyof typeof ItemType];
  * Either a folder from the file tree or a tag from the tag tree
  * This is a subset of ItemType that excludes 'file'
  */
-export type NavigationItemType = typeof ItemType.FOLDER | typeof ItemType.TAG;
+export type NavigationItemType = typeof ItemType.FOLDER | typeof ItemType.TAG | typeof ItemType.PROPERTY;
 
 /**
  * Keys used for persisting state in browser localStorage
@@ -178,22 +241,54 @@ export type NavigationItemType = typeof ItemType.FOLDER | typeof ItemType.TAG;
 export interface LocalStorageKeys {
     expandedFoldersKey: string;
     expandedTagsKey: string;
+    expandedPropertiesKey: string;
     expandedVirtualFoldersKey: string;
     selectedFolderKey: string;
+    selectedPropertyKey: string;
     selectedFileKey: string;
     selectedFilesKey: string;
     selectedTagKey: string;
     navigationPaneWidthKey: string;
+    navigationPaneHeightKey: string;
+    dualPaneOrientationKey: string;
     dualPaneKey: string;
+    uiScaleKey: string;
     shortcutsExpandedKey: string;
     recentNotesExpandedKey: string;
-    shortcutsPinnedKey: string;
     recentNotesKey: string;
     recentIconsKey: string;
+    navigationSectionOrderKey: string;
+    pinnedShortcutsMaxHeightKey: string;
+    uxPreferencesKey: string;
     fileCacheKey: string;
     databaseSchemaVersionKey: string;
     databaseContentVersionKey: string;
+    cacheRebuildNoticeKey: string;
+    // PDF_CRASH_DIAGNOSTICS: vault-scoped key used by the PDF crash diagnostic flow.
+    pdfProcessingDiagnosticKey: string;
     localStorageVersionKey: string;
+    vaultProfileKey: string;
+    releaseCheckTimestampKey: string;
+    searchProviderKey: string;
+    homepageKey: string;
+    folderSortOrderKey: string;
+    tagSortOrderKey: string;
+    propertySortOrderKey: string;
+    recentColorsKey: string;
+    paneTransitionDurationKey: string;
+    toolbarVisibilityKey: string;
+    useFloatingToolbarsKey: string;
+    pinNavigationBannerKey: string;
+    navIndentKey: string;
+    navItemHeightKey: string;
+    navItemHeightScaleTextKey: string;
+    calendarPlacementKey: string;
+    calendarLeftPlacementKey: string;
+    calendarWeeksToShowKey: string;
+    compactItemHeightKey: string;
+    compactItemHeightScaleTextKey: string;
+    featureImageSizeKey: string;
+    featureImagePixelSizeKey: string;
 }
 
 /**
@@ -203,31 +298,82 @@ export interface LocalStorageKeys {
 export const STORAGE_KEYS: LocalStorageKeys = {
     expandedFoldersKey: 'notebook-navigator-expanded-folders',
     expandedTagsKey: 'notebook-navigator-expanded-tags',
+    expandedPropertiesKey: 'notebook-navigator-expanded-properties',
     expandedVirtualFoldersKey: 'notebook-navigator-expanded-virtual-folders',
     selectedFolderKey: 'notebook-navigator-selected-folder',
+    selectedPropertyKey: 'notebook-navigator-selected-property',
     selectedFileKey: 'notebook-navigator-selected-file',
     selectedFilesKey: 'notebook-navigator-selected-files',
     selectedTagKey: 'notebook-navigator-selected-tag',
     navigationPaneWidthKey: 'notebook-navigator-navigation-pane-width',
+    navigationPaneHeightKey: 'notebook-navigator-navigation-pane-height',
+    dualPaneOrientationKey: 'notebook-navigator-dual-pane-orientation',
     dualPaneKey: 'notebook-navigator-dual-pane',
+    uiScaleKey: 'notebook-navigator-ui-scale',
     shortcutsExpandedKey: 'notebook-navigator-shortcuts-expanded',
     recentNotesExpandedKey: 'notebook-navigator-recent-notes-expanded',
-    shortcutsPinnedKey: 'notebook-navigator-shortcuts-pinned',
     recentNotesKey: 'notebook-navigator-recent-notes',
     recentIconsKey: 'notebook-navigator-recent-icons',
+    navigationSectionOrderKey: 'notebook-navigator-section-order',
+    pinnedShortcutsMaxHeightKey: 'notebook-navigator-pinned-shortcuts-max-height',
+    uxPreferencesKey: 'notebook-navigator-ux-preferences',
     fileCacheKey: 'notebook-navigator-file-cache',
     databaseSchemaVersionKey: 'notebook-navigator-db-schema-version',
     databaseContentVersionKey: 'notebook-navigator-db-content-version',
-    localStorageVersionKey: 'notebook-navigator-localstorage-version'
+    cacheRebuildNoticeKey: 'notebook-navigator-cache-rebuild-notice',
+    // PDF_CRASH_DIAGNOSTICS: persists the last PDF path being processed on mobile support builds.
+    pdfProcessingDiagnosticKey: 'notebook-navigator-pdf-processing-diagnostic',
+    localStorageVersionKey: 'notebook-navigator-localstorage-version',
+    vaultProfileKey: 'notebook-navigator-vault-profile',
+    releaseCheckTimestampKey: 'notebook-navigator-release-check-timestamp',
+    searchProviderKey: 'notebook-navigator-search-provider',
+    homepageKey: 'notebook-navigator-homepage',
+    folderSortOrderKey: 'notebook-navigator-folder-sort-order',
+    tagSortOrderKey: 'notebook-navigator-tag-sort-order',
+    propertySortOrderKey: 'notebook-navigator-property-sort-order',
+    recentColorsKey: 'notebook-navigator-recent-colors',
+    paneTransitionDurationKey: 'notebook-navigator-pane-transition-duration',
+    toolbarVisibilityKey: 'notebook-navigator-toolbar-visibility',
+    useFloatingToolbarsKey: 'notebook-navigator-use-floating-toolbars',
+    pinNavigationBannerKey: 'notebook-navigator-pin-navigation-banner',
+    navIndentKey: 'notebook-navigator-nav-indent',
+    navItemHeightKey: 'notebook-navigator-nav-item-height',
+    navItemHeightScaleTextKey: 'notebook-navigator-nav-item-height-scale-text',
+    calendarPlacementKey: 'notebook-navigator-calendar-placement',
+    calendarLeftPlacementKey: 'notebook-navigator-calendar-left-placement',
+    calendarWeeksToShowKey: 'notebook-navigator-calendar-weeks-to-show',
+    compactItemHeightKey: 'notebook-navigator-compact-item-height',
+    compactItemHeightScaleTextKey: 'notebook-navigator-compact-item-height-scale-text',
+    featureImageSizeKey: 'notebook-navigator-feature-image-size',
+    featureImagePixelSizeKey: 'notebook-navigator-feature-image-pixel-size'
 };
+
+export interface UXPreferences {
+    searchActive: boolean;
+    includeDescendantNotes: boolean;
+    showHiddenItems: boolean;
+    pinShortcuts: boolean;
+    showCalendar: boolean;
+}
+
+export type VisibilityPreferences = Pick<UXPreferences, 'includeDescendantNotes' | 'showHiddenItems'>;
+
+/** Orientation options for dual-pane layout */
+export type DualPaneOrientation = 'horizontal' | 'vertical';
+
+/** Background color mode for navigation/list panes on desktop */
+export type BackgroundMode = 'separate' | 'primary' | 'secondary';
 
 /**
  * Default dimensions for the navigation pane (folder/tag tree)
  * These values are used when no saved state exists
  */
 export const NAVIGATION_PANE_DIMENSIONS = {
-    defaultWidth: 300,
-    minWidth: 150
+    defaultWidth: 200, // Obsidian left panel default width is 300
+    minWidth: 150,
+    defaultHeight: 260,
+    minHeight: 160,
+    pinnedShortcutsMinHeight: 80
 };
 
 /**
@@ -235,7 +381,7 @@ export const NAVIGATION_PANE_DIMENSIONS = {
  * The file pane uses flex: 1 so it doesn't have a defaultWidth or maxWidth
  */
 export const FILE_PANE_DIMENSIONS = {
-    minWidth: 250
+    minWidth: 150
 };
 
 /**

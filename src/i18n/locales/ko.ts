@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,81 +25,129 @@ export const STRINGS_KO = {
     common: {
         cancel: '취소', // Button text for canceling dialogs and operations (English: Cancel)
         delete: '삭제', // Button text for delete operations in dialogs (English: Delete)
+        clear: '지우기', // Button text for clearing values (English: Clear)
         remove: '제거', // Button text for remove operations in dialogs (English: Remove)
+        restoreDefault: '기본값 복원', // Button text for restoring values to defaults (English: Restore default)
         submit: '제출', // Button text for submitting forms and dialogs (English: Submit)
+        configure: '구성', // Generic button label used when opening a configuration dialog (English: Configure)
+        lightMode: '라이트 모드', // Label for light theme mode (English: Light mode)
+        darkMode: '다크 모드', // Label for dark theme mode (English: Dark mode)
         noSelection: '선택 없음', // Placeholder text when no folder or tag is selected (English: No selection)
         untagged: '태그 없음', // Label for notes without any tags (English: Untagged)
-        untitled: '제목 없음', // Default name for notes without a title (English: Untitled)
         featureImageAlt: '대표 이미지', // Alt text for thumbnail/preview images (English: Feature image)
         unknownError: '알 수 없는 오류', // Generic fallback when an error has no message (English: Unknown error)
+        clipboardWriteError: '클립보드에 쓸 수 없습니다',
         updateBannerTitle: 'Notebook Navigator 업데이트 사용 가능',
-        updateBannerInstruction: '설정 -> 커뮤니티 플러그인에서 업데이트'
+        updateBannerInstruction: '설정 -> 커뮤니티 플러그인에서 업데이트',
+        previous: '이전', // Generic aria label for previous navigation (English: Previous)
+        next: '다음' // Generic aria label for next navigation (English: Next)
     },
 
     // List pane
     listPane: {
         emptyStateNoSelection: '노트를 보려면 폴더나 태그를 선택하세요', // Message shown when no folder or tag is selected (English: Select a folder or tag to view notes)
         emptyStateNoNotes: '노트 없음', // Message shown when a folder/tag has no notes (English: No notes)
-        pinnedSection: '📌 고정됨', // Header for the pinned notes section at the top of file list (English: 📌 Pinned)
+        pinnedSection: '고정됨', // Header for the pinned notes section at the top of file list (English: Pinned)
         notesSection: '노트', // Header shown between pinned and regular items when showing documents only (English: Notes)
-        filesSection: '파일' // Header shown between pinned and regular items when showing supported or all files (English: Files)
+        filesSection: '파일', // Header shown between pinned and regular items when showing supported or all files (English: Files)
+        hiddenItemAriaLabel: '{name} (숨김)' // Accessibility label applied to list items that are normally hidden
     },
 
     // Tag list
     tagList: {
         untaggedLabel: '태그 없음', // Label for the special item showing notes without tags (English: Untagged)
-        hiddenTags: '숨겨진 태그', // Label for the hidden tags virtual folder (English: Hidden tags)
         tags: '태그' // Label for the tags virtual folder (English: Tags)
     },
 
     navigationPane: {
         shortcutsHeader: '바로가기',
-        recentNotesHeader: '최근 노트',
-        recentFilesHeader: '최근 파일',
-        reorderRootFoldersTitle: '루트 폴더 순서 변경',
-        reorderRootFoldersHint: '폴더를 드래그하여 순서 변경',
+        recentFilesHeader: '최근 파일', // Header label for recent files section in navigation pane (English: Recent files)
+        properties: '속성',
+        reorderRootFoldersTitle: '내비게이션 재정렬',
+        reorderRootFoldersHint: '화살표 또는 드래그로 재정렬',
         vaultRootLabel: '보관함',
-        resetRootFolderOrder: '알파벳 순서로 리셋',
-        dragHandleLabel: '드래그하여 순서 변경',
-        pinShortcuts: 'Pin shortcuts',
-        unpinShortcuts: 'Unpin shortcuts'
+        resetRootToAlpha: '알파벳 순서로 리셋',
+        resetRootToFrequency: '빈도 순으로 리셋',
+        pinShortcuts: '바로가기를 고정',
+        pinShortcutsAndRecentFiles: '바로가기와 최근 파일을 고정',
+        unpinShortcuts: '바로가기 고정을 해제',
+        unpinShortcutsAndRecentFiles: '바로가기와 최근 파일 고정을 해제',
+        profileMenuAria: '보관소 프로필 변경'
+    },
+
+    navigationCalendar: {
+        ariaLabel: '달력',
+        dailyNotesNotEnabled: '데일리 노트 코어 플러그인이 활성화되어 있지 않습니다.',
+        createDailyNote: {
+            title: '새 데일리 노트',
+            message: '파일 {filename}이(가) 존재하지 않습니다. 생성하시겠습니까?',
+            confirmButton: '생성'
+        },
+        helpModal: {
+            title: '캘린더 단축키',
+            items: [
+                '아무 날이나 클릭하여 일간 노트를 열거나 만듭니다. 주, 월, 분기, 연도도 같은 방식으로 작동합니다.',
+                '날짜 아래 채워진 점은 노트가 있음을 의미합니다. 빈 점은 미완료 작업이 있음을 의미합니다.',
+                '노트에 대표 이미지가 있으면 해당 날짜의 배경으로 표시됩니다.'
+            ],
+            dateFilterCmdCtrl: '`Cmd/Ctrl`+클릭으로 해당 날짜로 파일 목록을 필터링합니다.',
+            dateFilterOptionAlt: '`Option/Alt`+클릭으로 해당 날짜로 파일 목록을 필터링합니다.'
+        }
+    },
+
+    dailyNotes: {
+        templateReadFailed: '데일리 노트 템플릿을 읽을 수 없습니다.',
+        createFailed: '데일리 노트를 생성할 수 없습니다.'
     },
 
     shortcuts: {
         folderExists: '폴더가 이미 바로가기에 있습니다',
         noteExists: '노트가 이미 바로가기에 있습니다',
         tagExists: '태그가 이미 바로가기에 있습니다',
+        propertyExists: '속성이 이미 바로가기에 있습니다',
+        invalidProperty: '잘못된 속성 바로가기',
         searchExists: '검색 바로가기가 이미 존재합니다',
         emptySearchQuery: '저장하기 전에 검색 쿼리를 입력하세요',
         emptySearchName: '검색을 저장하기 전에 이름을 입력하세요',
         add: '바로가기에 추가',
-        remove: '바로가기에 제거',
-        moveUp: '위로 이동',
-        moveDown: '아래로 이동'
+        addNotesCount: '바로가기에 노트 {count}개 추가',
+        addFilesCount: '바로가기에 파일 {count}개 추가',
+        rename: '바로가기 이름 변경',
+        remove: '바로가기에서 제거',
+        removeAll: '모든 바로가기 제거',
+        removeAllConfirm: '모든 바로가기를 제거하시겠습니까?',
+        folderNotesPinned: '폴더 노트 {count}개를 고정했습니다'
     },
 
     // Pane header
     paneHeader: {
         collapseAllFolders: '항목 접기', // Tooltip for button that collapses expanded items (English: Collapse items)
         expandAllFolders: '모든 항목 펼치기', // Tooltip for button that expands all items (English: Expand all items)
-        scrollToTop: '맨 위로 스크롤',
+        showCalendar: '달력 표시',
+        hideCalendar: '달력 숨기기',
         newFolder: '새 폴더', // Tooltip for create new folder button (English: New folder)
         newNote: '새 노트', // Tooltip for create new note button (English: New note)
         mobileBackToNavigation: '탐색으로 돌아가기', // Mobile-only back button text to return to navigation pane (English: Back to navigation)
         changeSortOrder: '정렬 순서 변경', // Tooltip for the sort order toggle button (English: Change sort order)
         defaultSort: '기본', // Label for default sorting mode (English: Default)
-        customSort: '사용자 정의', // Label for custom sorting mode (English: Custom)
+        descendants: '하위 항목',
+        subfolders: '하위 폴더',
+        subtags: '하위 태그',
+        childValues: '하위 값',
+        applySortToDescendants: (target: string) => `${target}에 정렬 적용`,
+        applyAppearanceToDescendants: (target: string) => `${target}에 모양 적용`,
         showFolders: '탐색 표시', // Tooltip for button to show the navigation pane (English: Show navigation)
-        hideFolders: '탐색 숨기기', // Tooltip for button to hide the navigation pane (English: Hide navigation)
-        reorderRootFolders: '루트 폴더 순서 변경',
-        finishRootFolderReorder: '루트 폴더 순서 변경 완료',
-        toggleDescendantNotes: '하위 폴더 / 하위 항목 노트 표시', // Tooltip: include descendants for folders and tags
-        autoExpandFoldersTags: '폴더 및 태그 자동 펼치기', // Tooltip for button to toggle auto-expanding folders and tags when selected (English: Auto-expand folders and tags)
-        showExcludedItems: '숨겨진 항목 표시', // Tooltip for button to show hidden items (English: Show hidden items)
-        hideExcludedItems: '숨겨진 항목 숨기기', // Tooltip for button to hide hidden items (English: Hide hidden items)
+        reorderRootFolders: '내비게이션 재정렬',
+        finishRootFolderReorder: '완료',
+        showExcludedItems: '숨긴 폴더, 태그, 노트 표시', // Tooltip for button to show hidden items (English: Show hidden items)
+        hideExcludedItems: '숨긴 폴더, 태그, 노트 숨기기', // Tooltip for button to hide hidden items (English: Hide hidden items)
         showDualPane: '이중 창 표시', // Tooltip for button to show dual-pane layout (English: Show dual panes)
         showSinglePane: '단일 창 표시', // Tooltip for button to show single-pane layout (English: Show single pane)
         changeAppearance: '모양 변경', // Tooltip for button to change folder appearance settings (English: Change appearance)
+        showNotesFromSubfolders: '하위 폴더 노트 표시',
+        showFilesFromSubfolders: '하위 폴더 파일 표시',
+        showNotesFromDescendants: '하위 항목 노트 표시',
+        showFilesFromDescendants: '하위 항목 파일 표시',
         search: '검색' // Tooltip for search button (English: Search)
     },
     // Search input
@@ -107,11 +155,106 @@ export const STRINGS_KO = {
         placeholder: '검색...', // Placeholder text for search input (English: Search...)
         placeholderOmnisearch: 'Omnisearch...', // Placeholder text when Omnisearch provider is active (English: Omnisearch...)
         clearSearch: '검색 지우기', // Tooltip for clear search button (English: Clear search)
+        switchToFilterSearch: '필터 검색으로 전환',
+        switchToOmnisearch: 'Omnisearch로 전환',
         saveSearchShortcut: '검색을 바로가기에 저장',
         removeSearchShortcut: '바로가기에서 검색 제거',
         shortcutModalTitle: '검색 바로가기 저장',
-        shortcutNameLabel: '바로가기 이름',
-        shortcutNamePlaceholder: '바로가기 이름을 입력하세요'
+        shortcutNamePlaceholder: '바로가기 이름을 입력하세요',
+        shortcutStartIn: '항상 다음에서 시작: {path}',
+        searchHelp: '검색 구문',
+        searchHelpTitle: '검색 구문',
+        searchHelpModal: {
+            intro: '파일 이름, 속성, 태그, 날짜, 필터를 하나의 쿼리에서 결합 (예: `meeting .status=active #work @thisweek`). Omnisearch 플러그인을 설치하면 전체 텍스트 검색을 사용할 수 있습니다.',
+            introSwitching: '위/아래 화살표 키 또는 검색 아이콘 클릭으로 필터 검색과 Omnisearch 간에 전환할 수 있습니다.',
+            sections: {
+                fileNames: {
+                    title: '파일 이름',
+                    items: [
+                        '`word` 파일 이름에 "word"가 포함된 노트 찾기.',
+                        '`word1 word2` 모든 단어가 파일 이름과 일치해야 합니다.',
+                        '`-word` 파일 이름에 "word"가 포함된 노트 제외.'
+                    ]
+                },
+                tags: {
+                    title: '태그',
+                    items: [
+                        '`#tag` 태그가 있는 노트 포함 (`#tag/subtag`와 같은 중첩 태그도 일치).',
+                        '`#` 태그가 있는 노트만 포함.',
+                        '`-#tag` 태그가 있는 노트 제외.',
+                        '`-#` 태그가 없는 노트만 포함.',
+                        '`#tag1 #tag2` 두 태그 모두 일치 (암시적 AND).',
+                        '`#tag1 AND #tag2` 두 태그 모두 일치 (명시적 AND).',
+                        '`#tag1 OR #tag2` 태그 중 하나와 일치.',
+                        '`#a OR #b AND #c` AND가 우선순위가 높음: `#a` 또는 `#b`와 `#c` 모두 일치.',
+                        'Cmd/Ctrl+클릭으로 AND로 태그 추가. Cmd/Ctrl+Shift+클릭으로 OR로 추가.'
+                    ]
+                },
+                properties: {
+                    title: '속성',
+                    items: [
+                        '`.key` 속성 키가 있는 노트를 포함합니다.',
+                        '`.key=value` 속성 값이 있는 노트를 포함합니다.',
+                        '`."Reading Status"` 공백이 포함된 속성 키가 있는 노트를 포함합니다.',
+                        '`."Reading Status"="In Progress"` 공백이 포함된 키와 값은 큰따옴표로 묶어야 합니다.',
+                        '`-.key` 속성 키가 있는 노트를 제외합니다.',
+                        '`-.key=value` 속성 값이 있는 노트를 제외합니다.',
+                        'Cmd/Ctrl+클릭으로 속성을 AND로 추가. Cmd/Ctrl+Shift+클릭으로 OR로 추가.'
+                    ]
+                },
+                tasks: {
+                    title: '필터',
+                    items: [
+                        '`has:task` 미완료 작업이 있는 노트를 포함.',
+                        '`-has:task` 미완료 작업이 있는 노트를 제외.',
+                        '`folder:meetings` 폴더 이름에 `meetings`를 포함하는 노트를 포함.',
+                        '`folder:/work/meetings` `work/meetings` 내의 노트만 포함 (하위 폴더 제외).',
+                        '`folder:/` 보관소 루트에 있는 노트만 포함.',
+                        '`-folder:archive` 폴더 이름에 `archive`를 포함하는 노트를 제외.',
+                        '`-folder:/archive` `archive` 내의 노트만 제외 (하위 폴더 제외).',
+                        '`ext:md` 확장자가 `md`인 노트를 포함 (`ext:.md`도 지원).',
+                        '`-ext:pdf` 확장자가 `pdf`인 노트를 제외.',
+                        '태그, 이름, 날짜와 결합하여 사용 (예: `folder:/work/meetings ext:md @thisweek`).'
+                    ]
+                },
+                connectors: {
+                    title: 'AND/OR 동작',
+                    items: [
+                        '`AND`와 `OR`는 태그/속성 전용 쿼리에서만 연산자로 작동합니다.',
+                        '태그/속성 전용 쿼리에는 태그 및 속성 필터만 포함됩니다: `#tag`, `-#tag`, `#`, `-#`, `.key`, `-.key`, `.key=value`, `-.key=value`.',
+                        '쿼리에 이름, 날짜(`@...`), 작업 필터(`has:task`), 폴더 필터(`folder:...`), 또는 확장자 필터(`ext:...`)가 포함되면 `AND`와 `OR`는 단어로 검색됩니다.',
+                        '연산자 쿼리 예시: `#work OR .status=started`.',
+                        '혼합 쿼리 예시: `#work OR ext:md` (`OR`가 파일 이름에서 검색됩니다).'
+                    ]
+                },
+                dates: {
+                    title: '날짜',
+                    items: [
+                        '`@today` 기본 날짜 필드를 사용하여 오늘의 노트 찾기.',
+                        '`@yesterday`, `@last7d`, `@last30d`, `@thisweek`, `@thismonth` 상대적 날짜 범위.',
+                        '`@2026-02-07` 특정 날짜 찾기 (`@20260207`도 지원).',
+                        '`@2026` 달력 연도 찾기.',
+                        '`@2026-02` 또는 `@202602` 달력 월 찾기.',
+                        '`@2026-W05` 또는 `@2026W05` ISO 주 찾기.',
+                        '`@2026-Q2` 또는 `@2026Q2` 달력 분기 찾기.',
+                        '`@13/02/2026` 구분자가 있는 숫자 형식 (`@07022026`은 모호할 때 로케일을 따름).',
+                        '`@2026-02-01..2026-02-07` 포함 날짜 범위 찾기 (열린 끝 지원).',
+                        '`@c:...` 또는 `@m:...` 생성 또는 수정 날짜 지정.',
+                        '`-@...` 날짜 일치 제외.'
+                    ]
+                },
+                omnisearch: {
+                    title: 'Omnisearch',
+                    items: [
+                        '보관소 전체의 전체 텍스트 검색. 현재 폴더 또는 선택된 태그로 필터링됩니다.',
+                        '대규모 보관소에서 3자 미만일 경우 느릴 수 있습니다.',
+                        '비ASCII 문자가 포함된 경로를 검색하거나 하위 경로를 올바르게 검색할 수 없습니다.',
+                        '폴더 필터링 전에 제한된 결과를 반환하므로, 다른 곳에 많은 일치 항목이 있으면 관련 파일이 표시되지 않을 수 있습니다.',
+                        '노트 미리보기에 기본 미리보기 텍스트 대신 Omnisearch 발췌문이 표시됩니다.'
+                    ]
+                }
+            }
+        }
     },
 
     // Context menus
@@ -142,18 +285,21 @@ export const STRINGS_KO = {
             revealInFolder: '폴더에서 표시',
             revealInFinder: 'Finder에서 표시',
             showInExplorer: '시스템 탐색기에서 표시',
-            copyDeepLink: 'Obsidian URL 복사',
-            copyPath: '경로 복사',
-            copyRelativePath: '상대 경로 복사',
+            openInDefaultApp: '기본 앱에서 열기',
             renameNote: '노트 이름 변경',
             renameFile: '파일 이름 변경',
             deleteNote: '노트 삭제',
             deleteFile: '파일 삭제',
+            setCalendarHighlight: '하이라이트 설정',
+            removeCalendarHighlight: '하이라이트 제거',
             deleteMultipleNotes: '{count}개의 노트 삭제',
             deleteMultipleFiles: '{count}개의 파일 삭제',
-            moveToFolder: '이동...',
-            moveMultipleToFolder: '{count}개의 파일을 이동...',
+            moveNoteToFolder: '노트 이동...',
+            moveFileToFolder: '파일 이동...',
+            moveMultipleNotesToFolder: '{count}개의 노트 이동...',
+            moveMultipleFilesToFolder: '{count}개의 파일 이동...',
             addTag: '태그 추가',
+            addPropertyKey: '속성 설정',
             removeTag: '태그 제거',
             removeAllTags: '모든 태그 제거',
             changeIcon: '아이콘 변경',
@@ -161,19 +307,24 @@ export const STRINGS_KO = {
         },
         folder: {
             newNote: '새 노트',
+            newNoteFromTemplate: '템플릿으로 새 노트',
             newFolder: '새 폴더',
             newCanvas: '새 캔버스',
             newBase: '새 베이스',
             newDrawing: '새 드로잉',
+            newExcalidrawDrawing: '새 Excalidraw 드로잉',
+            newTldrawDrawing: '새 Tldraw 드로잉',
             duplicateFolder: '폴더 복제',
             searchInFolder: '폴더에서 검색',
             createFolderNote: '폴더 노트 만들기',
+            detachFolderNote: '폴더 노트 해제',
             deleteFolderNote: '폴더 노트 삭제',
             changeIcon: '아이콘 변경',
-            changeColor: '아이콘 색상 변경',
+            changeColor: '색상 변경',
             changeBackground: '배경색 변경',
             excludeFolder: '폴더 숨기기',
-            moveFolder: '이동...',
+            unhideFolder: '폴더 표시',
+            moveFolder: '폴더 이동...',
             renameFolder: '폴더 이름 변경',
             deleteFolder: '폴더 삭제'
         },
@@ -183,24 +334,60 @@ export const STRINGS_KO = {
             changeBackground: '배경색 변경',
             showTag: '태그 표시',
             hideTag: '태그 숨기기'
+        },
+        property: {
+            addKey: '속성 키 구성',
+            renameKey: '속성 이름 변경',
+            deleteKey: '속성 삭제'
+        },
+        navigation: {
+            addSeparator: '구분선 추가',
+            removeSeparator: '구분선 제거'
+        },
+        copyPath: {
+            title: '경로 복사',
+            asObsidianUrl: 'Obsidian URL로',
+            fromVaultFolder: 'Vault 폴더에서',
+            fromSystemRoot: '시스템 루트에서'
+        },
+        style: {
+            title: '스타일',
+            copy: '스타일 복사',
+            paste: '스타일 붙여넣기',
+            removeIcon: '아이콘 제거',
+            removeColor: '색상 제거',
+            removeBackground: '배경 제거',
+            clear: '스타일 지우기'
         }
     },
 
     // Folder appearance menu
     folderAppearance: {
-        defaultPreset: '기본 모양',
-        slimPreset: '슬림 (날짜/미리보기/이미지 없음)',
+        standardPreset: '표준',
+        compactPreset: '컴팩트',
+        defaultSuffix: '(기본값)',
+        defaultLabel: '기본',
         titleRows: '제목 행',
         previewRows: '미리보기 행',
-        defaultOption: (rows: number) => `기본 (${rows})`,
+        groupBy: '그룹화 기준',
         defaultTitleOption: (rows: number) => `기본 제목 행 (${rows})`,
         defaultPreviewOption: (rows: number) => `기본 미리보기 행 (${rows})`,
+        defaultGroupOption: (groupLabel: string) => `기본 그룹화 (${groupLabel})`,
         titleRowOption: (rows: number) => `${rows}개 제목 행`,
         previewRowOption: (rows: number) => `${rows}개 미리보기 행`
     },
 
     // Modal dialogs
     modals: {
+        bulkApply: {
+            applyButton: '적용',
+            applySortTitle: (target: string) => `${target}에 정렬을 적용하시겠습니까?`,
+            applyAppearanceTitle: (target: string) => `${target}에 모양을 적용하시겠습니까?`,
+            affectedCountMessage: (count: number) => `변경될 기존 재정의: ${count}.`
+        },
+        navRainbowSection: {
+            title: (section: string) => `무지개 색상: ${section}`
+        },
         iconPicker: {
             searchPlaceholder: '아이콘 검색...',
             recentlyUsedHeader: '최근 사용',
@@ -208,41 +395,73 @@ export const STRINGS_KO = {
             emptyStateNoResults: '아이콘을 찾을 수 없음',
             showingResultsInfo: '{count}개 중 50개 결과 표시. 더 좁혀서 검색하세요.',
             emojiInstructions: '이모지를 입력하거나 붙여넣어 아이콘으로 사용하세요',
-            removeIcon: '아이콘 제거'
+            removeIcon: '아이콘 제거',
+            removeFromRecents: '최근 아이콘에서 제거',
+            allTabLabel: '모두'
+        },
+        fileIconRuleEditor: {
+            addRuleAria: '규칙 추가'
+        },
+        interfaceIcons: {
+            title: '인터페이스 아이콘',
+            fileItemsSection: '파일 항목',
+            items: {
+                'nav-shortcuts': '바로가기',
+                'nav-recent-files': '최근 파일',
+                'nav-expand-all': '모두 펼치기',
+                'nav-collapse-all': '모두 접기',
+                'nav-calendar': '달력',
+                'nav-tree-expand': '트리 화살표: 펼치기',
+                'nav-tree-collapse': '트리 화살표: 접기',
+                'nav-hidden-items': '숨겨진 항목',
+                'nav-root-reorder': '루트 폴더 재정렬',
+                'nav-new-folder': '새 폴더',
+                'nav-show-single-pane': '단일 창 표시',
+                'nav-show-dual-pane': '이중 창 표시',
+                'nav-profile-chevron': '프로필 메뉴 화살표',
+                'list-search': '검색',
+                'list-descendants': '하위 폴더의 노트',
+                'list-sort-ascending': '정렬 순서: 오름차순',
+                'list-sort-descending': '정렬 순서: 내림차순',
+                'list-appearance': '모양 변경',
+                'list-new-note': '새 노트',
+                'nav-folder-open': '열린 폴더',
+                'nav-folder-closed': '닫힌 폴더',
+                'nav-tags': '태그',
+                'nav-tag': '태그',
+                'nav-properties': '속성',
+                'nav-property': '속성',
+                'nav-property-value': '값',
+                'list-pinned': '고정 항목',
+                'file-unfinished-task': '미완료 작업',
+                'file-word-count': '단어 수'
+            }
         },
         colorPicker: {
             currentColor: '현재',
             newColor: '새로운',
-            presetColors: '프리셋 색상',
+            paletteDefault: '기본',
+            paletteCustom: '사용자 정의',
+            copyColors: '색상 복사',
+            colorsCopied: '클립보드에 복사됨',
+            pasteColors: '색상 붙여넣기',
+            pasteClipboardError: '클립보드를 읽을 수 없습니다',
+            pasteInvalidFormat: '16진수 색상 값이 필요합니다',
+            colorsPasted: '색상을 붙여넣었습니다',
+            resetUserColors: '사용자 정의 색상 지우기',
+            clearCustomColorsConfirm: '모든 사용자 정의 색상을 제거하시겠습니까?',
+            userColorSlot: '색상 {slot}',
             recentColors: '최근 색상',
             clearRecentColors: '최근 색상 지우기',
             removeRecentColor: '색상 제거',
-            removeColor: '색상 제거',
             apply: '적용',
             hexLabel: 'HEX',
-            rgbLabel: 'RGBA',
-            colors: {
-                red: '빨강',
-                orange: '주황',
-                amber: '호박색',
-                yellow: '노랑',
-                lime: '라임',
-                green: '초록',
-                emerald: '에메랄드',
-                teal: '청록',
-                cyan: '시안',
-                sky: '하늘',
-                blue: '파랑',
-                indigo: '남색',
-                violet: '보라',
-                purple: '자주',
-                fuchsia: '푸크시아',
-                pink: '분홍',
-                rose: '장미',
-                gray: '회색',
-                slate: '슬레이트',
-                stone: '돌'
-            }
+            rgbLabel: 'RGBA'
+        },
+        selectVaultProfile: {
+            title: '보관소 프로필 변경',
+            currentBadge: '활성',
+            emptyState: '사용 가능한 보관소 프로필이 없습니다.'
         },
         tagOperation: {
             renameTitle: '태그 {tag} 이름 변경',
@@ -255,9 +474,42 @@ export const STRINGS_KO = {
             affectedFiles: '영향받는 파일:',
             andMore: '...그리고 {count}개 더',
             confirmRename: '태그 이름 변경',
+            renameUnchanged: '{tag} 변경 없음',
+            renameNoChanges: '{oldTag} → {newTag} ({countLabel})',
+            renameBatchNotFinalized:
+                '{renamed}/{total} 이름 변경됨. 업데이트되지 않음: {notUpdated}. 메타데이터와 단축키가 업데이트되지 않았습니다.',
+            invalidTagName: '유효한 태그 이름을 입력하세요.',
+            descendantRenameError: '태그를 자신 또는 하위 태그로 이동할 수 없습니다.',
             confirmDelete: '태그 삭제',
+            deleteBatchNotFinalized:
+                '{removed}/{total}에서 제거됨. 업데이트되지 않음: {notUpdated}. 메타데이터와 단축키가 업데이트되지 않았습니다.',
+            checkConsoleForDetails: '자세한 내용은 콘솔을 확인하세요.',
             file: '파일',
-            files: '파일'
+            files: '파일',
+            inlineParsingWarning: {
+                title: '인라인 태그 호환성',
+                message:
+                    '{tag}에 Obsidian이 인라인 태그에서 구문 분석할 수 없는 문자가 포함되어 있습니다. Frontmatter 태그는 영향을 받지 않습니다.',
+                confirm: '그래도 사용'
+            }
+        },
+        propertyOperation: {
+            renameTitle: '속성 {property} 이름 변경',
+            deleteTitle: '속성 {property} 삭제',
+            newKeyPrompt: '새 속성 이름',
+            newKeyPlaceholder: '새 속성 이름 입력',
+            renameWarning: '속성 {property}의 이름을 변경하면 {count}개의 {files}이(가) 수정됩니다.',
+            renameConflictWarning:
+                '속성 {newKey}이(가) 이미 {count}개의 {files}에 존재합니다. {oldKey}의 이름을 변경하면 기존 {newKey} 값이 대체됩니다.',
+            deleteWarning: '속성 {property}을(를) 삭제하면 {count}개의 {files}이(가) 수정됩니다.',
+            confirmRename: '속성 이름 변경',
+            confirmDelete: '속성 삭제',
+            renameNoChanges: '{oldKey} → {newKey} (변경 없음)',
+            renameSettingsUpdateFailed: '속성 {oldKey} → {newKey} 이름 변경됨. 설정 업데이트에 실패했습니다.',
+            deleteSingleSuccess: '1개의 노트에서 속성 {property} 삭제됨',
+            deleteMultipleSuccess: '{count}개의 노트에서 속성 {property} 삭제됨',
+            deleteSettingsUpdateFailed: '속성 {property} 삭제됨. 설정 업데이트에 실패했습니다.',
+            invalidKeyName: '유효한 속성 이름을 입력하세요.'
         },
         fileSystem: {
             newFolderTitle: '새 폴더',
@@ -265,18 +517,37 @@ export const STRINGS_KO = {
             renameFileTitle: '파일 이름 변경',
             deleteFolderTitle: "'{name}'을(를) 삭제하시겠습니까?",
             deleteFileTitle: "'{name}'을(를) 삭제하시겠습니까?",
+            deleteFileAttachmentsTitle: '파일 첨부 파일을 삭제하시겠습니까?',
+            moveFileConflictTitle: '이동 충돌',
             folderNamePrompt: '폴더 이름 입력:',
+            hideInOtherVaultProfiles: '다른 보관소 프로필에서 숨기기',
             renamePrompt: '새 이름 입력:',
             renameVaultTitle: '보관함 표시 이름 변경',
             renameVaultPrompt: '사용자 정의 표시 이름 입력 (기본값을 사용하려면 비워두세요):',
             deleteFolderConfirm: '이 폴더와 모든 내용을 삭제하시겠습니까?',
             deleteFileConfirm: '이 파일을 삭제하시겠습니까?',
+            deleteFileAttachmentsDescriptionSingle: '이 첨부 파일은 더 이상 어떤 노트에서도 사용되지 않습니다. 삭제하시겠습니까?',
+            deleteFileAttachmentsDescriptionMultiple: '이 첨부 파일들은 더 이상 어떤 노트에서도 사용되지 않습니다. 삭제하시겠습니까?',
+            deleteFileAttachmentsViewFileTreeAriaLabel: '파일 트리',
+            deleteFileAttachmentsViewGalleryAriaLabel: '갤러리',
+            moveFileConflictDescriptionSingle: '"{folder}"에서 파일 충돌이 발견되었습니다.',
+            moveFileConflictDescriptionMultiple: '"{folder}"에서 {count}개의 파일 충돌이 발견되었습니다.',
+            moveFileConflictAffectedFiles: '영향받는 파일',
+            moveFileConflictItem: '"{name}" -> "{suggested}"{renameOnly}',
+            moveFileConflictRenameOnly: '(이름 변경만)',
+            moveFileConflictRename: '이름 변경',
+            moveFileConflictOverwrite: '덮어쓰기',
             removeAllTagsTitle: '모든 태그 제거',
             removeAllTagsFromNote: '이 노트에서 모든 태그를 제거하시겠습니까?',
             removeAllTagsFromNotes: '{count}개의 노트에서 모든 태그를 제거하시겠습니까?'
         },
+        folderNoteType: {
+            title: '폴더 노트 형식 선택',
+            folderLabel: '폴더: {name}'
+        },
         folderSuggest: {
-            placeholder: '폴더로 이동...',
+            placeholder: (name: string) => `${name}를 폴더로 이동...`,
+            multipleFilesLabel: (count: number) => `${count}개의 파일`,
             navigatePlaceholder: '폴더로 이동...',
             instructions: {
                 navigate: '이동',
@@ -293,6 +564,14 @@ export const STRINGS_KO = {
                 dismiss: '닫기'
             }
         },
+        calendarTemplate: {
+            placeholder: '템플릿 검색...',
+            instructions: {
+                navigate: '이동',
+                select: '템플릿 선택',
+                dismiss: '닫기'
+            }
+        },
         navigationBanner: {
             placeholder: '이미지 검색...',
             instructions: {
@@ -302,7 +581,6 @@ export const STRINGS_KO = {
             }
         },
         tagSuggest: {
-            placeholder: '태그 검색...',
             navigatePlaceholder: '태그로 이동...',
             addPlaceholder: '추가할 태그 검색...',
             removePlaceholder: '제거할 태그 선택...',
@@ -314,6 +592,41 @@ export const STRINGS_KO = {
                 add: '태그 추가',
                 remove: '태그 제거'
             }
+        },
+        propertySuggest: {
+            placeholder: '속성 키 선택...',
+            navigatePlaceholder: '속성으로 이동...',
+            instructions: {
+                navigate: '이동',
+                select: '속성 추가',
+                dismiss: '닫기'
+            }
+        },
+        propertyKeyVisibility: {
+            title: '속성 키 표시 설정',
+            description:
+                '속성 값이 표시되는 위치를 제어합니다. 열은 탐색 창, 목록 창, 파일 컨텍스트 메뉴에 해당합니다. 하단 행을 사용하여 열의 모든 행을 전환합니다.',
+            searchPlaceholder: '속성 키 검색...',
+            propertyColumnLabel: '속성',
+            showInNavigation: '탐색에 표시',
+            showInList: '목록에 표시',
+            showInFileMenu: '파일 메뉴에 표시',
+            toggleAllInNavigation: '탐색에서 모두 전환',
+            toggleAllInList: '목록에서 모두 전환',
+            toggleAllInFileMenu: '파일 메뉴에서 모두 전환',
+            applyButton: '적용',
+            emptyState: '속성 키를 찾을 수 없습니다.'
+        },
+        welcome: {
+            title: '{pluginName}에 오신 것을 환영합니다',
+            introText:
+                '안녕하세요! 시작하기 전에 아래 비디오의 첫 5분을 시청하여 패널과 토글 "하위 폴더의 노트 표시"가 어떻게 작동하는지 이해하는 것을 강력히 권장합니다.',
+            continueText:
+                '5분 더 있으시다면 비디오를 계속 시청하여 컴팩트 표시 모드와 바로가기 및 중요한 단축키를 올바르게 설정하는 방법을 이해해 주세요.',
+            thanksText: '다운로드해 주셔서 감사합니다. 즐겁게 사용하세요!',
+            videoAlt: 'Notebook Navigator 설치 및 마스터하기',
+            openVideoButton: '비디오 재생',
+            closeButton: '나중에'
         }
     },
 
@@ -327,17 +640,19 @@ export const STRINGS_KO = {
             renameFile: '파일 이름 변경 실패: {error}',
             deleteFolder: '폴더 삭제 실패: {error}',
             deleteFile: '파일 삭제 실패: {error}',
+            deleteAttachments: '첨부 파일 삭제 실패: {error}',
             duplicateNote: '노트 복제 실패: {error}',
-            createCanvas: '캔버스 생성 실패: {error}',
-            createDatabase: '데이터베이스 생성 실패: {error}',
             duplicateFolder: '폴더 복제 실패: {error}',
             openVersionHistory: '버전 기록 열기 실패: {error}',
             versionHistoryNotFound: '버전 기록 명령을 찾을 수 없습니다. Obsidian Sync가 활성화되어 있는지 확인하세요.',
             revealInExplorer: '시스템 탐색기에서 파일 표시 실패: {error}',
+            openInDefaultApp: '기본 앱에서 열기 실패: {error}',
+            openInDefaultAppNotAvailable: '이 플랫폼에서는 기본 앱에서 열기를 사용할 수 없습니다',
             folderNoteAlreadyExists: '폴더 노트가 이미 존재합니다',
             folderAlreadyExists: '폴더 "{name}"이(가) 이미 존재합니다',
             folderNotesDisabled: '파일을 변환하려면 설정에서 폴더 노트를 활성화하세요',
             folderNoteAlreadyLinked: '이 파일은 이미 폴더 노트로 작동하고 있습니다',
+            folderNoteNotFound: '선택한 폴더에 폴더 노트가 없습니다',
             folderNoteUnsupportedExtension: '지원되지 않는 파일 확장자: {extension}',
             folderNoteMoveFailed: '변환 중 파일 이동 실패: {error}',
             folderNoteRenameConflict: '"{name}"이라는 이름의 파일이 이미 폴더에 존재합니다',
@@ -352,8 +667,14 @@ export const STRINGS_KO = {
             noFolderSelected: 'Notebook Navigator에서 선택된 폴더가 없습니다',
             noFileSelected: '선택된 파일이 없습니다'
         },
+        warnings: {
+            linkBreakingNameCharacters: '이 이름에는 Obsidian 링크를 깨뜨리는 문자가 포함되어 있습니다: #, |, ^, %%, [[, ]].',
+            forbiddenNameCharactersAllPlatforms: '이름은 . 로 시작할 수 없고 : 또는 / 를 포함할 수 없습니다.',
+            forbiddenNameCharactersWindows: 'Windows에서 예약된 문자는 허용되지 않습니다: <, >, ", \\, |, ?, *.'
+        },
         notices: {
-            excludedFolder: '숨겨진 폴더: {name}'
+            hideFolder: '폴더 숨김: {name}',
+            showFolder: '폴더 표시: {name}'
         },
         notifications: {
             deletedMultipleFiles: '{count}개의 파일이 삭제됨',
@@ -372,18 +693,23 @@ export const STRINGS_KO = {
             noTagsToRemove: '제거할 태그 없음',
             noFilesSelected: '선택된 파일 없음',
             tagOperationsNotAvailable: '태그 작업을 사용할 수 없음',
+            propertyOperationsNotAvailable: '속성 작업을 사용할 수 없습니다',
             tagsRequireMarkdown: '태그는 마크다운 노트에서만 지원됩니다',
+            propertiesRequireMarkdown: '속성은 Markdown 노트에서만 지원됩니다',
+            propertySetOnNote: '1개 노트의 속성을 업데이트했습니다',
+            propertySetOnNotes: '{count}개 노트의 속성을 업데이트했습니다',
             iconPackDownloaded: '{provider} 다운로드됨',
+            iconPackUpdated: '{provider} 업데이트됨 ({version})',
             iconPackRemoved: '{provider} 제거됨',
-            iconPackLoadFailed: '{provider} 로드에 실패했습니다'
+            iconPackLoadFailed: '{provider} 로드에 실패했습니다',
+            hiddenFileReveal: '파일이 숨겨져 있습니다. 표시하려면 "숨겨진 항목 표시"를 활성화하세요'
         },
         confirmations: {
             deleteMultipleFiles: '{count}개의 파일을 삭제하시겠습니까?',
             deleteConfirmation: '이 작업은 취소할 수 없습니다.'
         },
         defaultNames: {
-            untitled: '제목 없음',
-            untitledNumber: '제목 없음 {number}'
+            untitled: '제목 없음'
         }
     },
 
@@ -394,15 +720,15 @@ export const STRINGS_KO = {
             itemAlreadyExists: '이 위치에 "{name}"이(가) 이미 존재합니다.',
             failedToMove: '이동 실패: {error}',
             failedToAddTag: '태그 "{tag}" 추가 실패',
+            failedToSetProperty: '속성 업데이트 실패: {error}',
             failedToClearTags: '태그 지우기 실패',
             failedToMoveFolder: '폴더 "{name}" 이동 실패',
             failedToImportFiles: '가져오기 실패: {names}'
         },
         notifications: {
             filesAlreadyExist: '대상에 {count}개의 파일이 이미 존재합니다',
-            addedTag: '{count}개의 파일에 태그 "{tag}" 추가됨',
             filesAlreadyHaveTag: '{count}개의 파일이 이미 이 태그나 더 구체적인 태그를 가지고 있습니다',
-            clearedTags: '{count}개의 파일에서 모든 태그 제거됨',
+            filesAlreadyHaveProperty: '{count}개 파일에 이미 이 속성이 있습니다',
             noTagsToClear: '지울 태그 없음',
             fileImported: '1개의 파일 가져옴',
             filesImported: '{count}개의 파일 가져옴'
@@ -417,43 +743,60 @@ export const STRINGS_KO = {
         previous30Days: '지난 30일'
     },
 
-    // Weekdays
-    weekdays: {
-        sunday: '일요일',
-        monday: '월요일',
-        tuesday: '화요일',
-        wednesday: '수요일',
-        thursday: '목요일',
-        friday: '금요일',
-        saturday: '토요일'
-    },
-
     // Plugin commands
     commands: {
         open: '열기', // Command palette: Opens the Notebook Navigator view (English: Open)
+        toggleLeftSidebar: '왼쪽 사이드바 전환', // Command palette: Toggles left sidebar, opening Notebook Navigator when uncollapsing (English: Toggle left sidebar)
         openHomepage: '홈페이지 열기', // Command palette: Opens the Notebook Navigator view and loads the homepage file (English: Open homepage)
+        openDailyNote: '일일 노트 열기',
+        openWeeklyNote: '주간 노트 열기',
+        openMonthlyNote: '월간 노트 열기',
+        openQuarterlyNote: '분기 노트 열기',
+        openYearlyNote: '연간 노트 열기',
         revealFile: '파일 표시', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: '검색', // Command palette: Toggle search in the file list (English: Search)
+        searchVaultRoot: '보관소 루트에서 검색', // Command palette: Selects the vault root folder and focuses search (English: Search in vault root)
         toggleDualPane: '이중 창 레이아웃 전환', // Command palette: Toggles between single-pane and dual-pane layout (English: Toggle dual pane layout)
+        toggleDualPaneOrientation: '이중 창 방향 전환', // Command palette: Toggles dual-pane orientation between horizontal and vertical (English: Toggle dual pane orientation)
+        toggleCalendar: '캘린더 전환', // Command palette: Toggles showing the calendar overlay in the navigation pane (English: Toggle calendar)
+        selectVaultProfile: '보관소 프로필 변경', // Command palette: Opens a modal to choose a different vault profile (English: Switch vault profile)
+        selectVaultProfile1: '보관소 프로필 1 선택', // Command palette: Activates the first vault profile without opening the modal (English: Select vault profile 1)
+        selectVaultProfile2: '보관소 프로필 2 선택', // Command palette: Activates the second vault profile without opening the modal (English: Select vault profile 2)
+        selectVaultProfile3: '보관소 프로필 3 선택', // Command palette: Activates the third vault profile without opening the modal (English: Select vault profile 3)
         deleteFile: '파일 삭제', // Command palette: Deletes the currently active file (English: Delete file)
         createNewNote: '새 노트 만들기', // Command palette: Creates a new note in the currently selected folder (English: Create new note)
+        createNewNoteFromTemplate: '템플릿으로 새 노트', // Command palette: Creates a new note from a template in the currently selected folder (English: Create new note from template)
         moveFiles: '파일 이동', // Command palette: Move selected files to another folder (English: Move files)
+        selectNextFile: '다음 파일 선택', // Command palette: Selects the next file in the current view (English: Select next file)
+        selectPreviousFile: '이전 파일 선택', // Command palette: Selects the previous file in the current view (English: Select previous file)
+        navigateBack: '뒤로 이동',
+        navigateForward: '앞으로 이동',
         convertToFolderNote: '폴더 노트로 변환', // Command palette: Converts the active file into a folder note with a new folder (English: Convert to folder note)
+        setAsFolderNote: '폴더 노트로 설정', // Command palette: Renames the active file to its folder note name (English: Set as folder note)
+        detachFolderNote: '폴더 노트 해제', // Command palette: Renames the active folder note to a new name (English: Detach folder note)
+        pinAllFolderNotes: '폴더 노트를 모두 고정', // Command palette: Pins all folder notes to shortcuts (English: Pin all folder notes)
         navigateToFolder: '폴더로 이동', // Command palette: Navigate to a folder using fuzzy search (English: Navigate to folder)
         navigateToTag: '태그로 이동', // Command palette: Navigate to a tag using fuzzy search (English: Navigate to tag)
-        addShortcut: '바로가기에 추가', // Command palette: Adds the current file, folder, or tag to shortcuts (English: Add to shortcuts)
+        navigateToProperty: '속성으로 이동', // Command palette: Navigate to a property key or value using fuzzy search (English: Navigate to property)
+        addShortcut: '바로가기에 추가', // Command palette: Adds or removes the current file, folder, tag, or property from shortcuts (English: Add to shortcuts)
+        openShortcut: '바로가기 {number} 열기',
         toggleDescendants: '하위 항목 전환', // Command palette: Toggles showing notes from descendants (English: Toggle descendants)
-        toggleHidden: '숨겨진 항목 전환', // Command palette: Toggles showing hidden items (English: Toggle hidden items)
+        toggleHidden: '숨긴 폴더, 태그, 노트 전환', // Command palette: Toggles showing hidden items (English: Toggle hidden items)
+        toggleTagSort: '태그 정렬 전환', // Command palette: Toggles between alphabetical and frequency tag sorting (English: Toggle tag sort order)
+        toggleCompactMode: '컴팩트 모드 전환', // Command palette: Toggles list mode between standard and compact (English: Toggle compact mode)
         collapseExpand: '모든 항목 접기 / 펼치기', // Command palette: Collapse or expand all folders and tags (English: Collapse / expand all items)
         addTag: '선택한 파일에 태그 추가', // Command palette: Opens a dialog to add a tag to selected files (English: Add tag to selected files)
+        setProperty: '선택한 파일에 속성 설정', // Command palette: Opens a fuzzy dialog to set a property on selected files (English: Set property on selected files)
         removeTag: '선택한 파일에서 태그 제거', // Command palette: Opens a dialog to remove a tag from selected files (English: Remove tag from selected files)
         removeAllTags: '선택한 파일에서 모든 태그 제거', // Command palette: Removes all tags from selected files (English: Remove all tags from selected files)
+        openAllFiles: '모든 파일 열기', // Command palette: Opens all files in the current folder or tag (English: Open all files)
         rebuildCache: '캐시 다시 빌드' // Command palette: Rebuilds the local Notebook Navigator cache (English: Rebuild cache)
     },
 
     // Plugin UI
     plugin: {
         viewName: 'Notebook Navigator', // Name shown in the view header/tab (English: Notebook Navigator)
+        calendarViewName: '캘린더', // Name shown in the view header/tab (English: Calendar)
         ribbonTooltip: 'Notebook Navigator', // Tooltip for the ribbon icon in the left sidebar (English: Notebook Navigator)
         revealInNavigator: 'Notebook Navigator에서 표시' // Context menu item to reveal a file in the navigator (English: Reveal in Notebook Navigator)
     },
@@ -476,68 +819,63 @@ export const STRINGS_KO = {
         },
         sections: {
             general: '일반',
-            navigationPane: '탐색 창',
+            navigationPane: '탐색',
+            calendar: '달력',
+            files: '파일',
             icons: '아이콘 팩',
             folders: '폴더',
+            folderNotes: '폴더 노트',
+            foldersAndTags: '폴더',
+            tagsAndProperties: '태그 및 속성',
             tags: '태그',
-            search: '검색',
-            listPane: '목록 창',
+            listPane: '목록',
             notes: '노트',
-            hotkeys: '단축키',
             advanced: '고급'
         },
         groups: {
             general: {
-                view: '모양',
-                behavior: '동작',
+                vaultProfiles: '보관소 프로필',
                 filtering: '필터링',
+                templates: '템플릿',
+                behavior: '동작',
+                keyboardNavigation: '키보드 탐색',
+                mouseButtons: '마우스 버튼',
+                view: '모양',
+                icons: '아이콘',
+                desktopAppearance: '데스크톱 모양새',
+                mobileAppearance: '모바일 모양',
                 formatting: '서식'
             },
             navigation: {
-                behavior: '동작',
-                appearance: '모양'
+                appearance: '모양',
+                rainbowColors: '무지개 색상',
+                leftSidebar: '왼쪽 사이드바',
+                calendarIntegration: '캘린더 연동'
             },
             list: {
                 display: '모양',
-                quickActions: '빠른 작업'
+                pinnedNotes: '고정된 노트'
             },
             notes: {
                 frontmatter: '프런트매터',
-                display: '모양'
+                tasks: '작업',
+                icon: '아이콘',
+                title: '제목',
+                previewText: '미리보기 텍스트',
+                featureImage: '대표 이미지',
+                tags: '태그',
+                properties: '속성',
+                date: '날짜',
+                parentFolder: '상위 폴더'
             }
         },
+        syncMode: {
+            notSynced: '(동기화되지 않음)',
+            disabled: '(비활성화됨)',
+            switchToSynced: '동기화 활성화',
+            switchToLocal: '동기화 비활성화'
+        },
         items: {
-            searchProvider: {
-                name: '검색 제공자',
-                desc: '빠른 파일명 검색 또는 Omnisearch 플러그인을 통한 전체 텍스트 검색 중에서 선택하세요.',
-                options: {
-                    internal: '필터 검색',
-                    omnisearch: 'Omnisearch (전체 텍스트)'
-                },
-                info: {
-                    filterSearch: {
-                        title: '필터 검색 (기본값):',
-                        description:
-                            '현재 폴더와 하위 폴더 내의 파일을 이름과 태그로 필터링하는 빠르고 가벼운 검색. # 접두사를 사용한 태그 필터링(예: #프로젝트), ! 접두사를 사용한 제외(예: !초안, !#보관됨), !#를 사용한 태그 없는 노트 찾기를 지원합니다. 현재 컨텍스트 내에서 빠른 탐색에 이상적입니다.'
-                    },
-                    omnisearch: {
-                        title: 'Omnisearch:',
-                        description:
-                            '전체 보관소를 검색한 다음 현재 폴더, 하위 폴더 또는 선택한 태그의 파일만 표시하도록 결과를 필터링하는 전체 텍스트 검색. Omnisearch 플러그인 설치가 필요합니다 - 사용할 수 없는 경우 검색이 자동으로 필터 검색으로 대체됩니다.',
-                        warningNotInstalled: 'Omnisearch 플러그인이 설치되지 않았습니다. 필터 검색을 사용합니다.',
-                        limitations: {
-                            title: '알려진 제한 사항:',
-                            performance: '성능: 대용량 보관소에서 3자 미만을 검색할 때 특히 느릴 수 있음',
-                            pathBug:
-                                '경로 버그: 비ASCII 문자가 있는 경로에서 검색할 수 없으며 하위 경로를 올바르게 검색하지 않아 검색 결과에 표시되는 파일에 영향을 줍니다',
-                            limitedResults:
-                                '제한된 결과: Omnisearch가 전체 보관소를 검색하고 필터링 전에 제한된 수의 결과를 반환하므로 보관소의 다른 곳에 일치 항목이 너무 많으면 현재 폴더의 관련 파일이 나타나지 않을 수 있음',
-                            previewText:
-                                '미리보기 텍스트: 노트 미리보기가 Omnisearch 결과 발췌로 대체되어 검색 일치 하이라이트가 파일의 다른 위치에 나타나는 경우 실제 하이라이트가 표시되지 않을 수 있음'
-                        }
-                    }
-                }
-            },
             listPaneTitle: {
                 name: '목록 창 제목',
                 desc: '목록 창 제목을 표시할 위치를 선택하세요.',
@@ -556,95 +894,472 @@ export const STRINGS_KO = {
                     'created-desc': '생성 날짜 (최신 상위)',
                     'created-asc': '생성 날짜 (오래된 상위)',
                     'title-asc': '제목 (가나다 상위)',
-                    'title-desc': '제목 (역순 상위)'
+                    'title-desc': '제목 (역순 상위)',
+                    'filename-asc': '파일 이름 (가나다 상위)',
+                    'filename-desc': '파일 이름 (역순 상위)',
+                    'property-asc': '속성 (가나다 상위)',
+                    'property-desc': '속성 (역순 상위)'
+                },
+                propertyOverride: {
+                    asc: '속성 ‘{property}’ (가나다 상위)',
+                    desc: '속성 ‘{property}’ (역순 상위)'
                 }
+            },
+            propertySortKey: {
+                name: '정렬 속성',
+                desc: '속성 정렬과 함께 사용됩니다. 이 frontmatter 속성이 있는 노트가 먼저 나열되고 속성 값으로 정렬됩니다. 배열은 하나의 값으로 결합됩니다.',
+                placeholder: 'order'
+            },
+            propertySortSecondary: {
+                name: '보조 정렬',
+                desc: '속성 정렬 사용 시 노트의 속성 값이 같거나 속성 값이 없을 때 적용됩니다.',
+                options: {
+                    title: '제목',
+                    filename: '파일 이름',
+                    created: '생성 날짜',
+                    modified: '편집 날짜'
+                }
+            },
+            revealFileOnListChanges: {
+                name: '목록 변경 시 선택된 파일로 스크롤',
+                desc: '노트 고정, 하위 노트 표시, 폴더 모양 변경 또는 파일 작업 실행 시 선택된 파일로 스크롤합니다.'
             },
             includeDescendantNotes: {
                 name: '하위 폴더 / 하위 항목 노트 표시',
                 desc: '폴더나 태그를 볼 때 중첩된 하위 폴더와 태그 하위 항목의 노트를 포함합니다.'
             },
+            limitPinnedToCurrentFolder: {
+                name: '노트를 해당 폴더에서만 고정',
+                desc: '고정된 노트는 자신의 폴더에서만 고정된 것으로 표시됩니다. 폴더 노트이거나 고정된 노트가 많을 때 유용합니다. 태그 또는 속성 보기에는 영향을 주지 않습니다.'
+            },
             separateNoteCounts: {
                 name: '현재와 하위 항목 수를 별도로 표시',
                 desc: '폴더와 태그의 노트 수를 "현재 ▾ 하위" 형식으로 표시합니다.'
             },
-            groupByDate: {
-                name: '날짜별로 노트 그룹화',
-                desc: '날짜별로 정렬할 때 날짜 헤더 아래에 노트를 그룹화합니다.'
+            groupNotes: {
+                name: '노트 그룹화',
+                desc: '날짜 또는 폴더별로 그룹화된 노트 사이에 머리글을 표시합니다. 폴더 그룹화가 활성화되면 태그 보기는 날짜 그룹을 사용합니다.',
+                options: {
+                    none: '그룹화 안 함',
+                    date: '날짜별 그룹',
+                    folder: '폴더별 그룹'
+                }
+            },
+            showSelectedNavigationPills: {
+                name: '태그 및 속성 필을 항상 표시',
+                desc: '비활성화하면 현재 탐색 선택과 일치하는 필이 숨겨집니다(예: "레시피" 태그를 탐색할 때 "레시피" 태그 필이 숨겨짐). 활성화하면 모든 필이 항상 표시됩니다.'
+            },
+            showPinnedGroupHeader: {
+                name: '고정 그룹 헤더 표시',
+                desc: '고정된 노트 위에 섹션 헤더를 표시합니다.'
+            },
+            showPinnedIcon: {
+                name: '고정 아이콘 표시',
+                desc: '고정 섹션 헤더 옆에 아이콘을 표시합니다.'
+            },
+            defaultListMode: {
+                name: '기본 목록 모드',
+                desc: '기본 목록 레이아웃을 선택합니다. 표준은 제목, 날짜, 설명, 미리보기 텍스트를 표시합니다. 컴팩트는 제목만 표시합니다. 외형은 폴더별로 덮어쓸 수 있습니다.',
+                options: {
+                    standard: '표준',
+                    compact: '컴팩트'
+                }
+            },
+            showFileIcons: {
+                name: '파일 아이콘 표시',
+                desc: '파일 아이콘을 왼쪽 정렬 간격과 함께 표시. 비활성화하면 아이콘과 들여쓰기가 모두 제거됩니다. 우선순위: 미완료 작업 아이콘 > 사용자 지정 아이콘 > 파일 이름 아이콘 > 파일 유형 아이콘 > 기본값 아이콘.'
+            },
+            showFileIconUnfinishedTask: {
+                name: '미완료 작업 아이콘',
+                desc: '노트에 미완료 작업이 있을 때 작업 아이콘을 표시합니다.'
+            },
+            showFileBackgroundUnfinishedTask: {
+                name: '미완료 작업 배경',
+                desc: '노트에 미완료 작업이 있을 때 배경색을 적용합니다.'
+            },
+            unfinishedTaskBackgroundColor: {
+                name: '배경색',
+                desc: '노트에 미완료 작업이 있을 때 사용할 배경색을 설정합니다.'
+            },
+            showFilenameMatchIcons: {
+                name: '파일 이름으로 아이콘 설정',
+                desc: '파일 이름의 텍스트를 기반으로 아이콘을 지정합니다.'
+            },
+            fileNameIconMap: {
+                name: '파일 이름 아이콘 맵',
+                desc: '텍스트를 포함하는 파일에 지정된 아이콘이 적용됩니다. 줄당 하나의 매핑: 텍스트=아이콘',
+                placeholder: '# 텍스트=아이콘\n회의=LiCalendar\n청구서=PhReceipt',
+                editTooltip: '매핑 편집'
+            },
+            showCategoryIcons: {
+                name: '파일 유형으로 아이콘 설정',
+                desc: '파일 확장자를 기반으로 아이콘을 지정합니다.'
+            },
+            fileTypeIconMap: {
+                name: '파일 유형 아이콘 맵',
+                desc: '확장자가 있는 파일에 지정된 아이콘이 적용됩니다. 줄당 하나의 매핑: 확장자=아이콘',
+                placeholder: '# Extension=icon\ncpp=LiFileCode\npdf=RaBook',
+                editTooltip: '매핑 편집'
             },
             optimizeNoteHeight: {
-                name: '노트 높이 최적화',
-                desc: '고정된 노트와 미리보기 텍스트가 없는 노트의 높이를 줄입니다.'
+                name: '가변 노트 높이',
+                desc: '고정된 노트와 미리보기 텍스트가 없는 노트에 컴팩트한 높이를 사용합니다.'
             },
-            showParentFolderNames: {
-                name: '상위 폴더 이름 표시',
+            compactItemHeight: {
+                name: '슬림 항목 높이',
+                desc: '데스크톱과 모바일에서 슬림 목록 항목 높이를 설정합니다.',
+                resetTooltip: '기본값으로 복원 (28px)'
+            },
+            compactItemHeightScaleText: {
+                name: '슬림 항목 높이에 맞춰 텍스트 크기 조정',
+                desc: '항목 높이를 줄이면 슬림 목록 텍스트 크기를 조정합니다.'
+            },
+            showParentFolder: {
+                name: '상위 폴더 표시',
                 desc: '하위 폴더나 태그의 노트에 상위 폴더 이름을 표시합니다.'
             },
+            parentFolderClickRevealsFile: {
+                name: '상위 폴더 클릭 시 폴더 열기',
+                desc: '상위 폴더 레이블을 클릭하면 목록 창에서 폴더를 엽니다.'
+            },
+            showParentFolderColor: {
+                name: '상위 폴더 색상 표시',
+                desc: '상위 폴더 레이블에 폴더 색상을 사용합니다.'
+            },
+            showParentFolderIcon: {
+                name: '상위 폴더 아이콘 표시',
+                desc: '상위 폴더 레이블 옆에 폴더 아이콘을 표시합니다.'
+            },
             showQuickActions: {
-                name: '빠른 작업 표시 (데스크톱 전용)',
-                desc: '파일 항목에 호버 작업을 표시합니다.'
-            },
-            quickActionsRevealInFolder: {
-                name: '폴더에서 표시',
-                desc: '빠른 작업: 노트를 상위 폴더에서 표시합니다. 하위 폴더나 태그에서 노트를 볼 때만 표시됩니다 (노트의 실제 폴더에서는 표시되지 않음).'
-            },
-            quickActionsPinNote: {
-                name: '노트 고정',
-                desc: '빠른 작업: 목록 상단에 노트를 고정하거나 고정 해제합니다.'
-            },
-            quickActionsOpenInNewTab: {
-                name: '새 탭에서 열기',
-                desc: '빠른 작업: 새 탭에서 노트를 엽니다.'
+                name: '빠른 작업 표시',
+                desc: '파일 위에 마우스를 올리면 작업 버튼을 표시합니다. 버튼 컨트롤로 표시할 작업을 선택합니다.'
             },
             dualPane: {
-                name: '이중 창 레이아웃 (데스크톱 전용, 동기화되지 않음)',
+                name: '이중 창 레이아웃',
                 desc: '데스크톱에서 탐색 창과 목록 창을 나란히 표시합니다.'
+            },
+            dualPaneOrientation: {
+                name: '듀얼 창 방향',
+                desc: '듀얼 창이 활성화된 경우 가로 또는 세로 레이아웃을 선택합니다.',
+                options: {
+                    horizontal: '가로 분할',
+                    vertical: '세로 분할'
+                }
+            },
+            appearanceBackground: {
+                name: '배경색',
+                desc: '탐색 및 목록 패널의 배경색을 선택합니다.',
+                options: {
+                    separate: '분리된 배경',
+                    primary: '목록 배경 사용',
+                    secondary: '탐색 배경 사용'
+                }
+            },
+            appearanceScale: {
+                name: '확대 수준',
+                desc: 'Notebook Navigator의 전체 확대 수준을 제어합니다.'
+            },
+            useFloatingToolbars: {
+                name: 'iOS/iPadOS에서 플로팅 툴바 사용',
+                desc: 'Obsidian 1.11 이상에 적용됩니다.'
             },
             startView: {
                 name: '기본 시작 보기',
-                desc: 'Notebook Navigator를 열 때 표시할 창을 선택하세요. 탐색 창은 바로가기, 최근 노트, 폴더 구조를 표시합니다. 목록 창은 노트 목록을 표시합니다.',
+                desc: 'Notebook Navigator를 열 때 표시할 창을 선택하세요. 탐색 창은 바로가기, 최근 파일, 폴더 구조를 표시합니다. 목록 창은 파일 목록을 표시합니다.',
                 options: {
                     navigation: '탐색 창',
                     files: '목록 창'
                 }
             },
+            toolbarButtons: {
+                name: '도구 모음 버튼',
+                desc: '도구 모음에 표시할 버튼을 선택하세요. 숨겨진 버튼은 명령과 메뉴를 통해 계속 사용할 수 있습니다.',
+                navigationLabel: '탐색 도구 모음',
+                listLabel: '목록 도구 모음'
+            },
+            createNewNotesInNewTab: {
+                name: '새 노트를 새 탭에서 열기',
+                desc: '활성화하면 새 노트 만들기 명령이 새 탭에서 노트를 엽니다. 비활성화하면 노트가 현재 탭을 대체합니다.'
+            },
             autoRevealActiveNote: {
                 name: '활성 노트 자동 표시',
                 desc: '빠른 전환기, 링크 또는 검색에서 열 때 노트를 자동으로 표시합니다.'
+            },
+            autoRevealShortestPath: {
+                name: '최단 경로 사용',
+                desc: '활성화: 자동 표시가 가장 가까운 보이는 상위 폴더 또는 태그를 선택합니다. 비활성화: 자동 표시가 파일의 실제 폴더와 정확한 태그를 선택합니다.'
             },
             autoRevealIgnoreRightSidebar: {
                 name: '오른쪽 사이드바의 이벤트 무시',
                 desc: '오른쪽 사이드바에서 클릭하거나 노트를 변경할 때 활성 노트를 변경하지 않습니다.'
             },
+            autoRevealIgnoreOtherWindows: {
+                name: '다른 창의 이벤트 무시',
+                desc: '다른 창에서 노트를 작업할 때 활성 노트를 변경하지 않습니다.'
+            },
+            paneTransitionDuration: {
+                name: '단일 창 애니메이션',
+                desc: '단일 창 모드에서 창 전환 시 트랜지션 시간 (밀리초).',
+                resetTooltip: '기본값으로 재설정'
+            },
             autoSelectFirstFileOnFocusChange: {
-                name: '첫 번째 노트 자동 선택 (데스크톱 전용)',
+                name: '첫 번째 노트 자동 선택',
                 desc: '폴더나 태그를 전환할 때 첫 번째 노트를 자동으로 엽니다.'
             },
-            autoExpandFoldersTags: {
-                name: '폴더 및 태그 자동 펼치기',
-                desc: '폴더와 태그가 선택되면 자동으로 펼칩니다.'
+            skipAutoScroll: {
+                name: '바로가기 자동 스크롤 비활성화',
+                desc: '바로가기 내 항목을 클릭할 때 탐색 패널을 스크롤하지 않습니다.'
+            },
+            autoExpandNavItems: {
+                name: '선택 시 확장',
+                desc: '선택 시 폴더와 태그를 확장합니다. 단일 창 모드에서는 첫 번째 선택이 확장하고 두 번째 선택이 파일을 표시합니다.'
+            },
+            springLoadedFolders: {
+                name: '드래그 중 확장',
+                desc: '드래그 작업 중에 마우스를 올리면 폴더와 태그를 확장합니다.'
+            },
+            springLoadedFoldersInitialDelay: {
+                name: '첫 확장 지연',
+                desc: '드래그 작업 중 첫 번째 폴더 또는 태그가 확장되기 전 지연(초).'
+            },
+            springLoadedFoldersSubsequentDelay: {
+                name: '후속 확장 지연',
+                desc: '같은 드래그 작업 중 추가 폴더 또는 태그가 확장되기 전 지연(초).'
             },
             navigationBanner: {
-                name: '탐색 배너',
-                desc: '탐색 창 상단에 이미지를 표시합니다.',
+                name: '탐색 배너 (저장소 프로필)',
+                desc: '탐색 창 상단에 이미지를 표시합니다. 선택한 저장소 프로필에 따라 변경됩니다.',
                 current: '현재 배너: {path}',
-                chooseButton: '이미지 선택',
-                clearButton: '지우기'
+                chooseButton: '이미지 선택'
+            },
+            pinNavigationBanner: {
+                name: '배너 고정',
+                desc: '탐색 배너를 탐색 트리 위에 고정합니다.'
             },
             showShortcuts: {
                 name: '바로가기 표시',
                 desc: '탐색 창에 바로가기 섹션을 표시합니다.'
             },
+            shortcutBadgeDisplay: {
+                name: '바로가기 배지',
+                desc: "바로가기 옆에 표시할 내용. '바로가기 1-9 열기' 명령으로 바로가기를 직접 열 수 있습니다.",
+                options: {
+                    index: '위치 (1-9)',
+                    count: '항목 수',
+                    none: '없음'
+                }
+            },
             showRecentNotes: {
-                name: '최근 노트 표시',
-                desc: '탐색 창에 최근 노트 섹션을 표시합니다.'
+                name: '최근 파일 표시',
+                desc: '탐색 창에 최근 파일 섹션을 표시합니다.'
+            },
+            hideRecentNotes: {
+                name: '파일 유형 숨기기',
+                desc: '최근 파일 섹션에서 숨길 파일 유형을 선택합니다.',
+                options: {
+                    none: '없음',
+                    folderNotes: '폴더 노트'
+                }
             },
             recentNotesCount: {
-                name: '최근 노트 수',
-                desc: '표시할 최근 노트의 수입니다.'
+                name: '최근 파일 수',
+                desc: '표시할 최근 파일의 수입니다.'
+            },
+            pinRecentNotesWithShortcuts: {
+                name: '바로가기와 함께 최근 파일 고정',
+                desc: '바로가기를 고정할 때 최근 파일을 포함합니다.'
+            },
+            calendarEnabled: {
+                name: '캘린더 활성화',
+                desc: 'Notebook Navigator의 캘린더 기능을 활성화합니다.'
+            },
+            calendarPlacement: {
+                name: '캘린더 위치',
+                desc: '왼쪽 또는 오른쪽 사이드바에 표시합니다.',
+                options: {
+                    leftSidebar: '왼쪽 사이드바',
+                    rightSidebar: '오른쪽 사이드바'
+                }
+            },
+            calendarLeftPlacement: {
+                name: '단일 창 배치',
+                desc: '단일 창 모드에서 캘린더가 표시되는 위치입니다.',
+                options: {
+                    navigationPane: '탐색 창',
+                    below: '창 아래'
+                }
+            },
+            calendarLocale: {
+                name: '지역',
+                desc: '달력 날짜 형식, 주 번호, 그리고 한 주의 첫 번째 요일을 제어합니다.',
+                incompatibleWeekPatternWarning:
+                    '주간 노트 패턴이 ISO 주 토큰("W" 또는 "G")을 사용합니다. 캘린더는 이 지역의 시작 요일 대신 월요일부터 시작하는 주를 표시합니다.',
+                options: {
+                    systemDefault: '기본값'
+                }
+            },
+            calendarWeekendDays: {
+                name: '주말',
+                desc: '주말을 다른 배경색으로 표시합니다.',
+                options: {
+                    none: '없음',
+                    satSun: '토요일과 일요일',
+                    friSat: '금요일과 토요일',
+                    thuFri: '목요일과 금요일'
+                }
+            },
+            calendarMonthHeadingFormat: {
+                name: '월 이름 형식',
+                desc: '연도 보기가 숨겨져 있을 때 월 이름을 일반 또는 약어로 표시합니다.',
+                options: {
+                    full: '1월 (전체)',
+                    short: '1월 (축약)'
+                }
+            },
+            showInfoButtons: {
+                name: '정보 버튼 표시',
+                desc: '검색 바와 캘린더 헤더에 정보 버튼을 표시합니다.'
+            },
+            calendarWeeksToShow: {
+                name: '왼쪽 사이드바에 표시할 주',
+                desc: '오른쪽 사이드바의 캘린더는 항상 전체 월을 표시합니다.',
+                options: {
+                    fullMonth: '전체 월',
+                    oneWeek: '1주',
+                    weeksCount: '{count}주'
+                }
+            },
+            calendarHighlightToday: {
+                name: '오늘 날짜 강조 표시',
+                desc: '오늘 날짜를 배경색과 굵은 텍스트로 강조 표시합니다.'
+            },
+            calendarShowFeatureImage: {
+                name: '대표 이미지 표시',
+                desc: '캘린더에서 노트의 대표 이미지를 표시합니다.'
+            },
+            calendarShowWeekNumber: {
+                name: '주 번호 표시',
+                desc: '주 번호 열을 추가합니다.'
+            },
+            calendarShowQuarter: {
+                name: '분기 표시',
+                desc: '캘린더 헤더에 분기 레이블을 추가합니다.'
+            },
+            calendarShowYearCalendar: {
+                name: '연간 캘린더 표시',
+                desc: '오른쪽 사이드바에 연도 탐색 및 월 그리드를 표시합니다.'
+            },
+            calendarConfirmBeforeCreate: {
+                name: '생성 전 확인',
+                desc: '새 데일리 노트를 생성할 때 확인 대화 상자를 표시합니다.'
+            },
+            calendarIntegrationMode: {
+                name: '데일리 노트 소스',
+                desc: '캘린더 노트 소스.',
+                options: {
+                    dailyNotes: '데일리 노트(코어 플러그인)',
+                    notebookNavigator: 'Notebook Navigator'
+                },
+                info: {
+                    dailyNotes: '폴더 및 날짜 형식은 데일리 노트 코어 플러그인에서 설정됩니다.'
+                }
+            },
+
+            calendarCustomRootFolder: {
+                name: '루트 폴더',
+                desc: '정기 노트의 기본 폴더. 날짜 패턴에 하위 폴더를 포함할 수 있습니다. 선택한 보관소 프로필에 따라 변경됩니다.',
+                placeholder: 'Personal/Diary'
+            },
+            calendarTemplateFolder: {
+                name: '템플릿 폴더 위치',
+                desc: '템플릿 파일 선택기가 이 폴더의 노트를 표시합니다.',
+                placeholder: 'Templates'
+            },
+            calendarCustomFilePattern: {
+                name: '일일 노트',
+                desc: 'Moment 날짜 형식을 사용하여 경로 지정. 하위 폴더 이름은 대괄호로 감싸세요, 예: [Work]/YYYY. 템플릿 아이콘을 클릭하여 템플릿을 설정하세요. 템플릿 폴더 위치는 일반 > 템플릿에서 설정하세요.',
+                momentDescPrefix: '',
+                momentLinkText: 'Moment 날짜 형식',
+                momentDescSuffix:
+                    '을 사용하여 경로 지정. 하위 폴더 이름은 대괄호로 감싸세요, 예: [Work]/YYYY. 템플릿 아이콘을 클릭하여 템플릿을 설정하세요. 템플릿 폴더 위치는 일반 > 템플릿에서 설정하세요.',
+                placeholder: 'YYYY/YYYYMMDD',
+                example: '현재 구문: {path}',
+                parsingError: '패턴은 전체 날짜(연, 월, 일)로 포맷되고 다시 파싱될 수 있어야 합니다.'
+            },
+            calendarCustomWeekPattern: {
+                name: '주간 노트',
+                parsingError: '패턴은 전체 주(주 연도, 주 번호)로 포맷되고 다시 파싱될 수 있어야 합니다.',
+                localeMismatchWarning:
+                    '이 패턴은 ISO 주 토큰("W" 또는 "G")을 사용합니다. 캘린더는 월요일부터 시작하는 주를 표시합니다. 주간 노트가 선택한 지역 설정을 따르려면 "w" 또는 "g"를 사용하세요.'
+            },
+            calendarCustomMonthPattern: {
+                name: '월간 노트',
+                parsingError: '패턴은 전체 월(연도, 월)로 포맷되고 다시 파싱될 수 있어야 합니다.'
+            },
+            calendarCustomQuarterPattern: {
+                name: '분기별 노트',
+                parsingError: '패턴은 전체 분기(연도, 분기)로 포맷되고 다시 파싱될 수 있어야 합니다.'
+            },
+            calendarCustomYearPattern: {
+                name: '연간 노트',
+                parsingError: '패턴은 전체 연도(연도)로 포맷되고 다시 파싱될 수 있어야 합니다.'
+            },
+            calendarTemplateFile: {
+                current: '템플릿 파일: {name}'
             },
             showTooltips: {
-                name: '도구 설명 표시 (데스크톱 전용)',
+                name: '도구 설명 표시',
                 desc: '노트와 폴더에 대한 추가 정보가 있는 호버 도구 설명을 표시합니다.'
+            },
+            showTooltipPath: {
+                name: '경로 표시',
+                desc: '도구 설명에서 노트 이름 아래에 폴더 경로를 표시합니다.'
+            },
+            resetPaneSeparator: {
+                name: '창 구분선 위치 초기화',
+                desc: '탐색 창과 목록 창 사이의 드래그 가능한 구분선을 기본 위치로 초기화합니다.',
+                buttonText: '구분선 초기화',
+                notice: '구분선 위치가 초기화되었습니다. Obsidian을 재시작하거나 Notebook Navigator를 다시 열어 적용하세요.'
+            },
+            settingsTransfer: {
+                name: '설정 가져오기 및 내보내기',
+                desc: 'Notebook Navigator 설정을 JSON으로 내보내거나 가져옵니다. 가져오기는 모든 설정을 대체합니다.',
+                importButtonText: '가져오기',
+                exportButtonText: '내보내기',
+                import: {
+                    modalTitle: '설정 가져오기',
+                    fileButtonName: '파일에서 가져오기',
+                    fileButtonDesc: '디스크에서 JSON 파일을 불러옵니다.',
+                    fileButtonText: '파일에서 가져오기',
+                    editorName: 'JSON',
+                    editorDesc: '아래에 JSON을 붙여넣거나 편집하세요. 포함되지 않은 설정은 기본값으로 초기화됩니다.',
+                    placeholder: '{\n  "folderSortOrder": "alpha-desc"\n}',
+                    confirmButtonText: '가져오기',
+                    successNotice: '설정을 가져왔습니다.',
+                    errorNotice: '설정 가져오기에 실패했습니다: {message}',
+                    fileReadError: '파일을 읽을 수 없습니다: {message}'
+                },
+                export: {
+                    modalTitle: '설정 내보내기',
+                    editorName: 'JSON',
+                    editorDesc: '기본값에서 변경된 설정만 포함됩니다.',
+                    placeholder: '{}',
+                    copyButtonText: '클립보드에 복사',
+                    downloadButtonText: '다운로드',
+                    copyNotice: '설정이 클립보드에 복사되었습니다.',
+                    downloadNotice: '설정이 내보내졌습니다.',
+                    downloadError: '설정 다운로드에 실패했습니다: {message}'
+                }
+            },
+            resetAllSettings: {
+                name: '모든 설정 초기화',
+                desc: 'Notebook Navigator의 모든 설정을 기본값으로 초기화합니다.',
+                buttonText: '모든 설정 초기화',
+                confirmTitle: '모든 설정을 초기화하시겠습니까?',
+                confirmMessage: 'Notebook Navigator의 모든 설정이 기본값으로 초기화됩니다. 되돌릴 수 없습니다.',
+                confirmButtonText: '모든 설정 초기화',
+                notice: '모든 설정이 초기화되었습니다. Obsidian을 재시작하거나 Notebook Navigator를 다시 열어 적용하세요.',
+                error: '설정 초기화에 실패했습니다.'
             },
             multiSelectModifier: {
                 name: '다중 선택 수정자',
@@ -654,8 +1369,33 @@ export const STRINGS_KO = {
                     optionAlt: 'Option/Alt 클릭'
                 }
             },
+            enterToOpenFiles: {
+                name: 'Enter 키로 파일 열기',
+                desc: '목록 키보드 탐색 중 Enter 키를 누를 때만 파일을 엽니다.'
+            },
+            shiftEnterOpenContext: {
+                name: 'Shift+Enter',
+                desc: 'Shift+Enter를 누르면 선택한 파일을 새 탭, 분할 또는 창에서 엽니다.'
+            },
+            cmdEnterOpenContext: {
+                name: 'Cmd+Enter',
+                desc: 'Cmd+Enter를 누르면 선택한 파일을 새 탭, 분할 또는 창에서 엽니다.'
+            },
+            ctrlEnterOpenContext: {
+                name: 'Ctrl+Enter',
+                desc: 'Ctrl+Enter를 누르면 선택한 파일을 새 탭, 분할 또는 창에서 엽니다.'
+            },
+            mouseBackForwardAction: {
+                name: '마우스 뒤로/앞으로 버튼',
+                desc: '데스크톱에서 마우스 뒤로/앞으로 버튼의 동작.',
+                options: {
+                    none: '시스템 기본값 사용',
+                    singlePaneSwitch: '패널 전환 (단일 패널)',
+                    history: '기록 탐색'
+                }
+            },
             fileVisibility: {
-                name: '파일 유형 표시',
+                name: '파일 유형 표시 (볼트 프로필)',
                 desc: '네비게이터에 표시할 파일 유형을 필터링합니다. Obsidian에서 지원하지 않는 파일 유형은 외부 응용 프로그램에서 열릴 수 있습니다.',
                 options: {
                     documents: '문서 (.md, .canvas, .base)',
@@ -665,23 +1405,63 @@ export const STRINGS_KO = {
             },
             homepage: {
                 name: '홈페이지',
-                desc: '자동으로 열릴 대시보드 같은 파일을 선택합니다.',
+                desc: '시작 시 자동으로 열 대상을 선택합니다.',
                 current: '현재: {path}',
-                currentMobile: '모바일: {path}',
                 chooseButton: '파일 선택',
-                clearButton: '지우기',
-                separateMobile: {
-                    name: '별도 모바일 홈페이지',
-                    desc: '모바일 기기에서 다른 홈페이지를 사용합니다.'
+                options: {
+                    none: '없음',
+                    file: '파일',
+                    dailyNote: '일간 노트',
+                    weeklyNote: '주간 노트',
+                    monthlyNote: '월간 노트',
+                    quarterlyNote: '분기 노트'
+                },
+                file: {
+                    name: '시작 파일',
+                    empty: '선택된 파일 없음'
                 }
             },
             excludedNotes: {
-                name: '노트 숨기기',
-                desc: '쉼표로 구분된 frontmatter 속성 목록입니다. 이러한 속성 중 하나라도 포함된 노트는 숨겨집니다 (예: draft, private, archived).',
-                placeholder: 'draft, private'
+                name: '속성 규칙으로 노트 숨기기 (볼트 프로필)',
+                desc: '쉼표로 구분된 frontmatter 규칙 목록입니다. `key` 또는 `key=value` 항목을 사용합니다 (예: status=done, published=true, archived).',
+                placeholder: 'status=done, published=true, archived'
+            },
+            excludedFileNamePatterns: {
+                name: '파일 숨기기 (볼트 프로필)',
+                desc: '숨길 파일 이름 패턴의 쉼표로 구분된 목록입니다. * 와일드카드와 / 경로를 지원합니다 (예: temp-*, *.png, /assets/*).',
+                placeholder: 'temp-*, *.png, /assets/*'
+            },
+            vaultProfiles: {
+                name: '보관소 프로필',
+                desc: '프로필은 파일 유형 가시성, 숨겨진 파일, 숨겨진 폴더, 숨겨진 태그, 숨겨진 노트, 바로가기, 탐색 배너를 저장합니다. 탐색 창 헤더에서 프로필을 전환합니다.',
+                defaultName: '기본',
+                addButton: '프로필 추가',
+                editProfilesButton: '프로필 편집',
+                addProfileOption: '프로필 추가...',
+                applyButton: '적용',
+                deleteButton: '프로필 삭제',
+                addModalTitle: '프로필 추가',
+                editProfilesModalTitle: '프로필 편집',
+                addModalPlaceholder: '프로필 이름',
+                deleteModalTitle: '{name} 삭제',
+                deleteModalMessage: '{name}을(를) 제거하시겠습니까? 이 프로필에 저장된 숨겨진 파일, 폴더, 태그 및 노트 필터가 삭제됩니다.',
+                moveUp: '위로 이동',
+                moveDown: '아래로 이동',
+                errors: {
+                    emptyName: '프로필 이름을 입력하세요',
+                    duplicateName: '프로필 이름이 이미 존재합니다'
+                }
+            },
+            vaultTitle: {
+                name: '볼트 제목 위치',
+                desc: '볼트 제목이 표시되는 위치를 선택합니다.',
+                options: {
+                    header: '헤더에 표시',
+                    navigation: '탐색 창에 표시'
+                }
             },
             excludedFolders: {
-                name: '폴더 숨기기',
+                name: '폴더 숨기기 (볼트 프로필)',
                 desc: '숨길 폴더의 쉼표로 구분된 목록입니다. 이름 패턴: assets* (assets로 시작하는 폴더), *_temp (_temp로 끝나는). 경로 패턴: /archive (루트 archive만), /res* (res로 시작하는 루트 폴더), /*/temp (한 레벨 깊이의 temp 폴더), /projects/* (projects 내부의 모든 폴더).',
                 placeholder: 'templates, assets*, /archive, /res*'
             },
@@ -689,38 +1469,97 @@ export const STRINGS_KO = {
                 name: '날짜 표시',
                 desc: '노트 이름 아래에 날짜를 표시합니다.'
             },
+            alphabeticalDateMode: {
+                name: '이름 정렬 시',
+                desc: '노트가 이름순으로 정렬될 때 표시할 날짜.',
+                options: {
+                    created: '생성일',
+                    modified: '수정일'
+                }
+            },
             showFileTags: {
                 name: '파일 태그 표시',
-                desc: '파일 항목에 클릭 가능한 태그를 표시합니다. 태그 색상을 사용하여 다른 태그 유형을 시각적으로 구분합니다.'
+                desc: '파일 항목에 클릭 가능한 태그를 표시합니다.'
             },
             showFileTagAncestors: {
-                name: '상위 태그 표시',
-                desc: '태그 이름 앞에 상위 세그먼트를 표시합니다.'
+                name: '전체 태그 경로 표시',
+                desc: "태그의 전체 계층 경로를 표시합니다. 활성화: 'ai/openai', 'work/projects/2024'. 비활성화: 'openai', '2024'."
             },
             colorFileTags: {
                 name: '파일 태그 색상 지정',
                 desc: '파일 항목의 태그 배지에 태그 색상을 적용합니다.'
             },
-            showFileTagsInSlimMode: {
+            prioritizeColoredFileTags: {
+                name: '색상 태그 우선 표시',
+                desc: '색상 태그를 다른 태그보다 먼저 정렬합니다.'
+            },
+            showFileTagsInCompactMode: {
                 name: '슬림 모드에서 파일 태그 표시',
                 desc: '날짜, 미리보기, 이미지가 숨겨져 있을 때 태그를 표시합니다.'
             },
+            showFileProperties: {
+                name: '파일 속성 표시',
+                desc: '파일 항목에 클릭 가능한 속성을 표시합니다.'
+            },
+            colorFileProperties: {
+                name: '파일 속성에 색상 적용',
+                desc: '파일 항목의 속성 배지에 속성 색상을 적용합니다.'
+            },
+            prioritizeColoredFileProperties: {
+                name: '색상 속성을 먼저 표시',
+                desc: '파일 항목에서 색상 속성을 다른 속성보다 먼저 정렬합니다.'
+            },
+            showFilePropertiesInCompactMode: {
+                name: '간결 모드에서 속성 표시',
+                desc: '간결 모드가 활성화되면 속성을 표시합니다.'
+            },
+            notePropertyType: {
+                name: '노트 속성',
+                desc: '파일 항목에 표시할 노트 속성을 선택합니다.',
+                options: {
+                    frontmatter: '프론트매터 속성',
+                    wordCount: '단어 수',
+                    none: '없음'
+                }
+            },
+            propertyFields: {
+                name: '속성 키 (보관함 프로필)',
+                desc: '프론트매터 속성 키. 키별로 탐색 창 및 파일 목록의 표시 여부를 설정할 수 있습니다.',
+                addButtonTooltip: '속성 키 구성',
+                noneConfigured: '구성된 속성 없음',
+                singleConfigured: '1개 속성 구성됨: {properties}',
+                multipleConfigured: '{count}개 속성 구성됨: {properties}'
+            },
+            showPropertiesOnSeparateRows: {
+                name: '속성을 별도 행에 표시',
+                desc: '각 속성을 개별 행에 표시합니다.'
+            },
+            enablePropertyInternalLinks: {
+                name: '속성 필을 노트에 연결',
+                desc: '속성 필을 클릭하여 연결된 노트를 엽니다.'
+            },
+            enablePropertyExternalLinks: {
+                name: '속성 필을 URL에 연결',
+                desc: '속성 필을 클릭하여 연결된 URL을 엽니다.'
+            },
             dateFormat: {
                 name: '날짜 형식',
-                desc: '날짜 표시 형식 (date-fns 형식 사용).',
-                placeholder: 'MMM d, yyyy',
-                help: '일반적인 형식:\nMMM d, yyyy = 5월 25, 2022\ndd/MM/yyyy = 25/05/2022\nyyyy-MM-dd = 2022-05-25\n\n토큰:\nyyyy/yy = 년도\nMMMM/MMM/MM = 월\ndd/d = 일\nEEEE/EEE = 요일',
-                helpTooltip: '형식 참조를 보려면 클릭'
+                desc: '날짜 표시 형식 (Moment 형식 사용).',
+                placeholder: 'YYYY년 M월 D일',
+                help: '일반적인 형식:\nYYYY년 M월 D일 = 2022년 5월 25일\nDD/MM/YYYY = 25/05/2022\nYYYY-MM-DD = 2022-05-25\n\n토큰:\nYYYY/YY = 년도\nMMMM/MMM/MM = 월\nDD/D = 일\ndddd/ddd = 요일',
+                helpTooltip: 'Moment 형식',
+                momentLinkText: 'Moment 형식'
             },
             timeFormat: {
                 name: '시간 형식',
-                desc: '시간 표시 형식 (date-fns 형식 사용).',
-                placeholder: 'h:mm a',
-                help: '일반적인 형식:\nh:mm a = 2:30 PM (12시간)\nHH:mm = 14:30 (24시간)\nh:mm:ss a = 2:30:45 PM\nHH:mm:ss = 14:30:45\n\n토큰:\nHH/H = 24시간\nhh/h = 12시간\nmm = 분\nss = 초\na = AM/PM',
-                helpTooltip: '형식 참조를 보려면 클릭'
+                desc: '시간 표시 형식 (Moment 형식 사용).',
+                placeholder: 'a h:mm',
+                help: '일반적인 형식:\na h:mm = 오후 2:30 (12시간)\nHH:mm = 14:30 (24시간)\na h:mm:ss = 오후 2:30:45\nHH:mm:ss = 14:30:45\n\n토큰:\nHH/H = 24시간\nhh/h = 12시간\nmm = 분\nss = 초\na = 오전/오후',
+                helpTooltip: 'Moment 형식',
+                momentLinkText: 'Moment 형식'
             },
             showFilePreview: {
-                name: '노트 미리보기 표시 (*)',
+                name: '노트 미리보기 표시',
                 desc: '노트 이름 아래에 미리보기 텍스트를 표시합니다.'
             },
             skipHeadingsInPreview: {
@@ -731,11 +1570,22 @@ export const STRINGS_KO = {
                 name: '미리보기에서 코드 블록 건너뛰기',
                 desc: '미리보기 텍스트를 생성할 때 코드 블록을 건너뜁니다.'
             },
+            stripHtmlInPreview: {
+                name: '미리보기에서 HTML 제거',
+                desc: '미리보기 텍스트에서 HTML 태그를 제거합니다. 큰 노트에서는 성능에 영향을 줄 수 있습니다.'
+            },
+            stripLatexInPreview: {
+                name: '미리보기에서 LaTeX 제거',
+                desc: '미리보기 텍스트에서 인라인 및 블록 LaTeX 수식을 제거합니다.'
+            },
             previewProperties: {
                 name: '미리보기 속성',
                 desc: '미리보기 텍스트를 확인할 frontmatter 속성의 쉼표로 구분된 목록입니다. 텍스트가 있는 첫 번째 속성이 사용됩니다.',
-                placeholder: 'summary, description, abstract',
-                info: '지정된 속성에서 미리보기 텍스트를 찾을 수 없으면 노트 내용에서 미리보기가 생성됩니다.'
+                placeholder: 'summary, description, abstract'
+            },
+            previewPropertiesFallback: {
+                name: '노트 내용으로 대체',
+                desc: '지정된 속성에 텍스트가 없을 때 노트 내용을 미리보기로 표시합니다.'
             },
             previewRows: {
                 name: '미리보기 행',
@@ -757,8 +1607,8 @@ export const STRINGS_KO = {
                 }
             },
             showFeatureImage: {
-                name: '대표 이미지 표시 (*)',
-                desc: 'frontmatter에서 썸네일 이미지를 표시합니다. 팁: "Featured Image" 플러그인을 사용하여 모든 문서에 대표 이미지를 자동으로 설정하세요.'
+                name: '대표 이미지 표시',
+                desc: '노트에서 발견된 첫 번째 이미지의 썸네일을 표시합니다.'
             },
             forceSquareFeatureImage: {
                 name: '대표 이미지를 정사각형으로 고정',
@@ -766,45 +1616,168 @@ export const STRINGS_KO = {
             },
             featureImageProperties: {
                 name: '이미지 속성',
-                desc: '썸네일 이미지를 확인할 frontmatter 속성의 쉼표로 구분된 목록입니다. 이미지가 있는 첫 번째 속성이 사용됩니다. 비어 있고 대체 설정이 활성화되면 첫 번째 임베디드 이미지가 사용됩니다.',
+                desc: '먼저 확인할 frontmatter 속성의 쉼표로 구분된 목록입니다. 없으면 마크다운 콘텐츠의 첫 번째 이미지를 사용합니다.',
                 placeholder: 'thumbnail, featureResized, feature'
             },
-            useEmbeddedImageFallback: {
-                name: '임베디드 이미지 대체 사용',
-                desc: 'frontmatter 속성에 썸네일을 찾을 수 없을 때 문서의 첫 번째 임베디드 이미지를 대체로 사용합니다 (Obsidian 1.9.4+ 필요). 썸네일이 올바르게 구성되었는지 확인하려면 이 기능을 비활성화하세요.'
+            featureImageExcludeProperties: {
+                name: '속성이 있는 노트 제외',
+                desc: '쉼표로 구분된 frontmatter 속성 목록입니다. 이러한 속성 중 하나라도 포함된 노트는 대표 이미지를 저장하지 않습니다.',
+                placeholder: 'private, confidential'
+            },
+            featureImageSize: {
+                name: '대표 이미지 표시 크기',
+                desc: '노트 목록에서 대표 이미지의 최대 렌더링 크기.',
+                options: {
+                    standard: '64 px',
+                    large: '96 px',
+                    extraLarge: '128 px'
+                }
+            },
+            featureImagePixelSize: {
+                name: '대표 이미지 픽셀 크기',
+                desc: '저장된 대표 이미지 썸네일을 생성할 때 사용되는 해상도. 큰 미리보기가 흐릿하게 보이면 이 값을 높이세요.',
+                options: {
+                    standard: '256 x 144 px',
+                    large: '384 x 216 px',
+                    extraLarge: '512 x 288 px'
+                }
+            },
+
+            downloadExternalFeatureImages: {
+                name: '외부 이미지 다운로드',
+                desc: '대표 이미지로 원격 이미지 및 YouTube 썸네일을 다운로드합니다.'
             },
             showRootFolder: {
                 name: '루트 폴더 표시',
                 desc: '트리에서 보관함 이름을 루트 폴더로 표시합니다.'
             },
+            showFolderIcons: {
+                name: '폴더 아이콘 표시',
+                desc: '탐색 창의 폴더 옆에 아이콘을 표시합니다.'
+            },
             inheritFolderColors: {
                 name: '폴더 색상 상속',
                 desc: '하위 폴더가 상위 폴더에서 색상을 상속합니다.'
+            },
+            folderSortOrder: {
+                name: '폴더 정렬 순서',
+                desc: '폴더를 마우스 오른쪽 버튼으로 클릭하여 하위 항목의 정렬 순서를 개별적으로 설정할 수 있습니다.',
+                options: {
+                    alphaAsc: 'A부터 Z까지',
+                    alphaDesc: 'Z부터 A까지'
+                }
             },
             showNoteCount: {
                 name: '노트 수 표시',
                 desc: '각 폴더와 태그 옆에 노트 수를 표시합니다.'
             },
-            showIcons: {
-                name: '아이콘 표시',
-                desc: '폴더, 태그 및 노트에 아이콘을 표시합니다.'
+            showSectionIcons: {
+                name: '바로 가기 및 최근 항목 아이콘 표시',
+                desc: '바로 가기 및 최근 섹션의 항목 옆에 아이콘을 표시합니다.'
+            },
+            interfaceIcons: {
+                name: '인터페이스 아이콘',
+                desc: '도구 모음, 폴더, 태그, 고정 항목, 검색, 정렬 아이콘을 편집합니다.',
+                buttonText: '아이콘 편집'
             },
             showIconsColorOnly: {
                 name: '아이콘에만 색상 적용',
                 desc: '활성화하면 사용자 지정 색상이 아이콘에만 적용됩니다. 비활성화하면 아이콘과 텍스트 레이블 모두에 색상이 적용됩니다.'
             },
+            navRainbowMode: {
+                name: '무지개 색상 모드 (보관소 프로필)',
+                desc: '탐색 창에 무지개 색상을 적용합니다.',
+                options: {
+                    none: '끄기',
+                    foreground: '텍스트 색상',
+                    background: '배경 색상'
+                }
+            },
+            navRainbowFirstColor: {
+                name: '첫 번째 색상',
+                desc: '무지개 그라데이션의 첫 번째 색상.'
+            },
+            navRainbowLastColor: {
+                name: '마지막 색상',
+                desc: '무지개 그라데이션의 마지막 색상.'
+            },
+            navRainbowTransitionStyle: {
+                name: '전환 스타일',
+                desc: '첫 번째와 마지막 색상 사이에 사용되는 보간.',
+                options: {
+                    hue: '색조',
+                    rgb: 'RGB'
+                }
+            },
+            navRainbowApplyToShortcuts: {
+                name: '바로가기에 적용',
+                desc: '무지개 색상을 바로가기에 적용합니다.'
+            },
+            navRainbowApplyToRecent: {
+                name: '최근 항목에 적용',
+                desc: '무지개 색상을 최근 항목에 적용합니다.'
+            },
+            navRainbowApplyToFolders: {
+                name: '폴더에 적용',
+                desc: '무지개 색상을 폴더에 적용합니다.'
+            },
+            navRainbowFolderScope: {
+                name: '폴더 범위',
+                desc: '색상 할당을 시작할 폴더 수준을 선택합니다.',
+                options: {
+                    root: '루트 수준',
+                    child: '하위 수준',
+                    all: '모든 수준'
+                }
+            },
+            navRainbowApplyToTags: {
+                name: '태그에 적용',
+                desc: '무지개 색상을 태그에 적용합니다.'
+            },
+            navRainbowTagScope: {
+                name: '태그 범위',
+                desc: '색상 할당을 시작할 태그 수준을 선택합니다.',
+                options: {
+                    root: '루트 수준',
+                    child: '하위 수준',
+                    all: '모든 수준'
+                }
+            },
+            navRainbowApplyToProperties: {
+                name: '속성에 적용',
+                desc: '무지개 색상을 속성에 적용합니다.'
+            },
+            navRainbowBalanceHueLuminance: {
+                name: '색상 간 일관된 밝기', // (English: Consistent brightness across hues)
+                desc: '색상 전환 중 시작 색상과 끝 색상 사이의 밝기를 보간합니다.' // (English: Interpolates brightness between the start and end colors during hue transitions.)
+            },
+            navRainbowSeparateThemeColors: {
+                name: '라이트 및 다크 모드 색상 분리', // (English: Separate light and dark mode colors)
+                desc: '라이트 모드와 다크 모드에서 서로 다른 레인보우 색상을 사용합니다.' // (English: Use different rainbow colors for light mode and dark mode.)
+            },
+            navRainbowCopyLightToDark: '라이트 모드 색상을 다크 모드로 복사', // (English: Copy light mode color to dark mode)
+            navRainbowPropertyScope: {
+                name: '속성 범위',
+                desc: '색상 할당을 시작할 속성 수준을 선택합니다.',
+                options: {
+                    root: '루트 수준',
+                    child: '하위 수준',
+                    all: '모든 수준'
+                }
+            },
             collapseBehavior: {
                 name: '항목 접기',
                 desc: '모두 펼치기/접기 버튼이 영향을 미치는 항목을 선택하세요.',
                 options: {
-                    all: '모든 폴더 및 태그',
+                    all: '모두',
                     foldersOnly: '폴더만',
-                    tagsOnly: '태그만'
+                    tagsOnly: '태그만',
+                    propertiesOnly: '속성만'
                 }
             },
             smartCollapse: {
                 name: '선택한 항목 펼친 상태 유지',
-                desc: '접을 때 현재 선택한 폴더나 태그와 상위 항목을 펼친 상태로 유지합니다.'
+                desc: '접을 때 선택한 항목과 상위 항목을 펼친 상태로 유지합니다.'
             },
             navIndent: {
                 name: '트리 들여쓰기',
@@ -818,23 +1791,36 @@ export const STRINGS_KO = {
                 name: '항목 높이에 따라 글자 크기 조정',
                 desc: '항목 높이를 줄이면 탐색 글자 크기를 작게 합니다.'
             },
+            showIndentGuides: {
+                name: '들여쓰기 안내선 표시',
+                desc: '중첩된 폴더와 태그의 들여쓰기 안내선을 표시합니다.'
+            },
+            navRootSpacing: {
+                name: '루트 항목 간격',
+                desc: '최상위 폴더와 태그 사이의 간격.'
+            },
             showTags: {
-                name: '태그 표시 (*)',
-                desc: '네비게이터에서 폴더 아래에 태그 섹션을 표시합니다.'
+                name: '태그 표시',
+                desc: '네비게이터에서 태그 섹션을 표시합니다.'
+            },
+            showTagIcons: {
+                name: '태그 아이콘 표시',
+                desc: '탐색 창의 태그 옆에 아이콘을 표시합니다.'
+            },
+            inheritTagColors: {
+                name: '태그 색상 상속',
+                desc: '하위 태그가 상위 태그의 색상을 상속합니다.'
             },
             tagSortOrder: {
                 name: '태그 정렬 순서',
-                desc: '탐색 창에서 태그를 정렬하는 방식을 선택합니다.',
+                desc: '태그를 마우스 오른쪽 버튼으로 클릭하여 하위 항목의 정렬 순서를 개별적으로 설정할 수 있습니다.',
                 options: {
                     alphaAsc: 'A부터 Z까지',
                     alphaDesc: 'Z부터 A까지',
-                    frequencyAsc: '빈도 (낮음 → 높음)',
-                    frequencyDesc: '빈도 (높음 → 낮음)'
+                    frequency: '빈도',
+                    lowToHigh: '낮음 → 높음',
+                    highToLow: '높음 → 낮음'
                 }
-            },
-            showTagsAboveFolders: {
-                name: '폴더 위에 태그 표시',
-                desc: '네비게이터에서 폴더 앞에 태그 섹션을 표시합니다.'
             },
             showAllTagsFolder: {
                 name: '태그 폴더 표시',
@@ -844,19 +1830,67 @@ export const STRINGS_KO = {
                 name: '태그 없는 노트 표시',
                 desc: '태그가 없는 노트에 대해 "태그 없음" 항목을 표시합니다.'
             },
+            scopeTagsToCurrentContext: {
+                name: '선택 항목으로 태그 필터링',
+                desc: '선택한 폴더 또는 속성 내 노트에 있는 태그만 표시합니다.'
+            },
+            keepEmptyTagsProperty: {
+                name: '마지막 태그 제거 후 tags 속성 유지',
+                desc: '모든 태그가 제거될 때 frontmatter 의 tags 속성을 유지합니다. 비활성화하면 tags 속성이 frontmatter 에서 삭제됩니다.'
+            },
+            showProperties: {
+                name: '속성 표시',
+                desc: '탐색기에 속성 섹션을 표시합니다.',
+                propertyKeysInfoPrefix: '',
+                propertyKeysInfoLinkText: '일반 > 속성 키',
+                propertyKeysInfoSuffix: '에서 속성 구성'
+            },
+            showPropertyIcons: {
+                name: '속성 아이콘 표시',
+                desc: '탐색 창에서 속성 옆에 아이콘을 표시합니다.'
+            },
+            inheritPropertyColors: {
+                name: '속성 색상 상속',
+                desc: '속성 값이 속성 키의 색상과 배경색을 상속합니다.'
+            },
+            propertySortOrder: {
+                name: '속성 정렬 순서',
+                desc: '속성을 마우스 오른쪽 버튼으로 클릭하여 값의 정렬 순서를 변경합니다.',
+                options: {
+                    alphaAsc: '가나다순',
+                    alphaDesc: '역가나다순',
+                    frequency: '빈도',
+                    lowToHigh: '낮은 순',
+                    highToLow: '높은 순'
+                }
+            },
+            showAllPropertiesFolder: {
+                name: '속성 폴더 표시',
+                desc: '"속성"을 접을 수 있는 폴더로 표시합니다.'
+            },
+            scopePropertiesToCurrentContext: {
+                name: '선택 항목으로 속성 필터링',
+                desc: '선택한 폴더 또는 태그 내 노트에 있는 속성만 표시합니다.'
+            },
             hiddenTags: {
-                name: '숨겨진 태그',
-                desc: '숨길 태그 접두사 또는 이름 와일드카드의 쉼표로 구분된 목록입니다. `tag*` 또는 `*tag` 로 태그 이름을 일치시킵니다. 태그를 숨기면 모든 하위 태그도 숨겨집니다 (예: "archive"는 "archive/2024/docs" 숨김).',
-                placeholder: 'internal, temp/drafts, archive/2024'
+                name: '태그 숨기기 (볼트 프로필)',
+                desc: '쉼표로 구분된 태그 패턴 목록입니다. 이름 패턴: tag* (시작), *tag (끝). 경로 패턴: archive (태그와 하위), archive/* (하위만), projects/*/drafts (중간 와일드카드).',
+                placeholder: 'archive*, *draft, projects/*/old'
+            },
+            hiddenFileTags: {
+                name: '태그가 있는 노트 숨기기 (볼트 프로필)',
+                desc: 'Comma-separated list of tag patterns. Notes containing matching tags are hidden. Name patterns: tag* (starting with), *tag (ending with). Path patterns: archive (tag and descendants), archive/* (descendants only), projects/*/drafts (mid-segment wildcard).',
+                placeholder: 'archive*, *draft, projects/*/old'
             },
             enableFolderNotes: {
                 name: '폴더 노트 활성화',
-                desc: '활성화되면 관련 노트가 있는 폴더가 클릭 가능한 링크로 표시됩니다.'
+                desc: '일치하는 노트 파일이 있는 폴더가 클릭 가능한 링크로 표시됩니다.'
             },
             folderNoteType: {
                 name: '기본 폴더 노트 형식',
                 desc: '컨텍스트 메뉴에서 생성되는 폴더 노트 형식입니다.',
                 options: {
+                    ask: '생성 시 선택',
                     markdown: 'Markdown',
                     canvas: 'Canvas',
                     base: 'Base'
@@ -867,22 +1901,50 @@ export const STRINGS_KO = {
                 desc: '확장자 없는 폴더 노트의 이름입니다. 폴더와 같은 이름을 사용하려면 비워 두세요.',
                 placeholder: 'index'
             },
-            folderNoteProperties: {
-                name: '폴더 노트 속성',
-                desc: '새로 생성된 폴더 노트에 추가할 frontmatter 속성 (쉼표로 구분).',
-                placeholder: 'foldernote, darktheme'
+            folderNoteNamePattern: {
+                name: '폴더 노트 이름 패턴',
+                desc: '확장자 없는 폴더 노트 이름 패턴. {{folder}}을 사용하여 폴더 이름을 삽입합니다. 설정하면 폴더 노트 이름이 적용되지 않습니다.'
+            },
+            folderNoteTemplate: {
+                name: '폴더 노트 템플릿',
+                desc: '새 마크다운 폴더 노트용 템플릿 파일. 템플릿 폴더 위치는 일반 > 템플릿에서 설정하세요.'
+            },
+            enableFolderNoteLinks: {
+                name: '폴더 노트 링크 활성화',
+                desc: '폴더 레이블이 링크로 표시되며 클릭 시 폴더 노트를 엽니다. 비활성화하면 폴더 노트는 여전히 이름, 아이콘, 색상 메타데이터를 제공합니다.'
             },
             hideFolderNoteInList: {
                 name: '목록에서 폴더 노트 숨기기',
-                desc: '폴더 노트가 폴더의 노트 목록에 나타나지 않도록 숨깁니다.'
+                desc: '파일 목록에서 폴더 노트를 숨깁니다.'
             },
             pinCreatedFolderNote: {
                 name: '생성된 폴더 노트 고정',
-                desc: '컨텍스트 메뉴에서 생성한 폴더 노트를 자동으로 고정합니다.'
+                desc: '컨텍스트 메뉴에서 생성 시 폴더 노트를 고정합니다.'
+            },
+            openFolderNotesInNewTab: {
+                name: '폴더 노트를 새 탭에서 열기',
+                desc: '폴더를 클릭할 때 폴더 노트를 새 탭에서 엽니다.'
             },
             confirmBeforeDelete: {
                 name: '삭제 전 확인',
                 desc: '노트나 폴더를 삭제할 때 확인 대화 상자 표시'
+            },
+            deleteAttachments: {
+                name: '파일 삭제 시 첨부 파일 삭제',
+                desc: '삭제된 파일에 연결된 첨부 파일이 다른 곳에서 사용되지 않는 경우 자동으로 제거',
+                options: {
+                    ask: '매번 확인',
+                    always: '항상',
+                    never: '안 함'
+                }
+            },
+            moveFileConflicts: {
+                name: '이동 충돌',
+                desc: '같은 이름의 파일이 이미 존재하는 폴더로 파일을 이동할 때. 매번 확인(이름 변경, 덮어쓰기, 취소)하거나 항상 이름을 변경합니다.',
+                options: {
+                    ask: '매번 확인',
+                    rename: '항상 이름 변경'
+                }
             },
             metadataCleanup: {
                 name: '메타데이터 정리',
@@ -891,26 +1953,15 @@ export const STRINGS_KO = {
                 error: '설정 정리에 실패했습니다',
                 loading: '메타데이터 확인 중...',
                 statusClean: '정리할 메타데이터가 없습니다',
-                statusCounts: '고아 항목: {folders} 폴더, {tags} 태그, {files} 파일, {pinned} 고정'
+                statusCounts: '고아 항목: {folders} 폴더, {tags} 태그, {properties} 속성, {files} 파일, {pinned} 고정, {separators} 구분선'
             },
             rebuildCache: {
                 name: '캐시 다시 빌드',
                 desc: '태그 누락, 잘못된 미리보기 또는 누락된 이미지가 있을 때 사용하세요. 동기화 충돌이나 예기치 않은 종료 후에 발생할 수 있습니다.',
                 buttonText: '캐시 다시 빌드',
-                success: '캐시가 다시 빌드되었습니다',
-                error: '캐시 다시 빌드 실패'
-            },
-            hotkeys: {
-                intro: 'Notebook Navigator 단축키는 <plugin folder>/notebook-navigator/data.json을 편집하여 구성합니다. 파일을 텍스트 편집기로 열고 "keyboardShortcuts" 섹션을 확인하세요. 각 항목은 다음 구조를 사용합니다:',
-                example: '"pane:move-up": [ { "key": "ArrowUp", "modifiers": [] }, { "key": "K", "modifiers": [] } ]',
-                modifierList: [
-                    '"Mod" = Cmd (macOS) / Ctrl (Win/Linux)',
-                    '"Alt" = Alt/Option',
-                    '"Shift" = Shift',
-                    '"Ctrl" = Control (크로스 플랫폼에서는 "Mod" 권장)'
-                ],
-                guidance:
-                    '위 예제처럼 ArrowUp과 K를 함께 허용하려면 동일한 명령에 여러 매핑을 추가하세요. 여러 수정 키를 사용하려면 "modifiers": ["Mod", "Shift"]처럼 모두 나열합니다. "gg" 또는 "dd"와 같은 키 시퀀스는 지원되지 않습니다. 파일을 수정한 후 Obsidian을 다시 로드하세요.'
+                error: '캐시 다시 빌드 실패',
+                indexingTitle: '보관함을 인덱싱하는 중...',
+                progress: 'Notebook Navigator 캐시를 업데이트하는 중.'
             },
             externalIcons: {
                 downloadButton: '다운로드',
@@ -922,24 +1973,16 @@ export const STRINGS_KO = {
                 downloadFailed: '{name} 다운로드에 실패했습니다. 연결을 확인하고 다시 시도해주세요.',
                 removeFailed: '{name} 제거에 실패했습니다.',
                 infoNote:
-                    '다운로드된 아이콘 팩은 기기 간 설치 상태를 동기화합니다. 아이콘 팩은 각 기기의 로컬 데이터베이스에 남아 있습니다. 동기화는 다운로드 또는 제거 여부만 추적합니다. 아이콘 팩은 Notebook Navigator 저장소에서 다운로드됩니다 (https://github.com/johansan/notebook-navigator/tree/main/icon-assets).',
-                providers: {
-                    bootstrapIconsDesc: 'https://icons.getbootstrap.com/',
-                    fontAwesomeDesc: 'https://fontawesome.com/v6/search?f=classic&s=solid&ic=free&o=r',
-                    materialIconsDesc: 'https://fonts.google.com/icons',
-                    phosphorDesc: 'https://phosphoricons.com/',
-                    rpgAwesomeDesc: 'https://nagoshiashumari.github.io/Rpg-Awesome/',
-                    simpleIconsDesc: 'https://simpleicons.org/'
-                }
+                    '다운로드된 아이콘 팩은 기기 간 설치 상태를 동기화합니다. 아이콘 팩은 각 기기의 로컬 데이터베이스에 남아 있습니다. 동기화는 다운로드 또는 제거 여부만 추적합니다. 아이콘 팩은 Notebook Navigator 저장소에서 다운로드됩니다 (https://github.com/johansan/notebook-navigator/tree/main/icon-assets).'
             },
             useFrontmatterDates: {
-                name: 'frontmatter에서 메타데이터 읽기 (*)',
-                desc: '사용 가능한 경우 frontmatter에서 노트 이름, 타임스탬프, 아이콘, 색상을 읽고, 파일 시스템 값 또는 설정으로 대체'
+                name: 'frontmatter 메타데이터 사용',
+                desc: '노트 이름, 타임스탬프, 아이콘, 색상에 frontmatter 사용'
             },
             frontmatterNameField: {
-                name: '이름 필드',
-                desc: '노트 표시 이름으로 사용할 frontmatter 필드입니다. 파일 이름을 사용하려면 비워 두세요.',
-                placeholder: 'title'
+                name: '이름 필드들',
+                desc: '쉼표로 구분된 frontmatter 필드 목록. 첫 번째 비어 있지 않은 값을 사용. 파일 이름으로 대체.',
+                placeholder: 'title, name'
             },
             frontmatterIconField: {
                 name: '아이콘 필드',
@@ -951,13 +1994,10 @@ export const STRINGS_KO = {
                 desc: '파일 색상용 frontmatter 필드입니다. 설정에 저장된 색상을 사용하려면 비워 두세요.',
                 placeholder: 'color'
             },
-            frontmatterSaveMetadata: {
-                name: 'frontmatter에 아이콘과 색상 저장',
-                desc: '위에서 구성한 필드를 사용하여 파일 아이콘과 색상을 frontmatter에 자동으로 기록합니다.'
-            },
-            frontmatterIconizeFormat: {
-                name: 'Iconize 형식으로 저장',
-                desc: '플러그인 형식(예: home, fontawesome-solid:user, simple-icons:github) 대신 Iconize 형식(예: LiHome, FasUser, SiGithub)으로 아이콘을 저장합니다.'
+            frontmatterBackgroundField: {
+                name: '배경 필드',
+                desc: '배경색용 frontmatter 필드입니다. 설정에 저장된 배경색을 사용하려면 비워 두세요.',
+                placeholder: 'background'
             },
             frontmatterMigration: {
                 name: '설정에서 아이콘과 색상 이동',
@@ -981,9 +2021,10 @@ export const STRINGS_KO = {
             },
             frontmatterDateFormat: {
                 name: '타임스탬프 형식',
-                desc: 'frontmatter에서 타임스탬프를 구문 분석하는 데 사용되는 형식입니다. ISO 8601 형식을 사용하려면 비워 두세요',
-                helpTooltip: 'date-fns 형식 문서 참조',
-                help: "일반적인 형식:\nyyyy-MM-dd'T'HH:mm:ss → 2025-01-04T14:30:45\ndd/MM/yyyy HH:mm:ss → 04/01/2025 14:30:45\nMM/dd/yyyy h:mm:ss a → 01/04/2025 2:30:45 PM"
+                desc: 'frontmatter에서 타임스탬프를 구문 분석하는 데 사용되는 형식입니다. ISO 8601 파싱을 사용하려면 비워 두세요.',
+                helpTooltip: 'Moment 형식',
+                momentLinkText: 'Moment 형식',
+                help: '일반적인 형식:\nYYYY-MM-DD[T]HH:mm:ss → 2025-01-04T14:30:45\nYYYY-MM-DD[T]HH:mm:ssZ → 2025-08-07T16:53:39+02:00\nDD/MM/YYYY HH:mm:ss → 04/01/2025 14:30:45\nMM/DD/YYYY h:mm:ss a → 01/04/2025 2:30:45 PM'
             },
             supportDevelopment: {
                 name: '개발 지원',
@@ -993,16 +2034,20 @@ export const STRINGS_KO = {
             },
             updateCheckOnStart: {
                 name: '시작 시 새 버전 확인',
-                desc: '시작 시 새로운 플러그인 릴리스를 확인하고 업데이트가 있으면 알림을 표시합니다. 각 버전은 한 번만 알림되며, 확인은 하루에 한 번 수행됩니다.',
-                status: 'New version available: {version}'
+                desc: '시작 시 새로운 플러그인 릴리스를 확인하고 업데이트가 있으면 알림을 표시합니다. 확인은 하루에 최대 한 번 수행됩니다.',
+                status: '새 버전 사용 가능: {version}'
             },
             whatsNew: {
-                name: '새로운 기능',
+                name: 'Notebook Navigator {version}의 새로운 기능',
                 desc: '최근 업데이트와 개선 사항 보기',
                 buttonText: '최근 업데이트 보기'
             },
+            masteringVideo: {
+                name: 'Notebook Navigator 마스터하기 (동영상)',
+                desc: '이 동영상에서는 Notebook Navigator를 효율적으로 사용하는 데 필요한 모든 것을 다룹니다. 단축키, 검색, 태그 및 고급 사용자 지정이 포함됩니다.'
+            },
             cacheStatistics: {
-                localCache: '(*) 로컬 캐시',
+                localCache: '로컬 캐시',
                 items: '항목',
                 withTags: '태그 포함',
                 withPreviewText: '미리보기 텍스트 포함',

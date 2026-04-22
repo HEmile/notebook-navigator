@@ -1,0 +1,412 @@
+/*
+ * Notebook Navigator - Plugin for Obsidian
+ * Copyright (c) 2025-2026 Johan Sanneblad
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { TFolder, type App, debounce } from 'obsidian';
+
+import type { ActiveProfileState } from '../context/SettingsContext';
+import type { NotebookNavigatorSettings } from '../settings/types';
+import type { MetadataService } from '../services/MetadataService';
+import { getDBInstance, getDBInstanceOrNull } from '../storage/fileOperations';
+import { FOLDER_NOTE_TYPE_EXTENSIONS } from '../types/folderNote';
+import { TIMEOUTS } from '../types/obsidian-extended';
+import {
+    createFrontmatterPropertyExclusionMatcher,
+    createHiddenFileNameMatcherForVisibility,
+    isFolderInExcludedFolder,
+    shouldExcludeFileWithMatcher
+} from '../utils/fileFilters';
+import { resolveFolderDisplayName } from '../utils/folderDisplayName';
+import { resolveFolderNoteName } from '../utils/folderNoteName';
+import { getFolderNote, getFolderNoteDetectionSettings } from '../utils/folderNotes';
+import { EXCALIDRAW_BASENAME_SUFFIX } from '../utils/fileNameUtils';
+import { getParentFolderPath, getPathBaseName } from '../utils/pathUtils';
+import { getCachedFileTags } from '../utils/tagUtils';
+import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
+import { type RootFileChangeEvent, useRootFolderOrder } from './useRootFolderOrder';
+
+const FOLDER_SORT_NAME_CACHE_MAX_ENTRIES = 2000;
+const FOLDER_NOTE_EXTENSIONS = new Set<string>(Object.values(FOLDER_NOTE_TYPE_EXTENSIONS));
+
+export interface FolderNavigationSourceState {
+    hiddenFolders: string[];
+    rootFolders: TFolder[];
+    rootLevelFolders: TFolder[];
+    rootFolderOrderMap: Map<string, number>;
+    missingRootFolderPaths: string[];
+    fileChangeVersion: number;
+    bumpFileChangeVersion: () => void;
+    folderDisplayVersion: number;
+    metadataDecorationVersion: number;
+    getFolderSortName: (folder: TFolder) => string;
+    folderExclusionByFolderNote: ((folder: TFolder) => boolean) | undefined;
+    isFolderExcluded: (folderPath: string) => boolean;
+}
+
+interface UseFolderNavigationSourceStateParams {
+    app: App;
+    settings: NotebookNavigatorSettings;
+    activeProfile: ActiveProfileState;
+    metadataService: MetadataService;
+    onFileChange?: (change: RootFileChangeEvent) => void;
+}
+
+export function useFolderNavigationSourceState({
+    app,
+    settings,
+    activeProfile,
+    metadataService,
+    onFileChange
+}: UseFolderNavigationSourceStateParams): FolderNavigationSourceState {
+    const { hiddenFolders, hiddenFileProperties, hiddenFileNames, hiddenFileTags } = activeProfile;
+    const folderVisibilityFileNameMatcher = useMemo(() => {
+        return createHiddenFileNameMatcherForVisibility(hiddenFileNames, false);
+    }, [hiddenFileNames]);
+    const hiddenFilePropertyMatcher = useMemo(
+        () => createFrontmatterPropertyExclusionMatcher(hiddenFileProperties),
+        [hiddenFileProperties]
+    );
+    const folderNoteSettings = useMemo(() => {
+        return getFolderNoteDetectionSettings({
+            enableFolderNotes: settings.enableFolderNotes,
+            folderNoteName: settings.folderNoteName,
+            folderNoteNamePattern: settings.folderNoteNamePattern
+        });
+    }, [settings.enableFolderNotes, settings.folderNoteName, settings.folderNoteNamePattern]);
+    const shouldEvaluateFolderNoteExclusions = useMemo(() => {
+        return (
+            settings.enableFolderNotes &&
+            (hiddenFilePropertyMatcher.hasCriteria || folderVisibilityFileNameMatcher !== null || hiddenFileTags.length > 0)
+        );
+    }, [settings.enableFolderNotes, hiddenFilePropertyMatcher, hiddenFileTags, folderVisibilityFileNameMatcher]);
+
+    const isFolderNoteRelatedPath = useCallback(
+        (path: string): boolean => {
+            if (!shouldEvaluateFolderNoteExclusions) {
+                return false;
+            }
+
+            const parentPath = getParentFolderPath(path);
+            if (parentPath === '/') {
+                return false;
+            }
+
+            const fileName = path.split('/').pop();
+            if (!fileName) {
+                return false;
+            }
+
+            const dotIndex = fileName.lastIndexOf('.');
+            if (dotIndex <= 0 || dotIndex === fileName.length - 1) {
+                return false;
+            }
+
+            const basename = fileName.slice(0, dotIndex);
+            const extension = fileName.slice(dotIndex + 1).toLowerCase();
+            const folderName = getPathBaseName(parentPath);
+            const expectedName = resolveFolderNoteName(folderName, folderNoteSettings);
+
+            if (basename === expectedName && FOLDER_NOTE_EXTENSIONS.has(extension)) {
+                return true;
+            }
+
+            return extension === 'md' && basename === `${expectedName}${EXCALIDRAW_BASENAME_SUFFIX}`;
+        },
+        [folderNoteSettings, shouldEvaluateFolderNoteExclusions]
+    );
+
+    const [folderExclusionVersion, setFolderExclusionVersion] = useState(0);
+    const [fileChangeVersion, setFileChangeVersion] = useState(0);
+    const bumpFileChangeVersion = useCallback(() => {
+        setFileChangeVersion(value => value + 1);
+    }, []);
+    const handleRootFileChange = useCallback(
+        (change: RootFileChangeEvent) => {
+            bumpFileChangeVersion();
+            onFileChange?.(change);
+            if (isFolderNoteRelatedPath(change.path) || (change.oldPath !== undefined && isFolderNoteRelatedPath(change.oldPath))) {
+                setFolderExclusionVersion(value => value + 1);
+            }
+        },
+        [bumpFileChangeVersion, isFolderNoteRelatedPath, onFileChange]
+    );
+
+    const { rootFolders, rootLevelFolders, rootFolderOrderMap, missingRootFolderPaths } = useRootFolderOrder({
+        settings,
+        onFileChange: handleRootFileChange
+    });
+
+    const [folderDisplayVersion, setFolderDisplayVersion] = useState(() => metadataService.getFolderDisplayVersion());
+    const [folderDisplayNameVersion, setFolderDisplayNameVersion] = useState(() => metadataService.getFolderDisplayNameVersion());
+
+    useEffect(() => {
+        setFolderDisplayVersion(metadataService.getFolderDisplayVersion());
+        const applyFolderDisplayVersion = debounce(
+            (version: number) => {
+                setFolderDisplayVersion(version);
+            },
+            TIMEOUTS.FILE_OPERATION_DELAY,
+            true
+        );
+        const unsubscribe = metadataService.subscribeToFolderDisplayChanges(version => {
+            applyFolderDisplayVersion(version);
+        });
+
+        return () => {
+            unsubscribe();
+            applyFolderDisplayVersion.cancel();
+        };
+    }, [metadataService]);
+
+    useEffect(() => {
+        setFolderDisplayNameVersion(metadataService.getFolderDisplayNameVersion());
+        const applyFolderDisplayNameVersion = debounce(
+            (version: number) => {
+                setFolderDisplayNameVersion(version);
+            },
+            TIMEOUTS.FILE_OPERATION_DELAY,
+            true
+        );
+        const unsubscribe = metadataService.subscribeToFolderDisplayNameChanges(version => {
+            applyFolderDisplayNameVersion(version);
+        });
+
+        return () => {
+            unsubscribe();
+            applyFolderDisplayNameVersion.cancel();
+        };
+    }, [metadataService]);
+
+    const [metadataDecorationVersion, setMetadataDecorationVersion] = useState(0);
+
+    useEffect(() => {
+        const db = getDBInstance();
+        const bumpFolderExclusionVersion = debounce(
+            () => {
+                setFolderExclusionVersion(version => version + 1);
+            },
+            TIMEOUTS.FILE_OPERATION_DELAY,
+            true
+        );
+        const unsubscribe = db.onContentChange(changes => {
+            let hasMetadataChange = false;
+            let shouldRefreshFolderExclusions = false;
+            const folderNotePathByParentPath = new Map<string, string | null>();
+
+            for (const change of changes) {
+                if (change.changeType !== 'metadata' && change.changeType !== 'both') {
+                    continue;
+                }
+
+                hasMetadataChange = true;
+                if (!shouldEvaluateFolderNoteExclusions || shouldRefreshFolderExclusions) {
+                    continue;
+                }
+
+                const parentPath = getParentFolderPath(change.path);
+                let cachedFolderNotePath = folderNotePathByParentPath.get(parentPath);
+                if (cachedFolderNotePath === undefined) {
+                    const parentFolder = app.vault.getFolderByPath(parentPath);
+                    cachedFolderNotePath = parentFolder ? (getFolderNote(parentFolder, folderNoteSettings)?.path ?? null) : null;
+                    folderNotePathByParentPath.set(parentPath, cachedFolderNotePath);
+                }
+
+                if (cachedFolderNotePath === change.path) {
+                    shouldRefreshFolderExclusions = true;
+                }
+            }
+
+            if (hasMetadataChange) {
+                setMetadataDecorationVersion(version => version + 1);
+                if (shouldRefreshFolderExclusions) {
+                    bumpFolderExclusionVersion();
+                }
+            }
+        });
+        return () => {
+            unsubscribe();
+            bumpFolderExclusionVersion.cancel();
+        };
+    }, [app, folderNoteSettings, shouldEvaluateFolderNoteExclusions]);
+
+    const getFolderSortName = useMemo(() => {
+        void folderDisplayNameVersion;
+        const folderSortNameByPath = new Map<string, string>();
+        const cacheFolderSortName = (path: string, name: string): string => {
+            if (folderSortNameByPath.size >= FOLDER_SORT_NAME_CACHE_MAX_ENTRIES) {
+                folderSortNameByPath.clear();
+            }
+            folderSortNameByPath.set(path, name);
+            return name;
+        };
+
+        return (folder: TFolder): string => {
+            const cachedName = folderSortNameByPath.get(folder.path);
+            if (cachedName !== undefined) {
+                return cachedName;
+            }
+
+            if (!settings.useFrontmatterMetadata) {
+                return cacheFolderSortName(folder.path, folder.name);
+            }
+
+            const resolvedName = resolveFolderDisplayName({
+                app,
+                metadataService,
+                settings: {
+                    customVaultName: settings.customVaultName
+                },
+                folderPath: folder.path,
+                fallbackName: folder.name
+            });
+            return cacheFolderSortName(folder.path, resolvedName);
+        };
+    }, [app, settings.customVaultName, settings.useFrontmatterMetadata, metadataService, folderDisplayNameVersion]);
+
+    const folderExclusionByFolderNote = useMemo(() => {
+        void folderExclusionVersion;
+        if (!shouldEvaluateFolderNoteExclusions) {
+            return undefined;
+        }
+
+        const hiddenFileTagVisibility = createHiddenTagVisibility(hiddenFileTags, false);
+        const shouldFilterHiddenFileTags = hiddenFileTagVisibility.hasHiddenRules;
+        const db = shouldFilterHiddenFileTags ? getDBInstanceOrNull() : null;
+        const directExclusionCache = new Map<string, boolean>();
+        const inheritedExclusionCache = new Map<string, boolean>();
+        const recursionGuard = new Set<string>();
+
+        const isDirectlyExcludedByFolderNote = (folder: TFolder): boolean => {
+            const cached = directExclusionCache.get(folder.path);
+            if (cached !== undefined) {
+                return cached;
+            }
+
+            const folderNote = getFolderNote(folder, folderNoteSettings);
+            if (!folderNote) {
+                directExclusionCache.set(folder.path, false);
+                return false;
+            }
+
+            let isExcluded = false;
+            if (hiddenFilePropertyMatcher.hasCriteria && shouldExcludeFileWithMatcher(folderNote, hiddenFilePropertyMatcher, app)) {
+                isExcluded = true;
+            }
+
+            if (!isExcluded && folderVisibilityFileNameMatcher && folderVisibilityFileNameMatcher.matches(folderNote)) {
+                isExcluded = true;
+            }
+
+            if (!isExcluded && shouldFilterHiddenFileTags) {
+                const tags = getCachedFileTags({ app, file: folderNote, db });
+                if (tags.some(tagValue => !hiddenFileTagVisibility.isTagVisible(tagValue))) {
+                    isExcluded = true;
+                }
+            }
+
+            directExclusionCache.set(folder.path, isExcluded);
+            return isExcluded;
+        };
+
+        const isExcludedByFolderNote = (folder: TFolder): boolean => {
+            if (folder.path === '/') {
+                return false;
+            }
+
+            const cached = inheritedExclusionCache.get(folder.path);
+            if (cached !== undefined) {
+                return cached;
+            }
+
+            if (recursionGuard.has(folder.path)) {
+                return false;
+            }
+            recursionGuard.add(folder.path);
+
+            let isExcluded = isDirectlyExcludedByFolderNote(folder);
+            if (!isExcluded && folder.parent instanceof TFolder) {
+                isExcluded = isExcludedByFolderNote(folder.parent);
+            }
+
+            recursionGuard.delete(folder.path);
+            inheritedExclusionCache.set(folder.path, isExcluded);
+            return isExcluded;
+        };
+
+        return (folder: TFolder): boolean => isExcludedByFolderNote(folder);
+    }, [
+        app,
+        folderExclusionVersion,
+        folderNoteSettings,
+        folderVisibilityFileNameMatcher,
+        hiddenFilePropertyMatcher,
+        hiddenFileTags,
+        shouldEvaluateFolderNoteExclusions
+    ]);
+
+    const isFolderExcluded = useCallback(
+        (folderPath: string): boolean => {
+            if (folderPath === '/') {
+                return false;
+            }
+
+            const folder = app.vault.getFolderByPath(folderPath);
+            if (!(folder instanceof TFolder)) {
+                return false;
+            }
+
+            if (hiddenFolders.length > 0 && isFolderInExcludedFolder(folder, hiddenFolders)) {
+                return true;
+            }
+
+            return folderExclusionByFolderNote ? folderExclusionByFolderNote(folder) : false;
+        },
+        [app, folderExclusionByFolderNote, hiddenFolders]
+    );
+
+    return useMemo(
+        () => ({
+            hiddenFolders,
+            rootFolders,
+            rootLevelFolders,
+            rootFolderOrderMap,
+            missingRootFolderPaths,
+            fileChangeVersion,
+            bumpFileChangeVersion,
+            folderDisplayVersion,
+            metadataDecorationVersion,
+            getFolderSortName,
+            folderExclusionByFolderNote,
+            isFolderExcluded
+        }),
+        [
+            bumpFileChangeVersion,
+            folderExclusionByFolderNote,
+            folderDisplayVersion,
+            fileChangeVersion,
+            getFolderSortName,
+            hiddenFolders,
+            isFolderExcluded,
+            metadataDecorationVersion,
+            missingRootFolderPaths,
+            rootFolders,
+            rootFolderOrderMap,
+            rootLevelFolders
+        ]
+    );
+}

@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,23 @@ import { TFile } from 'obsidian';
 import { NotebookNavigatorSettings } from '../settings';
 
 /**
- * Types of content that can be generated
+ * Types of content providers.
+ *
+ * These values identify providers in the ContentProviderRegistry include/exclude lists.
  */
-export type ContentType = 'preview' | 'featureImage' | 'metadata' | 'tags';
+export type ContentProviderType = 'fileThumbnails' | 'metadata' | 'tags' | 'markdownPipeline';
+
+/**
+ * Types of file content that can be generated and stored.
+ *
+ * These values identify content fields in storage (preview text, feature images, tags, etc).
+ */
+export type FileContentType = 'preview' | 'featureImage' | 'metadata' | 'tags' | 'wordCount' | 'tasks' | 'properties';
+
+export type ContentProviderClearContext = {
+    oldSettings: NotebookNavigatorSettings;
+    newSettings: NotebookNavigatorSettings;
+};
 
 /**
  * Interface for content providers that generate specific types of content
@@ -33,9 +47,9 @@ export type ContentType = 'preview' | 'featureImage' | 'metadata' | 'tags';
  */
 export interface IContentProvider {
     /**
-     * Gets the type of content this provider generates
+     * Gets the type of provider.
      */
-    getContentType(): ContentType;
+    getContentType(): ContentProviderType;
 
     /**
      * Gets the list of settings that affect this content type
@@ -54,7 +68,7 @@ export interface IContentProvider {
     /**
      * Clears all content of this type from the database
      */
-    clearContent(): Promise<void>;
+    clearContent(context?: ContentProviderClearContext): Promise<void>;
 
     /**
      * Queues files for content generation
@@ -72,6 +86,11 @@ export interface IContentProvider {
      * Stops any ongoing processing
      */
     stopProcessing(): void;
+
+    /**
+     * Waits until any in-flight batch work finishes.
+     */
+    waitForIdle(): Promise<void>;
 
     /**
      * Notifies the provider that settings have changed

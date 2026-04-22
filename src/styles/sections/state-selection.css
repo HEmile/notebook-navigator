@@ -1,0 +1,67 @@
+/* Source: src/styles/sections/state-selection.css */
+
+/* ========================================================================
+   Selection States
+   ======================================================================== */
+
+/* Selected file background pseudo-element - better control over styling */
+.nn-file.nn-selected .nn-file-content::before {
+    content: '';
+    position: absolute;
+    top: 0px;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    /* Extend slightly beyond bottom item bounds (height rounding issue) to prevent hairline gaps when zoomed */
+    bottom: -0.2px;
+    /* Pre-composited solid color prevents hairlines by blending alpha with pane background */
+    background-color: var(--nn-selected-file-bg-color);
+    border-radius: var(--nn-file-item-border-radius);
+    box-shadow: inset 0 0 0 var(--nn-theme-file-border-width) var(--nn-selected-file-border-color);
+    z-index: 0; /* Below separator lines */
+}
+
+/* Adjust rounded corners for multiselection */
+.nn-file.nn-selected.nn-has-selected-above .nn-file-content::before {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.nn-file.nn-selected.nn-has-selected-below .nn-file-content::before {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.nn-navitem.nn-selected > .nn-navitem-content:not(.nn-navitem-content--search-include):not(.nn-navitem-content--search-exclude) {
+    background: transparent;
+}
+
+/* Selection overlay lives above the custom background while mirroring trimmed corners */
+.nn-navitem.nn-selected::after {
+    content: '';
+    position: absolute;
+    top: 0px;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    /* Extend slightly beyond bottom item bounds (height rounding issue) to prevent hairline gaps when zoomed */
+    bottom: -0.2px;
+    /* Pre-composited solid color prevents hairlines by blending alpha with pane background */
+    background-color: var(--nn-selected-navitem-bg-color);
+    border-top-left-radius: var(--nn-navitem-top-left-radius, min(14px, var(--nn-theme-navitem-border-radius)));
+    border-top-right-radius: var(--nn-navitem-top-right-radius, min(14px, var(--nn-theme-navitem-border-radius)));
+    border-bottom-left-radius: var(--nn-navitem-bottom-left-radius, min(14px, var(--nn-theme-navitem-border-radius)));
+    border-bottom-right-radius: var(--nn-navitem-bottom-right-radius, min(14px, var(--nn-theme-navitem-border-radius)));
+    box-shadow: inset 0 0 0 var(--nn-theme-navitem-border-width) var(--nn-selected-navitem-border-color);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.nn-navitem.nn-selected > .nn-navitem-content {
+    position: relative;
+    z-index: 2;
+}
+
+/* Selected file inner content z-index - ensures content above background */
+.nn-file.nn-selected .nn-file-inner-content {
+    position: relative;
+    z-index: 5; /* Above selection background but below separators */
+}

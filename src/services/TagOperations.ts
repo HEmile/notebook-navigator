@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,525 +16,240 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, TFile } from 'obsidian';
-import { getDBInstance } from '../storage/fileOperations';
-import { normalizeTagPathValue } from '../utils/tagPrefixMatcher';
+import type { App, TFile } from 'obsidian';
+import type { NotebookNavigatorSettings } from '../settings/types';
+import type { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
+import type { MetadataService } from './MetadataService';
+import type { RenameFile, TagDescriptor } from './tagRename/TagRenameEngine';
+import { TagBatchOperations } from './tagOperations/TagBatchOperations';
+import { TagDeleteWorkflow, type TagDeleteHooks } from './tagOperations/TagDeleteWorkflow';
+import { TagFileMutations } from './tagOperations/TagFileMutations';
+import { TagRenameWorkflow, type TagRenameAnalysis, type TagRenameHooks, type TagRenameResult } from './tagOperations/TagRenameWorkflow';
+import { TagShortcutMutations } from './tagOperations/TagShortcutMutations';
+import type { TagDeleteEventPayload, TagRenameEventPayload } from './tagOperations/types';
+import { TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../types';
+import { resolveDisplayTagPath } from './tagOperations/TagOperationUtils';
+
+export type { TagRenameEventPayload, TagDeleteEventPayload } from './tagOperations/types';
 
 /**
- * Service for managing tag operations.
- * Handles adding tags to files and managing tag hierarchies.
+ * Facade for tag operations across the vault
+ * Coordinates between different tag operation workflows and services
  */
 export class TagOperations {
-    /**
-     * Pattern for valid tag characters: Unicode letters, numbers, underscore, hyphen, and forward slash
-     * \p{L} matches any Unicode letter, \p{N} matches any Unicode number
-     */
-    private static readonly TAG_CHAR_CLASS = '[\\p{L}\\p{N}_\\-/]+';
+    private readonly tagRenameListeners = new Set<(payload: TagRenameEventPayload) => void>();
+    private readonly tagDeleteListeners = new Set<(payload: TagDeleteEventPayload) => void>();
 
-    /**
-     * Pattern for tag boundaries: must be followed by whitespace, any Unicode punctuation, or end of line
-     * Uses Unicode property escapes (\\p{P}) to support non-ASCII punctuation (e.g., Japanese、Arabic, CJK)
-     */
-    private static readonly TAG_BOUNDARY = '(?=\\s|$|\\p{P})';
+    private readonly fileMutations: TagFileMutations;
+    private readonly batchOperations: TagBatchOperations;
+    private readonly shortcutMutations: TagShortcutMutations;
+    private readonly renameWorkflow: TagRenameWorkflow;
+    private readonly deleteWorkflow: TagDeleteWorkflow;
 
-    /**
-     * Complete pattern for matching any inline tag with optional leading space
-     */
-    private static readonly INLINE_TAG_PATTERN = new RegExp(`(\\s)?#${TagOperations.TAG_CHAR_CLASS}${TagOperations.TAG_BOUNDARY}`, 'gu');
-
-    /**
-     * Pattern for testing if content contains any inline tags (without global flag for test())
-     */
-    private static readonly INLINE_TAG_TEST_PATTERN = new RegExp(
-        `(\\s)?#${TagOperations.TAG_CHAR_CLASS}${TagOperations.TAG_BOUNDARY}`,
-        'u'
-    );
-
-    constructor(private app: App) {}
-
-    /**
-     * Checks if a file is a markdown file
-     */
-    private isMarkdownFile(file: TFile): boolean {
-        return file.extension === 'md';
-    }
-
-    /**
-     * Builds a regex pattern for matching a specific inline tag
-     * @param tag - The tag to match (without #)
-     * @returns A RegExp for matching the specific tag
-     */
-    private buildSpecificTagPattern(tag: string): RegExp {
-        const escapedTag = this.escapeRegExp(tag);
-        return new RegExp(`(\\s)?#${escapedTag}${TagOperations.TAG_BOUNDARY}`, 'giu');
-    }
-
-    /**
-     * Escapes special regex characters in a string
-     *
-     * Examples:
-     * - "file.txt" → "file\\.txt"
-     * - "tag*" → "tag\\*"
-     * - "[tag]" → "\\[tag\\]"
-     * - "tag?" → "tag\\?"
-     * - "(tag)" → "\\(tag\\)"
-     * - "tag|other" → "tag\\|other"
-     * - "tag$" → "tag\\$"
-     * - "tag^start" → "tag\\^start"
-     * - "tag{1,3}" → "tag\\{1,3\\}"
-     * - "tag\\" → "tag\\\\"
-     */
-    private escapeRegExp(string: string): string {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
-    /**
-     * Adds a tag to multiple files
-     * @param tag - The tag to add (without #)
-     * @param files - Files to add the tag to
-     * @returns Object with counts of files modified and skipped
-     */
-    async addTagToFiles(tag: string, files: TFile[]): Promise<{ added: number; skipped: number }> {
-        let added = 0;
-        let skipped = 0;
-
-        for (const file of files) {
-            // Skip non-markdown files
-            if (!this.isMarkdownFile(file)) {
-                skipped++;
-                continue;
-            }
-
-            const alreadyHasTag = await this.fileHasTagOrAncestor(file, tag);
-            if (alreadyHasTag) {
-                skipped++;
-                continue;
-            }
-
-            await this.addTagToFile(file, tag);
-            added++;
-        }
-
-        return { added, skipped };
-    }
-
-    /**
-     * Gets all unique tags from multiple files
-     * @param files - Files to get tags from
-     * @returns Array of unique tag strings (without #)
-     */
-    getTagsFromFiles(files: TFile[]): string[] {
-        // Use a Map to track lowercase tag -> first canonical form encountered
-        const canonicalTags = new Map<string, string>();
-        const db = getDBInstance();
-
-        for (const file of files) {
-            // Skip non-markdown files
-            if (!this.isMarkdownFile(file)) {
-                continue;
-            }
-
-            const tags = db.getCachedTags(file.path);
-            tags.forEach(tag => {
-                const normalizedTag = normalizeTagPathValue(tag);
-                if (normalizedTag.length === 0) {
-                    return;
-                }
-                // Only add if we haven't seen this tag (case-insensitive)
-                if (!canonicalTags.has(normalizedTag)) {
-                    canonicalTags.set(normalizedTag, tag);
-                }
-            });
-        }
-
-        // Return canonical forms sorted alphabetically
-        return Array.from(canonicalTags.values()).sort();
-    }
-
-    /**
-     * Removes a specific tag from multiple files
-     * @param tag - The tag to remove (without #)
-     * @param files - Files to remove the tag from
-     * @returns Number of files modified
-     */
-    async removeTagFromFiles(tag: string, files: TFile[]): Promise<number> {
-        let removed = 0;
-
-        for (const file of files) {
-            // Skip non-markdown files
-            if (!this.isMarkdownFile(file)) {
-                continue;
-            }
-
-            const hadTag = await this.removeTagFromFile(file, tag);
-            if (hadTag) {
-                removed++;
-            }
-        }
-
-        return removed;
-    }
-
-    /**
-     * Removes all tags from multiple files
-     * @param files - Files to clear tags from
-     * @returns Number of files modified
-     */
-    async clearAllTagsFromFiles(files: TFile[]): Promise<number> {
-        let cleared = 0;
-
-        for (const file of files) {
-            // Skip non-markdown files
-            if (!this.isMarkdownFile(file)) {
-                continue;
-            }
-
-            const hadTags = await this.clearAllTagsFromFile(file);
-            if (hadTags) {
-                cleared++;
-            }
-        }
-
-        return cleared;
-    }
-
-    /**
-     * Checks if content contains any inline tags
-     */
-    private hasInlineTags(content: string): boolean {
-        return TagOperations.INLINE_TAG_TEST_PATTERN.test(content);
-    }
-
-    /**
-     * Checks if content contains a specific inline tag (case-insensitive)
-     */
-    private hasSpecificInlineTag(content: string, tag: string): boolean {
-        const regex = this.buildSpecificTagPattern(tag);
-        return regex.test(content);
-    }
-
-    /**
-     * Checks if a file already has a specific tag or an ancestor tag.
-     * Comparison is case-insensitive (e.g., "TODO" matches "todo").
-     * Also returns true if file has an ancestor tag (e.g., won't add "project/task" if file has "project").
-     */
-    private async fileHasTagOrAncestor(file: TFile, tag: string): Promise<boolean> {
-        // Non-markdown files cannot have tags
-        if (!this.isMarkdownFile(file)) {
-            return false;
-        }
-
-        const db = getDBInstance();
-        const allTags = db.getCachedTags(file.path);
-        const normalizedTag = normalizeTagPathValue(tag);
-        if (normalizedTag.length === 0) {
-            return false;
-        }
-
-        // Check if any existing tag is the same or an ancestor
-        return allTags.some((existingTag: string) => {
-            const normalizedExistingTag = normalizeTagPathValue(existingTag);
-            if (normalizedExistingTag.length === 0) {
-                return false;
-            }
-
-            // Exact match (case-insensitive)
-            if (normalizedExistingTag === normalizedTag) return true;
-
-            // Check if we already have an ancestor tag
-            // e.g., if we want to add "project/example" but file has "project"
-            return normalizedTag.startsWith(`${normalizedExistingTag}/`);
-        });
-    }
-
-    /**
-     * Adds a tag to a single file's frontmatter
-     */
-    private async addTagToFile(file: TFile, tag: string): Promise<void> {
-        // Skip non-markdown files
-        if (!this.isMarkdownFile(file)) {
-            return;
-        }
-
-        // First, remove any descendant tags of the new tag
-        await this.removeDescendantTagsFromFile(file, tag);
-
-        try {
-            await this.app.fileManager.processFrontMatter(file, fm => {
-                if (!fm.tags) {
-                    // No tags yet, create new array
-                    fm.tags = [tag];
-                } else if (Array.isArray(fm.tags)) {
-                    // Add to existing array
-                    fm.tags.push(tag);
-                    // Ensure uniqueness
-                    fm.tags = [...new Set(fm.tags)];
-                } else if (typeof fm.tags === 'string') {
-                    // Convert string to array and add new tag
-                    const tags = fm.tags.split(',').map((t: string) => t.trim());
-                    tags.push(tag);
-                    fm.tags = [...new Set(tags)];
-                }
-            });
-        } catch (error) {
-            console.error('Error adding tag to frontmatter:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Removes a specific tag from a single file
-     * @param file - The file to remove the tag from
-     * @param tag - The tag to remove (without #)
-     * @returns Whether the file had the tag
-     */
-    private async removeTagFromFile(file: TFile, tag: string): Promise<boolean> {
-        // Non-markdown files cannot have tags
-        if (!this.isMarkdownFile(file)) {
-            return false;
-        }
-
-        let hadTag = false;
-
-        // Remove from frontmatter
-        try {
-            await this.app.fileManager.processFrontMatter(file, fm => {
-                if (!fm.tags) return;
-
-                const normalizedTarget = normalizeTagPathValue(tag);
-
-                if (Array.isArray(fm.tags)) {
-                    const originalLength = fm.tags.length;
-                    fm.tags = fm.tags.filter((t: string) => {
-                        const normalizedTag = normalizeTagPathValue(t);
-                        if (normalizedTag.length === 0) {
-                            return false;
-                        }
-                        if (normalizedTarget.length === 0) {
-                            return true;
-                        }
-                        return normalizedTag !== normalizedTarget;
-                    });
-
-                    if (fm.tags.length < originalLength) {
-                        hadTag = true;
-                    }
-
-                    if (fm.tags.length === 0) {
-                        delete fm.tags;
-                    }
-                } else if (typeof fm.tags === 'string') {
-                    const tags = fm.tags.split(',').map((t: string) => t.trim());
-                    const filteredTags = tags.filter((t: string) => {
-                        const normalizedTag = normalizeTagPathValue(t);
-                        if (normalizedTag.length === 0) {
-                            return false;
-                        }
-                        if (normalizedTarget.length === 0) {
-                            return true;
-                        }
-                        return normalizedTag !== normalizedTarget;
-                    });
-
-                    if (filteredTags.length < tags.length) {
-                        hadTag = true;
-                    }
-
-                    if (filteredTags.length === 0) {
-                        delete fm.tags;
-                    } else {
-                        fm.tags = filteredTags.length === 1 ? filteredTags[0] : filteredTags;
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Error removing tag from frontmatter:', error);
-        }
-
-        // Remove from inline content only if tag might exist
-        // First, read the content to check if we need to process it
-        const content = await this.app.vault.read(file);
-        if (this.hasSpecificInlineTag(content, tag)) {
-            await this.app.vault.process(file, content => {
-                const newContent = this.removeInlineTags(content, tag);
-                if (newContent !== content) {
-                    hadTag = true;
-                }
-                return newContent;
-            });
-        }
-
-        return hadTag;
-    }
-
-    /**
-     * Removes any descendant tags of the given tag from a file
-     * e.g., if adding "project", removes "project/example", "project/task1", etc.
-     */
-    private async removeDescendantTagsFromFile(file: TFile, ancestorTag: string): Promise<void> {
-        // Skip non-markdown files
-        if (!this.isMarkdownFile(file)) {
-            return;
-        }
-
-        // Get all current tags from the file
-        const currentTags = this.getTagsFromFiles([file]);
-
-        // Find descendant tags to remove (case-insensitive)
-        const normalizedAncestor = normalizeTagPathValue(ancestorTag);
-        if (normalizedAncestor.length === 0) {
-            return;
-        }
-        const descendantTags = currentTags.filter(tag => {
-            const normalizedTag = normalizeTagPathValue(tag);
-            return normalizedTag.startsWith(`${normalizedAncestor}/`);
-        });
-
-        if (descendantTags.length === 0) return;
-
-        // Create lowercase set for efficient lookup
-        const normalizedDescendantSet = new Set(
-            descendantTags.map(t => normalizeTagPathValue(t)).filter((value): value is string => value.length > 0)
+    constructor(
+        private readonly app: App,
+        private readonly getSettings: () => NotebookNavigatorSettings,
+        private readonly getTagTreeService: () => ITagTreeProvider | null,
+        private readonly getMetadataService: () => MetadataService | null
+    ) {
+        this.fileMutations = new TagFileMutations(this.app, this.getSettings);
+        this.batchOperations = new TagBatchOperations(this.fileMutations);
+        this.shortcutMutations = new TagShortcutMutations(this.getMetadataService);
+        this.renameWorkflow = new TagRenameWorkflow(
+            this.app,
+            this.fileMutations,
+            this.getTagTreeService,
+            this.getMetadataService,
+            tagPath => this.resolveDisplayTagPath(tagPath),
+            () => this.createRenameHooks()
         );
-        if (normalizedDescendantSet.size === 0) {
+        this.deleteWorkflow = new TagDeleteWorkflow(this.app, this.fileMutations, this.getTagTreeService, this.getMetadataService, () =>
+            this.createDeleteHooks()
+        );
+    }
+
+    /**
+     * Registers a listener for tag rename events
+     * Returns cleanup function to unsubscribe
+     */
+    addTagRenameListener(listener: (payload: TagRenameEventPayload) => void): () => void {
+        this.tagRenameListeners.add(listener);
+        return () => {
+            this.tagRenameListeners.delete(listener);
+        };
+    }
+
+    /**
+     * Registers a listener for tag deletion events
+     * Returns cleanup function to unsubscribe
+     */
+    addTagDeleteListener(listener: (payload: TagDeleteEventPayload) => void): () => void {
+        this.tagDeleteListeners.add(listener);
+        return () => {
+            this.tagDeleteListeners.delete(listener);
+        };
+    }
+
+    async addTagToFiles(tag: string, files: TFile[]): Promise<{ added: number; skipped: number }> {
+        return this.batchOperations.addTagToFiles(tag, files);
+    }
+
+    getTagsFromFiles(files: TFile[]): string[] {
+        return this.batchOperations.getTagsFromFiles(files);
+    }
+
+    async removeTagFromFiles(tag: string, files: TFile[]): Promise<number> {
+        return this.batchOperations.removeTagFromFiles(tag, files);
+    }
+
+    async clearAllTagsFromFiles(files: TFile[]): Promise<number> {
+        return this.batchOperations.clearAllTagsFromFiles(files);
+    }
+
+    async promptRenameTag(tagPath: string): Promise<void> {
+        await this.openRenameModal(tagPath);
+    }
+
+    /**
+     * Promotes a nested tag to root level
+     * Renames "parent/child" to just "child"
+     */
+    async promoteTagToRoot(sourceTagPath: string): Promise<void> {
+        if (sourceTagPath === TAGGED_TAG_ID || sourceTagPath === UNTAGGED_TAG_ID) {
             return;
         }
-
-        // Remove descendant tags from frontmatter
-        try {
-            await this.app.fileManager.processFrontMatter(file, fm => {
-                if (!fm.tags) return;
-
-                if (Array.isArray(fm.tags)) {
-                    fm.tags = fm.tags.filter((tag: string) => {
-                        const normalizedTag = normalizeTagPathValue(tag);
-                        if (normalizedTag.length === 0) {
-                            return false;
-                        }
-                        // Case-insensitive check
-                        return !normalizedDescendantSet.has(normalizedTag);
-                    });
-
-                    if (fm.tags.length === 0) {
-                        delete fm.tags;
-                    }
-                } else if (typeof fm.tags === 'string') {
-                    const tags = fm.tags.split(',').map((t: string) => t.trim());
-                    const filteredTags = tags.filter((tag: string) => {
-                        const normalizedTag = normalizeTagPathValue(tag);
-                        if (normalizedTag.length === 0) {
-                            return false;
-                        }
-                        // Case-insensitive check
-                        return !normalizedDescendantSet.has(normalizedTag);
-                    });
-
-                    if (filteredTags.length === 0) {
-                        delete fm.tags;
-                    } else {
-                        fm.tags = filteredTags.length === 1 ? filteredTags[0] : filteredTags;
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Error removing descendant tags from frontmatter:', error);
+        const sourceDisplay = this.resolveDisplayTagPath(sourceTagPath);
+        if (!sourceDisplay || sourceDisplay.length === 0 || !sourceDisplay.includes('/')) {
+            return;
         }
+        const leaf = this.fileMutations.getTagLeaf(sourceDisplay);
+        if (leaf.length === 0 || leaf === sourceDisplay) {
+            return;
+        }
+        await this.openRenameModal(sourceDisplay, leaf);
+    }
 
-        // Remove descendant tags from inline content only if any exist
-        // First check if we need to process at all
-        const content = await this.app.vault.read(file);
-        const hasAnyDescendantTag = descendantTags.some(tag => this.hasSpecificInlineTag(content, tag));
+    /**
+     * Handles tag rename via drag and drop
+     * Moves source tag to become child of target tag
+     */
+    async renameTagByDrag(sourceTagPath: string, targetTagPath: string): Promise<void> {
+        if (targetTagPath === TAGGED_TAG_ID || targetTagPath === UNTAGGED_TAG_ID) {
+            return;
+        }
+        const sourceDisplay = this.resolveDisplayTagPath(sourceTagPath);
+        const targetDisplay = this.resolveDisplayTagPath(targetTagPath);
+        const leaf = this.fileMutations.getTagLeaf(sourceDisplay);
+        const newPath = targetDisplay.length > 0 ? `${targetDisplay}/${leaf}` : leaf;
+        if (newPath === sourceDisplay) {
+            return;
+        }
+        await this.openRenameModal(sourceDisplay, newPath);
+    }
 
-        if (hasAnyDescendantTag) {
-            await this.app.vault.process(file, content => {
-                let newContent = content;
-                for (const descendantTag of descendantTags) {
-                    newContent = this.removeInlineTags(newContent, descendantTag);
-                }
-                return newContent;
-            });
+    async promptDeleteTag(tagPath: string): Promise<void> {
+        await this.deleteWorkflow.promptDeleteTag(tagPath);
+    }
+
+    private async openRenameModal(tagPath: string, initialValue?: string): Promise<void> {
+        await this.renameWorkflow.promptRenameTag(tagPath, initialValue);
+    }
+
+    protected resolveDisplayTagPath(tagPath: string): string {
+        return resolveDisplayTagPath(tagPath, this.getTagTreeService());
+    }
+
+    protected async executeRename(analysis: TagRenameAnalysis): Promise<TagRenameResult> {
+        return this.renameWorkflow.executeRename(analysis);
+    }
+
+    protected async updateTagMetadataAfterRename(oldTagPath: string, newTagPath: string, preserveDestination: boolean): Promise<void> {
+        await this.renameWorkflow.updateTagMetadataAfterRename(oldTagPath, newTagPath, preserveDestination);
+    }
+
+    protected async updateTagShortcutsAfterRename(oldTagPath: string, newTagPath: string): Promise<void> {
+        await this.shortcutMutations.updateTagShortcutsAfterRename(oldTagPath, newTagPath);
+    }
+
+    protected async runTagRename(oldTagPath: string, newTagPath: string, presetTargets?: RenameFile[] | null): Promise<boolean> {
+        return this.renameWorkflow.runTagRename(oldTagPath, newTagPath, presetTargets ?? null);
+    }
+
+    protected async runTagDelete(tagPath: string, presetPaths?: readonly string[] | null): Promise<boolean> {
+        return this.deleteWorkflow.runTagDelete(tagPath, presetPaths);
+    }
+
+    protected async deleteTagFromFile(file: TFile, tag: TagDescriptor): Promise<boolean> {
+        return this.deleteWorkflow.deleteTagFromFile(file, tag);
+    }
+
+    protected async removeTagMetadataAfterDelete(tagPath: string): Promise<void> {
+        await this.deleteWorkflow.removeTagMetadataAfterDelete(tagPath);
+    }
+
+    protected async removeTagShortcutsAfterDelete(tagPath: string): Promise<void> {
+        await this.shortcutMutations.removeTagShortcutsAfterDelete(tagPath);
+    }
+
+    /**
+     * Creates hook callbacks for tag rename workflow
+     * Provides controlled access to internal methods
+     */
+    private createRenameHooks(): TagRenameHooks {
+        return {
+            executeRename: analysis => this.executeRename(analysis),
+            updateTagMetadataAfterRename: (oldTagPath, newTagPath, preserve) =>
+                this.updateTagMetadataAfterRename(oldTagPath, newTagPath, preserve),
+            updateTagShortcutsAfterRename: (oldTagPath, newTagPath) => this.updateTagShortcutsAfterRename(oldTagPath, newTagPath),
+            notifyTagRenamed: payload => this.notifyTagRenamed(payload)
+        };
+    }
+
+    /**
+     * Creates hook callbacks for tag delete workflow
+     * Provides controlled access to internal methods
+     */
+    private createDeleteHooks(): TagDeleteHooks {
+        return {
+            deleteTagFromFile: (file, tag) => this.deleteTagFromFile(file, tag),
+            removeTagMetadataAfterDelete: tagPath => this.removeTagMetadataAfterDelete(tagPath),
+            removeTagShortcutsAfterDelete: tagPath => this.removeTagShortcutsAfterDelete(tagPath),
+            notifyTagDeleted: payload => this.notifyTagDeleted(payload),
+            resolveDisplayTagPath: tagPath => this.resolveDisplayTagPath(tagPath)
+        };
+    }
+
+    /**
+     * Notifies all registered listeners of a successful tag rename
+     * Catches and logs any listener errors to prevent cascading failures
+     */
+    private notifyTagRenamed(payload: TagRenameEventPayload): void {
+        if (this.tagRenameListeners.size === 0) {
+            return;
+        }
+        for (const listener of this.tagRenameListeners) {
+            try {
+                listener(payload);
+            } catch (error) {
+                console.error('[Notebook Navigator] Tag rename listener failed', error);
+            }
         }
     }
 
     /**
-     * Clears all tags from a single file
-     * @returns Whether the file had any tags to clear
+     * Notifies all registered listeners of a successful tag deletion
+     * Catches and logs any listener errors to prevent cascading failures
      */
-    private async clearAllTagsFromFile(file: TFile): Promise<boolean> {
-        // Non-markdown files cannot have tags
-        if (!this.isMarkdownFile(file)) {
-            return false;
+    private notifyTagDeleted(payload: TagDeleteEventPayload): void {
+        if (this.tagDeleteListeners.size === 0) {
+            return;
         }
-
-        let hadTags = false;
-
-        // Check if file has any tags using our memory cache
-        const db = getDBInstance();
-        const cachedTags = db.getCachedTags(file.path);
-
-        if (cachedTags.length === 0) {
-            // No tags to remove, skip processing
-            return false;
+        for (const listener of this.tagDeleteListeners) {
+            try {
+                listener(payload);
+            } catch (error) {
+                console.error('[Notebook Navigator] Tag delete listener failed', error);
+            }
         }
-
-        // Clear frontmatter tags
-        try {
-            await this.app.fileManager.processFrontMatter(file, fm => {
-                if (fm.tags) {
-                    hadTags = true;
-                    delete fm.tags;
-                }
-            });
-        } catch (error) {
-            console.error('Error clearing frontmatter tags:', error);
-            throw error;
-        }
-
-        // Only process file content if it actually contains inline tags
-        // Our cache told us there are tags, but they might only be in frontmatter
-        const content = await this.app.vault.read(file);
-        if (this.hasInlineTags(content)) {
-            await this.app.vault.process(file, content => {
-                const newContent = this.removeAllInlineTags(content);
-                if (newContent !== content) {
-                    hadTags = true;
-                }
-                return newContent;
-            });
-        }
-
-        return hadTags;
-    }
-
-    /**
-     * Removes a specific inline tag from content
-     * Supports Unicode characters in tags (e.g., #TODO_日本語, #проект, #tâche)
-     */
-    private removeInlineTags(content: string, tag: string): string {
-        const regex = this.buildSpecificTagPattern(tag);
-        return content.replace(regex, '');
-    }
-
-    /**
-     * Removes all inline tags from content
-     *
-     * Examples:
-     * - "text #tag more text" → "text more text"
-     * - "#todo finish this #urgent" → "finish this"
-     * - "Issue #123 is fixed" → "Issue is fixed"
-     * - "#project/subtask done" → "done"
-     * - "#multi-word-tag text" → "text"
-     * - "text#notag" → "text#notag" (preserved - no space before #)
-     * - "#tag1 #tag2\n#tag3" → "\n"
-     * - "end with #tag" → "end with"
-     * - "text  #tag  more" → "text  more" (existing double spaces preserved)
-     * - "Task #todo, check #bug." → "Task, check."
-     * - "Review (#urgent) and [#task]" → "Review () and []"
-     * - "#TODO_日本語 text" → "text" (Unicode support)
-     * - "#проект/задача done" → "done" (Cyrillic support)
-     * - "#tâche-à-faire text" → "text" (accented characters)
-     */
-    private removeAllInlineTags(content: string): string {
-        return content.replace(TagOperations.INLINE_TAG_PATTERN, '');
     }
 }

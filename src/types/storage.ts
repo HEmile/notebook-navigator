@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,4 +35,22 @@ export interface TagTreeNode {
     children: Map<string, TagTreeNode>;
     /** Set of file paths that have this exact tag */
     notesWithTag: Set<string>;
+}
+
+export type PropertyTreeNodeId = `key:${string}` | `key:${string}=${string}`;
+
+export interface PropertyTreeNode {
+    id: PropertyTreeNodeId;
+    kind: 'key' | 'value';
+    /** Canonical lowercase property key used for lookups (for example "status"). */
+    key: string;
+    /** Canonical lowercase value ("a/b/c") for value nodes, null for key nodes. */
+    valuePath: string | null;
+    /** Display label for this node (key name or value). */
+    name: string;
+    /** Canonical display path for UI. Key nodes use the display key, value nodes use the value label. */
+    displayPath: string;
+    children: Map<string, PropertyTreeNode>;
+    /** Set of file paths that have this exact key/value (key nodes include any value for the key). */
+    notesWithValue: Set<string>;
 }

@@ -1,0 +1,110 @@
+/* Source: src/styles/sections/layout-base.css */
+
+/* ========================================================================
+   Base Layout & Container Styles
+   ======================================================================== */
+
+/* Inline match highlight in file names while search is active */
+.nn-search-highlight {
+    background-color: var(--nn-theme-list-search-active-bg);
+    color: inherit;
+    border-radius: 3px;
+}
+
+/* Resets Obsidian's default view-content padding for cleaner integration */
+.view-content.notebook-navigator {
+    padding: 0;
+    border: none;
+}
+
+/* Main container - establishes the plugin's layout foundation */
+.notebook-navigator {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--background-primary);
+    font-family: var(--font-interface);
+}
+
+.nn-svg-filters {
+    position: absolute;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    opacity: 0;
+}
+
+/* Removes focus outline on main container for cleaner appearance */
+.notebook-navigator:focus {
+    outline: none;
+}
+
+/* Split container - creates the two-pane layout structure */
+.nn-split-container {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    --nn-pane-transition-duration: 0.15s;
+    --nn-pane-transition-timing: ease-in-out;
+    --nn-selected-file-bg-color: var(--nn-computed-file-selected-bg, var(--nn-theme-file-selected-bg));
+    --nn-selected-file-name-color: var(--nn-theme-file-selected-name-color);
+    --nn-selected-file-preview-color: var(--nn-theme-file-selected-preview-color);
+    --nn-selected-file-date-color: var(--nn-theme-file-selected-date-color);
+    --nn-selected-file-parent-color: var(--nn-theme-file-selected-parent-color);
+    --nn-selected-file-tag-color: var(--nn-theme-file-selected-tag-color);
+    --nn-selected-file-tag-bg: var(--nn-theme-file-selected-tag-bg);
+    --nn-selected-file-property-color: var(--nn-theme-file-selected-property-color);
+    --nn-selected-file-property-bg: var(--nn-theme-file-selected-property-bg);
+    --nn-selected-file-border-color: var(--nn-theme-file-selected-border-color);
+    --nn-selected-navitem-bg-color: var(--nn-computed-navitem-selected-bg, var(--nn-theme-navitem-selected-bg));
+    --nn-selected-navitem-name-color: var(--nn-theme-navitem-selected-name-color);
+    --nn-selected-navitem-chevron-color: var(--nn-theme-navitem-selected-chevron-color);
+    --nn-selected-navitem-icon-color: var(--nn-theme-navitem-selected-icon-color);
+    --nn-selected-navitem-count-color: var(--nn-theme-navitem-selected-count-color);
+    --nn-selected-navitem-count-bg: var(--nn-theme-navitem-selected-count-bg);
+    --nn-selected-navitem-border-color: var(--nn-theme-navitem-selected-border-color);
+    --nn-selected-navitem-count-border-color: var(--nn-theme-navitem-selected-count-border-color);
+}
+
+.nn-split-container:is([data-navigator-focused='false'], [data-focus-pane='navigation'], [data-focus-pane='search']) {
+    --nn-selected-file-bg-color: var(--nn-computed-file-selected-inactive-bg, var(--nn-theme-file-selected-inactive-bg));
+    --nn-selected-file-name-color: var(--nn-theme-file-selected-inactive-name-color);
+    --nn-selected-file-preview-color: var(--nn-theme-file-selected-inactive-preview-color);
+    --nn-selected-file-date-color: var(--nn-theme-file-selected-inactive-date-color);
+    --nn-selected-file-parent-color: var(--nn-theme-file-selected-inactive-parent-color);
+    --nn-selected-file-tag-color: var(--nn-theme-file-selected-inactive-tag-color);
+    --nn-selected-file-tag-bg: var(--nn-theme-file-selected-inactive-tag-bg);
+    --nn-selected-file-property-color: var(--nn-theme-file-selected-inactive-property-color);
+    --nn-selected-file-property-bg: var(--nn-theme-file-selected-inactive-property-bg);
+    --nn-selected-file-border-color: var(--nn-theme-file-selected-inactive-border-color);
+}
+
+.nn-split-container:is([data-navigator-focused='false'], [data-focus-pane='files'], [data-focus-pane='search']) {
+    --nn-selected-navitem-bg-color: var(--nn-computed-navitem-selected-inactive-bg, var(--nn-theme-navitem-selected-inactive-bg));
+    --nn-selected-navitem-name-color: var(--nn-theme-navitem-selected-inactive-name-color);
+    --nn-selected-navitem-chevron-color: var(--nn-theme-navitem-selected-inactive-chevron-color);
+    --nn-selected-navitem-icon-color: var(--nn-theme-navitem-selected-inactive-icon-color);
+    --nn-selected-navitem-count-color: var(--nn-theme-navitem-selected-inactive-count-color);
+    --nn-selected-navitem-count-bg: var(--nn-theme-navitem-selected-inactive-count-bg);
+    --nn-selected-navitem-border-color: var(--nn-theme-navitem-selected-inactive-border-color);
+    --nn-selected-navitem-count-border-color: var(--nn-theme-navitem-selected-inactive-count-border-color);
+}
+
+.nn-scale-wrapper {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.nn-scale-wrapper > .nn-split-container {
+    width: 100%;
+    height: 100%;
+    transform-origin: top left;
+}
+
+.nn-scale-wrapper[data-ui-scale] > .nn-split-container {
+    width: calc(100% / var(--nn-ui-scale, 1));
+    height: calc(100% / var(--nn-ui-scale, 1));
+    transform: scale(var(--nn-ui-scale, 1));
+}

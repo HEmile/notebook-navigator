@@ -1,10 +1,24 @@
 #!/usr/bin/env node
 
 /*
- * Obsidian Plugin Release Script
- * ==============================
- * This script is checked into git
+ * Notebook Navigator - Plugin for Obsidian
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Release Script
+ * ==============
  * This script automates the release process for Obsidian plugins by:
  * - Incrementing version numbers in manifest.json, package.json, and versions.json
  * - Committing the changes
@@ -546,12 +560,10 @@ function performRelease(releaseType, manifest, currentVersion, newVersion) {
             console.log(`\n🔍 DRY RUN COMPLETE - Version ${newVersion} would be released`);
         } else {
             console.log(`\n🎉 Successfully released version ${newVersion}`);
-            console.log('GitHub Actions will now create the release draft.');
+            console.log('GitHub Actions will now build and publish the GitHub release.');
             console.log('\nNext steps:');
             console.log('1. Wait for GitHub Actions to complete');
-            console.log('2. Go to GitHub releases page');
-            console.log('3. Add release notes');
-            console.log('4. Publish the release\n');
+            console.log('2. Verify the release on GitHub\n');
         }
     } catch (error) {
         // If git operations fail, rollback file changes
@@ -669,9 +681,6 @@ process.on('exit', () => {
 // Check prerequisites
 checkGitAvailable();
 
-// Acquire lock before any operations
-acquireLock();
-
 // Parse command line arguments
 const args = process.argv.slice(2);
 let releaseTypeArg = null;
@@ -697,6 +706,11 @@ if (releaseTypeArg && !hasValidArg) {
     console.error('   Use one of: patch, minor, major');
     console.error('\n   Usage: node release.js [patch|minor|major] [--dry-run]');
     process.exit(1);
+}
+
+// Acquire lock before any operations (but never in --dry-run mode)
+if (!isDryRun) {
+    acquireLock();
 }
 
 // Read and validate manifest

@@ -1,0 +1,10 @@
+/* Source: src/styles/sections/navigation-properties.css */
+
+/* ========================================================================
+   Navigation Properties
+   ======================================================================== */
+
+/* Property tree rows reuse the shared navigation row layout from navigation-tree.css. */
+.nn-navitem.nn-property .nn-navitem-name {
+    unicode-bidi: plaintext;
+}

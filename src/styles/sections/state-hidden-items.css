@@ -1,0 +1,51 @@
+/* Source: src/styles/sections/state-hidden-items.css */
+
+/* ========================================================================
+   Hidden Items - Dimmed appearance for hidden folders and tags
+   ======================================================================== */
+
+/* Hidden items (folders and tags) - dimmed appearance */
+.nn-navitem.nn-excluded {
+    --nn-theme-navitem-chevron-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-icon-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-count-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-selected-chevron-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-selected-icon-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-selected-count-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-selected-inactive-chevron-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-selected-inactive-icon-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-selected-inactive-count-color: var(--nn-theme-foreground);
+}
+
+.nn-navitem.nn-excluded .nn-navitem-chevron,
+.nn-navitem.nn-excluded .nn-navitem-icon,
+.nn-navitem.nn-excluded .nn-navitem-name,
+.nn-navitem.nn-excluded .nn-navitem-count {
+    opacity: 0.5;
+}
+
+/* Hidden files surfaced via "show hidden" toggle */
+.nn-file.nn-hidden-file {
+    --nn-theme-file-name-color: var(--nn-theme-foreground);
+    --nn-theme-file-preview-color: var(--nn-theme-foreground);
+    --nn-theme-file-date-color: var(--nn-theme-foreground);
+    --nn-theme-file-parent-color: var(--nn-theme-foreground);
+    --nn-theme-file-tag-color: var(--nn-theme-foreground);
+    --nn-theme-file-property-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-name-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-preview-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-date-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-parent-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-tag-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-property-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-inactive-name-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-inactive-preview-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-inactive-date-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-inactive-parent-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-inactive-tag-color: var(--nn-theme-foreground);
+    --nn-theme-file-selected-inactive-property-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-icon-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-selected-icon-color: var(--nn-theme-foreground);
+    --nn-theme-navitem-selected-inactive-icon-color: var(--nn-theme-foreground);
+    opacity: 0.5;
+}

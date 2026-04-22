@@ -1,0 +1,103 @@
+/* Source: src/styles/sections/modal-ux-icon-map.css */
+
+/* ========================================================================
+   UX Icon Map Modal
+   ======================================================================== */
+
+.modal.nn-ux-icon-map-modal {
+    width: 520px;
+    max-width: calc(100vw - 40px);
+    max-height: 500px;
+}
+
+.is-mobile .modal.nn-ux-icon-map-modal {
+    width: 560px;
+    max-width: calc(100vw - 24px);
+    max-height: min(560px, calc(100vh - 24px));
+}
+
+.modal.nn-ux-icon-map-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-2);
+    padding: var(--size-4-4);
+    overflow: hidden;
+}
+
+.is-mobile .modal.nn-ux-icon-map-modal .modal-content {
+    gap: var(--size-2-3);
+    padding: var(--size-4-6);
+}
+
+.nn-ux-icon-map-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+    padding-bottom: var(--size-1-5);
+}
+
+.is-mobile .modal.nn-ux-icon-map-modal .nn-ux-icon-map-scroll {
+    padding-bottom: var(--size-2-2);
+}
+
+.nn-ux-icon-map-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1-5);
+    width: 100%;
+}
+
+.is-mobile .modal.nn-ux-icon-map-modal .nn-ux-icon-map-list {
+    gap: var(--size-2-2);
+}
+
+.nn-ux-icon-map-footer {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding-top: var(--size-2-2);
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.is-mobile .modal.nn-ux-icon-map-modal .nn-ux-icon-map-footer {
+    padding-top: var(--size-2-3);
+}
+
+.nn-ux-icon-map-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+}
+
+.is-mobile .modal.nn-ux-icon-map-modal .nn-ux-icon-map-row {
+    gap: var(--size-2-3);
+}
+
+.nn-ux-icon-map-label {
+    flex: 1;
+    min-width: 0;
+}
+
+.is-mobile .modal.nn-ux-icon-map-modal .nn-ux-icon-map-label {
+    font-size: 1.05em;
+}
+
+.is-mobile .modal.nn-ux-icon-map-modal .nn-action-btn {
+    min-width: 36px;
+    min-height: 36px;
+}
+
+.nn-ux-icon-map-group-heading {
+    margin: 0;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--nn-theme-foreground);
+}
+
+.is-mobile .modal.nn-ux-icon-map-modal .nn-ux-icon-map-group-heading {
+    font-size: 1em;
+}
+
+.nn-ux-icon-map-group-heading--spaced {
+    margin-top: var(--size-4-4);
+}

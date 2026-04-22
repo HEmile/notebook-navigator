@@ -1,0 +1,44 @@
+/* Source: src/styles/sections/settings-database-statistics.css */
+
+/* ========================================================================
+   Database Statistics Section
+   ======================================================================== */
+
+/* Container for database statistics */
+.nn-database-stats {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Statistics text styling */
+.nn-stats-text {
+    font-size: var(--font-ui-smaller);
+    color: var(--nn-theme-foreground-muted);
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* Remove duplicate borders when statistics are displayed */
+.nn-stats-section {
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* Ensure proper spacing from previous sections */
+.nn-stats-section.setting-item {
+    margin-top: 0;
+}
+
+/* Advanced > Local cache: center text by removing the empty control column */
+.nn-local-cache-stats-setting .setting-item-control {
+    display: none;
+}
+
+.nn-local-cache-stats-setting .setting-item-info {
+    width: 100%;
+}
+
+.nn-local-cache-stats-setting .nn-stats-text {
+    text-align: center;
+}

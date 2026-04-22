@@ -1,0 +1,424 @@
+/* Source: src/styles/sections/ui-headers.css */
+
+/* ========================================================================
+   Header Styles
+   ======================================================================== */
+
+/* Pane headers - consistent header styling for both panes */
+.nn-pane-header {
+    padding: 8px 8px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    min-height: 32px;
+    height: 32px;
+}
+
+/* File pane header needs flex layout for title and buttons */
+.nn-list-pane .nn-pane-header > .nn-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+/* Navigation pane header - matches folder tree background for visual consistency */
+.nn-navigation-pane .nn-pane-header {
+    background-color: var(--nn-theme-nav-bg);
+}
+
+/* File list pane header */
+.nn-list-pane .nn-pane-header {
+    background-color: var(--nn-theme-list-bg);
+}
+
+/* Header actions container - groups action buttons in headers */
+.nn-header-actions {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.nn-header-actions-profile {
+    gap: 8px;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.nn-pane-header-profile {
+    gap: 4px;
+    padding-right: 0;
+    justify-content: flex-start;
+    display: inline-flex;
+    align-items: center;
+}
+
+.nn-pane-header-profile[role='button'] {
+    cursor: pointer;
+}
+
+.nn-pane-header-profile:focus-visible {
+    outline: 1px solid var(--interactive-accent);
+    outline-offset: 1px;
+    border-radius: 6px;
+}
+
+.nn-pane-header-profile-chevron {
+    width: var(--nn-nav-icon-size);
+    height: var(--nn-nav-icon-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--nn-theme-list-header-breadcrumb-color);
+}
+
+.nn-pane-header-title {
+    font-size: var(--nn-desktop-header-font-size);
+    font-weight: var(--nn-theme-list-header-breadcrumb-font-weight);
+    color: var(--nn-theme-list-header-breadcrumb-color);
+    padding-left: 12px;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+.nn-pane-header-title.nn-pane-header-profile {
+    padding-left: 0;
+}
+
+.nn-single-pane .nn-list-pane .nn-pane-header-title {
+    padding-left: 2px;
+}
+
+.nn-pane-header-icon {
+    width: var(--nn-nav-icon-size);
+    height: var(--nn-nav-icon-size);
+    margin-inline-end: 8px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    color: var(--nn-theme-list-header-icon-color);
+    overflow: visible;
+}
+
+.nn-pane-header-icon svg {
+    width: var(--nn-nav-icon-size);
+    height: var(--nn-nav-icon-size);
+}
+
+.nn-pane-header-icon.nn-emoji-icon {
+    font-size: var(--nn-nav-icon-size);
+    line-height: var(--nn-nav-icon-size);
+    text-align: center;
+    justify-content: center;
+}
+
+.nn-pane-header-icon.nn-iconfont {
+    font-size: var(--nn-nav-icon-size);
+    line-height: var(--nn-nav-icon-size);
+}
+
+.nn-pane-header-icon[data-has-color='true'] svg {
+    stroke-width: 2.4;
+}
+
+.nn-pane-header-text {
+    line-height: var(--nn-nav-line-height);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--nn-theme-list-header-breadcrumb-color);
+    flex: 1;
+    min-width: 0;
+}
+
+.nn-pane-header-profile .nn-pane-header-text {
+    flex: 0 1 auto;
+}
+
+.nn-pane-header-folder-note {
+    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration) !important;
+}
+
+.nn-pane-header-folder-note:hover {
+    cursor: pointer;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration) !important;
+}
+
+/* ========================================================================
+   Mobile Headers + Breadcrumb
+   ======================================================================== */
+
+/* Mobile header - adjust for back button */
+.notebook-navigator-mobile .nn-pane-header {
+    flex-shrink: 0;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--nn-file-item-padding-horizontal);
+    background-color: var(--nn-theme-list-bg);
+}
+
+/* Simplified mobile headers */
+.notebook-navigator-mobile .nn-pane-header-simple {
+    justify-content: center;
+    text-align: center;
+}
+
+.notebook-navigator-mobile .nn-navigation-pane .nn-pane-header-simple {
+    justify-content: center;
+    text-align: center;
+}
+
+.notebook-navigator-mobile .nn-pane-header-simple .nn-pane-header-profile {
+    width: 100%;
+    flex: 1 1 auto;
+    justify-content: center;
+    text-align: center;
+}
+
+.notebook-navigator-mobile .nn-pane-header-simple .nn-pane-header-title {
+    font-size: var(--nn-mobile-header-font-size);
+    font-weight: var(--nn-theme-mobile-list-header-breadcrumb-font-weight);
+    color: var(--nn-theme-mobile-list-header-breadcrumb-color);
+    width: 100%;
+    text-align: center;
+}
+
+.notebook-navigator-mobile .nn-pane-header-simple .nn-pane-header-profile .nn-pane-header-text {
+    color: var(--nn-theme-mobile-list-header-breadcrumb-color);
+}
+
+/* Mobile header container */
+.notebook-navigator-mobile .nn-mobile-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Scrollable breadcrumb container */
+.notebook-navigator-mobile .nn-breadcrumb-scroll {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    margin-left: 44px; /* Start right after the arrow button */
+}
+
+/* Add right margin when no icon for centering */
+.notebook-navigator-mobile .nn-mobile-header-no-icon .nn-breadcrumb-scroll {
+    margin-right: 44px;
+}
+
+.notebook-navigator-mobile .nn-breadcrumb-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* Fade overlay positioned just right of back arrow */
+.notebook-navigator-mobile .nn-breadcrumb-fade {
+    position: absolute;
+    left: 44px; /* Position just right of the back arrow */
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to right, var(--nn-theme-list-bg) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Mobile back button */
+.notebook-navigator-mobile .nn-back-button {
+    position: absolute;
+    left: 0;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+    z-index: 1;
+    opacity: 1 !important;
+}
+
+/* Increase stroke width for back button arrow and apply link color */
+.notebook-navigator-mobile .nn-back-button svg {
+    stroke: var(--nn-theme-mobile-list-header-link-color) !important;
+    width: 20px !important; /* Default size for Android */
+    height: 20px !important;
+}
+
+/* iOS/iPadOS-specific back button adjustments */
+.notebook-navigator-mobile:not(.notebook-navigator-android) .nn-back-button {
+    padding: 4px !important; /* Reduce padding to allow larger icon (44px - 8px padding = 36px space) */
+}
+
+/* iOS/iPadOS-specific back button chevron styling (36px actual, ~32px visual due to Lucide padding) */
+.notebook-navigator-mobile:not(.notebook-navigator-android) .nn-back-button svg {
+    width: 36px !important;
+    height: 36px !important;
+}
+
+/* Mobile header title */
+.notebook-navigator-mobile .nn-mobile-title {
+    font-weight: var(--nn-theme-mobile-list-header-breadcrumb-font-weight);
+    font-size: var(--nn-mobile-header-font-size);
+    color: var(--nn-theme-mobile-list-header-breadcrumb-color);
+    white-space: nowrap;
+    padding-left: 12px; /* Standard padding for snap position */
+}
+
+/* Breadcrumb current segment - desktop uses list header color, mobile uses navitem color */
+.nn-path-current {
+    color: var(--nn-theme-list-header-breadcrumb-color);
+}
+
+/* Mobile breadcrumb current segment - use mobile-specific theme color */
+.notebook-navigator-mobile .nn-path-current {
+    color: var(--nn-theme-mobile-list-header-breadcrumb-color);
+}
+
+/* Mobile breadcrumb separator - use same color as current segment */
+.notebook-navigator-mobile .nn-path-separator {
+    color: var(--nn-theme-mobile-list-header-breadcrumb-color);
+}
+
+/* Search bar container */
+.nn-search-bar-container {
+    height: 0;
+    overflow: hidden;
+    background-color: var(--nn-theme-list-bg);
+}
+
+.nn-search-bar-container.nn-search-bar-visible {
+    height: 44px;
+}
+
+/* Search input wrapper */
+.nn-search-input-wrapper {
+    display: flex;
+    align-items: center;
+    height: 44px;
+    padding: 0 10px 6px 10px;
+    background-color: var(--nn-theme-list-bg);
+}
+
+/* Search input container */
+.nn-search-input-container {
+    position: relative;
+    width: 100%;
+    height: 32px;
+}
+
+/* Search icon (clickable toggle between search providers) */
+.nn-search-input-icon {
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    line-height: 16px;
+    color: var(--nn-theme-list-header-icon-color);
+    cursor: pointer;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nn-search-input-icon:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+}
+
+.nn-search-input-icon svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+/* Search input field */
+.nn-search-input {
+    width: 100%;
+    height: 32px;
+    padding: 4px 60px 4px 36px !important;
+    font-size: 13px;
+    color: var(--nn-theme-file-selected-name-color) !important;
+    background: var(--nn-theme-list-bg) !important;
+    border: 1px solid var(--nn-theme-list-search-border-color) !important;
+    border-radius: 999px !important;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.nn-search-input-container--has-shortcut .nn-search-input {
+    padding-right: 84px !important;
+}
+
+/* Active search state - when there's a search query */
+.nn-search-input.nn-search-active {
+    background: var(--nn-theme-list-search-active-bg) !important;
+}
+
+/* Maintain highlight background on hover when search is active */
+.nn-search-input.nn-search-active:hover {
+    background: var(--nn-theme-list-search-active-bg) !important;
+}
+
+/* Focus state */
+.nn-search-input:focus {
+    border-color: var(--nn-theme-list-search-border-color) !important;
+    box-shadow: 0 0 0 2px var(--nn-theme-list-search-border-color) !important;
+}
+
+.nn-search-input::placeholder {
+    color: var(--nn-theme-list-header-breadcrumb-color) !important;
+}
+
+/* Search tag suggestion popover */
+.nn-search-tag-suggestion {
+    display: flex;
+    align-items: center;
+    padding: 4px 10px;
+    min-height: 28px;
+}
+
+.nn-search-tag-suggestion__label {
+    display: flex;
+    align-items: baseline;
+    width: 100%;
+    min-width: 0;
+    font-size: var(--nn-file-name-size-mobile, var(--nn-file-name-size));
+    color: var(--nn-theme-file-name-color);
+    gap: 6px;
+}
+
+.nn-search-tag-suggestion__prefix {
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    color: var(--nn-theme-list-header-breadcrumb-color);
+    flex-shrink: 0;
+}
+
+.nn-search-tag-suggestion__text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.nn-search-tag-suggestion__text .suggestion-highlight {
+    background-color: var(--nn-theme-list-search-active-bg);
+    color: var(--nn-theme-file-name-color);
+    border-radius: 3px;
+    padding: 0 1px;
+}
+
+/* Clear button */
+/* Hide webkit search cancel button */
+.nn-search-input::-webkit-search-cancel-button {
+    display: none;
+}

@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
  */
 
 export type { EntityType } from './BaseMetadataService';
-export { FolderMetadataService } from './FolderMetadataService';
-export { TagMetadataService } from './TagMetadataService';
+export { FolderMetadataService, type FolderDisplayData } from './FolderMetadataService';
+export { TagMetadataService, type TagColorData } from './TagMetadataService';
+export { PropertyMetadataService, type PropertyColorData } from './PropertyMetadataService';
 export { FileMetadataService, type FileMetadataMigrationResult } from './FileMetadataService';
+export { NavigationSeparatorService } from './NavigationSeparatorService';

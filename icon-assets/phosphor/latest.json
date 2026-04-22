@@ -1,7 +1,7 @@
 {
-  "version": "2.1.1",
-  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/phosphor/2.1.1/phosphor-regular.woff2",
-  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/phosphor/2.1.1/icons.json",
+  "version": "2.1.2",
+  "font": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/phosphor/phosphor-regular.woff2",
+  "metadata": "https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/phosphor/icons.json",
   "fontMimeType": "font/woff2",
   "metadataFormat": "json"
 }

@@ -1,0 +1,58 @@
+/* Source: src/styles/sections/android-toolbar.css */
+
+/* ========================================================================
+   Android Toolbar Positioning
+   Android displays toolbar at top, iOS at bottom
+   ======================================================================== */
+
+/* Android: toolbar at top with reduced height */
+.notebook-navigator-mobile.notebook-navigator-android .nn-mobile-toolbar {
+    background-color: var(--nn-theme-list-bg);
+    border: none;
+    padding-bottom: 0;
+    justify-content: center;
+    gap: 16px;
+    height: 44px;
+    min-height: 44px;
+}
+
+/* Android: smaller toolbar buttons */
+.notebook-navigator-android .nn-mobile-toolbar-button {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+}
+
+/* Make panes flex containers on mobile to accommodate tab bars */
+.notebook-navigator-mobile .nn-navigation-pane,
+.notebook-navigator-mobile .nn-list-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Ensure scrollers take remaining space */
+.notebook-navigator-mobile .nn-navigation-pane-scroller,
+.notebook-navigator-mobile .nn-list-pane-scroller {
+    flex: 1;
+    min-height: 0; /* Important for proper scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent the rubber-band/glow overscroll effect on mobile. */
+    overscroll-behavior: none;
+}
+
+/* Mobile list pane scroller - use mobile background */
+.notebook-navigator-mobile .nn-list-pane-scroller {
+    background-color: var(--nn-theme-list-bg); /* Opaque background on scroller for GPU scroll layer (see .nn-list-pane-scroller) */
+}
+
+/* Mobile compact file items - larger touch targets */
+.notebook-navigator-mobile .nn-file.nn-compact .nn-file-content {
+    padding: var(--nn-file-padding-vertical-compact-mobile) var(--nn-file-item-padding-horizontal);
+}
+
+/* Mobile compact mode file names - use dedicated font variable */
+.notebook-navigator-mobile .nn-file.nn-compact .nn-file-name {
+    font-size: var(--nn-compact-font-size-mobile, var(--nn-compact-font-size, 15px));
+}

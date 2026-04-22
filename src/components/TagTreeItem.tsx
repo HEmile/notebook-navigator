@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,15 +50,18 @@
  */
 
 import React, { forwardRef, useMemo, useCallback } from 'react';
-import { setIcon } from 'obsidian';
 import { useSettingsState } from '../context/SettingsContext';
+import { useUXPreferences } from '../context/UXPreferencesContext';
 import { useContextMenu } from '../hooks/useContextMenu';
 import { getIconService, useIconServiceVersion } from '../services/icons';
-import { ItemType } from '../types';
+import { ItemType, type CSSPropertiesWithVars } from '../types';
 import { TagTreeNode } from '../types/storage';
 import type { NoteCountInfo } from '../types/noteCounts';
-import { buildNoteCountDisplay } from '../utils/noteCountFormatting';
+import { buildNoteCountDisplay, buildSortableNoteCountDisplay } from '../utils/noteCountFormatting';
+import { buildSearchMatchContentClass } from '../utils/searchHighlight';
 import { getTotalNoteCount } from '../utils/tagTree';
+import { resolveUXIcon } from '../utils/uxIcons';
+import { IndentGuideColumns } from './IndentGuideColumns';
 
 /**
  * Props for the TagTreeItem component
@@ -68,6 +71,8 @@ interface TagTreeItemProps {
     tagNode: TagTreeNode;
     /** Nesting level for indentation */
     level: number;
+    /** Levels of expanded ancestors whose connector lines should be rendered on this row */
+    indentGuideLevels?: number[];
     /** Whether this tag is expanded to show children */
     isExpanded: boolean;
     /** Whether this tag is currently selected */
@@ -75,7 +80,7 @@ interface TagTreeItemProps {
     /** Callback when the expand/collapse chevron is clicked */
     onToggle: () => void;
     /** Callback when the tag name is clicked */
-    onClick: () => void;
+    onClick: (event: React.MouseEvent) => void;
     /** Callback when all sibling tags should be toggled */
     onToggleAllSiblings?: () => void;
     /** Pre-computed note counts for this tag (current and descendants) */
@@ -90,6 +95,10 @@ interface TagTreeItemProps {
     icon?: string;
     /** Whether this tag is normally hidden but being shown */
     isHidden?: boolean;
+    /** Indicates if the tag is referenced by the active search query */
+    searchMatch?: 'include' | 'exclude';
+    /** Enables drag and drop for tag reordering */
+    isDraggable: boolean;
 }
 
 /**
@@ -102,6 +111,7 @@ export const TagTreeItem = React.memo(
         {
             tagNode,
             level,
+            indentGuideLevels,
             isExpanded,
             isSelected,
             isHidden,
@@ -112,11 +122,15 @@ export const TagTreeItem = React.memo(
             showFileCount,
             color,
             backgroundColor,
-            icon
+            icon,
+            searchMatch,
+            isDraggable
         },
         ref
     ) {
         const settings = useSettingsState();
+        const uxPreferences = useUXPreferences();
+        const includeDescendantNotes = uxPreferences.includeDescendantNotes;
         const chevronRef = React.useRef<HTMLDivElement>(null);
         const iconRef = React.useRef<HTMLSpanElement>(null);
         const iconVersion = useIconServiceVersion();
@@ -129,19 +143,30 @@ export const TagTreeItem = React.memo(
             }
             // Calculate counts directly from tag node if not provided
             const directCount = tagNode.notesWithTag.size;
-            if (!settings.includeDescendantNotes) {
+            if (!includeDescendantNotes) {
                 return { current: directCount, descendants: 0, total: directCount };
             }
             const total = getTotalNoteCount(tagNode);
             const descendants = Math.max(total - directCount, 0);
             return { current: directCount, descendants, total };
-        }, [countInfo, tagNode, settings.includeDescendantNotes]);
+        }, [countInfo, tagNode, includeDescendantNotes]);
 
-        // Determine if counts should be shown separately (e.g., "2 + 5") or combined
-        const useSeparateCounts = settings.includeDescendantNotes && settings.separateNoteCounts;
+        const tagTreeSortOverrides = settings.tagTreeSortOverrides;
+        const hasChildSortOrderOverride = Boolean(
+            tagTreeSortOverrides && Object.prototype.hasOwnProperty.call(tagTreeSortOverrides, tagNode.path)
+        );
+        const childSortOrderOverride = hasChildSortOrderOverride ? tagTreeSortOverrides?.[tagNode.path] : undefined;
+        const sortOrderIndicator = childSortOrderOverride === 'alpha-desc' ? '↓' : childSortOrderOverride === 'alpha-asc' ? '↑' : undefined;
+
+        // Determine if counts should be shown separately (e.g., "2 • 5") or combined
+        const useSeparateCounts = includeDescendantNotes && settings.separateNoteCounts;
         // Build formatted display object with label and visibility flags
-        const noteCountDisplay = buildNoteCountDisplay(resolvedCounts, settings.includeDescendantNotes, useSeparateCounts);
-        // Check if count badge should be displayed based on settings and count values
+        const noteCountDisplay = buildSortableNoteCountDisplay(
+            buildNoteCountDisplay(resolvedCounts, includeDescendantNotes, useSeparateCounts, '•'),
+            sortOrderIndicator
+        );
+        const noteCountLabel = noteCountDisplay.label;
+        // Render count badge when enabled and there is either a count or a sort override indicator
         const shouldDisplayCount = showFileCount && noteCountDisplay.shouldDisplay;
 
         // Memoize computed values
@@ -153,21 +178,27 @@ export const TagTreeItem = React.memo(
         const tagIcon = icon;
         // Determine whether to apply color to the tag name instead of the icon
         const applyColorToName = Boolean(tagColor) && !settings.colorIconOnly;
+        // Use custom icon or default to tags icon for drag ghost
+        const dragIconId = tagIcon || resolveUXIcon(settings.interfaceIcons, 'nav-tag');
 
         // Memoize className to avoid string concatenation on every render
         const className = useMemo(() => {
             const classes = ['nn-navitem', 'nn-tag'];
             if (isSelected) classes.push('nn-selected');
             if (isHidden) classes.push('nn-excluded');
-            if (tagBackground && !isSelected) classes.push('nn-has-custom-background');
+            if (tagBackground) classes.push('nn-has-custom-background');
+            if (searchMatch) classes.push('nn-has-search-match');
             return classes.join(' ');
-        }, [isSelected, isHidden, tagBackground]);
+        }, [isSelected, isHidden, tagBackground, searchMatch]);
 
         const tagNameClassName = useMemo(() => {
             const classes = ['nn-navitem-name'];
             if (applyColorToName) classes.push('nn-has-custom-color');
             return classes.join(' ');
         }, [applyColorToName]);
+
+        // Apply search highlight classes when tag matches include or exclude filters
+        const contentClassName = useMemo(() => buildSearchMatchContentClass(['nn-navitem-content'], searchMatch), [searchMatch]);
 
         // Stable event handlers
         const handleDoubleClick = useCallback(
@@ -201,17 +232,28 @@ export const TagTreeItem = React.memo(
 
         // Update chevron icon based on expanded state
         React.useEffect(() => {
-            if (chevronRef.current && hasChildren) {
-                setIcon(chevronRef.current, isExpanded ? 'lucide-chevron-down' : 'lucide-chevron-right');
+            if (!chevronRef.current) {
+                return;
             }
-        }, [isExpanded, hasChildren]);
+
+            if (!hasChildren) {
+                chevronRef.current.empty();
+                return;
+            }
+
+            chevronRef.current.empty();
+            getIconService().renderIcon(
+                chevronRef.current,
+                resolveUXIcon(settings.interfaceIcons, isExpanded ? 'nav-tree-collapse' : 'nav-tree-expand')
+            );
+        }, [hasChildren, iconVersion, isExpanded, settings.interfaceIcons]);
 
         // Update tag icon
         React.useEffect(() => {
-            if (iconRef.current && settings.showIcons) {
-                getIconService().renderIcon(iconRef.current, tagIcon || 'lucide-tags');
+            if (iconRef.current && settings.showTagIcons) {
+                getIconService().renderIcon(iconRef.current, tagIcon || resolveUXIcon(settings.interfaceIcons, 'nav-tag'));
             }
-        }, [tagIcon, settings.showIcons, iconVersion]);
+        }, [tagIcon, settings.showTagIcons, iconVersion, settings.interfaceIcons]);
 
         // Set up forwarded ref
         React.useImperativeHandle(ref, () => itemRef.current as HTMLDivElement);
@@ -222,25 +264,43 @@ export const TagTreeItem = React.memo(
             item: tagNode.path
         });
 
+        const tagStyle: CSSPropertiesWithVars = {
+            '--level': level,
+            ...(tagBackground ? { '--nn-navitem-custom-bg-color': tagBackground } : {})
+        };
+
         return (
             <div
                 ref={itemRef}
                 className={className}
                 data-tag={tagNode.path}
+                data-search-match={searchMatch ?? undefined}
+                // Drop zone type (folder or tag)
                 data-drop-zone="tag"
+                // Target path for drop operations on this tag
                 data-drop-path={tagNode.displayPath}
+                // Display path used as drag source identifier
+                data-drag-path={tagNode.displayPath}
+                // Canonical lowercase path for comparison operations
+                data-drag-canonical={tagNode.path}
+                // Identifies element as a tag for drag operations
+                data-drag-type="tag"
+                // Marks element as draggable for drag handler filtering
+                data-draggable={isDraggable ? 'true' : undefined}
+                // Icon displayed in drag ghost
+                data-drag-icon={dragIconId}
+                // Optional color applied to drag ghost icon
+                data-drag-icon-color={tagColor || undefined}
                 data-level={level}
-                style={
-                    {
-                        '--level': level,
-                        ...(tagBackground && !isSelected ? { '--nn-navitem-custom-bg-color': tagBackground } : {})
-                    } as React.CSSProperties
-                }
+                // Enable native drag and drop when not on mobile and not a virtual tag
+                draggable={isDraggable}
+                style={tagStyle}
                 role="treeitem"
                 aria-expanded={hasChildren ? isExpanded : undefined}
                 aria-level={level + 1}
             >
-                <div className="nn-navitem-content" onClick={onClick} onDoubleClick={handleDoubleClick}>
+                <div className={contentClassName} onClick={onClick} onDoubleClick={handleDoubleClick}>
+                    <IndentGuideColumns levels={indentGuideLevels} />
                     <div
                         ref={chevronRef}
                         className={`nn-navitem-chevron ${hasChildren ? 'nn-navitem-chevron--has-children' : 'nn-navitem-chevron--no-children'}`}
@@ -248,14 +308,14 @@ export const TagTreeItem = React.memo(
                         onDoubleClick={handleChevronDoubleClick}
                         tabIndex={-1}
                     />
-                    {settings.showIcons && (
+                    {settings.showTagIcons && (
                         <span className="nn-navitem-icon" ref={iconRef} style={tagColor ? { color: tagColor } : undefined} />
                     )}
                     <span className={tagNameClassName} style={applyColorToName ? { color: tagColor } : undefined}>
                         {tagNode.name}
                     </span>
                     <span className="nn-navitem-spacer" />
-                    {shouldDisplayCount && <span className="nn-navitem-count">{noteCountDisplay.label}</span>}
+                    {shouldDisplayCount && <span className="nn-navitem-count">{noteCountLabel}</span>}
                 </div>
             </div>
         );

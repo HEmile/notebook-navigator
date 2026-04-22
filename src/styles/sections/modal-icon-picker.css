@@ -1,0 +1,209 @@
+/* Source: src/styles/sections/modal-icon-picker.css */
+
+/* ========================================================================
+   Icon Picker Modal
+   ======================================================================== */
+
+/* Icon picker modal width - adjust for mobile */
+.modal.nn-icon-picker-modal {
+    width: 480px;
+    max-width: calc(100vw - 40px);
+}
+
+/* Icon picker content layout */
+.modal.nn-icon-picker-modal .modal-content {
+    padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Icon picker modal height control */
+.modal.nn-icon-picker-modal {
+    height: auto;
+}
+
+/* Prevent icon picker content overflow */
+.modal.nn-icon-picker-modal .modal-content {
+    overflow: hidden;
+}
+
+.modal.nn-icon-picker-modal .modal-close-button {
+    z-index: 10;
+    pointer-events: auto;
+}
+
+/* Icon search container with bottom border */
+.nn-icon-search-container {
+    padding: 12px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Icon search input field */
+.nn-icon-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+}
+
+/* Icon search input focus */
+.nn-icon-search-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+/* Icon results scrollable container */
+.nn-icon-results-container {
+    height: 240px;
+    min-height: 240px;
+    overflow-y: auto;
+    padding: 8px;
+    flex: 0 0 auto;
+}
+
+.nn-icon-button-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Icon category headers */
+.nn-icon-section-header {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--nn-theme-foreground-muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+/* Icon grid layout - 5 columns */
+.nn-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+}
+
+/* Individual icon item */
+.nn-icon-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 8px;
+    border-radius: var(--radius-s);
+}
+
+.nn-icon-recent-remove-button {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--nn-theme-foreground-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .nn-icon-recent-remove-button {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 120ms ease;
+    }
+
+    .nn-icon-item:hover .nn-icon-recent-remove-button,
+    .nn-icon-item:focus-within .nn-icon-recent-remove-button {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+}
+
+.nn-icon-recent-remove-button:hover {
+    color: var(--nn-theme-foreground);
+    border-color: var(--interactive-accent);
+}
+
+.nn-icon-recent-remove-button:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 1px;
+}
+
+.nn-icon-recent-remove-glyph {
+    font-size: 11px;
+    line-height: 1;
+    transform: translateY(-1px);
+    pointer-events: none;
+}
+
+/* Icon item hover/focus states */
+.nn-icon-item:hover,
+.nn-icon-item:focus {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+}
+
+/* Icon item keyboard focus indicator */
+.nn-icon-item:focus-visible {
+    box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+/* Icon preview container */
+.nn-icon-item-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-bottom: 4px;
+    color: var(--nn-theme-foreground-muted);
+}
+
+/* Icon SVG size */
+.nn-icon-item-preview svg {
+    width: 24px;
+    height: 24px;
+}
+
+.nn-icon-item-preview.nn-iconfont {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.nn-icon-item-preview.nn-emoji-icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+/* Icon name label */
+.nn-icon-item-name {
+    font-size: 11px;
+    color: var(--nn-theme-foreground-muted);
+    text-align: center;
+    word-break: break-word;
+    line-height: 1.2;
+    max-width: 100%;
+}
+
+/* Empty search and additional icons messages */
+.nn-icon-empty-message,
+.nn-icon-more-message {
+    text-align: center;
+    color: var(--nn-theme-foreground-muted);
+    padding: 24px;
+    font-size: 14px;
+}

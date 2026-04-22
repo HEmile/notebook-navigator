@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,25 +16,28 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, TFile, TFolder } from 'obsidian';
+import { App, TFolder } from 'obsidian';
 import { naturalCompare } from './sortUtils';
 import { SelectionState, SelectionAction } from '../context/SelectionContext';
 import { FileSystemOperations } from '../services/FileSystemService';
 import { TagTreeService } from '../services/TagTreeService';
+import type { PropertyTreeService } from '../services/PropertyTreeService';
 import { NotebookNavigatorSettings } from '../settings';
-import { ItemType } from '../types';
-import { getFilesForFolder, getFilesForTag } from './fileFinder';
+import type { VisibilityPreferences } from '../types';
+import { getFilesForNavigationSelection } from './selectionUtils';
 
 interface BaseDeleteOperationsContext {
     app: App;
     fileSystemOps: FileSystemOperations;
     settings: NotebookNavigatorSettings;
+    visibility: VisibilityPreferences;
     selectionState: SelectionState;
     selectionDispatch: React.Dispatch<SelectionAction>;
 }
 
 interface DeleteFilesContext extends BaseDeleteOperationsContext {
     tagTreeService: TagTreeService | null;
+    propertyTreeService: PropertyTreeService | null;
 }
 
 /**
@@ -45,19 +48,28 @@ export async function deleteSelectedFiles({
     app,
     fileSystemOps,
     settings,
+    visibility,
     selectionState,
     selectionDispatch,
-    tagTreeService
+    tagTreeService,
+    propertyTreeService
 }: DeleteFilesContext): Promise<void> {
     // Check if multiple files are selected
     if (selectionState.selectedFiles.size > 1) {
         // Get all files in the current view for smart selection
-        let allFiles: TFile[] = [];
-        if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
-            allFiles = getFilesForFolder(selectionState.selectedFolder, settings, app);
-        } else if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag) {
-            allFiles = getFilesForTag(selectionState.selectedTag, settings, app, tagTreeService);
-        }
+        const allFiles = getFilesForNavigationSelection(
+            {
+                selectionType: selectionState.selectionType,
+                selectedFolder: selectionState.selectedFolder,
+                selectedTag: selectionState.selectedTag,
+                selectedProperty: selectionState.selectedProperty
+            },
+            settings,
+            visibility,
+            app,
+            tagTreeService,
+            propertyTreeService
+        );
 
         // Use centralized delete method with smart selection
         await fileSystemOps.deleteFilesWithSmartSelection(
@@ -74,7 +86,8 @@ export async function deleteSelectedFiles({
             {
                 selectionType: selectionState.selectionType,
                 selectedFolder: selectionState.selectedFolder || undefined,
-                selectedTag: selectionState.selectedTag || undefined
+                selectedTag: selectionState.selectedTag || undefined,
+                selectedProperty: selectionState.selectedProperty ?? undefined
             },
             selectionDispatch,
             settings.confirmBeforeDelete

@@ -1,11 +1,31 @@
+/*
+ * Notebook Navigator - Plugin for Obsidian
+ * Copyright (c) 2025-2026 Johan Sanneblad
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import { App, Modal } from 'obsidian';
-import { strings } from '../i18n';
+import { getReleaseBannerUrl, SUPPORT_BUY_ME_A_COFFEE_URL } from '../constants/urls';
+import { getCurrentLanguage, strings } from '../i18n';
 import { ReleaseNote } from '../releaseNotes';
+import { addAsyncEventListener } from '../utils/domEventListeners';
 import { DateUtils } from '../utils/dateUtils';
+import { getYoutubeThumbnailUrl, getYoutubeVideoId } from '../utils/youtubeUtils';
 
 export class WhatsNewModal extends Modal {
     private releaseNotes: ReleaseNote[];
-    private dateFormat: string;
     private thanksButton: HTMLButtonElement | null = null;
     private onCloseCallback?: () => void;
     private domDisposers: (() => void)[] = [];
@@ -44,12 +64,21 @@ export class WhatsNewModal extends Modal {
                     // **bold**
                     dest.createEl('strong', { text: match[4] });
                 } else if (match[5]) {
-                    // Bare URL
-                    const url = match[5];
+                    // Bare URL - strip trailing punctuation that's likely not part of the URL
+                    let url = match[5];
+                    let trailing = '';
+                    const trailingMatch = url.match(/[.,;:!?)]+$/);
+                    if (trailingMatch) {
+                        trailing = trailingMatch[0];
+                        url = url.slice(0, -trailing.length);
+                    }
                     const a = dest.createEl('a', { text: url });
                     a.setAttr('href', url);
                     a.setAttr('rel', 'noopener noreferrer');
                     a.setAttr('target', '_blank');
+                    if (trailing) {
+                        appendText(trailing);
+                    }
                 }
 
                 lastIndex = pattern.lastIndex;
@@ -67,20 +96,58 @@ export class WhatsNewModal extends Modal {
         }
     }
 
-    private addDomListener(
-        el: HTMLElement,
-        type: string,
-        handler: EventListenerOrEventListenerObject,
-        options?: boolean | AddEventListenerOptions
-    ): void {
-        el.addEventListener(type, handler, options);
-        this.domDisposers.push(() => el.removeEventListener(type, handler, options));
+    private renderReleaseBanner(container: HTMLElement, imageUrl: string): void {
+        const banner = container.createDiv({ cls: 'nn-whats-new-banner' });
+        const image = banner.createEl('img', { cls: 'nn-whats-new-banner-image' });
+        image.setAttr('alt', '');
+        image.setAttr('loading', 'lazy');
+        image.setAttr('decoding', 'async');
+
+        image.addEventListener('error', () => {
+            banner.remove();
+        });
+
+        image.src = imageUrl;
     }
 
-    constructor(app: App, releaseNotes: ReleaseNote[], dateFormat: string, onCloseCallback?: () => void) {
+    private renderYoutubeLink(container: HTMLElement, youtubeUrl: string): void {
+        const link = container.createEl('a', { cls: 'nn-whats-new-youtube-link' });
+        link.setAttr('href', youtubeUrl);
+        link.setAttr('rel', 'noopener noreferrer');
+        link.setAttr('target', '_blank');
+        link.setAttr('aria-label', strings.modals.welcome.openVideoButton);
+
+        const thumbnail = link.createDiv({ cls: 'nn-whats-new-youtube-thumbnail' });
+
+        const videoId = getYoutubeVideoId(youtubeUrl);
+        if (videoId) {
+            const image = thumbnail.createEl('img', { cls: 'nn-whats-new-youtube-image' });
+            image.setAttr('alt', strings.modals.welcome.openVideoButton);
+            image.setAttr('loading', 'lazy');
+
+            const primaryUrl = getYoutubeThumbnailUrl(videoId, 'maxresdefault.jpg');
+            const fallbackUrl = getYoutubeThumbnailUrl(videoId, 'hqdefault.jpg');
+
+            let usedFallback = false;
+            image.addEventListener('error', () => {
+                if (usedFallback) {
+                    return;
+                }
+                usedFallback = true;
+                image.src = fallbackUrl;
+            });
+
+            image.src = primaryUrl;
+        } else {
+            thumbnail.createDiv({ cls: 'nn-whats-new-youtube-placeholder', text: strings.modals.welcome.openVideoButton });
+        }
+
+        thumbnail.createDiv({ cls: 'nn-whats-new-youtube-play' }).setAttr('aria-hidden', 'true');
+    }
+
+    constructor(app: App, releaseNotes: ReleaseNote[], onCloseCallback?: () => void) {
         super(app);
         this.releaseNotes = releaseNotes;
-        this.dateFormat = dateFormat;
         this.onCloseCallback = onCloseCallback;
     }
 
@@ -89,31 +156,33 @@ export class WhatsNewModal extends Modal {
 
         contentEl.empty();
         this.modalEl.addClass('nn-whats-new-modal');
-
-        contentEl.createEl('h2', {
-            text: strings.whatsNew.title,
-            cls: 'nn-whats-new-header'
-        });
+        this.titleEl.setText(strings.whatsNew.title);
 
         this.attachCloseButtonHandler();
 
         const scrollContainer = contentEl.createDiv('nn-whats-new-scroll');
 
+        const displayLocale = (getCurrentLanguage() || 'en').replace(/_/g, '-');
+
         this.releaseNotes.forEach(note => {
             const versionContainer = scrollContainer.createDiv('nn-whats-new-version');
+            let headerText = `Version ${note.version}`;
 
-            versionContainer.createEl('h3', {
-                text: `Version ${note.version}`
-            });
+            const parsedDate = DateUtils.parseLocalDayKey(note.date);
+            if (parsedDate) {
+                const formattedDate = DateUtils.formatLocalizedMonthDay(parsedDate, displayLocale);
+                headerText = `${headerText} (${formattedDate})`;
+            }
+            versionContainer.createEl('h3', { text: headerText });
 
-            // Parse the date string and format according to user preference
-            const parsedDate = new Date(note.date);
-            const formattedDate = DateUtils.formatDate(parsedDate.getTime(), this.dateFormat);
+            const bannerUrl = getReleaseBannerUrl(note.bannerUrl, note.version);
+            if (bannerUrl) {
+                this.renderReleaseBanner(versionContainer, bannerUrl);
+            }
 
-            versionContainer.createEl('small', {
-                text: formattedDate,
-                cls: 'nn-whats-new-date'
-            });
+            if (note.youtubeUrl) {
+                this.renderYoutubeLink(versionContainer, note.youtubeUrl);
+            }
 
             // Show info text first if present (supports paragraphs and line breaks)
             if (note.info) {
@@ -179,17 +248,21 @@ export class WhatsNewModal extends Modal {
             cls: 'nn-support-button-label',
             text: strings.whatsNew.supportButton
         });
-        this.addDomListener(supportButton, 'click', () => {
-            window.open('https://www.buymeacoffee.com/johansan');
-        });
+        this.domDisposers.push(
+            addAsyncEventListener(supportButton, 'click', () => {
+                window.open(SUPPORT_BUY_ME_A_COFFEE_URL);
+            })
+        );
 
         const thanksButton = buttonContainer.createEl('button', {
             text: strings.whatsNew.thanksButton,
             cls: 'mod-cta'
         });
-        this.addDomListener(thanksButton, 'click', () => {
-            this.close();
-        });
+        this.domDisposers.push(
+            addAsyncEventListener(thanksButton, 'click', () => {
+                this.close();
+            })
+        );
 
         // Store reference to thanks button
         this.thanksButton = thanksButton;
@@ -239,7 +312,8 @@ export class WhatsNewModal extends Modal {
             this.close();
         };
 
-        this.addDomListener(closeButton, 'click', handleClose);
-        this.addDomListener(closeButton, 'pointerdown', handleClose);
+        // Close modal on click or pointer down
+        this.domDisposers.push(addAsyncEventListener(closeButton, 'click', handleClose));
+        this.domDisposers.push(addAsyncEventListener(closeButton, 'pointerdown', handleClose));
     }
 }

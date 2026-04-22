@@ -8,11 +8,48 @@ import globals from 'globals';
 
 export default tseslint.config(
     {
-        ignores: ['node_modules/**', 'dist/**', 'build/**', 'main.js', '*.min.js', 'web/**', 'codemods/**']
+        ignores: ['node_modules/**', 'dist/**', 'build/**', 'main.js', '*.min.js', 'web/**', 'codemods/**', 'tests/api-test-suite.js'],
+        linterOptions: {
+            reportUnusedDisableDirectives: 'error'
+        }
     },
     js.configs.recommended,
     ...tseslint.configs.recommended,
     ...obsidianmd.configs.recommended,
+    {
+        files: ['tests/**/*.{ts,tsx}'],
+        languageOptions: {
+            globals: {
+                ...globals.node
+            },
+            parserOptions: {
+                project: './tsconfig.json'
+            }
+        },
+        rules: {
+            // Tests may legitimately use Node built-ins (e.g. reading fixture files).
+            // Keep this rule enabled for `src/**` to avoid shipping Node-only imports in the plugin runtime.
+            'import/no-nodejs-modules': 'off',
+            'no-restricted-properties': [
+                'error',
+                {
+                    object: 'describe',
+                    property: 'only',
+                    message: 'Do not commit describe.only()'
+                },
+                {
+                    object: 'it',
+                    property: 'only',
+                    message: 'Do not commit it.only()'
+                },
+                {
+                    object: 'test',
+                    property: 'only',
+                    message: 'Do not commit test.only()'
+                }
+            ]
+        }
+    },
     {
         files: ['src/**/*.{ts,tsx}'],
         languageOptions: {
@@ -53,6 +90,13 @@ export default tseslint.config(
             'no-debugger': 'error',
             'prefer-const': 'error',
             'no-var': 'error',
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector: "NewExpression[callee.name='Notice']",
+                    message: 'Use showNotice(...) instead of new Notice(...).'
+                }
+            ],
             // Upgrade obsidianmd rules from warn to error
             'obsidianmd/prefer-file-manager-trash-file': 'error',
 
@@ -66,7 +110,19 @@ export default tseslint.config(
             '@typescript-eslint/array-type': ['warn', { default: 'array' }], // Prefer T[] over Array<T>
             'prefer-object-spread': 'warn', // Use {...obj} instead of Object.assign()
             curly: ['warn', 'multi-line'], // Require curly braces for multi-line blocks
-            'no-else-return': 'warn' // Remove unnecessary else after return
+            'no-else-return': 'warn', // Remove unnecessary else after return
+            'obsidianmd/ui/sentence-case': [
+                'warn',
+                {
+                    acronyms: ['RRGGBB', 'RRGGBBAA']
+                }
+            ]
+        }
+    },
+    {
+        files: ['src/utils/noticeUtils.ts'],
+        rules: {
+            'no-restricted-syntax': 'off'
         }
     }
 );

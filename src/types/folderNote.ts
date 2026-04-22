@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,18 @@
 
 export type FolderNoteType = 'markdown' | 'canvas' | 'base';
 
+export type FolderNoteCreationPreference = FolderNoteType | 'ask';
+
 export const FOLDER_NOTE_TYPE_EXTENSIONS: Record<FolderNoteType, string> = {
     markdown: 'md',
     canvas: 'canvas',
     base: 'base'
 };
 
-export function isFolderNoteType(value: string): value is FolderNoteType {
+function isFolderNoteType(value: string): value is FolderNoteType {
     return value === 'markdown' || value === 'canvas' || value === 'base';
+}
+
+export function isFolderNoteCreationPreference(value: string): value is FolderNoteCreationPreference {
+    return value === 'ask' || isFolderNoteType(value);
 }

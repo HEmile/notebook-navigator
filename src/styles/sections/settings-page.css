@@ -1,0 +1,455 @@
+/* Source: src/styles/sections/settings-page.css */
+
+/* ========================================================================
+   Settings Page Styles
+   ======================================================================== */
+
+/* Settings page indentation for sub-settings */
+.nn-sub-settings {
+    margin-inline-start: 20px;
+    padding-left: 1em;
+}
+
+/* Restore bottom padding on last setting inside sub-settings containers
+   (Obsidian's .setting-item:last-child removes it, but nested containers need it) */
+.nn-sub-settings > .setting-item:last-child {
+    padding-bottom: var(--size-4-4);
+}
+
+/* Settings layout root */
+.nn-settings-tab-root {
+    display: block;
+    min-height: 0;
+}
+
+/* Settings tabs layout and navigation */
+.nn-settings-tabs {
+    display: block;
+    min-height: 0;
+}
+
+.nn-settings-tabs-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-3);
+    flex-shrink: 0;
+    margin-bottom: var(--size-4-4);
+}
+
+.nn-settings-tabs-nav-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2-3);
+}
+
+.nn-settings-tabs-nav-row.is-hidden {
+    display: none;
+}
+
+.nn-settings-tabs-nav-row.is-icons-hidden .nn-settings-tab-icon {
+    display: none;
+}
+
+/* Separator between primary and secondary tab rows */
+.nn-settings-tabs-nav-secondary {
+    gap: var(--size-2-2);
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: var(--size-2-3);
+}
+
+.nn-settings-tab-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--size-2-2);
+    padding: 6px 12px;
+    font-size: var(--font-ui-small);
+}
+
+/* Icon inside settings tab buttons */
+.nn-settings-tab-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.nn-settings-tab-icon svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+}
+
+.nn-settings-tab-button.is-hidden {
+    display: none;
+}
+
+.nn-settings-tab-button-primary.is-group-active {
+    background-color: transparent;
+    color: var(--interactive-accent);
+    opacity: 0.85;
+}
+
+.nn-settings-tab-button-primary.is-group-active:hover {
+    background-color: var(--background-modifier-hover);
+    opacity: 1;
+}
+
+.nn-settings-tab-button-secondary {
+    padding: 5px 10px;
+}
+
+.nn-settings-tab-button-secondary.is-active {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.nn-settings-tabs-content {
+    position: static;
+    min-height: 0;
+    overflow: visible;
+    box-sizing: border-box;
+    padding-inline-end: 0;
+}
+
+/* Hide tabs by default, show only active tab */
+.nn-settings-tab {
+    display: none;
+}
+
+.nn-settings-tab.is-active {
+    display: block;
+}
+
+/* Settings section header spacing */
+.setting-item-heading {
+    margin-top: 30px;
+}
+
+/* First settings header - no top margin */
+.setting-item-heading:first-child {
+    margin-top: 0;
+}
+
+/* Utility class for conditionally hidden settings */
+.nn-setting-hidden {
+    display: none;
+}
+
+.nn-setting-warning {
+    color: var(--text-error);
+    font-weight: 600;
+}
+
+.nn-setting-calendar-pattern-example-text {
+    font-size: inherit;
+    font-weight: var(--font-semibold);
+}
+
+.nn-setting-property-keys-count-line {
+    margin-top: var(--size-2-1);
+}
+
+.nn-setting-property-keys-summary-text {
+    font-size: inherit;
+    font-weight: var(--font-semibold);
+}
+
+/* Sync mode toggle button (cloud/device) */
+.nn-setting-sync-toggle {
+    color: var(--text-muted);
+    opacity: 0.85;
+}
+
+.nn-setting-sync-toggle:hover {
+    color: var(--text-normal);
+    opacity: 1;
+}
+
+/* Setting name marker appended to setting names */
+.nn-settings-tab-root .setting-item-name.nn-setting-name-marker::after {
+    content: ' ' attr(data-nn-setting-marker);
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+.mod-rtl .nn-settings-tab-root .setting-item-name.nn-setting-name-marker::after {
+    content: '';
+}
+
+.mod-rtl .nn-settings-tab-root .setting-item-name.nn-setting-name-marker::before {
+    content: attr(data-nn-setting-marker) ' ';
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+/* Dim disabled calendar pattern text inputs */
+.nn-settings-tab-root .setting-item.nn-setting-disabled input[type='text']:disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Container for additional info below settings */
+.nn-setting-info-container {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.nn-setting-info-container.nn-setting-info-centered.setting-item {
+    justify-content: center;
+}
+
+.nn-setting-info-container.nn-setting-info-centered .setting-item-info,
+.nn-setting-info-container.nn-setting-info-centered .setting-item-description {
+    text-align: center;
+}
+
+.nn-sub-settings > .setting-item.nn-setting-property-keys-info:last-child {
+    padding-bottom: 0;
+}
+
+/* Wider text inputs for settings that benefit from more space */
+.nn-setting-wide-input input[type='text'],
+.nn-setting-wide-input textarea {
+    width: 300px;
+    max-width: 100%;
+}
+
+.nn-toolbar-visibility-control {
+    width: 100%;
+}
+
+.nn-setting-color-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-inline-end: var(--size-2-2);
+}
+
+.nn-setting-color-swatch-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.nn-setting-color-swatch-button:hover {
+    border-color: var(--text-muted);
+}
+
+.nn-setting-color-swatch-button.nn-setting-color-swatch-button-dark {
+    background: #111827;
+    border-color: #374151;
+}
+
+.nn-setting-color-swatch-button.nn-setting-color-swatch-button-dark:hover {
+    border-color: #4b5563;
+}
+
+.nn-setting-color-copy-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.nn-setting-color-copy-button:hover {
+    color: var(--text-normal);
+}
+
+.nn-setting-color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    box-sizing: border-box;
+}
+
+.nn-toolbar-visibility-sections {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-4-4);
+}
+
+.nn-toolbar-visibility-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-2);
+}
+
+.nn-toolbar-visibility-group-label {
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    color: var(--nn-theme-foreground-muted);
+}
+
+.nn-toolbar-visibility-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2-3);
+}
+
+.nn-quick-actions-control {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.nn-quick-actions-buttons,
+.nn-toolbar-visibility-grid-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.nn-toolbar-visibility-grid-scroll {
+    justify-content: flex-end;
+}
+
+.nn-quick-actions-buttons.is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.nn-quick-actions-master-toggle {
+    margin-inline-start: auto;
+}
+
+.nn-toolbar-visibility-toggle {
+    position: relative;
+    padding: 0;
+    /* Override mobile toolbar button dimensions for settings */
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+}
+
+.nn-toolbar-visibility-toggle:not(.nn-mobile-toolbar-button-active) {
+    opacity: 0.6;
+}
+
+.nn-toolbar-visibility-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--nn-theme-foreground);
+}
+
+.nn-toolbar-visibility-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.5;
+}
+
+/* Mobile-specific toolbar visibility button styles */
+.is-mobile .nn-toolbar-visibility-control {
+    width: 100%;
+}
+
+.is-mobile .nn-toolbar-visibility-sections {
+    width: 100%;
+}
+
+.is-mobile .nn-toolbar-visibility-group {
+    width: 100%;
+}
+
+.is-mobile .nn-toolbar-visibility-group-label {
+    text-align: center;
+}
+
+.is-mobile .nn-toolbar-visibility-grid {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0;
+    justify-content: space-between;
+}
+
+/* YouTube-style play button used in settings */
+.nn-youtube-button {
+    background-color: #ff0000 !important;
+    border: none !important;
+    color: #ffffff !important;
+    min-width: 54px;
+}
+
+.nn-youtube-button:hover {
+    background-color: #cc0000 !important;
+}
+
+.nn-youtube-button svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    stroke: none !important;
+}
+
+.is-mobile .nn-toolbar-visibility-toggle {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+}
+
+.is-mobile .nn-toolbar-visibility-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.is-mobile .nn-toolbar-visibility-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Android-specific adjustments for smaller buttons */
+.notebook-navigator-android .nn-toolbar-visibility-toggle {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+}
+
+.notebook-navigator-android .nn-toolbar-visibility-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.notebook-navigator-android .nn-toolbar-visibility-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.nn-setting-profile-dropdown select {
+    width: 160px;
+    max-width: 100%;
+}
+
+.is-mobile .nn-setting-profile-dropdown select {
+    width: 100%;
+    max-width: none;
+}
+
+.nn-slider-value {
+    margin-left: 12px;
+    font-size: var(--font-ui-smaller);
+    color: var(--nn-theme-foreground-muted);
+    min-width: 48px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}

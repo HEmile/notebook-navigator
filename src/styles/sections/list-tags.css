@@ -1,0 +1,146 @@
+/* Source: src/styles/sections/list-tags.css */
+
+/* ========================================================================
+   Tag & Property Value Display Styles
+   ======================================================================== */
+
+/* Tag container */
+.nn-file-tags,
+.nn-file-property-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--nn-file-tag-row-gap);
+    margin-top: var(--nn-file-tag-row-gap);
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: var(--nn-file-tag-row-height);
+    position: relative;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.nn-file-tags::-webkit-scrollbar,
+.nn-file-property-row::-webkit-scrollbar {
+    display: none;
+}
+
+/* Individual tag pill */
+.nn-file-tag {
+    --nn-file-pill-border-color-resolved: var(--nn-theme-file-tag-border-color);
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    line-height: 1;
+    padding: 0 8px;
+    background-color: var(--nn-theme-file-tag-bg);
+    color: var(--nn-theme-file-tag-color);
+    border-radius: min(10px, var(--nn-theme-file-tag-border-radius));
+    border-style: solid;
+    border-width: var(--nn-theme-file-pill-border-width);
+    border-color: var(--nn-file-pill-border-color-resolved);
+    font-size: 12px;
+    font-weight: var(--nn-theme-file-tag-font-weight);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.nn-file-pill-inline-icon {
+    width: 12px;
+    height: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+    color: currentColor;
+    flex-shrink: 0;
+}
+
+.nn-file-pill-inline-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+.nn-file-tag[data-has-color='true'],
+.nn-file-tag[data-has-background='true'] {
+    --nn-file-pill-border-color-resolved: color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.nn-file-property {
+    --nn-file-pill-border-color-resolved: var(--nn-theme-file-property-border-color);
+    background-color: var(--nn-theme-file-property-bg);
+    color: var(--nn-theme-file-property-color);
+    border-radius: min(10px, var(--nn-theme-file-property-border-radius));
+}
+
+.nn-file-tag[data-has-background='true'] {
+    background-color: var(--nn-theme-nav-bg);
+    background-image: linear-gradient(var(--nn-file-tag-custom-bg, transparent), var(--nn-file-tag-custom-bg, transparent));
+}
+
+.nn-file-tag[data-has-color='true'] {
+    font-weight: var(--nn-theme-navitem-custom-color-name-font-weight);
+}
+
+.nn-file-tag[data-has-color='true']:not([data-has-background='true']) {
+    background-color: var(--nn-theme-list-bg);
+    background-image: linear-gradient(color-mix(in srgb, currentColor 10%, transparent), color-mix(in srgb, currentColor 10%, transparent));
+}
+
+.nn-file-tag[data-has-background='true']:not([data-has-color='true']) {
+    color: var(--nn-theme-file-tag-custom-color-text-color);
+}
+
+/* Tag pill hover effect - darken/lighten all tags on hover */
+.nn-file-tag.nn-clickable-tag:hover {
+    filter: brightness(0.9);
+}
+
+/* Clickable tag styling */
+.nn-file-tag.nn-clickable-tag {
+    cursor: pointer;
+}
+
+/* Underline property pills that render clickable link values */
+.nn-file-tag.nn-file-property.nn-file-property-link {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Dark mode tag hover - lighten instead of darken */
+.theme-dark .nn-file-tag.nn-clickable-tag:hover {
+    filter: brightness(1.05);
+}
+
+/* Selected file tag styles - only for tags without custom colors */
+.nn-file.nn-selected .nn-file-tag:not(.nn-file-property):not([data-has-color='true']):not([data-has-background='true']) {
+    --nn-file-pill-border-color-resolved: var(--nn-theme-file-selected-tag-border-color);
+    background-color: var(--nn-selected-file-tag-bg);
+    color: var(--nn-selected-file-tag-color);
+}
+
+.nn-file.nn-selected .nn-file-tag.nn-file-property:not([data-has-color='true']):not([data-has-background='true']) {
+    --nn-file-pill-border-color-resolved: var(--nn-theme-file-selected-property-border-color);
+    background-color: var(--nn-selected-file-property-bg);
+    color: var(--nn-selected-file-property-color);
+}
+
+/* Selected file text colors */
+.nn-file.nn-selected .nn-file-name {
+    color: var(--nn-selected-file-name-color);
+}
+
+.nn-file.nn-selected .nn-file-name[data-has-color='true'] {
+    color: var(--nn-file-name-custom-color);
+}
+
+.nn-file.nn-selected .nn-file-preview {
+    color: var(--nn-selected-file-preview-color);
+}
+
+.nn-file.nn-selected .nn-file-date {
+    color: var(--nn-selected-file-date-color);
+}
+
+.nn-file.nn-selected .nn-parent-folder {
+    color: var(--nn-selected-file-parent-color);
+}

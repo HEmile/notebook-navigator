@@ -1,7 +1,22 @@
 #!/bin/bash
 
+# Notebook Navigator - Plugin for Obsidian
+# Copyright (c) 2025-2026 Johan Sanneblad
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 # Main build script for notebook-navigator
-# This script is checked into git
 
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -12,6 +27,19 @@ cd "$SCRIPT_DIR/.."
 # Track overall status
 BUILD_WARNINGS=0
 BUILD_ERRORS=0
+
+# Step 0: Generate icon constants (keeps src/constants/notebookNavigatorIcon.ts in sync with icon.svg)
+echo "Generating icon constants..."
+ICON_OUTPUT=$(npm run build:icons 2>&1)
+ICON_STATUS=$?
+echo "$ICON_OUTPUT"
+
+if [ $ICON_STATUS -ne 0 ]; then
+    echo "❌ Icon generation failed"
+    exit 1
+else
+    echo "✅ Icon constants generated"
+fi
 
 # Step 1: Run ESLint
 echo "Running ESLint..."
@@ -157,4 +185,3 @@ else
     fi
     exit 1
 fi
-

@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
  */
 
 import { Platform, type Hotkey, type Modifier } from 'obsidian';
+import { isRecord } from './typeGuards';
 
 /**
  * Enum-like object defining all keyboard shortcut actions
@@ -97,13 +98,6 @@ export function getDefaultKeyboardShortcuts(): KeyboardShortcutConfig {
 }
 
 /**
- * Type guard to check if a value is a plain object (not array or null)
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/**
  * Validates modifier strings and only accepts canonical Obsidian values
  */
 function normalizeModifier(value: unknown): Modifier | null {
@@ -149,7 +143,7 @@ function cloneKeyboardShortcutConfig(config: KeyboardShortcutConfig): KeyboardSh
  * Validates and sanitizes a single hotkey entry from user configuration
  */
 function sanitizeHotkeyEntry(entry: unknown): Hotkey | null {
-    if (!isRecord(entry)) {
+    if (!isRecord(entry) || Array.isArray(entry)) {
         return null;
     }
 
@@ -209,7 +203,7 @@ function sanitizeHotkeyArray(value: unknown): Hotkey[] | null {
  */
 export function sanitizeKeyboardShortcuts(value: unknown): KeyboardShortcutConfig {
     const sanitized = getDefaultKeyboardShortcuts();
-    if (!isRecord(value)) {
+    if (!isRecord(value) || Array.isArray(value)) {
         return sanitized;
     }
 

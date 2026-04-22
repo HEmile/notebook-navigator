@@ -1,0 +1,42 @@
+/* Source: src/styles/sections/layout-virtual-list.css */
+
+/* ========================================================================
+   Virtual List Styles
+   ======================================================================== */
+
+/* Virtual container wrapper - ensures proper absolute positioning context */
+
+.nn-navigation-pane-scroller > .nn-virtual-container,
+.nn-list-pane-scroller > .nn-virtual-container {
+    position: relative;
+}
+
+/* Virtual list container - holds all virtual items */
+.nn-virtual-container {
+    width: 100%;
+    position: relative;
+}
+
+/* Virtual items container */
+.nn-navigation-pane-scroller [data-index],
+.nn-list-pane-scroller [data-index] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+/* Virtual navigation item (folders and tags) */
+.nn-virtual-nav-item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+/* Virtual file item wrapper - position relative for separator positioning */
+.nn-virtual-file-item {
+    position: relative;
+    /* Isolate layout and style calculations per item while allowing overlays to extend beyond bounds */
+    contain: layout style;
+}

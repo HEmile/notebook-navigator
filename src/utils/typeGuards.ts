@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { TFolder, App } from 'obsidian';
+import { TFolder, App, Plugin } from 'obsidian';
 
 /**
  * Interface for internal plugin structure
@@ -87,6 +87,55 @@ export function executeCommand(app: App, commandId: string): boolean {
 }
 
 /**
+ * Extended App interface with access to plugin registry
+ */
+interface AppWithPlugins extends App {
+    plugins?: {
+        plugins?: Record<string, Plugin>;
+        enabledPlugins?: Set<string>;
+    };
+}
+
+/**
+ * Type guard to check if the app has a plugin registry
+ */
+function hasPluginRegistry(app: App): app is AppWithPlugins {
+    return typeof app === 'object' && app !== null && 'plugins' in app;
+}
+
+/**
+ * Safe access to a plugin instance by id
+ */
+export function getPluginById(app: App, pluginId: string): Plugin | null {
+    if (!pluginId || !hasPluginRegistry(app)) {
+        return null;
+    }
+
+    const registry = app.plugins;
+    if (!registry?.plugins) {
+        return null;
+    }
+
+    return registry.plugins[pluginId] ?? null;
+}
+
+/**
+ * Checks if a plugin is installed or enabled
+ */
+export function isPluginInstalled(app: App, pluginId: string): boolean {
+    if (!pluginId || !hasPluginRegistry(app)) {
+        return false;
+    }
+
+    const registry = app.plugins;
+    if (!registry) {
+        return false;
+    }
+
+    return Boolean(registry.plugins?.[pluginId]) || Boolean(registry.enabledPlugins?.has(pluginId));
+}
+
+/**
  * Check if a folder is an ancestor of another folder
  * @param potentialAncestor - The folder that might be an ancestor
  * @param folder - The folder to check
@@ -101,4 +150,21 @@ export function isFolderAncestor(potentialAncestor: TFolder, folder: TFolder): b
         current = current.parent;
     }
     return false;
+}
+
+/**
+ * Checks if the provided value is a plain object record
+ */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Safely reads a property from a record-like value
+ */
+export function getRecordValue<T = unknown>(value: unknown, key: string): T | undefined {
+    if (!isRecord(value)) {
+        return undefined;
+    }
+    return value[key] as T | undefined;
 }

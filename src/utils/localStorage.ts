@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,8 +34,17 @@ export const localStorage = {
      * This enables vault-specific storage isolation
      */
     init(app: App) {
-        this._app = app;
+        // Use localStorage object literal directly to ensure proper this binding (eslint @typescript-eslint/unbound-method)
+        localStorage._app = app;
     },
+
+    /**
+     * Returns true when vault-scoped localStorage access is ready.
+     */
+    isInitialized(): boolean {
+        return localStorage._app !== null;
+    },
+
     /**
      * Safely retrieves a value from localStorage with error handling
      * Obsidian automatically deserializes the stored value
@@ -44,15 +53,15 @@ export const localStorage = {
      */
     get<T = string>(key: string): T | null {
         try {
-            if (!this._app) {
+            if (!localStorage._app) {
                 // Return null if app not initialized to prevent mixing storage
-                console.warn(`localStorage accessed before initialization for key "${key}"`);
+                console.log(`localStorage accessed before initialization for key "${key}"`);
                 return null;
             }
             // Use vault-specific storage
-            const data = this._app.loadLocalStorage(key);
+            const data: unknown = localStorage._app.loadLocalStorage(key);
             return data as T;
-        } catch (error) {
+        } catch (error: unknown) {
             console.error(`Failed to get from localStorage for key "${key}":`, error);
             return null;
         }
@@ -66,15 +75,15 @@ export const localStorage = {
      */
     set<T>(key: string, value: T): boolean {
         try {
-            if (!this._app) {
+            if (!localStorage._app) {
                 // Ignore writes if app not initialized to prevent mixing storage
-                console.warn(`localStorage write attempted before initialization for key "${key}"`);
+                console.log(`localStorage write attempted before initialization for key "${key}"`);
                 return false;
             }
             // Use vault-specific storage
-            this._app.saveLocalStorage(key, value);
+            localStorage._app.saveLocalStorage(key, value);
             return true;
-        } catch (error) {
+        } catch (error: unknown) {
             console.error(`Failed to set localStorage for key "${key}":`, error);
             return false;
         }
@@ -87,15 +96,15 @@ export const localStorage = {
      */
     remove(key: string): boolean {
         try {
-            if (!this._app) {
+            if (!localStorage._app) {
                 // Ignore removes if app not initialized to prevent mixing storage
-                console.warn(`localStorage remove attempted before initialization for key "${key}"`);
+                console.log(`localStorage remove attempted before initialization for key "${key}"`);
                 return false;
             }
             // Use vault-specific storage - pass null to clear
-            this._app.saveLocalStorage(key, null);
+            localStorage._app.saveLocalStorage(key, null);
             return true;
-        } catch (error) {
+        } catch (error: unknown) {
             console.error(`Failed to remove from localStorage for key "${key}":`, error);
             return false;
         }

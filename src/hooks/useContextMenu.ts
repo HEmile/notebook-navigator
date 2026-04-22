@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +18,21 @@
 
 // src/hooks/useContextMenu.ts
 import { useEffect, useCallback, useState } from 'react';
-import { Menu } from 'obsidian';
+import { Menu, TFile, TFolder } from 'obsidian';
 import { useExpansionState, useExpansionDispatch } from '../context/ExpansionContext';
 import { useSelectionState, useSelectionDispatch } from '../context/SelectionContext';
-import { useServices, useFileSystemOps, useMetadataService, useTagOperations, useCommandQueue } from '../context/ServicesContext';
+import {
+    useServices,
+    useFileSystemOps,
+    useMetadataService,
+    useTagOperations,
+    usePropertyOperations,
+    useCommandQueue
+} from '../context/ServicesContext';
 import { useSettingsState } from '../context/SettingsContext';
 import { useUIDispatch } from '../context/UIStateContext';
 import { useShortcuts } from '../context/ShortcutsContext';
+import { useUXPreferences } from '../context/UXPreferencesContext';
 import { ItemType } from '../types';
 import {
     MenuConfig,
@@ -33,11 +41,25 @@ import {
     MenuDispatchers,
     buildFolderMenu,
     buildTagMenu,
+    buildPropertyMenu,
     buildFileMenu,
     buildEmptyListMenu,
     EMPTY_LIST_MENU_TYPE
 } from '../utils/contextMenu';
-import { TFolder } from 'obsidian';
+import { getFolderNote } from '../utils/folderNotes';
+
+// Tracks the currently open navigator context menu so it can be closed before opening another
+let activeNavigatorMenu: Menu | null = null;
+
+/**
+ * Hides the currently active navigator context menu if one is open.
+ */
+export function hideNavigatorContextMenu() {
+    if (activeNavigatorMenu) {
+        activeNavigatorMenu.hide();
+        activeNavigatorMenu = null;
+    }
+}
 
 /**
  * Custom hook that attaches a context menu to an element.
@@ -55,15 +77,19 @@ import { TFolder } from 'obsidian';
  * ```
  */
 export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, config: MenuConfig | null) {
-    const { app, plugin, isMobile, tagTreeService } = useServices();
+    const { app, plugin, isMobile, tagTreeService, propertyTreeService } = useServices();
     const settings = useSettingsState();
     const fileSystemOps = useFileSystemOps();
     const metadataService = useMetadataService();
     const tagOperations = useTagOperations();
+    const propertyOperations = usePropertyOperations();
     const commandQueue = useCommandQueue();
     const shortcuts = useShortcuts();
+    const uxPreferences = useUXPreferences();
+    const includeDescendantNotes = uxPreferences.includeDescendantNotes;
+    const showHiddenItems = uxPreferences.showHiddenItems;
     const selectionState = useSelectionState();
-    const { expandedFolders, expandedTags } = useExpansionState();
+    const { expandedFolders, expandedTags, expandedProperties } = useExpansionState();
     const selectionDispatch = useSelectionDispatch();
     const expansionDispatch = useExpansionDispatch();
     const uiDispatch = useUIDispatch();
@@ -79,19 +105,53 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
         (e: MouseEvent) => {
             if (!config || !elementRef.current) return;
 
+            const targetNode = e.target;
+            if (!(targetNode instanceof Node)) return;
+
             // Check if the click is on this element or its children
-            if (!elementRef.current.contains(e.target as Node)) return;
+            if (!elementRef.current.contains(targetNode)) return;
 
             // Get the target element if it's an HTML element
-            const targetElement = e.target instanceof HTMLElement ? e.target : null;
+            const targetElement = targetNode instanceof HTMLElement ? targetNode : targetNode.parentElement;
+            let menuElement: HTMLElement = elementRef.current;
+
+            // Folder note override:
+            // Right-clicking on a folder name should behave like right-clicking the folder note file.
+            let menuConfig: MenuConfig = config;
+            if (menuConfig.type === EMPTY_LIST_MENU_TYPE) {
+                if (!targetElement) {
+                    return;
+                }
+
+                const fileTarget = targetElement.closest('.nn-file');
+                if (fileTarget instanceof HTMLElement) {
+                    const filePath = fileTarget.dataset.path;
+                    const file = filePath ? app.vault.getFileByPath(filePath) : null;
+                    if (!(file instanceof TFile)) {
+                        return;
+                    }
+
+                    menuConfig = { type: ItemType.FILE, item: file };
+                    menuElement = fileTarget;
+                }
+            }
+
+            if (settings.enableFolderNoteLinks && menuConfig.type === ItemType.FOLDER && targetElement?.closest('.nn-navitem-name')) {
+                const folderNote = getFolderNote(menuConfig.item, settings);
+                if (folderNote) {
+                    menuConfig = { type: ItemType.FILE, item: folderNote };
+                }
+            }
+
+            const isFileMenu = menuConfig.type === ItemType.FILE;
 
             // Menu builder function that will be selected based on item type
             type Builder = (menu: Menu) => void;
             let buildMenu: Builder | null = null;
 
-            if (config.type === EMPTY_LIST_MENU_TYPE) {
+            if (menuConfig.type === EMPTY_LIST_MENU_TYPE) {
                 // Handle context menu for empty areas in the list pane
-                const folder = config.item;
+                const folder = menuConfig.item;
                 if (!(folder instanceof TFolder)) {
                     return;
                 }
@@ -116,21 +176,22 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
                         dispatchers
                     });
                 };
-            } else if (config.type === ItemType.FOLDER) {
+            } else if (menuConfig.type === ItemType.FOLDER) {
                 buildMenu = menuInstance => {
                     buildFolderMenu({
-                        folder: config.item,
+                        folder: menuConfig.item,
                         menu: menuInstance,
                         services,
                         settings,
                         state,
-                        dispatchers
+                        dispatchers,
+                        options: menuConfig.options
                     });
                 };
-            } else if (config.type === ItemType.TAG) {
+            } else if (menuConfig.type === ItemType.TAG) {
                 buildMenu = menuInstance => {
                     buildTagMenu({
-                        tagPath: config.item,
+                        tagPath: menuConfig.item,
                         menu: menuInstance,
                         services,
                         settings,
@@ -138,10 +199,21 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
                         dispatchers
                     });
                 };
-            } else if (config.type === ItemType.FILE) {
+            } else if (menuConfig.type === ItemType.PROPERTY) {
+                buildMenu = menuInstance => {
+                    buildPropertyMenu({
+                        propertyNodeId: menuConfig.item,
+                        menu: menuInstance,
+                        services,
+                        settings,
+                        state,
+                        dispatchers
+                    });
+                };
+            } else if (menuConfig.type === ItemType.FILE) {
                 buildMenu = menuInstance => {
                     buildFileMenu({
-                        file: config.item,
+                        file: menuConfig.item,
                         menu: menuInstance,
                         services,
                         settings,
@@ -158,15 +230,18 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
             e.preventDefault();
             e.stopPropagation();
 
+            hideNavigatorContextMenu();
+
             const menu = new Menu();
+            activeNavigatorMenu = menu;
 
             // Add context menu active class to show outline immediately
-            elementRef.current.classList.add('nn-context-menu-active');
+            menuElement.classList.add('nn-context-menu-active');
 
             // Handle separator hiding for file items in list pane
-            if (config.type === ItemType.FILE) {
+            if (isFileMenu) {
                 // Find the virtual item wrapper that contains this file item
-                const virtualItem = elementRef.current.closest('.nn-virtual-file-item');
+                const virtualItem = menuElement.closest('.nn-virtual-file-item');
                 if (virtualItem instanceof HTMLElement) {
                     // Hide separator below this item
                     virtualItem.classList.add('nn-hide-separator-context-menu');
@@ -187,15 +262,19 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
                 fileSystemOps,
                 metadataService,
                 tagOperations,
+                propertyOperations,
                 tagTreeService,
+                propertyTreeService,
                 commandQueue,
-                shortcuts
+                shortcuts,
+                visibility: { includeDescendantNotes, showHiddenItems }
             };
 
             const state: MenuState = {
                 selectionState,
                 expandedFolders,
-                expandedTags
+                expandedTags,
+                expandedProperties
             };
 
             const dispatchers: MenuDispatchers = {
@@ -215,21 +294,22 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
 
             // Remove the class when THIS menu is hidden
             menu.onHide(() => {
-                if (elementRef.current) {
-                    elementRef.current.classList.remove('nn-context-menu-active');
+                if (activeNavigatorMenu === menu) {
+                    activeNavigatorMenu = null;
+                }
+                menuElement.classList.remove('nn-context-menu-active');
 
-                    // Remove separator hiding for file items
-                    if (config.type === ItemType.FILE) {
-                        const virtualItem = elementRef.current.closest('.nn-virtual-file-item');
-                        if (virtualItem instanceof HTMLElement) {
-                            // Remove separator hiding from this item
-                            virtualItem.classList.remove('nn-hide-separator-context-menu');
+                // Remove separator hiding for file items
+                if (isFileMenu) {
+                    const virtualItem = menuElement.closest('.nn-virtual-file-item');
+                    if (virtualItem instanceof HTMLElement) {
+                        // Remove separator hiding from this item
+                        virtualItem.classList.remove('nn-hide-separator-context-menu');
 
-                            // Remove separator hiding from previous item
-                            const prevVirtualItem = virtualItem.previousElementSibling;
-                            if (prevVirtualItem instanceof HTMLElement && prevVirtualItem.classList.contains('nn-virtual-file-item')) {
-                                prevVirtualItem.classList.remove('nn-hide-separator-context-menu');
-                            }
+                        // Remove separator hiding from previous item
+                        const prevVirtualItem = virtualItem.previousElementSibling;
+                        if (prevVirtualItem instanceof HTMLElement && prevVirtualItem.classList.contains('nn-virtual-file-item')) {
+                            prevVirtualItem.classList.remove('nn-hide-separator-context-menu');
                         }
                     }
                 }
@@ -244,16 +324,21 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
             fileSystemOps,
             metadataService,
             tagOperations,
+            propertyOperations,
             selectionState,
             expandedFolders,
             expandedTags,
+            expandedProperties,
             selectionDispatch,
             expansionDispatch,
             uiDispatch,
             isMobile,
             tagTreeService,
+            propertyTreeService,
             commandQueue,
-            shortcuts
+            shortcuts,
+            includeDescendantNotes,
+            showHiddenItems
         ]
     );
 

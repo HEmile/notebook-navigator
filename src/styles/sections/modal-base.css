@@ -1,0 +1,109 @@
+/* Source: src/styles/sections/modal-base.css */
+
+/* ========================================================================
+   Modal Styles
+   ======================================================================== */
+
+/* Modal input field - used in rename/create dialogs */
+.nn-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background-color: var(--background-primary);
+    color: var(--nn-theme-foreground);
+    font-size: 14px;
+    margin: 16px 0;
+}
+
+/* Modal input focus state */
+.nn-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+.nn-input-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    cursor: pointer;
+    font-size: var(--font-ui-small);
+}
+
+.nn-input-checkbox-row input[type='checkbox'] {
+    margin: 0;
+}
+
+/* Modal button container - right-aligned button group */
+.nn-button-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.nn-folder-note-type-modal .modal-content {
+    padding-top: 16px;
+}
+
+.nn-folder-note-type-modal .modal-title {
+    width: 100%;
+    text-align: center;
+}
+
+.nn-folder-note-type-info {
+    margin-bottom: 4px;
+    color: var(--nn-theme-foreground-muted);
+    text-align: center;
+}
+
+.nn-folder-note-type-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.nn-folder-note-type-buttons button {
+    width: 100%;
+}
+
+/* ========================================================================
+   Search help modal
+   ======================================================================== */
+
+.modal.nn-search-help-modal {
+    /* Desktop layout with bounded width while keeping viewport margins */
+    width: min(600px, calc(100vw - 80px));
+    max-width: min(600px, calc(100vw - 80px));
+    /* Shorter desktop layout so the modal does not dominate vertical space */
+    max-height: min(70vh, 640px);
+}
+
+.modal.nn-search-help-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal.nn-search-help-modal .nn-search-help-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.modal.nn-search-help-modal strong {
+    font-size: inherit;
+    font-weight: 600;
+}
+
+.is-mobile .modal.nn-search-help-modal {
+    max-height: min(560px, calc(100vh - 24px));
+    max-width: calc(100vw - 24px);
+}
+
+.is-mobile .modal.nn-search-help-modal .modal-content {
+    padding-right: 12px;
+}

@@ -1,0 +1,229 @@
+/* Source: src/styles/sections/platform-ios-obsidian-1-11.css */
+
+/* ========================================================================
+   iOS + Obsidian 1.11+ iOS Platform Overrides
+   ======================================================================== */
+
+/* Platform-specific safe area definitions */
+.notebook-navigator-ios {
+    /* iOS uses env() for dynamic safe areas (notch, home indicator) */
+    --nn-mobile-safe-area-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios {
+    /* Obsidian 1.11+ already accounts for iOS safe areas in the view chrome. */
+    --nn-mobile-safe-area-bottom: 0px;
+}
+
+.notebook-navigator-ios:not(.notebook-navigator-obsidian-1-11-plus-ios)
+    .nn-navigation-pane[data-calendar='true']
+    .nn-pane-bottom-toolbar
+    .nn-mobile-toolbar,
+.notebook-navigator-ios:not(.notebook-navigator-obsidian-1-11-plus-ios)
+    .nn-list-pane[data-calendar='true']
+    .nn-pane-bottom-toolbar
+    .nn-mobile-toolbar {
+    padding-bottom: 0;
+    height: 49px;
+    min-height: 49px;
+}
+
+/* Obsidian 1.11+ iOS: view container background */
+/* Targets Obsidian's `.view-content` wrapper to ensure the area behind the navigator matches the mobile pane background. */
+.view-content.notebook-navigator.notebook-navigator-obsidian-1-11-plus-ios {
+    background-color: var(--nn-theme-mobile-bg);
+}
+
+/* Obsidian 1.11+ iOS: bottom padding inside the navigator viewport */
+/* Applied to the internal split container so the bottom edge doesn't touch the view chrome and the toolbar shadow can render into the padding (8px matches the top spacer). */
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-split-container {
+    padding-bottom: 8px;
+    box-sizing: border-box;
+}
+
+/* iOS (Obsidian 1.11+): allow the glass toolbar shadow to render into the split container padding */
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-navigation-pane,
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-list-pane {
+    overflow: visible;
+}
+
+/* iOS (Obsidian 1.11+): anchor floating toolbar to the panel (above the calendar). */
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-navigation-pane-panel,
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-list-pane-panel {
+    position: relative;
+}
+
+/* iOS (Obsidian 1.11+): bottom overlays are positioned above the scroller. */
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-pane-bottom-toolbar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+}
+
+/* iOS (Obsidian 1.11+): reserve scroll space for the floating toolbar so rows can scroll under it. */
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-navigation-pane-scroller,
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-list-pane-scroller {
+    padding-bottom: var(--nn-ios-pane-bottom-overlay-height);
+}
+
+/* Navigation pane calendar safe area for Obsidian 1.11+ iOS */
+.notebook-navigator-obsidian-1-11-plus-ios .nn-navigation-pane,
+.notebook-navigator-obsidian-1-11-plus-ios .nn-list-pane {
+    /* Obsidian 1.11+ already accounts for iOS safe areas in the view chrome. */
+    --nn-calendar-safe-area: 0px;
+}
+
+/* Obsidian 1.11+ iOS glass toolbar */
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar {
+    pointer-events: none;
+    justify-content: space-between;
+    align-items: flex-start;
+    background-color: transparent;
+    border-top: none;
+    /* 2px for border effect + 2px to match Obsidian view selector dropdown */
+    padding-left: calc(var(--nn-scroller-padding) + 4px); /* 4px horizontal spacer for glass pill */
+    padding-right: calc(var(--nn-scroller-padding) + 4px); /* 4px horizontal spacer for glass pill */
+    padding-bottom: 0; /* No extra bottom padding in iOS 1.11+ */
+    /* The glass outline is painted via box-shadow and extends outside the pill/circle box. Add a small top spacer so
+       auto-revealed rows are not positioned behind the outline. */
+    padding-top: var(--nn-ios-toolbar-glass-visual-overlap-top);
+    /* Adds an invisible spacer under the glass pills to create the visual bottom gap without shifting sticky positioning. */
+    height: calc(
+        var(--nn-ios-toolbar-height) + var(--nn-ios-toolbar-bottom-offset) + var(--nn-ios-toolbar-glass-visual-overlap-top)
+    ); /* Includes bottom offset spacer + top overlap */
+    min-height: calc(
+        var(--nn-ios-toolbar-height) + var(--nn-ios-toolbar-bottom-offset) + var(--nn-ios-toolbar-glass-visual-overlap-top)
+    ); /* Match toolbar box height */
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-left,
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-right {
+    display: flex;
+    pointer-events: auto;
+    flex: 0 0 auto;
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-pill,
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-circle {
+    display: flex;
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars {
+    --nn-theme-mobile-toolbar-button-icon-color: var(--nn-theme-foreground);
+    --nn-ios-toolbar-glass-bg: color-mix(in srgb, var(--nn-theme-mobile-toolbar-glass-bg) 45%, transparent);
+    --nn-ios-toolbar-glass-outline: rgba(255, 255, 255, 0.6);
+    --nn-ios-toolbar-glass-shadow: 0 0 0 2px var(--nn-ios-toolbar-glass-outline), 0 16px 32px rgba(0, 0, 0, 0.09);
+    --nn-ios-toolbar-glass-filter: blur(3px) saturate(160%);
+    --nn-theme-mobile-toolbar-button-active-bg: transparent;
+    /* Visual overflow above the pills caused by the glass outline (box-shadow spread). */
+    --nn-ios-toolbar-glass-visual-overlap-top: 2px;
+    /* Visual bottom gap between the glass pills and the view edge (implemented via toolbar height + fade, not sticky offset). */
+    --nn-ios-toolbar-bottom-offset: 12px;
+    --nn-ios-toolbar-height: 44px; /* 38px button + (1px padding + 2px border) * 2 */
+    --nn-ios-pane-bottom-fade-height: 64px; /* Fade height behind the toolbar */
+    --nn-ios-pane-bottom-fade-opacity: 0.8; /* Fade opacity behind the toolbar */
+    --nn-ios-pane-bottom-overlay-height: calc(
+        var(--nn-ios-toolbar-height) + var(--nn-ios-toolbar-bottom-offset) + var(--nn-ios-toolbar-glass-visual-overlap-top)
+    );
+}
+
+.theme-dark .notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars {
+    --nn-ios-toolbar-glass-outline: rgba(255, 255, 255, 0.1);
+    --nn-ios-toolbar-glass-shadow: 0 0 0 2px var(--nn-ios-toolbar-glass-outline), 0 16px 32px rgba(0, 0, 0, 0.3);
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-pill,
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-circle {
+    position: relative;
+    z-index: 0;
+    border-radius: 999px;
+    background: var(--nn-ios-toolbar-glass-bg);
+    border: 2px solid transparent; /* Glass outline thickness */
+    -webkit-backdrop-filter: var(--nn-ios-toolbar-glass-filter);
+    backdrop-filter: var(--nn-ios-toolbar-glass-filter);
+    box-shadow: var(--nn-ios-toolbar-glass-shadow);
+    overflow: hidden;
+
+    /*
+     * Warped glass (disabled)
+     * Enable when WebKit supports SVG `url(#...)` values for `-webkit-backdrop-filter`.
+     *
+     * Requirements:
+     * - Inject the SVG filter defs into the document (filter id: `notebook-navigator-frosted`)
+     * - Set:
+     *   -webkit-backdrop-filter: url(#notebook-navigator-frosted);
+     *   backdrop-filter: url(#notebook-navigator-frosted);
+     */
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-pill > .nn-mobile-toolbar-button,
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-circle > .nn-mobile-toolbar-button {
+    position: relative;
+    z-index: 1;
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-pill {
+    width: auto;
+    justify-content: flex-start;
+    gap: 6px; /* Spacing between buttons inside the pill */
+    padding: 1px 10px; /* 1px vertical + 10px horizontal pill inset */
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-circle {
+    padding: 1px; /* 1px inset around the circular button */
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-button {
+    width: 38px; /* Button diameter inside the glass pill */
+    height: 38px; /* Button diameter inside the glass pill */
+    min-width: 38px; /* Prevent button shrink */
+    min-height: 38px; /* Prevent button shrink */
+    border-radius: 999px;
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-mobile-toolbar-button svg {
+    stroke-width: 2;
+}
+
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-navigation-pane-content,
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-list-pane-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* Obsidian 1.11+ iOS: bottom fade layer */
+.notebook-navigator-obsidian-1-11-plus-ios.notebook-navigator-ios-floating-toolbars .nn-pane-bottom-toolbar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Covers the toolbar height plus the visual bottom gap so the fade reaches the edge below. */
+    height: calc(var(--nn-ios-pane-bottom-fade-height) + var(--nn-ios-toolbar-bottom-offset));
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--nn-theme-mobile-bg) 0%, transparent),
+        color-mix(in srgb, var(--nn-theme-mobile-bg) calc(var(--nn-ios-pane-bottom-fade-opacity) * 100%), transparent)
+    );
+    z-index: -1;
+}
+
+/*
+ * iOS + Obsidian 1.11+: WebKit paint workaround for virtualized lists.
+ *
+ * Symptom:
+ * - The list can render blank (rows not visible) after preview text / feature image updates when the list is short
+ *   enough that the scroller does not overflow (scrollHeight === clientHeight).
+ * - The DOM still contains the virtualized row elements and TanStack Virtual still reports virtual items, but the
+ *   scroll layer does not repaint until a user interaction (tap) or a layout-triggering event (rotation).
+ *
+ * Workaround:
+ * - Force each rendered virtual row wrapper onto its own composited layer. This makes WebKit repaint the rows
+ *   reliably when the virtualizer remeasures and updates absolute positioning.
+ */
+.notebook-navigator-obsidian-1-11-plus-ios .nn-list-pane .nn-virtual-item {
+    transform: translateZ(0);
+}

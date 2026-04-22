@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  */
 
 import { App } from 'obsidian';
-import { SortOption, type NotebookNavigatorSettings } from '../../settings';
+import { SortOption, type AlphaSortOrder, type NotebookNavigatorSettings } from '../../settings';
 import { ItemType } from '../../types';
 import { ISettingsProvider } from '../../interfaces/ISettingsProvider';
 import { ITagTreeProvider } from '../../interfaces/ITagTreeProvider';
@@ -25,6 +25,21 @@ import { BaseMetadataService } from './BaseMetadataService';
 import type { CleanupValidators } from '../MetadataService';
 import { TagTreeNode } from '../../types/storage';
 import { normalizeTagPath } from '../../utils/tagUtils';
+import {
+    hasHiddenFileTagMatch,
+    hasHiddenTagMatch,
+    removeHiddenFileTagPrefixMatches,
+    removeHiddenTagPrefixMatches,
+    updateHiddenFileTagPrefixMatches,
+    updateHiddenTagPrefixMatches
+} from '../../utils/vaultProfiles';
+
+type SettingsMutation = (settings: NotebookNavigatorSettings) => boolean;
+
+export interface TagColorData {
+    color?: string;
+    background?: string;
+}
 
 /**
  * Service for managing tag-specific metadata operations
@@ -88,6 +103,66 @@ export class TagMetadataService extends BaseMetadataService {
         return this.removeEntityBackgroundColor(ItemType.TAG, normalized);
     }
 
+    // Resolves tag color/background once, optionally inheriting from ancestor tags when enabled.
+    // Uses a shared ancestor traversal so callers can request one or both variants without duplicating work.
+    private resolveTagColorData(normalizedTagPath: string, includeColor: boolean, includeBackground: boolean): TagColorData {
+        let resolvedColor = includeColor ? this.getEntityColor(ItemType.TAG, normalizedTagPath) : undefined;
+        let resolvedBackground = includeBackground ? this.getEntityBackgroundColor(ItemType.TAG, normalizedTagPath) : undefined;
+
+        const shouldInherit =
+            this.settingsProvider.settings.inheritTagColors &&
+            ((includeColor && !resolvedColor) || (includeBackground && !resolvedBackground));
+
+        if (!shouldInherit) {
+            return {
+                color: resolvedColor,
+                background: resolvedBackground
+            };
+        }
+
+        let ancestorPath = normalizedTagPath;
+        while (ancestorPath.includes('/')) {
+            const separatorIndex = ancestorPath.lastIndexOf('/');
+            if (separatorIndex <= 0) {
+                break;
+            }
+
+            ancestorPath = ancestorPath.slice(0, separatorIndex);
+
+            if (includeColor && !resolvedColor) {
+                const ancestorColor = this.getEntityColor(ItemType.TAG, ancestorPath);
+                if (ancestorColor) {
+                    resolvedColor = ancestorColor;
+                }
+            }
+
+            if (includeBackground && !resolvedBackground) {
+                const ancestorBackground = this.getEntityBackgroundColor(ItemType.TAG, ancestorPath);
+                if (ancestorBackground) {
+                    resolvedBackground = ancestorBackground;
+                }
+            }
+
+            if ((!includeColor || resolvedColor) && (!includeBackground || resolvedBackground)) {
+                break;
+            }
+        }
+
+        return {
+            color: resolvedColor,
+            background: resolvedBackground
+        };
+    }
+
+    getTagColorData(tagPath: string): TagColorData {
+        const normalized = normalizeTagPath(tagPath);
+        if (!normalized) {
+            return {};
+        }
+        // Returns resolved values including inheritance settings.
+        return this.resolveTagColorData(normalized, true, true);
+    }
+
     /**
      * Gets the custom color for a tag, checking ancestors if not directly set
      * @param tagPath - Path of the tag
@@ -98,20 +173,7 @@ export class TagMetadataService extends BaseMetadataService {
         if (!normalized) {
             return undefined;
         }
-
-        // First check if this tag has a color directly set
-        const directColor = this.getEntityColor(ItemType.TAG, normalized);
-        if (directColor) return directColor;
-
-        // If no direct color, check ancestors
-        const pathParts = normalized.split('/');
-        for (let i = pathParts.length - 1; i > 0; i--) {
-            const ancestorPath = pathParts.slice(0, i).join('/');
-            const ancestorColor = this.getEntityColor(ItemType.TAG, ancestorPath);
-            if (ancestorColor) return ancestorColor;
-        }
-
-        return undefined;
+        return this.resolveTagColorData(normalized, true, false).color;
     }
 
     /**
@@ -124,18 +186,7 @@ export class TagMetadataService extends BaseMetadataService {
         if (!normalized) {
             return undefined;
         }
-
-        const directBackground = this.getEntityBackgroundColor(ItemType.TAG, normalized);
-        if (directBackground) return directBackground;
-
-        const pathParts = normalized.split('/');
-        for (let i = pathParts.length - 1; i > 0; i--) {
-            const ancestorPath = pathParts.slice(0, i).join('/');
-            const ancestorBackground = this.getEntityBackgroundColor(ItemType.TAG, ancestorPath);
-            if (ancestorBackground) return ancestorBackground;
-        }
-
-        return undefined;
+        return this.resolveTagColorData(normalized, false, true).background;
     }
 
     /**
@@ -215,6 +266,207 @@ export class TagMetadataService extends BaseMetadataService {
     }
 
     /**
+     * Sets a custom alphabetical sort order for the tag's child tags in the navigation pane.
+     */
+    async setTagChildSortOrderOverride(tagPath: string, sortOrder: AlphaSortOrder): Promise<void> {
+        const normalized = normalizeTagPath(tagPath);
+        if (!normalized) {
+            return Promise.resolve();
+        }
+        return this.setEntityChildSortOrderOverride(ItemType.TAG, normalized, sortOrder);
+    }
+
+    /**
+     * Removes the custom child tag sort order from a tag.
+     */
+    async removeTagChildSortOrderOverride(tagPath: string): Promise<void> {
+        const normalized = normalizeTagPath(tagPath);
+        if (!normalized) {
+            return Promise.resolve();
+        }
+        return this.removeEntityChildSortOrderOverride(ItemType.TAG, normalized);
+    }
+
+    /**
+     * Gets the child sort order override for a tag.
+     */
+    getTagChildSortOrderOverride(tagPath: string): AlphaSortOrder | undefined {
+        const normalized = normalizeTagPath(tagPath);
+        if (!normalized) {
+            return undefined;
+        }
+        return this.getEntityChildSortOrderOverride(ItemType.TAG, normalized);
+    }
+
+    /**
+     * Checks if metadata exists for a tag path or any of its descendants.
+     */
+    private hasTagMetadataForPath(settings: NotebookNavigatorSettings, path: string): boolean {
+        const prefix = `${path}/`;
+        const records: (Record<string, unknown> | undefined)[] = [
+            settings.tagColors,
+            settings.tagBackgroundColors,
+            settings.tagIcons,
+            settings.tagSortOverrides,
+            settings.tagTreeSortOverrides,
+            settings.tagAppearances
+        ];
+
+        for (const record of records) {
+            if (!record) {
+                continue;
+            }
+            if (Object.prototype.hasOwnProperty.call(record, path)) {
+                return true;
+            }
+            for (const key in record) {
+                if (key.startsWith(prefix)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Removes metadata entries matching the specified path or prefix
+     * Returns true if any entries were removed
+     */
+    private removeTagMetadataForPath<T>(metadata: Record<string, T> | undefined, path: string, prefix: string): boolean {
+        if (!metadata) {
+            return false;
+        }
+
+        let changed = false;
+        const keys = Object.keys(metadata);
+        for (const key of keys) {
+            if (key === path || key.startsWith(prefix)) {
+                delete metadata[key];
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /**
+     * Checks if updateNestedPaths would modify a metadata record without mutating it
+     */
+    private willUpdateNestedPaths<T>(
+        metadata: Record<string, T> | undefined,
+        oldPath: string,
+        newPath: string,
+        preserveExisting: boolean
+    ): boolean {
+        if (!metadata) {
+            return false;
+        }
+        const clone = { ...metadata };
+        return this.updateNestedPaths(clone, oldPath, newPath, preserveExisting);
+    }
+
+    /**
+     * Updates all tag metadata entries when a tag is renamed.
+     * Migrates direct entries and nested descendants to the new path.
+     */
+    async handleTagRename(oldPath: string, newPath: string, preserveExisting = false, extraMutation?: SettingsMutation): Promise<void> {
+        const normalizedOld = normalizeTagPath(oldPath);
+        const normalizedNew = normalizeTagPath(newPath);
+        if (!normalizedOld || !normalizedNew || normalizedOld === normalizedNew) {
+            if (extraMutation) {
+                await this.saveAndUpdate(settings => (extraMutation(settings) ? true : false));
+            }
+            return;
+        }
+
+        const settingsSnapshot = this.settingsProvider.settings;
+        const hasMetadata = this.hasTagMetadataForPath(settingsSnapshot, normalizedOld);
+        const hasHiddenTags = hasHiddenTagMatch(settingsSnapshot, normalizedOld);
+        const hasHiddenFileTags = hasHiddenFileTagMatch(settingsSnapshot, normalizedOld);
+
+        const requiresUpdate = hasMetadata
+            ? this.willUpdateNestedPaths(settingsSnapshot.tagColors, normalizedOld, normalizedNew, preserveExisting) ||
+              this.willUpdateNestedPaths(settingsSnapshot.tagBackgroundColors, normalizedOld, normalizedNew, preserveExisting) ||
+              this.willUpdateNestedPaths(settingsSnapshot.tagIcons, normalizedOld, normalizedNew, preserveExisting) ||
+              this.willUpdateNestedPaths(settingsSnapshot.tagSortOverrides, normalizedOld, normalizedNew, preserveExisting) ||
+              this.willUpdateNestedPaths(settingsSnapshot.tagTreeSortOverrides, normalizedOld, normalizedNew, preserveExisting) ||
+              this.willUpdateNestedPaths(settingsSnapshot.tagAppearances, normalizedOld, normalizedNew, preserveExisting)
+            : false;
+
+        if (!requiresUpdate && !hasHiddenTags && !hasHiddenFileTags && !extraMutation) {
+            return;
+        }
+
+        await this.saveAndUpdate(settings => {
+            let changed = false;
+            if (requiresUpdate) {
+                changed = this.updateNestedPaths(settings.tagColors, normalizedOld, normalizedNew, preserveExisting) || changed;
+                changed = this.updateNestedPaths(settings.tagBackgroundColors, normalizedOld, normalizedNew, preserveExisting) || changed;
+                changed = this.updateNestedPaths(settings.tagIcons, normalizedOld, normalizedNew, preserveExisting) || changed;
+                changed = this.updateNestedPaths(settings.tagSortOverrides, normalizedOld, normalizedNew, preserveExisting) || changed;
+                changed = this.updateNestedPaths(settings.tagTreeSortOverrides, normalizedOld, normalizedNew, preserveExisting) || changed;
+                changed = this.updateNestedPaths(settings.tagAppearances, normalizedOld, normalizedNew, preserveExisting) || changed;
+            }
+
+            changed = updateHiddenTagPrefixMatches(settings, normalizedOld, normalizedNew) || changed;
+            changed = updateHiddenFileTagPrefixMatches(settings, normalizedOld, normalizedNew) || changed;
+
+            if (extraMutation) {
+                changed = extraMutation(settings) || changed;
+            }
+
+            return changed;
+        });
+    }
+
+    /**
+     * Removes all metadata associated with a tag and its descendants
+     * Clears colors, icons, sort overrides, appearances, and hidden tag entries
+     */
+    async handleTagDelete(tagPath: string, extraMutation?: SettingsMutation): Promise<void> {
+        const normalized = normalizeTagPath(tagPath);
+        if (!normalized) {
+            if (extraMutation) {
+                await this.saveAndUpdate(settings => (extraMutation(settings) ? true : false));
+            }
+            return;
+        }
+
+        const settingsSnapshot = this.settingsProvider.settings;
+        const hasMetadata =
+            this.hasTagMetadataForPath(settingsSnapshot, normalized) ||
+            hasHiddenTagMatch(settingsSnapshot, normalized) ||
+            hasHiddenFileTagMatch(settingsSnapshot, normalized);
+
+        if (!hasMetadata && !extraMutation) {
+            return;
+        }
+
+        const prefix = `${normalized}/`;
+
+        await this.saveAndUpdate(settings => {
+            let changed = false;
+            if (hasMetadata) {
+                changed = this.removeTagMetadataForPath(settings.tagColors, normalized, prefix) || changed;
+                changed = this.removeTagMetadataForPath(settings.tagBackgroundColors, normalized, prefix) || changed;
+                changed = this.removeTagMetadataForPath(settings.tagIcons, normalized, prefix) || changed;
+                changed = this.removeTagMetadataForPath(settings.tagSortOverrides, normalized, prefix) || changed;
+                changed = this.removeTagMetadataForPath(settings.tagTreeSortOverrides, normalized, prefix) || changed;
+                changed = this.removeTagMetadataForPath(settings.tagAppearances, normalized, prefix) || changed;
+            }
+
+            changed = removeHiddenTagPrefixMatches(settings, normalized) || changed;
+            changed = removeHiddenFileTagPrefixMatches(settings, normalized) || changed;
+
+            if (extraMutation) {
+                changed = extraMutation(settings) || changed;
+            }
+
+            return changed;
+        });
+    }
+
+    /**
      * Clean up tag metadata for non-existent tags
      * @returns True if any changes were made
      */
@@ -234,6 +486,7 @@ export class TagMetadataService extends BaseMetadataService {
             this.cleanupMetadata(targetSettings, 'tagBackgroundColors', validator),
             this.cleanupMetadata(targetSettings, 'tagIcons', validator),
             this.cleanupMetadata(targetSettings, 'tagSortOverrides', validator),
+            this.cleanupMetadata(targetSettings, 'tagTreeSortOverrides', validator),
             this.cleanupMetadata(targetSettings, 'tagAppearances', validator)
         ]);
 
@@ -290,6 +543,7 @@ export class TagMetadataService extends BaseMetadataService {
             this.cleanupMetadata(targetSettings, 'tagBackgroundColors', validator),
             this.cleanupMetadata(targetSettings, 'tagIcons', validator),
             this.cleanupMetadata(targetSettings, 'tagSortOverrides', validator),
+            this.cleanupMetadata(targetSettings, 'tagTreeSortOverrides', validator),
             this.cleanupMetadata(targetSettings, 'tagAppearances', validator)
         ]);
 

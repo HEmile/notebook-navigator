@@ -1,10 +1,13 @@
 # Notebook Navigator Service Architecture
 
+Updated: March 16, 2026
+
 ## Table of Contents
 
 - [Overview](#overview)
 - [Service Hierarchy](#service-hierarchy)
 - [Core Services](#core-services)
+- [Plugin-Managed Services](#plugin-managed-services)
 - [Supporting Services](#supporting-services)
 - [Dependency Injection](#dependency-injection)
 - [Service Initialization](#service-initialization)
@@ -13,49 +16,131 @@
 
 ## Overview
 
-The service layer provides the business logic that sits between the storage layer and the UI components. Services
-encapsulate complex operations, manage state transitions, and coordinate between different parts of the system. All
-services are accessed through dependency injection via the ServicesContext, ensuring loose coupling and testability.
+The service layer hosts business logic that coordinates between the storage system and the React UI. Services handle
+vault mutations, metadata updates, background processing, and integration points. React components call into services
+through contexts, hooks, and the public API.
 
-ServicesContext currently exposes the plugin instance, Obsidian app, and these singleton services:
+Most UI code accesses services through `ServicesContext`. The provider exposes the Obsidian `app`, the plugin instance,
+a mobile flag, and the plugin-managed singletons:
 
-- FileSystemOperations (file and folder actions)
-- MetadataService (folder/tag/file metadata)
-- TagTreeService (tag tree state)
-- TagOperations (frontmatter tag mutations)
-- CommandQueueService (operation tracking)
-- OmnisearchService (optional search integration)
+- `fileSystemOps` (`FileSystemOperations`)
+- `metadataService` (`MetadataService`)
+- `propertyOperations` (`PropertyOperations`)
+- `tagOperations` (`TagOperations`)
+- `tagTreeService` (`TagTreeService`)
+- `propertyTreeService` (`PropertyTreeService`)
+- `commandQueue` (`CommandQueueService`)
+- `omnisearchService` (`OmnisearchService`)
+- `releaseCheckService` (`ReleaseCheckService`)
 
-IconService remains a plugin-level singleton accessed through `getIconService()`, and the content generation pipeline is
-constructed inside `StorageContext` via `ContentProviderRegistry` rather than being part of the dependency injection
-container.
+Convenience hooks wrap `ServicesContext` access:
+
+- `useServices()` returns the full context
+- `useFileSystemOps()` returns `fileSystemOps`
+- `useMetadataService()`, `useTagOperations()`, `usePropertyOperations()`, and `useCommandQueue()` throw when the service is `null`
+
+These instances are created during plugin startup and remain singletons for the lifetime of the plugin.
+`ServicesProvider` throws if `fileSystemOps` is not initialized; other services are nullable until the plugin finishes
+startup and must be guarded. `IconService` is a global singleton accessed through `getIconService()`.
+
+### Ownership and lifetimes
+
+- `NotebookNavigatorPlugin` owns plugin-wide singletons (services, controllers, managers) created during `onload()`.
+- Each mounted `NotebookNavigatorView` owns the primary React provider tree. `ServicesContext` provides references to
+  plugin singletons, while `StorageProvider` owns view-scoped storage state and background queues.
+- Each mounted `NotebookNavigatorCalendarView` owns a calendar sidebar tree (`SettingsProvider` →
+  `ServicesProvider` → `CalendarRightSidebar`) without storage, selection, or expansion providers.
+- `ContentProviderRegistry` is created by `StorageProvider` inside navigator view trees (via
+  `useInitializeContentProviderRegistry`) and is stopped during teardown.
+- `IndexedDBStorage` is initialized once per vault via `initializeDatabase()` and is accessed through `getDBInstance()`.
+
+`StorageContext` owns the IndexedDB sync lifecycle and the background content pipeline through `ContentProviderRegistry`.
+The registry is created when a navigator view mounts and is stopped during teardown; it is not exposed through
+`ServicesContext`.
+
+See `docs/metadata-pipeline.md` (cache rebuild flow, content provider processing pipeline).
 
 ## Service Hierarchy
 
-### Service Context and Main Services
+### ServicesContext
 
 ```mermaid
 graph TB
     ServicesContext["ServicesContext<br/>Dependency Injection"]
 
     subgraph "Core Services"
-        MetadataService["MetadataService<br/>Folder/tag/file metadata"]
-        FileSystemOperations["FileSystemOperations<br/>File operations & modals"]
+        MetadataService["MetadataService<br/>Metadata coordination"]
+        FileSystemOperations["FileSystemOperations<br/>Vault actions"]
     end
 
     subgraph "Supporting Services"
-        TagTreeService["TagTreeService<br/>Tag hierarchy"]
+        TagTreeService["TagTreeService<br/>Tag tree state"]
+        PropertyTreeService["PropertyTreeService<br/>Property tree state"]
         CommandQueue["CommandQueueService<br/>Operation tracking"]
-        TagOperations["TagOperations<br/>Tag management"]
-        OmnisearchService["OmnisearchService<br/>Omnisearch integration"]
+        TagOperations["TagOperations<br/>Tag workflows"]
+        PropertyOperations["PropertyOperations<br/>Property key workflows"]
+        Omnisearch["OmnisearchService<br/>Omnisearch bridge"]
+        ReleaseCheck["ReleaseCheckService<br/>Update notices"]
     end
 
     ServicesContext --> MetadataService
     ServicesContext --> FileSystemOperations
     ServicesContext --> TagTreeService
+    ServicesContext --> PropertyTreeService
     ServicesContext --> CommandQueue
     ServicesContext --> TagOperations
-    ServicesContext --> OmnisearchService
+    ServicesContext --> PropertyOperations
+    ServicesContext --> Omnisearch
+    ServicesContext --> ReleaseCheck
+```
+
+### Plugin-Managed Services
+
+```mermaid
+graph TB
+    Plugin["NotebookNavigatorPlugin"]
+
+    subgraph "ServicesContext exports"
+        MetadataService["MetadataService<br/>Metadata coordination"]
+        FileSystemOperations["FileSystemOperations<br/>Vault actions"]
+        TagOperations["TagOperations<br/>Tag workflows"]
+        PropertyOperations["PropertyOperations<br/>Property key workflows"]
+        TagTreeService["TagTreeService<br/>Tag tree snapshot"]
+        PropertyTreeService["PropertyTreeService<br/>Property tree snapshot"]
+        CommandQueue["CommandQueueService<br/>Operation tracking"]
+        Omnisearch["OmnisearchService<br/>Omnisearch bridge"]
+        ReleaseCheck["ReleaseCheckService<br/>Update notices"]
+    end
+
+    subgraph "Other plugin services"
+        RecentNotes["RecentNotesService<br/>Vault-local recents"]
+        RecentData["RecentDataManager<br/>Vault-local persistence"]
+        SettingsController["PluginSettingsController<br/>Settings load + sync-mode resolution"]
+        PreferencesController["PluginPreferencesController<br/>UX prefs + recent data"]
+        WorkspaceCoordinator["WorkspaceCoordinator<br/>Navigator + calendar leaves"]
+        HomepageController["HomepageController<br/>Homepage opening"]
+        ExternalIcons["ExternalIconProviderController<br/>External icon packs"]
+        API["NotebookNavigatorAPI<br/>Public surface"]
+    end
+
+    Plugin --> MetadataService
+    Plugin --> FileSystemOperations
+    Plugin --> TagOperations
+    Plugin --> PropertyOperations
+    Plugin --> TagTreeService
+    Plugin --> PropertyTreeService
+    Plugin --> CommandQueue
+    Plugin --> Omnisearch
+    Plugin --> ReleaseCheck
+
+    Plugin --> RecentNotes
+    Plugin --> RecentData
+    Plugin --> SettingsController
+    Plugin --> PreferencesController
+    Plugin --> WorkspaceCoordinator
+    Plugin --> HomepageController
+    Plugin --> ExternalIcons
+    Plugin --> API
 ```
 
 ### Metadata Service Structure
@@ -65,14 +150,18 @@ graph TB
     MetadataService["MetadataService<br/>Central metadata coordinator"]
 
     subgraph "Sub-Services"
-        FolderMeta["FolderMetadataService<br/>Colors, icons, sort"]
-        TagMeta["TagMetadataService<br/>Colors, icons, sort"]
-        FileMeta["FileMetadataService<br/>Pinned notes"]
+        FolderMeta["FolderMetadataService<br/>Colors, icons, sort, appearances"]
+        TagMeta["TagMetadataService<br/>Colors, icons, sort, appearances"]
+        PropertyMeta["PropertyMetadataService<br/>Colors, icons, sort overrides"]
+        FileMeta["FileMetadataService<br/>Pins, icons, colors"]
+        NavigationSeparators["NavigationSeparatorService<br/>Section/folder/tag/property separators"]
     end
 
     MetadataService --> FolderMeta
     MetadataService --> TagMeta
+    MetadataService --> PropertyMeta
     MetadataService --> FileMeta
+    MetadataService --> NavigationSeparators
 ```
 
 ### Content Provider Registry Structure
@@ -82,259 +171,504 @@ graph TB
     ContentRegistry["ContentProviderRegistry<br/>Provider coordinator"]
 
     subgraph "Content Providers"
-        PreviewProvider["PreviewContentProvider<br/>Note previews"]
-        ImageProvider["FeatureImageContentProvider<br/>Feature images"]
-        MetadataProvider["MetadataContentProvider<br/>Frontmatter fields"]
+        MarkdownPipelineProvider["MarkdownPipelineContentProvider<br/>Preview + word count + task counters + property pills + markdown feature images"]
+        FileThumbnailsProvider["FeatureImageContentProvider<br/>PDF thumbnails + non-markdown processed markers"]
+        MetadataProvider["MetadataContentProvider<br/>Frontmatter fields + hidden state"]
         TagProvider["TagContentProvider<br/>Tag extraction"]
     end
 
-    ContentRegistry --> PreviewProvider
-    ContentRegistry --> ImageProvider
+    ContentRegistry --> MarkdownPipelineProvider
+    ContentRegistry --> FileThumbnailsProvider
     ContentRegistry --> MetadataProvider
     ContentRegistry --> TagProvider
 ```
 
-`ContentProviderRegistry` is owned by `StorageContext`. The registry and its providers are created when storage mounts
-and are not exposed through `ServicesContext`.
+`ContentProviderRegistry` is owned by `StorageContext`. The registry and its providers are created by
+`useInitializeContentProviderRegistry` when a navigator view mounts and are stopped during teardown. The registry is not
+exposed through `ServicesContext`.
 
 ## Core Services
 
 ### MetadataService
 
-Central service for managing all metadata operations. Delegates to specialized sub-services for better organization and
-separation of concerns.
+Central coordinator for folder, tag, property, and file metadata. Delegates to specialized sub-services. Reads frontmatter-derived
+metadata from IndexedDB when `useFrontmatterMetadata` is enabled. File icon/color writes and migrations use frontmatter
+when `useFrontmatterMetadata` is enabled.
 
 **Location:** `src/services/MetadataService.ts`
 
 **Responsibilities:**
 
-- Folder metadata (colors, icons, sort overrides, appearances)
-- Tag metadata (colors, icons, sort overrides, appearances)
-- File metadata (pinned notes)
-- Metadata cleanup (manual trigger from settings only)
-- Rename operations coordination
+- Folder metadata: colors, background colors, icons, sort overrides, custom appearances, folder note metadata detection, and folder-note frontmatter writes.
+- Tag metadata: colors, background colors, icons, sort overrides, custom appearances.
+- Property metadata: key/value node colors, backgrounds, icons, and child sort overrides.
+- File metadata: pinned notes, icons, colors, frontmatter writes/migration helpers, iconize conversion support.
+- Navigation separators: section, folder, tag, and property separator entries.
+- Metadata cleanup and summary reporting based on vault state.
+- Rename and delete coordination for folders, tags, and files.
 
 **Sub-Services:**
 
 - **FolderMetadataService** (`src/services/metadata/FolderMetadataService.ts`)
-  - Manages folder colors, icons, custom sort orders, and appearance settings
-  - Handles folder rename metadata updates
-  - Persists data in plugin settings
+  - Validates folder existence, manages colors/backgrounds/icons, honors inheritance settings.
+  - Updates metadata paths on rename and delete.
+  - Cleans stale entries with diff validators.
 
 - **TagMetadataService** (`src/services/metadata/TagMetadataService.ts`)
-  - Manages tag colors, icons, custom sort orders, and appearance settings
-  - Handles tag rename metadata updates
-  - Persists data in plugin settings
+  - Tracks tag colors/backgrounds/icons/sort overrides.
+  - Updates nested metadata paths on tag rename/delete.
+  - Resolves inherited tag colors/backgrounds when enabled.
+  - Uses tag tree snapshots for cleanup.
+
+- **PropertyMetadataService** (`src/services/metadata/PropertyMetadataService.ts`)
+  - Tracks property key/value colors, backgrounds, icons, and child sort overrides.
+  - Normalizes property node ids and supports key/value-level metadata.
+  - Validates settings-backed property metadata against configured property fields.
 
 - **FileMetadataService** (`src/services/metadata/FileMetadataService.ts`)
-  - Manages pinned notes for folders and tags
-  - Handles file rename and move operations
-  - Maintains pin order and persistence
+  - Manages pinned notes per folder/tag/property context.
+  - Stores file icons and colors with frontmatter writes, settings fallback, and migration.
+  - Updates metadata during file rename/delete and syncs with IndexedDB cache.
 
-**Key Methods:**
+- **NavigationSeparatorService** (`src/services/metadata/NavigationSeparatorService.ts`)
+  - Persists separators for navigation sections, folders, tags, and property nodes.
+  - Updates separator keys on folder/tag rename and delete.
+  - Cleans stale entries during metadata cleanup and exposes a versioned subscription.
+
+**Selected API surface (examples):**
 
 ```typescript
-// Folder operations
+// Folder metadata
 setFolderColor(folderPath: string, color: string): Promise<void>
+setFolderBackgroundColor(folderPath: string, color: string): Promise<void>
 removeFolderColor(folderPath: string): Promise<void>
+removeFolderBackgroundColor(folderPath: string): Promise<void>
+getFolderColor(folderPath: string): string | undefined
+getFolderBackgroundColor(folderPath: string): string | undefined
 setFolderIcon(folderPath: string, iconId: string): Promise<void>
 removeFolderIcon(folderPath: string): Promise<void>
+getFolderIcon(folderPath: string): string | undefined
+setFolderStyleChangeListener(listener: ((folderPath: string) => void) | null): void
+getFolderDisplayData(folderPath: string): FolderDisplayData
+getFolderDisplayVersion(): number
+getFolderDisplayNameVersion(): number
 setFolderSortOverride(folderPath: string, sortOption: SortOption): Promise<void>
 removeFolderSortOverride(folderPath: string): Promise<void>
+getFolderSortOverride(folderPath: string): SortOption | undefined
 handleFolderRename(oldPath: string, newPath: string): Promise<void>
 handleFolderDelete(folderPath: string): Promise<void>
 
-// Tag operations
+// Tag metadata
 setTagColor(tagPath: string, color: string): Promise<void>
+setTagBackgroundColor(tagPath: string, color: string): Promise<void>
 removeTagColor(tagPath: string): Promise<void>
+removeTagBackgroundColor(tagPath: string): Promise<void>
+getTagColor(tagPath: string): string | undefined
+getTagBackgroundColor(tagPath: string): string | undefined
+getTagColorData(tagPath: string): TagColorData
 setTagIcon(tagPath: string, iconId: string): Promise<void>
 removeTagIcon(tagPath: string): Promise<void>
+getTagIcon(tagPath: string): string | undefined
+handleTagRename(oldPath: string, newPath: string, preserveExisting?: boolean): Promise<void>
+handleTagDelete(tagPath: string): Promise<void>
 setTagSortOverride(tagPath: string, sortOption: SortOption): Promise<void>
 removeTagSortOverride(tagPath: string): Promise<void>
+getTagSortOverride(tagPath: string): SortOption | undefined
+setTagChildSortOrderOverride(tagPath: string, sortOrder: AlphaSortOrder): Promise<void>
 
-// File pin operations
-togglePinnedNote(filePath: string, context: NavigatorContext): Promise<void>
+// Property metadata
+setPropertyColor(nodeId: string, color: string): Promise<void>
+setPropertyBackgroundColor(nodeId: string, color: string): Promise<void>
+removePropertyColor(nodeId: string): Promise<void>
+removePropertyBackgroundColor(nodeId: string): Promise<void>
+getPropertyColor(nodeId: string): string | undefined
+getPropertyBackgroundColor(nodeId: string): string | undefined
+getPropertyColorData(nodeId: string): PropertyColorData
+setPropertyIcon(nodeId: string, iconId: string): Promise<void>
+removePropertyIcon(nodeId: string): Promise<void>
+getPropertyIcon(nodeId: string): string | undefined
+setPropertyChildSortOrderOverride(nodeId: string, sortOrder: AlphaSortOrder): Promise<void>
+removePropertyChildSortOrderOverride(nodeId: string): Promise<void>
+getPropertyChildSortOrderOverride(nodeId: string): AlphaSortOrder | undefined
+
+// Navigation separators
+getNavigationSeparators(): Record<string, boolean>
+hasNavigationSeparator(target: NavigationSeparatorTarget): boolean
+addNavigationSeparator(target: NavigationSeparatorTarget): Promise<void>
+removeNavigationSeparator(target: NavigationSeparatorTarget): Promise<void>
+getNavigationSeparatorsVersion(): number
+subscribeToNavigationSeparatorChanges(listener: (version: number) => void): () => void
+
+// File metadata
+togglePin(filePath: string, context: NavigatorContext): Promise<void>
+pinNotes(filePaths: string[], context: NavigatorContext): Promise<number>
 isFilePinned(filePath: string, context?: NavigatorContext): boolean
 getPinnedNotes(context?: NavigatorContext): string[]
+setFileIcon(filePath: string, iconId: string): Promise<void>
+removeFileIcon(filePath: string): Promise<void>
+getFileIcon(filePath: string): string | undefined
+setFileColor(filePath: string, color: string): Promise<void>
+removeFileColor(filePath: string): Promise<void>
+getFileColor(filePath: string): string | undefined
+setFileBackgroundColor(filePath: string, color: string): Promise<void>
+removeFileBackgroundColor(filePath: string): Promise<void>
+getFileBackgroundColor(filePath: string): string | undefined
+migrateFileMetadataToFrontmatter(): Promise<FileMetadataMigrationResult>
 handleFileDelete(filePath: string): Promise<void>
 handleFileRename(oldPath: string, newPath: string): Promise<void>
 
-// Cleanup operations (for external file changes)
-cleanupAllMetadata(): Promise<boolean>  // Manual trigger from settings
-cleanupTagMetadata(): Promise<boolean>
-cleanupFolderMetadata(): Promise<boolean>
-cleanupPinnedNotes(): Promise<boolean>
-runUnifiedCleanup(validators: CleanupValidators): Promise<boolean>
+// Cleanup utilities
+cleanupAllMetadata(targetSettings?: NotebookNavigatorSettings): Promise<boolean>
+cleanupTagMetadata(targetSettings?: NotebookNavigatorSettings): Promise<boolean>
+runUnifiedCleanup(validators: CleanupValidators, targetSettings?: NotebookNavigatorSettings): Promise<boolean>
 getCleanupSummary(): Promise<MetadataCleanupSummary>
-static prepareCleanupValidators(app: App, tagTree: Map<string, TagTreeNode>): CleanupValidators
+MetadataService.prepareCleanupValidators(app: App, tagTree?: Map<string, TagTreeNode>): CleanupValidators
 ```
 
 ### FileSystemOperations
 
-Handles all file system operations with user interaction through modals and confirmations.
+Handles all vault mutations triggered from the navigator, including confirmation modals, selection updates, and command
+queue integration.
 
 **Location:** `src/services/FileSystemService.ts`
 
 **Responsibilities:**
 
-- File creation, deletion, and renaming
-- Folder creation, deletion, and renaming
-- Folder note management
-- Move operations with conflict resolution
-- Modal dialogs for user input
-- Smart selection updates after operations
+- File and folder creation, rename, deletion, duplication.
+- Folder note conversion with conflict handling.
+- Tag/property-driven note creation and property assignment.
+- Batch file moves with modal workflows and selection updates.
+- Canvas/base drawing creation and reveal helpers.
+- Command queue tracking for deletes and moves.
+- System actions such as reveal in explorer and version history.
 
 **Key Methods:**
 
 ```typescript
-// File operations
-createNewFile(parent: TFolder): Promise<TFile | null>
-renameFile(file: TFile, settings?: NotebookNavigatorSettings): Promise<void>
-deleteFile(file: TFile, confirmBeforeDelete: boolean, onSuccess?: () => void, preDeleteAction?: () => Promise<void>): Promise<void>
-deleteSelectedFile(): Promise<void>  // Smart deletion with selection update
-duplicateNote(file: TFile): Promise<void>
-
-// Folder operations
 createNewFolder(parent: TFolder, onSuccess?: (path: string) => void): Promise<void>
+createNewFile(parent: TFolder): Promise<TFile | null>
+createNewFileForTag(tagPath: string, sourcePath?: string, openInNewTab?: boolean): Promise<TFile | null>
+createNewFileForProperty(propertyNodeId: string, sourcePath?: string, openInNewTab?: boolean): Promise<TFile | null>
 renameFolder(folder: TFolder, settings?: NotebookNavigatorSettings): Promise<void>
+renameFile(file: TFile): Promise<void>
 deleteFolder(folder: TFolder, confirmBeforeDelete: boolean, onSuccess?: () => void): Promise<void>
+deleteFile(file: TFile, confirmBeforeDelete: boolean, onSuccess?: () => void, preDeleteAction?: () => Promise<void>): Promise<void>
+deleteSelectedFile(
+  file: TFile,
+  settings: NotebookNavigatorSettings,
+  selectionContext: SelectionContext,
+  selectionDispatch: SelectionDispatch,
+  confirmBeforeDelete: boolean
+): Promise<void>
+duplicateNote(file: TFile): Promise<void>
 duplicateFolder(folder: TFolder): Promise<void>
+isDescendant(parent: TAbstractFile, child: TAbstractFile): boolean
 
-// Folder note operations
-createFolderNote(folder: TFolder): Promise<TFile | null>
-deleteFolderNote(folder: TFolder): Promise<void>
+moveFilesToFolder(options: MoveFilesOptions): Promise<MoveFilesResult>
+moveFilesWithModal(
+  files: TFile[],
+  selectionContext?: {
+    selectedFile: TFile | null;
+    dispatch: SelectionDispatch;
+    allFiles: TFile[];
+  }
+): Promise<void>
+moveFolderWithModal(
+  folder: TFolder
+): Promise<
+  | { status: 'success'; data: MoveFolderResult }
+  | { status: 'cancelled' }
+  | { status: 'error'; error: unknown }
+>
 
-// Multi-file operations
-moveFilesWithModal(files: TFile[], targetFolder: TFolder, onSuccess?: () => void): Promise<void>
-deleteMultipleFiles(files: TAbstractFile[], confirmBeforeDelete: boolean, onSuccess?: () => void): Promise<void>
-deleteFilesWithSmartSelection(files: TAbstractFile[], confirmBeforeDelete: boolean): Promise<void>
+convertFileToFolderNote(file: TFile, settings: NotebookNavigatorSettings): Promise<void>
 
-// Special file types
+deleteMultipleFiles(
+  files: TFile[],
+  confirmBeforeDelete: boolean,
+  preDeleteAction?: () => void | Promise<void>
+): Promise<void>
+deleteFilesWithSmartSelection(
+  selectedFiles: Set<string>,
+  allFiles: TFile[],
+  selectionDispatch: SelectionDispatch,
+  confirmBeforeDelete: boolean
+): Promise<void>
+
 createCanvas(parent: TFolder): Promise<TFile | null>
 createBase(parent: TFolder): Promise<TFile | null>
-createNewDrawing(parent: TFolder): Promise<TFile | null>
+createNewDrawing(parent: TFolder, type?: 'excalidraw' | 'tldraw'): Promise<TFile | null>
+applyPropertyNodeToFiles(propertyNodeId: string, files: readonly TFile[]): Promise<ApplyPropertyNodeResult>
 
-// System operations
 openVersionHistory(file: TFile): Promise<void>
-revealInSystemExplorer(file: TFile | TFolder): Promise<void>
 getRevealInSystemExplorerText(): string
-
-// Utility methods
-isDescendant(parent: TAbstractFile, child: TAbstractFile): boolean
+revealInSystemExplorer(file: TFile | TFolder): Promise<void>
 ```
 
 ### ContentProviderRegistry
 
-Manages the registration and coordination of content providers for background content generation. StorageContext creates
-and owns the registry during mount; consumers interact with content through StorageContext rather than via
-ServicesContext.
+Coordinates background content providers that populate IndexedDB mirrors used by the UI. Owned by `StorageContext`.
 
 **Location:** `src/services/content/ContentProviderRegistry.ts`
 
+`StorageContext` creates the registry in `useInitializeContentProviderRegistry` (`src/context/storage/useInitializeContentProviderRegistry.ts`).
+That hook wires shared helpers used across providers:
+
+- `ContentReadCache` (shared `vault.cachedRead()` cache)
+- `FeatureImageThumbnailRuntime` (shared thumbnail/external-request runtime for feature images)
+
 **Responsibilities:**
 
-- Provider registration and lifecycle
-- Settings change coordination
-- Batch content generation
-- Content clearing on settings changes
-
-**Content Providers:**
-
-- **PreviewContentProvider** (`src/services/content/PreviewContentProvider.ts`)
-  - Generates preview text from note content
-  - Respects heading skip settings
-  - Handles unicode and length limits
-  - Supports configurable preview length
-
-- **FeatureImageContentProvider** (`src/services/content/FeatureImageContentProvider.ts`)
-  - Extracts feature images from frontmatter properties
-  - Falls back to first embedded image in content
-  - Supports multiple image property names
-  - Validates image file existence
-
-- **MetadataContentProvider** (`src/services/content/MetadataContentProvider.ts`)
-  - Extracts custom frontmatter fields
-  - Handles name field overrides
-  - Processes created/modified timestamp fields
-  - Parses timestamps with configurable formats
-
-- **TagContentProvider** (`src/services/content/TagContentProvider.ts`)
-  - Extracts tags from both frontmatter and document text
-  - Uses Obsidian's getAllTags for comprehensive tag extraction
-  - Deduplicates tags with different casing
-  - Preserves original tag casing
-
-**Provider Interface:**
-
-```typescript
-interface IContentProvider {
-  getContentType(): ContentType;
-  getRelevantSettings(): (keyof NotebookNavigatorSettings)[];
-  shouldRegenerate(oldSettings, newSettings): boolean;
-  clearContent(): Promise<void>;
-  queueFiles(files: TFile[]): void; // No settings parameter
-  startProcessing(settings: NotebookNavigatorSettings): void;
-  stopProcessing(): void;
-  onSettingsChanged(settings): void;
-}
-```
+- Provider registration and lookup.
+- Settings change coordination, including clearing content and notifying providers.
+- Batching queues across providers with optional include/exclude filters.
+- Stopping provider processing during teardown.
 
 **Registry Methods:**
 
 ```typescript
 registerProvider(provider: IContentProvider): void
-getProvider(type: ContentType): IContentProvider | undefined
+getProvider(type: ContentProviderType): IContentProvider | undefined
 getAllProviders(): IContentProvider[]
 getAllRelevantSettings(): (keyof NotebookNavigatorSettings)[]
-queueFilesForAllProviders(files: TFile[], settings: NotebookNavigatorSettings): void
-handleSettingsChange(oldSettings, newSettings): void
+handleSettingsChange(oldSettings: NotebookNavigatorSettings, newSettings: NotebookNavigatorSettings): Promise<ContentProviderType[]>
+queueFilesForAllProviders(
+  files: TFile[],
+  settings: NotebookNavigatorSettings,
+  options?: { include?: ContentProviderType[]; exclude?: ContentProviderType[] }
+): void
 stopAllProcessing(): void
 ```
+
+**Content Providers:**
+
+- **MarkdownPipelineContentProvider** (`src/services/content/MarkdownPipelineContentProvider.ts`)
+  - Generates markdown-derived content in a single pass (preview text, word count, task counters, property pills, markdown feature images).
+  - Extends `FeatureImageContentProvider`; uses its thumbnail helpers with local files and external references.
+  - Uses Obsidian's metadata cache for frontmatter and frontmatter position offsets.
+
+- **FeatureImageContentProvider** (`src/services/content/FeatureImageContentProvider.ts`)
+  - Generates PDF thumbnails and records processed markers for other non-markdown files.
+  - Provides thumbnail helpers used by `MarkdownPipelineContentProvider` (local images, external URLs, YouTube).
+
+- **MetadataContentProvider** (`src/services/content/MetadataContentProvider.ts`)
+  - Extracts configured frontmatter metadata fields and hidden state based on active vault profile hidden frontmatter properties.
+
+- **TagContentProvider** (`src/services/content/TagContentProvider.ts`)
+  - Extracts tags from Obsidian's metadata cache (`getAllTags(metadata)`).
+  - Deduplicates case variants and stores values without the `#` prefix.
+
+## Plugin-Managed Services
+
+These services live on the plugin instance and are surfaced to React code through specialized contexts or helper
+methods.
+
+### RecentNotesService
+
+**Location:** `src/services/RecentNotesService.ts`
+
+**Responsibilities:**
+
+- Maintains the recent notes list stored in vault-local storage.
+- Deduplicates entries, enforces configurable limits, and preserves ordering.
+- Provides helpers for open, rename, and delete events.
+
+**Key Methods:**
+
+```typescript
+recordFileOpen(file: TFile): boolean
+renameEntry(oldPath: string, newPath: string): boolean
+removeEntry(path: string): boolean
+```
+
+### RecentDataManager
+
+**Location:** `src/services/recent/RecentDataManager.ts`
+
+**Responsibilities:**
+
+- Wraps `RecentStorageService` lifecycle for vault-local storage of recent notes and icons.
+- Hydrates data during plugin startup and notifies listeners on change.
+- Applies limits and handles flushing pending persisting tasks.
+
+**Key Methods:**
+
+```typescript
+initialize(activeVaultProfileId: string): void
+dispose(): void
+getRecentNotes(): string[]
+setRecentNotes(recentNotes: string[]): void
+applyRecentNotesLimit(): void
+getRecentIcons(): Record<string, string[]>
+setRecentIcons(recentIcons: Record<string, string[]>): void
+flushPendingPersists(): void
+```
+
+### PluginSettingsController and PluginPreferencesController
+
+**Location:** `src/services/settings/PluginSettingsController.ts`, `src/services/settings/PluginPreferencesController.ts`
+
+**Responsibilities:**
+
+- `PluginSettingsController` loads `data.json`, runs synced/local preference migrations, owns sync-mode resolution through the
+  internal `syncModeRegistry`, and persists normalized settings.
+- `PluginPreferencesController` manages vault-local UX preferences, dual-pane state mirrors, and `RecentDataManager`
+  lifecycle/listeners.
+
+`NotebookNavigatorPlugin` owns both controllers as long-lived instances. The sync-mode registry still lives in
+`src/services/settings/syncModeRegistry.ts`, but it is created and cached inside `PluginSettingsController`, not on the
+plugin instance directly.
+
+### ExternalIconProviderController
+
+**Location:** `src/services/icons/external/ExternalIconProviderController.ts`
+
+**Responsibilities:**
+
+- Manages install/update/removal flow for external icon packs.
+- Downloads assets, stores them in `IconAssetDatabase`, and registers providers with `IconService`.
+- Syncs provider enablement with plugin settings and bundled manifests.
+
+**Key Methods:**
+
+```typescript
+initialize(): Promise<void>
+dispose(): void
+installProvider(id: ExternalIconProviderId, options?: InstallOptions): Promise<void>
+removeProvider(id: ExternalIconProviderId, options?: RemoveOptions): Promise<void>
+syncWithSettings(): Promise<void>
+isProviderInstalled(id: ExternalIconProviderId): boolean
+isProviderDownloading(id: ExternalIconProviderId): boolean
+getProviderVersion(id: ExternalIconProviderId): string | null
+```
+
+### WorkspaceCoordinator
+
+**Location:** `src/services/workspace/WorkspaceCoordinator.ts`
+
+**Responsibilities:**
+
+- Ensures navigator leaves exist and are revealed.
+- Ensures the calendar view leaf is attached to the right sidebar when `calendarPlacement` is `right-sidebar`.
+- Coordinates manual and contextual reveal actions for files across all navigator instances.
+
+**Key Methods:**
+
+```typescript
+activateNavigatorView(): Promise<WorkspaceLeaf | null>
+getNavigatorLeaves(): WorkspaceLeaf[]
+detachCalendarViewLeaves(): void
+ensureCalendarViewInRightSidebar(options?: {
+  reveal?: boolean
+  activate?: boolean
+  shouldContinue?: () => boolean
+}): Promise<WorkspaceLeaf | null>
+revealFileInActualFolder(file: TFile, options?: RevealFileOptions): void
+revealFileInNearestFolder(file: TFile, options?: RevealFileOptions): void
+```
+
+`revealFileInActualFolder(...)` is strict reveal behavior. Hidden files are not revealable while hidden items are off. In that case the view keeps its current folder, tag, or property context and may update selected file as fallback.
+
+### HomepageController
+
+**Location:** `src/services/workspace/HomepageController.ts`
+
+**Responsibilities:**
+
+- Resolves the configured homepage target and opens it at startup or via command.
+- Works with `WorkspaceCoordinator` and `CommandQueueService` to open files and reveal them in the navigator.
+- Handles deferred triggers while the workspace loads.
+
+**Key Methods:**
+
+```typescript
+resolveHomepageFile(): TFile | null
+handleWorkspaceReady(options: { shouldActivateOnStartup: boolean }): Promise<void>
+open(trigger: 'startup' | 'command'): Promise<boolean>
+```
+
+### NotebookNavigatorAPI
+
+**Location:** `src/api/NotebookNavigatorAPI.ts`
+
+Provides the typed public API surface for external integrations and internal cross-context events.
+
+- Sub-APIs: `navigation`, `metadata`, `selection`, `menus` (`src/api/modules/*`)
+- Event bus: `on(...)`, `once(...)`, `off(...)` (`src/api/NotebookNavigatorAPI.ts`)
+- Storage readiness: `isStorageReady()` and `whenReady()` are public; internal readiness updates use the internal API bridge
 
 ## Supporting Services
 
 ### TagTreeService
 
-Bridge between React components and the tag tree data structure.
+Bridge between React storage state and non-React consumers that need tag data.
 
 **Location:** `src/services/TagTreeService.ts`
 
 **Responsibilities:**
 
-- Tag tree data access
-- Tag tree snapshot caching
-- Untagged count tracking
-- Tag node lookup
-- Tag path collection
+- Stores latest tag tree snapshot and tagged/untagged counts.
+- Provides lookup helpers used by services outside React.
 
 **Key Methods:**
 
 ```typescript
-updateTagTree(tree: Map<string, TagTreeNode>, untagged: number): void
+updateTagTree(tree: Map<string, TagTreeNode>, tagged: number, untagged: number): void
 getTagTree(): Map<string, TagTreeNode>
-findTagNode(tagPath: string): TagTreeNode | null
-getAllTagPaths(): string[]
+hasNodes(): boolean
+addTreeUpdateListener(listener: () => void): () => void
+getFlattenedTagNodes(): readonly TagTreeNode[]
 getUntaggedCount(): number
-collectTagPaths(node: TagTreeNode): Set<string>
+getTaggedCount(): number
+findTagNode(tagPath: string): TagTreeNode | null
+resolveSelectionTagPath(tagPath: string): string | null
+getAllTagPaths(): readonly string[]
+collectDescendantTagPaths(tagPath: string): Set<string>
+collectTagFilePaths(tagPath: string): string[]
+```
+
+### PropertyTreeService
+
+Bridge between React storage state and non-React consumers that need property node data.
+
+**Location:** `src/services/PropertyTreeService.ts`
+
+**Responsibilities:**
+
+- Stores latest property tree snapshot keyed by normalized property key.
+- Provides property node lookup and selection id resolution.
+- Collects descendant node ids and file paths for property key/value nodes.
+- Publishes tree update events to consumers outside React.
+
+**Key Methods:**
+
+```typescript
+updatePropertyTree(tree: Map<string, PropertyTreeNode>): void
+getPropertyTree(): Map<string, PropertyTreeNode>
+hasNodes(): boolean
+addTreeUpdateListener(listener: () => void): () => void
+findNode(nodeId: string): PropertyTreeNode | null
+getKeyNode(normalizedKey: string): PropertyTreeNode | null
+resolveSelectionNodeId(selectionNodeId: PropertySelectionNodeId): PropertySelectionNodeId
+collectDescendantNodeIds(nodeId: string): Set<string>
+collectFilePaths(nodeId: string, includeDescendants: boolean): Set<string>
+collectFilesForKeys(normalizedKeys: Iterable<string>): Set<string>
 ```
 
 ### CommandQueueService
 
-Manages operation context and tracking, replacing global window flags.
+Tracks in-flight operations so React code can batch updates and adjust behavior during complex flows.
 
 **Location:** `src/services/CommandQueueService.ts`
 
 **Responsibilities:**
 
-- Operation queueing and execution
-- Context preservation during operations
-- File move tracking
-- File delete tracking
-- Folder note open tracking
-- Version history operations
-- New context (tab/split/window) tracking
+- Records move/delete operations, folder note opens, version history opens, new context opens, active file opens, and
+  homepage loads.
+- Provides `onOperationChange` subscription for UI hooks.
+- Serializes open-active-file requests and tracks active operation state.
 
-**Operation types:**
+**Operation Types:**
 
 ```typescript
 enum OperationType {
@@ -342,201 +676,184 @@ enum OperationType {
   DELETE_FILES = 'delete-files',
   OPEN_FOLDER_NOTE = 'open-folder-note',
   OPEN_VERSION_HISTORY = 'open-version-history',
-  OPEN_IN_NEW_CONTEXT = 'open-in-new-context'
+  OPEN_IN_NEW_CONTEXT = 'open-in-new-context',
+  OPEN_ACTIVE_FILE = 'open-active-file',
+  OPEN_HOMEPAGE = 'open-homepage'
 }
 ```
-
-**Key methods:**
-
-```typescript
-// Check operation status
-isMovingFile(): boolean
-isDeletingFiles(): boolean
-isOpeningFolderNote(): boolean
-isOpeningVersionHistory(): boolean
-isOpeningInNewContext(): boolean  // Only for tab/split, not window
-
-// Execute operations with tracking
-executeMoveFiles(files: TFile[], targetFolder: TFolder): Promise<CommandResult>
-executeDeleteFiles(files: TFile[], performDelete: () => Promise<void>): Promise<CommandResult>
-executeOpenFolderNote(folderPath: string, openFile: () => Promise<void>): Promise<CommandResult>
-executeOpenVersionHistory(file: TFile, openHistory: () => Promise<void>): Promise<CommandResult>
-executeOpenInNewContext(file: TFile, context: PaneType, openFile: () => Promise<void>): Promise<CommandResult>
-
-// Subscribe to operation activity changes
-onOperationChange(listener: (type: OperationType, active: boolean) => void): () => void
-
-// Debug and maintenance
-getActiveOperations(): Operation[]
-clearAllOperations(): void
-```
-
-**Implementation Details:**
-
-- **Operation Tracking**: Each operation is assigned a unique ID and tracked in an internal Map
-- **Automatic Cleanup**: Operations are automatically removed after completion or error
-- **Context Awareness**: The `isOpeningInNewContext()` method only returns true for tab/split operations, not window
-  operations (since window opens don't affect the current window's focus)
-- **Command Results**: All execute methods return a `CommandResult` interface:
-  ```typescript
-  interface CommandResult<T = unknown> {
-    success: boolean;
-    data?: T; // Operation-specific data (e.g., move counts)
-    error?: Error;
-  }
-  ```
-- **Move operation results**: returns `{ movedCount: number; skippedCount: number }` for file move operations
-
-**Batch UI update pattern:**
-
-- The file list suppresses intermediate refreshes during batch operations.
-- `useListPaneData` defers handling of `vault.create`, `vault.delete`, and `vault.rename` while `MOVE_FILE` or
-  `DELETE_FILES` are active.
-- After the operation ends, it flushes a single refresh after `TIMEOUTS.FILE_OPERATION_DELAY`.
-- Subscription example:
-
-```typescript
-// useListPaneData
-const unsubscribe = commandQueue.onOperationChange((type, active) => {
-  if (type === OperationType.MOVE_FILE || type === OperationType.DELETE_FILES) {
-    operationActiveRef.current = active;
-    if (!active) {
-      flushPendingWhenIdle(); // schedules one update after TIMEOUTS.FILE_OPERATION_DELAY
-    }
-  }
-});
-```
-
-**Delete integration:**
-
-- `FileSystemOperations.deleteFile` and `deleteMultipleFiles` wrap deletes with `executeDeleteFiles`.
-- This aligns delete behavior with move behavior for list updates.
-
-### IconService
-
-Singleton service managing icon providers and rendering. IconService is not part of `ServicesContext`; consumers access
-it via `getIconService()` from `src/services/icons`.
-
-**Location:** `src/services/icons/IconService.ts`
-
-**Responsibilities:**
-
-- Provider registration (built-in and external)
-- Icon ID parsing with prefixes
-- Recent icons tracking
-- Cross-provider search
-- Icon rendering coordination
-- External icon pack management
-
-**Built-in Icon Providers:**
-
-- **LucideIconProvider** - Obsidian's built-in Lucide icons
-- **EmojiIconProvider** - Unicode emoji support
-
-**Downloadable Icon Packs:**
-
-External icon packs can be downloaded and managed through settings:
-
-- **BootstrapIconProvider** - Bootstrap Icons (1,800+ icons)
-- **FontAwesomeIconProvider** - Font Awesome Free (2,000+ icons)
-- **MaterialIconProvider** - Material Icons (2,100+ icons)
-- **PhosphorIconProvider** - Phosphor Icons (7,000+ icons)
-- **RpgAwesomeIconProvider** - RPG Awesome (500+ game/fantasy icons)
-
-**Icon Pack Architecture:**
-
-- **ExternalIconProviderController** (`src/services/icons/external/ExternalIconProviderController.ts`)
-  - Manages download, installation, and removal of icon packs
-  - Handles version management and updates
-  - Coordinates with IconAssetDatabase for storage
-
-- **IconAssetDatabase** (`src/services/icons/external/IconAssetDatabase.ts`)
-  - IndexedDB-based storage for icon pack assets (fonts, CSS, manifests)
-  - Device-local storage (not synced across devices)
-  - Automatic cleanup and version management
-  - Database name: `notebooknavigator/icon-assets/{appId}`
 
 **Key Methods:**
 
 ```typescript
-// Provider management
-registerProvider(provider: IconProvider): void
-unregisterProvider(providerId: string): void
-getProvider(providerId: string): IconProvider | undefined
-getAllProviders(): IconProvider[]
+onOperationChange(listener: (type: OperationType, active: boolean) => void): () => void
+hasActiveOperation(type: OperationType): boolean
+getActiveOperations(): Operation[]
+clearAllOperations(): void
 
-// Icon operations
-parseIconId(iconId: string): ParsedIconId
-renderIcon(container: HTMLElement, iconId: string, size?: number): void  // Note: parameter order
-formatIconId(provider: string, identifier: string): string
-isValidIcon(iconId: string): boolean
+isMovingFile(): boolean
+isDeletingFiles(): boolean
+isOpeningFolderNote(): boolean
+isOpeningHomepage(): boolean
+isOpeningVersionHistory(): boolean
+isOpeningInNewContext(): boolean
 
-// Icon search and retrieval
-search(query: string, providerId?: string): IconDefinition[]
-getAllIcons(providerId?: string): IconDefinition[]
-getRecentIcons(): string[]
+executeMoveFiles(
+  files: TFile[],
+  targetFolder: TFolder
+): Promise<CommandResult<{ movedCount: number; skippedCount: number; errors: { filePath: string; error: unknown }[] }>>
+executeDeleteFiles(files: TFile[], performDelete: () => Promise<void>): Promise<CommandResult>
+executeOpenFolderNote(folderPath: string, openFile: () => Promise<void>): Promise<CommandResult>
+executeOpenVersionHistory(file: TFile, openHistory: () => Promise<void>): Promise<CommandResult>
+executeOpenInNewContext(file: TFile, context: PaneType, openFile: () => Promise<void>): Promise<CommandResult>
+executeOpenActiveFile(file: TFile, openFile: () => Promise<void>): Promise<CommandResult<{ skipped: boolean }>>
+executeHomepageOpen(file: TFile, openFile: () => Promise<void>): Promise<CommandResult>
 ```
 
 ### TagOperations
 
-Manages tag operations on files through frontmatter manipulation.
+Facade for tag operations across the vault.
 
 **Location:** `src/services/TagOperations.ts`
 
 **Responsibilities:**
 
-- Adding tags to files
-- Removing specific tags
-- Clearing all tags
-- Tag hierarchy management
-- Case-insensitive tag handling
+- Adds tags while preventing duplicates and ancestor conflicts.
+- Removes single tags or clears all tags from files.
+- Renames and deletes tags using modal workflows and file mutations.
+- Updates tag metadata and shortcuts after tag rename/delete operations.
+- Emits tag rename/delete events to registered listeners.
 
 **Key Methods:**
 
 ```typescript
-addTagToFiles(tag: string, files: TFile[]): Promise<{added: number, skipped: number}>
-removeTagFromFiles(tag: string, files: TFile[]): Promise<number>  // Returns removed count only
-clearAllTagsFromFiles(files: TFile[]): Promise<number>  // Different method name, returns count
+addTagRenameListener(listener: (payload: TagRenameEventPayload) => void): () => void
+addTagDeleteListener(listener: (payload: TagDeleteEventPayload) => void): () => void
+addTagToFiles(tag: string, files: TFile[]): Promise<{ added: number; skipped: number }>
+removeTagFromFiles(tag: string, files: TFile[]): Promise<number>
+clearAllTagsFromFiles(files: TFile[]): Promise<number>
 getTagsFromFiles(files: TFile[]): string[]
-// Note: fileHasTagOrAncestor is a private method, not part of public API
+promptRenameTag(tagPath: string): Promise<void>
+promoteTagToRoot(sourceTagPath: string): Promise<void>
+renameTagByDrag(sourceTagPath: string, targetTagPath: string): Promise<void>
+promptDeleteTag(tagPath: string): Promise<void>
+```
+
+### PropertyOperations
+
+Facade for property key rename/delete workflows across the vault.
+
+**Location:** `src/services/PropertyOperations.ts`
+
+**Responsibilities:**
+
+- Renames and deletes property keys through modal workflows and batched frontmatter mutations.
+- Updates settings-backed property metadata records and active-profile property field lists after successful changes.
+- Emits property rename/delete events to listeners used by the React layer and other services.
+
+**Key Methods:**
+
+```typescript
+addPropertyKeyRenameListener(listener: (payload: PropertyKeyRenameEventPayload) => void): () => void
+addPropertyKeyDeleteListener(listener: (payload: PropertyKeyDeleteEventPayload) => void): () => void
+promptRenamePropertyKey(normalizedKey: string): Promise<void>
+promptDeletePropertyKey(normalizedKey: string): Promise<void>
 ```
 
 ### OmnisearchService
 
-Wraps the community Omnisearch plugin and exposes optional full-text search features.
+Optional integration with the community Omnisearch plugin.
 
 **Location:** `src/services/OmnisearchService.ts`
 
 **Responsibilities:**
 
-- Detect Omnisearch availability
-- Execute full-text searches when the plugin is installed
-- Translate raw Omnisearch results into `OmnisearchHit`
-- Register and unregister indexing callbacks for reactive updates
+- Detects the Omnisearch API through plugin manager or global scope.
+- Executes full-text searches and normalizes result data.
+- Registers indexing callbacks when Omnisearch is available.
 
 **Key Methods:**
 
 ```typescript
 isAvailable(): boolean
-search(query: string): Promise<OmnisearchHit[]>
+search(query: string, options?: { pathScope?: string }): Promise<OmnisearchHit[]>
 registerOnIndexed(callback: () => void): void
 unregisterOnIndexed(callback: () => void): void
 ```
 
+### IconService
+
+Global singleton that coordinates icon providers and rendering.
+
+**Location:** `src/services/icons/IconService.ts`
+
+**Responsibilities:**
+
+- Built-in providers (`LucideIconProvider`, `EmojiIconProvider`) are registered during `getIconService()` initialization.
+- Manages provider registry, icon id parsing/formatting, rendering, validation, and search.
+- `ExternalIconProviderController` registers downloadable providers with `IconService`.
+
+**Icon Providers:**
+
+- Built-in: `LucideIconProvider`, `EmojiIconProvider`
+- Downloadable: `BootstrapIconProvider`, `FontAwesomeIconProvider`, `MaterialIconProvider`, `PhosphorIconProvider`,
+  `RpgAwesomeIconProvider`, `SimpleIconsProvider`
+
+**Key Methods:**
+
+```typescript
+registerProvider(provider: IconProvider): void
+unregisterProvider(providerId: string): void
+getProvider(providerId: string): IconProvider | undefined
+getAllProviders(): IconProvider[]
+parseIconId(iconId: string): ParsedIconId
+formatIconId(provider: string, identifier: string): string
+renderIcon(container: HTMLElement, iconId: string, size?: number): void
+isValidIcon(iconId: string): boolean
+search(query: string, providerId?: string): IconDefinition[]
+getAllIcons(providerId?: string): IconDefinition[]
+getVersion(): number
+subscribe(listener: () => void): () => void
+```
+
+### ReleaseCheckService
+
+**Location:** `src/services/ReleaseCheckService.ts`
+
+**Responsibilities:**
+
+- Polls GitHub releases and compares versions with the installed plugin.
+- Stores timestamps and latest announced releases in settings.
+- Provides pending notices consumed by the React UI.
+
+**Key Methods:**
+
+```typescript
+checkForUpdates(force?: boolean): Promise<ReleaseUpdateNotice | null>
+getPendingNotice(): ReleaseUpdateNotice | null
+clearPendingNotice(): void
+```
+
 ## Dependency Injection
 
-Services use dependency injection through interfaces to reduce coupling:
+Many storage and metadata helpers depend on small provider interfaces (`ISettingsProvider`, `ITagTreeProvider`,
+`IPropertyTreeProvider`), while plugin/workspace controllers still depend on `NotebookNavigatorPlugin` or concrete
+services.
 
 ### ISettingsProvider
 
 **Location:** `src/interfaces/ISettingsProvider.ts`
 
-Provides access to plugin settings without direct plugin dependency:
-
 ```typescript
 interface ISettingsProvider {
   readonly settings: NotebookNavigatorSettings;
-  saveSettings(): Promise<void>;
+  saveSettingsAndUpdate(): Promise<void>;
+  notifySettingsUpdate(): void;
+  getRecentNotes(): string[];
+  setRecentNotes(recentNotes: string[]): void;
+  getRecentIcons(): Record<string, string[]>;
+  setRecentIcons(recentIcons: Record<string, string[]>): void;
+  getRecentColors(): string[];
+  setRecentColors(recentColors: string[]): void;
 }
 ```
 
@@ -544,13 +861,32 @@ interface ISettingsProvider {
 
 **Location:** `src/interfaces/ITagTreeProvider.ts`
 
-Provides access to tag tree data without React context dependency:
-
 ```typescript
 interface ITagTreeProvider {
-  getTagTree(): Map<string, TagTreeNode>;
+  addTreeUpdateListener(listener: () => void): () => void;
+  hasNodes(): boolean;
   findTagNode(tagPath: string): TagTreeNode | null;
-  getAllTagPaths(): string[];
+  resolveSelectionTagPath(tagPath: string): string | null;
+  getAllTagPaths(): readonly string[];
+  collectDescendantTagPaths(tagPath: string): Set<string>;
+  collectTagFilePaths(tagPath: string): string[];
+}
+```
+
+### IPropertyTreeProvider
+
+**Location:** `src/interfaces/IPropertyTreeProvider.ts`
+
+```typescript
+interface IPropertyTreeProvider {
+  addTreeUpdateListener(listener: () => void): () => void;
+  hasNodes(): boolean;
+  findNode(nodeId: string): PropertyTreeNode | null;
+  getKeyNode(normalizedKey: string): PropertyTreeNode | null;
+  resolveSelectionNodeId(selectionNodeId: PropertySelectionNodeId): PropertySelectionNodeId;
+  collectDescendantNodeIds(nodeId: string): Set<string>;
+  collectFilePaths(nodeId: string, includeDescendants: boolean): Set<string>;
+  collectFilesForKeys(normalizedKeys: Iterable<string>): Set<string>;
 }
 ```
 
@@ -558,154 +894,200 @@ interface ITagTreeProvider {
 
 **Location:** `src/interfaces/IContentProvider.ts`
 
-Defines the contract for content generation providers:
-
 ```typescript
 interface IContentProvider {
-  getContentType(): ContentType;
+  getContentType(): ContentProviderType;
   getRelevantSettings(): (keyof NotebookNavigatorSettings)[];
-  shouldRegenerate(oldSettings, newSettings): boolean;
-  clearContent(): Promise<void>;
+  shouldRegenerate(oldSettings: NotebookNavigatorSettings, newSettings: NotebookNavigatorSettings): boolean;
+  clearContent(context?: ContentProviderClearContext): Promise<void>;
+  queueFiles(files: TFile[]): void;
+  startProcessing(settings: NotebookNavigatorSettings): void;
+  stopProcessing(): void;
+  waitForIdle(): Promise<void>;
+  onSettingsChanged(settings: NotebookNavigatorSettings): void;
 }
 ```
 
 ## Service Initialization
 
-Services are instantiated during plugin startup (see startup-process.md Phase 1):
-
-**In Plugin.onload()** - Core services initialized immediately:
+Services are instantiated during plugin startup (see `docs/startup-process.md`, phase 1). The current initialization
+sequence in `src/main.ts` is:
 
 ```typescript
-// Initialize core services
-this.metadataService = new MetadataService(this.app, this, () => this.tagTreeService);
-this.tagOperations = new TagOperations(this.app);
+// Database and settings load happen before this block
+this.preferencesController.initializeRecentDataManager();
+this.recentNotesService = new RecentNotesService(this);
+
+// Initialize workspace and homepage coordination
+this.workspaceCoordinator = new WorkspaceCoordinator(this);
+this.homepageController = new HomepageController(this, this.workspaceCoordinator);
+
+// Initialize services
 this.tagTreeService = new TagTreeService();
-this.commandQueue = new CommandQueueService(this.app);
+this.propertyTreeService = new PropertyTreeService();
+this.metadataService = new MetadataService(
+  this.app,
+  this,
+  () => this.tagTreeService,
+  () => this.propertyTreeService
+);
+this.tagOperations = new TagOperations(
+  this.app,
+  () => this.settings,
+  () => this.tagTreeService,
+  () => this.metadataService
+);
+this.propertyOperations = new PropertyOperations(
+  this.app,
+  () => this.settings,
+  () => this.saveSettingsAndUpdate(),
+  () => this.propertyTreeService
+);
+this.commandQueue = new CommandQueueService();
 this.fileSystemOps = new FileSystemOperations(
   this.app,
   () => this.tagTreeService,
-  () => this.commandQueue
+  () => this.propertyTreeService,
+  () => this.commandQueue,
+  () => this.metadataService,
+  (): VisibilityPreferences => ({
+    includeDescendantNotes: this.preferencesController.getUXPreferences().includeDescendantNotes,
+    showHiddenItems: this.preferencesController.getUXPreferences().showHiddenItems
+  }),
+  this
 );
 this.omnisearchService = new OmnisearchService(this.app);
+if (this.settings.searchProvider === 'omnisearch' && !this.omnisearchService.isAvailable()) {
+  this.setSearchProvider('internal');
+}
+this.api = new NotebookNavigatorAPI(this, this.app);
+this.metadataService.setFolderStyleChangeListener(folderPath => {
+  if (!this.api) {
+    return;
+  }
+
+  this.api[INTERNAL_NOTEBOOK_NAVIGATOR_API].metadata.emitFolderChangedForPath(folderPath);
+});
+this.releaseCheckService = new ReleaseCheckService(this);
 
 const iconService = getIconService();
+iconService.registerProvider(new VaultIconProvider(this.app));
 this.externalIconController = new ExternalIconProviderController(this.app, iconService, this);
-await this.externalIconController.initialize();
-void this.externalIconController.syncWithSettings();
+const iconController = this.externalIconController;
+if (iconController) {
+  runAsyncAction(
+    async () => {
+      await iconController.initialize();
+      await iconController.syncWithSettings();
+    },
+    {
+      onError: (error: unknown) => {
+        console.error('External icon controller init failed:', error);
+      }
+    }
+  );
+}
 ```
 
-**In React mount** - Services provided through context:
+React mounts the navigator with dependency injection:
 
-```typescript
-// ServicesContext provides dependency injection
-<ServicesProvider plugin={plugin}>
-  <StorageProvider>
-    {/* Services accessible via useServices() hook */}
-  </StorageProvider>
-</ServicesProvider>
+```tsx
+<SettingsProvider plugin={plugin}>
+  <UXPreferencesProvider plugin={plugin}>
+    <RecentDataProvider plugin={plugin}>
+      <ServicesProvider plugin={plugin}>
+        <ShortcutsProvider>
+          <StorageProvider app={plugin.app} api={plugin.api}>
+            <ExpansionProvider>
+              <SelectionProvider /* app/api/file rename wiring */>
+                <UIStateProvider isMobile={isMobile}>
+                  <NotebookNavigatorContainer />
+                </UIStateProvider>
+              </SelectionProvider>
+            </ExpansionProvider>
+          </StorageProvider>
+        </ShortcutsProvider>
+      </ServicesProvider>
+    </RecentDataProvider>
+  </UXPreferencesProvider>
+</SettingsProvider>
 ```
 
-**Content providers** - Initialized in StorageContext:
-
-```typescript
-// ContentProviderRegistry initialized during storage setup
-const registry = new ContentProviderRegistry();
-registry.registerProvider(new PreviewContentProvider(app));
-registry.registerProvider(new FeatureImageContentProvider(app));
-registry.registerProvider(new MetadataContentProvider(app));
-registry.registerProvider(new TagContentProvider(app));
-```
+`StorageProvider` creates the `ContentProviderRegistry` during mount and registers all providers. View-scoped contexts
+(`ExpansionProvider`, `SelectionProvider`, `UIStateProvider`) own React state and are not service singletons. Processing
+starts when `StorageContext` queues files through `ContentProviderRegistry.queueFilesForAllProviders(...)` (which calls
+`startProcessing()` for each provider).
 
 ## Data Flow
 
 ### Content Generation Flow
 
-Background content generation follows this process (see startup-process.md Phase 5):
-
-1. **File Detection**: Each provider checks if files need processing
-   - Null content fields indicate initial generation needed
-   - Modified time (mtime) differences trigger regeneration
-   - Settings changes may clear content for regeneration
-
-2. **Queue Management**: `ContentProviderRegistry` manages the queue
-   - Files queued based on enabled settings
-   - Processes files in batches (100 files per batch)
-   - Uses deferred scheduling for non-blocking processing
-   - Parallel processing limit of 10 files
-
-3. **Processing**: Each provider processes files independently
-   - TagContentProvider: Uses `app.metadataCache.getFileCache()`
-   - PreviewContentProvider: Uses `app.vault.cachedRead()`
-   - FeatureImageContentProvider: Checks frontmatter then embedded images
-   - MetadataContentProvider: Extracts custom frontmatter fields
-
-4. **Database Updates**: Results stored in IndexedDB
-   - Each provider returns updates to IndexedDBStorage
-   - Database fires content change events
-
-5. **Memory Sync**: `MemoryFileCache` automatically synced with IndexedDB
-
-6. **UI Updates**: `StorageContext` listens for database changes
-   - Tag changes trigger tag tree rebuild
-   - Components re-render via React context
+1. **File Detection**: `StorageContext` picks files needing processing and calls
+   `ContentProviderRegistry.queueFilesForAllProviders(...)` (optionally with include/exclude filters). Providers skip
+   files without enabled features and dedupe the queue.
+2. **Queue Management**: `BaseContentProvider` batches up to 100 files and processes them with a parallel limit of 10,
+   with debounce timers, abort signals, and retry scheduling.
+3. **Processing**: Providers read vault data and produce updates:
+   - Tags and metadata via `app.metadataCache.getFileCache()` (retries when cache data is missing)
+   - Preview text via `ContentReadCache` / `app.vault.cachedRead()` (skips oversized markdown reads via `LIMITS.markdown.maxReadBytes`)
+   - Feature images via frontmatter properties, markdown body references, and attachment thumbnails (local + optional external URLs)
+   - Metadata via `extractMetadataFromCache` and hidden-state checks against active vault profile hidden frontmatter properties
+4. **Database Updates**: Providers persist updates via `IndexedDBStorage.batchUpdateFileContentAndProviderProcessedMtimes(...)`
+   and clear content via `batchClearAllFileContent` / `batchClearFeatureImageContent`.
+5. **Memory Sync**: `MemoryFileCache` mirrors IndexedDB updates for synchronous access.
+6. **UI Updates**: `StorageContext` listens for database events, rebuilds tag/property trees, and updates React contexts.
 
 ### Metadata Cleanup Flow
 
-Metadata cleanup is **manually triggered** from settings.
+Triggered manually from **Settings → Notebook Navigator → Advanced → Clean up metadata**.
 
-**When cleanup is needed:**
-
-- Files/folders renamed or deleted outside of Obsidian
-- Files/folders renamed or deleted while the plugin was disabled
-- Sync conflicts resulted in orphaned metadata
-
-**Manual Trigger**: Settings → Notebook Navigator → Advanced → "Clean up metadata" button
-
-1. **Validator Preparation**: `MetadataService.prepareCleanupValidators()`
-   - Collects all vault files and folders
-   - Builds tag tree from current tags
-   - Creates validator data structures
-
-2. **Cleanup Operations**: `MetadataService.runUnifiedCleanup()`
-   - Validates folder metadata against vault folders
-   - Validates pinned notes against vault files
-   - Validates tag metadata against tag tree
-   - Removes orphaned entries
-   - Returns cleanup results with counts of removed items
-
-3. **Settings Persistence**: Updated settings saved to `data.json`
-
-4. **User Feedback**: Shows notice with cleanup results (e.g., "Cleaned up 3 folders, 5 tags")
+1. **Preview**: settings UI calls `NotebookNavigatorPlugin.getMetadataCleanupSummary()` which runs
+   `MetadataService.getCleanupSummary()` against a cloned settings object.
+2. **Cleanup Execution**: settings UI calls `NotebookNavigatorPlugin.runMetadataCleanup()` which runs
+   `MetadataService.cleanupAllMetadata()` (folder/tag/property/file/pinned note/separator cleanup).
+3. **Persistence**: `NotebookNavigatorPlugin.runMetadataCleanup()` calls `saveSettingsAndUpdate()` when changes are detected.
+4. **Feedback**: settings UI can re-run `getMetadataCleanupSummary()` after cleanup to confirm counts.
 
 ### File Operation Flow
 
-1. User initiates file operation (create, rename, delete, move)
-2. `FileSystemOperations` shows modal for user input if needed
-3. Operation is tracked by `CommandQueueService`
-4. Vault operation is performed
-5. Selection is updated intelligently
-6. Storage layer is notified of changes
-7. UI updates reflect new file structure
+1. User initiates an operation (create, rename, move, delete, duplicate).
+2. `FileSystemOperations` gathers input through modals when required.
+3. `CommandQueueService` wraps operations that coordinate workspace state (moves, deletes, folder note opens, version
+   history opens, new-context opens, active file opens, homepage opens).
+4. Vault mutations execute through `app.fileManager` (rename/move/trash/frontmatter) and `app.vault` (creates/reads).
+5. Selection state updates via helpers from `selectionUtils`.
+6. `StorageContext` observes vault events, records changes into IndexedDB, and rebuilds tag and property trees.
+7. React contexts broadcast changes to the UI.
+
+### Settings Update Flow
+
+1. Settings UI updates values and persists via `saveSettingsAndUpdate()` (synced settings) or local preference helpers.
+2. `NotebookNavigatorPlugin` notifies settings listeners (`registerSettingsUpdateListener`) and open React views.
+3. `StorageContext` receives new settings and calls `ContentProviderRegistry.handleSettingsChange(old, new)` to stop
+   providers, wait for idle batches, clear content when required, and re-queue work.
+4. Controllers that mirror settings state (for example `ExternalIconProviderController`) resync based on updated settings.
+
+### External Icon Pack Flow
+
+1. `NotebookNavigatorPlugin` initializes `IconService` via `getIconService()` and creates `ExternalIconProviderController`.
+2. `ExternalIconProviderController.initialize()` loads persisted provider state and prepares the icon asset database.
+3. `ExternalIconProviderController.syncWithSettings()` installs/removes providers based on settings and updates enablement.
+4. `IconService` publishes version changes; React code can subscribe via `useIconServiceVersion()`.
+
+### Workspace and Vault Event Flow
+
+1. `registerWorkspaceEvents` wires Obsidian events (context menus, file-open, vault rename/delete).
+2. File opens update recent notes via `RecentNotesService.recordFileOpen`.
+3. Vault renames/deletes update metadata (`MetadataService.handle*`), recent note paths, hidden folder exact-match
+   settings, and selection context file path tracking.
+4. Active-file auto-reveal after a rename skips moves initiated by the navigator (`CommandQueueService.isMovingFile()`).
 
 ## Service Patterns
 
-### Singleton Pattern
-
-- **IconService** - Ensures single instance across plugin
-
-### Provider Pattern
-
-- **ContentProviders** - Pluggable content generation
-- **IconProviders** - Extensible icon support
-
-### Delegation Pattern
-
-- **MetadataService** - Delegates to specialized sub-services
-
-### Bridge Pattern
-
-- **TagTreeService** - Bridges React and non-React code
-
-### Command Pattern
-
-- **CommandQueueService** - Encapsulates operations as objects
+- **Singleton**: `IconService` and plugin-managed services are singleton instances; each mounted `StorageProvider` owns a `ContentProviderRegistry`.
+- **Provider**: `ContentProviderRegistry` and `IconService` manage lists of registered providers.
+- **Delegation**: `MetadataService` delegates specialized work to folder/tag/property/file/separator sub-services.
+- **Bridge**: `TagTreeService` and `PropertyTreeService` bridge StorageContext data to non-React consumers.
+- **Observer**: `CommandQueueService`, `IconService`, recent data listeners, and `subscribeToNavigationSeparatorChanges()` publish state changes to the UI.
+- **Facade**: `TagOperations` and `PropertyOperations` wrap vault-wide rename/delete workflows.
+- **Controller**: `WorkspaceCoordinator`, `HomepageController`, and `ExternalIconProviderController` coordinate multi-step plugin flows.

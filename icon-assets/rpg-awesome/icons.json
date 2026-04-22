@@ -1,0 +1,3460 @@
+[
+  {
+    "id": "acid",
+    "name": "Acid",
+    "unicode": "e900",
+    "keywords": ["acid"],
+    "categories": []
+  },
+  {
+    "id": "acorn",
+    "name": "Acorn",
+    "unicode": "e901",
+    "keywords": ["acorn"],
+    "categories": []
+  },
+  {
+    "id": "alien-fire",
+    "name": "Alien Fire",
+    "unicode": "e902",
+    "keywords": ["alien", "fire", "alien fire", "alien-fire"],
+    "categories": []
+  },
+  {
+    "id": "all-for-one",
+    "name": "All For One",
+    "unicode": "e903",
+    "keywords": ["all", "for", "one", "all for one", "all-for-one"],
+    "categories": []
+  },
+  {
+    "id": "alligator-clip",
+    "name": "Alligator Clip",
+    "unicode": "e904",
+    "keywords": ["alligator", "clip", "alligator clip", "alligator-clip"],
+    "categories": []
+  },
+  {
+    "id": "ammo-bag",
+    "name": "Ammo Bag",
+    "unicode": "e905",
+    "keywords": ["ammo", "bag", "ammo bag", "ammo-bag"],
+    "categories": []
+  },
+  {
+    "id": "anchor",
+    "name": "Anchor",
+    "unicode": "e906",
+    "keywords": ["anchor"],
+    "categories": []
+  },
+  {
+    "id": "angel-wings",
+    "name": "Angel Wings",
+    "unicode": "e907",
+    "keywords": ["angel", "wings", "angel wings", "angel-wings"],
+    "categories": []
+  },
+  {
+    "id": "ankh",
+    "name": "Ankh",
+    "unicode": "e908",
+    "keywords": ["ankh"],
+    "categories": []
+  },
+  {
+    "id": "anvil",
+    "name": "Anvil",
+    "unicode": "e909",
+    "keywords": ["anvil"],
+    "categories": []
+  },
+  {
+    "id": "apple",
+    "name": "Apple",
+    "unicode": "e90a",
+    "keywords": ["apple"],
+    "categories": []
+  },
+  {
+    "id": "aquarius",
+    "name": "Aquarius",
+    "unicode": "e90b",
+    "keywords": ["aquarius"],
+    "categories": []
+  },
+  {
+    "id": "arcane-mask",
+    "name": "Arcane Mask",
+    "unicode": "e90c",
+    "keywords": ["arcane", "mask", "arcane mask", "arcane-mask"],
+    "categories": []
+  },
+  {
+    "id": "archer",
+    "name": "Archer",
+    "unicode": "e90d",
+    "keywords": ["archer"],
+    "categories": []
+  },
+  {
+    "id": "archery-target",
+    "name": "Archery Target",
+    "unicode": "e90e",
+    "keywords": ["archery", "target", "archery target", "archery-target"],
+    "categories": []
+  },
+  {
+    "id": "arena",
+    "name": "Arena",
+    "unicode": "e90f",
+    "keywords": ["arena"],
+    "categories": []
+  },
+  {
+    "id": "aries",
+    "name": "Aries",
+    "unicode": "e910",
+    "keywords": ["aries"],
+    "categories": []
+  },
+  {
+    "id": "arrow-cluster",
+    "name": "Arrow Cluster",
+    "unicode": "e911",
+    "keywords": ["arrow", "cluster", "arrow cluster", "arrow-cluster"],
+    "categories": []
+  },
+  {
+    "id": "arrow-flights",
+    "name": "Arrow Flights",
+    "unicode": "e912",
+    "keywords": ["arrow", "flights", "arrow flights", "arrow-flights"],
+    "categories": []
+  },
+  {
+    "id": "arson",
+    "name": "Arson",
+    "unicode": "e913",
+    "keywords": ["arson"],
+    "categories": []
+  },
+  {
+    "id": "aura",
+    "name": "Aura",
+    "unicode": "e914",
+    "keywords": ["aura"],
+    "categories": []
+  },
+  {
+    "id": "aware",
+    "name": "Aware",
+    "unicode": "e915",
+    "keywords": ["aware"],
+    "categories": []
+  },
+  {
+    "id": "axe",
+    "name": "Axe",
+    "unicode": "e917",
+    "keywords": ["axe"],
+    "categories": []
+  },
+  {
+    "id": "axe-swing",
+    "name": "Axe Swing",
+    "unicode": "e916",
+    "keywords": ["axe", "swing", "axe swing", "axe-swing"],
+    "categories": []
+  },
+  {
+    "id": "ball",
+    "name": "Ball",
+    "unicode": "e918",
+    "keywords": ["ball"],
+    "categories": []
+  },
+  {
+    "id": "barbed-arrow",
+    "name": "Barbed Arrow",
+    "unicode": "e919",
+    "keywords": ["barbed", "arrow", "barbed arrow", "barbed-arrow"],
+    "categories": []
+  },
+  {
+    "id": "barrier",
+    "name": "Barrier",
+    "unicode": "e91a",
+    "keywords": ["barrier"],
+    "categories": []
+  },
+  {
+    "id": "bat-sword",
+    "name": "Bat Sword",
+    "unicode": "e91b",
+    "keywords": ["bat", "sword", "bat sword", "bat-sword"],
+    "categories": []
+  },
+  {
+    "id": "battered-axe",
+    "name": "Battered Axe",
+    "unicode": "e91c",
+    "keywords": ["battered", "axe", "battered axe", "battered-axe"],
+    "categories": []
+  },
+  {
+    "id": "batteries",
+    "name": "Batteries",
+    "unicode": "e91d",
+    "keywords": ["batteries"],
+    "categories": []
+  },
+  {
+    "id": "battery-0",
+    "name": "Battery 0",
+    "unicode": "e91e",
+    "keywords": ["battery", "0", "battery 0", "battery-0"],
+    "categories": []
+  },
+  {
+    "id": "battery-100",
+    "name": "Battery 100",
+    "unicode": "e922",
+    "keywords": ["battery", "100", "battery 100", "battery-100"],
+    "categories": []
+  },
+  {
+    "id": "battery-25",
+    "name": "Battery 25",
+    "unicode": "e91f",
+    "keywords": ["battery", "25", "battery 25", "battery-25"],
+    "categories": []
+  },
+  {
+    "id": "battery-50",
+    "name": "Battery 50",
+    "unicode": "e920",
+    "keywords": ["battery", "50", "battery 50", "battery-50"],
+    "categories": []
+  },
+  {
+    "id": "battery-75",
+    "name": "Battery 75",
+    "unicode": "e921",
+    "keywords": ["battery", "75", "battery 75", "battery-75"],
+    "categories": []
+  },
+  {
+    "id": "battery-black",
+    "name": "Battery Black",
+    "unicode": "e923",
+    "keywords": ["battery", "black", "battery black", "battery-black"],
+    "categories": []
+  },
+  {
+    "id": "battery-negative",
+    "name": "Battery Negative",
+    "unicode": "e924",
+    "keywords": ["battery", "negative", "battery negative", "battery-negative"],
+    "categories": []
+  },
+  {
+    "id": "battery-positive",
+    "name": "Battery Positive",
+    "unicode": "e925",
+    "keywords": ["battery", "positive", "battery positive", "battery-positive"],
+    "categories": []
+  },
+  {
+    "id": "battery-white",
+    "name": "Battery White",
+    "unicode": "e926",
+    "keywords": ["battery", "white", "battery white", "battery-white"],
+    "categories": []
+  },
+  {
+    "id": "batwings",
+    "name": "Batwings",
+    "unicode": "e927",
+    "keywords": ["batwings"],
+    "categories": []
+  },
+  {
+    "id": "beam-wake",
+    "name": "Beam Wake",
+    "unicode": "e928",
+    "keywords": ["beam", "wake", "beam wake", "beam-wake"],
+    "categories": []
+  },
+  {
+    "id": "bear-trap",
+    "name": "Bear Trap",
+    "unicode": "e929",
+    "keywords": ["bear", "trap", "bear trap", "bear-trap"],
+    "categories": []
+  },
+  {
+    "id": "beer",
+    "name": "Beer",
+    "unicode": "e92a",
+    "keywords": ["beer"],
+    "categories": []
+  },
+  {
+    "id": "beetle",
+    "name": "Beetle",
+    "unicode": "e92b",
+    "keywords": ["beetle"],
+    "categories": []
+  },
+  {
+    "id": "bell",
+    "name": "Bell",
+    "unicode": "e92c",
+    "keywords": ["bell"],
+    "categories": []
+  },
+  {
+    "id": "biohazard",
+    "name": "Biohazard",
+    "unicode": "e92d",
+    "keywords": ["biohazard"],
+    "categories": []
+  },
+  {
+    "id": "bird-claw",
+    "name": "Bird Claw",
+    "unicode": "e92e",
+    "keywords": ["bird", "claw", "bird claw", "bird-claw"],
+    "categories": []
+  },
+  {
+    "id": "bird-mask",
+    "name": "Bird Mask",
+    "unicode": "e92f",
+    "keywords": ["bird", "mask", "bird mask", "bird-mask"],
+    "categories": []
+  },
+  {
+    "id": "blade-bite",
+    "name": "Blade Bite",
+    "unicode": "e930",
+    "keywords": ["blade", "bite", "blade bite", "blade-bite"],
+    "categories": []
+  },
+  {
+    "id": "blast",
+    "name": "Blast",
+    "unicode": "e931",
+    "keywords": ["blast"],
+    "categories": []
+  },
+  {
+    "id": "blaster",
+    "name": "Blaster",
+    "unicode": "e932",
+    "keywords": ["blaster"],
+    "categories": []
+  },
+  {
+    "id": "bleeding-eye",
+    "name": "Bleeding Eye",
+    "unicode": "e933",
+    "keywords": ["bleeding", "eye", "bleeding eye", "bleeding-eye"],
+    "categories": []
+  },
+  {
+    "id": "bleeding-hearts",
+    "name": "Bleeding Hearts",
+    "unicode": "e934",
+    "keywords": ["bleeding", "hearts", "bleeding hearts", "bleeding-hearts"],
+    "categories": []
+  },
+  {
+    "id": "bolt-shield",
+    "name": "Bolt Shield",
+    "unicode": "e935",
+    "keywords": ["bolt", "shield", "bolt shield", "bolt-shield"],
+    "categories": []
+  },
+  {
+    "id": "bomb-explosion",
+    "name": "Bomb Explosion",
+    "unicode": "e936",
+    "keywords": ["bomb", "explosion", "bomb explosion", "bomb-explosion"],
+    "categories": []
+  },
+  {
+    "id": "bombs",
+    "name": "Bombs",
+    "unicode": "e937",
+    "keywords": ["bombs"],
+    "categories": []
+  },
+  {
+    "id": "bone-bite",
+    "name": "Bone Bite",
+    "unicode": "e938",
+    "keywords": ["bone", "bite", "bone bite", "bone-bite"],
+    "categories": []
+  },
+  {
+    "id": "bone-knife",
+    "name": "Bone Knife",
+    "unicode": "e939",
+    "keywords": ["bone", "knife", "bone knife", "bone-knife"],
+    "categories": []
+  },
+  {
+    "id": "book",
+    "name": "Book",
+    "unicode": "e93a",
+    "keywords": ["book"],
+    "categories": []
+  },
+  {
+    "id": "boomerang",
+    "name": "Boomerang",
+    "unicode": "e93b",
+    "keywords": ["boomerang"],
+    "categories": []
+  },
+  {
+    "id": "boot-stomp",
+    "name": "Boot Stomp",
+    "unicode": "e93c",
+    "keywords": ["boot", "stomp", "boot stomp", "boot-stomp"],
+    "categories": []
+  },
+  {
+    "id": "bottle-vapors",
+    "name": "Bottle Vapors",
+    "unicode": "e93d",
+    "keywords": ["bottle", "vapors", "bottle vapors", "bottle-vapors"],
+    "categories": []
+  },
+  {
+    "id": "bottled-bolt",
+    "name": "Bottled Bolt",
+    "unicode": "e93e",
+    "keywords": ["bottled", "bolt", "bottled bolt", "bottled-bolt"],
+    "categories": []
+  },
+  {
+    "id": "bottom-right",
+    "name": "Bottom Right",
+    "unicode": "e93f",
+    "keywords": ["bottom", "right", "bottom right", "bottom-right"],
+    "categories": []
+  },
+  {
+    "id": "bowie-knife",
+    "name": "Bowie Knife",
+    "unicode": "e940",
+    "keywords": ["bowie", "knife", "bowie knife", "bowie-knife"],
+    "categories": []
+  },
+  {
+    "id": "bowling-pin",
+    "name": "Bowling Pin",
+    "unicode": "e941",
+    "keywords": ["bowling", "pin", "bowling pin", "bowling-pin"],
+    "categories": []
+  },
+  {
+    "id": "brain-freeze",
+    "name": "Brain Freeze",
+    "unicode": "e942",
+    "keywords": ["brain", "freeze", "brain freeze", "brain-freeze"],
+    "categories": []
+  },
+  {
+    "id": "brandy-bottle",
+    "name": "Brandy Bottle",
+    "unicode": "e943",
+    "keywords": ["brandy", "bottle", "brandy bottle", "brandy-bottle"],
+    "categories": []
+  },
+  {
+    "id": "bridge",
+    "name": "Bridge",
+    "unicode": "e944",
+    "keywords": ["bridge"],
+    "categories": []
+  },
+  {
+    "id": "broadhead-arrow",
+    "name": "Broadhead Arrow",
+    "unicode": "e945",
+    "keywords": ["broadhead", "arrow", "broadhead arrow", "broadhead-arrow"],
+    "categories": []
+  },
+  {
+    "id": "broken-bone",
+    "name": "Broken Bone",
+    "unicode": "e947",
+    "keywords": ["broken", "bone", "broken bone", "broken-bone"],
+    "categories": []
+  },
+  {
+    "id": "broken-heart",
+    "name": "Broken Heart",
+    "unicode": "e948",
+    "keywords": ["broken", "heart", "broken heart", "broken-heart"],
+    "categories": []
+  },
+  {
+    "id": "broken-shield",
+    "name": "Broken Shield",
+    "unicode": "e94a",
+    "keywords": ["broken", "shield", "broken shield", "broken-shield"],
+    "categories": []
+  },
+  {
+    "id": "broken-skull",
+    "name": "Broken Skull",
+    "unicode": "e94b",
+    "keywords": ["broken", "skull", "broken skull", "broken-skull"],
+    "categories": []
+  },
+  {
+    "id": "bubbling-potion",
+    "name": "Bubbling Potion",
+    "unicode": "e94c",
+    "keywords": ["bubbling", "potion", "bubbling potion", "bubbling-potion"],
+    "categories": []
+  },
+  {
+    "id": "bullets",
+    "name": "Bullets",
+    "unicode": "e94d",
+    "keywords": ["bullets"],
+    "categories": []
+  },
+  {
+    "id": "burning-book",
+    "name": "Burning Book",
+    "unicode": "e94e",
+    "keywords": ["burning", "book", "burning book", "burning-book"],
+    "categories": []
+  },
+  {
+    "id": "burning-embers",
+    "name": "Burning Embers",
+    "unicode": "e94f",
+    "keywords": ["burning", "embers", "burning embers", "burning-embers"],
+    "categories": []
+  },
+  {
+    "id": "burning-eye",
+    "name": "Burning Eye",
+    "unicode": "e950",
+    "keywords": ["burning", "eye", "burning eye", "burning-eye"],
+    "categories": []
+  },
+  {
+    "id": "burning-meteor",
+    "name": "Burning Meteor",
+    "unicode": "e951",
+    "keywords": ["burning", "meteor", "burning meteor", "burning-meteor"],
+    "categories": []
+  },
+  {
+    "id": "burst-blob",
+    "name": "Burst Blob",
+    "unicode": "e952",
+    "keywords": ["burst", "blob", "burst blob", "burst-blob"],
+    "categories": []
+  },
+  {
+    "id": "butterfly",
+    "name": "Butterfly",
+    "unicode": "e953",
+    "keywords": ["butterfly"],
+    "categories": []
+  },
+  {
+    "id": "campfire",
+    "name": "Campfire",
+    "unicode": "e954",
+    "keywords": ["campfire"],
+    "categories": []
+  },
+  {
+    "id": "cancel",
+    "name": "Cancel",
+    "unicode": "e955",
+    "keywords": ["cancel"],
+    "categories": []
+  },
+  {
+    "id": "cancer",
+    "name": "Cancer",
+    "unicode": "e956",
+    "keywords": ["cancer"],
+    "categories": []
+  },
+  {
+    "id": "candle",
+    "name": "Candle",
+    "unicode": "e958",
+    "keywords": ["candle"],
+    "categories": []
+  },
+  {
+    "id": "candle-fire",
+    "name": "Candle Fire",
+    "unicode": "e957",
+    "keywords": ["candle", "fire", "candle fire", "candle-fire"],
+    "categories": []
+  },
+  {
+    "id": "cannon-shot",
+    "name": "Cannon Shot",
+    "unicode": "e959",
+    "keywords": ["cannon", "shot", "cannon shot", "cannon-shot"],
+    "categories": []
+  },
+  {
+    "id": "capitol",
+    "name": "Capitol",
+    "unicode": "e95a",
+    "keywords": ["capitol"],
+    "categories": []
+  },
+  {
+    "id": "capricorn",
+    "name": "Capricorn",
+    "unicode": "e95b",
+    "keywords": ["capricorn"],
+    "categories": []
+  },
+  {
+    "id": "carrot",
+    "name": "Carrot",
+    "unicode": "e95c",
+    "keywords": ["carrot"],
+    "categories": []
+  },
+  {
+    "id": "castle-emblem",
+    "name": "Castle Emblem",
+    "unicode": "e95d",
+    "keywords": ["castle", "emblem", "castle emblem", "castle-emblem"],
+    "categories": []
+  },
+  {
+    "id": "castle-flag",
+    "name": "Castle Flag",
+    "unicode": "e95e",
+    "keywords": ["castle", "flag", "castle flag", "castle-flag"],
+    "categories": []
+  },
+  {
+    "id": "cat",
+    "name": "Cat",
+    "unicode": "e95f",
+    "keywords": ["cat"],
+    "categories": []
+  },
+  {
+    "id": "chain",
+    "name": "Chain",
+    "unicode": "e960",
+    "keywords": ["chain"],
+    "categories": []
+  },
+  {
+    "id": "cheese",
+    "name": "Cheese",
+    "unicode": "e961",
+    "keywords": ["cheese"],
+    "categories": []
+  },
+  {
+    "id": "chemical-arrow",
+    "name": "Chemical Arrow",
+    "unicode": "e962",
+    "keywords": ["chemical", "arrow", "chemical arrow", "chemical-arrow"],
+    "categories": []
+  },
+  {
+    "id": "chessboard",
+    "name": "Chessboard",
+    "unicode": "e963",
+    "keywords": ["chessboard"],
+    "categories": []
+  },
+  {
+    "id": "chicken-leg",
+    "name": "Chicken Leg",
+    "unicode": "e964",
+    "keywords": ["chicken", "leg", "chicken leg", "chicken-leg"],
+    "categories": []
+  },
+  {
+    "id": "circle-of-circles",
+    "name": "Circle Of Circles",
+    "unicode": "e965",
+    "keywords": ["circle", "of", "circles", "circle of circles", "circle-of-circles"],
+    "categories": []
+  },
+  {
+    "id": "circular-saw",
+    "name": "Circular Saw",
+    "unicode": "e966",
+    "keywords": ["circular", "saw", "circular saw", "circular-saw"],
+    "categories": []
+  },
+  {
+    "id": "circular-shield",
+    "name": "Circular Shield",
+    "unicode": "e967",
+    "keywords": ["circular", "shield", "circular shield", "circular-shield"],
+    "categories": []
+  },
+  {
+    "id": "cloak-and-dagger",
+    "name": "Cloak And Dagger",
+    "unicode": "e968",
+    "keywords": ["cloak", "and", "dagger", "cloak and dagger", "cloak-and-dagger"],
+    "categories": []
+  },
+  {
+    "id": "clockwork",
+    "name": "Clockwork",
+    "unicode": "e969",
+    "keywords": ["clockwork"],
+    "categories": []
+  },
+  {
+    "id": "clover",
+    "name": "Clover",
+    "unicode": "e96a",
+    "keywords": ["clover"],
+    "categories": []
+  },
+  {
+    "id": "clovers",
+    "name": "Clovers",
+    "unicode": "e96c",
+    "keywords": ["clovers"],
+    "categories": []
+  },
+  {
+    "id": "clovers-card",
+    "name": "Clovers Card",
+    "unicode": "e96b",
+    "keywords": ["clovers", "card", "clovers card", "clovers-card"],
+    "categories": []
+  },
+  {
+    "id": "cluster-bomb",
+    "name": "Cluster Bomb",
+    "unicode": "e96d",
+    "keywords": ["cluster", "bomb", "cluster bomb", "cluster-bomb"],
+    "categories": []
+  },
+  {
+    "id": "coffee-mug",
+    "name": "Coffee Mug",
+    "unicode": "e96e",
+    "keywords": ["coffee", "mug", "coffee mug", "coffee-mug"],
+    "categories": []
+  },
+  {
+    "id": "cog",
+    "name": "Cog",
+    "unicode": "e970",
+    "keywords": ["cog"],
+    "categories": []
+  },
+  {
+    "id": "cog-wheel",
+    "name": "Cog Wheel",
+    "unicode": "e96f",
+    "keywords": ["cog", "wheel", "cog wheel", "cog-wheel"],
+    "categories": []
+  },
+  {
+    "id": "cold-heart",
+    "name": "Cold Heart",
+    "unicode": "e971",
+    "keywords": ["cold", "heart", "cold heart", "cold-heart"],
+    "categories": []
+  },
+  {
+    "id": "compass",
+    "name": "Compass",
+    "unicode": "e972",
+    "keywords": ["compass"],
+    "categories": []
+  },
+  {
+    "id": "corked-tube",
+    "name": "Corked Tube",
+    "unicode": "e973",
+    "keywords": ["corked", "tube", "corked tube", "corked-tube"],
+    "categories": []
+  },
+  {
+    "id": "crab-claw",
+    "name": "Crab Claw",
+    "unicode": "e974",
+    "keywords": ["crab", "claw", "crab claw", "crab-claw"],
+    "categories": []
+  },
+  {
+    "id": "cracked-helm",
+    "name": "Cracked Helm",
+    "unicode": "e975",
+    "keywords": ["cracked", "helm", "cracked helm", "cracked-helm"],
+    "categories": []
+  },
+  {
+    "id": "cracked-shield",
+    "name": "Cracked Shield",
+    "unicode": "e976",
+    "keywords": ["cracked", "shield", "cracked shield", "cracked-shield"],
+    "categories": []
+  },
+  {
+    "id": "croc-sword",
+    "name": "Croc Sword",
+    "unicode": "e977",
+    "keywords": ["croc", "sword", "croc sword", "croc-sword"],
+    "categories": []
+  },
+  {
+    "id": "crossbow",
+    "name": "Crossbow",
+    "unicode": "e978",
+    "keywords": ["crossbow"],
+    "categories": []
+  },
+  {
+    "id": "crossed-axes",
+    "name": "Crossed Axes",
+    "unicode": "e979",
+    "keywords": ["crossed", "axes", "crossed axes", "crossed-axes"],
+    "categories": []
+  },
+  {
+    "id": "crossed-bones",
+    "name": "Crossed Bones",
+    "unicode": "e97a",
+    "keywords": ["crossed", "bones", "crossed bones", "crossed-bones"],
+    "categories": []
+  },
+  {
+    "id": "crossed-pistols",
+    "name": "Crossed Pistols",
+    "unicode": "e97b",
+    "keywords": ["crossed", "pistols", "crossed pistols", "crossed-pistols"],
+    "categories": []
+  },
+  {
+    "id": "crossed-sabres",
+    "name": "Crossed Sabres",
+    "unicode": "e97c",
+    "keywords": ["crossed", "sabres", "crossed sabres", "crossed-sabres"],
+    "categories": []
+  },
+  {
+    "id": "crossed-swords",
+    "name": "Crossed Swords",
+    "unicode": "e97d",
+    "keywords": ["crossed", "swords", "crossed swords", "crossed-swords"],
+    "categories": []
+  },
+  {
+    "id": "crown",
+    "name": "Crown",
+    "unicode": "e97f",
+    "keywords": ["crown"],
+    "categories": []
+  },
+  {
+    "id": "crown-of-thorns",
+    "name": "Crown Of Thorns",
+    "unicode": "e97e",
+    "keywords": ["crown", "of", "thorns", "crown of thorns", "crown-of-thorns"],
+    "categories": []
+  },
+  {
+    "id": "crowned-heart",
+    "name": "Crowned Heart",
+    "unicode": "e980",
+    "keywords": ["crowned", "heart", "crowned heart", "crowned-heart"],
+    "categories": []
+  },
+  {
+    "id": "crush",
+    "name": "Crush",
+    "unicode": "e981",
+    "keywords": ["crush"],
+    "categories": []
+  },
+  {
+    "id": "crystal-ball",
+    "name": "Crystal Ball",
+    "unicode": "e982",
+    "keywords": ["crystal", "ball", "crystal ball", "crystal-ball"],
+    "categories": []
+  },
+  {
+    "id": "crystal-cluster",
+    "name": "Crystal Cluster",
+    "unicode": "e983",
+    "keywords": ["crystal", "cluster", "crystal cluster", "crystal-cluster"],
+    "categories": []
+  },
+  {
+    "id": "crystal-wand",
+    "name": "Crystal Wand",
+    "unicode": "e984",
+    "keywords": ["crystal", "wand", "crystal wand", "crystal-wand"],
+    "categories": []
+  },
+  {
+    "id": "crystals",
+    "name": "Crystals",
+    "unicode": "e985",
+    "keywords": ["crystals"],
+    "categories": []
+  },
+  {
+    "id": "cubes",
+    "name": "Cubes",
+    "unicode": "e986",
+    "keywords": ["cubes"],
+    "categories": []
+  },
+  {
+    "id": "cut-palm",
+    "name": "Cut Palm",
+    "unicode": "e987",
+    "keywords": ["cut", "palm", "cut palm", "cut-palm"],
+    "categories": []
+  },
+  {
+    "id": "cycle",
+    "name": "Cycle",
+    "unicode": "e988",
+    "keywords": ["cycle"],
+    "categories": []
+  },
+  {
+    "id": "daggers",
+    "name": "Daggers",
+    "unicode": "e989",
+    "keywords": ["daggers"],
+    "categories": []
+  },
+  {
+    "id": "daisy",
+    "name": "Daisy",
+    "unicode": "e98a",
+    "keywords": ["daisy"],
+    "categories": []
+  },
+  {
+    "id": "dead-tree",
+    "name": "Dead Tree",
+    "unicode": "e98b",
+    "keywords": ["dead", "tree", "dead tree", "dead-tree"],
+    "categories": []
+  },
+  {
+    "id": "death-skull",
+    "name": "Death Skull",
+    "unicode": "e98c",
+    "keywords": ["death", "skull", "death skull", "death-skull"],
+    "categories": []
+  },
+  {
+    "id": "decapitation",
+    "name": "Decapitation",
+    "unicode": "e98d",
+    "keywords": ["decapitation"],
+    "categories": []
+  },
+  {
+    "id": "defibrillate",
+    "name": "Defibrillate",
+    "unicode": "e98e",
+    "keywords": ["defibrillate"],
+    "categories": []
+  },
+  {
+    "id": "demolish",
+    "name": "Demolish",
+    "unicode": "e98f",
+    "keywords": ["demolish"],
+    "categories": []
+  },
+  {
+    "id": "dervish-swords",
+    "name": "Dervish Swords",
+    "unicode": "e990",
+    "keywords": ["dervish", "swords", "dervish swords", "dervish-swords"],
+    "categories": []
+  },
+  {
+    "id": "desert-skull",
+    "name": "Desert Skull",
+    "unicode": "e991",
+    "keywords": ["desert", "skull", "desert skull", "desert-skull"],
+    "categories": []
+  },
+  {
+    "id": "diamond",
+    "name": "Diamond",
+    "unicode": "e992",
+    "keywords": ["diamond"],
+    "categories": []
+  },
+  {
+    "id": "diamonds",
+    "name": "Diamonds",
+    "unicode": "e994",
+    "keywords": ["diamonds"],
+    "categories": []
+  },
+  {
+    "id": "diamonds-card",
+    "name": "Diamonds Card",
+    "unicode": "e993",
+    "keywords": ["diamonds", "card", "diamonds card", "diamonds-card"],
+    "categories": []
+  },
+  {
+    "id": "dice-five",
+    "name": "Dice Five",
+    "unicode": "e995",
+    "keywords": ["dice", "five", "dice five", "dice-five"],
+    "categories": []
+  },
+  {
+    "id": "dice-four",
+    "name": "Dice Four",
+    "unicode": "e996",
+    "keywords": ["dice", "four", "dice four", "dice-four"],
+    "categories": []
+  },
+  {
+    "id": "dice-one",
+    "name": "Dice One",
+    "unicode": "e997",
+    "keywords": ["dice", "one", "dice one", "dice-one"],
+    "categories": []
+  },
+  {
+    "id": "dice-six",
+    "name": "Dice Six",
+    "unicode": "e998",
+    "keywords": ["dice", "six", "dice six", "dice-six"],
+    "categories": []
+  },
+  {
+    "id": "dice-three",
+    "name": "Dice Three",
+    "unicode": "e999",
+    "keywords": ["dice", "three", "dice three", "dice-three"],
+    "categories": []
+  },
+  {
+    "id": "dice-two",
+    "name": "Dice Two",
+    "unicode": "e99a",
+    "keywords": ["dice", "two", "dice two", "dice-two"],
+    "categories": []
+  },
+  {
+    "id": "dinosaur",
+    "name": "Dinosaur",
+    "unicode": "e99b",
+    "keywords": ["dinosaur"],
+    "categories": []
+  },
+  {
+    "id": "divert",
+    "name": "Divert",
+    "unicode": "e99c",
+    "keywords": ["divert"],
+    "categories": []
+  },
+  {
+    "id": "diving-dagger",
+    "name": "Diving Dagger",
+    "unicode": "e99d",
+    "keywords": ["diving", "dagger", "diving dagger", "diving-dagger"],
+    "categories": []
+  },
+  {
+    "id": "double-team",
+    "name": "Double Team",
+    "unicode": "e99e",
+    "keywords": ["double", "team", "double team", "double-team"],
+    "categories": []
+  },
+  {
+    "id": "doubled",
+    "name": "Doubled",
+    "unicode": "e99f",
+    "keywords": ["doubled"],
+    "categories": []
+  },
+  {
+    "id": "dragon",
+    "name": "Dragon",
+    "unicode": "e9a2",
+    "keywords": ["dragon"],
+    "categories": []
+  },
+  {
+    "id": "dragon-breath",
+    "name": "Dragon Breath",
+    "unicode": "e9a0",
+    "keywords": ["dragon", "breath", "dragon breath", "dragon-breath"],
+    "categories": []
+  },
+  {
+    "id": "dragon-wing",
+    "name": "Dragon Wing",
+    "unicode": "e9a1",
+    "keywords": ["dragon", "wing", "dragon wing", "dragon-wing"],
+    "categories": []
+  },
+  {
+    "id": "dragonfly",
+    "name": "Dragonfly",
+    "unicode": "e9a3",
+    "keywords": ["dragonfly"],
+    "categories": []
+  },
+  {
+    "id": "drill",
+    "name": "Drill",
+    "unicode": "e9a4",
+    "keywords": ["drill"],
+    "categories": []
+  },
+  {
+    "id": "dripping-blade",
+    "name": "Dripping Blade",
+    "unicode": "e9a5",
+    "keywords": ["dripping", "blade", "dripping blade", "dripping-blade"],
+    "categories": []
+  },
+  {
+    "id": "dripping-knife",
+    "name": "Dripping Knife",
+    "unicode": "e9a6",
+    "keywords": ["dripping", "knife", "dripping knife", "dripping-knife"],
+    "categories": []
+  },
+  {
+    "id": "dripping-sword",
+    "name": "Dripping Sword",
+    "unicode": "e9a7",
+    "keywords": ["dripping", "sword", "dripping sword", "dripping-sword"],
+    "categories": []
+  },
+  {
+    "id": "droplet",
+    "name": "Droplet",
+    "unicode": "e9a9",
+    "keywords": ["droplet"],
+    "categories": []
+  },
+  {
+    "id": "droplet-splash",
+    "name": "Droplet Splash",
+    "unicode": "e9a8",
+    "keywords": ["droplet", "splash", "droplet splash", "droplet-splash"],
+    "categories": []
+  },
+  {
+    "id": "droplets",
+    "name": "Droplets",
+    "unicode": "e9aa",
+    "keywords": ["droplets"],
+    "categories": []
+  },
+  {
+    "id": "duel",
+    "name": "Duel",
+    "unicode": "e9ab",
+    "keywords": ["duel"],
+    "categories": []
+  },
+  {
+    "id": "egg",
+    "name": "Egg",
+    "unicode": "e9ad",
+    "keywords": ["egg"],
+    "categories": []
+  },
+  {
+    "id": "egg-pod",
+    "name": "Egg Pod",
+    "unicode": "e9ac",
+    "keywords": ["egg", "pod", "egg pod", "egg-pod"],
+    "categories": []
+  },
+  {
+    "id": "eggplant",
+    "name": "Eggplant",
+    "unicode": "e9ae",
+    "keywords": ["eggplant"],
+    "categories": []
+  },
+  {
+    "id": "emerald",
+    "name": "Emerald",
+    "unicode": "e9af",
+    "keywords": ["emerald"],
+    "categories": []
+  },
+  {
+    "id": "energise",
+    "name": "Energise",
+    "unicode": "e9b0",
+    "keywords": ["energise"],
+    "categories": []
+  },
+  {
+    "id": "explosion",
+    "name": "Explosion",
+    "unicode": "e9b1",
+    "keywords": ["explosion"],
+    "categories": []
+  },
+  {
+    "id": "explosive-materials",
+    "name": "Explosive Materials",
+    "unicode": "e9b2",
+    "keywords": ["explosive", "materials", "explosive materials", "explosive-materials"],
+    "categories": []
+  },
+  {
+    "id": "eye-monster",
+    "name": "Eye Monster",
+    "unicode": "e9b3",
+    "keywords": ["eye", "monster", "eye monster", "eye-monster"],
+    "categories": []
+  },
+  {
+    "id": "eye-shield",
+    "name": "Eye Shield",
+    "unicode": "e9b4",
+    "keywords": ["eye", "shield", "eye shield", "eye-shield"],
+    "categories": []
+  },
+  {
+    "id": "eyeball",
+    "name": "Eyeball",
+    "unicode": "e9b5",
+    "keywords": ["eyeball"],
+    "categories": []
+  },
+  {
+    "id": "fairy",
+    "name": "Fairy",
+    "unicode": "e9b7",
+    "keywords": ["fairy"],
+    "categories": []
+  },
+  {
+    "id": "fairy-wand",
+    "name": "Fairy Wand",
+    "unicode": "e9b6",
+    "keywords": ["fairy", "wand", "fairy wand", "fairy-wand"],
+    "categories": []
+  },
+  {
+    "id": "fall-down",
+    "name": "Fall Down",
+    "unicode": "e9b8",
+    "keywords": ["fall", "down", "fall down", "fall-down"],
+    "categories": []
+  },
+  {
+    "id": "falling",
+    "name": "Falling",
+    "unicode": "e9b9",
+    "keywords": ["falling"],
+    "categories": []
+  },
+  {
+    "id": "fast-ship",
+    "name": "Fast Ship",
+    "unicode": "e9ba",
+    "keywords": ["fast", "ship", "fast ship", "fast-ship"],
+    "categories": []
+  },
+  {
+    "id": "feather-wing",
+    "name": "Feather Wing",
+    "unicode": "e9bb",
+    "keywords": ["feather", "wing", "feather wing", "feather-wing"],
+    "categories": []
+  },
+  {
+    "id": "feathered-wing",
+    "name": "Feathered Wing",
+    "unicode": "e9bc",
+    "keywords": ["feathered", "wing", "feathered wing", "feathered-wing"],
+    "categories": []
+  },
+  {
+    "id": "fedora",
+    "name": "Fedora",
+    "unicode": "e9bd",
+    "keywords": ["fedora"],
+    "categories": []
+  },
+  {
+    "id": "fire",
+    "name": "Fire",
+    "unicode": "e9c3",
+    "keywords": ["fire"],
+    "categories": []
+  },
+  {
+    "id": "fire-bomb",
+    "name": "Fire Bomb",
+    "unicode": "e9be",
+    "keywords": ["fire", "bomb", "fire bomb", "fire-bomb"],
+    "categories": []
+  },
+  {
+    "id": "fire-breath",
+    "name": "Fire Breath",
+    "unicode": "e9bf",
+    "keywords": ["fire", "breath", "fire breath", "fire-breath"],
+    "categories": []
+  },
+  {
+    "id": "fire-ring",
+    "name": "Fire Ring",
+    "unicode": "e9c0",
+    "keywords": ["fire", "ring", "fire ring", "fire-ring"],
+    "categories": []
+  },
+  {
+    "id": "fire-shield",
+    "name": "Fire Shield",
+    "unicode": "e9c1",
+    "keywords": ["fire", "shield", "fire shield", "fire-shield"],
+    "categories": []
+  },
+  {
+    "id": "fire-symbol",
+    "name": "Fire Symbol",
+    "unicode": "e9c2",
+    "keywords": ["fire", "symbol", "fire symbol", "fire-symbol"],
+    "categories": []
+  },
+  {
+    "id": "fireball-sword",
+    "name": "Fireball Sword",
+    "unicode": "e9c4",
+    "keywords": ["fireball", "sword", "fireball sword", "fireball-sword"],
+    "categories": []
+  },
+  {
+    "id": "fish",
+    "name": "Fish",
+    "unicode": "e9c5",
+    "keywords": ["fish"],
+    "categories": []
+  },
+  {
+    "id": "fizzing-flask",
+    "name": "Fizzing Flask",
+    "unicode": "e9c6",
+    "keywords": ["fizzing", "flask", "fizzing flask", "fizzing-flask"],
+    "categories": []
+  },
+  {
+    "id": "flame-symbol",
+    "name": "Flame Symbol",
+    "unicode": "e9c7",
+    "keywords": ["flame", "symbol", "flame symbol", "flame-symbol"],
+    "categories": []
+  },
+  {
+    "id": "flaming-arrow",
+    "name": "Flaming Arrow",
+    "unicode": "e9c8",
+    "keywords": ["flaming", "arrow", "flaming arrow", "flaming-arrow"],
+    "categories": []
+  },
+  {
+    "id": "flaming-claw",
+    "name": "Flaming Claw",
+    "unicode": "e9c9",
+    "keywords": ["flaming", "claw", "flaming claw", "flaming-claw"],
+    "categories": []
+  },
+  {
+    "id": "flaming-trident",
+    "name": "Flaming Trident",
+    "unicode": "e9ca",
+    "keywords": ["flaming", "trident", "flaming trident", "flaming-trident"],
+    "categories": []
+  },
+  {
+    "id": "flask",
+    "name": "Flask",
+    "unicode": "e9cb",
+    "keywords": ["flask"],
+    "categories": []
+  },
+  {
+    "id": "flat-hammer",
+    "name": "Flat Hammer",
+    "unicode": "e9cc",
+    "keywords": ["flat", "hammer", "flat hammer", "flat-hammer"],
+    "categories": []
+  },
+  {
+    "id": "flower",
+    "name": "Flower",
+    "unicode": "e9cd",
+    "keywords": ["flower"],
+    "categories": []
+  },
+  {
+    "id": "flowers",
+    "name": "Flowers",
+    "unicode": "e9ce",
+    "keywords": ["flowers"],
+    "categories": []
+  },
+  {
+    "id": "fluffy-swirl",
+    "name": "Fluffy Swirl",
+    "unicode": "e9cf",
+    "keywords": ["fluffy", "swirl", "fluffy swirl", "fluffy-swirl"],
+    "categories": []
+  },
+  {
+    "id": "focused-lightning",
+    "name": "Focused Lightning",
+    "unicode": "e9d0",
+    "keywords": ["focused", "lightning", "focused lightning", "focused-lightning"],
+    "categories": []
+  },
+  {
+    "id": "food-chain",
+    "name": "Food Chain",
+    "unicode": "e9d1",
+    "keywords": ["food", "chain", "food chain", "food-chain"],
+    "categories": []
+  },
+  {
+    "id": "footprint",
+    "name": "Footprint",
+    "unicode": "e9d2",
+    "keywords": ["footprint"],
+    "categories": []
+  },
+  {
+    "id": "forging",
+    "name": "Forging",
+    "unicode": "e9d3",
+    "keywords": ["forging"],
+    "categories": []
+  },
+  {
+    "id": "forward",
+    "name": "Forward",
+    "unicode": "e9d4",
+    "keywords": ["forward"],
+    "categories": []
+  },
+  {
+    "id": "fox",
+    "name": "Fox",
+    "unicode": "e9d5",
+    "keywords": ["fox"],
+    "categories": []
+  },
+  {
+    "id": "frost-emblem",
+    "name": "Frost Emblem",
+    "unicode": "e9d6",
+    "keywords": ["frost", "emblem", "frost emblem", "frost-emblem"],
+    "categories": []
+  },
+  {
+    "id": "frostfire",
+    "name": "Frostfire",
+    "unicode": "e9d7",
+    "keywords": ["frostfire"],
+    "categories": []
+  },
+  {
+    "id": "frozen-arrow",
+    "name": "Frozen Arrow",
+    "unicode": "e9d8",
+    "keywords": ["frozen", "arrow", "frozen arrow", "frozen-arrow"],
+    "categories": []
+  },
+  {
+    "id": "gamepad-cross",
+    "name": "Gamepad Cross",
+    "unicode": "e9d9",
+    "keywords": ["gamepad", "cross", "gamepad cross", "gamepad-cross"],
+    "categories": []
+  },
+  {
+    "id": "gavel",
+    "name": "Gavel",
+    "unicode": "e9da",
+    "keywords": ["gavel"],
+    "categories": []
+  },
+  {
+    "id": "gear-hammer",
+    "name": "Gear Hammer",
+    "unicode": "e9db",
+    "keywords": ["gear", "hammer", "gear hammer", "gear-hammer"],
+    "categories": []
+  },
+  {
+    "id": "gear-heart",
+    "name": "Gear Heart",
+    "unicode": "e9dc",
+    "keywords": ["gear", "heart", "gear heart", "gear-heart"],
+    "categories": []
+  },
+  {
+    "id": "gears",
+    "name": "Gears",
+    "unicode": "e9dd",
+    "keywords": ["gears"],
+    "categories": []
+  },
+  {
+    "id": "gecko",
+    "name": "Gecko",
+    "unicode": "e9de",
+    "keywords": ["gecko"],
+    "categories": []
+  },
+  {
+    "id": "gem",
+    "name": "Gem",
+    "unicode": "e9e0",
+    "keywords": ["gem"],
+    "categories": []
+  },
+  {
+    "id": "gem-pendant",
+    "name": "Gem Pendant",
+    "unicode": "e9df",
+    "keywords": ["gem", "pendant", "gem pendant", "gem-pendant"],
+    "categories": []
+  },
+  {
+    "id": "gemini",
+    "name": "Gemini",
+    "unicode": "e9e1",
+    "keywords": ["gemini"],
+    "categories": []
+  },
+  {
+    "id": "glass-heart",
+    "name": "Glass Heart",
+    "unicode": "e9e2",
+    "keywords": ["glass", "heart", "glass heart", "glass-heart"],
+    "categories": []
+  },
+  {
+    "id": "gloop",
+    "name": "Gloop",
+    "unicode": "e9e3",
+    "keywords": ["gloop"],
+    "categories": []
+  },
+  {
+    "id": "gold-bar",
+    "name": "Gold Bar",
+    "unicode": "e9e4",
+    "keywords": ["gold", "bar", "gold bar", "gold-bar"],
+    "categories": []
+  },
+  {
+    "id": "grappling-hook",
+    "name": "Grappling Hook",
+    "unicode": "e9e5",
+    "keywords": ["grappling", "hook", "grappling hook", "grappling-hook"],
+    "categories": []
+  },
+  {
+    "id": "grass",
+    "name": "Grass",
+    "unicode": "e9e7",
+    "keywords": ["grass"],
+    "categories": []
+  },
+  {
+    "id": "grass-patch",
+    "name": "Grass Patch",
+    "unicode": "e9e6",
+    "keywords": ["grass", "patch", "grass patch", "grass-patch"],
+    "categories": []
+  },
+  {
+    "id": "grenade",
+    "name": "Grenade",
+    "unicode": "e9e8",
+    "keywords": ["grenade"],
+    "categories": []
+  },
+  {
+    "id": "groundbreaker",
+    "name": "Groundbreaker",
+    "unicode": "e9e9",
+    "keywords": ["groundbreaker"],
+    "categories": []
+  },
+  {
+    "id": "guarded-tower",
+    "name": "Guarded Tower",
+    "unicode": "e9ea",
+    "keywords": ["guarded", "tower", "guarded tower", "guarded-tower"],
+    "categories": []
+  },
+  {
+    "id": "guillotine",
+    "name": "Guillotine",
+    "unicode": "e9eb",
+    "keywords": ["guillotine"],
+    "categories": []
+  },
+  {
+    "id": "halberd",
+    "name": "Halberd",
+    "unicode": "e9ec",
+    "keywords": ["halberd"],
+    "categories": []
+  },
+  {
+    "id": "hammer",
+    "name": "Hammer",
+    "unicode": "e9ee",
+    "keywords": ["hammer"],
+    "categories": []
+  },
+  {
+    "id": "hammer-drop",
+    "name": "Hammer Drop",
+    "unicode": "e9ed",
+    "keywords": ["hammer", "drop", "hammer drop", "hammer-drop"],
+    "categories": []
+  },
+  {
+    "id": "hand",
+    "name": "Hand",
+    "unicode": "e9f1",
+    "keywords": ["hand"],
+    "categories": []
+  },
+  {
+    "id": "hand-emblem",
+    "name": "Hand Emblem",
+    "unicode": "e9ef",
+    "keywords": ["hand", "emblem", "hand emblem", "hand-emblem"],
+    "categories": []
+  },
+  {
+    "id": "hand-saw",
+    "name": "Hand Saw",
+    "unicode": "e9f0",
+    "keywords": ["hand", "saw", "hand saw", "hand-saw"],
+    "categories": []
+  },
+  {
+    "id": "harpoon-trident",
+    "name": "Harpoon Trident",
+    "unicode": "e9f2",
+    "keywords": ["harpoon", "trident", "harpoon trident", "harpoon-trident"],
+    "categories": []
+  },
+  {
+    "id": "health",
+    "name": "Health",
+    "unicode": "e9f5",
+    "keywords": ["health"],
+    "categories": []
+  },
+  {
+    "id": "health-decrease",
+    "name": "Health Decrease",
+    "unicode": "e9f3",
+    "keywords": ["health", "decrease", "health decrease", "health-decrease"],
+    "categories": []
+  },
+  {
+    "id": "health-increase",
+    "name": "Health Increase",
+    "unicode": "e9f4",
+    "keywords": ["health", "increase", "health increase", "health-increase"],
+    "categories": []
+  },
+  {
+    "id": "heart-bottle",
+    "name": "Heart Bottle",
+    "unicode": "e9f6",
+    "keywords": ["heart", "bottle", "heart bottle", "heart-bottle"],
+    "categories": []
+  },
+  {
+    "id": "heart-tower",
+    "name": "Heart Tower",
+    "unicode": "e9f7",
+    "keywords": ["heart", "tower", "heart tower", "heart-tower"],
+    "categories": []
+  },
+  {
+    "id": "heartburn",
+    "name": "Heartburn",
+    "unicode": "e9f8",
+    "keywords": ["heartburn"],
+    "categories": []
+  },
+  {
+    "id": "hearts",
+    "name": "Hearts",
+    "unicode": "e9fa",
+    "keywords": ["hearts"],
+    "categories": []
+  },
+  {
+    "id": "hearts-card",
+    "name": "Hearts Card",
+    "unicode": "e9f9",
+    "keywords": ["hearts", "card", "hearts card", "hearts-card"],
+    "categories": []
+  },
+  {
+    "id": "heat-haze",
+    "name": "Heat Haze",
+    "unicode": "e9fb",
+    "keywords": ["heat", "haze", "heat haze", "heat-haze"],
+    "categories": []
+  },
+  {
+    "id": "heavy-fall",
+    "name": "Heavy Fall",
+    "unicode": "e9fc",
+    "keywords": ["heavy", "fall", "heavy fall", "heavy-fall"],
+    "categories": []
+  },
+  {
+    "id": "heavy-shield",
+    "name": "Heavy Shield",
+    "unicode": "e9fd",
+    "keywords": ["heavy", "shield", "heavy shield", "heavy-shield"],
+    "categories": []
+  },
+  {
+    "id": "helmet",
+    "name": "Helmet",
+    "unicode": "e9fe",
+    "keywords": ["helmet"],
+    "categories": []
+  },
+  {
+    "id": "help",
+    "name": "Help",
+    "unicode": "e9ff",
+    "keywords": ["help"],
+    "categories": []
+  },
+  {
+    "id": "hive-emblem",
+    "name": "Hive Emblem",
+    "unicode": "ea00",
+    "keywords": ["hive", "emblem", "hive emblem", "hive-emblem"],
+    "categories": []
+  },
+  {
+    "id": "hole-ladder",
+    "name": "Hole Ladder",
+    "unicode": "ea01",
+    "keywords": ["hole", "ladder", "hole ladder", "hole-ladder"],
+    "categories": []
+  },
+  {
+    "id": "honeycomb",
+    "name": "Honeycomb",
+    "unicode": "ea02",
+    "keywords": ["honeycomb"],
+    "categories": []
+  },
+  {
+    "id": "hood",
+    "name": "Hood",
+    "unicode": "ea03",
+    "keywords": ["hood"],
+    "categories": []
+  },
+  {
+    "id": "horn-call",
+    "name": "Horn Call",
+    "unicode": "ea04",
+    "keywords": ["horn", "call", "horn call", "horn-call"],
+    "categories": []
+  },
+  {
+    "id": "horns",
+    "name": "Horns",
+    "unicode": "ea05",
+    "keywords": ["horns"],
+    "categories": []
+  },
+  {
+    "id": "horseshoe",
+    "name": "Horseshoe",
+    "unicode": "ea06",
+    "keywords": ["horseshoe"],
+    "categories": []
+  },
+  {
+    "id": "hospital-cross",
+    "name": "Hospital Cross",
+    "unicode": "ea07",
+    "keywords": ["hospital", "cross", "hospital cross", "hospital-cross"],
+    "categories": []
+  },
+  {
+    "id": "hot-surface",
+    "name": "Hot Surface",
+    "unicode": "ea08",
+    "keywords": ["hot", "surface", "hot surface", "hot-surface"],
+    "categories": []
+  },
+  {
+    "id": "hourglass",
+    "name": "Hourglass",
+    "unicode": "ea09",
+    "keywords": ["hourglass"],
+    "categories": []
+  },
+  {
+    "id": "hydra",
+    "name": "Hydra",
+    "unicode": "ea0b",
+    "keywords": ["hydra"],
+    "categories": []
+  },
+  {
+    "id": "hydra-shot",
+    "name": "Hydra Shot",
+    "unicode": "ea0a",
+    "keywords": ["hydra", "shot", "hydra shot", "hydra-shot"],
+    "categories": []
+  },
+  {
+    "id": "ice-cube",
+    "name": "Ice Cube",
+    "unicode": "ea0c",
+    "keywords": ["ice", "cube", "ice cube", "ice-cube"],
+    "categories": []
+  },
+  {
+    "id": "implosion",
+    "name": "Implosion",
+    "unicode": "ea0d",
+    "keywords": ["implosion"],
+    "categories": []
+  },
+  {
+    "id": "incense",
+    "name": "Incense",
+    "unicode": "ea0e",
+    "keywords": ["incense"],
+    "categories": []
+  },
+  {
+    "id": "insect-jaws",
+    "name": "Insect Jaws",
+    "unicode": "ea0f",
+    "keywords": ["insect", "jaws", "insect jaws", "insect-jaws"],
+    "categories": []
+  },
+  {
+    "id": "interdiction",
+    "name": "Interdiction",
+    "unicode": "ea10",
+    "keywords": ["interdiction"],
+    "categories": []
+  },
+  {
+    "id": "jetpack",
+    "name": "Jetpack",
+    "unicode": "ea11",
+    "keywords": ["jetpack"],
+    "categories": []
+  },
+  {
+    "id": "jigsaw-piece",
+    "name": "Jigsaw Piece",
+    "unicode": "ea12",
+    "keywords": ["jigsaw", "piece", "jigsaw piece", "jigsaw-piece"],
+    "categories": []
+  },
+  {
+    "id": "kaleidoscope",
+    "name": "Kaleidoscope",
+    "unicode": "ea13",
+    "keywords": ["kaleidoscope"],
+    "categories": []
+  },
+  {
+    "id": "kettlebell",
+    "name": "Kettlebell",
+    "unicode": "ea14",
+    "keywords": ["kettlebell"],
+    "categories": []
+  },
+  {
+    "id": "key",
+    "name": "Key",
+    "unicode": "ea16",
+    "keywords": ["key"],
+    "categories": []
+  },
+  {
+    "id": "key-basic",
+    "name": "Key Basic",
+    "unicode": "ea15",
+    "keywords": ["key", "basic", "key basic", "key-basic"],
+    "categories": []
+  },
+  {
+    "id": "kitchen-knives",
+    "name": "Kitchen Knives",
+    "unicode": "ea17",
+    "keywords": ["kitchen", "knives", "kitchen knives", "kitchen-knives"],
+    "categories": []
+  },
+  {
+    "id": "knife",
+    "name": "Knife",
+    "unicode": "ea19",
+    "keywords": ["knife"],
+    "categories": []
+  },
+  {
+    "id": "knife-fork",
+    "name": "Knife Fork",
+    "unicode": "ea18",
+    "keywords": ["knife", "fork", "knife fork", "knife-fork"],
+    "categories": []
+  },
+  {
+    "id": "knight-helmet",
+    "name": "Knight Helmet",
+    "unicode": "ea1a",
+    "keywords": ["knight", "helmet", "knight helmet", "knight-helmet"],
+    "categories": []
+  },
+  {
+    "id": "kunai",
+    "name": "Kunai",
+    "unicode": "ea1b",
+    "keywords": ["kunai"],
+    "categories": []
+  },
+  {
+    "id": "lantern-flame",
+    "name": "Lantern Flame",
+    "unicode": "ea1c",
+    "keywords": ["lantern", "flame", "lantern flame", "lantern-flame"],
+    "categories": []
+  },
+  {
+    "id": "large-hammer",
+    "name": "Large Hammer",
+    "unicode": "ea1d",
+    "keywords": ["large", "hammer", "large hammer", "large-hammer"],
+    "categories": []
+  },
+  {
+    "id": "laser-blast",
+    "name": "Laser Blast",
+    "unicode": "ea1e",
+    "keywords": ["laser", "blast", "laser blast", "laser-blast"],
+    "categories": []
+  },
+  {
+    "id": "laser-site",
+    "name": "Laser Site",
+    "unicode": "ea1f",
+    "keywords": ["laser", "site", "laser site", "laser-site"],
+    "categories": []
+  },
+  {
+    "id": "lava",
+    "name": "Lava",
+    "unicode": "ea20",
+    "keywords": ["lava"],
+    "categories": []
+  },
+  {
+    "id": "leaf",
+    "name": "Leaf",
+    "unicode": "ea21",
+    "keywords": ["leaf"],
+    "categories": []
+  },
+  {
+    "id": "leo",
+    "name": "Leo",
+    "unicode": "ea22",
+    "keywords": ["leo"],
+    "categories": []
+  },
+  {
+    "id": "level-four",
+    "name": "Level Four",
+    "unicode": "ea24",
+    "keywords": ["level", "four", "level four", "level-four"],
+    "categories": []
+  },
+  {
+    "id": "level-four-advanced",
+    "name": "Level Four Advanced",
+    "unicode": "ea23",
+    "keywords": ["level", "four", "advanced", "level four advanced", "level-four-advanced"],
+    "categories": []
+  },
+  {
+    "id": "level-three",
+    "name": "Level Three",
+    "unicode": "ea26",
+    "keywords": ["level", "three", "level three", "level-three"],
+    "categories": []
+  },
+  {
+    "id": "level-three-advanced",
+    "name": "Level Three Advanced",
+    "unicode": "ea25",
+    "keywords": ["level", "three", "advanced", "level three advanced", "level-three-advanced"],
+    "categories": []
+  },
+  {
+    "id": "level-two",
+    "name": "Level Two",
+    "unicode": "ea28",
+    "keywords": ["level", "two", "level two", "level-two"],
+    "categories": []
+  },
+  {
+    "id": "level-two-advanced",
+    "name": "Level Two Advanced",
+    "unicode": "ea27",
+    "keywords": ["level", "two", "advanced", "level two advanced", "level-two-advanced"],
+    "categories": []
+  },
+  {
+    "id": "lever",
+    "name": "Lever",
+    "unicode": "ea29",
+    "keywords": ["lever"],
+    "categories": []
+  },
+  {
+    "id": "libra",
+    "name": "Libra",
+    "unicode": "ea2a",
+    "keywords": ["libra"],
+    "categories": []
+  },
+  {
+    "id": "light-bulb",
+    "name": "Light Bulb",
+    "unicode": "ea2b",
+    "keywords": ["light", "bulb", "light bulb", "light-bulb"],
+    "categories": []
+  },
+  {
+    "id": "lighthouse",
+    "name": "Lighthouse",
+    "unicode": "ea2c",
+    "keywords": ["lighthouse"],
+    "categories": []
+  },
+  {
+    "id": "lightning",
+    "name": "Lightning",
+    "unicode": "ea31",
+    "keywords": ["lightning"],
+    "categories": []
+  },
+  {
+    "id": "lightning-bolt",
+    "name": "Lightning Bolt",
+    "unicode": "ea2d",
+    "keywords": ["lightning", "bolt", "lightning bolt", "lightning-bolt"],
+    "categories": []
+  },
+  {
+    "id": "lightning-storm",
+    "name": "Lightning Storm",
+    "unicode": "ea2e",
+    "keywords": ["lightning", "storm", "lightning storm", "lightning-storm"],
+    "categories": []
+  },
+  {
+    "id": "lightning-sword",
+    "name": "Lightning Sword",
+    "unicode": "ea2f",
+    "keywords": ["lightning", "sword", "lightning sword", "lightning-sword"],
+    "categories": []
+  },
+  {
+    "id": "lightning-trio",
+    "name": "Lightning Trio",
+    "unicode": "ea30",
+    "keywords": ["lightning", "trio", "lightning trio", "lightning-trio"],
+    "categories": []
+  },
+  {
+    "id": "lion",
+    "name": "Lion",
+    "unicode": "ea32",
+    "keywords": ["lion"],
+    "categories": []
+  },
+  {
+    "id": "lit-candelabra",
+    "name": "Lit Candelabra",
+    "unicode": "ea33",
+    "keywords": ["lit", "candelabra", "lit candelabra", "lit-candelabra"],
+    "categories": []
+  },
+  {
+    "id": "load",
+    "name": "Load",
+    "unicode": "ea34",
+    "keywords": ["load"],
+    "categories": []
+  },
+  {
+    "id": "locked-fortress",
+    "name": "Locked Fortress",
+    "unicode": "ea35",
+    "keywords": ["locked", "fortress", "locked fortress", "locked-fortress"],
+    "categories": []
+  },
+  {
+    "id": "love-howl",
+    "name": "Love Howl",
+    "unicode": "ea36",
+    "keywords": ["love", "howl", "love howl", "love-howl"],
+    "categories": []
+  },
+  {
+    "id": "maggot",
+    "name": "Maggot",
+    "unicode": "ea37",
+    "keywords": ["maggot"],
+    "categories": []
+  },
+  {
+    "id": "magnet",
+    "name": "Magnet",
+    "unicode": "ea38",
+    "keywords": ["magnet"],
+    "categories": []
+  },
+  {
+    "id": "mass-driver",
+    "name": "Mass Driver",
+    "unicode": "ea39",
+    "keywords": ["mass", "driver", "mass driver", "mass-driver"],
+    "categories": []
+  },
+  {
+    "id": "match",
+    "name": "Match",
+    "unicode": "ea3a",
+    "keywords": ["match"],
+    "categories": []
+  },
+  {
+    "id": "meat",
+    "name": "Meat",
+    "unicode": "ea3c",
+    "keywords": ["meat"],
+    "categories": []
+  },
+  {
+    "id": "meat-hook",
+    "name": "Meat Hook",
+    "unicode": "ea3b",
+    "keywords": ["meat", "hook", "meat hook", "meat-hook"],
+    "categories": []
+  },
+  {
+    "id": "medical-pack",
+    "name": "Medical Pack",
+    "unicode": "ea3d",
+    "keywords": ["medical", "pack", "medical pack", "medical-pack"],
+    "categories": []
+  },
+  {
+    "id": "metal-gate",
+    "name": "Metal Gate",
+    "unicode": "ea3e",
+    "keywords": ["metal", "gate", "metal gate", "metal-gate"],
+    "categories": []
+  },
+  {
+    "id": "microphone",
+    "name": "Microphone",
+    "unicode": "ea3f",
+    "keywords": ["microphone"],
+    "categories": []
+  },
+  {
+    "id": "mine-wagon",
+    "name": "Mine Wagon",
+    "unicode": "ea40",
+    "keywords": ["mine", "wagon", "mine wagon", "mine-wagon"],
+    "categories": []
+  },
+  {
+    "id": "mining-diamonds",
+    "name": "Mining Diamonds",
+    "unicode": "ea41",
+    "keywords": ["mining", "diamonds", "mining diamonds", "mining-diamonds"],
+    "categories": []
+  },
+  {
+    "id": "mirror",
+    "name": "Mirror",
+    "unicode": "ea42",
+    "keywords": ["mirror"],
+    "categories": []
+  },
+  {
+    "id": "monster-skull",
+    "name": "Monster Skull",
+    "unicode": "ea43",
+    "keywords": ["monster", "skull", "monster skull", "monster-skull"],
+    "categories": []
+  },
+  {
+    "id": "moon-sun",
+    "name": "Moon Sun",
+    "unicode": "ea45",
+    "keywords": ["moon", "sun", "moon sun", "moon-sun"],
+    "categories": []
+  },
+  {
+    "id": "mountains",
+    "name": "Mountains",
+    "unicode": "ea44",
+    "keywords": ["mountains"],
+    "categories": []
+  },
+  {
+    "id": "mp5",
+    "name": "Mp5",
+    "unicode": "ea46",
+    "keywords": ["mp5"],
+    "categories": []
+  },
+  {
+    "id": "muscle-fat",
+    "name": "Muscle Fat",
+    "unicode": "ea47",
+    "keywords": ["muscle", "fat", "muscle fat", "muscle-fat"],
+    "categories": []
+  },
+  {
+    "id": "muscle-up",
+    "name": "Muscle Up",
+    "unicode": "ea48",
+    "keywords": ["muscle", "up", "muscle up", "muscle-up"],
+    "categories": []
+  },
+  {
+    "id": "musket",
+    "name": "Musket",
+    "unicode": "ea49",
+    "keywords": ["musket"],
+    "categories": []
+  },
+  {
+    "id": "nails",
+    "name": "Nails",
+    "unicode": "ea4a",
+    "keywords": ["nails"],
+    "categories": []
+  },
+  {
+    "id": "nodular",
+    "name": "Nodular",
+    "unicode": "ea4b",
+    "keywords": ["nodular"],
+    "categories": []
+  },
+  {
+    "id": "noose",
+    "name": "Noose",
+    "unicode": "ea4c",
+    "keywords": ["noose"],
+    "categories": []
+  },
+  {
+    "id": "nuclear",
+    "name": "Nuclear",
+    "unicode": "ea4d",
+    "keywords": ["nuclear"],
+    "categories": []
+  },
+  {
+    "id": "ocarina",
+    "name": "Ocarina",
+    "unicode": "ea4e",
+    "keywords": ["ocarina"],
+    "categories": []
+  },
+  {
+    "id": "ocean-emblem",
+    "name": "Ocean Emblem",
+    "unicode": "ea4f",
+    "keywords": ["ocean", "emblem", "ocean emblem", "ocean-emblem"],
+    "categories": []
+  },
+  {
+    "id": "octopus",
+    "name": "Octopus",
+    "unicode": "ea50",
+    "keywords": ["octopus"],
+    "categories": []
+  },
+  {
+    "id": "omega",
+    "name": "Omega",
+    "unicode": "ea51",
+    "keywords": ["omega"],
+    "categories": []
+  },
+  {
+    "id": "on-target",
+    "name": "On Target",
+    "unicode": "ea52",
+    "keywords": ["on", "target", "on target", "on-target"],
+    "categories": []
+  },
+  {
+    "id": "ophiuchus",
+    "name": "Ophiuchus",
+    "unicode": "ea53",
+    "keywords": ["ophiuchus"],
+    "categories": []
+  },
+  {
+    "id": "overhead",
+    "name": "Overhead",
+    "unicode": "ea54",
+    "keywords": ["overhead"],
+    "categories": []
+  },
+  {
+    "id": "overmind",
+    "name": "Overmind",
+    "unicode": "ea55",
+    "keywords": ["overmind"],
+    "categories": []
+  },
+  {
+    "id": "palm-tree",
+    "name": "Palm Tree",
+    "unicode": "ea56",
+    "keywords": ["palm", "tree", "palm tree", "palm-tree"],
+    "categories": []
+  },
+  {
+    "id": "pawn",
+    "name": "Pawn",
+    "unicode": "ea57",
+    "keywords": ["pawn"],
+    "categories": []
+  },
+  {
+    "id": "pawprint",
+    "name": "Pawprint",
+    "unicode": "ea58",
+    "keywords": ["pawprint"],
+    "categories": []
+  },
+  {
+    "id": "perspective-dice-five",
+    "name": "Perspective Dice Five",
+    "unicode": "ea59",
+    "keywords": ["perspective", "dice", "five", "perspective dice five", "perspective-dice-five"],
+    "categories": []
+  },
+  {
+    "id": "perspective-dice-four",
+    "name": "Perspective Dice Four",
+    "unicode": "ea5a",
+    "keywords": ["perspective", "dice", "four", "perspective dice four", "perspective-dice-four"],
+    "categories": []
+  },
+  {
+    "id": "perspective-dice-one",
+    "name": "Perspective Dice One",
+    "unicode": "ea5b",
+    "keywords": ["perspective", "dice", "one", "perspective dice one", "perspective-dice-one"],
+    "categories": []
+  },
+  {
+    "id": "perspective-dice-random",
+    "name": "Perspective Dice Random",
+    "unicode": "ea5c",
+    "keywords": ["perspective", "dice", "random", "perspective dice random", "perspective-dice-random"],
+    "categories": []
+  },
+  {
+    "id": "perspective-dice-six",
+    "name": "Perspective Dice Six",
+    "unicode": "ea5e",
+    "keywords": ["perspective", "dice", "six", "perspective dice six", "perspective-dice-six"],
+    "categories": []
+  },
+  {
+    "id": "perspective-dice-three",
+    "name": "Perspective Dice Three",
+    "unicode": "ea5f",
+    "keywords": ["perspective", "dice", "three", "perspective dice three", "perspective-dice-three"],
+    "categories": []
+  },
+  {
+    "id": "perspective-dice-two",
+    "name": "Perspective Dice Two",
+    "unicode": "ea5d",
+    "keywords": ["perspective", "dice", "two", "perspective dice two", "perspective-dice-two"],
+    "categories": []
+  },
+  {
+    "id": "pill",
+    "name": "Pill",
+    "unicode": "ea60",
+    "keywords": ["pill"],
+    "categories": []
+  },
+  {
+    "id": "pills",
+    "name": "Pills",
+    "unicode": "ea61",
+    "keywords": ["pills"],
+    "categories": []
+  },
+  {
+    "id": "pine-tree",
+    "name": "Pine Tree",
+    "unicode": "ea62",
+    "keywords": ["pine", "tree", "pine tree", "pine-tree"],
+    "categories": []
+  },
+  {
+    "id": "ping-pong",
+    "name": "Ping Pong",
+    "unicode": "ea63",
+    "keywords": ["ping", "pong", "ping pong", "ping-pong"],
+    "categories": []
+  },
+  {
+    "id": "pisces",
+    "name": "Pisces",
+    "unicode": "ea64",
+    "keywords": ["pisces"],
+    "categories": []
+  },
+  {
+    "id": "plain-dagger",
+    "name": "Plain Dagger",
+    "unicode": "ea65",
+    "keywords": ["plain", "dagger", "plain dagger", "plain-dagger"],
+    "categories": []
+  },
+  {
+    "id": "player",
+    "name": "Player",
+    "unicode": "ea6f",
+    "keywords": ["player"],
+    "categories": []
+  },
+  {
+    "id": "player-despair",
+    "name": "Player Despair",
+    "unicode": "ea66",
+    "keywords": ["player", "despair", "player despair", "player-despair"],
+    "categories": []
+  },
+  {
+    "id": "player-dodge",
+    "name": "Player Dodge",
+    "unicode": "ea67",
+    "keywords": ["player", "dodge", "player dodge", "player-dodge"],
+    "categories": []
+  },
+  {
+    "id": "player-king",
+    "name": "Player King",
+    "unicode": "ea68",
+    "keywords": ["player", "king", "player king", "player-king"],
+    "categories": []
+  },
+  {
+    "id": "player-lift",
+    "name": "Player Lift",
+    "unicode": "ea69",
+    "keywords": ["player", "lift", "player lift", "player-lift"],
+    "categories": []
+  },
+  {
+    "id": "player-pain",
+    "name": "Player Pain",
+    "unicode": "ea6a",
+    "keywords": ["player", "pain", "player pain", "player-pain"],
+    "categories": []
+  },
+  {
+    "id": "player-pyromaniac",
+    "name": "Player Pyromaniac",
+    "unicode": "ea6b",
+    "keywords": ["player", "pyromaniac", "player pyromaniac", "player-pyromaniac"],
+    "categories": []
+  },
+  {
+    "id": "player-shot",
+    "name": "Player Shot",
+    "unicode": "ea6c",
+    "keywords": ["player", "shot", "player shot", "player-shot"],
+    "categories": []
+  },
+  {
+    "id": "player-teleport",
+    "name": "Player Teleport",
+    "unicode": "ea6d",
+    "keywords": ["player", "teleport", "player teleport", "player-teleport"],
+    "categories": []
+  },
+  {
+    "id": "player-thunder-struck",
+    "name": "Player Thunder Struck",
+    "unicode": "ea6e",
+    "keywords": ["player", "thunder", "struck", "player thunder struck", "player-thunder-struck"],
+    "categories": []
+  },
+  {
+    "id": "podium",
+    "name": "Podium",
+    "unicode": "ea70",
+    "keywords": ["podium"],
+    "categories": []
+  },
+  {
+    "id": "poison-cloud",
+    "name": "Poison Cloud",
+    "unicode": "ea71",
+    "keywords": ["poison", "cloud", "poison cloud", "poison-cloud"],
+    "categories": []
+  },
+  {
+    "id": "potion",
+    "name": "Potion",
+    "unicode": "ea72",
+    "keywords": ["potion"],
+    "categories": []
+  },
+  {
+    "id": "pyramids",
+    "name": "Pyramids",
+    "unicode": "ea73",
+    "keywords": ["pyramids"],
+    "categories": []
+  },
+  {
+    "id": "queen-crown",
+    "name": "Queen Crown",
+    "unicode": "ea74",
+    "keywords": ["queen", "crown", "queen crown", "queen-crown"],
+    "categories": []
+  },
+  {
+    "id": "quill-ink",
+    "name": "Quill Ink",
+    "unicode": "ea75",
+    "keywords": ["quill", "ink", "quill ink", "quill-ink"],
+    "categories": []
+  },
+  {
+    "id": "rabbit",
+    "name": "Rabbit",
+    "unicode": "ea76",
+    "keywords": ["rabbit"],
+    "categories": []
+  },
+  {
+    "id": "radar-dish",
+    "name": "Radar Dish",
+    "unicode": "ea77",
+    "keywords": ["radar", "dish", "radar dish", "radar-dish"],
+    "categories": []
+  },
+  {
+    "id": "radial-balance",
+    "name": "Radial Balance",
+    "unicode": "ea78",
+    "keywords": ["radial", "balance", "radial balance", "radial-balance"],
+    "categories": []
+  },
+  {
+    "id": "radioactive",
+    "name": "Radioactive",
+    "unicode": "ea79",
+    "keywords": ["radioactive"],
+    "categories": []
+  },
+  {
+    "id": "raven",
+    "name": "Raven",
+    "unicode": "ea7a",
+    "keywords": ["raven"],
+    "categories": []
+  },
+  {
+    "id": "reactor",
+    "name": "Reactor",
+    "unicode": "ea7b",
+    "keywords": ["reactor"],
+    "categories": []
+  },
+  {
+    "id": "recycle",
+    "name": "Recycle",
+    "unicode": "ea7c",
+    "keywords": ["recycle"],
+    "categories": []
+  },
+  {
+    "id": "regeneration",
+    "name": "Regeneration",
+    "unicode": "ea7d",
+    "keywords": ["regeneration"],
+    "categories": []
+  },
+  {
+    "id": "relic-blade",
+    "name": "Relic Blade",
+    "unicode": "ea7e",
+    "keywords": ["relic", "blade", "relic blade", "relic-blade"],
+    "categories": []
+  },
+  {
+    "id": "repair",
+    "name": "Repair",
+    "unicode": "ea7f",
+    "keywords": ["repair"],
+    "categories": []
+  },
+  {
+    "id": "reverse",
+    "name": "Reverse",
+    "unicode": "ea80",
+    "keywords": ["reverse"],
+    "categories": []
+  },
+  {
+    "id": "revolver",
+    "name": "Revolver",
+    "unicode": "ea81",
+    "keywords": ["revolver"],
+    "categories": []
+  },
+  {
+    "id": "rifle",
+    "name": "Rifle",
+    "unicode": "ea82",
+    "keywords": ["rifle"],
+    "categories": []
+  },
+  {
+    "id": "ringing-bell",
+    "name": "Ringing Bell",
+    "unicode": "ea83",
+    "keywords": ["ringing", "bell", "ringing bell", "ringing-bell"],
+    "categories": []
+  },
+  {
+    "id": "roast-chicken",
+    "name": "Roast Chicken",
+    "unicode": "ea84",
+    "keywords": ["roast", "chicken", "roast chicken", "roast-chicken"],
+    "categories": []
+  },
+  {
+    "id": "robot-arm",
+    "name": "Robot Arm",
+    "unicode": "ea85",
+    "keywords": ["robot", "arm", "robot arm", "robot-arm"],
+    "categories": []
+  },
+  {
+    "id": "round-bottom-flask",
+    "name": "Round Bottom Flask",
+    "unicode": "ea86",
+    "keywords": ["round", "bottom", "flask", "round bottom flask", "round-bottom-flask"],
+    "categories": []
+  },
+  {
+    "id": "round-shield",
+    "name": "Round Shield",
+    "unicode": "ea87",
+    "keywords": ["round", "shield", "round shield", "round-shield"],
+    "categories": []
+  },
+  {
+    "id": "rss",
+    "name": "Rss",
+    "unicode": "ea88",
+    "keywords": ["rss"],
+    "categories": []
+  },
+  {
+    "id": "rune-stone",
+    "name": "Rune Stone",
+    "unicode": "ea89",
+    "keywords": ["rune", "stone", "rune stone", "rune-stone"],
+    "categories": []
+  },
+  {
+    "id": "sagittarius",
+    "name": "Sagittarius",
+    "unicode": "ea8a",
+    "keywords": ["sagittarius"],
+    "categories": []
+  },
+  {
+    "id": "sapphire",
+    "name": "Sapphire",
+    "unicode": "ea8b",
+    "keywords": ["sapphire"],
+    "categories": []
+  },
+  {
+    "id": "satellite",
+    "name": "Satellite",
+    "unicode": "ea8c",
+    "keywords": ["satellite"],
+    "categories": []
+  },
+  {
+    "id": "save",
+    "name": "Save",
+    "unicode": "ea8d",
+    "keywords": ["save"],
+    "categories": []
+  },
+  {
+    "id": "scorpio",
+    "name": "Scorpio",
+    "unicode": "ea8e",
+    "keywords": ["scorpio"],
+    "categories": []
+  },
+  {
+    "id": "scroll-unfurled",
+    "name": "Scroll Unfurled",
+    "unicode": "ea8f",
+    "keywords": ["scroll", "unfurled", "scroll unfurled", "scroll-unfurled"],
+    "categories": []
+  },
+  {
+    "id": "scythe",
+    "name": "Scythe",
+    "unicode": "ea90",
+    "keywords": ["scythe"],
+    "categories": []
+  },
+  {
+    "id": "sea-serpent",
+    "name": "Sea Serpent",
+    "unicode": "ea91",
+    "keywords": ["sea", "serpent", "sea serpent", "sea-serpent"],
+    "categories": []
+  },
+  {
+    "id": "seagull",
+    "name": "Seagull",
+    "unicode": "ea92",
+    "keywords": ["seagull"],
+    "categories": []
+  },
+  {
+    "id": "shark",
+    "name": "Shark",
+    "unicode": "ea93",
+    "keywords": ["shark"],
+    "categories": []
+  },
+  {
+    "id": "sheep",
+    "name": "Sheep",
+    "unicode": "ea94",
+    "keywords": ["sheep"],
+    "categories": []
+  },
+  {
+    "id": "sheriff",
+    "name": "Sheriff",
+    "unicode": "ea95",
+    "keywords": ["sheriff"],
+    "categories": []
+  },
+  {
+    "id": "shield",
+    "name": "Shield",
+    "unicode": "ea96",
+    "keywords": ["shield"],
+    "categories": []
+  },
+  {
+    "id": "ship-emblem",
+    "name": "Ship Emblem",
+    "unicode": "ea97",
+    "keywords": ["ship", "emblem", "ship emblem", "ship-emblem"],
+    "categories": []
+  },
+  {
+    "id": "shoe-prints",
+    "name": "Shoe Prints",
+    "unicode": "ea98",
+    "keywords": ["shoe", "prints", "shoe prints", "shoe-prints"],
+    "categories": []
+  },
+  {
+    "id": "shot-through-the-heart",
+    "name": "Shot Through The Heart",
+    "unicode": "ea99",
+    "keywords": ["shot", "through", "the", "heart", "shot through the heart", "shot-through-the-heart"],
+    "categories": []
+  },
+  {
+    "id": "shotgun-shell",
+    "name": "Shotgun Shell",
+    "unicode": "ea9a",
+    "keywords": ["shotgun", "shell", "shotgun shell", "shotgun-shell"],
+    "categories": []
+  },
+  {
+    "id": "shovel",
+    "name": "Shovel",
+    "unicode": "ea9b",
+    "keywords": ["shovel"],
+    "categories": []
+  },
+  {
+    "id": "shuriken",
+    "name": "Shuriken",
+    "unicode": "ea9c",
+    "keywords": ["shuriken"],
+    "categories": []
+  },
+  {
+    "id": "sickle",
+    "name": "Sickle",
+    "unicode": "ea9d",
+    "keywords": ["sickle"],
+    "categories": []
+  },
+  {
+    "id": "sideswipe",
+    "name": "Sideswipe",
+    "unicode": "ea9e",
+    "keywords": ["sideswipe"],
+    "categories": []
+  },
+  {
+    "id": "site",
+    "name": "Site",
+    "unicode": "ea9f",
+    "keywords": ["site"],
+    "categories": []
+  },
+  {
+    "id": "skull",
+    "name": "Skull",
+    "unicode": "eaa1",
+    "keywords": ["skull"],
+    "categories": []
+  },
+  {
+    "id": "skull-trophy",
+    "name": "Skull Trophy",
+    "unicode": "eaa0",
+    "keywords": ["skull", "trophy", "skull trophy", "skull-trophy"],
+    "categories": []
+  },
+  {
+    "id": "slash-ring",
+    "name": "Slash Ring",
+    "unicode": "eaa2",
+    "keywords": ["slash", "ring", "slash ring", "slash-ring"],
+    "categories": []
+  },
+  {
+    "id": "small-fire",
+    "name": "Small Fire",
+    "unicode": "eaa3",
+    "keywords": ["small", "fire", "small fire", "small-fire"],
+    "categories": []
+  },
+  {
+    "id": "snail",
+    "name": "Snail",
+    "unicode": "eaa4",
+    "keywords": ["snail"],
+    "categories": []
+  },
+  {
+    "id": "snake",
+    "name": "Snake",
+    "unicode": "eaa5",
+    "keywords": ["snake"],
+    "categories": []
+  },
+  {
+    "id": "snorkel",
+    "name": "Snorkel",
+    "unicode": "eaa6",
+    "keywords": ["snorkel"],
+    "categories": []
+  },
+  {
+    "id": "snowflake",
+    "name": "Snowflake",
+    "unicode": "eaa7",
+    "keywords": ["snowflake"],
+    "categories": []
+  },
+  {
+    "id": "soccer-ball",
+    "name": "Soccer Ball",
+    "unicode": "eaa8",
+    "keywords": ["soccer", "ball", "soccer ball", "soccer-ball"],
+    "categories": []
+  },
+  {
+    "id": "spades",
+    "name": "Spades",
+    "unicode": "eaaa",
+    "keywords": ["spades"],
+    "categories": []
+  },
+  {
+    "id": "spades-card",
+    "name": "Spades Card",
+    "unicode": "eaa9",
+    "keywords": ["spades", "card", "spades card", "spades-card"],
+    "categories": []
+  },
+  {
+    "id": "spawn-node",
+    "name": "Spawn Node",
+    "unicode": "eaab",
+    "keywords": ["spawn", "node", "spawn node", "spawn-node"],
+    "categories": []
+  },
+  {
+    "id": "spear-head",
+    "name": "Spear Head",
+    "unicode": "eaac",
+    "keywords": ["spear", "head", "spear head", "spear-head"],
+    "categories": []
+  },
+  {
+    "id": "speech-bubble",
+    "name": "Speech Bubble",
+    "unicode": "eaad",
+    "keywords": ["speech", "bubble", "speech bubble", "speech-bubble"],
+    "categories": []
+  },
+  {
+    "id": "speech-bubbles",
+    "name": "Speech Bubbles",
+    "unicode": "eaae",
+    "keywords": ["speech", "bubbles", "speech bubbles", "speech-bubbles"],
+    "categories": []
+  },
+  {
+    "id": "spider-face",
+    "name": "Spider Face",
+    "unicode": "eaaf",
+    "keywords": ["spider", "face", "spider face", "spider-face"],
+    "categories": []
+  },
+  {
+    "id": "spikeball",
+    "name": "Spikeball",
+    "unicode": "eab0",
+    "keywords": ["spikeball"],
+    "categories": []
+  },
+  {
+    "id": "spiked-mace",
+    "name": "Spiked Mace",
+    "unicode": "eab1",
+    "keywords": ["spiked", "mace", "spiked mace", "spiked-mace"],
+    "categories": []
+  },
+  {
+    "id": "spiked-tentacle",
+    "name": "Spiked Tentacle",
+    "unicode": "eab2",
+    "keywords": ["spiked", "tentacle", "spiked tentacle", "spiked-tentacle"],
+    "categories": []
+  },
+  {
+    "id": "spinning-sword",
+    "name": "Spinning Sword",
+    "unicode": "eab3",
+    "keywords": ["spinning", "sword", "spinning sword", "spinning-sword"],
+    "categories": []
+  },
+  {
+    "id": "spiral-shell",
+    "name": "Spiral Shell",
+    "unicode": "eab4",
+    "keywords": ["spiral", "shell", "spiral shell", "spiral-shell"],
+    "categories": []
+  },
+  {
+    "id": "splash",
+    "name": "Splash",
+    "unicode": "eab5",
+    "keywords": ["splash"],
+    "categories": []
+  },
+  {
+    "id": "spray-can",
+    "name": "Spray Can",
+    "unicode": "eab6",
+    "keywords": ["spray", "can", "spray can", "spray-can"],
+    "categories": []
+  },
+  {
+    "id": "sprout",
+    "name": "Sprout",
+    "unicode": "eab8",
+    "keywords": ["sprout"],
+    "categories": []
+  },
+  {
+    "id": "sprout-emblem",
+    "name": "Sprout Emblem",
+    "unicode": "eab7",
+    "keywords": ["sprout", "emblem", "sprout emblem", "sprout-emblem"],
+    "categories": []
+  },
+  {
+    "id": "stopwatch",
+    "name": "Stopwatch",
+    "unicode": "eab9",
+    "keywords": ["stopwatch"],
+    "categories": []
+  },
+  {
+    "id": "suckered-tentacle",
+    "name": "Suckered Tentacle",
+    "unicode": "eaba",
+    "keywords": ["suckered", "tentacle", "suckered tentacle", "suckered-tentacle"],
+    "categories": []
+  },
+  {
+    "id": "suits",
+    "name": "Suits",
+    "unicode": "eabb",
+    "keywords": ["suits"],
+    "categories": []
+  },
+  {
+    "id": "sun",
+    "name": "Sun",
+    "unicode": "eabd",
+    "keywords": ["sun"],
+    "categories": []
+  },
+  {
+    "id": "sun-symbol",
+    "name": "Sun Symbol",
+    "unicode": "eabc",
+    "keywords": ["sun", "symbol", "sun symbol", "sun-symbol"],
+    "categories": []
+  },
+  {
+    "id": "sunbeams",
+    "name": "Sunbeams",
+    "unicode": "eabe",
+    "keywords": ["sunbeams"],
+    "categories": []
+  },
+  {
+    "id": "super-mushroom",
+    "name": "Super Mushroom",
+    "unicode": "eabf",
+    "keywords": ["super", "mushroom", "super mushroom", "super-mushroom"],
+    "categories": []
+  },
+  {
+    "id": "supersonic-arrow",
+    "name": "Supersonic Arrow",
+    "unicode": "eac0",
+    "keywords": ["supersonic", "arrow", "supersonic arrow", "supersonic-arrow"],
+    "categories": []
+  },
+  {
+    "id": "surveillance-camera",
+    "name": "Surveillance Camera",
+    "unicode": "eac1",
+    "keywords": ["surveillance", "camera", "surveillance camera", "surveillance-camera"],
+    "categories": []
+  },
+  {
+    "id": "sword",
+    "name": "Sword",
+    "unicode": "e946",
+    "keywords": ["sword"],
+    "categories": []
+  },
+  {
+    "id": "syringe",
+    "name": "Syringe",
+    "unicode": "eac2",
+    "keywords": ["syringe"],
+    "categories": []
+  },
+  {
+    "id": "target-arrows",
+    "name": "Target Arrows",
+    "unicode": "eac3",
+    "keywords": ["target", "arrows", "target arrows", "target-arrows"],
+    "categories": []
+  },
+  {
+    "id": "target-laser",
+    "name": "Target Laser",
+    "unicode": "eac4",
+    "keywords": ["target", "laser", "target laser", "target-laser"],
+    "categories": []
+  },
+  {
+    "id": "targeted",
+    "name": "Targeted",
+    "unicode": "eac5",
+    "keywords": ["targeted"],
+    "categories": []
+  },
+  {
+    "id": "taurus",
+    "name": "Taurus",
+    "unicode": "eac6",
+    "keywords": ["taurus"],
+    "categories": []
+  },
+  {
+    "id": "telescope",
+    "name": "Telescope",
+    "unicode": "eac7",
+    "keywords": ["telescope"],
+    "categories": []
+  },
+  {
+    "id": "tentacle",
+    "name": "Tentacle",
+    "unicode": "eac8",
+    "keywords": ["tentacle"],
+    "categories": []
+  },
+  {
+    "id": "tesla",
+    "name": "Tesla",
+    "unicode": "eac9",
+    "keywords": ["tesla"],
+    "categories": []
+  },
+  {
+    "id": "thorn-arrow",
+    "name": "Thorn Arrow",
+    "unicode": "eaca",
+    "keywords": ["thorn", "arrow", "thorn arrow", "thorn-arrow"],
+    "categories": []
+  },
+  {
+    "id": "thorny-vine",
+    "name": "Thorny Vine",
+    "unicode": "eacb",
+    "keywords": ["thorny", "vine", "thorny vine", "thorny-vine"],
+    "categories": []
+  },
+  {
+    "id": "three-keys",
+    "name": "Three Keys",
+    "unicode": "eacc",
+    "keywords": ["three", "keys", "three keys", "three-keys"],
+    "categories": []
+  },
+  {
+    "id": "tic-tac-toe",
+    "name": "Tic Tac Toe",
+    "unicode": "eacd",
+    "keywords": ["tic", "tac", "toe", "tic tac toe", "tic-tac-toe"],
+    "categories": []
+  },
+  {
+    "id": "toast",
+    "name": "Toast",
+    "unicode": "eace",
+    "keywords": ["toast"],
+    "categories": []
+  },
+  {
+    "id": "tombstone",
+    "name": "Tombstone",
+    "unicode": "eacf",
+    "keywords": ["tombstone"],
+    "categories": []
+  },
+  {
+    "id": "tooth",
+    "name": "Tooth",
+    "unicode": "ead0",
+    "keywords": ["tooth"],
+    "categories": []
+  },
+  {
+    "id": "torch",
+    "name": "Torch",
+    "unicode": "ead1",
+    "keywords": ["torch"],
+    "categories": []
+  },
+  {
+    "id": "tower",
+    "name": "Tower",
+    "unicode": "ead2",
+    "keywords": ["tower"],
+    "categories": []
+  },
+  {
+    "id": "trail",
+    "name": "Trail",
+    "unicode": "ead3",
+    "keywords": ["trail"],
+    "categories": []
+  },
+  {
+    "id": "trefoil-lily",
+    "name": "Trefoil Lily",
+    "unicode": "ead4",
+    "keywords": ["trefoil", "lily", "trefoil lily", "trefoil-lily"],
+    "categories": []
+  },
+  {
+    "id": "trident",
+    "name": "Trident",
+    "unicode": "ead5",
+    "keywords": ["trident"],
+    "categories": []
+  },
+  {
+    "id": "triforce",
+    "name": "Triforce",
+    "unicode": "ead6",
+    "keywords": ["triforce"],
+    "categories": []
+  },
+  {
+    "id": "trophy",
+    "name": "Trophy",
+    "unicode": "ead7",
+    "keywords": ["trophy"],
+    "categories": []
+  },
+  {
+    "id": "turd",
+    "name": "Turd",
+    "unicode": "ead8",
+    "keywords": ["turd"],
+    "categories": []
+  },
+  {
+    "id": "two-dragons",
+    "name": "Two Dragons",
+    "unicode": "ead9",
+    "keywords": ["two", "dragons", "two dragons", "two-dragons"],
+    "categories": []
+  },
+  {
+    "id": "two-hearts",
+    "name": "Two Hearts",
+    "unicode": "eada",
+    "keywords": ["two", "hearts", "two hearts", "two-hearts"],
+    "categories": []
+  },
+  {
+    "id": "uncertainty",
+    "name": "Uncertainty",
+    "unicode": "eadb",
+    "keywords": ["uncertainty"],
+    "categories": []
+  },
+  {
+    "id": "underhand",
+    "name": "Underhand",
+    "unicode": "eadc",
+    "keywords": ["underhand"],
+    "categories": []
+  },
+  {
+    "id": "unplugged",
+    "name": "Unplugged",
+    "unicode": "eadd",
+    "keywords": ["unplugged"],
+    "categories": []
+  },
+  {
+    "id": "vase",
+    "name": "Vase",
+    "unicode": "eade",
+    "keywords": ["vase"],
+    "categories": []
+  },
+  {
+    "id": "venomous-snake",
+    "name": "Venomous Snake",
+    "unicode": "eadf",
+    "keywords": ["venomous", "snake", "venomous snake", "venomous-snake"],
+    "categories": []
+  },
+  {
+    "id": "vest",
+    "name": "Vest",
+    "unicode": "eae0",
+    "keywords": ["vest"],
+    "categories": []
+  },
+  {
+    "id": "vial",
+    "name": "Vial",
+    "unicode": "eae1",
+    "keywords": ["vial"],
+    "categories": []
+  },
+  {
+    "id": "vine-whip",
+    "name": "Vine Whip",
+    "unicode": "eae2",
+    "keywords": ["vine", "whip", "vine whip", "vine-whip"],
+    "categories": []
+  },
+  {
+    "id": "virgo",
+    "name": "Virgo",
+    "unicode": "eae3",
+    "keywords": ["virgo"],
+    "categories": []
+  },
+  {
+    "id": "water-drop",
+    "name": "Water Drop",
+    "unicode": "eae4",
+    "keywords": ["water", "drop", "water drop", "water-drop"],
+    "categories": []
+  },
+  {
+    "id": "wifi",
+    "name": "Wifi",
+    "unicode": "eae5",
+    "keywords": ["wifi"],
+    "categories": []
+  },
+  {
+    "id": "wireless-signal",
+    "name": "Wireless Signal",
+    "unicode": "eae6",
+    "keywords": ["wireless", "signal", "wireless signal", "wireless-signal"],
+    "categories": []
+  },
+  {
+    "id": "wolf-head",
+    "name": "Wolf Head",
+    "unicode": "eae7",
+    "keywords": ["wolf", "head", "wolf head", "wolf-head"],
+    "categories": []
+  },
+  {
+    "id": "wolf-howl",
+    "name": "Wolf Howl",
+    "unicode": "eae8",
+    "keywords": ["wolf", "howl", "wolf howl", "wolf-howl"],
+    "categories": []
+  },
+  {
+    "id": "wooden-sign",
+    "name": "Wooden Sign",
+    "unicode": "eae9",
+    "keywords": ["wooden", "sign", "wooden sign", "wooden-sign"],
+    "categories": []
+  },
+  {
+    "id": "wrench",
+    "name": "Wrench",
+    "unicode": "eaea",
+    "keywords": ["wrench"],
+    "categories": []
+  },
+  {
+    "id": "wyvern",
+    "name": "Wyvern",
+    "unicode": "eaeb",
+    "keywords": ["wyvern"],
+    "categories": []
+  },
+  {
+    "id": "x-mark",
+    "name": "X Mark",
+    "unicode": "eaec",
+    "keywords": ["x", "mark", "x mark", "x-mark"],
+    "categories": []
+  },
+  {
+    "id": "zebra-shield",
+    "name": "Zebra Shield",
+    "unicode": "eaed",
+    "keywords": ["zebra", "shield", "zebra shield", "zebra-shield"],
+    "categories": []
+  },
+  {
+    "id": "zigzag-leaf",
+    "name": "Zigzag Leaf",
+    "unicode": "eaee",
+    "keywords": ["zigzag", "leaf", "zigzag leaf", "zigzag-leaf"],
+    "categories": []
+  }
+]

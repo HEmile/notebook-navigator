@@ -1,0 +1,10 @@
+/* Source: src/styles/sections/settings-sponsor-button.css */
+
+/* ========================================================================
+   Sponsor Button Styles
+   ======================================================================== */
+
+/* Support button hover - subtle opacity change */
+.nn-support-button:hover {
+    opacity: 0.8;
+}

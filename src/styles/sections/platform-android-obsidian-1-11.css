@@ -1,0 +1,18 @@
+/* Source: src/styles/sections/platform-android-obsidian-1-11.css */
+
+/* ========================================================================
+   Android + Obsidian 1.11+ Platform Overrides
+   ======================================================================== */
+
+/* Obsidian 1.11+ Android: match the view container background to mobile pane surfaces */
+.view-content.notebook-navigator.notebook-navigator-obsidian-1-11-plus-android {
+    background-color: var(--nn-theme-mobile-bg);
+}
+
+/* Obsidian 1.11+ Android: bottom padding inside the navigator viewport */
+/* Applied to the internal split container so the bottom edge doesn't touch the view chrome (8px matches the top spacer). */
+.notebook-navigator-obsidian-1-11-plus-android .nn-split-container {
+    background-color: var(--nn-theme-mobile-bg);
+    padding-bottom: 8px;
+    box-sizing: border-box;
+}

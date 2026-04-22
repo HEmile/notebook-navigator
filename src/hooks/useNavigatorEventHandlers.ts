@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ import { useExpansionDispatch } from '../context/ExpansionContext';
 import { useSelectionDispatch } from '../context/SelectionContext';
 import { useUIState } from '../context/UIStateContext';
 import { useCommandQueue } from '../context/ServicesContext';
+import { focusElementPreventScroll } from '../utils/domUtils';
 
 interface UseNavigatorEventHandlersOptions {
     app: App;
@@ -115,7 +116,7 @@ export function useNavigatorEventHandlers({ app, containerRef, setIsNavigatorFoc
         container.addEventListener('focusout', handleBlur);
 
         // Focus the container initially
-        container.focus();
+        focusElementPreventScroll(container);
 
         return () => {
             // Cancel any pending debounced callback to avoid setState after unmount
@@ -139,7 +140,12 @@ export function useNavigatorEventHandlers({ app, containerRef, setIsNavigatorFoc
         const isOpeningVersionHistory = commandQueue.isOpeningVersionHistory();
         const isOpeningInNewContext = commandQueue.isOpeningInNewContext();
         if (uiState.focusedPane && !isOpeningVersionHistory && !isOpeningInNewContext) {
-            containerRef.current?.focus();
+            const container = containerRef.current;
+            if (!container) {
+                return;
+            }
+
+            focusElementPreventScroll(container);
         }
     }, [uiState.focusedPane, containerRef, commandQueue]);
 }

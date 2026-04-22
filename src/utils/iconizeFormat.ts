@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { getIconIds } from 'obsidian';
+import { GENERATED_ICONIZE_EXCEPTION_MAPS } from '../generated/iconizeReverseMaps';
+import { extractFirstEmoji } from './emojiUtils';
+import {
+    IDENTIFIER_NORMALIZATION_RULES,
+    decodeCompactNameToKebab,
+    normalizeIdentifierFromIconize,
+    normalizeIconizeCompactName,
+    stripAllLeadingPrefixes
+} from './iconizeNormalization';
+import { casefold, casefoldPreservingWhitespace, sanitizeRecord } from './recordUtils';
+
 /**
  * Base mapping between icon providers and their pack names
  */
@@ -26,29 +38,43 @@ interface IconizeMapping {
     prefix: string;
 }
 
+interface ShortProviderAlias {
+    alias: string;
+    providerId: string;
+}
+
+const LUCIDE_PROVIDER_ID = 'lucide';
+const VAULT_PROVIDER_ID = 'vault';
+const VAULT_SVG_EXTENSION = '.svg';
+
 /**
- * List of icon providers and their corresponding pack names
+ * Providers that the plugin currently writes using the short frontmatter format.
+ * `li` is accepted on read for lenient/manual input, but lucide still serializes as a bare slug.
  */
-const ICONIZE_MAPPINGS: IconizeMapping[] = [
-    // Font Awesome variants
-    { providerId: 'fontawesome-regular', packName: 'font-awesome-solid', prefix: generateIconizePrefix('font-awesome-solid') },
-    { providerId: 'fontawesome-regular', packName: 'font-awesome-regular', prefix: generateIconizePrefix('font-awesome-regular') },
-    { providerId: 'fontawesome-brands', packName: 'font-awesome-brands', prefix: generateIconizePrefix('font-awesome-brands') },
-    // Iconize built-in packs
-    { providerId: 'lucide', packName: 'lucide-icons', prefix: generateIconizePrefix('lucide-icons'), isDefaultProvider: true },
-    { providerId: 'remix-icons', packName: 'remix-icons', prefix: generateIconizePrefix('remix-icons') },
-    { providerId: 'icon-brew', packName: 'icon-brew', prefix: generateIconizePrefix('icon-brew') },
-    { providerId: 'simple-icons', packName: 'simple-icons', prefix: generateIconizePrefix('simple-icons') },
-    { providerId: 'tabler-icons', packName: 'tabler-icons', prefix: generateIconizePrefix('tabler-icons') },
-    { providerId: 'boxicons', packName: 'boxicons', prefix: generateIconizePrefix('boxicons') },
-    { providerId: 'rpg-awesome', packName: 'rpg-awesome', prefix: generateIconizePrefix('rpg-awesome') },
-    { providerId: 'coolicons', packName: 'coolicons', prefix: generateIconizePrefix('coolicons') },
-    { providerId: 'feather-icons', packName: 'feather-icons', prefix: generateIconizePrefix('feather-icons') },
-    { providerId: 'octicons', packName: 'octicons', prefix: generateIconizePrefix('octicons') },
-    // Additional providers supported by Notebook Navigator
+const SHORT_FRONTMATTER_PROVIDER_ALIASES: ShortProviderAlias[] = [
+    { alias: 'li', providerId: LUCIDE_PROVIDER_ID },
+    { alias: 'ph', providerId: 'phosphor' },
+    { alias: 'bi', providerId: 'bootstrap-icons' },
+    { alias: 'fas', providerId: 'fontawesome-solid' },
+    { alias: 'mi', providerId: 'material-icons' },
+    { alias: 'si', providerId: 'simple-icons' },
+    { alias: 'ra', providerId: 'rpg-awesome' }
+];
+
+/**
+ * Providers that Notebook Navigator currently exposes and can write back out.
+ * Keep this separate from the short frontmatter alias table:
+ * - aliases define the new stored frontmatter format
+ * - mappings define the legacy Iconize identifiers we still decode/encode
+ */
+const SUPPORTED_ICONIZE_MAPPINGS: IconizeMapping[] = [
+    { providerId: 'fontawesome-solid', packName: 'font-awesome-solid', prefix: generateIconizePrefix('font-awesome-solid') },
     { providerId: 'bootstrap-icons', packName: 'bootstrap-icons', prefix: generateIconizePrefix('bootstrap-icons') },
     { providerId: 'material-icons', packName: 'material-icons', prefix: generateIconizePrefix('material-icons') },
-    { providerId: 'phosphor', packName: 'phosphor', prefix: generateIconizePrefix('phosphor') }
+    { providerId: 'phosphor', packName: 'phosphor', prefix: generateIconizePrefix('phosphor') },
+    { providerId: 'rpg-awesome', packName: 'rpg-awesome', prefix: generateIconizePrefix('rpg-awesome') },
+    { providerId: 'simple-icons', packName: 'simple-icons', prefix: generateIconizePrefix('simple-icons') },
+    { providerId: LUCIDE_PROVIDER_ID, packName: 'lucide-icons', prefix: generateIconizePrefix('lucide-icons'), isDefaultProvider: true }
 ];
 
 /**
@@ -89,19 +115,237 @@ function generateIconizePrefix(packName: string): string {
  */
 const PREFIX_TO_MAPPING = new Map<string, IconizeMapping>();
 const PROVIDER_TO_MAPPING = new Map<string, IconizeMapping>();
+const SHORT_ALIAS_TO_PROVIDER = new Map<string, string>();
+const PROVIDER_TO_SHORT_ALIAS = new Map<string, string>();
 
 // Preserve initial mapping order for provider -> prefix selection
-ICONIZE_MAPPINGS.forEach(mapping => {
+SUPPORTED_ICONIZE_MAPPINGS.forEach(mapping => {
     if (!PROVIDER_TO_MAPPING.has(mapping.providerId)) {
         PROVIDER_TO_MAPPING.set(mapping.providerId, mapping);
     }
 });
 
 // Sort by prefix length to ensure longest prefixes match first (e.g. Fab before Fa)
-const PREFIX_SORTED_MAPPINGS = [...ICONIZE_MAPPINGS].sort((a, b) => b.prefix.length - a.prefix.length);
+const PREFIX_SORTED_MAPPINGS = [...SUPPORTED_ICONIZE_MAPPINGS].sort((a, b) => b.prefix.length - a.prefix.length);
 PREFIX_SORTED_MAPPINGS.forEach(mapping => {
     PREFIX_TO_MAPPING.set(mapping.prefix, mapping);
 });
+
+SHORT_FRONTMATTER_PROVIDER_ALIASES.forEach(({ alias, providerId }) => {
+    SHORT_ALIAS_TO_PROVIDER.set(alias, providerId);
+    PROVIDER_TO_SHORT_ALIAS.set(providerId, alias);
+});
+
+function stripProviderPrefixForIconize(identifier: string, providerId: string): string {
+    const rule = IDENTIFIER_NORMALIZATION_RULES.get(providerId);
+    if (!rule) {
+        return identifier;
+    }
+    return stripAllLeadingPrefixes(identifier, rule.redundantPrefixes ?? []);
+}
+
+function normalizeIdentifierForProvider(identifier: string, providerId: string): string {
+    return normalizeIdentifierFromIconize(identifier, providerId);
+}
+
+function serializeShortProviderIconId(iconId: string): string | null {
+    const colonIndex = iconId.indexOf(':');
+    if (colonIndex === -1) {
+        return isSupportedLucideIconId(iconId) ? iconId : null;
+    }
+
+    const providerId = iconId.substring(0, colonIndex);
+    const identifier = iconId.substring(colonIndex + 1).trim();
+    if (!identifier) {
+        return null;
+    }
+
+    if (providerId === LUCIDE_PROVIDER_ID) {
+        return isSupportedLucideIconId(identifier) ? identifier : null;
+    }
+
+    const alias = PROVIDER_TO_SHORT_ALIAS.get(providerId);
+    if (!alias) {
+        return null;
+    }
+
+    return `${alias}:${identifier}`;
+}
+
+function parseShortProviderIconId(value: string): string | null {
+    const colonIndex = value.indexOf(':');
+    if (colonIndex <= 0 || colonIndex >= value.length - 1) {
+        return null;
+    }
+
+    const alias = value.substring(0, colonIndex).toLowerCase();
+    const rawIdentifier = value.substring(colonIndex + 1).trim();
+    if (!alias || !rawIdentifier || rawIdentifier.includes(':')) {
+        return null;
+    }
+
+    const providerId = SHORT_ALIAS_TO_PROVIDER.get(alias);
+    if (!providerId) {
+        return null;
+    }
+
+    const identifier = normalizeIdentifierForProvider(rawIdentifier, providerId);
+    if (!identifier) {
+        return null;
+    }
+
+    if (providerId === LUCIDE_PROVIDER_ID) {
+        return isSupportedLucideIconId(identifier) ? identifier : null;
+    }
+
+    return `${providerId}:${identifier}`;
+}
+
+let SUPPORTED_LUCIDE_ICON_IDS: ReadonlySet<string> | null | undefined;
+
+function getSupportedLucideIconIds(): ReadonlySet<string> | null {
+    if (SUPPORTED_LUCIDE_ICON_IDS !== undefined) {
+        return SUPPORTED_LUCIDE_ICON_IDS;
+    }
+
+    if (typeof getIconIds !== 'function') {
+        SUPPORTED_LUCIDE_ICON_IDS = null;
+        return SUPPORTED_LUCIDE_ICON_IDS;
+    }
+
+    SUPPORTED_LUCIDE_ICON_IDS = new Set(
+        getIconIds()
+            .map(iconId => normalizeCanonicalIconId(iconId))
+            .filter(iconId => iconId.length > 0)
+    );
+    return SUPPORTED_LUCIDE_ICON_IDS;
+}
+
+function isSupportedLucideIconId(value: string): boolean {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.startsWith('lucide-')) {
+        return false;
+    }
+
+    const supportedIconIds = getSupportedLucideIconIds();
+    return supportedIconIds?.has(trimmed) ?? false;
+}
+
+function deserializeStoredFrontmatterIcon(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const emojiOnly = extractFirstEmoji(trimmed);
+    if (emojiOnly && emojiOnly === trimmed) {
+        return `emoji:${emojiOnly}`;
+    }
+
+    const wikiLinkPath = extractVaultSvgPathFromWikiLink(trimmed);
+    if (wikiLinkPath) {
+        return `${VAULT_PROVIDER_ID}:${wikiLinkPath}`;
+    }
+
+    if (!trimmed.includes(':') && trimmed.toLowerCase().endsWith(VAULT_SVG_EXTENSION)) {
+        return `${VAULT_PROVIDER_ID}:${trimmed}`;
+    }
+
+    const shortProviderIconId = parseShortProviderIconId(trimmed);
+    if (shortProviderIconId) {
+        return shortProviderIconId;
+    }
+
+    if (trimmed.includes(':')) {
+        return null;
+    }
+
+    return isSupportedLucideIconId(trimmed) ? trimmed : null;
+}
+
+function deserializeFrontmatterIconWithIconizeFallback(value: string): string | null {
+    // Read the plugin's stored format first. Only if that fails do we try the
+    // supported legacy Iconize format. Unsupported provider-style values stay null.
+    const stored = deserializeStoredFrontmatterIcon(value);
+    if (stored) {
+        return stored;
+    }
+
+    return convertIconizeToIconId(value);
+}
+
+const ICONIZE_EXCEPTION_CACHE = new Map<string, ReadonlyMap<string, string>>();
+const ICONIZE_COMPACT_PREFIX_CACHE = new Map<string, string[]>();
+
+function getCompactRedundantPrefixes(providerId: string): string[] {
+    const cached = ICONIZE_COMPACT_PREFIX_CACHE.get(providerId);
+    if (cached) {
+        return cached;
+    }
+
+    const compactPrefixes = (IDENTIFIER_NORMALIZATION_RULES.get(providerId)?.redundantPrefixes ?? [])
+        .map(prefix => normalizeIconizeCompactName(prefix))
+        .filter(prefix => prefix.length > 0);
+
+    ICONIZE_COMPACT_PREFIX_CACHE.set(providerId, compactPrefixes);
+    return compactPrefixes;
+}
+
+function stripProviderPrefixForIconizeLookup(identifier: string, providerId: string): string {
+    return stripAllLeadingPrefixes(identifier, getCompactRedundantPrefixes(providerId));
+}
+
+function buildIconizeExceptionMap(iconIds: string[], providerId: string): ReadonlyMap<string, string> {
+    const exceptionMap = new Map<string, string>();
+
+    iconIds.forEach(iconId => {
+        const compactName = normalizeIconizeCompactName(iconId);
+        const heuristicIdentifier = normalizeIdentifierFromIconize(decodeCompactNameToKebab(compactName), providerId);
+        if (heuristicIdentifier !== iconId) {
+            exceptionMap.set(compactName, iconId);
+        }
+    });
+
+    return exceptionMap;
+}
+
+function getIconizeExceptionMap(providerId: string): ReadonlyMap<string, string> | null {
+    const cached = ICONIZE_EXCEPTION_CACHE.get(providerId);
+    if (cached) {
+        return cached;
+    }
+
+    if (providerId === LUCIDE_PROVIDER_ID) {
+        const supportedLucideIconIds = getSupportedLucideIconIds();
+        if (!supportedLucideIconIds) {
+            return null;
+        }
+
+        const lucideExceptionMap = buildIconizeExceptionMap([...supportedLucideIconIds], providerId);
+        ICONIZE_EXCEPTION_CACHE.set(providerId, lucideExceptionMap);
+        return lucideExceptionMap;
+    }
+
+    const generatedExceptionMap = GENERATED_ICONIZE_EXCEPTION_MAPS[providerId as keyof typeof GENERATED_ICONIZE_EXCEPTION_MAPS];
+    if (!generatedExceptionMap) {
+        return null;
+    }
+
+    const exceptionMap = new Map<string, string>(Object.entries(generatedExceptionMap));
+    ICONIZE_EXCEPTION_CACHE.set(providerId, exceptionMap);
+    return exceptionMap;
+}
+
+function resolveExceptionIconizeIdentifier(iconName: string, providerId: string): string | null {
+    const normalizedIconName = stripProviderPrefixForIconizeLookup(iconName, providerId);
+    const exceptionMap = getIconizeExceptionMap(providerId);
+    const exceptionMatch = exceptionMap?.get(iconName) ?? exceptionMap?.get(normalizedIconName) ?? null;
+    if (exceptionMatch) {
+        return exceptionMatch;
+    }
+
+    return null;
+}
 
 /**
  * Determines the prefix length in an Iconize identifier using Iconize's original logic.
@@ -121,65 +365,15 @@ function findIconizePrefixLength(value: string): number {
 }
 
 /**
- * Converts an Iconize PascalCase identifier to kebab-case.
- * Examples:
- * - "Home" -> "home"
- * - "ChevronRight" -> "chevron-right"
- * - "FileJSON" -> "file-json"
- */
-function pascalToKebab(value: string): string {
-    if (!value) {
-        return '';
-    }
-
-    const withHyphenSeparators = value
-        .replace(/([a-z])([A-Z])/g, '$1-$2') // Handle camelCase transitions, excluding digit uppercase boundaries
-        .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2') // Handle acronyms like "JSON" -> "json"
-        .replace(/_/g, '-'); // Replace underscores with hyphens
-
-    return withHyphenSeparators.toLowerCase();
-}
-
-/**
- * Converts a kebab-case identifier to Iconize PascalCase format.
- * Examples:
- * - "home" -> "Home"
- * - "chevron-right" -> "ChevronRight"
- * - "file-json" -> "FileJson"
- */
-function kebabToPascal(value: string): string {
-    if (!value) {
-        return '';
-    }
-
-    return value
-        .split(/[ -]|[ _]/g) // Split on hyphens, spaces, or underscores
-        .map(part => {
-            if (!part) {
-                return '';
-            }
-
-            const digitMatch = part.match(/^(\d+)(.*)$/);
-            if (digitMatch) {
-                const [, digits, remainder] = digitMatch;
-                if (!remainder) {
-                    return digits;
-                }
-                return `${digits}${remainder.charAt(0).toUpperCase()}${remainder.slice(1)}`;
-            }
-
-            return part.charAt(0).toUpperCase() + part.slice(1);
-        })
-        .join('');
-}
-
-/**
  * Converts an Iconize formatted value (e.g. LiHome) to the plugin's icon identifier.
  * Returns null when the value does not use the Iconize format or when no mapping exists.
  *
  * Examples:
  * - "LiHome" -> "home" (lucide is default)
- * - "FasUser" -> "fontawesome-regular:user"
+ * - "LiLucideUser" -> "user" (removes redundant lucide prefix)
+ * - "PhPhAppleLogo" -> "phosphor:apple-logo" (collapses duplicate phosphor prefix)
+ * - "RaRaHarpoonTrident" -> "rpg-awesome:harpoon-trident"
+ * - "FasUser" -> "fontawesome-solid:user"
  * - "SiGithub" -> "simple-icons:github"
  * - "invalid" -> null (no matching prefix)
  */
@@ -202,16 +396,30 @@ export function convertIconizeToIconId(value: string): string | null {
         return null;
     }
 
-    const identifier = pascalToKebab(iconName);
+    const exceptionIdentifier = resolveExceptionIconizeIdentifier(iconName, mapping.providerId);
+    if (exceptionIdentifier) {
+        if (mapping.isDefaultProvider) {
+            return exceptionIdentifier;
+        }
+
+        return `${mapping.providerId}:${exceptionIdentifier}`;
+    }
+
+    const identifier = decodeCompactNameToKebab(iconName);
     if (!identifier) {
         return null;
     }
 
-    if (mapping.isDefaultProvider) {
-        return identifier;
+    const normalizedIdentifier = normalizeIdentifierFromIconize(identifier, mapping.providerId);
+    if (!normalizedIdentifier) {
+        return null;
     }
 
-    return `${mapping.providerId}:${identifier}`;
+    if (mapping.isDefaultProvider) {
+        return normalizedIdentifier;
+    }
+
+    return `${mapping.providerId}:${normalizedIdentifier}`;
 }
 
 /**
@@ -219,8 +427,9 @@ export function convertIconizeToIconId(value: string): string | null {
  * Returns null when no Iconize mapping exists for the provider.
  *
  * Examples:
- * - "home" -> "LiHome" (assumes lucide as default)
- * - "fontawesome-regular:user" -> "FasUser"
+ * - "lucide-home" -> "LiHome" (legacy default identifiers)
+ * - "home" -> "LiHome" (legacy identifiers without prefix)
+ * - "fontawesome-solid:user" -> "FasUser"
  * - "simple-icons:github" -> "SiGithub"
  * - "unknown-provider:icon" -> null (no mapping for provider)
  */
@@ -232,7 +441,7 @@ export function convertIconIdToIconize(iconId: string): string | null {
 
     // Parse provider and icon identifier
     const colonIndex = trimmed.indexOf(':');
-    const providerId = colonIndex === -1 ? 'lucide' : trimmed.substring(0, colonIndex);
+    const providerId = colonIndex === -1 ? LUCIDE_PROVIDER_ID : trimmed.substring(0, colonIndex);
     const identifier = colonIndex === -1 ? trimmed : trimmed.substring(colonIndex + 1);
 
     if (identifier.length === 0) {
@@ -250,11 +459,378 @@ export function convertIconIdToIconize(iconId: string): string | null {
     }
 
     // Convert kebab-case to PascalCase
-    const pascalName = kebabToPascal(identifier);
-    if (!pascalName) {
+    const normalizedIdentifier = stripProviderPrefixForIconize(identifier, providerId);
+
+    if (normalizedIdentifier.length === 0) {
+        return null;
+    }
+
+    const compactName = normalizeIconizeCompactName(normalizedIdentifier);
+    if (!compactName) {
         return null;
     }
 
     // Combine prefix and icon name
-    return `${mapping.prefix}${pascalName}`;
+    return `${mapping.prefix}${compactName}`;
+}
+
+/**
+ * Normalizes canonical icon identifiers to remove redundant provider prefixes.
+ * Ensures phosphor/rpg-awesome icons use slug-only identifiers and lucide icons
+ * drop the `lucide-` prefix when stored in canonical form.
+ */
+export function normalizeCanonicalIconId(iconId: string): string {
+    const trimmed = iconId.trim();
+    if (!trimmed) {
+        return trimmed;
+    }
+
+    const colonIndex = trimmed.indexOf(':');
+    if (colonIndex === -1) {
+        const normalized = normalizeIdentifierForProvider(trimmed, LUCIDE_PROVIDER_ID);
+        return normalized && normalized.length > 0 ? normalized : trimmed;
+    }
+
+    const providerId = trimmed.substring(0, colonIndex);
+    const identifier = trimmed.substring(colonIndex + 1);
+    const normalized = normalizeIdentifierForProvider(identifier, providerId);
+
+    if (!normalized || normalized.length === 0 || normalized === identifier) {
+        return trimmed;
+    }
+
+    return `${providerId}:${normalized}`;
+}
+
+/** Normalizes a file type icon map key, removing quotes, leading dots, and converting to lowercase */
+export function normalizeFileTypeIconMapKey(input: string): string {
+    const trimmed = input.trim();
+    const unquoted = tryUnquoteSingleQuotedText(trimmed);
+    const value = unquoted ?? trimmed;
+    return casefold(value.trim().replace(/^\./, ''));
+}
+
+/**
+ * Normalizes a file name icon map key, preserving intentional whitespace.
+ * Supports single-quoted values (e.g., 'ai ') to allow keys with leading/trailing spaces.
+ */
+export function normalizeFileNameIconMapKey(input: string): string {
+    if (!input || input.trim().length === 0) {
+        return '';
+    }
+
+    // Check if the input is a single-quoted string and extract its content
+    const trimmedForQuote = input.trim();
+    const unquoted = tryUnquoteSingleQuotedText(trimmedForQuote);
+    if (unquoted !== null) {
+        if (unquoted.trim().length === 0) {
+            return '';
+        }
+        return casefoldPreservingWhitespace(unquoted);
+    }
+
+    // Preserve whitespace if the raw input has leading or trailing spaces
+    if (/^\s|\s$/.test(input)) {
+        return casefoldPreservingWhitespace(input);
+    }
+
+    return casefold(input);
+}
+
+interface NormalizedIconMapEntry {
+    key: string;
+    iconId: string;
+}
+
+export interface IconMapParseResult {
+    map: Record<string, string>;
+    invalidLines: string[];
+}
+
+export function normalizeIconMapEntry(key: string, iconId: string, normalizeKey: (input: string) => string): NormalizedIconMapEntry | null {
+    const normalizedKey = normalizeKey(key);
+    if (!normalizedKey) {
+        return null;
+    }
+
+    const normalizedIconValue = normalizeIconMapIconValue(iconId);
+    if (!normalizedIconValue) {
+        return null;
+    }
+
+    return { key: normalizedKey, iconId: normalizedIconValue };
+}
+
+/**
+ * Normalizes an icon value from icon map input to match the value stored in frontmatter.
+ * Returns null for invalid or unrecognized identifiers.
+ */
+function normalizeIconMapIconValue(iconId: string): string | null {
+    const trimmed = iconId.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    // Preserve plain emoji values as-is (matches frontmatter storage).
+    const emojiOnly = extractFirstEmoji(trimmed);
+    if (emojiOnly && emojiOnly === trimmed) {
+        return emojiOnly;
+    }
+
+    // Heuristic: treat unknown Iconize-style identifiers as invalid rather than lucide names.
+    // Example: "Si" should not be interpreted as a lucide icon.
+    const converted = convertIconizeToIconId(trimmed);
+    if (!converted && !trimmed.includes(':') && /[A-Z]/.test(trimmed) && !/[-_]/.test(trimmed)) {
+        return null;
+    }
+
+    const canonical = deserializeIconFromFrontmatter(trimmed);
+    if (!canonical) {
+        return null;
+    }
+
+    const serialized = serializeIconForFrontmatter(canonical);
+    return serialized && serialized.length > 0 ? serialized : null;
+}
+
+export function normalizeIconMapRecord(record: Record<string, string>, normalizeKey: (input: string) => string): Record<string, string> {
+    const normalized = sanitizeRecord<string>(undefined);
+
+    Object.entries(record).forEach(([key, value]) => {
+        if (typeof value !== 'string') {
+            return;
+        }
+
+        const normalizedEntry = normalizeIconMapEntry(key, value, normalizeKey);
+        if (!normalizedEntry) {
+            return;
+        }
+
+        normalized[normalizedEntry.key] = normalizedEntry.iconId;
+    });
+
+    return normalized;
+}
+
+export function serializeIconMapRecord(map: Record<string, string>): string {
+    const entries = Object.entries(map)
+        .filter(([key, iconId]) => Boolean(key) && Boolean(iconId))
+        .sort(([a], [b]) => a.localeCompare(b));
+
+    return entries
+        .map(([key, iconId]) => {
+            // Wrap keys containing whitespace or starting with '#' in single quotes
+            const serializedKey = shouldQuoteIconMapKey(key) ? `'${escapeSingleQuotedText(key)}'` : key;
+            return `${serializedKey}=${iconId}`;
+        })
+        .join('\n');
+}
+
+export function parseIconMapText(value: string, normalizeKey: (input: string) => string): IconMapParseResult {
+    const map = sanitizeRecord<string>(undefined);
+    const invalidLines: string[] = [];
+
+    const lines = value.replace(/\r\n/g, '\n').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const rawLine = lines[i];
+        const trimmed = rawLine.trim();
+
+        if (!trimmed || trimmed.startsWith('#')) {
+            continue;
+        }
+
+        const separatorIndex = trimmed.indexOf('=');
+        const altSeparatorIndex = trimmed.indexOf(':');
+        const hasEquals = separatorIndex !== -1;
+        const hasColon = altSeparatorIndex !== -1;
+
+        const splitIndex = hasEquals ? separatorIndex : hasColon ? altSeparatorIndex : -1;
+        if (splitIndex === -1) {
+            invalidLines.push(trimmed);
+            continue;
+        }
+
+        const rawKey = trimmed.substring(0, splitIndex).trim();
+        const rawIconId = trimmed.substring(splitIndex + 1).trim();
+
+        const normalizedEntry = normalizeIconMapEntry(rawKey, rawIconId, normalizeKey);
+        if (!normalizedEntry) {
+            invalidLines.push(trimmed);
+            continue;
+        }
+
+        map[normalizedEntry.key] = normalizedEntry.iconId;
+    }
+
+    return { map, invalidLines };
+}
+
+/** Returns true if the key needs to be wrapped in single quotes for serialization */
+function shouldQuoteIconMapKey(key: string): boolean {
+    return /\s/.test(key) || key.startsWith('#');
+}
+
+/** Escapes backslashes and single quotes for embedding in a single-quoted string */
+function escapeSingleQuotedText(value: string): string {
+    return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+/** Extracts the content from a single-quoted string, or returns null if not quoted */
+function tryUnquoteSingleQuotedText(value: string): string | null {
+    if (value.length < 2 || !value.startsWith("'") || !value.endsWith("'")) {
+        return null;
+    }
+
+    return unescapeSingleQuotedText(value.slice(1, -1));
+}
+
+/** Unescapes backslashes and single quotes in a single-quoted string's content */
+function unescapeSingleQuotedText(value: string): string {
+    let result = '';
+    for (let i = 0; i < value.length; i++) {
+        const ch = value[i];
+        // Handle escape sequences: \' and \\
+        if (ch === '\\' && i + 1 < value.length) {
+            const next = value[i + 1];
+            if (next === "'" || next === '\\') {
+                result += next;
+                i += 1;
+                continue;
+            }
+        }
+        result += ch;
+    }
+    return result;
+}
+
+/**
+ * Serializes a canonical icon identifier to the value stored in frontmatter.
+ * Returns null when the icon cannot be normalized.
+ */
+export function serializeIconForFrontmatter(iconId: string): string | null {
+    const canonical = normalizeCanonicalIconId(iconId);
+    if (!canonical) {
+        return null;
+    }
+
+    const trimmed = canonical.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const colonIndex = trimmed.indexOf(':');
+    if (colonIndex !== -1) {
+        const providerId = trimmed.substring(0, colonIndex);
+        const identifier = trimmed.substring(colonIndex + 1).trim();
+        if (providerId === VAULT_PROVIDER_ID && identifier.toLowerCase().endsWith(VAULT_SVG_EXTENSION)) {
+            return identifier;
+        }
+    }
+
+    const emojiPrefix = 'emoji:';
+    const emojiCandidate = trimmed.startsWith(emojiPrefix) ? trimmed.substring(emojiPrefix.length).trim() : trimmed;
+    const emojiOnly = extractFirstEmoji(emojiCandidate);
+
+    if (emojiOnly && emojiCandidate === emojiOnly) {
+        return emojiOnly;
+    }
+
+    const shortProviderIconId = serializeShortProviderIconId(trimmed);
+    if (shortProviderIconId) {
+        return shortProviderIconId;
+    }
+
+    return null;
+}
+
+/**
+ * Deserializes an icon value from frontmatter back into canonical format.
+ * Accepts the plugin's stored frontmatter format, then falls back to supported
+ * legacy Iconize identifiers.
+ */
+export function deserializeIconFromFrontmatter(value: string): string | null {
+    return deserializeFrontmatterIconWithIconizeFallback(value);
+}
+
+/**
+ * Deserializes a legacy provider-prefixed frontmatter value (e.g. "emoji:🔭") into canonical format.
+ */
+function deserializeLegacyProviderPrefixedFrontmatter(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    const colonIndex = trimmed.indexOf(':');
+    if (colonIndex === -1) {
+        return null;
+    }
+
+    const provider = trimmed.substring(0, colonIndex).trim().toLowerCase();
+    const identifier = trimmed.substring(colonIndex + 1).trim();
+    if (!provider || !identifier) {
+        return null;
+    }
+
+    if (provider === 'emoji') {
+        const emojiOnly = extractFirstEmoji(identifier);
+        if (emojiOnly && emojiOnly === identifier) {
+            return `emoji:${emojiOnly}`;
+        }
+        return null;
+    }
+
+    if (provider === LUCIDE_PROVIDER_ID) {
+        const normalized = normalizeCanonicalIconId(identifier);
+        return normalized && normalized.length > 0 ? normalized : null;
+    }
+
+    if (provider === VAULT_PROVIDER_ID && !identifier.includes(':') && identifier.toLowerCase().endsWith(VAULT_SVG_EXTENSION)) {
+        return `${VAULT_PROVIDER_ID}:${identifier}`;
+    }
+
+    return null;
+}
+
+function extractVaultSvgPathFromWikiLink(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed.startsWith('[[') || !trimmed.endsWith(']]')) {
+        return null;
+    }
+
+    const inner = trimmed.slice(2, -2).trim();
+    if (!inner || inner.includes('\n') || inner.includes('\r')) {
+        return null;
+    }
+
+    const pipeIndex = inner.indexOf('|');
+    const rawTarget = (pipeIndex === -1 ? inner : inner.slice(0, pipeIndex)).trim();
+    if (!rawTarget || rawTarget.includes('#') || rawTarget.includes('^')) {
+        return null;
+    }
+
+    return rawTarget.toLowerCase().endsWith(VAULT_SVG_EXTENSION) ? rawTarget : null;
+}
+
+/**
+ * Deserializes an icon value from note frontmatter back into canonical format.
+ * Accepts the plugin's stored frontmatter format, then falls back to supported
+ * legacy Iconize identifiers.
+ */
+export function deserializeIconFromFrontmatterStrict(value: string): string | null {
+    return deserializeFrontmatterIconWithIconizeFallback(value);
+}
+
+/**
+ * Deserializes an icon value from note frontmatter back into canonical format.
+ *
+ * Accepts a legacy provider-prefixed format (e.g. "emoji:🔭") for backward compatibility.
+ */
+export function deserializeIconFromFrontmatterCompat(value: string): string | null {
+    const legacy = deserializeLegacyProviderPrefixedFrontmatter(value);
+    if (legacy) {
+        return legacy;
+    }
+
+    return deserializeIconFromFrontmatterStrict(value);
 }

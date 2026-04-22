@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
 import type { LocalStorageKeys } from '../types';
-import { DEFAULT_SETTINGS } from '../settings';
+import { DEFAULT_SETTINGS } from '../settings/defaultSettings';
 import { localStorage } from '../utils/localStorage';
+import { normalizeCanonicalIconId } from '../utils/iconizeFormat';
+import { sanitizeRecord } from '../utils/recordUtils';
+import { isRecord } from '../utils/typeGuards';
 import { RECENT_ICONS_PER_PROVIDER_LIMIT } from './icons/types';
 
 // Delay before persisting changes to local storage (milliseconds)
@@ -30,23 +33,31 @@ export class RecentStorageService {
     private readonly settings: NotebookNavigatorSettings;
     private readonly keys: LocalStorageKeys;
     private readonly notifyChange: () => void;
+    private readonly vaultProfileId: string;
 
     // In-memory caches for recent data
     private notesCache: string[] = [];
-    private iconsCache: Record<string, string[]> = {};
+    private notesByProfileCache: Record<string, string[]> = sanitizeRecord<string[]>(undefined);
+    private iconsCache: Record<string, string[]> = sanitizeRecord<string[]>(undefined);
 
     // Timer IDs for delayed persistence
     private notesPersistTimer: number | null = null;
     private iconsPersistTimer: number | null = null;
 
     // Track last persisted state to avoid unnecessary writes
-    private lastPersistedNotes: string[] = [];
-    private lastPersistedIcons: Record<string, string[]> = {};
+    private lastPersistedNotesByProfile: Record<string, string[]> = sanitizeRecord<string[]>(undefined);
+    private lastPersistedIcons: Record<string, string[]> = sanitizeRecord<string[]>(undefined);
 
-    constructor(options: { settings: NotebookNavigatorSettings; keys: LocalStorageKeys; notifyChange: () => void }) {
+    constructor(options: {
+        settings: NotebookNavigatorSettings;
+        keys: LocalStorageKeys;
+        notifyChange: () => void;
+        vaultProfileId: string;
+    }) {
         this.settings = options.settings;
         this.keys = options.keys;
         this.notifyChange = options.notifyChange;
+        this.vaultProfileId = options.vaultProfileId;
     }
 
     // Load data from local storage into memory caches
@@ -56,7 +67,7 @@ export class RecentStorageService {
     }
 
     getRecentNotes(): string[] {
-        return this.notesCache;
+        return [...this.notesCache];
     }
 
     setRecentNotes(recentNotes: string[]): void {
@@ -66,11 +77,16 @@ export class RecentStorageService {
         }
 
         this.notesCache = normalized;
+        if (normalized.length === 0) {
+            delete this.notesByProfileCache[this.vaultProfileId];
+        } else {
+            this.notesByProfileCache[this.vaultProfileId] = normalized;
+        }
         this.scheduleRecentNotesPersist();
     }
 
     getRecentIcons(): Record<string, string[]> {
-        return this.iconsCache;
+        return this.cloneIconMap(this.iconsCache);
     }
 
     setRecentIcons(recentIcons: Record<string, string[]>): void {
@@ -84,12 +100,35 @@ export class RecentStorageService {
     }
 
     applyRecentNotesLimit(): void {
-        const normalized = this.normalizeRecentNotes(this.notesCache, this.getRecentNotesLimit());
-        if (this.areArraysEqual(normalized, this.notesCache)) {
+        const limit = this.getRecentNotesLimit();
+        const cachedProfiles = Object.keys(this.notesByProfileCache);
+        let didChange = false;
+
+        cachedProfiles.forEach(profileId => {
+            const storedNotes = this.notesByProfileCache[profileId] ?? [];
+            const normalized = this.normalizeRecentNotes(storedNotes, limit);
+            if (this.areArraysEqual(normalized, storedNotes)) {
+                return;
+            }
+
+            didChange = true;
+            if (normalized.length === 0) {
+                delete this.notesByProfileCache[profileId];
+            } else {
+                this.notesByProfileCache[profileId] = normalized;
+            }
+        });
+
+        const activeNotes = this.notesByProfileCache[this.vaultProfileId] ?? [];
+        if (!this.areArraysEqual(activeNotes, this.notesCache)) {
+            this.notesCache = [...activeNotes];
+            didChange = true;
+        }
+
+        if (!didChange) {
             return;
         }
 
-        this.notesCache = normalized;
         this.scheduleRecentNotesPersist();
     }
 
@@ -114,30 +153,74 @@ export class RecentStorageService {
     private hydrateRecentNotes(): void {
         const limit = this.getRecentNotesLimit();
         const storedValue = localStorage.get<unknown>(this.keys.recentNotesKey);
-        const storedList = Array.isArray(storedValue) ? storedValue.filter(item => typeof item === 'string') : [];
-        const normalized = this.normalizeRecentNotes(storedList, limit);
+        const validProfileIds = this.getValidVaultProfileIds();
+        const normalizedByProfile = sanitizeRecord<string[]>(undefined);
+        let didNormalize = false;
 
-        this.notesCache = normalized;
-        this.lastPersistedNotes = [...normalized];
+        if (Array.isArray(storedValue)) {
+            const storedList = storedValue.filter((item): item is string => typeof item === 'string');
+            const normalized = this.normalizeRecentNotes(storedList, limit);
+            if (normalized.length > 0) {
+                normalizedByProfile[this.vaultProfileId] = normalized;
+            }
+            didNormalize = true;
+        } else if (isRecord(storedValue)) {
+            for (const [profileId, value] of Object.entries(storedValue)) {
+                if (!validProfileIds.has(profileId)) {
+                    didNormalize = true;
+                    continue;
+                }
+
+                if (!Array.isArray(value)) {
+                    didNormalize = true;
+                    continue;
+                }
+
+                if (value.length === 0) {
+                    didNormalize = true;
+                    continue;
+                }
+
+                const storedList = value.filter((item): item is string => typeof item === 'string');
+                if (storedList.length !== value.length) {
+                    didNormalize = true;
+                }
+                const normalized = this.normalizeRecentNotes(storedList, limit);
+
+                if (!this.areArraysEqual(normalized, storedList)) {
+                    didNormalize = true;
+                }
+
+                if (normalized.length > 0) {
+                    normalizedByProfile[profileId] = normalized;
+                } else if (storedList.length > 0) {
+                    didNormalize = true;
+                }
+            }
+        }
+
+        this.notesByProfileCache = normalizedByProfile;
+        this.notesCache = [...(normalizedByProfile[this.vaultProfileId] ?? [])];
+        this.lastPersistedNotesByProfile = this.cloneIconMap(normalizedByProfile);
 
         // Persist normalized data if it differs from stored data
-        if (!this.areArraysEqual(normalized, storedList)) {
-            localStorage.set(this.keys.recentNotesKey, normalized);
+        if (didNormalize) {
+            localStorage.set(this.keys.recentNotesKey, this.cloneIconMap(normalizedByProfile));
         }
     }
 
     // Load recent icons from local storage and normalize data
     private hydrateRecentIcons(): void {
         const storedValue = localStorage.get<unknown>(this.keys.recentIconsKey);
-        const storedRecord = storedValue && typeof storedValue === 'object' ? (storedValue as Record<string, unknown>) : {};
-        const sanitized = this.sanitizeIconRecord(storedRecord);
+        const storedRecord = isRecord(storedValue) ? storedValue : {};
+        const { sanitized, didSanitize } = this.sanitizeIconRecord(storedRecord);
         const normalized = this.normalizeRecentIconsMap(sanitized);
 
         this.iconsCache = normalized;
         this.lastPersistedIcons = this.cloneIconMap(normalized);
 
         // Persist normalized data if it differs from stored data
-        if (!this.areIconMapsEqual(normalized, sanitized)) {
+        if (didSanitize || !this.areIconMapsEqual(normalized, sanitized)) {
             localStorage.set(this.keys.recentIconsKey, normalized);
         }
     }
@@ -186,15 +269,17 @@ export class RecentStorageService {
 
     // Save recent notes to local storage immediately
     private persistRecentNotesImmediately(): void {
+        this.pruneRecentNotesByProfileCache();
+
         // Skip if data hasn't changed
-        if (this.areArraysEqual(this.notesCache, this.lastPersistedNotes)) {
+        if (this.areIconMapsEqual(this.notesByProfileCache, this.lastPersistedNotesByProfile)) {
             return;
         }
 
         // Create snapshot and persist
-        const snapshot = [...this.notesCache];
+        const snapshot = this.cloneIconMap(this.notesByProfileCache);
         localStorage.set(this.keys.recentNotesKey, snapshot);
-        this.lastPersistedNotes = snapshot;
+        this.lastPersistedNotesByProfile = snapshot;
         this.notifyChange();
     }
 
@@ -250,7 +335,7 @@ export class RecentStorageService {
 
     // Normalize recent icons map: validate structure, remove duplicates, apply per-provider limit
     private normalizeRecentIconsMap(source: Record<string, unknown>): Record<string, string[]> {
-        const normalized: Record<string, string[]> = {};
+        const normalized = sanitizeRecord<string[]>(undefined);
 
         for (const [providerId, value] of Object.entries(source)) {
             // Skip invalid provider IDs
@@ -268,14 +353,19 @@ export class RecentStorageService {
                     continue;
                 }
 
+                const normalizedIdentifier = this.normalizeIconIdentifierForProvider(providerId, iconId);
+                if (!normalizedIdentifier) {
+                    continue;
+                }
+
                 // Skip duplicates
-                if (seen.has(iconId)) {
+                if (seen.has(normalizedIdentifier)) {
                     continue;
                 }
 
                 // Add to result
-                seen.add(iconId);
-                providerIcons.push(iconId);
+                seen.add(normalizedIdentifier);
+                providerIcons.push(normalizedIdentifier);
 
                 // Stop when per-provider limit reached
                 if (providerIcons.length >= RECENT_ICONS_PER_PROVIDER_LIMIT) {
@@ -290,6 +380,33 @@ export class RecentStorageService {
         }
 
         return normalized;
+    }
+
+    private normalizeIconIdentifierForProvider(providerId: string, identifier: string): string | null {
+        const trimmedIdentifier = identifier.trim();
+        if (!trimmedIdentifier) {
+            return null;
+        }
+
+        let canonical = trimmedIdentifier;
+        if (!canonical.includes(':') && providerId !== 'lucide') {
+            canonical = `${providerId}:${canonical}`;
+        }
+
+        const normalizedCanonical = normalizeCanonicalIconId(canonical);
+        if (!normalizedCanonical) {
+            return null;
+        }
+
+        const colonIndex = normalizedCanonical.indexOf(':');
+        const normalizedProvider = colonIndex === -1 ? 'lucide' : normalizedCanonical.substring(0, colonIndex);
+        const normalizedIdentifier = colonIndex === -1 ? normalizedCanonical : normalizedCanonical.substring(colonIndex + 1);
+
+        if (!normalizedIdentifier || normalizedProvider !== providerId) {
+            return null;
+        }
+
+        return providerId === 'lucide' ? normalizedIdentifier : `${providerId}:${normalizedIdentifier}`;
     }
 
     // Check if two string arrays are identical
@@ -316,8 +433,12 @@ export class RecentStorageService {
         }
 
         for (const key of aKeys) {
-            const aList = a[key] ?? [];
-            const bList = b[key] ?? [];
+            if (!Object.prototype.hasOwnProperty.call(b, key)) {
+                return false;
+            }
+
+            const aList = a[key];
+            const bList = b[key];
             if (!this.areArraysEqual(aList, bList)) {
                 return false;
             }
@@ -328,7 +449,7 @@ export class RecentStorageService {
 
     // Create deep copy of icon map
     private cloneIconMap(source: Record<string, string[]>): Record<string, string[]> {
-        const clone: Record<string, string[]> = {};
+        const clone = sanitizeRecord<string[]>(undefined);
         for (const [key, value] of Object.entries(source)) {
             clone[key] = [...value];
         }
@@ -342,26 +463,69 @@ export class RecentStorageService {
         return Math.max(1, limitValue);
     }
 
+    private getValidVaultProfileIds(): Set<string> {
+        const profiles = Array.isArray(this.settings.vaultProfiles) ? this.settings.vaultProfiles : [];
+        const ids = new Set<string>();
+
+        profiles.forEach(profile => {
+            if (profile.id) {
+                ids.add(profile.id);
+            }
+        });
+
+        if (this.vaultProfileId) {
+            ids.add(this.vaultProfileId);
+        }
+
+        return ids;
+    }
+
+    private pruneRecentNotesByProfileCache(): void {
+        const validProfileIds = this.getValidVaultProfileIds();
+
+        Object.keys(this.notesByProfileCache).forEach(profileId => {
+            if (validProfileIds.has(profileId)) {
+                return;
+            }
+            delete this.notesByProfileCache[profileId];
+        });
+    }
+
     // Convert unknown record to validated icon record structure
-    private sanitizeIconRecord(source: Record<string, unknown>): Record<string, string[]> {
-        const sanitized: Record<string, string[]> = {};
+    private sanitizeIconRecord(source: Record<string, unknown>): { sanitized: Record<string, string[]>; didSanitize: boolean } {
+        const sanitized = sanitizeRecord<string[]>(undefined);
+        let didSanitize = false;
+
         for (const [key, value] of Object.entries(source)) {
             // Validate key
             if (typeof key !== 'string' || key.length === 0) {
+                didSanitize = true;
                 continue;
             }
 
             // Validate value is array
             if (!Array.isArray(value)) {
+                didSanitize = true;
+                continue;
+            }
+
+            if (value.length === 0) {
+                didSanitize = true;
                 continue;
             }
 
             // Filter to only string values
             const icons = value.filter((item): item is string => typeof item === 'string');
+            if (icons.length !== value.length) {
+                didSanitize = true;
+            }
+
             if (icons.length > 0) {
                 sanitized[key] = icons;
+            } else {
+                didSanitize = true;
             }
         }
-        return sanitized;
+        return { sanitized, didSanitize };
     }
 }

@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  */
 
 import { TFile } from 'obsidian';
-import { IndexedDBStorage, FileData } from './IndexedDBStorage';
+import { createDefaultFileData, IndexedDBStorage, FileData } from './IndexedDBStorage';
 
 /**
  * FileOperations - IndexedDB storage access layer and cache management
@@ -44,13 +44,21 @@ let dbInstance: IndexedDBStorage | null = null;
 let appId: string | null = null;
 let isInitializing = false;
 let isShuttingDown = false;
+let isShutdownState = false;
+let initializationPromise: Promise<void> | null = null;
+// Configured feature image blob cache size for the current platform.
+let featureImageCacheMaxEntries: number | null = null;
+// Configured preview text LRU size for the current platform.
+let previewTextCacheMaxEntries: number | null = null;
+// Configured preview text load batch size for the current platform.
+let previewLoadMaxBatch: number | null = null;
 
 /**
  * Indicates whether a database shutdown is currently in progress.
  * Used to avoid issuing write operations during teardown cycles.
  */
 export function isShutdownInProgress(): boolean {
-    return isShuttingDown;
+    return isShuttingDown || isShutdownState;
 }
 
 /**
@@ -64,9 +72,38 @@ export function getDBInstance(): IndexedDBStorage {
         if (!appId) {
             throw new Error('Database not initialized. Call initializeDatabase(appId) first.');
         }
-        dbInstance = new IndexedDBStorage(appId);
+        // Build the constructor options from the configured module-level settings.
+        const options: {
+            featureImageCacheMaxEntries?: number;
+            previewTextCacheMaxEntries?: number;
+            previewLoadMaxBatch?: number;
+        } = {};
+        if (featureImageCacheMaxEntries !== null) {
+            options.featureImageCacheMaxEntries = featureImageCacheMaxEntries;
+        }
+        if (previewTextCacheMaxEntries !== null) {
+            options.previewTextCacheMaxEntries = previewTextCacheMaxEntries;
+        }
+        if (previewLoadMaxBatch !== null) {
+            options.previewLoadMaxBatch = previewLoadMaxBatch;
+        }
+
+        // Only pass options when at least one value is configured.
+        dbInstance = new IndexedDBStorage(appId, Object.keys(options).length > 0 ? options : undefined);
     }
     return dbInstance;
+}
+
+/**
+ * Returns the global database instance when initialized, otherwise null.
+ *
+ * This avoids throwing during early startup when callers only need best-effort cache reads.
+ */
+export function getDBInstanceOrNull(): IndexedDBStorage | null {
+    if (isShutdownInProgress() || !appId) {
+        return null;
+    }
+    return getDBInstance();
 }
 
 /**
@@ -75,20 +112,123 @@ export function getDBInstance(): IndexedDBStorage {
  *
  * @param appIdParam - The app ID to use for database naming
  */
-export async function initializeDatabase(appIdParam: string): Promise<void> {
+export async function initializeDatabase(
+    appIdParam: string,
+    options?: {
+        featureImageCacheMaxEntries?: number;
+        previewTextCacheMaxEntries?: number;
+        previewLoadMaxBatch?: number;
+    }
+): Promise<void> {
+    if (isShuttingDown) {
+        return;
+    }
+    if (isShutdownState) {
+        isShutdownState = false;
+    }
+
     // Idempotent: if already initialized or in progress, skip
-    if (isInitializing) return;
+    if (isInitializing) {
+        if (initializationPromise) {
+            await initializationPromise;
+        }
+        return;
+    }
     const existing = dbInstance;
-    if (existing && existing.isInitialized()) return;
+    if (existing && existing.isInitialized()) {
+        existing.startPreviewTextWarmup();
+        return;
+    }
 
     isInitializing = true;
+    initializationPromise = (async () => {
+        try {
+            if (isShutdownInProgress()) {
+                return;
+            }
+            appId = appIdParam;
+            if (options?.featureImageCacheMaxEntries !== undefined) {
+                // Persist feature image cache size for the singleton instance.
+                featureImageCacheMaxEntries = options.featureImageCacheMaxEntries;
+            }
+            if (options?.previewTextCacheMaxEntries !== undefined) {
+                previewTextCacheMaxEntries = options.previewTextCacheMaxEntries;
+            }
+            if (options?.previewLoadMaxBatch !== undefined) {
+                previewLoadMaxBatch = options.previewLoadMaxBatch;
+            }
+            const db = getDBInstance();
+            await db.init();
+            if (isShutdownInProgress() || dbInstance !== db) {
+                return;
+            }
+            db.startPreviewTextWarmup();
+        } finally {
+            isInitializing = false;
+        }
+    })();
+
     try {
-        appId = appIdParam;
-        const db = getDBInstance();
-        await db.init();
+        await initializationPromise;
     } finally {
-        isInitializing = false;
+        initializationPromise = null;
     }
+}
+
+/**
+ * Waits for shared database initialization and returns the singleton instance.
+ *
+ * Returns null when the plugin has not configured the database yet or initialization fails.
+ */
+export async function waitForDatabaseInitialization(): Promise<IndexedDBStorage | null> {
+    if (isShutdownInProgress()) {
+        return null;
+    }
+
+    if (!appId) {
+        const waitStart = Date.now();
+        while (!appId && !isShutdownInProgress() && Date.now() - waitStart < 5000) {
+            await new Promise<void>(resolve => {
+                globalThis.setTimeout(resolve, 50);
+            });
+        }
+    }
+
+    if (isShutdownInProgress() || !appId) {
+        return null;
+    }
+
+    if (initializationPromise) {
+        try {
+            await initializationPromise;
+        } catch (error) {
+            console.error('Failed while waiting for database initialization:', error);
+            return null;
+        }
+    }
+
+    const db = getDBInstanceOrNull();
+    if (!db) {
+        return null;
+    }
+
+    if (!db.isInitialized()) {
+        if (isShutdownInProgress() || dbInstance !== db) {
+            return null;
+        }
+        try {
+            await db.init();
+            if (isShutdownInProgress() || dbInstance !== db) {
+                return null;
+            }
+            db.startPreviewTextWarmup();
+        } catch (error) {
+            console.error('Failed to initialize database while waiting:', error);
+            return null;
+        }
+    }
+
+    return db;
 }
 
 /**
@@ -97,19 +237,27 @@ export async function initializeDatabase(appIdParam: string): Promise<void> {
  */
 export function shutdownDatabase(): void {
     // Idempotent: if already shut down or in progress, skip
-    if (!dbInstance) {
+    if (!dbInstance && !appId && !isInitializing && !initializationPromise) {
         return;
     }
     if (isShuttingDown) return;
 
     isShuttingDown = true;
+    isShutdownState = true;
     try {
         try {
-            dbInstance.close();
+            dbInstance?.close();
         } catch (e) {
             console.error('Failed to close database on shutdown:', e);
         }
     } finally {
+        dbInstance = null;
+        appId = null;
+        isInitializing = false;
+        initializationPromise = null;
+        featureImageCacheMaxEntries = null;
+        previewTextCacheMaxEntries = null;
+        previewLoadMaxBatch = null;
         isShuttingDown = false;
     }
 }
@@ -119,12 +267,11 @@ export function shutdownDatabase(): void {
  *
  * Behavior:
  * - New files: Initialize with null content fields for content generation
- * - Modified files: Skip update entirely, letting content providers detect mtime mismatch
+ * - Modified files: Update the stored mtime, leaving provider processed mtimes unchanged
  * - Unchanged files: Update the record (useful for sync scenarios)
  *
- * When files are modified, the database mtime is intentionally not updated.
- * This creates an mtime mismatch that content providers use to trigger regeneration.
- * Existing content remains visible until regeneration completes, avoiding UI flicker.
+ * Content providers track their own processed mtimes (e.g. `markdownPipelineMtime`, `tagsMtime`) to detect staleness.
+ * On file modification, we keep existing content visible until regeneration completes, avoiding UI flicker.
  *
  * @param files - Array of Obsidian files to record
  * @param existingData - Pre-fetched map of existing file data
@@ -132,11 +279,13 @@ export function shutdownDatabase(): void {
 export async function recordFileChanges(
     files: TFile[],
     existingData: Map<string, FileData>,
-    renamedData?: Map<string, FileData>
+    renamedData?: Map<string, FileData>,
+    dbOverride?: Pick<IndexedDBStorage, 'upsertFilesWithPatch'>
 ): Promise<void> {
-    if (isShuttingDown) return;
-    const db = getDBInstance();
-    const updates: { path: string; data: FileData }[] = [];
+    if (isShutdownInProgress()) return;
+    const db = dbOverride ?? getDBInstance();
+    // Use patch-only upserts for existing records so provider-owned fields cannot be overwritten by stale snapshots.
+    const updates: { path: string; create: FileData; patch?: Partial<FileData> }[] = [];
 
     for (const file of files) {
         const existing = existingData.get(file.path);
@@ -148,88 +297,82 @@ export async function recordFileChanges(
                     ...renamed,
                     mtime: file.stat.mtime
                 };
-                updates.push({ path: file.path, data: clonedData });
+                updates.push({ path: file.path, create: clonedData });
                 renamedData?.delete(file.path);
                 continue;
             }
-            // New file - initialize with null content
-            const fileData: FileData = {
-                mtime: file.stat.mtime,
-                tags: null, // TagContentProvider will extract these
-                preview: null, // PreviewContentProvider will generate these
-                featureImage: null, // FeatureImageContentProvider will generate these
-                metadata: null // MetadataContentProvider will extract these
-            };
-            updates.push({ path: file.path, data: fileData });
+            // New file - initialize with default content and provider bookkeeping fields.
+            updates.push({ path: file.path, create: createDefaultFileData({ mtime: file.stat.mtime, path: file.path }) });
         } else if (renamed) {
             // File exists in DB and has pending rename data - merge them
             // This happens when a file is renamed then modified before the rename is fully processed
-            const mergedData: FileData = {
-                ...existing,
-                ...renamed,
-                mtime: file.stat.mtime
+            const patch: Partial<FileData> = {
+                mtime: file.stat.mtime,
+                markdownPipelineMtime: renamed.markdownPipelineMtime,
+                tagsMtime: renamed.tagsMtime,
+                metadataMtime: renamed.metadataMtime,
+                fileThumbnailsMtime: renamed.fileThumbnailsMtime,
+                tags: renamed.tags,
+                wordCount: renamed.wordCount,
+                taskTotal: renamed.taskTotal,
+                taskUnfinished: renamed.taskUnfinished,
+                properties: renamed.properties,
+                previewStatus: renamed.previewStatus,
+                featureImageStatus: renamed.featureImageStatus,
+                featureImageKey: renamed.featureImageKey,
+                metadata: renamed.metadata
             };
-            updates.push({ path: file.path, data: mergedData });
+            const createdData: FileData = { ...renamed, mtime: file.stat.mtime };
+            updates.push({ path: file.path, create: createdData, patch });
             renamedData?.delete(file.path);
+        } else if (existing.mtime !== file.stat.mtime) {
+            // Keep the record mtime in sync with the vault.
+            // Regeneration is driven by provider-specific processed mtimes and content status fields.
+            const createdData: FileData = { ...existing, mtime: file.stat.mtime };
+            // Patch only the stat-derived fields; all other fields come from the stored record.
+            updates.push({ path: file.path, create: createdData, patch: { mtime: file.stat.mtime } });
         }
-        // If file was actually modified (existing.mtime !== file.stat.mtime),
-        // we intentionally skip the update. Content providers will detect
-        // the mtime mismatch and regenerate content as needed.
     }
 
-    await db.setFiles(updates);
+    await db.upsertFilesWithPatch(updates);
 }
 
 /**
- * Mark files for content regeneration without updating mtime.
- * This preserves existing file data but clears content fields.
- * Used when settings change and content needs to be regenerated.
+ * Mark files for content regeneration without clearing existing content fields.
  *
- * Why we preserve mtime:
- * - The file hasn't actually changed, only our settings have
- * - Updating mtime would make content providers think the file was modified
- * - We want to regenerate content with new settings, not because file changed
- *
- * When we DO update mtime:
- * - recordFileChanges(): When files are actually modified/added/renamed
- * - Content providers update mtime after generation to prevent re-processing
+ * This resets provider processed mtimes so providers re-run even when the file mtime has not changed
+ * (for example when Obsidian refreshes metadata after a frontmatter edit that preserves timestamps).
  *
  * @param files - Array of Obsidian files to mark for regeneration
  */
 export async function markFilesForRegeneration(files: TFile[]): Promise<void> {
-    if (isShuttingDown) return;
+    if (isShutdownInProgress()) return;
     const db = getDBInstance();
     const paths = files.map(f => f.path);
     const existingData = db.getFiles(paths);
-    const updates: { path: string; data: FileData }[] = [];
-    const mtimeOnlyUpdates: { path: string; mtime: number }[] = [];
+    // Reset provider processed mtimes without clearing provider output fields.
+    const updates: { path: string; create: FileData; patch?: Partial<FileData> }[] = [];
 
     for (const file of files) {
         const existing = existingData.get(file.path);
         if (!existing) {
             // File not in database yet, record it
-            updates.push({
-                path: file.path,
-                data: {
-                    mtime: file.stat.mtime,
-                    tags: null,
-                    preview: null,
-                    featureImage: null,
-                    metadata: null
-                }
-            });
+            updates.push({ path: file.path, create: createDefaultFileData({ mtime: file.stat.mtime, path: file.path }) });
         } else {
-            // Force regeneration by setting mtime to 0, without overwriting other fields
-            mtimeOnlyUpdates.push({ path: file.path, mtime: 0 });
+            // Force regeneration by resetting provider processed mtimes without clearing existing content fields.
+            const patch: Partial<FileData> = {
+                mtime: file.stat.mtime,
+                markdownPipelineMtime: 0,
+                tagsMtime: 0,
+                metadataMtime: 0,
+                fileThumbnailsMtime: 0
+            };
+            const createdData: FileData = { ...existing, ...patch };
+            updates.push({ path: file.path, create: createdData, patch });
         }
     }
 
-    if (updates.length > 0) {
-        await db.setFiles(updates);
-    }
-    if (mtimeOnlyUpdates.length > 0) {
-        await db.updateMtimes(mtimeOnlyUpdates);
-    }
+    await db.upsertFilesWithPatch(updates);
 }
 
 /**
@@ -238,7 +381,7 @@ export async function markFilesForRegeneration(files: TFile[]): Promise<void> {
  * @param paths - Array of file paths to remove
  */
 export async function removeFilesFromCache(paths: string[]): Promise<void> {
-    if (isShuttingDown) return;
+    if (isShutdownInProgress()) return;
     const db = getDBInstance();
     await db.deleteFiles(paths);
 }

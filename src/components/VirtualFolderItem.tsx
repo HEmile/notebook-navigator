@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,27 +38,64 @@
  *    - Virtual folder icons are defined in the virtualFolder prop
  *
  * 5. Minimal overhead:
- *    - No file operations or context menus
+ *    - No file operations
  *    - No tooltip functionality needed
  *    - Pure presentational component
  */
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import type { DragEvent } from 'react';
-import { setIcon } from 'obsidian';
 import { useSettingsState } from '../context/SettingsContext';
 import { getIconService, useIconServiceVersion } from '../services/icons';
-import { VirtualFolder } from '../types';
+import {
+    PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
+    SHORTCUTS_VIRTUAL_FOLDER_ID,
+    TAGS_ROOT_VIRTUAL_FOLDER_ID,
+    VirtualFolder,
+    type CSSPropertiesWithVars
+} from '../types';
+import { useUXPreferences } from '../context/UXPreferencesContext';
+import type { NoteCountInfo } from '../types/noteCounts';
+import { buildNoteCountDisplay } from '../utils/noteCountFormatting';
+import { buildSearchMatchContentClass } from '../utils/searchHighlight';
+import { resolveUXIcon } from '../utils/uxIcons';
+import { IndentGuideColumns } from './IndentGuideColumns';
+import { NavItemHoverActionSlot } from './NavItemHoverActionSlot';
+
+export interface VirtualFolderTrailingAction {
+    actionLabel: string;
+    icon: string;
+    onClick: () => void;
+    labelMode?: 'note-count';
+}
 
 interface VirtualFolderItemProps {
     virtualFolder: VirtualFolder; // Static data structure from NavigationPane
     level: number; // Nesting level for indentation
+    color?: string;
+    backgroundColor?: string;
+    indentGuideLevels?: number[]; // Levels of expanded ancestors whose connector lines should be rendered on this row
     isExpanded: boolean; // From ExpansionContext via NavigationPane
     hasChildren: boolean; // Computed by NavigationPane from tag tree
     onToggle: () => void; // Expansion toggle handler
+    onToggleAllSiblings?: () => void; // Optional recursive toggle handler for modifier-click on the chevron
+    onSelect?: (event: React.MouseEvent<HTMLDivElement>) => void; // Optional selection handler
+    isSelected?: boolean; // Selection state for virtual folders that act as collections
+    showFileCount?: boolean; // Whether to render note count badge
+    countInfo?: NoteCountInfo; // Pre-computed note counts
+    searchMatch?: 'include' | 'exclude'; // Search highlight state
+    trailingAction?: VirtualFolderTrailingAction; // Optional trailing action button
     onDragOver?: (event: DragEvent<HTMLDivElement>) => void; // Optional drag over handler for shortcuts
     onDrop?: (event: DragEvent<HTMLDivElement>) => void; // Optional drop handler for shortcuts
     onDragLeave?: (event: DragEvent<HTMLDivElement>) => void; // Optional drag leave handler for shortcuts
+    dropConfig?: {
+        zone: string;
+        path: string;
+        tag?: string;
+        allowInternalDrop?: boolean;
+        allowExternalDrop?: boolean;
+    };
+    onContextMenu?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 /**
@@ -79,18 +116,108 @@ interface VirtualFolderItemProps {
 export const VirtualFolderComponent = React.memo(function VirtualFolderComponent({
     virtualFolder,
     level,
+    color,
+    backgroundColor,
+    indentGuideLevels,
     isExpanded,
     hasChildren,
+    onToggleAllSiblings,
+    onSelect,
+    isSelected = false,
+    showFileCount = false,
+    countInfo,
+    searchMatch,
+    trailingAction,
     onToggle,
     onDragOver,
     onDrop,
-    onDragLeave
+    onDragLeave,
+    dropConfig,
+    onContextMenu
 }: VirtualFolderItemProps) {
     const settings = useSettingsState();
+    const uxPreferences = useUXPreferences();
     const folderRef = useRef<HTMLDivElement>(null);
     const chevronRef = useRef<HTMLDivElement>(null);
     const iconRef = useRef<HTMLSpanElement>(null);
     const iconVersion = useIconServiceVersion();
+    const includeDescendantNotes = uxPreferences.includeDescendantNotes;
+    const applyColorToName = Boolean(color) && !settings.colorIconOnly;
+
+    // Format note count display based on descendant notes preference and count settings
+    const noteCountDisplay = useMemo(() => {
+        if (!countInfo) {
+            return null;
+        }
+        const useSeparateCounts = includeDescendantNotes && settings.separateNoteCounts;
+        return buildNoteCountDisplay(countInfo, includeDescendantNotes, useSeparateCounts);
+    }, [countInfo, includeDescendantNotes, settings.separateNoteCounts]);
+
+    // Determine if count badge should be rendered based on settings and available data
+    const shouldDisplayCount = useMemo(() => {
+        if (!showFileCount) {
+            return false;
+        }
+        if (!noteCountDisplay) {
+            return false;
+        }
+        if (
+            (virtualFolder.id === TAGS_ROOT_VIRTUAL_FOLDER_ID || virtualFolder.id === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) &&
+            !includeDescendantNotes
+        ) {
+            return false;
+        }
+        return noteCountDisplay.shouldDisplay;
+    }, [includeDescendantNotes, noteCountDisplay, showFileCount, virtualFolder.id]);
+
+    const trailingActionLabelMode = trailingAction?.labelMode;
+
+    const trailingActionLabel = useMemo(() => {
+        if (trailingActionLabelMode !== 'note-count') {
+            return undefined;
+        }
+        if (!shouldDisplayCount || !noteCountDisplay) {
+            return undefined;
+        }
+        return noteCountDisplay.label;
+    }, [noteCountDisplay, shouldDisplayCount, trailingActionLabelMode]);
+
+    const shouldRenderCountBadge = useMemo(() => {
+        if (!shouldDisplayCount || !noteCountDisplay) {
+            return false;
+        }
+        return trailingActionLabelMode !== 'note-count';
+    }, [noteCountDisplay, shouldDisplayCount, trailingActionLabelMode]);
+
+    // Build CSS class name with selection state
+    const className = useMemo(() => {
+        const classes = ['nn-navitem'];
+        if (virtualFolder.id === SHORTCUTS_VIRTUAL_FOLDER_ID) {
+            classes.push('nn-shortcut-header-item');
+        }
+        if (virtualFolder.id === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
+            classes.push('nn-properties-header-item');
+        }
+        if (isSelected) {
+            classes.push('nn-selected');
+        }
+        if (backgroundColor) {
+            classes.push('nn-has-custom-background');
+        }
+        if (searchMatch) {
+            classes.push('nn-has-search-match');
+        }
+        return classes.join(' ');
+    }, [backgroundColor, isSelected, searchMatch, virtualFolder.id]);
+
+    const contentClassName = useMemo(() => buildSearchMatchContentClass(['nn-navitem-content'], searchMatch), [searchMatch]);
+    const virtualFolderNameClassName = useMemo(() => {
+        const classes = ['nn-navitem-name'];
+        if (applyColorToName && color) {
+            classes.push('nn-has-custom-color');
+        }
+        return classes.join(' ');
+    }, [applyColorToName, color]);
 
     const handleDoubleClick = useCallback(() => {
         if (hasChildren) {
@@ -101,9 +228,18 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
     const handleChevronClick = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation();
-            if (hasChildren) onToggle();
+            if (!hasChildren) {
+                return;
+            }
+
+            if (e.altKey && onToggleAllSiblings) {
+                onToggleAllSiblings();
+                return;
+            }
+
+            onToggle();
         },
-        [hasChildren, onToggle]
+        [hasChildren, onToggle, onToggleAllSiblings]
     );
 
     const handleChevronDoubleClick = useCallback((e: React.MouseEvent) => {
@@ -111,33 +247,73 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
         e.preventDefault();
     }, []);
 
-    useEffect(() => {
-        if (chevronRef.current) {
-            setIcon(chevronRef.current, isExpanded ? 'lucide-chevron-down' : 'lucide-chevron-right');
-        }
-    }, [isExpanded]);
+    // Route click to selection handler if provided, otherwise toggle expansion
+    const handleContentClick = useCallback(
+        (event: React.MouseEvent<HTMLDivElement>) => {
+            if (onSelect) {
+                event.preventDefault();
+                event.stopPropagation();
+                onSelect(event);
+                return;
+            }
+            onToggle();
+        },
+        [onSelect, onToggle]
+    );
 
     useEffect(() => {
-        if (iconRef.current && settings.showIcons && virtualFolder.icon) {
+        const chevronEl = chevronRef.current;
+        if (!chevronEl) {
+            return;
+        }
+
+        if (!hasChildren) {
+            chevronEl.replaceChildren();
+            return;
+        }
+
+        getIconService().renderIcon(
+            chevronEl,
+            resolveUXIcon(settings.interfaceIcons, isExpanded ? 'nav-tree-collapse' : 'nav-tree-expand')
+        );
+    }, [hasChildren, iconVersion, isExpanded, settings.interfaceIcons]);
+
+    // Renders icon for virtual folders when an icon is configured on the item
+    useEffect(() => {
+        if (iconRef.current && virtualFolder.icon) {
             getIconService().renderIcon(iconRef.current, virtualFolder.icon);
         }
-    }, [virtualFolder.icon, settings.showIcons, iconVersion]);
+    }, [virtualFolder.icon, iconVersion]);
+
+    const virtualFolderStyle: CSSPropertiesWithVars = {
+        '--level': level,
+        ...(backgroundColor ? { '--nn-navitem-custom-bg-color': backgroundColor } : {})
+    };
 
     return (
         <div
             ref={folderRef}
-            className="nn-navitem"
+            className={className}
+            data-search-match={searchMatch ?? undefined}
             data-path={virtualFolder.id}
+            data-drop-zone={dropConfig?.zone}
+            data-drop-path={dropConfig?.path}
+            data-tag={dropConfig?.tag}
+            data-allow-internal-drop={dropConfig?.allowInternalDrop === false ? 'false' : undefined}
+            data-allow-external-drop={dropConfig?.allowExternalDrop === false ? 'false' : undefined}
             data-level={level}
-            style={{ '--level': level } as React.CSSProperties}
+            style={virtualFolderStyle}
             role="treeitem"
             aria-expanded={hasChildren ? isExpanded : undefined}
+            aria-selected={onSelect ? isSelected : undefined}
             aria-level={level + 1}
             onDragOver={onDragOver}
             onDrop={onDrop}
             onDragLeave={onDragLeave}
+            onContextMenu={onContextMenu}
         >
-            <div className="nn-navitem-content" onClick={onToggle} onDoubleClick={handleDoubleClick}>
+            <div className={contentClassName} onClick={handleContentClick} onDoubleClick={handleDoubleClick}>
+                <IndentGuideColumns levels={indentGuideLevels} />
                 <div
                     className={`nn-navitem-chevron ${hasChildren ? 'nn-navitem-chevron--has-children' : 'nn-navitem-chevron--no-children'}`}
                     ref={chevronRef}
@@ -145,9 +321,20 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
                     onDoubleClick={handleChevronDoubleClick}
                     tabIndex={-1}
                 />
-                {settings.showIcons && virtualFolder.icon && <span className="nn-navitem-icon" ref={iconRef} />}
-                <span className="nn-navitem-name">{virtualFolder.name}</span>
+                {virtualFolder.icon && <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />}
+                <span className={virtualFolderNameClassName} style={applyColorToName ? { color } : undefined}>
+                    {virtualFolder.name}
+                </span>
                 <span className="nn-navitem-spacer" />
+                {shouldRenderCountBadge && noteCountDisplay && <span className="nn-navitem-count">{noteCountDisplay.label}</span>}
+                {trailingAction && (
+                    <NavItemHoverActionSlot
+                        label={trailingActionLabel}
+                        actionLabel={trailingAction.actionLabel}
+                        icon={trailingAction.icon}
+                        onClick={trailingAction.onClick}
+                    />
+                )}
             </div>
         </div>
     );

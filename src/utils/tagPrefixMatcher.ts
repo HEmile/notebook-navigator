@@ -1,6 +1,6 @@
 /*
  * Notebook Navigator - Plugin for Obsidian
- * Copyright (c) 2025 Johan Sanneblad
+ * Copyright (c) 2025-2026 Johan Sanneblad
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,6 +15,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+import {
+    getNormalizedPathSegments,
+    getPathPatternCacheKey,
+    matchesParsedPatternSegments,
+    parsePathPattern,
+    type ParsedPathPattern
+} from './pathPatternMatcher';
+import { normalizeCaseInsensitiveIdentifierPreservingWhitespace } from './recordUtils';
 
 /**
  * Simple tag prefix matching utilities
@@ -66,28 +75,35 @@ function matchesAnyPrefix(tagPath: string, prefixes: string[]): boolean {
  * Hidden tag pattern handling
  *
  * Rules:
- * - Entries without wildcards act as prefix matchers against full tag paths
- * - Entries with a single wildcard at the start (`*tag`) or end (`tag*`) act on tag names only
- * - Entries containing slashes alongside wildcards are ignored
- * - Entries containing more than one wildcard character are ignored
+ * - Path rules without wildcards hide the tag and its descendants.
+ * - Path rules that end with `/*` hide descendants while keeping the base tag visible (e.g., `projects/*` hides `projects/client` but not `projects`).
+ * - Path rules that end with `*` but no slash hide the base tag and descendants (e.g., `projects*` hides `projects` and `projects/client`).
+ * - Name rules: single wildcard at the start (`*tag`) applies to tag names only, at any depth.
+ * - Anything with multiple wildcards or a wildcard in the middle of a path segment is ignored to keep matching predictable.
  *
  * Examples:
- * - "archive" -> hides archive, archive/2024, archive/2024/docs (prefix match)
- * - "temp*" -> hides temp, temp-file, temporary (name starts with)
+ * - "archive" -> hides archive, archive/2024, archive/2024/docs (path prefix)
+ * - "archive/*" -> hides archive/2024 and archive/2024/docs, keeps archive visible
+ * - "archive*" -> hides archive and all descendants (path prefix with wildcard)
+ * - "temp*" -> hides temp, temp-file, temporary (name starts with) while also hiding descendants via path prefix
  * - "*draft" -> hides draft, my-draft, first-draft (name ends with)
- * - "archive/*" -> IGNORED (contains slash with wildcard)
- * - "*temp*" -> IGNORED (multiple wildcards)
+ * - "archive/<wildcard>/private" -> ignored (wildcard mid-path)
+ * - "*temp*" -> ignored (multiple wildcards)
  */
 export interface HiddenTagMatcher {
-    prefixes: string[]; // Full path prefix matchers (e.g., "archive", "internal/private")
+    prefixes: string[]; // Full path prefix matchers (legacy compatibility)
     startsWithNames: string[]; // Tag name prefix matchers (e.g., "temp" from "temp*")
     endsWithNames: string[]; // Tag name suffix matchers (e.g., "draft" from "*draft")
+    pathPatterns: HiddenTagPathPattern[]; // Parsed path-based patterns
 }
+
+export type HiddenTagPathPattern = ParsedPathPattern;
 
 const EMPTY_HIDDEN_TAG_MATCHER: HiddenTagMatcher = {
     prefixes: [],
     startsWithNames: [],
-    endsWithNames: []
+    endsWithNames: [],
+    pathPatterns: []
 };
 
 /**
@@ -101,8 +117,32 @@ function sanitizePattern(pattern: string): string {
  * Normalizes a tag path or pattern by trimming slashes, removing # prefix, and lowercasing.
  */
 export function normalizeTagPathValue(tag: string): string {
-    return cleanTagPath(tag).toLowerCase();
+    return normalizeCaseInsensitiveIdentifierPreservingWhitespace(cleanTagPath(tag));
 }
+
+// Cache parsed matchers and path patterns keyed by the joined pattern list.
+const tagMatcherCache = new Map<string, HiddenTagMatcher>();
+const tagPathCache = new Map<string, HiddenTagPathPattern[]>();
+
+// Clears all hidden-tag matcher caches.
+export const clearHiddenTagPatternCache = (): void => {
+    tagMatcherCache.clear();
+    tagPathCache.clear();
+};
+
+export const getHiddenTagPathPatterns = (patterns: string[]): HiddenTagPathPattern[] => {
+    const cacheKey = getPathPatternCacheKey(patterns);
+    const cached = tagPathCache.get(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
+    const parsed = patterns
+        .map(entry => parsePathPattern(entry, { normalizePattern: sanitizePattern }))
+        .filter((entry): entry is HiddenTagPathPattern => Boolean(entry));
+    tagPathCache.set(cacheKey, parsed);
+    return parsed;
+};
 
 /**
  * Parses patterns and categorizes them into prefix matchers or wildcard name matchers.
@@ -115,9 +155,16 @@ export function createHiddenTagMatcher(patterns: string[]): HiddenTagMatcher {
         return EMPTY_HIDDEN_TAG_MATCHER;
     }
 
+    const cacheKey = getPathPatternCacheKey(patterns);
+    const cached = tagMatcherCache.get(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
     const prefixes = new Set<string>();
     const startsWithNames = new Set<string>();
     const endsWithNames = new Set<string>();
+    const pathPatterns = getHiddenTagPathPatterns(patterns);
 
     for (const rawPattern of patterns) {
         const normalized = sanitizePattern(rawPattern);
@@ -125,44 +172,42 @@ export function createHiddenTagMatcher(patterns: string[]): HiddenTagMatcher {
             continue;
         }
 
-        // Patterns without wildcards become prefix matchers
+        const hasSlash = normalized.includes('/');
+        const starCount = (normalized.match(/\*/g) || []).length;
+        const startsWithWildcard = normalized.startsWith('*');
+        const endsWithWildcard = normalized.endsWith('*');
+
+        if (!hasSlash && starCount === 1 && startsWithWildcard && !endsWithWildcard) {
+            const suffix = normalized.slice(1);
+            if (suffix.length > 0) {
+                endsWithNames.add(suffix);
+            }
+            continue;
+        }
+
+        if (!hasSlash && starCount === 1 && endsWithWildcard && !startsWithWildcard) {
+            const prefix = normalized.slice(0, -1);
+            if (prefix.length > 0) {
+                startsWithNames.add(prefix);
+                prefixes.add(prefix);
+            }
+            continue;
+        }
+
         if (!normalized.includes('*')) {
             prefixes.add(normalized);
-            continue;
         }
-
-        const firstIndex = normalized.indexOf('*');
-        const lastIndex = normalized.lastIndexOf('*');
-
-        if (firstIndex !== lastIndex) {
-            // Ignore patterns with multiple wildcards (e.g., "*temp*")
-            continue;
-        }
-
-        // Wildcard must be at start/end AND pattern must not contain slashes
-        if ((firstIndex === 0 || firstIndex === normalized.length - 1) && !normalized.includes('/')) {
-            if (firstIndex === 0) {
-                // Pattern like "*draft"
-                const suffix = normalized.substring(1);
-                if (suffix.length > 0) {
-                    endsWithNames.add(suffix);
-                }
-            } else {
-                // Pattern like "temp*"
-                const prefix = normalized.substring(0, normalized.length - 1);
-                if (prefix.length > 0) {
-                    startsWithNames.add(prefix);
-                }
-            }
-        }
-        // Patterns like "archive/*" are ignored (wildcards don't work with paths)
     }
 
-    return {
+    const matcher: HiddenTagMatcher = {
         prefixes: Array.from(prefixes),
         startsWithNames: Array.from(startsWithNames),
-        endsWithNames: Array.from(endsWithNames)
+        endsWithNames: Array.from(endsWithNames),
+        pathPatterns
     };
+
+    tagMatcherCache.set(cacheKey, matcher);
+    return matcher;
 }
 
 /**
@@ -174,18 +219,26 @@ export function createHiddenTagMatcher(patterns: string[]): HiddenTagMatcher {
  * @returns true if tag matches a pattern
  */
 export function matchesHiddenTagPattern(tagPath: string, tagName: string, matcher: HiddenTagMatcher): boolean {
-    if (!matcher.prefixes.length && !matcher.startsWithNames.length && !matcher.endsWithNames.length) {
+    if (
+        matcher.pathPatterns.length === 0 &&
+        matcher.prefixes.length === 0 &&
+        matcher.startsWithNames.length === 0 &&
+        matcher.endsWithNames.length === 0
+    ) {
         return false;
     }
 
     const normalizedPath = sanitizePattern(tagPath);
+    const pathSegments = getNormalizedPathSegments(normalizedPath, normalizeTagPathValue);
+    const normalizedName = normalizeCaseInsensitiveIdentifierPreservingWhitespace(tagName);
 
-    // Check prefix matchers (e.g., "archive" matches "archive/2024")
-    if (matcher.prefixes.length > 0 && matchesAnyPrefix(normalizedPath, matcher.prefixes)) {
+    if (matcher.pathPatterns.some(pattern => matchesParsedPatternSegments(pattern, pathSegments))) {
         return true;
     }
 
-    const normalizedName = tagName.toLowerCase();
+    if (matcher.prefixes.length > 0 && matchesAnyPrefix(normalizedPath, matcher.prefixes)) {
+        return true;
+    }
 
     // Check name starts with (e.g., "temp*" matches "temp-file")
     if (matcher.startsWithNames.some(prefix => normalizedName.startsWith(prefix))) {
@@ -225,13 +278,20 @@ export interface HiddenTagVisibility {
  */
 export function createHiddenTagVisibility(patterns: string[], showHiddenItems: boolean): HiddenTagVisibility {
     const matcher = createHiddenTagMatcher(patterns);
-    const hasHiddenRules = matcher.prefixes.length > 0 || matcher.startsWithNames.length > 0 || matcher.endsWithNames.length > 0;
+    const hasHiddenRules =
+        matcher.pathPatterns.length > 0 ||
+        matcher.prefixes.length > 0 ||
+        matcher.startsWithNames.length > 0 ||
+        matcher.endsWithNames.length > 0;
     const shouldFilterHiddenTags = hasHiddenRules && !showHiddenItems;
 
     const isTagVisible = shouldFilterHiddenTags
         ? (tagPath: string, tagName?: string) => {
               const normalizedPath = normalizeTagPathValue(tagPath);
-              const normalizedName = tagName !== undefined ? tagName.toLowerCase() : (normalizedPath.split('/').pop() ?? normalizedPath);
+              const normalizedName =
+                  tagName !== undefined
+                      ? normalizeCaseInsensitiveIdentifierPreservingWhitespace(tagName)
+                      : (normalizedPath.split('/').pop() ?? normalizedPath);
               return !matchesHiddenTagPattern(normalizedPath, normalizedName, matcher);
           }
         : () => true;

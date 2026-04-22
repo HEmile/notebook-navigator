@@ -19,9 +19,10 @@ main.js
 .DS_Store
 
 # Ignore local user AI rules
-.github/copilot-instructions.md
+.claude
 .cursorrules
 .cursorignore
+.github/copilot-instructions.md
 AGENTS.md
 CLAUDE.md
 GEMINI.md
@@ -37,3 +38,4 @@ web/
 
 # Obsidian
 .obsidian
+release-notes.md
