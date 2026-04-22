@@ -29,7 +29,7 @@
  * WHAT ANDROID TEXTZOOM SCALES:
  * - font-size: YES (scaled proportionally)
  * - line-height: YES (when specified in px or em)
- * - width/height/min-height: NO (not scaled)
+ * - width/height/min-height/max-height: NO (not scaled)
  * - SVG dimensions: NO (not scaled)
  * - padding/margin: NO (not scaled)
  *
@@ -58,10 +58,10 @@
  *    - Must be done in CSS because .nn-mobile class redefines these on inner element
  *    - Uses: calc(21px * var(--nn-android-font-scale-reciprocal, 1))
  *
- * 3. Container heights (via CSS calc):
- *    - height/min-height for .nn-file-name and .nn-file-preview
+ * 3. Multi-line row caps (via CSS calc):
+ *    - max-height for .nn-file-name and .nn-file-preview
  *    - These use line-height vars which are pre-compensated, so we multiply by
- *      scale to get the original value (which Android won't scale)
+ *      scale to get the original cap value (which Android won't scale)
  *    - Uses: calc(var(--line-height) * rows * var(--nn-android-font-scale, 1))
  *
  * 4. Text elements with hardcoded sizes (via CSS):

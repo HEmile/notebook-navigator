@@ -57,7 +57,9 @@ import type { NotePropertyType } from '../settings/types';
 import type { SelectionState } from '../context/SelectionContext';
 import { getEffectiveSortOption } from '../utils/sortUtils';
 import { calculateCompactListMetrics } from '../utils/listPaneMetrics';
+import { getExtensionSuffix } from '../utils/fileTypeUtils';
 import {
+    estimateRenderedTextRows,
     getFileItemLayoutState,
     getSelectedPropertyValuePillToHide,
     getSelectedTagPillToHide,
@@ -178,7 +180,7 @@ export function useListPaneScroll({
 }: UseListPaneScrollParams): UseListPaneScrollResult {
     const { app, isMobile } = useServices();
     const listMeasurements = getListPaneMeasurements(isMobile);
-    const { hasPreview, getDB, isStorageReady } = useFileCache();
+    const { hasPreview, getDB, getFileDisplayName, isStorageReady } = useFileCache();
     // The list pane only renders after StorageContext marks storage ready.
     const db = getDB();
 
@@ -192,6 +194,8 @@ export function useListPaneScroll({
             }),
         [listMeasurements.titleLineHeight, settings.compactItemHeight, settings.compactItemHeightScaleText]
     );
+    const estimatedTitleCharsPerRow = isMobile ? 22 : 28;
+    const estimatedPreviewCharsPerRow = isMobile ? 44 : 60;
 
     // Reference to the scroll container DOM element
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -264,6 +268,7 @@ export function useListPaneScroll({
     const effectiveScrollPaddingEnd = Number.isFinite(scrollPaddingEnd) && scrollPaddingEnd > 0 ? scrollPaddingEnd : 0;
     const rowVirtualizer = useVirtualizer({
         count: listItems.length,
+        getItemKey: index => listItems[index]?.key ?? index,
         getScrollElement: () => {
             const element = scrollContainerRef.current;
             if (!element) {
@@ -321,6 +326,7 @@ export function useListPaneScroll({
             // Get actual preview status for accurate height calculation
             let hasPreviewText = false;
             let hasOmnisearchExcerpt = false;
+            let effectivePreviewText = '';
             if (file && folderSettings.showPreview) {
                 if (file.extension === 'md') {
                     // Use synchronous check from cache for markdown preview text
@@ -328,6 +334,7 @@ export function useListPaneScroll({
                 }
                 const excerpt = item.searchMeta?.excerpt;
                 hasOmnisearchExcerpt = typeof excerpt === 'string' && excerpt.length > 0;
+                effectivePreviewText = hasOmnisearchExcerpt && typeof excerpt === 'string' ? excerpt : db.getCachedPreviewText(file.path);
             }
             const hasPreviewContent = hasPreviewText || hasOmnisearchExcerpt;
 
@@ -378,13 +385,19 @@ export function useListPaneScroll({
 
             // Start with base padding
             let textContentHeight = 0;
+            const estimatedTitleText = file ? `${getFileDisplayName(file)}${getExtensionSuffix(file)}` : '';
+            const estimatedTitleRows = estimateRenderedTextRows({
+                text: estimatedTitleText,
+                maxRows: folderSettings.titleRows || 1,
+                charsPerRow: estimatedTitleCharsPerRow
+            });
 
             if (layoutState.isCompactMode) {
                 // Compact mode: only shows file name
-                textContentHeight = heights.titleLineHeight * (folderSettings.titleRows || 1);
+                textContentHeight = heights.titleLineHeight * Math.max(1, estimatedTitleRows);
             } else {
                 // Normal mode
-                textContentHeight += heights.titleLineHeight * (folderSettings.titleRows || 1); // File name
+                textContentHeight += heights.titleLineHeight * Math.max(1, estimatedTitleRows); // File name
 
                 // Single row mode - show date+preview, tags, and parent folder
                 if (layoutState.shouldUseSingleLineForDateAndPreview) {
@@ -401,9 +414,14 @@ export function useListPaneScroll({
                         if (layoutState.shouldShowDateForItem || showParentFolderLine) {
                             textContentHeight += heights.singleTextLineHeight;
                         }
-                    } else if (layoutState.shouldAlwaysReservePreviewSpace) {
-                        if (layoutState.multilinePreviewRowCount > 0) {
-                            textContentHeight += heights.multilineTextLineHeight * layoutState.multilinePreviewRowCount;
+                    } else if (layoutState.shouldUseExpandedMultiLineLayout) {
+                        const estimatedPreviewRows = estimateRenderedTextRows({
+                            text: effectivePreviewText,
+                            maxRows: layoutState.multilinePreviewRowCount,
+                            charsPerRow: estimatedPreviewCharsPerRow
+                        });
+                        if (estimatedPreviewRows > 0) {
+                            textContentHeight += heights.multilineTextLineHeight * estimatedPreviewRows;
                         }
 
                         if (layoutState.shouldShowDateForItem || showParentFolderLine) {
@@ -423,8 +441,8 @@ export function useListPaneScroll({
                 textContentHeight += heights.tagRowHeight * propertyRowCount;
             }
 
-            // Apply min-height constraint AFTER including all content (but not in compact mode)
-            // This ensures text content aligns with feature image height when shown
+            // Keep the estimated text area at least as tall as the feature image area in normal mode.
+            // This mirrors the rendered row floor when thumbnails are shown beside short text blocks.
             if (!isCompactMode && textContentHeight < heights.featureImageHeight) {
                 textContentHeight = heights.featureImageHeight;
             }
@@ -450,6 +468,42 @@ export function useListPaneScroll({
             onVirtualizerScrollingChange?.(nextIsScrolling, instance.scrollElement);
         }
     });
+    const remeasureRafRef = useRef<number | null>(null);
+    const remeasureVisibleRows = useCallback(() => {
+        if (!rowVirtualizer) {
+            return;
+        }
+        if (remeasureRafRef.current !== null) {
+            return;
+        }
+
+        remeasureRafRef.current = requestAnimationFrame(() => {
+            remeasureRafRef.current = null;
+
+            const scrollEl = scrollContainerRef.current;
+            if (!scrollEl) {
+                return;
+            }
+
+            const visibleFileRows = scrollEl.querySelectorAll<HTMLElement>('.nn-virtual-file-item[data-index]');
+            visibleFileRows.forEach(node => {
+                if (node.isConnected) {
+                    rowVirtualizer.measureElement(node);
+                }
+            });
+        });
+    }, [rowVirtualizer]);
+    const resetAndRemeasureVisibleRows = useCallback(() => {
+        if (!rowVirtualizer) {
+            return;
+        }
+
+        // TanStack Virtual clears the item size cache on `measure()`.
+        // Re-measure the mounted rows on the next frame so visible items settle
+        // to their exact post-commit heights instead of waiting for remount/resize.
+        rowVirtualizer.measure();
+        remeasureVisibleRows();
+    }, [rowVirtualizer, remeasureVisibleRows]);
 
     /**
      * Callback for when scroll container ref is set.
@@ -506,6 +560,15 @@ export function useListPaneScroll({
         return () => observer.disconnect();
     }, [scrollContainerEl]);
 
+    useEffect(() => {
+        return () => {
+            if (remeasureRafRef.current !== null) {
+                cancelAnimationFrame(remeasureRafRef.current);
+                remeasureRafRef.current = null;
+            }
+        };
+    }, []);
+
     // Container is ready when both the list pane and the physical container are visible
     const isScrollContainerReady = isVisible && containerVisible;
 
@@ -559,12 +622,8 @@ export function useListPaneScroll({
             prevIndexMapSizeRef.current = filePathToIndex.size;
             prevIndexMapObjRef.current = filePathToIndex;
             indexVersionRef.current = indexVersionRef.current + 1;
-            // Re-measure on any list structure/index change (covers reorders/add/remove)
-            if (rowVirtualizer) {
-                rowVirtualizer.measure();
-            }
         }
-    }, [filePathToIndex, filePathToIndex.size, rowVirtualizer]);
+    }, [filePathToIndex, filePathToIndex.size]);
 
     /**
      * Priority-based scroll queue management.
@@ -713,37 +772,47 @@ export function useListPaneScroll({
 
         const db = getDB();
         const unsubscribe = db.onContentChange(changes => {
-            // Check if any changes affect item height
-            const needsRemeasure = changes.some(change => {
-                // Content changes always need remeasure
-                if (
+            const heightAffectingChanges = changes.filter(change => {
+                if (!filePathToIndex.has(change.path)) {
+                    return false;
+                }
+
+                return (
                     change.changes.preview !== undefined ||
                     change.changes.featureImageKey !== undefined ||
                     change.changes.featureImageStatus !== undefined ||
                     change.changes.metadata !== undefined ||
-                    change.changes.properties !== undefined
-                ) {
-                    return true;
-                }
-
-                // For tag changes, always remeasure to handle height changes
-                // When tags are added/removed, the height of the item changes
-                if (change.changes.tags !== undefined) {
-                    return true;
-                }
-
-                return false;
+                    change.changes.properties !== undefined ||
+                    change.changes.tags !== undefined ||
+                    change.changes.wordCount !== undefined
+                );
             });
+            if (heightAffectingChanges.length === 0) {
+                return;
+            }
 
-            if (needsRemeasure) {
-                rowVirtualizer.measure();
+            const visibleFilePaths = new Set<string>();
+            rowVirtualizer.getVirtualItems().forEach(virtualItem => {
+                const item = listItems[virtualItem.index];
+                if (item?.type === ListPaneItemType.FILE && item.data instanceof TFile) {
+                    visibleFilePaths.add(item.data.path);
+                }
+            });
+            const hasOffscreenHeightChanges = heightAffectingChanges.some(change => !visibleFilePaths.has(change.path));
+
+            // Visible rows can be re-measured in place.
+            // Offscreen row changes need a cache reset so stale measured heights do not persist until remount.
+            if (hasOffscreenHeightChanges) {
+                resetAndRemeasureVisibleRows();
+            } else {
+                remeasureVisibleRows();
             }
         });
 
         return () => {
             unsubscribe();
         };
-    }, [rowVirtualizer, getDB]);
+    }, [filePathToIndex, getDB, listItems, remeasureVisibleRows, resetAndRemeasureVisibleRows, rowVirtualizer]);
 
     /**
      * Listen for mobile drawer visibility events.
@@ -777,7 +846,7 @@ export function useListPaneScroll({
     useEffect(() => {
         if (!rowVirtualizer) return;
 
-        rowVirtualizer.measure();
+        resetAndRemeasureVisibleRows();
     }, [
         topSpacerHeight,
         settings.showFileDate,
@@ -801,8 +870,11 @@ export function useListPaneScroll({
         settings.compactItemHeight,
         settings.compactItemHeightScaleText,
         folderSettings,
+        estimatedPreviewCharsPerRow,
+        estimatedTitleCharsPerRow,
         listMeasurements,
-        rowVirtualizer
+        rowVirtualizer,
+        resetAndRemeasureVisibleRows
     ]);
 
     /**
@@ -811,9 +883,9 @@ export function useListPaneScroll({
      */
     useEffect(() => {
         if (isStorageReady && rowVirtualizer) {
-            rowVirtualizer.measure();
+            resetAndRemeasureVisibleRows();
         }
-    }, [isStorageReady, rowVirtualizer]);
+    }, [isStorageReady, rowVirtualizer, resetAndRemeasureVisibleRows]);
 
     /**
      * Handle scrolling when list configuration changes (descendants toggle, appearance, grouping, or sort).

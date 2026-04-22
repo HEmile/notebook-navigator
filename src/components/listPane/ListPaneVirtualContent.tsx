@@ -292,6 +292,12 @@ export function ListPaneVirtualContent({
     const handleListMouseLeave = useCallback(() => {
         onHoveredFilePathChange(null, null);
     }, [onHoveredFilePathChange]);
+    const measureFileRowElement = useCallback(
+        (element: HTMLDivElement | null) => {
+            rowVirtualizer.measureElement(element);
+        },
+        [rowVirtualizer]
+    );
 
     return (
         <div
@@ -386,6 +392,7 @@ export function ListPaneVirtualContent({
 
                             return (
                                 <div
+                                    ref={item.type === ListPaneItemType.FILE ? measureFileRowElement : undefined}
                                     key={virtualItem.key}
                                     className={`nn-virtual-item ${
                                         item.type === ListPaneItemType.FILE ? 'nn-virtual-file-item' : ''

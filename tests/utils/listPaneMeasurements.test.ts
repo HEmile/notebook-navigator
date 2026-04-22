@@ -18,6 +18,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+    estimateRenderedTextRows,
     getFileItemLayoutState,
     getSelectedPropertyValuePillToHide,
     getSelectedTagPillToHide,
@@ -51,7 +52,27 @@ describe('listPaneMeasurements layout helpers', () => {
         ).toBe(false);
     });
 
-    it('reserves multiline preview rows when the feature image area is visible', () => {
+    it('estimates one rendered title row for short capped text', () => {
+        expect(
+            estimateRenderedTextRows({
+                text: 'Daily note',
+                maxRows: 2,
+                charsPerRow: 28
+            })
+        ).toBe(1);
+    });
+
+    it('caps estimated rendered rows at the configured maximum', () => {
+        expect(
+            estimateRenderedTextRows({
+                text: 'This preview text is long enough to wrap across multiple estimated rows in the list pane',
+                maxRows: 2,
+                charsPerRow: 20
+            })
+        ).toBe(2);
+    });
+
+    it('keeps the expanded multi-line layout when the feature image area is visible', () => {
         expect(
             getFileItemLayoutState({
                 showDate: true,
@@ -68,7 +89,7 @@ describe('listPaneMeasurements layout helpers', () => {
             isCompactMode: false,
             shouldUseMultiLinePreviewLayout: true,
             shouldCollapseEmptyPreviewSpace: false,
-            shouldAlwaysReservePreviewSpace: true,
+            shouldUseExpandedMultiLineLayout: true,
             shouldSuppressEmptyPreviewLines: false,
             multilinePreviewRowCount: 3
         });
@@ -90,7 +111,7 @@ describe('listPaneMeasurements layout helpers', () => {
         ).toMatchObject({
             shouldUseMultiLinePreviewLayout: true,
             shouldCollapseEmptyPreviewSpace: true,
-            shouldAlwaysReservePreviewSpace: false,
+            shouldUseExpandedMultiLineLayout: false,
             shouldSuppressEmptyPreviewLines: true,
             multilinePreviewRowCount: 0
         });
