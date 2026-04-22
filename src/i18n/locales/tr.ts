@@ -1604,7 +1604,8 @@ export const STRINGS_TR = {
                 desc: 'Not başlıkları için görüntülenecek satır sayısı.',
                 options: {
                     '1': '1 satır',
-                    '2': '2 satır'
+                    '2': '2 satır',
+                    '3': '3 satır'
                 }
             },
             showFeatureImage: {

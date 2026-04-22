@@ -1605,7 +1605,8 @@ export const STRINGS_VI = {
                 desc: 'Số dòng hiển thị cho tiêu đề ghi chú.',
                 options: {
                     '1': '1 dòng',
-                    '2': '2 dòng'
+                    '2': '2 dòng',
+                    '3': '3 dòng'
                 }
             },
             showFeatureImage: {

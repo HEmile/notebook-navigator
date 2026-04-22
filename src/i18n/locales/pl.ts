@@ -1608,7 +1608,8 @@ export const STRINGS_PL = {
                 desc: 'Liczba widocznych wierszy tytułów notatek.',
                 options: {
                     '1': '1 wiersz',
-                    '2': '2 wiersze'
+                    '2': '2 wiersze',
+                    '3': '3 wiersze'
                 }
             },
             showFeatureImage: {

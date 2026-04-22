@@ -1604,7 +1604,8 @@ export const STRINGS_JA = {
                 desc: 'ノートタイトルの表示行数。',
                 options: {
                     '1': '1行',
-                    '2': '2行'
+                    '2': '2行',
+                    '3': '3行'
                 }
             },
             showFeatureImage: {

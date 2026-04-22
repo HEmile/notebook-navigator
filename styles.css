@@ -3893,8 +3893,8 @@ body {
     top: max(0px, calc((var(--nn-file-title-line-height) + var(--nn-file-padding-vertical-compact) * 2 - 20px) / 2));
 }
 
-/* Compact mode with tags or 2 title rows: align with compact padding */
-.nn-quick-actions-panel.nn-compact-mode[data-title-rows='2'],
+/* Compact mode with tags or more than 1 title row: align with compact padding */
+.nn-quick-actions-panel.nn-compact-mode:not([data-title-rows='1']),
 .nn-quick-actions-panel.nn-compact-mode[data-has-tags='true'] {
     top: var(--nn-file-padding-vertical-compact);
 }

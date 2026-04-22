@@ -340,6 +340,7 @@ export function renderNotesTab(context: SettingsTabContext): void {
                 dropdown
                     .addOption('1', strings.settings.items.fileNameRows.options['1'])
                     .addOption('2', strings.settings.items.fileNameRows.options['2'])
+                    .addOption('3', strings.settings.items.fileNameRows.options['3'])
                     .setValue(plugin.settings.fileNameRows.toString())
                     .onChange(async value => {
                         plugin.settings.fileNameRows = parseInt(value, 10);

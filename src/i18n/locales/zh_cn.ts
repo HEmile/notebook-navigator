@@ -1597,7 +1597,8 @@ export const STRINGS_ZH_CN = {
                 desc: '笔记标题显示的行数。',
                 options: {
                     '1': '1 行',
-                    '2': '2 行'
+                    '2': '2 行',
+                    '3': '3 行'
                 }
             },
             showFeatureImage: {

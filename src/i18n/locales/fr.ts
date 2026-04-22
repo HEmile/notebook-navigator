@@ -1610,7 +1610,8 @@ export const STRINGS_FR = {
                 desc: 'Nombre de lignes à afficher pour les titres des notes.',
                 options: {
                     '1': '1 ligne',
-                    '2': '2 lignes'
+                    '2': '2 lignes',
+                    '3': '3 lignes'
                 }
             },
             showFeatureImage: {
