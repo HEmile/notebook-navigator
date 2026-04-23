@@ -39,6 +39,7 @@ import type { NavigationPaneRowProps } from './NavigationPaneItemRenderer.types'
 import type { TopicTreeItem as TopicTreeItemType } from '../../types/virtualization';
 import type { NavigationPaneRowContext } from './NavigationPaneItemRenderer.types';
 import { useTopicNavigation } from '../../hooks/useTopicNavigation';
+import { useContextMenu } from '../../hooks/useContextMenu';
 
 interface TopicRowProps {
     item: TopicTreeItemType;
@@ -48,6 +49,7 @@ interface TopicRowProps {
 function TopicRow({ item, context }: TopicRowProps) {
     const { settings, expansionState, expansionDispatch, selectionState } = context;
     const { navigateToTopic } = useTopicNavigation();
+    const itemRef = useRef<HTMLDivElement>(null);
     const chevronRef = useRef<HTMLDivElement>(null);
     const iconRef = useRef<HTMLSpanElement>(null);
     const iconVersion = useIconServiceVersion();
@@ -62,6 +64,8 @@ function TopicRow({ item, context }: TopicRowProps) {
     const color = item.color;
     const backgroundColor = item.backgroundColor;
     const applyColorToName = Boolean(color) && !settings.colorIconOnly;
+
+    useContextMenu(itemRef, { type: ItemType.TOPIC, item: topicNode.name });
 
     useEffect(() => {
         const el = chevronRef.current;
@@ -107,7 +111,7 @@ function TopicRow({ item, context }: TopicRowProps) {
     };
 
     return (
-        <div className={classes.join(' ')} style={itemStyle} data-path={topicPath} data-level={level}>
+        <div ref={itemRef} className={classes.join(' ')} style={itemStyle} data-path={topicPath} data-level={level}>
             <div className="nn-navitem-content" onClick={handleClick}>
                 <div
                     ref={chevronRef}

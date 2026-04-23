@@ -41,6 +41,7 @@ import {
     MenuDispatchers,
     buildFolderMenu,
     buildTagMenu,
+    buildTopicMenu,
     buildPropertyMenu,
     buildFileMenu,
     buildEmptyListMenu,
@@ -197,6 +198,15 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
                         settings,
                         state,
                         dispatchers
+                    });
+                };
+            } else if (menuConfig.type === ItemType.TOPIC) {
+                buildMenu = menuInstance => {
+                    buildTopicMenu({
+                        topicName: menuConfig.item,
+                        menu: menuInstance,
+                        services,
+                        settings
                     });
                 };
             } else if (menuConfig.type === ItemType.PROPERTY) {
