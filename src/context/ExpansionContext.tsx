@@ -17,7 +17,7 @@
  */
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, STORAGE_KEYS, TAGS_ROOT_VIRTUAL_FOLDER_ID } from '../types';
+import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, STORAGE_KEYS, TAGS_ROOT_VIRTUAL_FOLDER_ID, TOPICS_ROOT_VIRTUAL_FOLDER_ID } from '../types';
 import { localStorage } from '../utils/localStorage';
 
 // State interface
@@ -275,8 +275,8 @@ export function ExpansionProvider({ children }: ExpansionProviderProps) {
         const expandedTags = new Set<string>(savedExpandedTags || []);
         const expandedProperties = new Set<string>(savedExpandedProperties || []);
         const expandedVirtualFolders = new Set<string>(
-            savedExpandedVirtualFolders || [TAGS_ROOT_VIRTUAL_FOLDER_ID, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID]
-        ); // Default expand tag/property roots
+            savedExpandedVirtualFolders || [TAGS_ROOT_VIRTUAL_FOLDER_ID, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TOPICS_ROOT_VIRTUAL_FOLDER_ID]
+        ); // Default expand tag/property/topic roots
         const expandedTopics = new Set<string>(savedExpandedTopics || []);
 
         return { expandedFolders, expandedTags, expandedProperties, expandedVirtualFolders, expandedTopics };

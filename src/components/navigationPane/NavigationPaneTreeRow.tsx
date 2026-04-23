@@ -27,6 +27,7 @@ import {
     SHORTCUTS_VIRTUAL_FOLDER_ID,
     TAGGED_TAG_ID,
     TAGS_ROOT_VIRTUAL_FOLDER_ID,
+    TOPICS_ROOT_VIRTUAL_FOLDER_ID,
     UNTAGGED_TAG_ID
 } from '../../types';
 import { FolderItem } from '../FolderItem';
@@ -211,7 +212,9 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
                     ? NavigationSectionId.TAGS
                     : virtualFolder.id === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
                       ? NavigationSectionId.PROPERTIES
-                      : null;
+                      : virtualFolder.id === TOPICS_ROOT_VIRTUAL_FOLDER_ID
+                        ? NavigationSectionId.TOPICS
+                        : null;
             const shouldDisableFirstSectionMenu =
                 shouldPinShortcuts && sectionId !== null && firstSectionId !== null && sectionId === firstSectionId;
             const baseAllowSeparatorActions = !isShortcutsGroup || !shouldPinShortcuts;

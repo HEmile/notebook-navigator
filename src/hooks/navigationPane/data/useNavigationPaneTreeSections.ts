@@ -28,6 +28,7 @@ import {
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
     TAGGED_TAG_ID,
     TAGS_ROOT_VIRTUAL_FOLDER_ID,
+    TOPICS_ROOT_VIRTUAL_FOLDER_ID,
     UNTAGGED_TAG_ID,
     type VirtualFolder
 } from '../../../types';
@@ -873,6 +874,26 @@ export function useNavigationPaneTreeSections({
 
         const items: CombinedNavigationItem[] = [];
 
+        // Always push a collapsible section header (like Tags/Shortcuts)
+        const rootVirtualFolder: VirtualFolder = {
+            id: TOPICS_ROOT_VIRTUAL_FOLDER_ID,
+            name: strings.navigationPane.topics,
+            icon: resolveUXIcon(settings.interfaceIcons, 'nav-tags')
+        };
+        items.push({
+            type: NavigationPaneItemType.VIRTUAL_FOLDER,
+            data: rootVirtualFolder,
+            level: 0,
+            key: TOPICS_ROOT_VIRTUAL_FOLDER_ID,
+            isSelectable: false,
+            hasChildren: rootNodes.length > 0
+        });
+
+        const isExpanded = expansionState.expandedVirtualFolders.has(TOPICS_ROOT_VIRTUAL_FOLDER_ID);
+        if (!isExpanded) {
+            return { topicItems: items, renderTopicTree: topicGraph };
+        }
+
         const appendTopicNode = (node: TopicNode, path: string, level: number) => {
             const isHidden = hiddenTopics.has(node.name);
             if (isHidden && !showHiddenItems) return;
@@ -904,15 +925,17 @@ export function useNavigationPaneTreeSections({
         };
 
         for (const root of rootNodes) {
-            appendTopicNode(root, root.name, 0);
+            appendTopicNode(root, root.name, 1);
         }
 
         return { topicItems: items, renderTopicTree: topicGraph };
     }, [
         settings.showTopics,
         settings.hiddenTopics,
+        settings.interfaceIcons,
         topicService,
         expansionState.expandedTopics,
+        expansionState.expandedVirtualFolders,
         showHiddenItems
     ]);
 

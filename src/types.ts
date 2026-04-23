@@ -61,6 +61,12 @@ export const TAGS_ROOT_VIRTUAL_FOLDER_ID = 'tags-root';
 export const PROPERTIES_ROOT_VIRTUAL_FOLDER_ID = 'properties-root';
 
 /**
+ * Virtual folder id for the root Topics row in navigation.
+ * Used for topics-section expand/collapse tracking.
+ */
+export const TOPICS_ROOT_VIRTUAL_FOLDER_ID = 'topics-root';
+
+/**
  * Identifies which pane currently has keyboard focus
  * Used for keyboard navigation between folder tree and file list
  */
