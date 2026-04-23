@@ -20,12 +20,16 @@ import { useCallback } from 'react';
 import { useExpansionDispatch } from '../context/ExpansionContext';
 import { useSelectionDispatch } from '../context/SelectionContext';
 import { useUIState, useUIDispatch } from '../context/UIStateContext';
+import { useServices } from '../context/ServicesContext';
+import { getTopicNote } from '../utils/topicNotes';
+import { getTopicNameFromPath } from '../utils/topicGraph';
 
 export function useTopicNavigation() {
     const selectionDispatch = useSelectionDispatch();
     const expansionDispatch = useExpansionDispatch();
     const uiState = useUIState();
     const uiDispatch = useUIDispatch();
+    const { app } = useServices();
 
     const navigateToTopic = useCallback(
         (topicPath: string) => {
@@ -40,8 +44,18 @@ export function useTopicNavigation() {
             }
 
             uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+
+            // Open the topic note file in the editor if it exists
+            const topicName = getTopicNameFromPath(topicPath);
+            const topicFile = getTopicNote(topicName, app);
+            if (topicFile) {
+                const leaf = app.workspace.getLeaf(false);
+                if (leaf) {
+                    leaf.openFile(topicFile, { active: false });
+                }
+            }
         },
-        [selectionDispatch, expansionDispatch, uiState.singlePane, uiDispatch]
+        [selectionDispatch, expansionDispatch, uiState.singlePane, uiDispatch, app]
     );
 
     return { navigateToTopic };
