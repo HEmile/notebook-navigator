@@ -55,6 +55,7 @@ type PropertyValueNavigationItem = Extract<CombinedNavigationItem, { type: typeo
 type PropertyLikeNavigationItem = PropertyKeyNavigationItem | PropertyValueNavigationItem;
 type VirtualFolderNavigationItem = Extract<CombinedNavigationItem, { type: typeof NavigationPaneItemType.VIRTUAL_FOLDER }>;
 type RecentNoteNavigationItem = Extract<CombinedNavigationItem, { type: typeof NavigationPaneItemType.RECENT_NOTE }>;
+type TopicNavigationItem = Extract<CombinedNavigationItem, { type: typeof NavigationPaneItemType.TOPIC }>;
 
 function decorateFolderNavigationItem(ctx: NavigationItemDecorationContext, item: FolderNavigationItem): CombinedNavigationItem {
     const folderDisplayData = ctx.getFolderDisplayData(item.data.path);
@@ -228,6 +229,17 @@ function decorateRecentNoteNavigationItem(ctx: NavigationItemDecorationContext, 
     };
 }
 
+function decorateTopicNavigationItem(ctx: NavigationItemDecorationContext, item: TopicNavigationItem): CombinedNavigationItem {
+    const topicNode = item.data;
+    const colorData = ctx.metadataService.getTagColorData(topicNode.name);
+    return {
+        ...item,
+        icon: ctx.metadataService.getTagIcon(topicNode.name),
+        color: colorData.color,
+        backgroundColor: colorData.background
+    };
+}
+
 function decorateNavigationItem(ctx: NavigationItemDecorationContext, item: CombinedNavigationItem): CombinedNavigationItem {
     switch (item.type) {
         case NavigationPaneItemType.FOLDER:
@@ -238,6 +250,8 @@ function decorateNavigationItem(ctx: NavigationItemDecorationContext, item: Comb
         case NavigationPaneItemType.PROPERTY_KEY:
         case NavigationPaneItemType.PROPERTY_VALUE:
             return decoratePropertyLikeNavigationItem(ctx, item);
+        case NavigationPaneItemType.TOPIC:
+            return decorateTopicNavigationItem(ctx, item);
         case NavigationPaneItemType.VIRTUAL_FOLDER:
             return decorateVirtualFolderNavigationItem(ctx, item);
         case NavigationPaneItemType.RECENT_NOTE:

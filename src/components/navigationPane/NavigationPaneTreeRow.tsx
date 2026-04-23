@@ -18,6 +18,7 @@
 
 import React, { useCallback, useEffect, useRef } from 'react';
 import { setIcon } from 'obsidian';
+import { getIconService, useIconServiceVersion } from '../../services/icons';
 import {
     NavigationPaneItemType,
     NavigationSectionId,
@@ -48,6 +49,8 @@ function TopicRow({ item, context }: TopicRowProps) {
     const { settings, expansionState, expansionDispatch, selectionState } = context;
     const { navigateToTopic } = useTopicNavigation();
     const chevronRef = useRef<HTMLDivElement>(null);
+    const iconRef = useRef<HTMLSpanElement>(null);
+    const iconVersion = useIconServiceVersion();
 
     const topicNode = item.data;
     const topicPath = item.key;
@@ -55,6 +58,10 @@ function TopicRow({ item, context }: TopicRowProps) {
     const isSelected = selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath === topicPath;
     const hasChildren = topicNode.children.size > 0;
     const level = item.level ?? 0;
+    const icon = item.icon;
+    const color = item.color;
+    const backgroundColor = item.backgroundColor;
+    const applyColorToName = Boolean(color) && !settings.colorIconOnly;
 
     useEffect(() => {
         const el = chevronRef.current;
@@ -64,6 +71,12 @@ function TopicRow({ item, context }: TopicRowProps) {
             setIcon(el, isExpanded ? 'chevron-down' : 'chevron-right');
         }
     }, [isExpanded, hasChildren]);
+
+    useEffect(() => {
+        if (iconRef.current && settings.showTagIcons) {
+            getIconService().renderIcon(iconRef.current, icon || 'tag');
+        }
+    }, [icon, settings.showTagIcons, iconVersion, settings.interfaceIcons]);
 
     const handleChevronClick = useCallback(
         (e: React.MouseEvent) => {
@@ -86,19 +99,30 @@ function TopicRow({ item, context }: TopicRowProps) {
     const classes = ['nn-navitem', 'nn-tag'];
     if (isSelected) classes.push('nn-selected');
     if (item.isHidden) classes.push('nn-excluded');
-    const indentStyle = level > 0 ? { paddingLeft: `${level * 16 + 8}px` } : { paddingLeft: '8px' };
+    if (applyColorToName) classes.push('nn-has-custom-color');
+
+    const itemStyle: React.CSSProperties & { '--level'?: number; '--nn-navitem-custom-bg-color'?: string } = {
+        '--level': level,
+        ...(backgroundColor ? { '--nn-navitem-custom-bg-color': backgroundColor } : {})
+    };
 
     return (
-        <div className={classes.join(' ')} style={indentStyle} onClick={handleClick} data-path={topicPath}>
-            <div
-                ref={chevronRef}
-                className={`nn-navitem-chevron ${hasChildren ? 'nn-navitem-chevron--has-children' : 'nn-navitem-chevron--no-children'}`}
-                onClick={handleChevronClick}
-            />
-            <span className="nn-navitem-name">{topicNode.name}</span>
-            {settings.showNoteCount && item.noteCount && (
-                <span className="nn-navitem-count">{item.noteCount.total}</span>
-            )}
+        <div className={classes.join(' ')} style={itemStyle} data-path={topicPath} data-level={level}>
+            <div className="nn-navitem-content" onClick={handleClick}>
+                <div
+                    ref={chevronRef}
+                    className={`nn-navitem-chevron ${hasChildren ? 'nn-navitem-chevron--has-children' : 'nn-navitem-chevron--no-children'}`}
+                    onClick={handleChevronClick}
+                />
+                {settings.showTagIcons && (
+                    <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />
+                )}
+                <span className="nn-navitem-name" style={applyColorToName ? { color } : undefined}>{topicNode.name}</span>
+                <span className="nn-navitem-spacer" />
+                {settings.showNoteCount && item.noteCount && (
+                    <span className="nn-navitem-count">{item.noteCount.total}</span>
+                )}
+            </div>
         </div>
     );
 }
