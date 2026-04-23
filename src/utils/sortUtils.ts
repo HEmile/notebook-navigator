@@ -186,7 +186,8 @@ export function getEffectiveSortOption(
     selectionType: NavigationItemType,
     selectedFolder: TFolder | null,
     selectedTag?: string | null,
-    selectedProperty?: string | null
+    selectedProperty?: string | null,
+    selectedTopic?: string | null
 ): SortOption {
     if (selectionType === ItemType.FOLDER && selectedFolder && settings.folderSortOverrides?.[selectedFolder.path]) {
         return settings.folderSortOverrides[selectedFolder.path];
@@ -196,6 +197,9 @@ export function getEffectiveSortOption(
     }
     if (selectionType === ItemType.PROPERTY && selectedProperty && settings.propertySortOverrides?.[selectedProperty]) {
         return settings.propertySortOverrides[selectedProperty];
+    }
+    if (selectionType === ItemType.TOPIC && selectedTopic && settings.topicSortOverrides?.[selectedTopic]) {
+        return settings.topicSortOverrides[selectedTopic];
     }
     return settings.defaultFolderSort;
 }

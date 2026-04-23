@@ -391,6 +391,7 @@ export const ListPane = React.memo(
             selectedFolder,
             selectedTag,
             selectedProperty,
+            selectedTopicPath,
             settings,
             folderSettings: appearanceSettings,
             isVisible,
@@ -503,7 +504,8 @@ export const ListPane = React.memo(
             await addNoteShortcutRef.current(file.path);
         }, []);
 
-        const effectiveSortOption = getEffectiveSortOption(settings, selectionType, selectedFolder, selectedTag, selectedProperty);
+        const topicName = selectedTopicPath ? selectedTopicPath.split('/').pop() ?? selectedTopicPath : null;
+        const effectiveSortOption = getEffectiveSortOption(settings, selectionType, selectedFolder, selectedTag, selectedProperty, topicName);
 
         // Expose the virtualizer instance and file lookup method via the ref
         useImperativeHandle(

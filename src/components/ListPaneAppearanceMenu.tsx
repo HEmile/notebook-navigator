@@ -34,6 +34,7 @@ interface AppearanceMenuProps {
     selectedFolder: TFolder | null;
     selectedTag?: string | null;
     selectedProperty?: PropertySelectionNodeId | null;
+    selectedTopicPath?: string | null;
     selectionType?: ItemType;
     updateSettings: (updater: (settings: NotebookNavigatorSettings) => void) => Promise<void>;
     descendantAction?: {
@@ -55,6 +56,7 @@ export function showListPaneAppearanceMenu({
     selectedFolder,
     selectedTag,
     selectedProperty,
+    selectedTopicPath,
     selectionType,
     updateSettings,
     descendantAction
@@ -85,6 +87,16 @@ export function showListPaneAppearanceMenu({
                 getRecord: targetSettings => targetSettings.propertyAppearances,
                 setRecord: (targetSettings, next) => {
                     targetSettings.propertyAppearances = next;
+                }
+            };
+        }
+        if (selectionType === ItemType.TOPIC && selectedTopicPath) {
+            const topicName = selectedTopicPath.split('/').pop() ?? selectedTopicPath;
+            return {
+                key: topicName,
+                getRecord: targetSettings => targetSettings.topicAppearances,
+                setRecord: (targetSettings, next) => {
+                    targetSettings.topicAppearances = next;
                 }
             };
         }

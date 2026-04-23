@@ -40,7 +40,8 @@ import { ensureRecord, sanitizeRecord } from '../utils/recordUtils';
 type SelectionSortTarget =
     | { type: typeof ItemType.FOLDER; key: string }
     | { type: typeof ItemType.TAG; key: string }
-    | { type: typeof ItemType.PROPERTY; key: string };
+    | { type: typeof ItemType.PROPERTY; key: string }
+    | { type: typeof ItemType.TOPIC; key: string };
 
 type DescendantApplyStats = {
     descendantCount: number;
@@ -332,8 +333,12 @@ export function useListActions() {
         if (selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty) {
             return { type: ItemType.PROPERTY, key: selectionState.selectedProperty };
         }
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            const topicName = selectionState.selectedTopicPath.split('/').pop() ?? selectionState.selectedTopicPath;
+            return { type: ItemType.TOPIC, key: topicName };
+        }
         return null;
-    }, [selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag, selectionState.selectedProperty]);
+    }, [selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag, selectionState.selectedProperty, selectionState.selectedTopicPath]);
 
     const handleNewFile = useCallback(async () => {
         try {
@@ -368,19 +373,22 @@ export function useListActions() {
     ]);
 
     const getCurrentSortOption = useCallback((): SortOption => {
+        const topicName = selectionState.selectedTopicPath?.split('/').pop() ?? selectionState.selectedTopicPath ?? null;
         return getEffectiveSortOption(
             settings,
             selectionState.selectionType,
             selectionState.selectedFolder,
             selectionState.selectedTag,
-            selectionState.selectedProperty
+            selectionState.selectedProperty,
+            topicName
         );
     }, [
         settings,
         selectionState.selectionType,
         selectionState.selectedFolder,
         selectionState.selectedTag,
-        selectionState.selectedProperty
+        selectionState.selectedProperty,
+        selectionState.selectedTopicPath
     ]);
 
     const getSortIcon = useCallback(() => {
@@ -397,15 +405,21 @@ export function useListActions() {
         if (selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty) {
             return settings.propertySortOverrides?.[selectionState.selectedProperty];
         }
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            const topicName = selectionState.selectedTopicPath.split('/').pop() ?? selectionState.selectedTopicPath;
+            return settings.topicSortOverrides?.[topicName];
+        }
         return undefined;
     }, [
         selectionState.selectionType,
         selectionState.selectedFolder,
         selectionState.selectedTag,
         selectionState.selectedProperty,
+        selectionState.selectedTopicPath,
         settings.folderSortOverrides,
         settings.tagSortOverrides,
-        settings.propertySortOverrides
+        settings.propertySortOverrides,
+        settings.topicSortOverrides
     ]);
 
     const getSelectionAppearanceOverride = useCallback((): FolderAppearance | undefined => {
@@ -418,15 +432,21 @@ export function useListActions() {
         if (selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty) {
             return settings.propertyAppearances?.[selectionState.selectedProperty];
         }
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            const topicName = selectionState.selectedTopicPath.split('/').pop() ?? selectionState.selectedTopicPath;
+            return settings.topicAppearances?.[topicName];
+        }
         return undefined;
     }, [
         selectionState.selectionType,
         selectionState.selectedFolder,
         selectionState.selectedTag,
         selectionState.selectedProperty,
+        selectionState.selectedTopicPath,
         settings.folderAppearances,
         settings.tagAppearances,
-        settings.propertyAppearances
+        settings.propertyAppearances,
+        settings.topicAppearances
     ]);
 
     const getSelectionDescendantKeys = useCallback((): string[] => {
@@ -613,8 +633,16 @@ export function useListActions() {
             await metadataService.removeTagSortOverride(target.key);
             return;
         }
+        if (target.type === ItemType.TOPIC) {
+            await updateSettings(current => {
+                const next = sanitizeRecord(ensureRecord(current.topicSortOverrides));
+                delete next[target.key];
+                current.topicSortOverrides = next;
+            });
+            return;
+        }
         await metadataService.removePropertySortOverride(target.key);
-    }, [getSelectionSortTarget, metadataService]);
+    }, [getSelectionSortTarget, metadataService, updateSettings]);
 
     const setSelectionSortOverride = useCallback(
         async (sortOption: SortOption) => {
@@ -630,9 +658,17 @@ export function useListActions() {
                 await metadataService.setTagSortOverride(target.key, sortOption);
                 return;
             }
+            if (target.type === ItemType.TOPIC) {
+                await updateSettings(current => {
+                    const next = sanitizeRecord(ensureRecord(current.topicSortOverrides));
+                    next[target.key] = sortOption;
+                    current.topicSortOverrides = next;
+                });
+                return;
+            }
             await metadataService.setPropertySortOverride(target.key, sortOption);
         },
-        [getSelectionSortTarget, metadataService]
+        [getSelectionSortTarget, metadataService, updateSettings]
     );
 
     const getDescendantSortChangeStats = useCallback(() => {
@@ -651,7 +687,9 @@ export function useListActions() {
                 ? settings.folderSortOverrides
                 : target.type === ItemType.TAG
                   ? settings.tagSortOverrides
-                  : settings.propertySortOverrides;
+                  : target.type === ItemType.TOPIC
+                    ? settings.topicSortOverrides
+                    : settings.propertySortOverrides;
 
         const descendantEntries = Object.entries(sortOverrides ?? {}).filter(([key]) => isSelectionDescendantSettingKey(key));
         return buildDescendantApplyStats({
@@ -667,7 +705,8 @@ export function useListActions() {
         selectionSortTarget,
         settings.folderSortOverrides,
         settings.propertySortOverrides,
-        settings.tagSortOverrides
+        settings.tagSortOverrides,
+        settings.topicSortOverrides
     ]);
 
     const applySortToDescendants = useCallback(async () => {
@@ -705,6 +744,19 @@ export function useListActions() {
                     delete next[key];
                 });
                 current.tagSortOverrides = next;
+                return;
+            }
+
+            if (target.type === ItemType.TOPIC) {
+                const next = sanitizeRecord(ensureRecord(current.topicSortOverrides));
+                selectionDescendantKeys.forEach(key => {
+                    if (selectionSortOverride !== undefined) {
+                        next[key] = selectionSortOverride;
+                        return;
+                    }
+                    delete next[key];
+                });
+                current.topicSortOverrides = next;
                 return;
             }
 
@@ -778,7 +830,9 @@ export function useListActions() {
                 ? settings.folderAppearances
                 : target.type === ItemType.TAG
                   ? settings.tagAppearances
-                  : settings.propertyAppearances;
+                  : target.type === ItemType.TOPIC
+                    ? settings.topicAppearances
+                    : settings.propertyAppearances;
 
         const descendantEntries = Object.entries(appearances ?? {}).filter(
             ([key, descendantAppearance]) => isSelectionDescendantSettingKey(key) && hasStoredAppearanceOverride(descendantAppearance)
@@ -802,7 +856,8 @@ export function useListActions() {
         selectionSortTarget,
         settings.folderAppearances,
         settings.propertyAppearances,
-        settings.tagAppearances
+        settings.tagAppearances,
+        settings.topicAppearances
     ]);
 
     const applyAppearanceToDescendants = useCallback(async () => {
@@ -840,6 +895,19 @@ export function useListActions() {
                     delete next[key];
                 });
                 current.tagAppearances = next;
+                return;
+            }
+
+            if (target.type === ItemType.TOPIC) {
+                const next = sanitizeRecord(ensureRecord(current.topicAppearances));
+                selectionDescendantKeys.forEach(key => {
+                    if (hasSelectionAppearanceOverride && selectionAppearanceOverride) {
+                        next[key] = { ...selectionAppearanceOverride };
+                        return;
+                    }
+                    delete next[key];
+                });
+                current.topicAppearances = next;
                 return;
             }
 
@@ -909,6 +977,7 @@ export function useListActions() {
                 selectedFolder: selectionState.selectedFolder,
                 selectedTag: selectionState.selectedTag,
                 selectedProperty: selectionState.selectedProperty,
+                selectedTopicPath: selectionState.selectedTopicPath,
                 selectionType: selectionState.selectionType,
                 updateSettings,
                 descendantAction: canApplyToDescendants
@@ -930,6 +999,7 @@ export function useListActions() {
             selectionState.selectedFolder,
             selectionState.selectedTag,
             selectionState.selectedProperty,
+            selectionState.selectedTopicPath,
             selectionState.selectionType,
             updateSettings
         ]
@@ -1077,7 +1147,7 @@ export function useListActions() {
         return hasModeOverride || otherOverrides;
     };
 
-    // Check if folder, tag, or property has custom appearance settings
+    // Check if folder, tag, property, or topic has custom appearance settings
     const hasCustomAppearance =
         (hasFolderSelection &&
             selectionState.selectedFolder &&
@@ -1085,7 +1155,12 @@ export function useListActions() {
         (hasTagSelection && selectionState.selectedTag && hasMeaningfulOverrides(settings.tagAppearances?.[selectionState.selectedTag])) ||
         (hasPropertySelection &&
             selectionState.selectedProperty &&
-            hasMeaningfulOverrides(settings.propertyAppearances?.[selectionState.selectedProperty]));
+            hasMeaningfulOverrides(settings.propertyAppearances?.[selectionState.selectedProperty])) ||
+        (hasTopicSelection &&
+            selectionState.selectedTopicPath &&
+            hasMeaningfulOverrides(
+                settings.topicAppearances?.[selectionState.selectedTopicPath.split('/').pop() ?? selectionState.selectedTopicPath]
+            ));
 
     const activeFileVisibility = useMemo(() => {
         return findVaultProfileById(vaultProfiles, vaultProfileId).fileVisibility;

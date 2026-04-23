@@ -840,7 +840,7 @@ function getFilesForTopic(
 
     const filteredFiles = baseFiles.filter(file => filesToInclude.has(file.path));
 
-    const sortOption = getEffectiveSortOption(settings, ItemType.TOPIC, null, null, topicNode.name);
+    const sortOption = getEffectiveSortOption(settings, ItemType.TOPIC, null, null, null, topicNode.name);
     sortNavigationFiles(filteredFiles, settings, app, sortOption);
 
     return applyPinnedOrdering(filteredFiles, settings, 'topic');

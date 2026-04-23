@@ -90,6 +90,8 @@ interface UseListPaneScrollParams {
     selectedTag: string | null;
     /** Currently selected property */
     selectedProperty: PropertySelectionNodeId | null;
+    /** Currently selected topic path */
+    selectedTopicPath?: string | null;
     /** Plugin settings */
     settings: NotebookNavigatorSettings;
     /** Effective settings for the current folder */
@@ -162,6 +164,7 @@ export function useListPaneScroll({
     selectedFolder,
     selectedTag,
     selectedProperty,
+    selectedTopicPath,
     settings,
     folderSettings,
     isVisible,
@@ -894,8 +897,9 @@ export function useListPaneScroll({
      */
     // Calculate effective sort order based on current selection and custom overrides
     const effectiveSort = useMemo(() => {
-        return getEffectiveSortOption(settings, selectionState.selectionType, selectedFolder, selectedTag, selectedProperty);
-    }, [settings, selectionState.selectionType, selectedFolder, selectedTag, selectedProperty]);
+        const topicName = selectedTopicPath ? selectedTopicPath.split('/').pop() ?? selectedTopicPath : null;
+        return getEffectiveSortOption(settings, selectionState.selectionType, selectedFolder, selectedTag, selectedProperty, topicName);
+    }, [settings, selectionState.selectionType, selectedFolder, selectedTag, selectedProperty, selectedTopicPath]);
     useEffect(() => {
         if (!rowVirtualizer || !isScrollContainerReady) {
             return;

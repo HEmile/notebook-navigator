@@ -199,8 +199,12 @@ export function useListPaneData({
         if (selectionType === ItemType.PROPERTY && selectedProperty) {
             return getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, selectedProperty);
         }
+        if (selectionType === ItemType.TOPIC && selectedTopicPath) {
+            const topicName = selectedTopicPath.split('/').pop() ?? selectedTopicPath;
+            return getEffectiveSortOption(settings, ItemType.TOPIC, null, null, null, topicName);
+        }
         return getEffectiveSortOption(settings, ItemType.FOLDER, selectedFolder, selectedTag);
-    }, [selectionType, selectedFolder, selectedTag, selectedProperty, settings]);
+    }, [selectionType, selectedFolder, selectedTag, selectedProperty, selectedTopicPath, settings]);
     const activePropertyFields = getActivePropertyFields(settings);
 
     const baseFiles = useMemo(() => {
