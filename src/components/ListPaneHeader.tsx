@@ -88,7 +88,7 @@ export function ListPaneHeader({
     const showSortButton = listToolbarVisibility.sort;
     const showAppearanceButton = listToolbarVisibility.appearance;
     const showNewNoteButton = listToolbarVisibility.newNote;
-    const hasNavigationSelection = Boolean(selectionState.selectedFolder || selectionState.selectedTag || selectionState.selectedProperty);
+    const hasNavigationSelection = Boolean(selectionState.selectedFolder || selectionState.selectedTag || selectionState.selectedProperty || selectionState.selectedTopicPath);
 
     const shouldRenderBreadcrumbSegments = isMobile;
     const shouldShowHeaderTitle = !isMobile && listPaneTitlePreference === 'header';

@@ -318,7 +318,8 @@ export function useListActions() {
         hasTagSelection && selectionState.selectedTag !== TAGGED_TAG_ID && selectionState.selectedTag !== UNTAGGED_TAG_ID;
     const hasPropertySelection = selectionState.selectionType === ItemType.PROPERTY && Boolean(selectionState.selectedProperty);
     const hasCreatablePropertySelection = hasPropertySelection && selectionState.selectedProperty !== PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
-    const hasAppearanceOrSortSelection = hasFolderSelection || hasTagSelection || hasPropertySelection;
+    const hasTopicSelection = selectionState.selectionType === ItemType.TOPIC && Boolean(selectionState.selectedTopicPath);
+    const hasAppearanceOrSortSelection = hasFolderSelection || hasTagSelection || hasPropertySelection || hasTopicSelection;
     const canCreateNewFile = Boolean(selectionState.selectedFolder) || hasCreatableTagSelection || hasCreatablePropertySelection;
 
     const getSelectionSortTarget = useCallback((): SelectionSortTarget | null => {

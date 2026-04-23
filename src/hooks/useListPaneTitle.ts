@@ -462,6 +462,15 @@ export function useListPaneTitle(): UseListPaneTitleResult {
             };
         }
 
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            const topicPath = selectionState.selectedTopicPath;
+            const topicName = topicPath.split('/').pop() ?? topicPath;
+            return {
+                desktopTitle: topicName,
+                breadcrumbSegments: [{ label: topicName, targetType: 'none', isLast: true }]
+            };
+        }
+
         const noSelectionBreadcrumb: BreadcrumbSegment[] = [
             {
                 label: strings.common.noSelection,
@@ -482,6 +491,7 @@ export function useListPaneTitle(): UseListPaneTitleResult {
         selectionState.selectedFolder,
         selectionState.selectedTag,
         selectionState.selectedProperty,
+        selectionState.selectedTopicPath,
         selectionState.selectionType,
         settings.customVaultName,
         metadataVersion
