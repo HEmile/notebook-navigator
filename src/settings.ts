@@ -26,6 +26,7 @@ import { renderShortcutsTab } from './settings/tabs/ShortcutsTab';
 import { renderCalendarTab } from './settings/tabs/CalendarTab';
 import { renderFoldersTab } from './settings/tabs/FoldersTab';
 import { renderTagsTab } from './settings/tabs/TagsTab';
+import { renderTopicsTab } from './settings/tabs/TopicsTab';
 import { renderPropertiesTab } from './settings/tabs/PropertiesTab';
 import { renderListPaneTab } from './settings/tabs/ListTab';
 import { renderFrontmatterTab } from './settings/tabs/FrontmatterTab';
@@ -71,6 +72,7 @@ const SETTINGS_TAB_ICONS: Record<SettingsPaneId, SettingsTabIconDefinition> = {
     shortcuts: { kind: 'ux', uxIconId: 'nav-shortcuts' },
     folders: { kind: 'ux', uxIconId: 'nav-folder-closed' },
     tags: { kind: 'ux', uxIconId: 'nav-tag' },
+    topics: { kind: 'ux', uxIconId: 'nav-tags' },
     properties: { kind: 'ux', uxIconId: 'nav-property' },
     frontmatter: { kind: 'ux', uxIconId: 'nav-properties' },
     notes: { kind: 'fileType', fileTypeKey: 'md', fallbackIconId: 'file' }
@@ -78,7 +80,7 @@ const SETTINGS_TAB_ICONS: Record<SettingsPaneId, SettingsTabIconDefinition> = {
 
 const SETTINGS_GROUP_SECONDARY_TAB_IDS: Record<SettingsGroupId, SettingsPaneId[]> = {
     general: ['files', 'icon-packs', 'advanced'],
-    'navigation-pane': ['shortcuts', 'folders', 'tags', 'properties'],
+    'navigation-pane': ['shortcuts', 'folders', 'tags', 'topics', 'properties'],
     'list-pane': ['frontmatter', 'notes'],
     calendar: []
 };
@@ -92,6 +94,7 @@ const SETTINGS_TAB_GROUP_MAP: Record<SettingsPaneId, SettingsGroupId> = {
     shortcuts: 'navigation-pane',
     folders: 'navigation-pane',
     tags: 'navigation-pane',
+    topics: 'navigation-pane',
     properties: 'navigation-pane',
     'list-pane': 'list-pane',
     frontmatter: 'list-pane',
@@ -124,6 +127,7 @@ const SETTINGS_PANE_DEFINITIONS: SettingsPaneDefinition[] = [
         render: renderFoldersTab
     },
     { id: 'tags', getLabel: () => strings.settings.sections.tags, render: renderTagsTab },
+    { id: 'topics', getLabel: () => strings.settings.sections.topics, render: renderTopicsTab },
     { id: 'properties', getLabel: () => strings.navigationPane.properties, render: renderPropertiesTab },
     { id: 'list-pane', getLabel: () => strings.settings.sections.listPane, render: renderListPaneTab },
     { id: 'frontmatter', getLabel: () => strings.settings.groups.notes.frontmatter, render: renderFrontmatterTab },

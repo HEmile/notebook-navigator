@@ -630,6 +630,14 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.preferencesController.setTagSortOrder(order);
     }
 
+    public getTopicSortOrder(): TagSortOrder {
+        return this.preferencesController.getTopicSortOrder();
+    }
+
+    public setTopicSortOrder(order: TagSortOrder): void {
+        this.preferencesController.setTopicSortOrder(order);
+    }
+
     /**
      * Updates the property sort order preference and persists to local storage.
      */

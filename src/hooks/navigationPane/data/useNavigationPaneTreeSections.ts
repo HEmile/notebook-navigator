@@ -868,9 +868,24 @@ export function useNavigationPaneTreeSections({
         const topicGraph = topicService.getTopicGraph();
         const hiddenTopics = new Set(settings.hiddenTopics ?? []);
 
+        const sortTopicNodes = (nodes: TopicNode[]): TopicNode[] => {
+            return nodes.slice().sort((a, b) => {
+                switch (settings.topicSortOrder) {
+                    case 'frequency-desc':
+                        return getTotalNoteCount(b) - getTotalNoteCount(a) || a.name.localeCompare(b.name);
+                    case 'frequency-asc':
+                        return getTotalNoteCount(a) - getTotalNoteCount(b) || a.name.localeCompare(b.name);
+                    case 'alpha-desc':
+                        return b.name.localeCompare(a.name);
+                    case 'alpha-asc':
+                    default:
+                        return a.name.localeCompare(b.name);
+                }
+            });
+        };
+
         // Root nodes: those with no parents
-        const rootNodes = Array.from(topicGraph.values()).filter(n => n.parents.size === 0);
-        rootNodes.sort((a, b) => a.name.localeCompare(b.name));
+        const rootNodes = sortTopicNodes(Array.from(topicGraph.values()).filter(n => n.parents.size === 0));
 
         const items: CombinedNavigationItem[] = [];
 
@@ -916,8 +931,7 @@ export function useNavigationPaneTreeSections({
             });
 
             if (expansionState.expandedTopics.has(path) && node.children.size > 0) {
-                const children = Array.from(node.children.values());
-                children.sort((a, b) => a.name.localeCompare(b.name));
+                const children = sortTopicNodes(Array.from(node.children.values()));
                 for (const child of children) {
                     appendTopicNode(child, `${path}/${child.name}`, level + 1);
                 }
@@ -933,6 +947,7 @@ export function useNavigationPaneTreeSections({
         settings.showTopics,
         settings.hiddenTopics,
         settings.interfaceIcons,
+        settings.topicSortOrder,
         topicService,
         expansionState.expandedTopics,
         expansionState.expandedVirtualFolders,

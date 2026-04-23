@@ -273,6 +273,21 @@ export class PluginPreferencesController {
         this.options.persistSyncModeSettingUpdate('tagSortOrder');
     }
 
+    public getTopicSortOrder(): TagSortOrder {
+        return this.options.getSettings().topicSortOrder;
+    }
+
+    public setTopicSortOrder(order: TagSortOrder): void {
+        const settings = this.options.getSettings();
+        if (!isTagSortOrder(order) || settings.topicSortOrder === order) {
+            return;
+        }
+
+        settings.topicSortOrder = order;
+        localStorage.set(this.options.keys.topicSortOrderKey, order);
+        this.options.saveSettings();
+    }
+
     public setPropertySortOrder(order: TagSortOrder): void {
         const settings = this.options.getSettings();
         if (!isTagSortOrder(order) || settings.propertySortOrder === order) {

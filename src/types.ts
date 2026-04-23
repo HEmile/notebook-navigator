@@ -285,6 +285,7 @@ export interface LocalStorageKeys {
     homepageKey: string;
     folderSortOrderKey: string;
     tagSortOrderKey: string;
+    topicSortOrderKey: string;
     propertySortOrderKey: string;
     recentColorsKey: string;
     paneTransitionDurationKey: string;
@@ -343,6 +344,7 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     homepageKey: 'notebook-navigator-homepage',
     folderSortOrderKey: 'notebook-navigator-folder-sort-order',
     tagSortOrderKey: 'notebook-navigator-tag-sort-order',
+    topicSortOrderKey: 'notebook-navigator-topic-sort-order',
     propertySortOrderKey: 'notebook-navigator-property-sort-order',
     recentColorsKey: 'notebook-navigator-recent-colors',
     paneTransitionDurationKey: 'notebook-navigator-pane-transition-duration',

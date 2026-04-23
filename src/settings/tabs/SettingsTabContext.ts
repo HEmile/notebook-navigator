@@ -26,6 +26,7 @@ export type SettingsTabId =
     | 'calendar'
     | 'folders'
     | 'tags'
+    | 'topics'
     | 'properties'
     | 'list-pane'
     | 'frontmatter'

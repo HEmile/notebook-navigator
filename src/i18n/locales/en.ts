@@ -1806,6 +1806,21 @@ export const STRINGS_EN = {
                 name: 'Root item spacing',
                 desc: 'Spacing between root-level folders and tags.'
             },
+            showTopics: {
+                name: 'Show topics',
+                desc: 'Display topics section in the navigator.'
+            },
+            topicSortOrder: {
+                name: 'Topic sort order',
+                desc: 'Sort order for topics in the navigation pane.',
+                options: {
+                    alphaAsc: 'A to Z',
+                    alphaDesc: 'Z to A',
+                    frequency: 'Frequency',
+                    lowToHigh: 'low to high',
+                    highToLow: 'high to low'
+                }
+            },
             showTags: {
                 name: 'Show tags',
                 desc: 'Display tags section in the navigator.'
