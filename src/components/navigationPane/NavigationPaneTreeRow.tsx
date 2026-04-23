@@ -16,7 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { setIcon } from 'obsidian';
 import {
     NavigationPaneItemType,
     NavigationSectionId,
@@ -33,7 +34,73 @@ import { PropertyTreeItem } from '../PropertyTreeItem';
 import { TagTreeItem } from '../TagTreeItem';
 import { VirtualFolderComponent, type VirtualFolderTrailingAction } from '../VirtualFolderItem';
 import type { NavigationPaneRowProps } from './NavigationPaneItemRenderer.types';
+import type { TopicTreeItem as TopicTreeItemType } from '../../types/virtualization';
+import type { NavigationPaneRowContext } from './NavigationPaneItemRenderer.types';
 import { useTopicNavigation } from '../../hooks/useTopicNavigation';
+
+interface TopicRowProps {
+    item: TopicTreeItemType;
+    context: NavigationPaneRowContext;
+}
+
+function TopicRow({ item, context }: TopicRowProps) {
+    const { settings, expansionState, expansionDispatch, selectionState } = context;
+    const { navigateToTopic } = useTopicNavigation();
+    const chevronRef = useRef<HTMLDivElement>(null);
+
+    const topicNode = item.data;
+    const topicPath = item.key;
+    const isExpanded = expansionState.expandedTopics?.has(topicPath) ?? false;
+    const isSelected = selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath === topicPath;
+    const hasChildren = topicNode.children.size > 0;
+    const level = item.level ?? 0;
+
+    useEffect(() => {
+        const el = chevronRef.current;
+        if (!el) return;
+        el.empty();
+        if (hasChildren) {
+            setIcon(el, isExpanded ? 'chevron-down' : 'chevron-right');
+        }
+    }, [isExpanded, hasChildren]);
+
+    const handleChevronClick = useCallback(
+        (e: React.MouseEvent) => {
+            e.stopPropagation();
+            if (hasChildren) {
+                expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
+            }
+        },
+        [hasChildren, expansionDispatch, topicPath]
+    );
+
+    const handleClick = useCallback(
+        (e: React.MouseEvent) => {
+            e.stopPropagation();
+            navigateToTopic(topicPath);
+        },
+        [navigateToTopic, topicPath]
+    );
+
+    const classes = ['nn-navitem', 'nn-tag'];
+    if (isSelected) classes.push('nn-selected');
+    if (item.isHidden) classes.push('nn-excluded');
+    const indentStyle = level > 0 ? { paddingLeft: `${level * 16 + 8}px` } : { paddingLeft: '8px' };
+
+    return (
+        <div className={classes.join(' ')} style={indentStyle} onClick={handleClick} data-path={topicPath}>
+            <div
+                ref={chevronRef}
+                className={`nn-navitem-chevron ${hasChildren ? 'nn-navitem-chevron--has-children' : 'nn-navitem-chevron--no-children'}`}
+                onClick={handleChevronClick}
+            />
+            <span className="nn-navitem-name">{topicNode.name}</span>
+            {settings.showNoteCount && item.noteCount && (
+                <span className="nn-navitem-count">{item.noteCount.total}</span>
+            )}
+        </div>
+    );
+}
 
 export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps) {
     const {
@@ -58,7 +125,6 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
         searchHighlights,
         onSectionContextMenu
     } = context;
-    const { navigateToTopic } = useTopicNavigation();
 
     switch (item.type) {
         case NavigationPaneItemType.FOLDER: {
@@ -300,44 +366,8 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
             );
         }
 
-        case NavigationPaneItemType.TOPIC: {
-            const topicNode = item.data;
-            const topicPath = item.key; // key is the slash-separated path
-            const isExpanded = expansionState.expandedTopics?.has(topicPath) ?? false;
-            const isSelected = selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath === topicPath;
-            const hasChildren = topicNode.children.size > 0;
-            const noteCount = item.noteCount;
-
-            const classes = ['nn-navitem', 'nn-tag'];
-            if (isSelected) classes.push('nn-selected');
-            if (item.isHidden) classes.push('nn-excluded');
-            const level = item.level ?? 0;
-            const indentStyle = level > 0 ? { paddingLeft: `${level * 16 + 8}px` } : { paddingLeft: '8px' };
-
-            return (
-                <div
-                    className={classes.join(' ')}
-                    style={indentStyle}
-                    onClick={e => { e.stopPropagation(); navigateToTopic(topicPath); }}
-                    data-path={topicPath}
-                >
-                    {hasChildren && (
-                        <div
-                            className={`nn-navitem-chevron ${isExpanded ? 'nn-navitem-chevron--expanded' : ''}`}
-                            onClick={e => {
-                                e.stopPropagation();
-                                expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
-                            }}
-                        />
-                    )}
-                    {!hasChildren && <div className="nn-navitem-chevron nn-navitem-chevron--leaf" />}
-                    <span className="nn-navitem-name">{topicNode.name}</span>
-                    {settings.showNoteCount && noteCount && (
-                        <span className="nn-navitem-count">{noteCount.total}</span>
-                    )}
-                </div>
-            );
-        }
+        case NavigationPaneItemType.TOPIC:
+            return <TopicRow item={item} context={context} />;
 
         case NavigationPaneItemType.TOP_SPACER: {
             const spacerClass = item.hasSeparator ? 'nn-nav-top-spacer nn-nav-spacer--with-separator' : 'nn-nav-top-spacer';

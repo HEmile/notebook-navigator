@@ -221,11 +221,12 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         const db = getDBInstance();
         const excludedFolderPatterns = showHiddenItems ? [] : hiddenFolders;
         const includedPaths = new Set(getVisibleMarkdownFiles().map((f: TFile) => f.path));
-        const topicGraph = buildTopicGraphFromDatabase(db, app, excludedFolderPatterns, includedPaths);
+        const topicTags = settings.topicTags?.length ? settings.topicTags : ['topic', "jaar", "decennium", "maand"];
+        const topicGraph = buildTopicGraphFromDatabase(db, app, excludedFolderPatterns, includedPaths, topicTags);
         if (topicService) {
             topicService.updateTopicGraph(topicGraph);
         }
-    }, [app, hiddenFolders, settings.showTopics, showHiddenItems, topicService, getVisibleMarkdownFiles]);
+    }, [app, hiddenFolders, settings.showTopics, settings.topicTags, showHiddenItems, topicService, getVisibleMarkdownFiles]);
 
     const { queueMetadataContentWhenReady, disposeMetadataWaitDisposers } = useMetadataCacheQueue({
         app,

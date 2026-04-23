@@ -27,7 +27,7 @@ let noteCountCache: WeakMap<TopicNode, number> | null = null;
 
 export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw", "maand", "stroming", "festival", "genre", "voor", "project"];
 export const HAS_TOPIC_RELATIONS = SUBSET_RELATIONS.concat(["hasTopic", "isA", "for", 'with', "author", "publishedIn", "by", "artiest", "live", "adres", "gerecht", "at"]);
-export const TOPIC_TAGS = ["topic", "jaar", "decennium", "maand"];
+export const DEFAULT_TOPIC_TAGS = ["topic", "jaar", "decennium", "maand"];
 
 export function clearNoteCountCache(): void {
     noteCountCache = null;
@@ -74,11 +74,11 @@ export function getTopicRelations(metadata: CachedMetadata, isTopicNote: boolean
     return Array.from(new Set(topics));
 }
 
-export function hasTopicTag(tags: string[]): boolean {
-    return tags?.some(tag => TOPIC_TAGS.some(topicTag => tag.contains(topicTag)));
+export function hasTopicTag(tags: string[], topicTags: string[] = DEFAULT_TOPIC_TAGS): boolean {
+    return tags?.some(tag => topicTags.some((topicTag: string) => tag.contains(topicTag)));
 }
 
-function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, app: App, visitedTopics: Set<string>): TopicNode {
+function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, app: App, visitedTopics: Set<string>, topicTags: string[]): TopicNode {
     const topicName = getTopicNameFromPath(topicPath);
 
     if (allTopics.has(topicName)) {
@@ -125,7 +125,7 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
         }
         const parentFilePath = parentFile.path;
         const parentMetadata = app.metadataCache.getFileCache(parentFile);
-        if (parentMetadata && !hasTopicTag(getTopicTags(parentMetadata))) {
+        if (parentMetadata && !hasTopicTag(getTopicTags(parentMetadata), topicTags)) {
             continue;
         }
 
@@ -135,7 +135,7 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
         }
         const parentVisitedTopic = new Set(visitedTopics);
         parentVisitedTopic.add(parentName);
-        const parent = traverseTopicsUp(allTopics, parentFilePath, app, parentVisitedTopic);
+        const parent = traverseTopicsUp(allTopics, parentFilePath, app, parentVisitedTopic, topicTags);
         if (parent) {
             parent.children.set(topicName, topicNode);
             topicNode.parents.set(parentName, parent);
@@ -148,7 +148,8 @@ export function buildTopicGraphFromDatabase(
     db: IndexedDBStorage,
     app: App,
     excludedFolderPatterns?: string[],
-    includedPaths?: Set<string>
+    includedPaths?: Set<string>,
+    topicTags: string[] = DEFAULT_TOPIC_TAGS
 ): Map<string, TopicNode> {
     const allTopics = new Map<string, TopicNode>();
     const allFiles = db.getAllFiles();
@@ -163,7 +164,7 @@ export function buildTopicGraphFromDatabase(
         }
 
         const tags = fileData.tags;
-        if (!tags || !hasTopicTag(tags)) {
+        if (!tags || !hasTopicTag(tags, topicTags)) {
             continue;
         }
         if (allTopics.has(path)) {
@@ -171,7 +172,7 @@ export function buildTopicGraphFromDatabase(
         }
         const visitedTopics = new Set<string>();
         visitedTopics.add(getTopicNameFromPath(path));
-        traverseTopicsUp(allTopics, path, app, visitedTopics);
+        traverseTopicsUp(allTopics, path, app, visitedTopics, topicTags);
     }
 
     function collectParentTopics(file: TFile, path: string, visitedPaths: Set<string>) {
@@ -179,7 +180,7 @@ export function buildTopicGraphFromDatabase(
         if (!metadata) {
             return;
         }
-        const isTopicNote = hasTopicTag(getTopicTags(metadata));
+        const isTopicNote = hasTopicTag(getTopicTags(metadata), topicTags);
         const topics = getTopicRelations(metadata, isTopicNote);
         if (!topics.length) {
             return;
@@ -199,7 +200,7 @@ export function buildTopicGraphFromDatabase(
             }
             visitedPaths.add(topicFile.path);
             const metadataTopic = app.metadataCache.getFileCache(topicFile);
-            if (metadataTopic && !hasTopicTag(getTopicTags(metadataTopic))) {
+            if (metadataTopic && !hasTopicTag(getTopicTags(metadataTopic), topicTags)) {
                 collectParentTopics(topicFile, path, visitedPaths);
             } else {
                 const topicName = getTopicNameFromPath(topicFile.path);

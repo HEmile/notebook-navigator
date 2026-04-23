@@ -273,6 +273,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
 
     // Topics
     showTopics: true,
+    topicTags: ['topic', "jaar", "decennium", "maand"],
     topicSortOrder: 'alpha-asc',
     hiddenTopics: [],
     rootTopicOrder: [],

@@ -447,6 +447,7 @@ export interface NotebookNavigatorSettings {
 
     // Topics
     showTopics: boolean;
+    topicTags: string[];
     topicSortOrder: TagSortOrder;
     hiddenTopics: string[];
     rootTopicOrder: string[];
