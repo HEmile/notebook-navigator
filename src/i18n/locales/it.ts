@@ -1604,7 +1604,8 @@ export const STRINGS_IT = {
                 desc: 'Numero di righe da visualizzare per i titoli note.',
                 options: {
                     '1': '1 riga',
-                    '2': '2 righe'
+                    '2': '2 righe',
+                    '3': '3 righe'
                 }
             },
             showFeatureImage: {

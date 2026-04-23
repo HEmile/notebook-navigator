@@ -24,6 +24,16 @@ function readTextFile(path: string): string {
     return readFileSync(path, 'utf8');
 }
 
+function extractRuleBlock(css: string, selector: string): string {
+    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`, 'm');
+    const match = css.match(pattern);
+    if (!match?.[1]) {
+        throw new Error(`Missing CSS rule for selector ${selector}`);
+    }
+    return match[1];
+}
+
 function extractPxVariableValue(css: string, variableName: string): number {
     const pattern = new RegExp(`--${variableName}:\\s*([0-9]+)px\\s*;`);
     const match = css.match(pattern);
@@ -105,5 +115,26 @@ describe('List pane measurements stay in sync with CSS', () => {
 
         expect(mobileVars).not.toMatch(/--nn-file-tag-row-height\\s*:/);
         expect(mobileVars).not.toMatch(/--nn-file-tag-row-gap\\s*:/);
+    });
+
+    test('android text zoom caps title and preview rows without forcing fixed heights', () => {
+        const androidCss = readTextFile('src/styles/sections/android-textzoom.css');
+        const titleRule = extractRuleBlock(androidCss, '.notebook-navigator-android .nn-file-name');
+        const previewRule = extractRuleBlock(
+            androidCss,
+            '.notebook-navigator-android .nn-file-preview:not(.nn-file-second-line .nn-file-preview)'
+        );
+
+        expect(titleRule).toMatch(
+            /max-height:\s*calc\(var\(--nn-file-title-line-height\)\s*\*\s*var\(--filename-rows, 1\)\s*\*\s*var\(--nn-android-font-scale, 1\)\)/
+        );
+        expect(previewRule).toMatch(
+            /max-height:\s*calc\(var\(--nn-file-multiline-text-line-height\)\s*\*\s*var\(--preview-rows, 1\)\s*\*\s*var\(--nn-android-font-scale, 1\)\)/
+        );
+
+        expect(titleRule).not.toMatch(/(^|\n)\s*min-height\s*:/m);
+        expect(titleRule).not.toMatch(/(^|\n)\s*height\s*:/m);
+        expect(previewRule).not.toMatch(/(^|\n)\s*min-height\s*:/m);
+        expect(previewRule).not.toMatch(/(^|\n)\s*height\s*:/m);
     });
 });

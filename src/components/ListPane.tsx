@@ -58,7 +58,7 @@ import { useListPaneData } from '../hooks/useListPaneData';
 import { useListPaneScroll } from '../hooks/useListPaneScroll';
 import { useListPaneTitle } from '../hooks/useListPaneTitle';
 import { useListPaneAppearance } from '../hooks/useListPaneAppearance';
-import { useListPaneSearch } from '../hooks/useListPaneSearch';
+import { useListPaneSearch, type SearchQueryUpdateOptions } from '../hooks/useListPaneSearch';
 import { useListPaneSelectionCoordinator } from '../hooks/useListPaneSelectionCoordinator';
 import type { EnsureSelectionOptions, EnsureSelectionResult, SelectFileOptions } from '../hooks/useListPaneSelectionCoordinator';
 import { useContextMenu } from '../hooks/useContextMenu';
@@ -107,9 +107,9 @@ export interface ListPaneHandle {
     scrollContainerRef: HTMLDivElement | null;
     selectFile: (file: TFile, options?: SelectFileOptions) => void;
     selectAdjacentFile: (direction: 'next' | 'previous') => boolean;
-    modifySearchWithTag: (tag: string, operator: InclusionOperator) => void;
-    modifySearchWithProperty: (key: string, value: string | null, operator: InclusionOperator) => void;
-    modifySearchWithDateToken: (dateToken: string) => void;
+    modifySearchWithTag: (tag: string, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => void;
+    modifySearchWithProperty: (key: string, value: string | null, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => void;
+    modifySearchWithDateToken: (dateToken: string, options?: SearchQueryUpdateOptions) => void;
     toggleSearch: () => void;
     executeSearchShortcut: (params: ExecuteSearchShortcutParams) => Promise<void>;
 }

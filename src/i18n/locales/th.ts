@@ -1600,7 +1600,8 @@ export const STRINGS_TH = {
                 desc: 'จำนวนแถวที่จะแสดงสำหรับชื่อโน้ต',
                 options: {
                     '1': '1 แถว',
-                    '2': '2 แถว'
+                    '2': '2 แถว',
+                    '3': '3 แถว'
                 }
             },
             showFeatureImage: {

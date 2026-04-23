@@ -1603,7 +1603,8 @@ export const STRINGS_KO = {
                 desc: '노트 제목에 표시할 행 수입니다.',
                 options: {
                     '1': '1행',
-                    '2': '2행'
+                    '2': '2행',
+                    '3': '3행'
                 }
             },
             showFeatureImage: {

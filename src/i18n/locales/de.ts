@@ -1608,7 +1608,8 @@ export const STRINGS_DE = {
                 desc: 'Anzahl der Zeilen für Notizentitel.',
                 options: {
                     '1': '1 Zeile',
-                    '2': '2 Zeilen'
+                    '2': '2 Zeilen',
+                    '3': '3 Zeilen'
                 }
             },
             showFeatureImage: {

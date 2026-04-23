@@ -1597,7 +1597,8 @@ export const STRINGS_ZH_TW = {
                 desc: '筆記標題顯示的行數。',
                 options: {
                     '1': '1 行',
-                    '2': '2 行'
+                    '2': '2 行',
+                    '3': '3 行'
                 }
             },
             showFeatureImage: {

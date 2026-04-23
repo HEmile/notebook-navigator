@@ -191,7 +191,7 @@ export function showListPaneAppearanceMenu({
     });
 
     // Title row options
-    [1, 2].forEach(rows => {
+    [1, 2, 3].forEach(rows => {
         menu.addItem(item => {
             const isChecked = appearance?.titleRows === rows;
             item.setTitle(`    ${strings.folderAppearance.titleRowOption(rows)}`)

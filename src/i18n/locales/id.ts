@@ -1605,7 +1605,8 @@ export const STRINGS_ID = {
                 desc: 'Jumlah baris yang ditampilkan untuk judul catatan.',
                 options: {
                     '1': '1 baris',
-                    '2': '2 baris'
+                    '2': '2 baris',
+                    '3': '3 baris'
                 }
             },
             showFeatureImage: {

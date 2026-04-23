@@ -592,7 +592,7 @@ export const FileItem = React.memo(function FileItem({
         shouldUseSingleLineForDateAndPreview,
         shouldUseMultiLinePreviewLayout,
         shouldCollapseEmptyPreviewSpace,
-        shouldAlwaysReservePreviewSpace,
+        shouldUseExpandedMultiLineLayout,
         shouldSuppressEmptyPreviewLines,
         shouldShowDateForItem,
         shouldShowSingleLineSecondLine
@@ -1187,12 +1187,12 @@ export const FileItem = React.memo(function FileItem({
                                             </>
                                         )}
 
-                                        {/* CASE 2: ALWAYS RESERVE PREVIEW SPACE */}
-                                        {/* Conditions: heightOptimizationDisabled OR hasPreviewContent */}
-                                        {/* Layout: Full preview rows, tags, then Date+Parent on same line */}
-                                        {shouldAlwaysReservePreviewSpace && (
+                                        {/* CASE 2: KEEP THE EXPANDED MULTI-LINE LAYOUT */}
+                                        {/* Conditions: heightOptimizationDisabled OR hasPreviewContent OR feature image visible */}
+                                        {/* Layout: Preview can shrink to its rendered rows, then pills, then Date+Parent on the metadata line */}
+                                        {shouldUseExpandedMultiLineLayout && (
                                             <>
-                                                {/* Multi-row preview - show preview text spanning multiple rows */}
+                                                {/* Multi-row preview - clamp to the configured rows without forcing empty lines */}
                                                 {appearanceSettings.showPreview && !shouldSuppressEmptyPreviewLines && (
                                                     <div
                                                         className="nn-file-preview"

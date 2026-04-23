@@ -1611,7 +1611,8 @@ export const STRINGS_EN = {
                 desc: 'Number of rows to display for note titles.',
                 options: {
                     '1': '1 row',
-                    '2': '2 rows'
+                    '2': '2 rows',
+                    '3': '3 rows'
                 }
             },
             showFeatureImage: {

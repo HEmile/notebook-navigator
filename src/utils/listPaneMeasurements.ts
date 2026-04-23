@@ -241,13 +241,36 @@ export function isListPaneCompactMode({
     return !showDate && !showPreview && !showImage;
 }
 
+export function estimateRenderedTextRows({
+    text,
+    maxRows,
+    charsPerRow
+}: {
+    text: string | null | undefined;
+    maxRows: number;
+    charsPerRow: number;
+}): number {
+    const normalizedMaxRows = Number.isFinite(maxRows) && maxRows > 0 ? Math.floor(maxRows) : 1;
+    const normalizedCharsPerRow = Number.isFinite(charsPerRow) && charsPerRow > 0 ? Math.floor(charsPerRow) : 1;
+    const normalizedText = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : '';
+    if (normalizedText.length === 0) {
+        return 0;
+    }
+
+    if (normalizedMaxRows === 1) {
+        return 1;
+    }
+
+    return Math.min(normalizedMaxRows, Math.max(1, Math.ceil(normalizedText.length / normalizedCharsPerRow)));
+}
+
 export interface FileItemLayoutState {
     isCompactMode: boolean;
     pinnedItemShouldUseCompactLayout: boolean;
     shouldUseSingleLineForDateAndPreview: boolean;
     shouldUseMultiLinePreviewLayout: boolean;
     shouldCollapseEmptyPreviewSpace: boolean;
-    shouldAlwaysReservePreviewSpace: boolean;
+    shouldUseExpandedMultiLineLayout: boolean;
     shouldSuppressEmptyPreviewLines: boolean;
     shouldShowDateForItem: boolean;
     shouldShowSingleLineSecondLine: boolean;
@@ -280,11 +303,11 @@ export function getFileItemLayoutState({
     const shouldUseSingleLineForDateAndPreview = pinnedItemShouldUseCompactLayout || previewRows < 2;
     const shouldUseMultiLinePreviewLayout = !pinnedItemShouldUseCompactLayout && previewRows >= 2;
     const shouldCollapseEmptyPreviewSpace = optimizeNoteHeight && !hasPreviewContent && !showFeatureImageArea;
-    const shouldAlwaysReservePreviewSpace = !optimizeNoteHeight || hasPreviewContent || showFeatureImageArea;
+    const shouldUseExpandedMultiLineLayout = !optimizeNoteHeight || hasPreviewContent || showFeatureImageArea;
     const shouldSuppressEmptyPreviewLines = !hasPreviewContent && hasVisiblePillRows;
     const shouldShowDateForItem = showDate && !pinnedItemShouldUseCompactLayout;
     const shouldShowSingleLineSecondLine = shouldShowDateForItem || (showPreview && !shouldSuppressEmptyPreviewLines);
-    const multilinePreviewRowCount = showPreview && shouldAlwaysReservePreviewSpace && !shouldSuppressEmptyPreviewLines ? previewRows : 0;
+    const multilinePreviewRowCount = showPreview && shouldUseExpandedMultiLineLayout && !shouldSuppressEmptyPreviewLines ? previewRows : 0;
 
     return {
         isCompactMode,
@@ -292,7 +315,7 @@ export function getFileItemLayoutState({
         shouldUseSingleLineForDateAndPreview,
         shouldUseMultiLinePreviewLayout,
         shouldCollapseEmptyPreviewSpace,
-        shouldAlwaysReservePreviewSpace,
+        shouldUseExpandedMultiLineLayout,
         shouldSuppressEmptyPreviewLines,
         shouldShowDateForItem,
         shouldShowSingleLineSecondLine,

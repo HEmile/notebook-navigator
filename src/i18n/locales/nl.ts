@@ -1607,7 +1607,8 @@ export const STRINGS_NL = {
                 desc: 'Aantal weer te geven rijen voor notitietitels.',
                 options: {
                     '1': '1 rij',
-                    '2': '2 rijen'
+                    '2': '2 rijen',
+                    '3': '3 rijen'
                 }
             },
             showFeatureImage: {

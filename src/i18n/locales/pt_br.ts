@@ -1609,7 +1609,8 @@ export const STRINGS_PT_BR = {
                 desc: 'Número de linhas a exibir para títulos de notas.',
                 options: {
                     '1': '1 linha',
-                    '2': '2 linhas'
+                    '2': '2 linhas',
+                    '3': '3 linhas'
                 }
             },
             showFeatureImage: {

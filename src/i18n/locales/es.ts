@@ -1608,7 +1608,8 @@ export const STRINGS_ES = {
                 desc: 'Número de filas a mostrar para los títulos de las notas.',
                 options: {
                     '1': '1 fila',
-                    '2': '2 filas'
+                    '2': '2 filas',
+                    '3': '3 filas'
                 }
             },
             showFeatureImage: {
