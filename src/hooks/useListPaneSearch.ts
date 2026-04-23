@@ -56,6 +56,16 @@ interface ExecuteSearchShortcutParams {
     searchShortcut: SearchShortcut;
 }
 
+export interface SearchQueryUpdateOptions {
+    preserveSinglePaneView?: boolean;
+    focusSearch?: boolean;
+}
+
+interface ActivateSearchOptions {
+    focusPane?: 'search' | 'files' | null;
+    preserveSinglePaneView?: boolean;
+}
+
 interface UseListPaneSearchParams {
     rootContainerRef: RefObject<HTMLDivElement | null>;
     onSearchTokensChange?: (state: SearchNavFilterState) => void;
@@ -83,9 +93,9 @@ export interface UseListPaneSearchResult {
     focusSearchComplete: () => void;
     handleSaveSearchShortcut: () => void;
     handleRemoveSearchShortcut: () => Promise<void>;
-    modifySearchWithTag: (tag: string, operator: InclusionOperator) => void;
-    modifySearchWithProperty: (key: string, value: string | null, operator: InclusionOperator) => void;
-    modifySearchWithDateToken: (dateToken: string) => void;
+    modifySearchWithTag: (tag: string, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => void;
+    modifySearchWithProperty: (key: string, value: string | null, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => void;
+    modifySearchWithDateToken: (dateToken: string, options?: SearchQueryUpdateOptions) => void;
     toggleSearch: () => void;
     executeSearchShortcut: (params: ExecuteSearchShortcutParams) => Promise<void>;
 }
@@ -333,15 +343,18 @@ export function useListPaneSearch({
     }, [activeSearchShortcutStartTarget]);
 
     const activateSearch = useCallback(
-        (focusPane: 'search' | 'files' = 'search') => {
+        (options?: ActivateSearchOptions) => {
+            const focusPane = options?.focusPane ?? 'search';
             if (!isSearchActive) {
                 setSearchActive(true);
-                if (uiState.singlePane) {
+                if (uiState.singlePane && options?.preserveSinglePaneView !== true) {
                     uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'files' });
                 }
             }
 
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: focusPane });
+            if (focusPane) {
+                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: focusPane });
+            }
         },
         [isSearchActive, setSearchActive, uiDispatch, uiState.singlePane]
     );
@@ -435,9 +448,15 @@ export function useListPaneSearch({
     }, [activeSearchShortcut, isSavingSearchShortcut, removeSearchShortcut]);
 
     const updateSearchQuery = useCallback(
-        (mutate: (query: string) => string) => {
-            setShouldFocusSearch(true);
-            activateSearch();
+        (mutate: (query: string) => string, options?: SearchQueryUpdateOptions) => {
+            const shouldFocusSearch = options?.focusSearch !== false;
+            if (shouldFocusSearch) {
+                setShouldFocusSearch(true);
+            }
+            activateSearch({
+                focusPane: shouldFocusSearch ? 'search' : null,
+                preserveSinglePaneView: options?.preserveSinglePaneView
+            });
 
             let nextQueryValue: string | null = null;
             setSearchQuery(previousQuery => {
@@ -454,31 +473,31 @@ export function useListPaneSearch({
     );
 
     const modifySearchWithTag = useCallback(
-        (tag: string, operator: InclusionOperator) => {
+        (tag: string, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => {
             const normalizedTag = normalizeTagPath(tag);
             if (!normalizedTag || normalizedTag === UNTAGGED_TAG_ID) {
                 return;
             }
 
-            updateSearchQuery(query => updateFilterQueryWithTag(query, normalizedTag, operator).query);
+            updateSearchQuery(query => updateFilterQueryWithTag(query, normalizedTag, operator).query, options);
         },
         [updateSearchQuery]
     );
 
     const modifySearchWithProperty = useCallback(
-        (key: string, value: string | null, operator: InclusionOperator) => {
+        (key: string, value: string | null, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => {
             const normalizedKey = key.trim();
             if (!normalizedKey) {
                 return;
             }
 
-            updateSearchQuery(query => updateFilterQueryWithProperty(query, normalizedKey, value, operator).query);
+            updateSearchQuery(query => updateFilterQueryWithProperty(query, normalizedKey, value, operator).query, options);
         },
         [updateSearchQuery]
     );
 
     const modifySearchWithDateToken = useCallback(
-        (dateToken: string) => {
+        (dateToken: string, options?: SearchQueryUpdateOptions) => {
             const normalizedToken = dateToken.trim();
             if (!normalizedToken) {
                 return;
@@ -488,7 +507,7 @@ export function useListPaneSearch({
                 plugin.setSearchProvider('internal');
             }
 
-            updateSearchQuery(query => updateFilterQueryWithDateToken(query, normalizedToken).query);
+            updateSearchQuery(query => updateFilterQueryWithDateToken(query, normalizedToken).query, options);
         },
         [plugin, searchProvider, updateSearchQuery]
     );

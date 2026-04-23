@@ -80,6 +80,7 @@ import { useFileItemPillDecorationState } from '../hooks/useFileItemPillDecorati
 import { useNavigationPaneTreeSections } from '../hooks/navigationPane/data/useNavigationPaneTreeSections';
 import { useNavigationPaneSourceState } from '../hooks/navigationPane/data/useNavigationPaneSourceState';
 import type { SelectionHistoryEntry } from '../context/selection/types';
+import type { SearchQueryUpdateOptions } from '../hooks/useListPaneSearch';
 
 // Checks if two string arrays have identical content in the same order
 const arraysEqual = (a: string[], b: string[]): boolean => {
@@ -284,17 +285,33 @@ export const NotebookNavigatorComponent = React.memo(
             await listHandle.executeSearchShortcut({ searchShortcut });
         }, []);
 
-        const handleModifySearchWithTag = useCallback((tag: string, operator: InclusionOperator) => {
-            listPaneRef.current?.modifySearchWithTag(tag, operator);
-        }, []);
+        const getNavigationSearchUpdateOptions = useCallback((): SearchQueryUpdateOptions => {
+            return {
+                preserveSinglePaneView: uiState.singlePane && uiState.currentSinglePaneView === 'navigation',
+                focusSearch: false
+            };
+        }, [uiState.currentSinglePaneView, uiState.singlePane]);
 
-        const handleModifySearchWithProperty = useCallback((key: string, value: string | null, operator: InclusionOperator) => {
-            listPaneRef.current?.modifySearchWithProperty(key, value, operator);
-        }, []);
+        const handleModifySearchWithTag = useCallback(
+            (tag: string, operator: InclusionOperator) => {
+                listPaneRef.current?.modifySearchWithTag(tag, operator, getNavigationSearchUpdateOptions());
+            },
+            [getNavigationSearchUpdateOptions]
+        );
 
-        const handleModifySearchWithDateFilter = useCallback((dateToken: string) => {
-            listPaneRef.current?.modifySearchWithDateToken(dateToken);
-        }, []);
+        const handleModifySearchWithProperty = useCallback(
+            (key: string, value: string | null, operator: InclusionOperator) => {
+                listPaneRef.current?.modifySearchWithProperty(key, value, operator, getNavigationSearchUpdateOptions());
+            },
+            [getNavigationSearchUpdateOptions]
+        );
+
+        const handleModifySearchWithDateFilter = useCallback(
+            (dateToken: string) => {
+                listPaneRef.current?.modifySearchWithDateToken(dateToken, getNavigationSearchUpdateOptions());
+            },
+            [getNavigationSearchUpdateOptions]
+        );
 
         // Enable resizable pane
         const { paneSize, isResizing, resizeHandleProps } = useResizablePane({
