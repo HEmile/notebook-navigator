@@ -33,6 +33,7 @@ import { PropertyOperations } from './services/PropertyOperations';
 import { TagOperations } from './services/TagOperations';
 import { TagTreeService } from './services/TagTreeService';
 import { PropertyTreeService } from './services/PropertyTreeService';
+import { TopicService } from './services/TopicGraphService';
 import { CommandQueueService } from './services/CommandQueueService';
 import { OmnisearchService } from './services/OmnisearchService';
 import { FileSystemOperations } from './services/FileSystemService';
@@ -87,6 +88,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
     propertyOperations: PropertyOperations | null = null;
     tagTreeService: TagTreeService | null = null;
     propertyTreeService: PropertyTreeService | null = null;
+    topicService: TopicService | null = null;
     commandQueue: CommandQueueService | null = null;
     fileSystemOps: FileSystemOperations | null = null;
     omnisearchService: OmnisearchService | null = null;
@@ -384,6 +386,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         // Initialize services
         this.tagTreeService = new TagTreeService();
         this.propertyTreeService = new PropertyTreeService();
+        this.topicService = new TopicService();
         this.metadataService = new MetadataService(
             this.app,
             this,
@@ -1274,6 +1277,14 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
      */
     async revealFileInNearestFolder(file: TFile, options?: RevealFileOptions) {
         this.workspaceCoordinator?.revealFileInNearestFolder(file, options);
+    }
+
+    async revealTopic(topicPath: string) {
+        this.workspaceCoordinator?.revealTopic(topicPath);
+    }
+
+    async revealTopicAllPaths(topicPath: string) {
+        this.workspaceCoordinator?.revealTopicAllPaths(topicPath);
     }
 
     public resolveHomepageFile(): TFile | null {

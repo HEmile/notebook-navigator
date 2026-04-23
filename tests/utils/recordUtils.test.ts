@@ -133,16 +133,18 @@ describe('ensureRecord', () => {
 
 describe('pinned note record helpers', () => {
     it('normalizes malformed pinned context values to strict booleans', () => {
-        expect(normalizePinnedNoteContext('invalid')).toEqual({ folder: false, tag: false, property: false });
+        expect(normalizePinnedNoteContext('invalid')).toEqual({ folder: false, tag: false, property: false, topic: false });
         expect(normalizePinnedNoteContext({ folder: true, tag: 'yes', property: 1 })).toEqual({
             folder: true,
             tag: false,
-            property: false
+            property: false,
+            topic: false
         });
         expect(normalizePinnedNoteContext({ folder: true, tag: true })).toEqual({
             folder: true,
             tag: true,
-            property: true
+            property: true,
+            topic: false
         });
     });
 
@@ -155,9 +157,9 @@ describe('pinned note record helpers', () => {
         });
 
         expect(Object.getPrototypeOf(cloned)).toBeNull();
-        expect(cloned['a.md']).toEqual({ folder: true, tag: false, property: false });
-        expect(cloned['b.md']).toEqual({ folder: false, tag: false, property: false });
-        expect(cloned['c.md']).toEqual({ folder: false, tag: false, property: false });
-        expect(cloned['d.md']).toEqual({ folder: true, tag: true, property: true });
+        expect(cloned['a.md']).toEqual({ folder: true, tag: false, property: false, topic: false });
+        expect(cloned['b.md']).toEqual({ folder: false, tag: false, property: false, topic: false });
+        expect(cloned['c.md']).toEqual({ folder: false, tag: false, property: false, topic: false });
+        expect(cloned['d.md']).toEqual({ folder: true, tag: true, property: true, topic: false });
     });
 });

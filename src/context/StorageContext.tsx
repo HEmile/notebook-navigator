@@ -61,7 +61,8 @@ import type { PropertyTreeNode, TagTreeNode } from '../types/storage';
 import { getFileDisplayName as getDisplayName } from '../utils/fileNameUtils';
 import { findTagNode, collectAllTagPaths } from '../utils/tagTree';
 import { isPdfFile } from '../utils/fileTypeUtils';
-import { useServices } from './ServicesContext';
+import { useServices, useTopicService } from './ServicesContext';
+import { buildTopicGraphFromDatabase } from '../utils/topicGraph';
 import { useSettingsState, useActiveProfile } from './SettingsContext';
 import { useUXPreferences } from './UXPreferencesContext';
 import type { NotebookNavigatorAPI } from '../api/NotebookNavigatorAPI';
@@ -131,6 +132,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
     const uxPreferences = useUXPreferences();
     const showHiddenItems = uxPreferences.showHiddenItems;
     const { tagTreeService, propertyTreeService } = useServices();
+    const topicService = useTopicService();
     const [fileData, setFileData] = useState<StorageFileData>({
         tagTree: new Map(),
         propertyTree: new Map(),
@@ -213,6 +215,17 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         getVisibleMarkdownFiles,
         propertyTreeService: propertyTreeService ?? null
     });
+
+    const rebuildTopicTree = useCallback(() => {
+        if (!settings.showTopics) return;
+        const db = getDBInstance();
+        const excludedFolderPatterns = showHiddenItems ? [] : hiddenFolders;
+        const includedPaths = new Set(getVisibleMarkdownFiles().map((f: TFile) => f.path));
+        const topicGraph = buildTopicGraphFromDatabase(db, app, excludedFolderPatterns, includedPaths);
+        if (topicService) {
+            topicService.updateTopicGraph(topicGraph);
+        }
+    }, [app, hiddenFolders, settings.showTopics, showHiddenItems, topicService, getVisibleMarkdownFiles]);
 
     const { queueMetadataContentWhenReady, disposeMetadataWaitDisposers } = useMetadataCacheQueue({
         app,
@@ -485,6 +498,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         activeMetadataEventRefRef: activeMetadataEventRef,
         rebuildTagTree,
         rebuildPropertyTree,
+        rebuildTopicTree,
         scheduleTagTreeRebuild,
         schedulePropertyTreeRebuild,
         cancelTagTreeRebuildDebouncer,

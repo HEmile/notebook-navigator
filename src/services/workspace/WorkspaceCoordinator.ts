@@ -145,4 +145,22 @@ export default class WorkspaceCoordinator {
             }
         });
     }
+
+    revealTopic(topicPath: string): void {
+        this.getNavigatorLeaves().forEach(leaf => {
+            const { view } = leaf;
+            if (view instanceof NotebookNavigatorView) {
+                view.revealTopic(topicPath);
+            }
+        });
+    }
+
+    revealTopicAllPaths(topicPath: string): void {
+        this.getNavigatorLeaves().forEach(leaf => {
+            const { view } = leaf;
+            if (view instanceof NotebookNavigatorView) {
+                view.revealTopicAllPaths(topicPath);
+            }
+        });
+    }
 }

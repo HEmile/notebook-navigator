@@ -208,6 +208,7 @@ function withSingleSelection(
         selectedFolder: TFolder | null;
         selectedTag: string | null;
         selectedProperty: SelectionState['selectedProperty'];
+        selectedTopicPath?: string | null;
         selectedFile: TFile | null;
         isRevealOperation: boolean;
         isFolderChangeWithAutoSelect: boolean;
@@ -237,6 +238,7 @@ function withSingleSelection(
         selectedFolder: params.selectedFolder,
         selectedTag: params.selectedTag,
         selectedProperty: params.selectedProperty,
+        selectedTopicPath: params.selectedTopicPath ?? null,
         selectedFiles: createSelectedFilesSet(params.selectedFile),
         selectedFile: params.selectedFile,
         anchorIndex: null,
@@ -281,6 +283,7 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 selectedFolder: action.folder,
                 selectedTag: null,
                 selectedProperty: null,
+                selectedTopicPath: null,
                 selectedFile: action.autoSelectedFile ?? null,
                 isRevealOperation: false,
                 isFolderChangeWithAutoSelect: action.autoSelectedFile !== undefined && action.autoSelectedFile !== null,
@@ -297,6 +300,7 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 selectedFolder: null,
                 selectedTag: normalizeTagPath(action.tag),
                 selectedProperty: null,
+                selectedTopicPath: null,
                 selectedFile: action.autoSelectedFile ?? null,
                 isRevealOperation: false,
                 isFolderChangeWithAutoSelect: action.autoSelectedFile !== undefined && action.autoSelectedFile !== null,
@@ -313,6 +317,7 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 selectedFolder: null,
                 selectedTag: null,
                 selectedProperty: normalizeSelectedPropertyNodeId(action.nodeId),
+                selectedTopicPath: null,
                 selectedFile: action.autoSelectedFile ?? null,
                 isRevealOperation: false,
                 isFolderChangeWithAutoSelect: action.autoSelectedFile !== undefined && action.autoSelectedFile !== null,
@@ -347,12 +352,28 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 revealSource: null
             };
 
+        case 'SET_SELECTED_TOPIC':
+            return withSingleSelection(state, {
+                selectionType: 'topic',
+                selectedFolder: null,
+                selectedTag: null,
+                selectedProperty: null,
+                selectedTopicPath: action.topicPath,
+                selectedFile: action.autoSelectedFile ?? null,
+                isRevealOperation: false,
+                isFolderChangeWithAutoSelect: action.autoSelectedFile !== undefined && action.autoSelectedFile !== null,
+                isKeyboardNavigation: false,
+                isFolderNavigation: true,
+                revealSource: action.source ?? null
+            });
+
         case 'CLEAR_SELECTION':
             return {
                 ...state,
                 selectedFolder: null,
                 selectedTag: null,
                 selectedProperty: null,
+                selectedTopicPath: null,
                 selectedFiles: new Set<string>(),
                 selectedFile: null,
                 anchorIndex: null,

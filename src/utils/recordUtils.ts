@@ -145,6 +145,7 @@ export interface PinnedNoteContextValue {
     folder: boolean;
     tag: boolean;
     property: boolean;
+    topic: boolean;
 }
 
 /**
@@ -152,7 +153,7 @@ export interface PinnedNoteContextValue {
  */
 export function normalizePinnedNoteContext(value: unknown): PinnedNoteContextValue {
     if (!isPlainObjectRecordValue(value)) {
-        return { folder: false, tag: false, property: false };
+        return { folder: false, tag: false, property: false, topic: false };
     }
 
     const folder = value.folder === true;
@@ -163,7 +164,8 @@ export function normalizePinnedNoteContext(value: unknown): PinnedNoteContextVal
         tag,
         // Legacy pinned context values only stored folder+tag.
         // Treating both as true implies the file was pinned everywhere before property context existed.
-        property: value.property === true || (!Object.prototype.hasOwnProperty.call(value, 'property') && folder && tag)
+        property: value.property === true || (!Object.prototype.hasOwnProperty.call(value, 'property') && folder && tag),
+        topic: value.topic === true
     };
 }
 

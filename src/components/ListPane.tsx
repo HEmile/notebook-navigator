@@ -307,7 +307,7 @@ export const ListPane = React.memo(
             ensureSelectionForCurrentFilterRef
         });
 
-        const { selectionType, selectedFolder, selectedTag, selectedProperty, selectedFile } = selectionState;
+        const { selectionType, selectedFolder, selectedTag, selectedProperty, selectedTopicPath, selectedFile } = selectionState;
 
         // Determine if list pane is visible early to optimize
         const isVisible = !uiState.singlePane || uiState.currentSinglePaneView === 'files';
@@ -318,6 +318,7 @@ export const ListPane = React.memo(
             selectedFolder,
             selectedTag,
             selectedProperty,
+            selectedTopicPath,
             settings,
             activeProfile,
             searchProvider,
@@ -562,7 +563,7 @@ export const ListPane = React.memo(
         });
 
         // Determine if we're showing empty state
-        const isEmptySelection = !selectedFolder && !selectedTag && !selectedProperty;
+        const isEmptySelection = !selectedFolder && !selectedTag && !selectedProperty && !selectedTopicPath;
         const hasNoFiles = files.length === 0;
 
         const shouldRenderBottomToolbar = isMobile && !isAndroid;

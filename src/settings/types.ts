@@ -445,6 +445,12 @@ export interface NotebookNavigatorSettings {
     inheritTagColors: boolean;
     keepEmptyTagsProperty: boolean;
 
+    // Topics
+    showTopics: boolean;
+    topicSortOrder: TagSortOrder;
+    hiddenTopics: string[];
+    rootTopicOrder: string[];
+
     // Properties tab
     showProperties: boolean;
     showPropertyIcons: boolean;

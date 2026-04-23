@@ -72,6 +72,7 @@ export function useStorageVaultSync(params: {
     scheduleTagTreeRebuild: (options?: { flush?: boolean }) => void;
     cancelTagTreeRebuildDebouncer: (options?: { reset?: boolean }) => void;
     rebuildPropertyTree: () => Map<string, PropertyTreeNode>;
+    rebuildTopicTree: () => void;
     schedulePropertyTreeRebuild: (options?: { flush?: boolean }) => void;
     cancelPropertyTreeRebuildDebouncer: (options?: { reset?: boolean }) => void;
     startCacheRebuildNotice: (total: number, enabledTypes: FileContentType[]) => void;
@@ -107,6 +108,7 @@ export function useStorageVaultSync(params: {
         scheduleTagTreeRebuild,
         cancelTagTreeRebuildDebouncer,
         rebuildPropertyTree,
+        rebuildTopicTree,
         schedulePropertyTreeRebuild,
         cancelPropertyTreeRebuildDebouncer,
         startCacheRebuildNotice,
@@ -141,6 +143,7 @@ export function useStorageVaultSync(params: {
 
                     rebuildTagTree();
                     rebuildPropertyTree();
+                    rebuildTopicTree();
 
                     isStorageReadyRef.current = true;
                     setIsStorageReady(true);
@@ -473,6 +476,7 @@ export function useStorageVaultSync(params: {
         rebuildFileCacheRef,
         rebuildTagTree,
         rebuildPropertyTree,
+        rebuildTopicTree,
         scheduleTagTreeRebuild,
         schedulePropertyTreeRebuild,
         setIsStorageReady,

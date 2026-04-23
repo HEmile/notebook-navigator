@@ -213,6 +213,7 @@ export function loadInitialSelectionState({ app, settings }: LoadInitialSelectio
         selectedFolder,
         selectedTag: selectedProperty ? null : normalizedTag,
         selectedProperty,
+        selectedTopicPath: null,
         selectedFiles,
         selectedFile,
         anchorIndex: null,

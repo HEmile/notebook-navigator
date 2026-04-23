@@ -265,7 +265,7 @@ describe('fileFinder getFilesForTag', () => {
         const settings = createSettings();
         settings.filterPinnedByFolder = true;
         settings.pinnedNotes = {
-            [childTagFile.path]: { folder: false, tag: true, property: false }
+            [childTagFile.path]: { folder: false, tag: true, property: false, topic: false }
         };
 
         const app = createAppWithFiles([rootTagFile, childTagFile]);
@@ -295,7 +295,7 @@ describe('fileFinder getFilesForTag', () => {
         const settings = createSettings();
         settings.filterPinnedByFolder = true;
         settings.pinnedNotes = {
-            [childTagFile.path]: { folder: false, tag: true, property: false }
+            [childTagFile.path]: { folder: false, tag: true, property: false, topic: false }
         };
 
         const app = createAppWithFiles([rootTagFile, childTagFile]);
@@ -334,7 +334,7 @@ describe('fileFinder getFilesForProperty', () => {
         setActivePropertyFields(settings, 'status');
         settings.filterPinnedByFolder = true;
         settings.pinnedNotes = {
-            [valueFile.path]: { folder: false, tag: false, property: true }
+            [valueFile.path]: { folder: false, tag: false, property: true, topic: false }
         };
 
         const app = createAppWithFiles([keyOnlyFile, valueFile]);
@@ -364,7 +364,7 @@ describe('fileFinder getFilesForProperty', () => {
         setActivePropertyFields(settings, 'status');
         settings.filterPinnedByFolder = true;
         settings.pinnedNotes = {
-            [valueFile.path]: { folder: false, tag: false, property: true }
+            [valueFile.path]: { folder: false, tag: false, property: true, topic: false }
         };
 
         const app = createAppWithFiles([keyOnlyFile, valueFile]);

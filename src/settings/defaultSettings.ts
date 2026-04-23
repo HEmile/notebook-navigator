@@ -271,6 +271,12 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     inheritTagColors: true,
     keepEmptyTagsProperty: false,
 
+    // Topics
+    showTopics: true,
+    topicSortOrder: 'alpha-asc',
+    hiddenTopics: [],
+    rootTopicOrder: [],
+
     // Properties tab
     showProperties: true,
     showPropertyIcons: true,

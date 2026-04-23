@@ -180,6 +180,7 @@ export function useNavigationPaneData({
     const {
         folderItems,
         tagItems,
+        topicItems,
         rootOrderingTagTree,
         resolvedRootTagKeys,
         tagsVirtualFolderHasChildren,
@@ -232,6 +233,7 @@ export function useNavigationPaneData({
         propertiesSectionActive,
         folderItems,
         tagItems,
+        topicItems,
         propertyItems,
         shortcutItems,
         recentNotesItems,

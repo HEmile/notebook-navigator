@@ -63,7 +63,7 @@ const EMPTY_SEARCH_META = new Map<string, SearchResultMeta>();
  * Parameters for the useListPaneData hook
  */
 interface UseListPaneDataParams {
-    /** The type of selection (folder, tag, or property) */
+    /** The type of selection (folder, tag, property, or topic) */
     selectionType: ItemType | null;
     /** The currently selected folder, if any */
     selectedFolder: TFolder | null;
@@ -71,6 +71,8 @@ interface UseListPaneDataParams {
     selectedTag: string | null;
     /** The currently selected property key/value, if any */
     selectedProperty: PropertySelectionNodeId | null;
+    /** The currently selected topic path, if any */
+    selectedTopicPath: string | null;
     /** Plugin settings */
     settings: NotebookNavigatorSettings;
     /** Active profile-derived values */
@@ -119,6 +121,7 @@ export function useListPaneData({
     selectedFolder,
     selectedTag,
     selectedProperty,
+    selectedTopicPath,
     settings,
     activeProfile,
     searchProvider,
@@ -126,7 +129,7 @@ export function useListPaneData({
     searchTokens,
     visibility
 }: UseListPaneDataParams): UseListPaneDataResult {
-    const { app, tagTreeService, propertyTreeService, commandQueue, omnisearchService } = useServices();
+    const { app, tagTreeService, propertyTreeService, topicService, commandQueue, omnisearchService } = useServices();
     const { getFileTimestamps, getDB, getFileDisplayName } = useFileCache();
     const { includeDescendantNotes, showHiddenItems } = visibility;
     const dayKey = useLocalDayKey();
@@ -206,13 +209,16 @@ export function useListPaneData({
                 selectionType,
                 selectedFolder,
                 selectedTag,
-                selectedProperty
+                selectedProperty,
+                selectedTopicPath
             },
             settings,
             visibility,
             app,
             tagTreeService,
-            propertyTreeService
+            propertyTreeService,
+            undefined,
+            topicService
         );
         // NOTE: Excluding getFilesForNavigationSelection - static import
         // updateKey triggers re-computation on storage updates
@@ -222,6 +228,7 @@ export function useListPaneData({
         selectedFolder,
         selectedTag,
         selectedProperty,
+        selectedTopicPath,
         activeProfile.profile.id,
         activeProfile.hiddenFolders,
         activeProfile.hiddenFileProperties,
@@ -249,6 +256,7 @@ export function useListPaneData({
         settings.tagSortOverrides,
         settings.propertySortOverrides,
         propertyTreeService,
+        topicService,
         includeDescendantNotes,
         showHiddenItems,
         app,

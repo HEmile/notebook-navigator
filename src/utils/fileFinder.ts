@@ -780,3 +780,68 @@ export function getFilesForProperty(
 
     return applyPinnedOrdering(matchedFiles, settings, 'property');
 }
+
+/**
+ * Gets a sorted list of files for a topic, looked up by name.
+ */
+export function getFilesForTopicByName(
+    topicName: string,
+    settings: NotebookNavigatorSettings,
+    app: App,
+    topicService: import('../services/TopicGraphService').TopicService | null
+): TFile[] {
+    const topicNode = topicService?.findTopicNodeByName(topicName);
+    if (!topicNode) return [];
+    return getFilesForTopic(topicNode, settings, app);
+}
+
+/**
+ * Gets a sorted list of files for a topic, looked up by path (slash-separated ancestor chain).
+ */
+export function getFilesForTopicByPath(
+    topicPath: string,
+    settings: NotebookNavigatorSettings,
+    app: App,
+    topicService: import('../services/TopicGraphService').TopicService | null
+): TFile[] {
+    const topicNode = topicService?.findTopicNodeByPath(topicPath);
+    if (!topicNode) return [];
+    return getFilesForTopic(topicNode, settings, app);
+}
+
+function getFilesForTopic(
+    topicNode: import('../types/storage').TopicNode,
+    settings: NotebookNavigatorSettings,
+    app: App
+): TFile[] {
+    const { collectTopicDescendants } = require('./topicGraph') as typeof import('./topicGraph');
+    const excludedFolderPatterns = getActiveHiddenFolders(settings);
+    const showHiddenItems = false;
+    const fileVisibility = getActiveFileVisibility(settings);
+    const allFiles =
+        fileVisibility === FILE_VISIBILITY.DOCUMENTS
+            ? getFilteredDocumentFiles(app, settings, { showHiddenItems })
+            : getFilteredFiles(app, settings, { showHiddenItems });
+
+    const baseFiles = allFiles.filter(
+        file => excludedFolderPatterns.length === 0 || !isPathInExcludedFolder(file.path, excludedFolderPatterns)
+    );
+
+    const topicsToInclude = settings.includeDescendantNotes
+        ? collectTopicDescendants(topicNode)
+        : new Set([topicNode]);
+
+    const filesToInclude = new Set<string>();
+    for (const topic of topicsToInclude) {
+        for (const path of topic.notesWithTag) {
+            filesToInclude.add(path);
+        }
+    }
+
+    const filteredFiles = baseFiles.filter(file => filesToInclude.has(file.path));
+
+    const sortOption = getEffectiveSortOption(settings, ItemType.TOPIC, null, null, topicNode.name);
+    sortNavigationFiles(filteredFiles, settings, app, sortOption);
+
+    return applyPinnedOrdering(filteredFiles, settings, 'topic');
+}

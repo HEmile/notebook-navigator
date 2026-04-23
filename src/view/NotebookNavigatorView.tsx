@@ -374,6 +374,14 @@ export class NotebookNavigatorView extends ItemView {
         this.componentHandle?.revealFileInNearestFolder(file, options);
     }
 
+    revealTopic(topicPath: string) {
+        this.componentHandle?.revealTopic(topicPath);
+    }
+
+    revealTopicAllPaths(topicPath: string) {
+        this.componentHandle?.revealTopicAllPaths(topicPath);
+    }
+
     /**
      * Moves focus to the visible pane without forcing a view switch
      */

@@ -34,6 +34,7 @@ export interface SelectionState {
     selectedFolder: TFolder | null;
     selectedTag: string | null;
     selectedProperty: PropertySelectionNodeId | null;
+    selectedTopicPath: string | null;
     selectedFiles: Set<string>;
     anchorIndex: number | null;
     lastMovementDirection: 'up' | 'down' | null;
@@ -100,6 +101,12 @@ export type SelectionAction =
     | { type: 'SET_KEYBOARD_NAVIGATION'; isKeyboardNavigation: boolean }
     | { type: 'SET_FOLDER_CHANGE_WITH_AUTO_SELECT'; isFolderChangeWithAutoSelect: boolean }
     | { type: 'UPDATE_FILE_PATH'; oldPath: string; newPath: string }
-    | { type: 'SET_FOLDER_NAVIGATION'; isFolderNavigation: boolean };
+    | { type: 'SET_FOLDER_NAVIGATION'; isFolderNavigation: boolean }
+    | {
+          type: 'SET_SELECTED_TOPIC';
+          topicPath: string | null;
+          autoSelectedFile?: TFile | null;
+          source?: SelectionRevealSource;
+      };
 
 export type SelectionDispatch = Dispatch<SelectionAction>;

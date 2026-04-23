@@ -143,6 +143,8 @@ export interface NotebookNavigatorHandle {
     selectNextFile: () => Promise<boolean>;
     selectPreviousFile: () => Promise<boolean>;
     openShortcutByNumber: (shortcutNumber: number) => Promise<boolean>;
+    revealTopic: (topicPath: string) => void;
+    revealTopicAllPaths: (topicPath: string) => void;
 }
 
 /**
@@ -157,7 +159,7 @@ export interface NotebookNavigatorHandle {
  */
 export const NotebookNavigatorComponent = React.memo(
     forwardRef<NotebookNavigatorHandle>(function NotebookNavigatorComponent(_, ref) {
-        const { app, isMobile, fileSystemOps, plugin, tagTreeService, propertyTreeService, commandQueue, tagOperations } = useServices();
+        const { app, isMobile, fileSystemOps, plugin, tagTreeService, propertyTreeService, topicService, commandQueue, tagOperations } = useServices();
         const settings = useSettingsState();
         const activeProfile = useActiveProfile();
         const expansionState = useExpansionState();
@@ -493,7 +495,9 @@ export const NotebookNavigatorComponent = React.memo(
             navigateToTag,
             navigateToProperty,
             revealTag,
-            revealProperty
+            revealProperty,
+            revealTopic,
+            revealTopicAllPaths
         } = useNavigatorReveal({
             app,
             navigationPaneRef,
@@ -1047,6 +1051,8 @@ export const NotebookNavigatorComponent = React.memo(
                 navigateToFolder,
                 navigateToTag,
                 navigateToProperty,
+                revealTopic,
+                revealTopicAllPaths,
                 addDateFilterToSearch: handleModifySearchWithDateFilter,
                 navigateToFolderWithModal: () => {
                     // Show the folder selection modal for navigation
@@ -1378,7 +1384,8 @@ export const NotebookNavigatorComponent = React.memo(
             sourceState: navigationSourceState,
             selectionScope: navigationSelectionScope,
             tagTreeService,
-            propertyTreeService
+            propertyTreeService,
+            topicService
         });
         const fileItemPillDecorationModel = useFileItemPillDecorationState({
             sourceState: navigationSourceState,

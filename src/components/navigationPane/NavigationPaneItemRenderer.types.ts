@@ -31,6 +31,7 @@ import type { NavigationSearchHighlightsResult } from '../../hooks/navigationPan
 export interface NavigationPaneExpansionStateSnapshot {
     expandedFolders: Set<string>;
     expandedTags: Set<string>;
+    expandedTopics: Set<string>;
     expandedProperties: Set<string>;
     expandedVirtualFolders: Set<string>;
 }

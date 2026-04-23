@@ -26,6 +26,7 @@ interface ExpansionState {
     expandedTags: Set<string>;
     expandedProperties: Set<string>;
     expandedVirtualFolders: Set<string>;
+    expandedTopics: Set<string>;
 }
 
 // Action types
@@ -46,7 +47,12 @@ export type ExpansionAction =
     | { type: 'TOGGLE_DESCENDANT_PROPERTIES'; descendantNodeIds: string[]; expand: boolean }
     | { type: 'CLEANUP_DELETED_FOLDERS'; existingPaths: Set<string> }
     | { type: 'CLEANUP_DELETED_TAGS'; existingTags: Set<string> }
-    | { type: 'CLEANUP_DELETED_PROPERTIES'; existingPropertyNodeIds: Set<string> };
+    | { type: 'CLEANUP_DELETED_PROPERTIES'; existingPropertyNodeIds: Set<string> }
+    | { type: 'SET_EXPANDED_TOPICS'; topics: Set<string> }
+    | { type: 'TOGGLE_TOPIC_EXPANDED'; topicName: string }
+    | { type: 'EXPAND_TOPICS'; topicNames: string[] }
+    | { type: 'TOGGLE_DESCENDANT_TOPICS'; descendantNames: string[]; expand: boolean }
+    | { type: 'CLEANUP_DELETED_TOPICS'; existingTopics: Set<string> };
 
 // Create contexts
 const ExpansionContext = createContext<ExpansionState | null>(null);
@@ -207,6 +213,45 @@ function expansionReducer(state: ExpansionState, action: ExpansionAction): Expan
             return { ...state, expandedProperties: cleaned };
         }
 
+        case 'SET_EXPANDED_TOPICS':
+            return { ...state, expandedTopics: action.topics };
+
+        case 'TOGGLE_TOPIC_EXPANDED': {
+            const newExpanded = new Set(state.expandedTopics);
+            if (newExpanded.has(action.topicName)) {
+                newExpanded.delete(action.topicName);
+            } else {
+                newExpanded.add(action.topicName);
+            }
+            return { ...state, expandedTopics: newExpanded };
+        }
+
+        case 'EXPAND_TOPICS': {
+            const newExpanded = new Set(state.expandedTopics);
+            action.topicNames.forEach(name => newExpanded.add(name));
+            return { ...state, expandedTopics: newExpanded };
+        }
+
+        case 'TOGGLE_DESCENDANT_TOPICS': {
+            const newExpanded = new Set(state.expandedTopics);
+            action.descendantNames.forEach(name => {
+                if (action.expand) {
+                    newExpanded.add(name);
+                } else {
+                    newExpanded.delete(name);
+                }
+            });
+            return { ...state, expandedTopics: newExpanded };
+        }
+
+        case 'CLEANUP_DELETED_TOPICS': {
+            const cleaned = filterExpandedSet(state.expandedTopics, action.existingTopics);
+            if (!cleaned) {
+                return state;
+            }
+            return { ...state, expandedTopics: cleaned };
+        }
+
         default:
             return state;
     }
@@ -224,6 +269,7 @@ export function ExpansionProvider({ children }: ExpansionProviderProps) {
         const savedExpandedTags = localStorage.get<string[]>(STORAGE_KEYS.expandedTagsKey);
         const savedExpandedProperties = localStorage.get<string[]>(STORAGE_KEYS.expandedPropertiesKey);
         const savedExpandedVirtualFolders = localStorage.get<string[]>(STORAGE_KEYS.expandedVirtualFoldersKey);
+        const savedExpandedTopics = localStorage.get<string[]>(STORAGE_KEYS.expandedTopicsKey);
 
         const expandedFolders = new Set<string>(savedExpandedFolders || []);
         const expandedTags = new Set<string>(savedExpandedTags || []);
@@ -231,8 +277,9 @@ export function ExpansionProvider({ children }: ExpansionProviderProps) {
         const expandedVirtualFolders = new Set<string>(
             savedExpandedVirtualFolders || [TAGS_ROOT_VIRTUAL_FOLDER_ID, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID]
         ); // Default expand tag/property roots
+        const expandedTopics = new Set<string>(savedExpandedTopics || []);
 
-        return { expandedFolders, expandedTags, expandedProperties, expandedVirtualFolders };
+        return { expandedFolders, expandedTags, expandedProperties, expandedVirtualFolders, expandedTopics };
     };
 
     const [state, dispatch] = useReducer(expansionReducer, undefined, loadInitialState);
@@ -253,6 +300,10 @@ export function ExpansionProvider({ children }: ExpansionProviderProps) {
     useEffect(() => {
         localStorage.set(STORAGE_KEYS.expandedVirtualFoldersKey, Array.from(state.expandedVirtualFolders));
     }, [state.expandedVirtualFolders]);
+
+    useEffect(() => {
+        localStorage.set(STORAGE_KEYS.expandedTopicsKey, Array.from(state.expandedTopics));
+    }, [state.expandedTopics]);
 
     return (
         <ExpansionContext.Provider value={state}>

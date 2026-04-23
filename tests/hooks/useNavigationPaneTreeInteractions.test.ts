@@ -69,6 +69,7 @@ function createSelectionState(): SelectionState {
         selectedFolder: null,
         selectedTag: null,
         selectedProperty: null,
+        selectedTopicPath: null,
         selectedFiles: new Set(),
         anchorIndex: null,
         lastMovementDirection: null,

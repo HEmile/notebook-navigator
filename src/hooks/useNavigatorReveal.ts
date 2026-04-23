@@ -18,6 +18,8 @@
 
 import { useEffect, useRef, useCallback, RefObject, useState } from 'react';
 import { TFile, TFolder, App, FileView, WorkspaceLeaf } from 'obsidian';
+import { getTopicAncestors, getAllTopicPathsToRoot } from '../utils/topicGraph';
+import { useTopicService } from '../context/ServicesContext';
 import { getLeafSplitLocation } from '../utils/workspaceSplit';
 import { isLeafInNavigatorWindow, shouldSkipNavigatorAutoReveal } from '../utils/autoRevealUtils';
 import type { NavigationPaneHandle } from '../components/NavigationPane';
@@ -131,6 +133,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
     const uiDispatch = useUIDispatch();
     const { getDB, getPropertyTree, findTagInTree } = useFileCache();
     const commandQueue = useCommandQueue();
+    const topicService = useTopicService();
 
     // Auto-reveal state
     const [fileToReveal, setFileToReveal] = useState<TFile | null>(null);
@@ -1078,6 +1081,78 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
         uiState.singlePane
     ]);
 
+    const revealTopic = useCallback(
+        (topicPath: string) => {
+            if (!topicService) return;
+
+            const isPath = topicPath.includes('/');
+            const topicNode = isPath
+                ? topicService.findTopicNodeByPath(topicPath)
+                : topicService.findTopicNodeByName(topicPath);
+            if (!topicNode) return;
+
+            const ancestorNames = getTopicAncestors(topicNode);
+
+            if (!isPath && topicNode.parents.size > 0) {
+                topicPath = `${topicNode.name}/${topicPath}`;
+            }
+
+            const ancestorPaths: string[] = [];
+            for (let i = 0; i < ancestorNames.length; i++) {
+                ancestorPaths.push(ancestorNames.slice(0, i + 1).join('/'));
+            }
+
+            const currentExpanded = new Set(expansionState.expandedVirtualFolders);
+            currentExpanded.add('topics');
+            expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: currentExpanded });
+
+            if (ancestorPaths.length > 0) {
+                expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: ancestorPaths });
+            }
+
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath });
+
+            setTimeout(() => {
+                navigationPaneRef.current?.requestScroll(topicPath, { itemType: ItemType.TOPIC });
+            }, 50);
+        },
+        [topicService, expansionState.expandedVirtualFolders, expansionDispatch, selectionDispatch, navigationPaneRef]
+    );
+
+    const revealTopicAllPaths = useCallback(
+        (topicName: string) => {
+            if (!topicService) return;
+
+            const topicNode = topicService.findTopicNodeByName(topicName);
+            if (!topicNode) return;
+
+            const allPaths = getAllTopicPathsToRoot(topicNode);
+
+            const currentExpanded = new Set(expansionState.expandedVirtualFolders);
+            currentExpanded.add('topics');
+            expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: currentExpanded });
+
+            const allAncestorPaths = new Set<string>();
+            for (const pathToRoot of allPaths) {
+                for (let i = 0; i < pathToRoot.length; i++) {
+                    allAncestorPaths.add(pathToRoot.slice(0, i + 1).join('/'));
+                }
+            }
+
+            if (allAncestorPaths.size > 0) {
+                expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: Array.from(allAncestorPaths) });
+            }
+
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: topicNode.name });
+
+            setTimeout(() => {
+                const firstPath = allPaths.length > 0 ? `${allPaths[0].join('/')}/${topicName}` : topicName;
+                navigationPaneRef.current?.requestScroll(firstPath, { itemType: ItemType.TOPIC });
+            }, 50);
+        },
+        [topicService, expansionState.expandedVirtualFolders, expansionDispatch, selectionDispatch, navigationPaneRef]
+    );
+
     return {
         revealFileInActualFolder,
         revealFileInNearestFolder,
@@ -1085,6 +1160,8 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
         navigateToTag,
         navigateToProperty,
         revealTag,
-        revealProperty
+        revealProperty,
+        revealTopic,
+        revealTopicAllPaths
     };
 }

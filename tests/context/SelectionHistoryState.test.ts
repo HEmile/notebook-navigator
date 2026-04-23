@@ -50,6 +50,7 @@ function createSelectionState(rootFolder: TFolder): SelectionState {
         selectedFolder: rootFolder,
         selectedTag: null,
         selectedProperty: null,
+        selectedTopicPath: null,
         selectedFiles: new Set<string>(),
         anchorIndex: null,
         lastMovementDirection: null,

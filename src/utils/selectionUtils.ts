@@ -22,7 +22,8 @@ import { ItemType, type NavigationItemType, type NavigatorContext, type Visibili
 import { NotebookNavigatorSettings } from '../settings';
 import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
 import type { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
-import { getFilesForFolder, getFilesForProperty, getFilesForTag } from './fileFinder';
+import type { TopicService } from '../services/TopicGraphService';
+import { getFilesForFolder, getFilesForProperty, getFilesForTag, getFilesForTopicByPath } from './fileFinder';
 
 /**
  * Utilities for managing file selection operations
@@ -43,6 +44,9 @@ export function getSelectedPath(selectionState: SelectionState): string | null {
     if (selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty) {
         return selectionState.selectedProperty;
     }
+    if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+        return selectionState.selectedTopicPath;
+    }
     return null;
 }
 
@@ -61,20 +65,24 @@ export function getFilesForSelection(
     visibility: VisibilityPreferences,
     app: App,
     tagTreeService: ITagTreeProvider | null,
-    propertyTreeService: IPropertyTreeProvider | null
+    propertyTreeService: IPropertyTreeProvider | null,
+    topicService?: TopicService | null
 ): TFile[] {
     return getFilesForNavigationSelection(
         {
             selectionType: selectionState.selectionType,
             selectedFolder: selectionState.selectedFolder,
             selectedTag: selectionState.selectedTag,
-            selectedProperty: selectionState.selectedProperty
+            selectedProperty: selectionState.selectedProperty,
+            selectedTopicPath: selectionState.selectedTopicPath
         },
         settings,
         visibility,
         app,
         tagTreeService,
-        propertyTreeService
+        propertyTreeService,
+        undefined,
+        topicService
     );
 }
 
@@ -83,6 +91,7 @@ export interface NavigationSelectionScope {
     selectedFolder?: SelectionState['selectedFolder'];
     selectedTag?: SelectionState['selectedTag'];
     selectedProperty?: SelectionState['selectedProperty'];
+    selectedTopicPath?: SelectionState['selectedTopicPath'];
 }
 
 interface NavigationSelectionOptions {
@@ -98,6 +107,10 @@ export function getNavigatorPinContext(selectionType: NavigationSelectionScope['
         return ItemType.PROPERTY;
     }
 
+    if (selectionType === ItemType.TOPIC) {
+        return ItemType.TOPIC;
+    }
+
     return ItemType.FOLDER;
 }
 
@@ -108,7 +121,8 @@ export function getFilesForNavigationSelection(
     app: App,
     tagTreeService: ITagTreeProvider | null,
     propertyTreeService: IPropertyTreeProvider | null,
-    options?: NavigationSelectionOptions
+    options?: NavigationSelectionOptions,
+    topicService?: TopicService | null
 ): TFile[] {
     if (selectionScope.selectionType === ItemType.FOLDER && selectionScope.selectedFolder) {
         return getFilesForFolder(selectionScope.selectedFolder, settings, visibility, app, options);
@@ -118,6 +132,9 @@ export function getFilesForNavigationSelection(
     }
     if (selectionScope.selectionType === ItemType.PROPERTY && selectionScope.selectedProperty) {
         return getFilesForProperty(selectionScope.selectedProperty, settings, visibility, app, propertyTreeService, options);
+    }
+    if (selectionScope.selectionType === ItemType.TOPIC && selectionScope.selectedTopicPath) {
+        return getFilesForTopicByPath(selectionScope.selectedTopicPath, settings, app, topicService ?? null);
     }
     return [];
 }

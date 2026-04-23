@@ -54,3 +54,14 @@ export interface PropertyTreeNode {
     /** Set of file paths that have this exact key/value (key nodes include any value for the key). */
     notesWithValue: Set<string>;
 }
+
+export interface TopicNode {
+    /** The topic name (file basename without extension) */
+    name: string;
+    /** Parent nodes in the DAG — a topic can have multiple parents */
+    parents: Map<string, TopicNode>;
+    /** Child nodes in the topic hierarchy */
+    children: Map<string, TopicNode>;
+    /** File paths of notes that reference this topic via frontmatter relations */
+    notesWithTag: Set<string>;
+}

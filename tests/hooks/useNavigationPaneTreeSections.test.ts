@@ -208,6 +208,7 @@ describe('useNavigationPaneTreeSections', () => {
                 expansionState: {
                     expandedFolders: new Set(),
                     expandedTags: new Set(),
+                    expandedTopics: new Set(),
                     expandedProperties: new Set(),
                     expandedVirtualFolders: new Set()
                 },
@@ -219,7 +220,8 @@ describe('useNavigationPaneTreeSections', () => {
                     selectedFolder: folder
                 },
                 tagTreeService: null,
-                propertyTreeService: null
+                propertyTreeService: null,
+                topicService: null
             });
             return null;
         }
@@ -282,6 +284,7 @@ describe('useNavigationPaneTreeSections', () => {
                 expansionState: {
                     expandedFolders: new Set(),
                     expandedTags: new Set(),
+                    expandedTopics: new Set(),
                     expandedProperties: new Set([buildPropertyKeyNodeId('status')]),
                     expandedVirtualFolders: new Set()
                 },
@@ -301,7 +304,8 @@ describe('useNavigationPaneTreeSections', () => {
                     selectedFolder: folder
                 },
                 tagTreeService: null,
-                propertyTreeService: null
+                propertyTreeService: null,
+                topicService: null
             });
             return null;
         }
@@ -353,6 +357,7 @@ describe('useNavigationPaneTreeSections', () => {
                 expansionState: {
                     expandedFolders: new Set(),
                     expandedTags: new Set(),
+                    expandedTopics: new Set(),
                     expandedProperties: new Set(),
                     expandedVirtualFolders: new Set()
                 },
@@ -366,7 +371,8 @@ describe('useNavigationPaneTreeSections', () => {
                     selectedFolder: folder
                 },
                 tagTreeService: null,
-                propertyTreeService: null
+                propertyTreeService: null,
+                topicService: null
             });
             return null;
         }

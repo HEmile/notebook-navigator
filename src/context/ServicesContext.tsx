@@ -26,6 +26,7 @@ import { PropertyOperations } from '../services/PropertyOperations';
 import { TagOperations } from '../services/TagOperations';
 import { TagTreeService } from '../services/TagTreeService';
 import { PropertyTreeService } from '../services/PropertyTreeService';
+import { TopicService } from '../services/TopicGraphService';
 import { CommandQueueService } from '../services/CommandQueueService';
 import { OmnisearchService } from '../services/OmnisearchService';
 import ReleaseCheckService from '../services/ReleaseCheckService';
@@ -53,6 +54,8 @@ interface Services {
     tagTreeService: TagTreeService | null;
     /** Property tree service for accessing the current property tree */
     propertyTreeService: PropertyTreeService | null;
+    /** Topic graph service for accessing the current topic graph */
+    topicService: TopicService | null;
     /** Command queue service for managing operations and their context */
     commandQueue: CommandQueueService | null;
     /** Omnisearch integration service */
@@ -101,6 +104,7 @@ export function ServicesProvider({ children, plugin }: { children: React.ReactNo
             propertyOperations: plugin.propertyOperations,
             tagTreeService: plugin.tagTreeService,
             propertyTreeService: plugin.propertyTreeService,
+            topicService: plugin.topicService,
             commandQueue: plugin.commandQueue,
             omnisearchService: plugin.omnisearchService,
             releaseCheckService: plugin.releaseCheckService
@@ -184,4 +188,8 @@ export function useCommandQueue() {
         throw new Error('CommandQueue not initialized');
     }
     return commandQueue;
+}
+
+export function useTopicService(): TopicService | null {
+    return useServices().topicService;
 }

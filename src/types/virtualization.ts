@@ -19,7 +19,7 @@
 import { TFile, TFolder } from 'obsidian';
 import { ListPaneItemType, NavigationPaneItemType, VirtualFolder } from '../types';
 import type { SearchResultMeta } from './search';
-import { PropertyTreeNode, TagTreeNode } from '../types/storage';
+import { PropertyTreeNode, TagTreeNode, TopicNode } from '../types/storage';
 import type { SearchShortcut, ShortcutEntry } from '../types/shortcuts';
 import type { NoteCountInfo } from '../types/noteCounts';
 
@@ -105,6 +105,18 @@ export interface PropertyValueTreeItem {
     color?: string;
     backgroundColor?: string;
     icon?: string;
+}
+
+export interface TopicTreeItem {
+    type: typeof NavigationPaneItemType.TOPIC;
+    data: TopicNode;
+    level: number;
+    key: string; // slash-separated path from root (e.g. "AI/Machine Learning")
+    noteCount?: NoteCountInfo;
+    color?: string;
+    backgroundColor?: string;
+    icon?: string;
+    isHidden?: boolean;
 }
 
 export interface VirtualFolderItem {
@@ -211,6 +223,7 @@ export type CombinedNavigationItem =
     | VirtualFolderItem
     | TagTreeItem
     | UntaggedItem
+    | TopicTreeItem
     | PropertyKeyTreeItem
     | PropertyValueTreeItem
     | ShortcutHeaderItem

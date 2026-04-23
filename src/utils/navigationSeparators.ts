@@ -26,6 +26,7 @@ const SECTION_KEY_BY_ID: Record<NavigationSectionId, string> = {
     [NavigationSectionId.RECENT]: 'recent',
     [NavigationSectionId.FOLDERS]: 'folders',
     [NavigationSectionId.TAGS]: 'tags',
+    [NavigationSectionId.TOPICS]: 'topics',
     [NavigationSectionId.PROPERTIES]: 'properties'
 };
 
@@ -36,6 +37,7 @@ const SECTION_ID_BY_KEY: Record<string, NavigationSectionId> = {
     recents: NavigationSectionId.RECENT,
     folders: NavigationSectionId.FOLDERS,
     tags: NavigationSectionId.TAGS,
+    topics: NavigationSectionId.TOPICS,
     properties: NavigationSectionId.PROPERTIES
 };
 

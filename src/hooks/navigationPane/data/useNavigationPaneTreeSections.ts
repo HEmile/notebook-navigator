@@ -32,8 +32,10 @@ import {
     type VirtualFolder
 } from '../../../types';
 import type { NoteCountInfo } from '../../../types/noteCounts';
-import type { PropertyTreeNode, TagTreeNode } from '../../../types/storage';
+import type { PropertyTreeNode, TagTreeNode, TopicNode } from '../../../types/storage';
 import type { CombinedNavigationItem } from '../../../types/virtualization';
+import type { TopicService } from '../../../services/TopicGraphService';
+import { getTotalNoteCount } from '../../../utils/topicGraph';
 import { getDBInstanceOrNull } from '../../../storage/fileOperations';
 import type { NavigationSelectionScope } from '../../../utils/selectionUtils';
 import { getFilesForNavigationSelection } from '../../../utils/selectionUtils';
@@ -60,6 +62,7 @@ interface NavigationPaneTreeExpansionState {
     expandedFolders: Set<string>;
     expandedTags: Set<string>;
     expandedProperties: Set<string>;
+    expandedTopics: Set<string>;
     expandedVirtualFolders: Set<string>;
 }
 
@@ -73,6 +76,7 @@ export interface UseNavigationPaneTreeSectionsParams {
     selectionScope: NavigationSelectionScope;
     tagTreeService: ITagTreeProvider | null;
     propertyTreeService: IPropertyTreeProvider | null;
+    topicService: TopicService | null;
 }
 
 export interface NavigationPaneTreeSectionsResult {
@@ -88,6 +92,8 @@ export interface NavigationPaneTreeSectionsResult {
     propertiesSectionActive: boolean;
     resolvedRootPropertyKeys: string[];
     propertyCollectionCount: NoteCountInfo | undefined;
+    topicItems: CombinedNavigationItem[];
+    renderTopicTree: Map<string, TopicNode>;
 }
 
 interface ResolvedRootTagOrdering {
@@ -215,7 +221,8 @@ export function useNavigationPaneTreeSections({
     sourceState,
     selectionScope,
     tagTreeService,
-    propertyTreeService
+    propertyTreeService,
+    topicService
 }: UseNavigationPaneTreeSectionsParams): NavigationPaneTreeSectionsResult {
     const folderItems = useMemo(() => {
         return flattenFolderTree(sourceState.rootFolders, expansionState.expandedFolders, sourceState.hiddenFolders, 0, new Set(), {
@@ -852,6 +859,63 @@ export function useNavigationPaneTreeSections({
         settings.showNoteCount
     ]);
 
+    const { topicItems, renderTopicTree } = useMemo(() => {
+        if (!settings.showTopics || !topicService) {
+            return { topicItems: [] as CombinedNavigationItem[], renderTopicTree: new Map<string, TopicNode>() };
+        }
+
+        const topicGraph = topicService.getTopicGraph();
+        const hiddenTopics = new Set(settings.hiddenTopics ?? []);
+
+        // Root nodes: those with no parents
+        const rootNodes = Array.from(topicGraph.values()).filter(n => n.parents.size === 0);
+        rootNodes.sort((a, b) => a.name.localeCompare(b.name));
+
+        const items: CombinedNavigationItem[] = [];
+
+        const appendTopicNode = (node: TopicNode, path: string, level: number) => {
+            const isHidden = hiddenTopics.has(node.name);
+            if (isHidden && !showHiddenItems) return;
+
+            const directCount = node.notesWithTag.size;
+            const totalCount = getTotalNoteCount(node);
+            const noteCount: NoteCountInfo = {
+                current: directCount,
+                descendants: Math.max(totalCount - directCount, 0),
+                total: totalCount
+            };
+
+            items.push({
+                type: NavigationPaneItemType.TOPIC,
+                data: node,
+                level,
+                key: path,
+                noteCount,
+                isHidden
+            });
+
+            if (expansionState.expandedTopics.has(path) && node.children.size > 0) {
+                const children = Array.from(node.children.values());
+                children.sort((a, b) => a.name.localeCompare(b.name));
+                for (const child of children) {
+                    appendTopicNode(child, `${path}/${child.name}`, level + 1);
+                }
+            }
+        };
+
+        for (const root of rootNodes) {
+            appendTopicNode(root, root.name, 0);
+        }
+
+        return { topicItems: items, renderTopicTree: topicGraph };
+    }, [
+        settings.showTopics,
+        settings.hiddenTopics,
+        topicService,
+        expansionState.expandedTopics,
+        showHiddenItems
+    ]);
+
     return {
         folderItems,
         tagItems,
@@ -864,6 +928,8 @@ export function useNavigationPaneTreeSections({
         propertyItems,
         propertiesSectionActive,
         resolvedRootPropertyKeys,
-        propertyCollectionCount: propertySectionBase.collectionCount
+        propertyCollectionCount: propertySectionBase.collectionCount,
+        topicItems,
+        renderTopicTree
     };
 }

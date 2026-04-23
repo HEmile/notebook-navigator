@@ -63,6 +63,7 @@ export const STRINGS_EN = {
     navigationPane: {
         shortcutsHeader: 'Shortcuts', // Header label for shortcuts section in navigation pane (English: Shortcuts)
         recentFilesHeader: 'Recent files', // Header label for recent files section in navigation pane (English: Recent files)
+        topics: 'Topics', // Header label for topics section in navigation pane (English: Topics)
         properties: 'Properties', // Header label for properties section in navigation pane (English: Properties)
         reorderRootFoldersTitle: 'Reorder navigation',
         reorderRootFoldersHint: 'Use arrows or drag to reorder',
@@ -340,6 +341,13 @@ export const STRINGS_EN = {
             addKey: 'Configure property keys',
             renameKey: 'Rename property',
             deleteKey: 'Delete property'
+        },
+        topic: {
+            changeIcon: 'Change icon',
+            changeColor: 'Change color',
+            changeBackground: 'Change background',
+            showTopic: 'Show topic',
+            hideTopic: 'Hide topic'
         },
         navigation: {
             addSeparator: 'Add separator',
@@ -787,7 +795,9 @@ export const STRINGS_EN = {
         removeTag: 'Remove tag from selected files', // Command palette: Opens a dialog to remove a tag from selected files (English: Remove tag from selected files)
         removeAllTags: 'Remove all tags from selected files', // Command palette: Removes all tags from selected files (English: Remove all tags from selected files)
         openAllFiles: 'Open all files', // Command palette: Opens all files in the current folder or tag (English: Open all files)
-        rebuildCache: 'Rebuild cache' // Command palette: Rebuilds the local Notebook Navigator cache (English: Rebuild cache)
+        rebuildCache: 'Rebuild cache', // Command palette: Rebuilds the local Notebook Navigator cache (English: Rebuild cache)
+        revealActiveTopic: 'Reveal active note topic',
+        revealActiveTopicAllPaths: 'Reveal active note topic (all paths)'
     },
 
     // Plugin UI
@@ -817,6 +827,7 @@ export const STRINGS_EN = {
         sections: {
             general: 'General',
             navigationPane: 'Navigation',
+            topics: 'Topics',
             calendar: 'Calendar',
             files: 'Files',
             icons: 'Icon packs',

@@ -738,7 +738,7 @@ export class MetadataAPI {
         }
 
         if (!plugin.settings.pinnedNotes[file.path]) {
-            plugin.settings.pinnedNotes[file.path] = { folder: false, tag: false, property: false };
+            plugin.settings.pinnedNotes[file.path] = { folder: false, tag: false, property: false, topic: false };
         }
 
         let changed = false;

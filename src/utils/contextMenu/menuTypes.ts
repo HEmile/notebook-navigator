@@ -58,6 +58,10 @@ export type MenuConfig =
           item: string; // Property node id
       }
     | {
+          type: typeof ItemType.TOPIC;
+          item: string; // Topic name
+      }
+    | {
           type: typeof EMPTY_LIST_MENU_TYPE;
           item: TFolder | null;
       };

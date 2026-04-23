@@ -33,6 +33,7 @@ import { PropertyTreeItem } from '../PropertyTreeItem';
 import { TagTreeItem } from '../TagTreeItem';
 import { VirtualFolderComponent, type VirtualFolderTrailingAction } from '../VirtualFolderItem';
 import type { NavigationPaneRowProps } from './NavigationPaneItemRenderer.types';
+import { useTopicNavigation } from '../../hooks/useTopicNavigation';
 
 export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps) {
     const {
@@ -57,6 +58,7 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
         searchHighlights,
         onSectionContextMenu
     } = context;
+    const { navigateToTopic } = useTopicNavigation();
 
     switch (item.type) {
         case NavigationPaneItemType.FOLDER: {
@@ -295,6 +297,45 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
                     countInfo={propertyCounts.get(propertyNode.id)}
                     showFileCount={settings.showNoteCount}
                 />
+            );
+        }
+
+        case NavigationPaneItemType.TOPIC: {
+            const topicNode = item.data;
+            const topicPath = item.key; // key is the slash-separated path
+            const isExpanded = expansionState.expandedTopics?.has(topicPath) ?? false;
+            const isSelected = selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath === topicPath;
+            const hasChildren = topicNode.children.size > 0;
+            const noteCount = item.noteCount;
+
+            const classes = ['nn-navitem', 'nn-tag'];
+            if (isSelected) classes.push('nn-selected');
+            if (item.isHidden) classes.push('nn-excluded');
+            const level = item.level ?? 0;
+            const indentStyle = level > 0 ? { paddingLeft: `${level * 16 + 8}px` } : { paddingLeft: '8px' };
+
+            return (
+                <div
+                    className={classes.join(' ')}
+                    style={indentStyle}
+                    onClick={e => { e.stopPropagation(); navigateToTopic(topicPath); }}
+                    data-path={topicPath}
+                >
+                    {hasChildren && (
+                        <div
+                            className={`nn-navitem-chevron ${isExpanded ? 'nn-navitem-chevron--expanded' : ''}`}
+                            onClick={e => {
+                                e.stopPropagation();
+                                expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
+                            }}
+                        />
+                    )}
+                    {!hasChildren && <div className="nn-navitem-chevron nn-navitem-chevron--leaf" />}
+                    <span className="nn-navitem-name">{topicNode.name}</span>
+                    {settings.showNoteCount && noteCount && (
+                        <span className="nn-navitem-count">{noteCount.total}</span>
+                    )}
+                </div>
             );
         }
 

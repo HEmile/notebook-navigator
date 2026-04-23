@@ -70,6 +70,7 @@ export interface UseNavigationPaneItemPipelineParams {
     propertiesSectionActive: boolean;
     folderItems: CombinedNavigationItem[];
     tagItems: CombinedNavigationItem[];
+    topicItems: CombinedNavigationItem[];
     propertyItems: CombinedNavigationItem[];
     shortcutItems: CombinedNavigationItem[];
     recentNotesItems: CombinedNavigationItem[];
@@ -124,6 +125,7 @@ export function useNavigationPaneItemPipeline({
     propertiesSectionActive,
     folderItems,
     tagItems,
+    topicItems,
     propertyItems,
     shortcutItems,
     recentNotesItems,
@@ -147,6 +149,7 @@ export function useNavigationPaneItemPipeline({
         const shouldIncludeRecentSection = settings.showRecentNotes && recentNotesItems.length > 0 && !shouldPinRecentNotes;
         const shouldIncludeFoldersSection = folderItems.length > 0;
         const shouldIncludeTagsSection = settings.showTags && tagItems.length > 0;
+        const shouldIncludeTopicsSection = settings.showTopics && topicItems.length > 0;
         const shouldIncludePropertiesSection = propertiesSectionActive && propertyItems.length > 0;
 
         const orderedSections: SectionItems[] = [];
@@ -171,6 +174,11 @@ export function useNavigationPaneItemPipeline({
                 case NavigationSectionId.TAGS:
                     if (shouldIncludeTagsSection) {
                         orderedSections.push({ id: identifier, items: tagItems });
+                    }
+                    break;
+                case NavigationSectionId.TOPICS:
+                    if (shouldIncludeTopicsSection) {
+                        orderedSections.push({ id: identifier, items: topicItems });
                     }
                     break;
                 case NavigationSectionId.PROPERTIES:
@@ -215,10 +223,12 @@ export function useNavigationPaneItemPipeline({
         pinShortcuts,
         propertiesSectionActive,
         propertyItems,
+        topicItems,
         recentNotesItems,
         settings.showRecentNotes,
         settings.showShortcuts,
         settings.showTags,
+        settings.showTopics,
         shortcutItems,
         shouldPinRecentNotes,
         tagItems

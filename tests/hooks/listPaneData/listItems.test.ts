@@ -104,7 +104,7 @@ describe('buildListItems pinned display scope', () => {
             hiddenFileState: new Map(),
             hiddenTags: [],
             listConfig: createListConfig({
-                [childFile.path]: { folder: false, tag: true, property: false }
+                [childFile.path]: { folder: false, tag: true, property: false, topic: false }
             }),
             searchMetaMap: new Map(),
             selectedFolder: null,
@@ -141,7 +141,7 @@ describe('buildListItems pinned display scope', () => {
             hiddenFileState: new Map(),
             hiddenTags: [],
             listConfig: createListConfig({
-                [childFile.path]: { folder: false, tag: true, property: false }
+                [childFile.path]: { folder: false, tag: true, property: false, topic: false }
             }),
             searchMetaMap: new Map(),
             selectedFolder: null,
@@ -184,7 +184,7 @@ describe('buildListItems pinned display scope', () => {
             hiddenFileState: new Map(),
             hiddenTags: [],
             listConfig: createListConfig({
-                [valueFile.path]: { folder: false, tag: false, property: true }
+                [valueFile.path]: { folder: false, tag: false, property: true, topic: false }
             }),
             searchMetaMap: new Map(),
             selectedFolder: null,
@@ -227,7 +227,7 @@ describe('buildListItems pinned display scope', () => {
             hiddenFileState: new Map(),
             hiddenTags: [],
             listConfig: createListConfig({
-                [valueFile.path]: { folder: false, tag: false, property: true }
+                [valueFile.path]: { folder: false, tag: false, property: true, topic: false }
             }),
             searchMetaMap: new Map(),
             selectedFolder: null,

@@ -688,6 +688,56 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
         }
     });
 
+    // Command to reveal the active note's first topic in the navigator
+    plugin.addCommand({
+        id: 'reveal-active-topic',
+        name: strings.commands.revealActiveTopic,
+        checkCallback: (checking: boolean) => {
+            const activeFile = plugin.app.workspace.getActiveFile();
+            if (activeFile) {
+                if (!checking) {
+                    runAsyncAction(async () => {
+                        await plugin.activateView();
+                        const topicService = plugin.topicService;
+                        if (!topicService) return;
+                        const { findFirstTopicPathInHierarchy } = await import('../../utils/topicNotes');
+                        const topicPath = findFirstTopicPathInHierarchy(activeFile, plugin.app, topicService.getTopicGraph());
+                        if (topicPath) {
+                            plugin.revealTopic(topicPath);
+                        }
+                    });
+                }
+                return true;
+            }
+            return false;
+        }
+    });
+
+    // Command to reveal the active note's topic across all paths in the hierarchy
+    plugin.addCommand({
+        id: 'reveal-active-topic-all-paths',
+        name: strings.commands.revealActiveTopicAllPaths,
+        checkCallback: (checking: boolean) => {
+            const activeFile = plugin.app.workspace.getActiveFile();
+            if (activeFile) {
+                if (!checking) {
+                    runAsyncAction(async () => {
+                        await plugin.activateView();
+                        const topicService = plugin.topicService;
+                        if (!topicService) return;
+                        const { getTopicNameFromFile } = await import('../../utils/topicNotes');
+                        const topicName = getTopicNameFromFile(activeFile);
+                        if (topicName) {
+                            plugin.revealTopicAllPaths(topicName);
+                        }
+                    });
+                }
+                return true;
+            }
+            return false;
+        }
+    });
+
     // Command to open all files in the currently selected folder, tag, or property scope
     plugin.addCommand({
         id: 'open-all-files',
