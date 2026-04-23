@@ -446,6 +446,8 @@ export const parseTagModeTokens = (
         extensionTokens: [],
         excludeExtensionTokens: [],
         excludeDateRanges: [],
-        excludeTagged: false
+        excludeTagged: false,
+        topicTokens: [],
+        excludeTopicTokens: []
     };
 };

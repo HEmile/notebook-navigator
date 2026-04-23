@@ -286,7 +286,8 @@ export function useListPaneData({
             settings,
             sortOption,
             trimmedQuery,
-            useOmnisearch
+            useOmnisearch,
+            topicService
         });
     }, [
         app,
@@ -299,7 +300,8 @@ export function useListPaneData({
         settings,
         sortOption,
         trimmedQuery,
-        useOmnisearch
+        useOmnisearch,
+        topicService
     ]);
 
     const hiddenFileState = useMemo(() => {

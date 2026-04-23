@@ -392,3 +392,19 @@ export function excludeFromTopicTree(tree: Map<string, TopicNode>, matcher: Hidd
     // TODO: Implement topic exclusion filtering
     return tree;
 }
+
+/** Returns every unique node in the topic graph, including all descendants. */
+export function flattenTopicGraph(rootGraph: Map<string, TopicNode>): TopicNode[] {
+    const all: TopicNode[] = [];
+    const seen = new Set<string>();
+    const visit = (nodes: Map<string, TopicNode>) => {
+        for (const node of nodes.values()) {
+            if (seen.has(node.name)) continue;
+            seen.add(node.name);
+            all.push(node);
+            if (node.children.size > 0) visit(node.children);
+        }
+    };
+    visit(rootGraph);
+    return all;
+}

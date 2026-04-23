@@ -104,4 +104,6 @@ export interface FilterSearchTokens {
     excludeExtensionTokens: string[];
     excludeDateRanges: DateFilterRange[];
     excludeTagged: boolean;
+    topicTokens: string[];
+    excludeTopicTokens: string[];
 }

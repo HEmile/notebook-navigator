@@ -26,6 +26,8 @@ import { matchesShortcut, KeyboardShortcutAction } from '../utils/keyboardShortc
 import { runAsyncAction, type MaybePromise } from '../utils/async';
 import { SearchDateInputSuggest } from '../suggest/SearchDateInputSuggest';
 import { SearchTagInputSuggest } from '../suggest/SearchTagInputSuggest';
+import { SearchTopicInputSuggest } from '../suggest/SearchTopicInputSuggest';
+import { flattenTopicGraph } from '../utils/topicGraph';
 import type { SearchProvider } from '../types/search';
 import { resolveUXIcon } from '../utils/uxIcons';
 import { InfoModal, type InfoModalSection } from '../modals/InfoModal';
@@ -63,8 +65,9 @@ export function SearchInput({
 }: SearchInputProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const tagSuggestRef = useRef<SearchTagInputSuggest | null>(null);
+    const topicSuggestRef = useRef<SearchTopicInputSuggest | null>(null);
     const dateSuggestRef = useRef<SearchDateInputSuggest | null>(null);
-    const { isMobile, omnisearchService, app, tagTreeService, plugin } = useServices();
+    const { isMobile, omnisearchService, app, tagTreeService, topicService, plugin } = useServices();
     const settings = useSettingsState();
     const uiState = useUIState();
     const uiDispatch = useUIDispatch();
@@ -167,6 +170,30 @@ export function SearchInput({
         };
     }, [app, tagTreeService, settings.showTags, isOmnisearchActive, applyTagSuggestion, isMobile]);
 
+    // Initialize topic suggest on the search input — triggers on `topic:"`
+    useEffect(() => {
+        const inputEl = inputRef.current;
+        if (!inputEl || !topicService || isOmnisearchActive) {
+            topicSuggestRef.current?.dispose();
+            topicSuggestRef.current = null;
+            return;
+        }
+
+        if (topicSuggestRef.current) return;
+
+        const suggest = new SearchTopicInputSuggest(app, inputEl, {
+            getTopics: () => flattenTopicGraph(topicService.getTopicGraph()),
+            onApply: applyTagSuggestion,
+            isMobile
+        });
+
+        topicSuggestRef.current = suggest;
+        return () => {
+            suggest.dispose();
+            topicSuggestRef.current = null;
+        };
+    }, [app, topicService, isOmnisearchActive, applyTagSuggestion, isMobile]);
+
     // Initialize date filter suggestions on the search input (Filter search provider)
     useEffect(() => {
         const inputEl = inputRef.current;
@@ -196,6 +223,7 @@ export function SearchInput({
             return;
         }
         tagSuggestRef.current?.close();
+        topicSuggestRef.current?.close();
         dateSuggestRef.current?.close();
     }, [searchQuery]);
 
@@ -230,7 +258,9 @@ export function SearchInput({
             }
 
             const isSuggestOpen = Boolean(
-                tagSuggestRef.current?.containerEl?.isConnected || dateSuggestRef.current?.containerEl?.isConnected
+                tagSuggestRef.current?.containerEl?.isConnected ||
+                topicSuggestRef.current?.containerEl?.isConnected ||
+                dateSuggestRef.current?.containerEl?.isConnected
             );
             if (isSuggestOpen) {
                 return;
@@ -283,6 +313,7 @@ export function SearchInput({
     // Opens the search syntax help modal, closing any active suggest popups first
     const openSearchHelp = useCallback(() => {
         tagSuggestRef.current?.close();
+        topicSuggestRef.current?.close();
         dateSuggestRef.current?.close();
         const { fileNames, tags, properties, tasks, connectors, dates, omnisearch } = strings.searchInput.searchHelpModal.sections;
         const propertiesSection = Object.prototype.hasOwnProperty.call(strings.searchInput.searchHelpModal.sections, 'properties')

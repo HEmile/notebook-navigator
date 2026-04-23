@@ -50,7 +50,9 @@ const EMPTY_TOKENS: FilterSearchTokens = {
     extensionTokens: [],
     excludeExtensionTokens: [],
     excludeDateRanges: [],
-    excludeTagged: false
+    excludeTagged: false,
+    topicTokens: [],
+    excludeTopicTokens: []
 };
 const EMPTY_PROPERTY_VALUE_MAP = new Map<string, string[]>();
 
@@ -778,7 +780,9 @@ const parseFilterModeTokens = (
         extensionTokens,
         excludeExtensionTokens,
         excludeDateRanges,
-        excludeTagged: hasUntaggedOperand
+        excludeTagged: hasUntaggedOperand,
+        topicTokens: [],
+        excludeTopicTokens: []
     };
 };
 
@@ -825,9 +829,29 @@ const parseFilterModeTokens = (
  * @returns Parsed tokens with include/exclude criteria for filtering
  */
 export function parseFilterSearchTokens(query: string): FilterSearchTokens {
-    const trimmedQuery = query.trim();
+    // Extract topic:"name" patterns before the main tokenizer sees them.
+    // Supports: topic:"name" (include) and !topic:"name" (exclude).
+    const topicPattern = /(!)?topic:\s*"([^"]+)"/gi;
+    const topicTokens: string[] = [];
+    const excludeTopicTokens: string[] = [];
+    let cleanedQuery = query;
+    let topicMatch;
+    while ((topicMatch = topicPattern.exec(query)) !== null) {
+        const topicName = topicMatch[2].trim().toLowerCase();
+        if (topicMatch[1] === '!') {
+            excludeTopicTokens.push(topicName);
+        } else {
+            topicTokens.push(topicName);
+        }
+        cleanedQuery = cleanedQuery.replace(topicMatch[0], ' ');
+    }
+
+    const trimmedQuery = cleanedQuery.trim();
+    const hasTopicTokens = topicTokens.length > 0 || excludeTopicTokens.length > 0;
+
     if (!trimmedQuery) {
-        return EMPTY_TOKENS;
+        if (!hasTopicTokens) return EMPTY_TOKENS;
+        return { ...EMPTY_TOKENS, topicTokens, excludeTopicTokens };
     }
 
     // Tokenization preserves original code points.
@@ -835,7 +859,8 @@ export function parseFilterSearchTokens(query: string): FilterSearchTokens {
     // stay explicit and testable.
     const rawTokens = tokenizeFilterSearchQuery(trimmedQuery).filter(Boolean);
     if (rawTokens.length === 0) {
-        return EMPTY_TOKENS;
+        if (!hasTopicTokens) return EMPTY_TOKENS;
+        return { ...EMPTY_TOKENS, topicTokens, excludeTopicTokens };
     }
 
     const classification = classifyRawTokens(rawTokens);
@@ -866,11 +891,11 @@ export function parseFilterSearchTokens(query: string): FilterSearchTokens {
         // evaluated as literal name tokens.
         const tagTokens = parseTagModeTokens(classifiedTokens, excludeTagTokens, excludePropertyTokens);
         if (tagTokens) {
-            return tagTokens;
+            return { ...tagTokens, topicTokens, excludeTopicTokens };
         }
     }
 
-    return parseFilterModeTokens(classifiedTokens, excludeTagTokens, excludePropertyTokens, hasUntaggedOperand);
+    return { ...parseFilterModeTokens(classifiedTokens, excludeTagTokens, excludePropertyTokens, hasUntaggedOperand), topicTokens, excludeTopicTokens };
 }
 
 // Checks if a token is a recognized connector word
@@ -1193,7 +1218,9 @@ export function filterSearchHasActiveCriteria(tokens: FilterSearchTokens): boole
         tokens.excludeExtensionTokens.length > 0 ||
         tokens.excludeDateRanges.length > 0 ||
         tokens.excludeUnfinishedTasks ||
-        tokens.excludeTagged
+        tokens.excludeTagged ||
+        tokens.topicTokens.length > 0 ||
+        tokens.excludeTopicTokens.length > 0
     );
 }
 

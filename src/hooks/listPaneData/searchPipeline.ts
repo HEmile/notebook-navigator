@@ -47,6 +47,8 @@ import { runAsyncAction } from '../../utils/async';
 import type { SearchResultMeta } from '../../types/search';
 import type { OmnisearchService } from '../../services/OmnisearchService';
 import type { IndexedDBStorage, FileData } from '../../storage/IndexedDBStorage';
+import type { TopicService } from '../../services/TopicGraphService';
+import { findTopicNode, collectTopicFilePaths } from '../../utils/topicGraph';
 
 const EMPTY_FILTER_SEARCH_PROPERTIES = new Map<string, string[]>();
 const TAG_PRESENCE_SENTINEL = ['__nn_tag_present__'];
@@ -84,6 +86,7 @@ interface FilterListPaneFilesArgs {
     sortOption: SortOption;
     trimmedQuery: string;
     useOmnisearch: boolean;
+    topicService?: TopicService | null;
 }
 
 interface BuildHiddenFileStateArgs {
@@ -259,10 +262,36 @@ export function filterListPaneFiles({
     settings,
     sortOption,
     trimmedQuery,
-    useOmnisearch
+    useOmnisearch,
+    topicService
 }: FilterListPaneFilesArgs): TFile[] {
     if (!trimmedQuery) {
         return baseFiles;
+    }
+
+    const tokens = searchTokens ?? parseFilterSearchTokens(trimmedQuery);
+
+    // Build topic path sets for include/exclude filtering
+    let topicIncludePaths: Set<string> | null = null;
+    let topicExcludePaths: Set<string> | null = null;
+    if (tokens.topicTokens.length > 0 || tokens.excludeTopicTokens.length > 0) {
+        const topicGraph = topicService?.getTopicGraph();
+        if (topicGraph) {
+            if (tokens.topicTokens.length > 0) {
+                topicIncludePaths = new Set<string>();
+                for (const topicName of tokens.topicTokens) {
+                    const node = findTopicNode(topicGraph, topicName);
+                    if (node) collectTopicFilePaths(node).forEach(p => topicIncludePaths!.add(p));
+                }
+            }
+            if (tokens.excludeTopicTokens.length > 0) {
+                topicExcludePaths = new Set<string>();
+                for (const topicName of tokens.excludeTopicTokens) {
+                    const node = findTopicNode(topicGraph, topicName);
+                    if (node) collectTopicFilePaths(node).forEach(p => topicExcludePaths!.add(p));
+                }
+            }
+        }
     }
 
     if (useOmnisearch) {
@@ -275,10 +304,13 @@ export function filterListPaneFiles({
             return [];
         }
 
-        return baseFiles.filter(file => omnisearchPaths.has(file.path));
+        return baseFiles.filter(file => {
+            if (!omnisearchPaths.has(file.path)) return false;
+            if (topicIncludePaths && !topicIncludePaths.has(file.path)) return false;
+            if (topicExcludePaths && topicExcludePaths.has(file.path)) return false;
+            return true;
+        });
     }
-
-    const tokens = searchTokens ?? parseFilterSearchTokens(trimmedQuery);
     if (!filterSearchHasActiveCriteria(tokens)) {
         return baseFiles;
     }
@@ -296,6 +328,9 @@ export function filterListPaneFiles({
     const emptyTags: string[] = [];
 
     return baseFiles.filter(file => {
+        if (topicIncludePaths && !topicIncludePaths.has(file.path)) return false;
+        if (topicExcludePaths && topicExcludePaths.has(file.path)) return false;
+
         const foldedName = searchableNames.get(file.path) ?? '';
         const fileData = hasTaskFilters || needsTagLookup || needsPropertyLookup ? db.getFile(file.path) : null;
         const hasUnfinishedTasks = hasTaskFilters && typeof fileData?.taskUnfinished === 'number' && fileData.taskUnfinished > 0;
