@@ -19,6 +19,9 @@
 // src/hooks/useDragNavigationPaneActivation.ts
 import { useEffect, useRef } from 'react';
 import { DRAG_AUTO_EXPAND_DELAY } from './useDragAndDrop';
+import { hasExternalFileDragType, hasPotentialObsidianFileDragType } from '../utils/dragData';
+import { ItemType } from '../types';
+import { useInternalDragSession } from '../context/InternalDragContext';
 
 // Pixels from left edge that trigger navigation pane activation
 const EDGE_ACTIVATION_THRESHOLD = 32;
@@ -42,15 +45,24 @@ function isWithinRect(event: DragEvent, rect: DOMRect | null): boolean {
     return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
 }
 
-// Determines if the drag event contains Obsidian file data
-function isEligibleFileDrag(event: DragEvent): boolean {
+// Determines if the drag event contains file data that can be dropped in the navigator
+function isEligibleFileDrag(event: DragEvent, isInternalFileDrag: boolean): boolean {
     const types = event.dataTransfer?.types;
-    if (!types) {
+    return isInternalFileDrag || hasPotentialObsidianFileDragType(types) || hasExternalFileDragType(types);
+}
+
+function isNotebookNavigatorFileDragStart(event: DragEvent): boolean {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
         return false;
     }
 
-    const typeList = Array.from(types);
-    return typeList.includes('obsidian/file') || typeList.includes('obsidian/files');
+    const draggable = target.closest('[data-draggable="true"]');
+    if (!(draggable instanceof HTMLElement)) {
+        return false;
+    }
+
+    return draggable.getAttribute('data-drag-type') === ItemType.FILE;
 }
 
 /**
@@ -69,12 +81,15 @@ export function useDragNavigationPaneActivation({
     const activationTimeoutRef = useRef<number | null>(null);
     const navigationActivatedRef = useRef(false);
     const dragActiveRef = useRef(false);
+    const internalFileDragRef = useRef(false);
+    const internalDragSession = useInternalDragSession();
 
     useEffect(() => {
         const container = containerRef.current;
         if (!container || isMobile) {
             return;
         }
+        const ownerDocument = container.ownerDocument;
 
         const clearActivationTimeout = () => {
             if (activationTimeoutRef.current !== null) {
@@ -121,14 +136,16 @@ export function useDragNavigationPaneActivation({
             return isWithinRect(event, navigationToggle.getBoundingClientRect());
         };
 
-        const handleDragStart = () => {
+        const handleDragStart = (event: DragEvent) => {
             dragActiveRef.current = true;
+            internalFileDragRef.current = isNotebookNavigatorFileDragStart(event);
             navigationActivatedRef.current = false;
             clearActivationTimeout();
         };
 
         const handleDragOver = (event: DragEvent) => {
-            if (!isEligibleFileDrag(event)) {
+            const hasInternalFileDrag = internalFileDragRef.current || internalDragSession.getSession()?.type === ItemType.FILE;
+            if (!isEligibleFileDrag(event, hasInternalFileDrag)) {
                 return;
             }
 
@@ -147,7 +164,8 @@ export function useDragNavigationPaneActivation({
         };
 
         const handleDragLeave = (event: DragEvent) => {
-            if (!isEligibleFileDrag(event)) {
+            const hasInternalFileDrag = internalFileDragRef.current || internalDragSession.getSession()?.type === ItemType.FILE;
+            if (!isEligibleFileDrag(event, hasInternalFileDrag)) {
                 return;
             }
 
@@ -174,6 +192,7 @@ export function useDragNavigationPaneActivation({
 
         const handleDragEnd = () => {
             dragActiveRef.current = false;
+            internalFileDragRef.current = false;
 
             clearActivationTimeout();
 
@@ -193,8 +212,8 @@ export function useDragNavigationPaneActivation({
         container.addEventListener('dragend', handleDragEnd);
         container.addEventListener('drop', handleDrop);
 
-        document.addEventListener('dragend', handleDragEnd);
-        document.addEventListener('drop', handleDragEnd);
+        ownerDocument.addEventListener('dragend', handleDragEnd);
+        ownerDocument.addEventListener('drop', handleDragEnd);
 
         return () => {
             clearActivationTimeout();
@@ -203,8 +222,8 @@ export function useDragNavigationPaneActivation({
             container.removeEventListener('dragleave', handleDragLeave);
             container.removeEventListener('dragend', handleDragEnd);
             container.removeEventListener('drop', handleDrop);
-            document.removeEventListener('dragend', handleDragEnd);
-            document.removeEventListener('drop', handleDragEnd);
+            ownerDocument.removeEventListener('dragend', handleDragEnd);
+            ownerDocument.removeEventListener('drop', handleDragEnd);
         };
-    }, [containerRef, isMobile, isSinglePane, isFilesView, onActivateNavigation, onRestoreFiles]);
+    }, [containerRef, internalDragSession, isMobile, isSinglePane, isFilesView, onActivateNavigation, onRestoreFiles]);
 }

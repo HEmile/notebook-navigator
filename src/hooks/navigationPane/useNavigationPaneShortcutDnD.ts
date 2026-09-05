@@ -16,19 +16,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { TFile, TFolder, type App } from 'obsidian';
 import { PointerSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { showNotice } from '../../utils/noticeUtils';
-import { extractFilePathsFromDataTransfer, parsePropertyDragPayload, parseTagDragPayload } from '../../utils/dragData';
+import {
+    extractFilePathsFromDataTransfer,
+    hasPotentialObsidianFileDragType,
+    parsePropertyDragPayload,
+    parseTagDragPayload
+} from '../../utils/dragData';
 import { runAsyncAction } from '../../utils/async';
+import { useInternalDragSession, type InternalDragSession } from '../../context/InternalDragContext';
 import { PROPERTY_DRAG_MIME, TAG_DRAG_MIME } from '../../types/obsidian-extended';
 import { SHORTCUT_POINTER_CONSTRAINT } from '../../utils/dndConfig';
 import type { ShortcutEntry } from '../../types/shortcuts';
 import { ShortcutType, SHORTCUT_DRAG_MIME } from '../../types/shortcuts';
 import { strings } from '../../i18n';
 import type { ListReorderHandlers } from '../../types/listReorder';
+import { ItemType } from '../../types';
 
 interface HydratedShortcutDndItem {
     key: string;
@@ -48,6 +55,30 @@ interface UseNavigationPaneShortcutDnDProps {
     addTagShortcut: (tagPath: string, options?: { index?: number }) => Promise<boolean>;
     addPropertyShortcut: (nodeId: string, options?: { index?: number }) => Promise<boolean>;
     addShortcutsBatch: (entries: ShortcutEntry[], options?: { index?: number }) => Promise<number>;
+}
+
+function getInternalFileOrFolderDragPaths(session: InternalDragSession): string[] | null {
+    if (session?.type === ItemType.FILE && session.filePaths.length > 0) {
+        return session.filePaths;
+    }
+    if (session?.type === ItemType.FOLDER) {
+        return [session.folderPath];
+    }
+    return null;
+}
+
+function getInternalTagDragPath(session: InternalDragSession): string | null {
+    if (session?.type !== ItemType.TAG) {
+        return null;
+    }
+    return session.canonicalPath ?? session.displayPath;
+}
+
+function getInternalPropertyDragNodeId(session: InternalDragSession): string | null {
+    if (session?.type !== ItemType.PROPERTY) {
+        return null;
+    }
+    return session.nodeId;
 }
 
 export function useNavigationPaneShortcutDnD({
@@ -83,6 +114,7 @@ export function useNavigationPaneShortcutDnD({
             only: true
         } as const;
     }, [showShortcutDragHandles]);
+    const internalDragSession = useInternalDragSession();
 
     const shortcutPositionMap = useMemo(() => {
         const map = new Map<string, number>();
@@ -162,9 +194,10 @@ export function useNavigationPaneShortcutDnD({
                 return false;
             }
 
-            const hasObsidianFiles = types.includes('obsidian/file') || types.includes('obsidian/files');
-            const hasTagPayload = types.includes(TAG_DRAG_MIME);
-            const hasPropertyPayload = types.includes(PROPERTY_DRAG_MIME);
+            const internalSession = internalDragSession.getSession();
+            const hasObsidianFiles = hasPotentialObsidianFileDragType(types) || Boolean(getInternalFileOrFolderDragPaths(internalSession));
+            const hasTagPayload = types.includes(TAG_DRAG_MIME) || Boolean(getInternalTagDragPath(internalSession));
+            const hasPropertyPayload = types.includes(PROPERTY_DRAG_MIME) || Boolean(getInternalPropertyDragNodeId(internalSession));
             if (!hasObsidianFiles && !hasTagPayload && !hasPropertyPayload) {
                 return false;
             }
@@ -173,7 +206,21 @@ export function useNavigationPaneShortcutDnD({
             dataTransfer.dropEffect = 'copy';
             return true;
         },
-        [shortcutsExpanded, showShortcuts]
+        [internalDragSession, shortcutsExpanded, showShortcuts]
+    );
+
+    const getDragPathType = useCallback(
+        (path: string): 'file' | 'folder' | null => {
+            const target = app.vault.getAbstractFileByPath(path);
+            if (target instanceof TFile) {
+                return 'file';
+            }
+            if (target instanceof TFolder) {
+                return 'folder';
+            }
+            return null;
+        },
+        [app.vault]
     );
 
     const handleShortcutDrop = useCallback(
@@ -191,40 +238,45 @@ export function useNavigationPaneShortcutDnD({
             if (types.includes(SHORTCUT_DRAG_MIME)) {
                 return false;
             }
+            const internalSession = internalDragSession.getSession();
 
             const tagPayloadRaw = dataTransfer.getData(TAG_DRAG_MIME);
-            if (tagPayloadRaw) {
-                const droppedTagPath = parseTagDragPayload(tagPayloadRaw);
-                if (droppedTagPath) {
-                    event.preventDefault();
-                    event.stopPropagation();
+            const droppedTagPath = tagPayloadRaw ? parseTagDragPayload(tagPayloadRaw) : getInternalTagDragPath(internalSession);
+            if (droppedTagPath) {
+                event.preventDefault();
+                event.stopPropagation();
 
-                    const baseInsertIndex = computeShortcutInsertIndex(event, key);
-                    runAsyncAction(async () => {
-                        await addTagShortcut(droppedTagPath, { index: Math.max(0, baseInsertIndex) });
-                    });
+                const baseInsertIndex = computeShortcutInsertIndex(event, key);
+                runAsyncAction(async () => {
+                    await addTagShortcut(droppedTagPath, { index: Math.max(0, baseInsertIndex) });
+                });
+                internalDragSession.clearSession();
 
-                    return true;
-                }
+                return true;
             }
 
             const propertyPayloadRaw = dataTransfer.getData(PROPERTY_DRAG_MIME);
-            if (propertyPayloadRaw) {
-                const droppedNodeId = parsePropertyDragPayload(propertyPayloadRaw);
-                if (droppedNodeId) {
-                    event.preventDefault();
-                    event.stopPropagation();
+            const droppedNodeId = propertyPayloadRaw
+                ? parsePropertyDragPayload(propertyPayloadRaw)
+                : getInternalPropertyDragNodeId(internalSession);
+            if (droppedNodeId) {
+                event.preventDefault();
+                event.stopPropagation();
 
-                    const baseInsertIndex = computeShortcutInsertIndex(event, key);
-                    runAsyncAction(async () => {
-                        await addPropertyShortcut(droppedNodeId, { index: Math.max(0, baseInsertIndex) });
-                    });
+                const baseInsertIndex = computeShortcutInsertIndex(event, key);
+                runAsyncAction(async () => {
+                    await addPropertyShortcut(droppedNodeId, { index: Math.max(0, baseInsertIndex) });
+                });
+                internalDragSession.clearSession();
 
-                    return true;
-                }
+                return true;
             }
 
-            const rawPaths = extractFilePathsFromDataTransfer(dataTransfer);
+            const rawPaths =
+                extractFilePathsFromDataTransfer(dataTransfer, {
+                    getPathType: getDragPathType,
+                    vaultName: app.vault.getName()
+                }) ?? getInternalFileOrFolderDragPaths(internalSession);
             if (!rawPaths || rawPaths.length === 0) {
                 return false;
             }
@@ -284,6 +336,7 @@ export function useNavigationPaneShortcutDnD({
             runAsyncAction(async () => {
                 await addShortcutsBatch(additions, { index: Math.max(0, baseInsertIndex) });
             });
+            internalDragSession.clearSession();
 
             return true;
         },
@@ -293,8 +346,10 @@ export function useNavigationPaneShortcutDnD({
             addTagShortcut,
             app.vault,
             computeShortcutInsertIndex,
+            getDragPathType,
             hasFolderShortcut,
             hasNoteShortcut,
+            internalDragSession,
             showShortcuts,
             shortcutsExpanded
         ]
@@ -322,16 +377,22 @@ export function useNavigationPaneShortcutDnD({
         [allowEmptyShortcutDrop, handleShortcutDrop]
     );
 
+    // The returned handler objects are built during row render and held in memoized row props,
+    // so they resolve the latest drag handlers through a ref at event time instead of capturing
+    // the handlers current at build time.
+    const externalDragHandlersRef = useRef({ handleShortcutDragOver, handleShortcutDrop });
+    externalDragHandlersRef.current = { handleShortcutDragOver, handleShortcutDrop };
+
     const buildShortcutExternalHandlers = useCallback(
         (key: string): ListReorderHandlers => ({
             onDragOver: event => {
-                handleShortcutDragOver(event);
+                externalDragHandlersRef.current.handleShortcutDragOver(event);
             },
             onDrop: event => {
-                handleShortcutDrop(event, key);
+                externalDragHandlersRef.current.handleShortcutDrop(event, key);
             }
         }),
-        [handleShortcutDragOver, handleShortcutDrop]
+        []
     );
 
     return {

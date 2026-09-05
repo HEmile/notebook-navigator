@@ -48,7 +48,7 @@ const VAULT_PROVIDER_ID = 'vault';
 const VAULT_SVG_EXTENSION = '.svg';
 
 /**
- * Providers that the plugin currently writes using the short frontmatter format.
+ * Providers that the plugin currently writes using the short frontmatter alias format.
  * `li` is accepted on read for lenient/manual input, but lucide still serializes as a bare slug.
  */
 const SHORT_FRONTMATTER_PROVIDER_ALIASES: ShortProviderAlias[] = [
@@ -64,7 +64,7 @@ const SHORT_FRONTMATTER_PROVIDER_ALIASES: ShortProviderAlias[] = [
 /**
  * Providers that Notebook Navigator currently exposes and can write back out.
  * Keep this separate from the short frontmatter alias table:
- * - aliases define the new stored frontmatter format
+ * - aliases define the stored frontmatter format
  * - mappings define the legacy Iconize identifiers we still decode/encode
  */
 const SUPPORTED_ICONIZE_MAPPINGS: IconizeMapping[] = [
@@ -169,17 +169,19 @@ function serializeShortProviderIconId(iconId: string): string | null {
         return null;
     }
 
-    return `${alias}:${identifier}`;
+    // Frontmatter writes use alias-slug values because Obsidian renders
+    // alias:slug values as clickable URI-like links in Properties.
+    return `${alias}-${identifier}`;
 }
 
-function parseShortProviderIconId(value: string): string | null {
-    const colonIndex = value.indexOf(':');
-    if (colonIndex <= 0 || colonIndex >= value.length - 1) {
+function parseShortProviderIconIdWithSeparator(value: string, separator: '-' | ':'): string | null {
+    const separatorIndex = value.indexOf(separator);
+    if (separatorIndex <= 0 || separatorIndex >= value.length - 1) {
         return null;
     }
 
-    const alias = value.substring(0, colonIndex).toLowerCase();
-    const rawIdentifier = value.substring(colonIndex + 1).trim();
+    const alias = value.substring(0, separatorIndex).toLowerCase();
+    const rawIdentifier = value.substring(separatorIndex + 1).trim();
     if (!alias || !rawIdentifier || rawIdentifier.includes(':')) {
         return null;
     }
@@ -199,6 +201,10 @@ function parseShortProviderIconId(value: string): string | null {
     }
 
     return `${providerId}:${identifier}`;
+}
+
+function parseShortProviderIconId(value: string): string | null {
+    return parseShortProviderIconIdWithSeparator(value, '-') ?? parseShortProviderIconIdWithSeparator(value, ':');
 }
 
 let SUPPORTED_LUCIDE_ICON_IDS: ReadonlySet<string> | null | undefined;
@@ -251,6 +257,14 @@ function deserializeStoredFrontmatterIcon(value: string): string | null {
         return `${VAULT_PROVIDER_ID}:${trimmed}`;
     }
 
+    // Prefer exact Lucide slugs before trying alias-slug parsing so future
+    // Lucide icons like `ph-example` are not interpreted as external packs.
+    if (!trimmed.includes(':') && isSupportedLucideIconId(trimmed)) {
+        return trimmed;
+    }
+
+    // Fall back to the short external-provider format written by Notebook Navigator.
+    // This also keeps legacy alias:slug frontmatter values readable.
     const shortProviderIconId = parseShortProviderIconId(trimmed);
     if (shortProviderIconId) {
         return shortProviderIconId;
@@ -260,7 +274,7 @@ function deserializeStoredFrontmatterIcon(value: string): string | null {
         return null;
     }
 
-    return isSupportedLucideIconId(trimmed) ? trimmed : null;
+    return null;
 }
 
 function deserializeFrontmatterIconWithIconizeFallback(value: string): string | null {

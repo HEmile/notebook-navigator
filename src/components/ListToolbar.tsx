@@ -24,41 +24,68 @@ import { ServiceIcon } from './ServiceIcon';
 import { useListActions } from '../hooks/useListActions';
 import { runAsyncAction } from '../utils/async';
 import { resolveUXIcon } from '../utils/uxIcons';
+import type { ManualSortNewFilePlacementContext } from '../utils/manualSort';
 
 interface ListToolbarProps {
     isSearchActive?: boolean;
     onSearchToggle?: () => void;
+    onManualSortStart?: (propertyKey: string) => void;
+    getManualSortNewFileContext?: () => ManualSortNewFilePlacementContext | null;
+    canToggleGroupExpansion: boolean;
+    shouldCollapseGroups: boolean;
+    onToggleGroupExpansion: () => boolean;
+    useFloatingLayout?: boolean;
 }
 
-export function ListToolbar({ isSearchActive, onSearchToggle }: ListToolbarProps) {
+export function ListToolbar({
+    isSearchActive,
+    onSearchToggle,
+    onManualSortStart,
+    getManualSortNewFileContext,
+    canToggleGroupExpansion,
+    shouldCollapseGroups,
+    onToggleGroupExpansion,
+    useFloatingLayout = false
+}: ListToolbarProps) {
     const uxPreferences = useUXPreferences();
     const includeDescendantNotes = uxPreferences.includeDescendantNotes;
     const selectionState = useSelectionState();
     const settings = useSettingsState();
     const listVisibility = settings.toolbarVisibility.list;
+    const showRevealButton = listVisibility.reveal;
 
     // Use the shared actions hook
     const {
         handleNewFile,
         canCreateNewFile,
+        handleRevealFile,
+        canRevealFile,
         handleAppearanceMenu,
         handleSortMenu,
         handleToggleDescendants,
         descendantsTooltip,
-        getCurrentSortOption,
+        getSortIcon,
         hasAppearanceOrSortSelection,
-        isCustomSort,
+        hasCustomSortOrGroup,
         hasCustomAppearance
-    } = useListActions();
+    } = useListActions({ onManualSortStart, getManualSortNewFileContext, trackRevealFileAvailability: showRevealButton });
 
     const showSearchButton = listVisibility.search;
     const showDescendantsButton = listVisibility.descendants;
+    const showGroupExpansionButton = listVisibility.groupExpansion;
     const showSortButton = listVisibility.sort;
     const showAppearanceButton = listVisibility.appearance;
     const showNewNoteButton = listVisibility.newNote;
     const hasNavigationSelection = Boolean(selectionState.selectedFolder || selectionState.selectedTag || selectionState.selectedProperty);
 
-    const leftButtonCount = [showSearchButton, showDescendantsButton, showSortButton, showAppearanceButton].filter(Boolean).length;
+    const leftButtonCount = [
+        showSearchButton,
+        showRevealButton,
+        showDescendantsButton,
+        showGroupExpansionButton,
+        showSortButton,
+        showAppearanceButton
+    ].filter(Boolean).length;
     const totalButtonCount = leftButtonCount + (showNewNoteButton ? 1 : 0);
     const leftGroupClassName = leftButtonCount === 1 ? 'nn-mobile-toolbar-circle' : 'nn-mobile-toolbar-pill';
     const leftButtonBaseClassName =
@@ -68,79 +95,120 @@ export function ListToolbar({ isSearchActive, onSearchToggle }: ListToolbarProps
         return null;
     }
 
+    const leftButtons = [
+        showSearchButton ? (
+            <button
+                key="search"
+                className={`${leftButtonBaseClassName}${isSearchActive ? ' nn-mobile-toolbar-button-active' : ''}`}
+                aria-label={strings.paneHeader.search}
+                onClick={onSearchToggle}
+                disabled={!hasNavigationSelection}
+                tabIndex={-1}
+            >
+                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-search')} />
+            </button>
+        ) : null,
+        showRevealButton ? (
+            <button
+                key="reveal"
+                className={leftButtonBaseClassName}
+                aria-label={strings.commands.revealFile}
+                onClick={() => {
+                    runAsyncAction(() => handleRevealFile());
+                }}
+                disabled={!canRevealFile}
+                tabIndex={-1}
+            >
+                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-reveal-file')} />
+            </button>
+        ) : null,
+        showDescendantsButton ? (
+            <button
+                key="descendants"
+                className={`${leftButtonBaseClassName}${includeDescendantNotes ? ' nn-mobile-toolbar-button-active' : ''}`}
+                aria-label={descendantsTooltip}
+                onClick={handleToggleDescendants}
+                disabled={!hasNavigationSelection}
+                tabIndex={-1}
+            >
+                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-descendants')} />
+            </button>
+        ) : null,
+        showGroupExpansionButton ? (
+            <button
+                key="group-expansion"
+                className={leftButtonBaseClassName}
+                aria-label={shouldCollapseGroups ? strings.paneHeader.collapseAllListGroups : strings.paneHeader.expandAllListGroups}
+                onClick={() => {
+                    onToggleGroupExpansion();
+                }}
+                disabled={!canToggleGroupExpansion}
+                tabIndex={-1}
+            >
+                <ServiceIcon
+                    iconId={resolveUXIcon(settings.interfaceIcons, shouldCollapseGroups ? 'list-collapse-all' : 'list-expand-all')}
+                />
+            </button>
+        ) : null,
+        showSortButton ? (
+            <button
+                key="sort"
+                className={`${leftButtonBaseClassName}${hasCustomSortOrGroup ? ' nn-mobile-toolbar-button-active' : ''}`}
+                aria-label={strings.paneHeader.changeSortAndGroup}
+                onClick={handleSortMenu}
+                disabled={!hasAppearanceOrSortSelection}
+                tabIndex={-1}
+            >
+                <ServiceIcon iconId={getSortIcon()} />
+            </button>
+        ) : null,
+        showAppearanceButton ? (
+            <button
+                key="appearance"
+                className={`${leftButtonBaseClassName}${hasCustomAppearance ? ' nn-mobile-toolbar-button-active' : ''}`}
+                aria-label={hasCustomAppearance ? strings.paneHeader.changeAppearanceCustomized : strings.paneHeader.changeAppearance}
+                aria-haspopup="menu"
+                onClick={handleAppearanceMenu}
+                disabled={!hasAppearanceOrSortSelection}
+                tabIndex={-1}
+            >
+                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-appearance')} />
+            </button>
+        ) : null
+    ].filter(Boolean);
+    const newNoteButton = showNewNoteButton ? (
+        <button
+            key="new-note"
+            className="nn-mobile-toolbar-button nn-mobile-toolbar-button-circle"
+            aria-label={strings.paneHeader.newNote}
+            onClick={() => {
+                runAsyncAction(() => handleNewFile());
+            }}
+            disabled={!canCreateNewFile}
+            tabIndex={-1}
+        >
+            <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-new-note')} />
+        </button>
+    ) : null;
+
+    if (!useFloatingLayout) {
+        return (
+            <div className="nn-mobile-toolbar">
+                {leftButtons}
+                {newNoteButton}
+            </div>
+        );
+    }
+
     return (
         <div className="nn-mobile-toolbar">
             <div className="nn-mobile-toolbar-left">
-                {leftButtonCount > 0 ? (
-                    <div className={leftGroupClassName}>
-                        {showSearchButton ? (
-                            <button
-                                className={`${leftButtonBaseClassName}${isSearchActive ? ' nn-mobile-toolbar-button-active' : ''}`}
-                                aria-label={strings.paneHeader.search}
-                                onClick={onSearchToggle}
-                                disabled={!hasNavigationSelection}
-                                tabIndex={-1}
-                            >
-                                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-search')} />
-                            </button>
-                        ) : null}
-                        {showDescendantsButton ? (
-                            <button
-                                className={`${leftButtonBaseClassName}${includeDescendantNotes ? ' nn-mobile-toolbar-button-active' : ''}`}
-                                aria-label={descendantsTooltip}
-                                onClick={handleToggleDescendants}
-                                disabled={!hasNavigationSelection}
-                                tabIndex={-1}
-                            >
-                                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-descendants')} />
-                            </button>
-                        ) : null}
-                        {showSortButton ? (
-                            <button
-                                className={`${leftButtonBaseClassName}${isCustomSort ? ' nn-mobile-toolbar-button-active' : ''}`}
-                                aria-label={strings.paneHeader.changeSortOrder}
-                                onClick={handleSortMenu}
-                                disabled={!hasAppearanceOrSortSelection}
-                                tabIndex={-1}
-                            >
-                                <ServiceIcon
-                                    iconId={resolveUXIcon(
-                                        settings.interfaceIcons,
-                                        getCurrentSortOption().endsWith('-desc') ? 'list-sort-descending' : 'list-sort-ascending'
-                                    )}
-                                />
-                            </button>
-                        ) : null}
-                        {showAppearanceButton ? (
-                            <button
-                                className={`${leftButtonBaseClassName}${hasCustomAppearance ? ' nn-mobile-toolbar-button-active' : ''}`}
-                                aria-label={strings.paneHeader.changeAppearance}
-                                onClick={handleAppearanceMenu}
-                                disabled={!hasAppearanceOrSortSelection}
-                                tabIndex={-1}
-                            >
-                                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-appearance')} />
-                            </button>
-                        ) : null}
-                    </div>
-                ) : null}
+                {leftButtonCount > 0 ? <div className={leftGroupClassName}>{leftButtons}</div> : null}
             </div>
 
             {showNewNoteButton ? (
                 <div className="nn-mobile-toolbar-right">
-                    <div className="nn-mobile-toolbar-circle">
-                        <button
-                            className="nn-mobile-toolbar-button nn-mobile-toolbar-button-circle"
-                            aria-label={strings.paneHeader.newNote}
-                            onClick={() => {
-                                runAsyncAction(() => handleNewFile());
-                            }}
-                            disabled={!canCreateNewFile}
-                            tabIndex={-1}
-                        >
-                            <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-new-note')} />
-                        </button>
-                    </div>
+                    <div className="nn-mobile-toolbar-circle">{newNoteButton}</div>
                 </div>
             ) : null}
         </div>

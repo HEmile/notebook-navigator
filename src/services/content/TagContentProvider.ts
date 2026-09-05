@@ -19,7 +19,7 @@
 import { TFile, getAllTags } from 'obsidian';
 import { LIMITS } from '../../constants/limits';
 import { type ContentProviderType } from '../../interfaces/IContentProvider';
-import { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { FileData } from '../../storage/IndexedDBStorage';
 import { getDBInstance } from '../../storage/fileOperations';
 import { extractFileTagsFromRawTags } from '../../utils/tagUtils';

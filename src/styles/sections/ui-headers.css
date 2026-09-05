@@ -6,7 +6,7 @@
 
 /* Pane headers - consistent header styling for both panes */
 .nn-pane-header {
-    padding: 8px 8px;
+    padding: 8px;
     display: flex;
     justify-content: flex-end;
     align-items: center;
@@ -119,10 +119,6 @@
     line-height: var(--nn-nav-icon-size);
 }
 
-.nn-pane-header-icon[data-has-color='true'] svg {
-    stroke-width: 2.4;
-}
-
 .nn-pane-header-text {
     line-height: var(--nn-nav-line-height);
     overflow: hidden;
@@ -137,38 +133,30 @@
     flex: 0 1 auto;
 }
 
-.nn-pane-header-folder-note {
-    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration) !important;
+.nn-pane-header .nn-pane-header-folder-note {
+    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration);
 }
 
-.nn-pane-header-folder-note:hover {
+.nn-pane-header .nn-pane-header-folder-note:hover {
     cursor: pointer;
-    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration) !important;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration);
 }
 
 /* ========================================================================
    Mobile Headers + Breadcrumb
    ======================================================================== */
 
-/* Mobile header - adjust for back button */
-.notebook-navigator-mobile .nn-pane-header {
+/* Simplified mobile headers. Keyed on the phone chrome header class so the desktop
+   headers rendered on tablets keep the desktop height and per-pane backgrounds. */
+.notebook-navigator-mobile .nn-pane-header-simple {
     flex-shrink: 0;
     min-height: 48px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    text-align: center;
     padding: 0 var(--nn-file-item-padding-horizontal);
     background-color: var(--nn-theme-list-bg);
-}
-
-/* Simplified mobile headers */
-.notebook-navigator-mobile .nn-pane-header-simple {
-    justify-content: center;
-    text-align: center;
-}
-
-.notebook-navigator-mobile .nn-navigation-pane .nn-pane-header-simple {
-    justify-content: center;
-    text-align: center;
 }
 
 .notebook-navigator-mobile .nn-pane-header-simple .nn-pane-header-profile {
@@ -231,7 +219,7 @@
 }
 
 /* Mobile back button */
-.notebook-navigator-mobile .nn-back-button {
+.notebook-navigator-mobile button.nn-back-button {
     position: absolute;
     left: 0;
     width: 44px;
@@ -240,25 +228,25 @@
     min-height: 44px;
     padding: 10px;
     z-index: 1;
-    opacity: 1 !important;
+    opacity: 1;
 }
 
 /* Increase stroke width for back button arrow and apply link color */
-.notebook-navigator-mobile .nn-back-button svg {
-    stroke: var(--nn-theme-mobile-list-header-link-color) !important;
-    width: 20px !important; /* Default size for Android */
-    height: 20px !important;
+.notebook-navigator-mobile button.nn-back-button svg {
+    stroke: var(--nn-theme-mobile-list-header-link-color);
+    width: 20px; /* Default size for Android */
+    height: 20px;
 }
 
 /* iOS/iPadOS-specific back button adjustments */
-.notebook-navigator-mobile:not(.notebook-navigator-android) .nn-back-button {
-    padding: 4px !important; /* Reduce padding to allow larger icon (44px - 8px padding = 36px space) */
+.notebook-navigator-mobile:not(.notebook-navigator-android) button.nn-back-button {
+    padding: 4px; /* Reduce padding to allow larger icon (44px - 8px padding = 36px space) */
 }
 
 /* iOS/iPadOS-specific back button chevron styling (36px actual, ~32px visual due to Lucide padding) */
-.notebook-navigator-mobile:not(.notebook-navigator-android) .nn-back-button svg {
-    width: 36px !important;
-    height: 36px !important;
+.notebook-navigator-mobile:not(.notebook-navigator-android) button.nn-back-button svg {
+    width: 36px;
+    height: 36px;
 }
 
 /* Mobile header title */
@@ -301,7 +289,7 @@
     display: flex;
     align-items: center;
     height: 44px;
-    padding: 0 10px 6px 10px;
+    padding: 0 10px 6px;
     background-color: var(--nn-theme-list-bg);
 }
 
@@ -341,41 +329,41 @@
 }
 
 /* Search input field */
-.nn-search-input {
+input.nn-search-input {
     width: 100%;
     height: 32px;
-    padding: 4px 60px 4px 36px !important;
+    padding: 4px 60px 4px 36px;
     font-size: 13px;
-    color: var(--nn-theme-file-selected-name-color) !important;
-    background: var(--nn-theme-list-bg) !important;
-    border: 1px solid var(--nn-theme-list-search-border-color) !important;
-    border-radius: 999px !important;
+    color: var(--nn-theme-file-selected-name-color);
+    background: var(--nn-theme-list-bg);
+    border: 1px solid var(--nn-theme-list-search-border-color);
+    border-radius: 999px;
     outline: none;
     box-sizing: border-box;
 }
 
-.nn-search-input-container--has-shortcut .nn-search-input {
-    padding-right: 84px !important;
+.nn-search-input-container--has-shortcut input.nn-search-input {
+    padding-right: 84px;
 }
 
 /* Active search state - when there's a search query */
-.nn-search-input.nn-search-active {
-    background: var(--nn-theme-list-search-active-bg) !important;
+input.nn-search-input.nn-search-active {
+    background: var(--nn-theme-list-search-active-bg);
 }
 
 /* Maintain highlight background on hover when search is active */
-.nn-search-input.nn-search-active:hover {
-    background: var(--nn-theme-list-search-active-bg) !important;
+input.nn-search-input.nn-search-active:hover {
+    background: var(--nn-theme-list-search-active-bg);
 }
 
 /* Focus state */
-.nn-search-input:focus {
-    border-color: var(--nn-theme-list-search-border-color) !important;
-    box-shadow: 0 0 0 2px var(--nn-theme-list-search-border-color) !important;
+input.nn-search-input:focus {
+    border-color: var(--nn-theme-list-search-border-color);
+    box-shadow: 0 0 0 2px var(--nn-theme-list-search-border-color);
 }
 
-.nn-search-input::placeholder {
-    color: var(--nn-theme-list-header-breadcrumb-color) !important;
+input.nn-search-input::placeholder {
+    color: var(--nn-theme-list-header-breadcrumb-color);
 }
 
 /* Search tag suggestion popover */

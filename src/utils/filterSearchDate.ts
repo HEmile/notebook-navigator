@@ -24,6 +24,26 @@ type DayMonthOrder = 'DMY' | 'MDY';
 // Recognized relative date keywords for @today, @yesterday, etc.
 export const DATE_FILTER_RELATIVE_KEYWORDS = ['today', 'yesterday', 'last7d', 'last30d', 'thisweek', 'thismonth'] as const;
 const DATE_FILTER_RELATIVE_KEYWORD_SET = new Set<string>(DATE_FILTER_RELATIVE_KEYWORDS);
+const MIN_DATE_FILTER_YEAR = 1;
+const MAX_DATE_FILTER_YEAR = 9999;
+
+const isSupportedDateFilterYear = (year: number): boolean => {
+    return Number.isFinite(year) && year >= MIN_DATE_FILTER_YEAR && year <= MAX_DATE_FILTER_YEAR;
+};
+
+const createLocalDate = (year: number, monthIndex: number, day: number): Date => {
+    const date = new Date(0);
+    date.setFullYear(year, monthIndex, day);
+    date.setHours(0, 0, 0, 0);
+    return date;
+};
+
+const createUtcDayTimestamp = (year: number, monthIndex: number, day: number): number => {
+    const date = new Date(0);
+    date.setUTCFullYear(year, monthIndex, day);
+    date.setUTCHours(0, 0, 0, 0);
+    return date.getTime();
+};
 
 // Extracts optional c:/m:/created:/modified: prefix from a date filter token
 export const parseDateFieldPrefix = (value: string): { field: DateFilterField; prefix: string; remainder: string } => {
@@ -85,7 +105,7 @@ const createLocalDayRange = (year: number, month: number, day: number): { startM
         return null;
     }
 
-    if (year < 1000 || year > 9999) {
+    if (!isSupportedDateFilterYear(year)) {
         return null;
     }
     if (month < 1 || month > 12) {
@@ -95,12 +115,12 @@ const createLocalDayRange = (year: number, month: number, day: number): { startM
         return null;
     }
 
-    const start = new Date(year, month - 1, day);
+    const start = createLocalDate(year, month - 1, day);
     if (start.getFullYear() !== year || start.getMonth() !== month - 1 || start.getDate() !== day || Number.isNaN(start.getTime())) {
         return null;
     }
 
-    const end = new Date(year, month - 1, day + 1);
+    const end = createLocalDate(year, month - 1, day + 1);
     if (Number.isNaN(end.getTime())) {
         return null;
     }
@@ -114,19 +134,19 @@ const createLocalMonthRange = (year: number, month: number): { startMs: number; 
         return null;
     }
 
-    if (year < 1000 || year > 9999) {
+    if (!isSupportedDateFilterYear(year)) {
         return null;
     }
     if (month < 1 || month > 12) {
         return null;
     }
 
-    const start = new Date(year, month - 1, 1);
+    const start = createLocalDate(year, month - 1, 1);
     if (start.getFullYear() !== year || start.getMonth() !== month - 1 || start.getDate() !== 1 || Number.isNaN(start.getTime())) {
         return null;
     }
 
-    const end = new Date(year, month, 1);
+    const end = createLocalDate(year, month, 1);
     if (Number.isNaN(end.getTime())) {
         return null;
     }
@@ -140,7 +160,7 @@ const createLocalQuarterRange = (year: number, quarter: number): { startMs: numb
         return null;
     }
 
-    if (year < 1000 || year > 9999) {
+    if (!isSupportedDateFilterYear(year)) {
         return null;
     }
     if (quarter < 1 || quarter > 4) {
@@ -148,12 +168,12 @@ const createLocalQuarterRange = (year: number, quarter: number): { startMs: numb
     }
 
     const startMonthIndex = (quarter - 1) * 3;
-    const start = new Date(year, startMonthIndex, 1);
+    const start = createLocalDate(year, startMonthIndex, 1);
     if (start.getFullYear() !== year || start.getMonth() !== startMonthIndex || start.getDate() !== 1 || Number.isNaN(start.getTime())) {
         return null;
     }
 
-    const end = new Date(year, startMonthIndex + 3, 1);
+    const end = createLocalDate(year, startMonthIndex + 3, 1);
     if (Number.isNaN(end.getTime())) {
         return null;
     }
@@ -167,16 +187,16 @@ const createLocalYearRange = (year: number): { startMs: number; endMs: number } 
         return null;
     }
 
-    if (year < 1000 || year > 9999) {
+    if (!isSupportedDateFilterYear(year)) {
         return null;
     }
 
-    const start = new Date(year, 0, 1);
+    const start = createLocalDate(year, 0, 1);
     if (start.getFullYear() !== year || start.getMonth() !== 0 || start.getDate() !== 1 || Number.isNaN(start.getTime())) {
         return null;
     }
 
-    const end = new Date(year + 1, 0, 1);
+    const end = createLocalDate(year + 1, 0, 1);
     if (Number.isNaN(end.getTime())) {
         return null;
     }
@@ -189,12 +209,12 @@ const getIsoWeek1Start = (isoYear: number): Date | null => {
     if (!Number.isFinite(isoYear)) {
         return null;
     }
-    if (isoYear < 1000 || isoYear > 9999) {
+    if (!isSupportedDateFilterYear(isoYear)) {
         return null;
     }
 
     // ISO week 1 is the week containing January 4. This returns the local-time Monday at the start of ISO week 1.
-    const jan4 = new Date(isoYear, 0, 4);
+    const jan4 = createLocalDate(isoYear, 0, 4);
     if (Number.isNaN(jan4.getTime())) {
         return null;
     }
@@ -217,8 +237,8 @@ const getIsoWeeksInYear = (isoYear: number): number | null => {
         return null;
     }
 
-    const startDayUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
-    const endDayUtc = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+    const startDayUtc = createUtcDayTimestamp(start.getFullYear(), start.getMonth(), start.getDate());
+    const endDayUtc = createUtcDayTimestamp(end.getFullYear(), end.getMonth(), end.getDate());
     const diffDays = Math.round((endDayUtc - startDayUtc) / (24 * 60 * 60 * 1000));
     if (diffDays <= 0 || diffDays % 7 !== 0) {
         return null;
@@ -234,7 +254,7 @@ const createLocalIsoWeekRange = (isoYear: number, isoWeek: number): { startMs: n
         return null;
     }
 
-    if (isoYear < 1000 || isoYear > 9999) {
+    if (!isSupportedDateFilterYear(isoYear)) {
         return null;
     }
     if (isoWeek < 1 || isoWeek > 53) {
@@ -291,7 +311,7 @@ const parseDayToken = (value: string): { startMs: number; endMs: number } | null
         return null;
     }
 
-    const ymdSeparator = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+    const ymdSeparator = trimmed.match(/^(\d{3,4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
     if (ymdSeparator) {
         const year = Number(ymdSeparator[1]);
         const month = Number(ymdSeparator[2]);
@@ -307,7 +327,7 @@ const parseDayToken = (value: string): { startMs: number; endMs: number } | null
         return createLocalDayRange(year, month, day);
     }
 
-    const dayMonthYearSeparator = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+    const dayMonthYearSeparator = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{3,4})$/);
     if (dayMonthYearSeparator) {
         const first = Number(dayMonthYearSeparator[1]);
         const second = Number(dayMonthYearSeparator[2]);
@@ -333,13 +353,13 @@ const parseDateToken = (value: string): { startMs: number; endMs: number } | nul
         return null;
     }
 
-    const yearOnly = trimmed.match(/^(\d{4})$/);
+    const yearOnly = trimmed.match(/^(\d{3,4})$/);
     if (yearOnly) {
         const year = Number(yearOnly[1]);
         return createLocalYearRange(year);
     }
 
-    const yearMonthSeparator = trimmed.match(/^(\d{4})[-/.](\d{1,2})$/);
+    const yearMonthSeparator = trimmed.match(/^(\d{3,4})[-/.](\d{1,2})$/);
     if (yearMonthSeparator) {
         const year = Number(yearMonthSeparator[1]);
         const month = Number(yearMonthSeparator[2]);
@@ -353,14 +373,14 @@ const parseDateToken = (value: string): { startMs: number; endMs: number } | nul
         return createLocalMonthRange(year, month);
     }
 
-    const yearQuarter = trimmed.match(/^(\d{4})[-/.]?q([1-4])$/);
+    const yearQuarter = trimmed.match(/^(\d{3,4})[-/.]?q([1-4])$/);
     if (yearQuarter) {
         const year = Number(yearQuarter[1]);
         const quarter = Number(yearQuarter[2]);
         return createLocalQuarterRange(year, quarter);
     }
 
-    const yearWeek = trimmed.match(/^(\d{4})[-/.]?w(\d{1,2})$/);
+    const yearWeek = trimmed.match(/^(\d{3,4})[-/.]?w(\d{1,2})$/);
     if (yearWeek) {
         const year = Number(yearWeek[1]);
         const week = Number(yearWeek[2]);

@@ -30,33 +30,47 @@ import { useListActions } from '../hooks/useListActions';
 import type { BreadcrumbSegment } from '../hooks/useListPaneTitle';
 import { useSelectedFolderFileVersion } from '../hooks/useSelectedFolderFileVersion';
 import { ItemType } from '../types';
-import { getFolderNote, openFolderNoteFile } from '../utils/folderNotes';
+import { getFolderNote, openFolderNoteFile, revealFolderNoteInNavigator } from '../utils/folderNotes';
 import { resolveFolderNoteClickOpenContext } from '../utils/keyboardOpenContext';
+import { usesMobileChrome } from '../utils/paneLayout';
 import { normalizeTagPath } from '../utils/tagUtils';
 import { runAsyncAction } from '../utils/async';
 import { resolveUXIcon } from '../utils/uxIcons';
+import type { ManualSortNewFilePlacementContext } from '../utils/manualSort';
 
 interface ListPaneHeaderProps {
     onHeaderClick?: () => void;
     isSearchActive?: boolean;
     onSearchToggle?: () => void;
+    onManualSortStart?: (propertyKey: string) => void;
+    getManualSortNewFileContext?: () => ManualSortNewFilePlacementContext | null;
+    canToggleGroupExpansion: boolean;
+    shouldCollapseGroups: boolean;
+    onToggleGroupExpansion: () => boolean;
+    actionsDisabled?: boolean;
     desktopTitle: string;
     breadcrumbSegments: BreadcrumbSegment[];
     iconName: string;
     showIcon: boolean;
 }
 
-export function ListPaneHeader({
+export const ListPaneHeader = React.memo(function ListPaneHeader({
     onHeaderClick,
     isSearchActive,
     onSearchToggle,
+    onManualSortStart,
+    getManualSortNewFileContext,
+    canToggleGroupExpansion,
+    shouldCollapseGroups,
+    onToggleGroupExpansion,
+    actionsDisabled = false,
     desktopTitle,
     breadcrumbSegments,
     iconName,
     showIcon
 }: ListPaneHeaderProps) {
-    const iconRef = React.useRef<HTMLSpanElement>(null);
-    const { app, isMobile } = useServices();
+    const iconRef = React.useRef<HTMLSpanElement | null>(null);
+    const { app, plugin } = useServices();
     const commandQueue = useCommandQueue();
     const settings = useSettingsState();
     const uxPreferences = useUXPreferences();
@@ -67,37 +81,53 @@ export function ListPaneHeader({
     const uiDispatch = useUIDispatch();
     const listPaneTitlePreference = settings.listPaneTitle ?? 'header';
     const iconVersion = useIconServiceVersion();
+    const listToolbarVisibility = settings.toolbarVisibility.list;
+    const showRevealButton = listToolbarVisibility.reveal;
+    // Mobile chrome (simplified header, actions in the tab bar) applies to phones only.
+    // Tablets render the desktop header in both pane layouts so the toolbars stay at the
+    // top when switching between single and dual pane.
+    const useMobileChrome = usesMobileChrome();
 
     // Use the shared actions hook
     const {
         handleNewFile,
         canCreateNewFile,
+        handleRevealFile,
+        canRevealFile,
         handleAppearanceMenu,
         handleSortMenu,
         handleToggleDescendants,
         descendantsTooltip,
-        getCurrentSortOption,
+        getSortIcon,
         hasAppearanceOrSortSelection,
-        isCustomSort,
+        hasCustomSortOrGroup,
         hasCustomAppearance
-    } = useListActions();
-    const listToolbarVisibility = settings.toolbarVisibility.list;
+    } = useListActions({
+        onManualSortStart,
+        getManualSortNewFileContext,
+        trackRevealFileAvailability: !useMobileChrome && showRevealButton
+    });
     const showBackButton = listToolbarVisibility.back && uiState.singlePane;
     const showSearchButton = listToolbarVisibility.search;
     const showDescendantsButton = listToolbarVisibility.descendants;
+    const showGroupExpansionButton = listToolbarVisibility.groupExpansion;
     const showSortButton = listToolbarVisibility.sort;
     const showAppearanceButton = listToolbarVisibility.appearance;
     const showNewNoteButton = listToolbarVisibility.newNote;
-    const hasNavigationSelection = Boolean(selectionState.selectedFolder || selectionState.selectedTag || selectionState.selectedProperty || selectionState.selectedTopicPath);
+    const hasNavigationSelection = Boolean(
+        selectionState.selectedFolder || selectionState.selectedTag || selectionState.selectedProperty || selectionState.selectedTopicPath
+    );
 
-    const shouldRenderBreadcrumbSegments = isMobile;
-    const shouldShowHeaderTitle = !isMobile && listPaneTitlePreference === 'header';
+    const shouldRenderBreadcrumbSegments = useMobileChrome;
+    const shouldShowHeaderTitle = !useMobileChrome && listPaneTitlePreference === 'header';
     const shouldShowHeaderIcon = shouldShowHeaderTitle && showIcon;
     const shouldRenderDesktopHeader =
         showBackButton ||
         shouldShowHeaderTitle ||
         showSearchButton ||
+        showRevealButton ||
         showDescendantsButton ||
+        showGroupExpansionButton ||
         showSortButton ||
         showAppearanceButton ||
         showNewNoteButton;
@@ -107,9 +137,8 @@ export function ListPaneHeader({
     }, []);
 
     const sortIconId = useMemo(() => {
-        const sortOption = getCurrentSortOption();
-        return resolveUXIcon(settings.interfaceIcons, sortOption.endsWith('-desc') ? 'list-sort-descending' : 'list-sort-ascending');
-    }, [getCurrentSortOption, settings.interfaceIcons]);
+        return getSortIcon();
+    }, [getSortIcon]);
 
     // Folder note interactions only apply when a folder is the active selection.
     const selectedFolder = selectionState.selectionType === ItemType.FOLDER ? selectionState.selectedFolder : null;
@@ -131,14 +160,12 @@ export function ListPaneHeader({
 
         return getFolderNote(selectedFolder, {
             enableFolderNotes: settings.enableFolderNotes,
-            folderNoteName: settings.folderNoteName,
             folderNoteNamePattern: settings.folderNoteNamePattern
         });
     }, [
         selectedFolder,
         settings.enableFolderNotes,
         settings.enableFolderNoteLinks,
-        settings.folderNoteName,
         settings.folderNoteNamePattern,
         shouldResolveSelectedFolderNote,
         selectedFolderFileVersion
@@ -153,12 +180,8 @@ export function ListPaneHeader({
             // Prevents header click handlers from also running.
             event.stopPropagation();
 
-            const openContext = resolveFolderNoteClickOpenContext(
-                event,
-                settings.openFolderNotesInNewTab,
-                settings.multiSelectModifier,
-                isMobile
-            );
+            const openContext = resolveFolderNoteClickOpenContext(event, settings.folderNoteOpenLocation, settings.multiSelectModifier);
+            revealFolderNoteInNavigator(selectionDispatch, selectedFolderNote);
 
             runAsyncAction(() =>
                 openFolderNoteFile({
@@ -166,11 +189,21 @@ export function ListPaneHeader({
                     commandQueue,
                     folder: selectedFolder,
                     folderNote: selectedFolderNote,
-                    context: openContext
+                    context: openContext,
+                    openInRightSidebar: folderNote => plugin.openFolderNoteInRightSidebar(folderNote)
                 })
             );
         },
-        [selectedFolder, selectedFolderNote, settings.openFolderNotesInNewTab, settings.multiSelectModifier, isMobile, app, commandQueue]
+        [
+            selectedFolder,
+            selectedFolderNote,
+            settings.folderNoteOpenLocation,
+            settings.multiSelectModifier,
+            app,
+            commandQueue,
+            plugin,
+            selectionDispatch
+        ]
     );
 
     const handleSelectedFolderNoteMouseDown = React.useCallback(
@@ -182,6 +215,7 @@ export function ListPaneHeader({
             // Middle-click opens in a new tab and suppresses default browser behavior.
             event.preventDefault();
             event.stopPropagation();
+            revealFolderNoteInNavigator(selectionDispatch, selectedFolderNote);
 
             runAsyncAction(() =>
                 openFolderNoteFile({
@@ -193,7 +227,7 @@ export function ListPaneHeader({
                 })
             );
         },
-        [selectedFolder, selectedFolderNote, app, commandQueue]
+        [selectedFolder, selectedFolderNote, app, commandQueue, selectionDispatch]
     );
 
     const breadcrumbContent = useMemo((): React.ReactNode => {
@@ -275,7 +309,7 @@ export function ListPaneHeader({
         handleSelectedFolderNoteMouseDown
     ]);
 
-    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+    const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
     const [showFade, setShowFade] = React.useState(false);
 
     // Renders the header icon when icon name or version changes
@@ -290,7 +324,7 @@ export function ListPaneHeader({
 
     // Auto-scroll to end when selection changes
     useEffect(() => {
-        if (!isMobile) {
+        if (!useMobileChrome) {
             setShowFade(false);
             return;
         }
@@ -308,20 +342,22 @@ export function ListPaneHeader({
         }, 0);
 
         return () => window.clearTimeout(timeoutId);
-    }, [selectionState.selectedFolder, selectionState.selectedTag, selectionState.selectedProperty, isMobile]);
+    }, [selectionState.selectedFolder, selectionState.selectedTag, selectionState.selectedProperty, useMobileChrome]);
 
     // Updates fade gradient visibility based on scroll position
     const handleScroll = React.useCallback(() => {
-        if (!isMobile) {
+        if (!useMobileChrome) {
             return;
         }
         if (scrollContainerRef.current) {
             setShowFade(scrollContainerRef.current.scrollLeft > 0);
         }
-    }, [isMobile]);
+    }, [useMobileChrome]);
 
-    if (isMobile) {
-        // On mobile, show simplified header with back button and path - actions moved to tab bar
+    if (useMobileChrome) {
+        // Simplified header with back button and breadcrumb path - actions live in the tab bar.
+        // Phones are always single pane, so the back button always has a navigation view to
+        // return to.
         return (
             <div className="nn-pane-header nn-pane-header-simple" onClick={onHeaderClick}>
                 <div className="nn-mobile-header nn-mobile-header-no-icon">
@@ -331,7 +367,7 @@ export function ListPaneHeader({
                         data-pane-toggle="navigation"
                         onClick={e => {
                             e.stopPropagation();
-                            uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'navigation' });
+                            uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
                         }}
                         tabIndex={-1}
                     >
@@ -358,8 +394,7 @@ export function ListPaneHeader({
                         className="nn-icon-button"
                         data-pane-toggle="navigation"
                         onClick={() => {
-                            uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'navigation' });
-                            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+                            uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
                         }}
                         aria-label={strings.paneHeader.showFolders}
                         tabIndex={-1}
@@ -377,10 +412,23 @@ export function ListPaneHeader({
                             className={`nn-icon-button ${isSearchActive ? 'nn-icon-button-active' : ''}`}
                             aria-label={strings.paneHeader.search}
                             onClick={onSearchToggle}
-                            disabled={!hasNavigationSelection}
+                            disabled={actionsDisabled || !hasNavigationSelection}
                             tabIndex={-1}
                         >
                             <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-search')} />
+                        </button>
+                    ) : null}
+                    {showRevealButton ? (
+                        <button
+                            className="nn-icon-button"
+                            aria-label={strings.commands.revealFile}
+                            onClick={() => {
+                                runAsyncAction(() => handleRevealFile());
+                            }}
+                            disabled={actionsDisabled || !canRevealFile}
+                            tabIndex={-1}
+                        >
+                            <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-reveal-file')} />
                         </button>
                     ) : null}
                     {showDescendantsButton ? (
@@ -388,18 +436,38 @@ export function ListPaneHeader({
                             className={`nn-icon-button ${includeDescendantNotes ? 'nn-icon-button-active' : ''}`}
                             aria-label={descendantsTooltip}
                             onClick={handleToggleDescendants}
-                            disabled={!hasNavigationSelection}
+                            disabled={actionsDisabled || !hasNavigationSelection}
                             tabIndex={-1}
                         >
                             <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-descendants')} />
                         </button>
                     ) : null}
+                    {showGroupExpansionButton ? (
+                        <button
+                            className="nn-icon-button"
+                            aria-label={
+                                shouldCollapseGroups ? strings.paneHeader.collapseAllListGroups : strings.paneHeader.expandAllListGroups
+                            }
+                            onClick={() => {
+                                onToggleGroupExpansion();
+                            }}
+                            disabled={actionsDisabled || !canToggleGroupExpansion}
+                            tabIndex={-1}
+                        >
+                            <ServiceIcon
+                                iconId={resolveUXIcon(
+                                    settings.interfaceIcons,
+                                    shouldCollapseGroups ? 'list-collapse-all' : 'list-expand-all'
+                                )}
+                            />
+                        </button>
+                    ) : null}
                     {showSortButton ? (
                         <button
-                            className={`nn-icon-button ${isCustomSort ? 'nn-icon-button-active' : ''}`}
-                            aria-label={strings.paneHeader.changeSortOrder}
+                            className={`nn-icon-button ${hasCustomSortOrGroup ? 'nn-icon-button-active' : ''}`}
+                            aria-label={strings.paneHeader.changeSortAndGroup}
                             onClick={handleSortMenu}
-                            disabled={!hasAppearanceOrSortSelection}
+                            disabled={actionsDisabled || !hasAppearanceOrSortSelection}
                             tabIndex={-1}
                         >
                             <ServiceIcon iconId={sortIconId} />
@@ -408,9 +476,12 @@ export function ListPaneHeader({
                     {showAppearanceButton ? (
                         <button
                             className={`nn-icon-button ${hasCustomAppearance ? 'nn-icon-button-active' : ''}`}
-                            aria-label={strings.paneHeader.changeAppearance}
+                            aria-label={
+                                hasCustomAppearance ? strings.paneHeader.changeAppearanceCustomized : strings.paneHeader.changeAppearance
+                            }
+                            aria-haspopup="menu"
                             onClick={handleAppearanceMenu}
-                            disabled={!hasAppearanceOrSortSelection}
+                            disabled={actionsDisabled || !hasAppearanceOrSortSelection}
                             tabIndex={-1}
                         >
                             <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-appearance')} />
@@ -423,7 +494,7 @@ export function ListPaneHeader({
                             onClick={() => {
                                 runAsyncAction(() => handleNewFile());
                             }}
-                            disabled={!canCreateNewFile}
+                            disabled={actionsDisabled || !canCreateNewFile}
                             tabIndex={-1}
                         >
                             <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'list-new-note')} />
@@ -433,4 +504,4 @@ export function ListPaneHeader({
             </div>
         </div>
     );
-}
+});

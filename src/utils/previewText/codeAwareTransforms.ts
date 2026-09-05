@@ -18,6 +18,7 @@
 
 import { findFencedCodeBlockRanges, findInlineCodeRanges, findRangeContainingIndex } from '../codeRangeUtils';
 import type { NumericRange } from '../arrayUtils';
+import { stripHtmlForPreview } from '../htmlParsingUtils';
 import { stripLatexFromChunk } from './latexParsing';
 
 export interface HtmlStripOptions {
@@ -58,22 +59,6 @@ export function buildPlaceholder(base: string, index: number): string {
 
 export function escapeRegExpLiteral(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function stripHtmlFromChunk(chunk: string): string {
-    if (!chunk.includes('<')) {
-        return chunk;
-    }
-
-    let cleaned = chunk;
-    cleaned = cleaned.replace(/<script[\s\S]*?<\/script>/gi, ' ');
-    cleaned = cleaned.replace(/<style[\s\S]*?<\/style>/gi, ' ');
-    cleaned = cleaned.replace(/<br\s*\/?>/gi, ' ');
-    cleaned = cleaned.replace(/<hr\s*\/?>/gi, ' ');
-    cleaned = cleaned.replace(/<\/(p|div|section|article|header|footer|main|aside|nav|li|ul|ol|blockquote|h[1-6]|tr|td|th|table)>/gi, ' ');
-    cleaned = cleaned.replace(/<\/?[a-zA-Z][^>]*>/g, ' ');
-
-    return cleaned;
 }
 
 function decodeHtmlEntitiesFromChunk(chunk: string): string {
@@ -300,7 +285,7 @@ export function stripHtmlOutsideCode(
     return transformOutsideCodeSegments(text, context, {
         includeInline: preserveInlineCode,
         includeFenced: preserveFencedCode,
-        transform: stripHtmlFromChunk,
+        transform: stripHtmlForPreview,
         contextWhenNoRanges: { inlineCodeRanges: [], fencedCodeRanges: [] }
     });
 }

@@ -57,12 +57,12 @@
 }
 
 .nn-list-title-label--folder-note {
-    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration) !important;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration);
 }
 
 .nn-list-title-label--folder-note:hover {
     cursor: pointer;
-    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration) !important;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration);
 }
 
 /* File - container for each file in the list */
@@ -73,10 +73,10 @@
     -webkit-user-select: none;
     user-select: none;
     position: relative;
+    height: 100%;
 
     /* CSS Custom Properties for file items - themes can override these */
-    /* Isolate layout and style calculations per item while allowing ::before to extend beyond bounds */
-    contain: layout style;
+    contain: layout style paint;
 }
 
 /* Remove shadows */
@@ -92,6 +92,8 @@
     border-radius: var(--nn-file-item-border-radius);
     background: transparent;
     position: relative; /* For absolute positioning of reveal overlay */
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .nn-file.nn-has-custom-background::before {
@@ -100,8 +102,7 @@
     top: 0px;
     inset-inline-start: 0;
     inset-inline-end: 0;
-    /* Extend slightly beyond bottom item bounds (height rounding issue) to prevent hairline gaps when zoomed */
-    bottom: -0.2px;
+    bottom: 0;
     background-color: var(--nn-file-custom-bg-color);
     border-top-left-radius: var(--nn-file-top-left-radius, var(--nn-file-item-border-radius));
     border-top-right-radius: var(--nn-file-top-right-radius, var(--nn-file-item-border-radius));
@@ -116,20 +117,14 @@
     z-index: 2;
 }
 
-.nn-virtual-file-item:has(> .nn-file.nn-has-custom-background)::after,
-.nn-virtual-file-item:has(+ .nn-virtual-file-item > .nn-file.nn-has-custom-background)::after {
-    display: none;
-}
-
-.nn-virtual-file-item:has(> .nn-file.nn-has-custom-background)
-    + .nn-virtual-file-item:has(> .nn-file.nn-has-custom-background)
-    > .nn-file.nn-has-custom-background {
+.nn-virtual-file-item-has-filled-background-previous > .nn-file,
+.nn-virtual-file-item-has-custom-background-previous > .nn-file.nn-has-custom-background {
     --nn-file-top-left-radius: 0;
     --nn-file-top-right-radius: 0;
 }
 
-.nn-virtual-file-item:has(> .nn-file.nn-has-custom-background):has(+ .nn-virtual-file-item > .nn-file.nn-has-custom-background)
-    > .nn-file.nn-has-custom-background {
+.nn-virtual-file-item-has-filled-background-next > .nn-file,
+.nn-virtual-file-item-has-custom-background-next > .nn-file.nn-has-custom-background {
     --nn-file-bottom-left-radius: 0;
     --nn-file-bottom-right-radius: 0;
 }
@@ -141,6 +136,7 @@
     gap: var(--nn-file-row-gap);
     align-items: flex-start;
     position: relative;
+    height: 100%;
 }
 
 .nn-file-icon-slot {
@@ -195,7 +191,11 @@
 
 /* Hide separator when flagged by renderer (selection) or context menu */
 .nn-virtual-file-item.nn-hide-separator-selection::after,
-.nn-virtual-file-item.nn-hide-separator-context-menu::after {
+.nn-virtual-file-item.nn-hide-separator-context-menu::after,
+.nn-virtual-file-item.nn-virtual-file-item-has-filled-background::after,
+.nn-virtual-file-item.nn-virtual-file-item-has-filled-background-next::after,
+.nn-virtual-file-item.nn-virtual-file-item-has-custom-background::after,
+.nn-virtual-file-item.nn-virtual-file-item-has-custom-background-next::after {
     display: none;
 }
 
@@ -212,9 +212,9 @@
     flex-direction: column;
     gap: 0;
     order: 1; /* Ensure it appears on the left */
-    min-height: var(--nn-file-thumbnail-min-size); /* Minimum height to match minimum thumbnail size */
-    justify-content: flex-start; /* Top-align content */
-    /* No align-self - let it stretch naturally */
+    height: 100%;
+    min-height: 0;
+    justify-content: flex-start;
 }
 
 /* Compact mode file text content - same as above but without min-height */
@@ -226,6 +226,186 @@
     gap: 0;
     order: 1; /* Ensure it appears on the left */
     justify-content: flex-start; /* Top-align content */
+}
+
+/* Manual property sort editing */
+.nn-manual-sort-scroller {
+    padding: 0 var(--nn-scroller-padding);
+}
+
+.nn-manual-sort-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem 0 1rem;
+}
+
+.nn-manual-sort-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0 var(--nn-file-item-padding-horizontal);
+}
+
+.nn-manual-sort-header-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.nn-manual-sort-title {
+    font-size: var(--nn-desktop-header-font-size);
+    font-weight: var(--nn-theme-list-header-breadcrumb-font-weight);
+    line-height: 1.3;
+    color: var(--nn-theme-list-heading-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nn-manual-sort-hint {
+    font-size: var(--nn-root-reorder-hint-font-size);
+    color: var(--nn-theme-foreground-muted);
+    line-height: 1.25;
+}
+
+.nn-manual-sort-done {
+    flex-shrink: 0;
+    padding: 0 0.75rem;
+    cursor: pointer;
+}
+
+.nn-manual-sort-done:disabled {
+    cursor: default;
+}
+
+.nn-manual-sort-list {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    width: 100%;
+}
+
+.nn-manual-sort-section-header {
+    margin-top: var(--nn-list-group-header-spacer-before);
+}
+
+.nn-manual-sort-list > .nn-manual-sort-section-header:first-child {
+    margin-top: 0;
+}
+
+.nn-manual-sort-sortable-item {
+    position: relative;
+    width: 100%;
+}
+
+.nn-manual-sort-sortable-item-sorting {
+    z-index: 2;
+}
+
+.nn-manual-sort-row {
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    cursor: grab;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.nn-manual-sort-row-sorting {
+    z-index: 2;
+}
+
+.nn-manual-sort-row-sorting::after {
+    display: none;
+}
+
+.nn-manual-sort-row-has-filled-background-previous .nn-file,
+.nn-manual-sort-row-has-custom-background-previous .nn-file.nn-has-custom-background {
+    --nn-file-top-left-radius: 0;
+    --nn-file-top-right-radius: 0;
+}
+
+.nn-manual-sort-row-has-filled-background-next .nn-file,
+.nn-manual-sort-row-has-custom-background-next .nn-file.nn-has-custom-background {
+    --nn-file-bottom-left-radius: 0;
+    --nn-file-bottom-right-radius: 0;
+}
+
+.nn-manual-sort-row-drag-block .nn-file.nn-selected .nn-file-content::before {
+    box-shadow: inset 0 0 0 2px var(--interactive-accent);
+}
+
+.nn-manual-sort-row-disabled {
+    cursor: default;
+}
+
+.nn-manual-sort-row:not(.nn-manual-sort-row-last)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    inset-inline-start: calc(
+        var(--nn-file-item-padding-horizontal) + var(--nn-file-icon-slot-width-mobile, var(--nn-file-icon-slot-width)) +
+            var(--nn-file-icon-slot-gap)
+    );
+    inset-inline-end: var(--nn-file-item-padding-horizontal);
+    height: var(--nn-separator-height);
+    background-color: var(--nn-theme-list-separator-color);
+    z-index: 100;
+    pointer-events: none;
+}
+
+.nn-manual-sort-row.nn-manual-sort-row-hide-separator::after,
+.nn-manual-sort-row.nn-manual-sort-row-has-filled-background::after,
+.nn-manual-sort-row.nn-manual-sort-row-has-filled-background-next::after,
+.nn-manual-sort-row.nn-manual-sort-row-has-custom-background::after,
+.nn-manual-sort-row.nn-manual-sort-row-has-custom-background-next::after {
+    display: none;
+}
+
+.nn-manual-sort-file {
+    flex: 1;
+    min-width: 0;
+}
+
+.nn-manual-sort-file .nn-file,
+.nn-manual-sort-file .nn-file-content,
+.nn-manual-sort-file .nn-file-inner-content {
+    height: auto;
+}
+
+.nn-file-manual-sort-disabled {
+    opacity: 0.55;
+}
+
+.notebook-navigator-mobile .nn-manual-sort-title {
+    font-size: var(--nn-mobile-header-font-size);
+}
+
+.notebook-navigator-mobile .nn-manual-sort-hint {
+    font-size: var(--nn-root-reorder-hint-font-size-mobile);
+}
+
+.notebook-navigator-mobile .nn-manual-sort-row {
+    cursor: default;
+}
+
+.notebook-navigator-mobile .nn-manual-sort-row-draggable:not(.nn-manual-sort-row-last)::after {
+    inset-inline-start: calc(
+        var(--nn-file-item-padding-horizontal) + var(--nn-file-icon-slot-width-mobile, var(--nn-file-icon-slot-width)) +
+            var(--nn-file-icon-slot-gap)
+    );
+    inset-inline-end: calc(var(--nn-file-item-padding-horizontal) + 28px + var(--nn-file-item-padding-horizontal));
+}
+
+.notebook-navigator-mobile .nn-manual-sort-row .nn-drag-handle {
+    align-self: center;
+    width: calc(28px + var(--nn-file-item-padding-horizontal));
+    padding-inline-end: var(--nn-file-item-padding-horizontal);
+    box-sizing: border-box;
 }
 
 /* File name - primary text with ellipsis overflow */
@@ -252,6 +432,61 @@
 
 .nn-file-name[data-has-color='true'] {
     color: var(--nn-file-name-custom-color);
+}
+
+.nn-file-name-suffix {
+    color: var(--nn-theme-file-word-count-color);
+    font-weight: var(--nn-theme-file-word-count-font-weight);
+}
+
+/* Keep aliases in normal text flow so title clamping can reveal or wrap each value independently. */
+.nn-file-alias-match {
+    display: inline;
+    margin-inline-start: 5px;
+    color: var(--nn-theme-foreground-muted);
+    font-size: 0.85em;
+    font-weight: normal;
+    vertical-align: baseline;
+}
+
+.nn-file-alias-match-icon {
+    display: inline-flex;
+    width: 1em;
+    height: 1em;
+    margin-inline-end: 2px;
+    vertical-align: -0.125em;
+}
+
+.nn-file-alias-match-icon svg {
+    width: 1em;
+    height: 1em;
+}
+
+/* Property evidence appears only while an internal property search is active. */
+.nn-file-property-search-evidence {
+    display: inline;
+    margin-inline-start: 5px;
+    color: var(--nn-theme-foreground-muted);
+    font-size: 0.85em;
+    font-weight: normal;
+    vertical-align: baseline;
+}
+
+.nn-file-property-search-evidence-key {
+    font-weight: 600;
+}
+
+.nn-file-property-search-evidence-icon {
+    display: inline-flex;
+    width: 1em;
+    height: 1em;
+    margin-inline-end: 2px;
+    vertical-align: -0.125em;
+}
+
+.nn-file-property-search-evidence-icon svg {
+    width: 1em;
+    height: 1em;
 }
 
 .nn-file-icon {
@@ -288,16 +523,14 @@
     color: var(--nn-theme-navitem-selected-icon-color);
 }
 
+/* A configured task color remains stable across selection states. Without one, the replacement
+   follows the same normal and selected colors as the file icon it replaces. */
 .nn-file-icon.nn-file-icon-unfinished-task[data-has-color='false'] {
-    color: var(--nn-theme-file-task-icon-color);
+    color: var(--nn-theme-file-task-color, var(--nn-theme-navitem-icon-color));
 }
 
 .nn-file.nn-selected .nn-file-icon.nn-file-icon-unfinished-task[data-has-color='false'] {
-    color: var(--nn-theme-file-task-icon-color);
-}
-
-.nn-file-icon[data-has-color='true'] svg {
-    stroke-width: 2.4;
+    color: var(--nn-theme-file-task-color, var(--nn-theme-navitem-selected-icon-color));
 }
 
 /* Quick actions panel - horizontal container for action icons */
@@ -376,22 +609,120 @@
     line-height: var(--nn-file-single-text-line-height);
 }
 
-/* Date + preview (same line): match legacy spacing. */
-.nn-file-second-line > .nn-file-date + .nn-file-preview {
+/* Task progress - task icon with optional fixed-width bar and completed/total task count.
+   The container color drives the dot separator, icon, and count; track and fill read the same variable.
+   The task color variables are intentionally unset by default: the var() fallbacks detect whether a
+   theme or Style Settings customized them. Customized colors persist on selected rows (see list-tags.css),
+   while the uncustomized default follows the date color in each selection state. */
+.nn-file-task-progress {
+    --nn-file-task-progress-current-color: var(--nn-theme-file-task-color, var(--nn-theme-file-date-color));
+    --nn-file-task-progress-current-weight: var(--nn-theme-file-task-font-weight);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    line-height: var(--nn-file-single-text-line-height);
+    color: var(--nn-file-task-progress-current-color);
+}
+
+/* All tasks completed: color and weight default to the unfinished values, so completion reads
+   only from the count showing equal numbers unless a theme customizes the complete variables. */
+.nn-file-task-progress--complete {
+    --nn-file-task-progress-current-color: var(
+        --nn-theme-file-task-complete-color,
+        var(--nn-theme-file-task-color, var(--nn-theme-file-date-color))
+    );
+    --nn-file-task-progress-current-weight: var(--nn-theme-file-task-complete-font-weight);
+}
+
+/* Task icon inherits the current color so it reflects the complete state when bar and count are hidden. */
+.nn-file-task-progress-icon {
+    width: calc(var(--icon-size) * 0.8);
+    height: calc(var(--icon-size) * 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Emoji and icon-font providers render the glyph on the container instead of adding an SVG,
+   so they need an explicit font size to match the task indicator box. */
+.nn-file-task-progress-icon.nn-emoji-icon,
+.nn-file-task-progress-icon.nn-iconfont {
+    font-size: calc(var(--icon-size) * 0.8);
+    line-height: calc(var(--icon-size) * 0.8);
+}
+
+/* The icon has no font weight, so its stroke width tracks the state weight variable instead:
+   weight 400 maps to the lucide default stroke of 2, weight 600 to 2.5, keeping the icon's
+   visual boldness in sync with the count text. */
+.nn-file-task-progress-icon svg {
+    width: 100%;
+    height: 100%;
+    stroke-width: calc(2px + (var(--nn-file-task-progress-current-weight) - 400) * 0.0025px);
+}
+
+/* Bar width stays fixed regardless of task count; only the fill percentage changes. */
+.nn-file-task-progress-track {
+    position: relative;
+    width: 44px;
+    height: 4px;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+/* Track background derives from the current color so themed colors tint track, fill, and count together. */
+.nn-file-task-progress-track::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: var(--nn-file-task-progress-current-color);
+    opacity: 0.25;
+}
+
+.nn-file-task-progress-fill {
+    position: relative;
+    width: var(--nn-file-task-progress-width, 0%);
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--nn-file-task-progress-current-color);
+}
+
+.nn-file-task-progress-count {
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    font-weight: var(--nn-file-task-progress-current-weight);
+    white-space: nowrap;
+}
+
+/* Task progress followed by the date: trailing dot separator. The dot is a flex item inside
+   the task element - the same mechanism as the parent folder's leading dot - so both dots get
+   identical box geometry and flex centering. Placing it inside the date's inline text instead
+   would tie it to baseline math and misalign it against the flex-centered folder dot. */
+.nn-file-task-progress[data-dot-separator='true']::after {
+    content: '•';
+    flex-shrink: 0;
+    font-size: 0.65em;
+    color: var(--nn-theme-file-date-color);
+}
+
+/* Parent folder after date or task progress (same line): match legacy spacing when dot separator is disabled. */
+.nn-file-second-line > .nn-file-date + .nn-parent-folder[data-dot-separator='false'],
+.nn-file-second-line > .nn-file-task-progress + .nn-parent-folder[data-dot-separator='false'] {
     margin-inline-start: 8px;
 }
 
-/* Date + parent folder (same line): match legacy spacing when dot separator is disabled. */
-.nn-file-second-line > .nn-file-date + .nn-parent-folder[data-dot-separator='false'] {
-    margin-inline-start: 8px;
-}
-
-/* Date + parent folder (same line): dot separator */
-.nn-file-second-line > .nn-file-date + .nn-parent-folder[data-dot-separator='true']::before {
+/* Parent folder after date or task progress (same line): dot separator */
+.nn-file-second-line > .nn-file-date + .nn-parent-folder[data-dot-separator='true']::before,
+.nn-file-second-line > .nn-file-task-progress + .nn-parent-folder[data-dot-separator='true']::before {
     content: '•';
     flex-shrink: 0;
     margin-inline-end: 4px;
     font-size: 0.65em;
+}
+
+.nn-file-second-line .nn-parent-folder {
+    flex: 0 1 auto;
 }
 
 /* File preview text - secondary line showing file content */
@@ -406,20 +737,19 @@
     -webkit-line-clamp: var(--preview-rows, 1);
     -webkit-box-orient: vertical;
     word-break: break-word;
-    flex: 1;
-}
-
-/* Multi-line preview - shrink to content and cap at the configured rows */
-.nn-file-preview:not(.nn-file-second-line .nn-file-preview) {
     max-height: calc(var(--nn-file-multiline-text-line-height) * var(--preview-rows, 1));
 }
 
-/* Preview on same line as date - match date line-height for alignment */
-.nn-file-second-line .nn-file-preview {
-    line-height: var(--nn-file-single-text-line-height);
+/* Pinned task progress and preview share one secondary row. */
+.nn-file-second-line--pinned {
+    overflow: hidden;
+}
+
+.nn-file-second-line--pinned .nn-file-preview {
     display: block;
+    flex: 1 1 auto;
+    min-width: 0;
     white-space: nowrap;
-    word-break: normal;
 }
 
 /* Parent folder indicator shown under file names */
@@ -445,6 +775,9 @@
 }
 
 .nn-parent-folder-content[data-has-background='true'] {
+    box-sizing: border-box;
+    height: var(--nn-file-single-text-line-height);
+    line-height: calc(var(--nn-file-single-text-line-height) - 2px);
     border-radius: 4px;
     padding: 1px 4px;
 }
@@ -479,10 +812,6 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-}
-
-.nn-parent-folder-icon[data-has-color='true'] svg {
-    stroke-width: 2.4;
 }
 
 .nn-parent-folder-label {

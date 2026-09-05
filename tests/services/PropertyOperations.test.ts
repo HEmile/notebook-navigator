@@ -24,6 +24,7 @@ import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import { createTestTFile } from '../utils/createTestTFile';
 import { getActivePropertyFields, setActivePropertyFields } from '../../src/utils/vaultProfiles';
 import { buildPropertyKeyNodeId, buildPropertyValueNodeId } from '../../src/utils/propertyTree';
+import type { CollapsedPinnedContexts } from '../../src/types';
 
 class TestPropertyOperations extends PropertyOperations {
     public renameSettings(oldKeyNormalized: string, newKeyDisplay: string): Promise<void> {
@@ -55,12 +56,14 @@ class TestPropertyOperations extends PropertyOperations {
 describe('PropertyOperations settings updates', () => {
     let app: App;
     let settings: NotebookNavigatorSettings;
+    let collapsedPinnedContexts: CollapsedPinnedContexts;
     let saveSettingsAndUpdate: ReturnType<typeof vi.fn>;
     let operations: TestPropertyOperations;
 
     beforeEach(() => {
         app = new App();
         settings = structuredClone(DEFAULT_SETTINGS);
+        collapsedPinnedContexts = {};
         saveSettingsAndUpdate = vi.fn().mockResolvedValue(undefined);
         operations = new TestPropertyOperations(
             app,
@@ -68,30 +71,77 @@ describe('PropertyOperations settings updates', () => {
             async () => {
                 await saveSettingsAndUpdate();
             },
-            () => null
+            () => null,
+            mutator => mutator(collapsedPinnedContexts)
         );
     });
 
     it('renames propertyFields and propertySortKey on rename', async () => {
         setActivePropertyFields(settings, 'Status, priority');
         settings.propertySortKey = 'STATUS';
+        settings.manualSortPropertyKey = 'STATUS';
+        settings.manualSortGroupHeaderProperty = 'STATUS';
 
         await operations.renameSettings('status', 'State');
 
         expect(saveSettingsAndUpdate).toHaveBeenCalledTimes(1);
         expect(getActivePropertyFields(settings)).toBe('State, priority');
         expect(settings.propertySortKey).toBe('State');
+        expect(settings.manualSortPropertyKey).toBe('State');
+        expect(settings.manualSortGroupHeaderProperty).toBe('State');
+    });
+
+    it('renames comma-separated propertySortKey entries and sort override property keys', async () => {
+        setActivePropertyFields(settings, 'Status, priority');
+        settings.propertySortKey = 'published, STATUS, downloaded';
+        settings.folderSortOverrides = {
+            Books: { option: 'property-asc', propertyKey: 'STATUS' }
+        };
+        settings.tagSortOverrides = {
+            clips: { option: 'property-desc', propertyKey: 'downloaded' },
+            reading: { option: 'property-desc', propertyKey: 'Status' }
+        };
+
+        await operations.renameSettings('status', 'State');
+
+        expect(saveSettingsAndUpdate).toHaveBeenCalledTimes(1);
+        expect(settings.propertySortKey).toBe('published, State, downloaded');
+        expect(settings.folderSortOverrides.Books).toEqual({ option: 'property-asc', propertyKey: 'State' });
+        expect(settings.tagSortOverrides.clips).toEqual({ option: 'property-desc', propertyKey: 'downloaded' });
+        expect(settings.tagSortOverrides.reading).toEqual({ option: 'property-desc', propertyKey: 'State' });
     });
 
     it('clears propertySortKey and removes propertyFields entries on delete', async () => {
         setActivePropertyFields(settings, 'State, priority');
         settings.propertySortKey = 'State';
+        settings.manualSortPropertyKey = 'State';
+        settings.manualSortGroupHeaderProperty = 'State';
 
         await operations.deleteSettings('state');
 
         expect(saveSettingsAndUpdate).toHaveBeenCalledTimes(1);
         expect(getActivePropertyFields(settings)).toBe('priority');
         expect(settings.propertySortKey).toBe('');
+        expect(settings.manualSortPropertyKey).toBe('');
+        expect(settings.manualSortGroupHeaderProperty).toBe('');
+    });
+
+    it('removes deleted propertySortKey entries and matching sort overrides', async () => {
+        setActivePropertyFields(settings, 'State, priority');
+        settings.propertySortKey = 'published, State, downloaded';
+        settings.folderSortOverrides = {
+            Books: { option: 'property-asc', propertyKey: 'State' }
+        };
+        settings.tagSortOverrides = {
+            clips: { option: 'property-desc', propertyKey: 'downloaded' }
+        };
+
+        await operations.deleteSettings('state');
+
+        expect(saveSettingsAndUpdate).toHaveBeenCalledTimes(1);
+        expect(settings.propertySortKey).toBe('published, downloaded');
+        expect(settings.folderSortOverrides.Books).toBeUndefined();
+        expect(settings.tagSortOverrides.clips).toEqual({ option: 'property-desc', propertyKey: 'downloaded' });
     });
 
     it('does not save when rename makes no changes', async () => {
@@ -176,7 +226,7 @@ describe('PropertyOperations settings updates', () => {
         };
         settings.propertyAppearances = {
             [deletedKeyNodeId]: { groupBy: 'date' },
-            [keptKeyNodeId]: { groupBy: 'none' }
+            [keptKeyNodeId]: { groupBy: 'custom' }
         };
         settings.propertyTreeSortOverrides = {
             [deletedKeyNodeId]: 'alpha-desc',
@@ -199,7 +249,7 @@ describe('PropertyOperations settings updates', () => {
             [keptKeyNodeId]: 'title-desc'
         });
         expect(settings.propertyAppearances).toEqual({
-            [keptKeyNodeId]: { groupBy: 'none' }
+            [keptKeyNodeId]: { groupBy: 'custom' }
         });
         expect(settings.propertyTreeSortOverrides).toEqual({
             [keptKeyNodeId]: 'alpha-asc'
@@ -255,12 +305,14 @@ describe('PropertyOperations settings updates', () => {
 describe('PropertyOperations rename conflict detection', () => {
     let app: App;
     let settings: NotebookNavigatorSettings;
+    let collapsedPinnedContexts: CollapsedPinnedContexts;
     let saveSettingsAndUpdate: ReturnType<typeof vi.fn>;
     let operations: TestPropertyOperations;
 
     beforeEach(() => {
         app = new App();
         settings = structuredClone(DEFAULT_SETTINGS);
+        collapsedPinnedContexts = {};
         saveSettingsAndUpdate = vi.fn().mockResolvedValue(undefined);
         operations = new TestPropertyOperations(
             app,
@@ -268,7 +320,8 @@ describe('PropertyOperations rename conflict detection', () => {
             async () => {
                 await saveSettingsAndUpdate();
             },
-            () => null
+            () => null,
+            mutator => mutator(collapsedPinnedContexts)
         );
     });
 

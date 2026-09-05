@@ -29,7 +29,8 @@
     --nn-file-pill-border-color-resolved: var(--nn-theme-file-tag-border-color);
     display: inline-flex;
     align-items: center;
-    height: 20px;
+    box-sizing: border-box;
+    height: var(--nn-file-tag-row-height);
     line-height: 1;
     padding: 0 8px;
     background-color: var(--nn-theme-file-tag-bg);
@@ -139,6 +140,28 @@
 
 .nn-file.nn-selected .nn-file-date {
     color: var(--nn-selected-file-date-color);
+}
+
+/* Selected rows: customized task colors persist (like custom tag colors); only the
+   uncustomized default falls back to the selected date color. */
+.nn-file.nn-selected .nn-file-task-progress {
+    --nn-file-task-progress-current-color: var(--nn-theme-file-task-color, var(--nn-selected-file-date-color));
+}
+
+/* The trailing dot separator stays neutral like the date, not the task color. */
+.nn-file.nn-selected .nn-file-task-progress[data-dot-separator='true']::after {
+    color: var(--nn-selected-file-date-color);
+}
+
+.nn-file.nn-selected .nn-file-task-progress--complete {
+    --nn-file-task-progress-current-color: var(
+        --nn-theme-file-task-complete-color,
+        var(--nn-theme-file-task-color, var(--nn-selected-file-date-color))
+    );
+}
+
+.nn-file.nn-selected .nn-file-name-suffix {
+    color: var(--nn-selected-file-word-count-color);
 }
 
 .nn-file.nn-selected .nn-parent-folder {

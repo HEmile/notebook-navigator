@@ -35,6 +35,9 @@ import { getVirtualTagCollection, VIRTUAL_TAG_COLLECTION_IDS } from '../utils/vi
 import { getActiveHiddenFolders } from '../utils/vaultProfiles';
 import { resolveUXIcon } from '../utils/uxIcons';
 import { buildPropertyKeyNodeId, parsePropertyNodeId, type PropertySelectionNodeId } from '../utils/propertyTree';
+import { resolveFolderDisplayName, resolveFolderDisplayPathSegments } from '../utils/folderDisplayName';
+import { resolveRootFolderNoteSourceName } from '../utils/folderNoteLookup';
+import { isFolderEffectivelyExpanded } from '../utils/navigationExpansion';
 
 const FOLDER_NOTE_EXTENSIONS = Object.values(FOLDER_NOTE_TYPE_EXTENSIONS);
 
@@ -43,8 +46,7 @@ function addFolderNoteCandidatePaths(
     folderPath: string,
     folderName: string,
     settings: {
-        folderNoteName: string;
-        folderNoteNamePattern?: string;
+        folderNoteNamePattern: string;
     }
 ): void {
     const expectedName = resolveFolderNoteName(folderName, settings);
@@ -114,14 +116,17 @@ export function useListPaneTitle(): UseListPaneTitleResult {
         }
 
         const folderNoteNameSettings = {
-            folderNoteName: settings.folderNoteName,
             folderNoteNamePattern: settings.folderNoteNamePattern
         };
 
         const targets = new Set<string>();
 
         if (selectedFolderPath === '/') {
-            addFolderNoteCandidatePaths(targets, '/', selectedFolderName ?? '', folderNoteNameSettings);
+            const rootFolder = selectionState.selectedFolder;
+            const rootFolderNoteSourceName = rootFolder
+                ? resolveRootFolderNoteSourceName(rootFolder, app.vault)
+                : (selectedFolderName ?? '');
+            addFolderNoteCandidatePaths(targets, '/', rootFolderNoteSourceName, folderNoteNameSettings);
             return targets;
         }
 
@@ -136,9 +141,10 @@ export function useListPaneTitle(): UseListPaneTitleResult {
     }, [
         selectedFolderName,
         selectedFolderPath,
+        app.vault,
+        selectionState.selectedFolder,
         selectionState.selectionType,
         settings.enableFolderNotes,
-        settings.folderNoteName,
         settings.folderNoteNamePattern
     ]);
 
@@ -202,7 +208,6 @@ export function useListPaneTitle(): UseListPaneTitleResult {
             tagIcons: settings.tagIcons || {},
             propertyIcons: settings.propertyIcons || {},
             enableFolderNotes: settings.enableFolderNotes,
-            folderNoteName: settings.folderNoteName,
             folderNoteNamePattern: settings.folderNoteNamePattern,
             useFrontmatterMetadata: settings.useFrontmatterMetadata,
             frontmatterNameField: settings.frontmatterNameField
@@ -235,7 +240,7 @@ export function useListPaneTitle(): UseListPaneTitleResult {
             const excludedFolders = hiddenFolders;
             const showHiddenFolders = showHiddenItems;
             const hasChildren = hasSubfolders(folder, excludedFolders, showHiddenFolders);
-            const isExpanded = expansionState.expandedFolders.has(folder.path);
+            const isExpanded = isFolderEffectivelyExpanded(folder.path, expansionState.expandedFolders, settings.showRootFolder);
             return hasChildren && isExpanded
                 ? resolveUXIcon(settings.interfaceIcons, 'nav-folder-open')
                 : resolveUXIcon(settings.interfaceIcons, 'nav-folder-closed');
@@ -284,6 +289,7 @@ export function useListPaneTitle(): UseListPaneTitleResult {
         settings.interfaceIcons,
         settings.showFolderIcons,
         settings.showPropertyIcons,
+        settings.showRootFolder,
         settings.showTagIcons,
         metadataVersion
     ]);
@@ -293,25 +299,15 @@ export function useListPaneTitle(): UseListPaneTitleResult {
         void metadataVersion;
         if (selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder) {
             const folder = selectionState.selectedFolder;
-            const folderDisplayNameByPath = new Map<string, string>();
-            const getFolderDisplayName = (folderPath: string, fallbackLabel: string): string => {
-                if (folderDisplayNameByPath.has(folderPath)) {
-                    return folderDisplayNameByPath.get(folderPath) ?? fallbackLabel;
-                }
-
-                const metadataDisplayName = metadataService.getFolderDisplayData(folderPath, {
-                    includeDisplayName: true,
-                    includeColor: false,
-                    includeBackgroundColor: false,
-                    includeIcon: false
-                }).displayName;
-                const resolvedDisplayName = metadataDisplayName && metadataDisplayName.length > 0 ? metadataDisplayName : fallbackLabel;
-                folderDisplayNameByPath.set(folderPath, resolvedDisplayName);
-                return resolvedDisplayName;
-            };
 
             if (folder.path === '/') {
-                const vaultName = settings.customVaultName || app.vault.getName();
+                const vaultName = resolveFolderDisplayName({
+                    app,
+                    metadataService,
+                    settings: { customVaultName: settings.customVaultName },
+                    folderPath: folder.path,
+                    fallbackName: folder.name
+                });
                 const rootBreadcrumb: BreadcrumbSegment[] = [
                     {
                         label: vaultName,
@@ -325,32 +321,27 @@ export function useListPaneTitle(): UseListPaneTitleResult {
                 };
             }
 
-            const segments = folder.path.split('/').filter(Boolean);
-            const breadcrumb: BreadcrumbSegment[] = [];
-            let currentPath = '';
-            segments.forEach((segment, index) => {
-                currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-                const isLast = index === segments.length - 1;
-                const label = getFolderDisplayName(currentPath, segment);
+            const folderDisplayPathSegments = resolveFolderDisplayPathSegments({ metadataService, folderPath: folder.path });
+            const breadcrumb: BreadcrumbSegment[] = folderDisplayPathSegments.map((segment, index) => {
+                const isLast = index === folderDisplayPathSegments.length - 1;
                 if (isLast) {
-                    breadcrumb.push({
-                        label,
+                    return {
+                        label: segment.label,
                         targetType: 'none',
                         isLast: true
-                    });
-                    return;
+                    };
                 }
 
-                breadcrumb.push({
-                    label,
+                return {
+                    label: segment.label,
                     targetType: 'folder',
-                    targetPath: currentPath,
+                    targetPath: segment.path,
                     isLast: false
-                });
+                };
             });
 
             return {
-                desktopTitle: getFolderDisplayName(folder.path, folder.name),
+                desktopTitle: folderDisplayPathSegments[folderDisplayPathSegments.length - 1]?.label ?? folder.name,
                 breadcrumbSegments: breadcrumb
             };
         }
@@ -484,7 +475,7 @@ export function useListPaneTitle(): UseListPaneTitleResult {
             breadcrumbSegments: noSelectionBreadcrumb
         };
     }, [
-        app.vault,
+        app,
         getTagDisplayPath,
         getPropertyTree,
         metadataService,

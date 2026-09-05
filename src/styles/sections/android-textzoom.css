@@ -26,36 +26,40 @@
        which Android doesn't scale. Only compensate font-size on emoji elements directly. */
 }
 
-/* Note counts in navigation pane - !important needed to override other rules */
-.notebook-navigator-android .nn-navitem-count {
+/* Note counts in navigation pane */
+.notebook-navigator-android .nn-mobile .nn-navitem-count {
     font-size: calc(
         var(--nn-navitem-count-font-size-mobile, var(--nn-navitem-count-font-size)) * var(--nn-android-font-scale-reciprocal, 1)
-    ) !important;
+    );
 }
 
 /* Root reorder panel text */
-.notebook-navigator-android .nn-root-reorder-hint {
+.notebook-navigator-android .nn-mobile .nn-root-reorder-hint {
     font-size: calc(
         var(--nn-root-reorder-hint-font-size-mobile, var(--nn-root-reorder-hint-font-size)) * var(--nn-android-font-scale-reciprocal, 1)
-    ) !important;
+    );
 }
 
 /* Emoji and webfont icons - Android scales font-size but not SVG dimensions.
    Only apply to .nn-emoji-icon and .nn-iconfont to avoid breaking Lucide SVG icons. */
-.notebook-navigator-android .nn-emoji-icon,
-.notebook-navigator-android .nn-iconfont {
-    font-size: calc(var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)) * var(--nn-android-font-scale-reciprocal, 1)) !important;
+.notebook-navigator-android .nn-mobile .nn-emoji-icon,
+.notebook-navigator-android .nn-mobile .nn-iconfont {
+    font-size: calc(var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)) * var(--nn-android-font-scale-reciprocal, 1));
 }
 
-/* Row-cap compensation - Android doesn't scale max-height, but the line-height
-   variables above are pre-divided to offset textZoom. Multiply the cap by the
-   detected font scale so the final row limit matches the rendered line height
-   while still allowing shorter titles and previews to shrink naturally. */
+/* Task indicators are smaller than file icons, so preserve their 80% size while compensating
+   for Android textZoom. Without this override, the general icon rule above enlarges them. */
+.notebook-navigator-android .nn-mobile .nn-file-task-progress-icon.nn-emoji-icon,
+.notebook-navigator-android .nn-mobile .nn-file-task-progress-icon.nn-iconfont {
+    font-size: calc(var(--icon-size) * 0.8 * var(--nn-android-font-scale-reciprocal, 1));
+}
+
+/* Clamp height compensation - Android doesn't scale max-height, so match the compensated line-height after textZoom applies. */
 .notebook-navigator-android .nn-file-name {
     max-height: calc(var(--nn-file-title-line-height) * var(--filename-rows, 1) * var(--nn-android-font-scale, 1));
 }
 
-.notebook-navigator-android .nn-file-preview:not(.nn-file-second-line .nn-file-preview) {
+.notebook-navigator-android .nn-file-preview {
     max-height: calc(var(--nn-file-multiline-text-line-height) * var(--preview-rows, 1) * var(--nn-android-font-scale, 1));
 }
 

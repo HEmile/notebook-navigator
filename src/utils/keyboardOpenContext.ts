@@ -17,11 +17,12 @@
  */
 
 import { Platform } from 'obsidian';
-import type { FileOpenContext, MultiSelectModifier } from '../settings/types';
+import type { EnterKeyAction, FolderNoteOpenLocation, MultiSelectModifier } from '../settings/types';
+import { supportsKeyboardInteractions } from './paneLayout';
 
 interface KeyboardOpenContextSettings {
-    shiftEnterOpenContext: FileOpenContext;
-    cmdCtrlEnterOpenContext: FileOpenContext;
+    shiftEnterOpenContext: EnterKeyAction;
+    cmdCtrlEnterOpenContext: EnterKeyAction;
 }
 
 interface CmdCtrlEventState {
@@ -37,7 +38,7 @@ export function isEnterKey(e: KeyboardEvent): boolean {
     return e.key === 'Enter' || e.code === 'Enter' || e.code === 'NumpadEnter';
 }
 
-export function resolveKeyboardOpenContext(e: KeyboardEvent, settings: KeyboardOpenContextSettings): FileOpenContext | null {
+export function resolveKeyboardEnterAction(e: KeyboardEvent, settings: KeyboardOpenContextSettings): EnterKeyAction | null {
     const isCmdCtrl = e.metaKey || e.ctrlKey;
     if (isCmdCtrl) {
         return settings.cmdCtrlEnterOpenContext;
@@ -62,21 +63,45 @@ export function isMultiSelectModifierPressed(event: MultiSelectModifierEventStat
     return isCmdCtrlModifierPressed(event);
 }
 
+export function shouldOpenNoteClickInNewTab(event: MultiSelectModifierEventState, multiSelectModifier: MultiSelectModifier): boolean {
+    return (
+        supportsKeyboardInteractions() &&
+        multiSelectModifier === 'optionAlt' &&
+        !isMultiSelectModifierPressed(event, multiSelectModifier) &&
+        isCmdCtrlModifierPressed(event)
+    );
+}
+
 export function resolveFolderNoteClickOpenContext(
     event: CmdCtrlEventState,
-    openFolderNotesInNewTab: boolean,
-    multiSelectModifier: MultiSelectModifier,
-    isMobile: boolean
-): 'tab' | null {
+    folderNoteOpenLocation: FolderNoteOpenLocation,
+    multiSelectModifier: MultiSelectModifier
+): 'tab' | 'right-sidebar' | null {
     // Explicit setting takes precedence over modifier-driven behavior.
-    if (openFolderNotesInNewTab) {
+    if (folderNoteOpenLocation === 'new-tab') {
         return 'tab';
     }
 
-    // Folder note click-to-tab modifier is desktop-only and tied to optionAlt mode.
-    if (isMobile || multiSelectModifier !== 'optionAlt') {
+    if (folderNoteOpenLocation === 'right-sidebar') {
+        return 'right-sidebar';
+    }
+
+    // Folder note click-to-tab follows pointer-modifier support (desktop and tablets) and is tied to optionAlt mode.
+    if (!supportsKeyboardInteractions() || multiSelectModifier !== 'optionAlt') {
         return null;
     }
 
     return isCmdCtrlModifierPressed(event) ? 'tab' : null;
+}
+
+export function resolveFolderNoteDefaultOpenContext(folderNoteOpenLocation: FolderNoteOpenLocation): 'tab' | 'right-sidebar' | null {
+    if (folderNoteOpenLocation === 'new-tab') {
+        return 'tab';
+    }
+
+    if (folderNoteOpenLocation === 'right-sidebar') {
+        return 'right-sidebar';
+    }
+
+    return null;
 }

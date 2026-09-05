@@ -16,13 +16,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, Modal } from 'obsidian';
-import { getReleaseBannerUrl, SUPPORT_BUY_ME_A_COFFEE_URL } from '../constants/urls';
+import { App, Modal, Platform, setIcon } from 'obsidian';
+import { getReleaseBannerUrl, getReleaseVideoOpenUrl, getReleaseVideoUrl, SUPPORT_BUY_ME_A_COFFEE_URL } from '../constants/urls';
 import { getCurrentLanguage, strings } from '../i18n';
-import { ReleaseNote } from '../releaseNotes';
+import { ReleaseNote, YoutubePlayButtonOptions } from '../releaseNotes';
 import { addAsyncEventListener } from '../utils/domEventListeners';
+import { focusElementPreventScroll } from '../utils/domUtils';
 import { DateUtils } from '../utils/dateUtils';
 import { getYoutubeThumbnailUrl, getYoutubeVideoId } from '../utils/youtubeUtils';
+
+const SUPPORTED_RELEASE_NOTE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'obsidian:']);
+
+function isSupportedReleaseNoteLink(url: string): boolean {
+    try {
+        return SUPPORTED_RELEASE_NOTE_LINK_PROTOCOLS.has(new URL(url).protocol);
+    } catch {
+        return false;
+    }
+}
 
 export class WhatsNewModal extends Modal {
     private releaseNotes: ReleaseNote[];
@@ -30,16 +41,21 @@ export class WhatsNewModal extends Modal {
     private onCloseCallback?: () => void;
     private domDisposers: (() => void)[] = [];
 
+    private normalizeTextBreaks(text: string): string {
+        return text.replace(/\r\n?/g, '\n').replace(/<br\s*\/?>/gi, '\n');
+    }
+
     // Renders limited formatting into a container element.
     // Supports:
     // - **bold**
+    // - `inline code`
     // - ==text== (highlight as red + bold)
-    // - [label](https://link)
+    // - [label](https://link) and [label](obsidian://action)
     // - Auto-link bare http(s) URLs
-    // - Line breaks: single \n becomes <br>
+    // - Line breaks: single \n or <br> becomes <br>
     private renderFormattedText(container: HTMLElement, text: string): void {
         const renderInline = (segment: string, dest: HTMLElement) => {
-            const pattern = /==([\s\S]*?)==|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*|(https?:\/\/[^\s]+)/g;
+            const pattern = /==([\s\S]*?)==|\[([^\]]+)\]\(([^\s)]+)\)|`([^`]+)`|\*\*([^*]+)\*\*|(https?:\/\/[^\s]+)/g;
             let lastIndex = 0;
             let match: RegExpExecArray | null;
 
@@ -54,18 +70,24 @@ export class WhatsNewModal extends Modal {
                     // ==highlight== -> highlight span, supports nested formatting inside
                     const highlight = dest.createSpan({ cls: 'nn-highlight' });
                     renderInline(match[1], highlight);
-                } else if (match[2] && match[3]) {
+                } else if (match[2] && match[3] && isSupportedReleaseNoteLink(match[3])) {
                     // Markdown link [label](url)
                     const a = dest.createEl('a', { text: match[2] });
                     a.setAttr('href', match[3]);
                     a.setAttr('rel', 'noopener noreferrer');
                     a.setAttr('target', '_blank');
+                } else if (match[2] && match[3]) {
+                    // Unsupported protocols remain visible without becoming executable links.
+                    appendText(match[0]);
                 } else if (match[4]) {
-                    // **bold**
-                    dest.createEl('strong', { text: match[4] });
+                    // `inline code`
+                    dest.createEl('code', { text: match[4] });
                 } else if (match[5]) {
+                    // **bold**
+                    dest.createEl('strong', { text: match[5] });
+                } else if (match[6]) {
                     // Bare URL - strip trailing punctuation that's likely not part of the URL
-                    let url = match[5];
+                    let url = match[6];
                     let trailing = '';
                     const trailingMatch = url.match(/[.,;:!?)]+$/);
                     if (trailingMatch) {
@@ -87,7 +109,7 @@ export class WhatsNewModal extends Modal {
             appendText(segment.slice(lastIndex));
         };
 
-        const lines = text.split('\n');
+        const lines = this.normalizeTextBreaks(text).split('\n');
         for (let i = 0; i < lines.length; i++) {
             renderInline(lines[i], container);
             if (i < lines.length - 1) {
@@ -96,8 +118,36 @@ export class WhatsNewModal extends Modal {
         }
     }
 
-    private renderReleaseBanner(container: HTMLElement, imageUrl: string): void {
-        const banner = container.createDiv({ cls: 'nn-whats-new-banner' });
+    private renderInfoText(container: HTMLElement, text: string): void {
+        const normalizedText = this.normalizeTextBreaks(text).trim();
+        if (normalizedText.length === 0) {
+            return;
+        }
+
+        const paragraphs = normalizedText
+            .split(/\n[ \t]*\n+/)
+            .map(paragraph => paragraph.trim())
+            .filter(paragraph => paragraph.length > 0);
+
+        paragraphs.forEach(paragraph => {
+            const p = container.createEl('p', { cls: 'nn-whats-new-info' });
+            this.renderFormattedText(p, paragraph);
+        });
+    }
+
+    private renderReleaseBanner(container: HTMLElement, imageUrl: string, isClickable: boolean): void {
+        let banner: HTMLElement;
+        if (isClickable) {
+            const link = container.createEl('a', { cls: 'nn-whats-new-banner' });
+            link.setAttr('href', imageUrl);
+            link.setAttr('rel', 'noopener noreferrer');
+            link.setAttr('target', '_blank');
+            link.setAttr('aria-label', strings.whatsNew.openBannerImage);
+            banner = link;
+        } else {
+            banner = container.createDiv({ cls: 'nn-whats-new-banner' });
+        }
+
         const image = banner.createEl('img', { cls: 'nn-whats-new-banner-image' });
         image.setAttr('alt', '');
         image.setAttr('loading', 'lazy');
@@ -110,7 +160,39 @@ export class WhatsNewModal extends Modal {
         image.src = imageUrl;
     }
 
-    private renderYoutubeLink(container: HTMLElement, youtubeUrl: string): void {
+    private renderReleaseVideo(container: HTMLElement, videoUrl: string, openUrl: string | null): void {
+        const frame = container.createDiv({ cls: 'nn-whats-new-video-frame' });
+        const video = frame.createEl('video', { cls: 'nn-whats-new-video' });
+
+        video.autoplay = true;
+        video.defaultMuted = true;
+        video.loop = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'auto';
+        video.setAttr('autoplay', '');
+        video.setAttr('loop', '');
+        video.setAttr('muted', '');
+        video.setAttr('playsinline', '');
+        video.setAttr('webkit-playsinline', '');
+
+        video.addEventListener('error', () => {
+            frame.remove();
+        });
+
+        video.src = videoUrl;
+
+        if (openUrl) {
+            const openLink = frame.createEl('a', { cls: 'nn-whats-new-video-open' });
+            openLink.setAttr('href', openUrl);
+            openLink.setAttr('rel', 'noopener noreferrer');
+            openLink.setAttr('target', '_blank');
+            openLink.setAttr('aria-label', strings.modals.welcome.openVideoButton);
+            setIcon(openLink, 'external-link');
+        }
+    }
+
+    private renderYoutubeLink(container: HTMLElement, youtubeUrl: string, playButtonOptions?: YoutubePlayButtonOptions): void {
         const link = container.createEl('a', { cls: 'nn-whats-new-youtube-link' });
         link.setAttr('href', youtubeUrl);
         link.setAttr('rel', 'noopener noreferrer');
@@ -120,14 +202,38 @@ export class WhatsNewModal extends Modal {
         const thumbnail = link.createDiv({ cls: 'nn-whats-new-youtube-thumbnail' });
 
         const videoId = getYoutubeVideoId(youtubeUrl);
+        let image: HTMLImageElement | null = null;
         if (videoId) {
-            const image = thumbnail.createEl('img', { cls: 'nn-whats-new-youtube-image' });
+            image = thumbnail.createEl('img', { cls: 'nn-whats-new-youtube-image' });
             image.setAttr('alt', strings.modals.welcome.openVideoButton);
             image.setAttr('loading', 'lazy');
+        } else {
+            thumbnail.createDiv({ cls: 'nn-whats-new-youtube-placeholder', text: strings.modals.welcome.openVideoButton });
+        }
 
+        const playButton = thumbnail.createDiv({ cls: 'nn-youtube-play' });
+        playButton.setAttr('aria-hidden', 'true');
+
+        if (playButtonOptions) {
+            // Thumbnail-relative percentages preserve the intended placement as the modal width changes.
+            playButton.style.setProperty('--nn-youtube-play-x', `${playButtonOptions.x}%`);
+            playButton.style.setProperty('--nn-youtube-play-y', `${playButtonOptions.y}%`);
+            if (playButtonOptions.scale !== undefined) {
+                playButton.style.setProperty('--nn-youtube-play-scale', playButtonOptions.scale.toString());
+            }
+        }
+
+        if (image && videoId) {
             const primaryUrl = getYoutubeThumbnailUrl(videoId, 'maxresdefault.jpg');
             const fallbackUrl = getYoutubeThumbnailUrl(videoId, 'hqdefault.jpg');
 
+            // Keep the overlay hidden until the thumbnail is painted; otherwise it appears over the empty frame during loading.
+            playButton.hidden = true;
+            image.addEventListener('load', () => {
+                playButton.hidden = false;
+            });
+
+            // YouTube does not generate a max-resolution image for every video, so retry once with its standard thumbnail.
             let usedFallback = false;
             image.addEventListener('error', () => {
                 if (usedFallback) {
@@ -138,11 +244,7 @@ export class WhatsNewModal extends Modal {
             });
 
             image.src = primaryUrl;
-        } else {
-            thumbnail.createDiv({ cls: 'nn-whats-new-youtube-placeholder', text: strings.modals.welcome.openVideoButton });
         }
-
-        thumbnail.createDiv({ cls: 'nn-whats-new-youtube-play' }).setAttr('aria-hidden', 'true');
     }
 
     constructor(app: App, releaseNotes: ReleaseNote[], onCloseCallback?: () => void) {
@@ -175,22 +277,23 @@ export class WhatsNewModal extends Modal {
             }
             versionContainer.createEl('h3', { text: headerText });
 
-            const bannerUrl = getReleaseBannerUrl(note.bannerUrl, note.version);
-            if (bannerUrl) {
-                this.renderReleaseBanner(versionContainer, bannerUrl);
+            if (note.banner) {
+                const bannerUrl = getReleaseBannerUrl(note.banner);
+                this.renderReleaseBanner(versionContainer, bannerUrl, note.bannerClickable === true);
+            }
+
+            const videoUrl = getReleaseVideoUrl(note.videoUrl, note.version);
+            if (videoUrl) {
+                const openUrl = note.videoClickable === true ? getReleaseVideoOpenUrl(note.videoUrl, note.version) : null;
+                this.renderReleaseVideo(versionContainer, videoUrl, openUrl);
             }
 
             if (note.youtubeUrl) {
-                this.renderYoutubeLink(versionContainer, note.youtubeUrl);
+                this.renderYoutubeLink(versionContainer, note.youtubeUrl, note.youtubePlayButton);
             }
 
-            // Show info text first if present (supports paragraphs and line breaks)
             if (note.info) {
-                const paragraphs = note.info.split(/\n\s*\n/);
-                paragraphs.forEach(para => {
-                    const p = versionContainer.createEl('p', { cls: 'nn-whats-new-info' });
-                    this.renderFormattedText(p, para);
-                });
+                this.renderInfoText(versionContainer, note.info);
             }
 
             const categories = [
@@ -271,10 +374,12 @@ export class WhatsNewModal extends Modal {
     open(): void {
         super.open();
         // Focus the thanks button after the modal is fully opened
-        if (this.thanksButton) {
+        if (this.thanksButton && !Platform.isMobile) {
             // Use requestAnimationFrame to ensure DOM is ready
-            requestAnimationFrame(() => {
-                this.thanksButton?.focus();
+            window.requestAnimationFrame(() => {
+                if (this.thanksButton) {
+                    focusElementPreventScroll(this.thanksButton);
+                }
             });
         }
     }

@@ -18,6 +18,11 @@
 
 // Matches Obsidian's current word count tokenization behavior.
 
+import type { App, TFile } from 'obsidian';
+import type { PropertyItem } from '../storage/IndexedDBStorage';
+import { casefold, findMatchingRecordKey } from './recordUtils';
+import { isRecord } from './typeGuards';
+
 // CJK characters that count as individual words (Obsidian splits these out)
 const CJK_SINGLE_CHARS =
     '\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C' + // Tibetan
@@ -35,6 +40,18 @@ const WORD_PATTERN = new RegExp(
     `(?:[0-9]+(?:(?:,|\\.)[0-9]+)*|[\\-'\u2019${OBSIDIAN_GF_PATTERN_SOURCE}஀-௿가-힣ꥠ-ꥼힰ-ퟆ])+|[${CJK_SINGLE_CHARS}]`,
     'g'
 );
+const CHARACTER_COUNT_WHITESPACE_PATTERN = /\s/u;
+const FRONTMATTER_START_PATTERN = /^---(\r?\n)/g;
+const FRONTMATTER_END_PATTERN = /---(\r?\n|$)/g;
+
+export interface CharacterCountResult {
+    withSpaces: number;
+    withoutSpaces: number;
+}
+
+export function formatTextCount(count: number): string {
+    return Math.trunc(count).toLocaleString();
+}
 
 export function countWordsForNoteProperty(content: string, startIndex: number): number {
     const text = startIndex > 0 ? content.slice(startIndex) : content;
@@ -44,4 +61,147 @@ export function countWordsForNoteProperty(content: string, startIndex: number): 
         count += 1;
     }
     return count;
+}
+
+export function getObsidianTextCountStartIndex(content: string): number {
+    // Matches Obsidian's bundled word-count plugin frontmatter slicing, not metadata body offsets.
+    FRONTMATTER_START_PATTERN.lastIndex = 0;
+    if (!FRONTMATTER_START_PATTERN.exec(content)) {
+        return 0;
+    }
+
+    FRONTMATTER_END_PATTERN.lastIndex = FRONTMATTER_START_PATTERN.lastIndex;
+    let match = FRONTMATTER_END_PATTERN.exec(content);
+    while (match && content.charAt(match.index - 1) !== '\n') {
+        match = FRONTMATTER_END_PATTERN.exec(content);
+    }
+
+    if (!match) {
+        return 0;
+    }
+
+    return FRONTMATTER_END_PATTERN.lastIndex;
+}
+
+function isCharacterCountWhitespace(char: string): boolean {
+    return (
+        char === ' ' ||
+        char === '\n' ||
+        char === '\r' ||
+        char === '\t' ||
+        char === '\f' ||
+        char === '\v' ||
+        CHARACTER_COUNT_WHITESPACE_PATTERN.test(char)
+    );
+}
+
+export function countCharactersForNoteProperty(content: string, startIndex: number): CharacterCountResult {
+    const text = startIndex > 0 ? content.slice(startIndex) : content;
+    const withSpaces = text.length;
+    let withoutSpaces = 0;
+
+    for (let index = 0; index < text.length; index += 1) {
+        const char = text.charAt(index);
+        if (!isCharacterCountWhitespace(char)) {
+            withoutSpaces += 1;
+        }
+    }
+
+    return { withSpaces, withoutSpaces };
+}
+
+function parseWordCountTargetValue(value: unknown): number | null {
+    if (typeof value === 'number') {
+        return Number.isSafeInteger(value) && value > 0 ? value : null;
+    }
+
+    if (typeof value !== 'string') {
+        return null;
+    }
+
+    const normalized = value.replace(/,/g, '').trim();
+    if (!/^\d+$/.test(normalized)) {
+        return null;
+    }
+
+    const parsed = Number(normalized);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function getWordCountTargetFromProperties(
+    properties: readonly PropertyItem[] | null | undefined,
+    targetProperty: string
+): number | null {
+    const normalizedTargetProperty = casefold(targetProperty);
+    if (!properties || !normalizedTargetProperty) {
+        return null;
+    }
+
+    for (const property of properties) {
+        if (casefold(property.fieldKey) !== normalizedTargetProperty) {
+            continue;
+        }
+
+        const target = parseWordCountTargetValue(property.value);
+        if (target !== null) {
+            return target;
+        }
+    }
+
+    return null;
+}
+
+export function getCachedWordCountTargetFromFrontmatter(app: App, file: TFile, targetProperty: string): number | null {
+    const trimmedTargetProperty = targetProperty.trim();
+    if (file.extension !== 'md' || !trimmedTargetProperty) {
+        return null;
+    }
+
+    const frontmatter = app.metadataCache?.getFileCache(file)?.frontmatter;
+    if (!isRecord(frontmatter)) {
+        return null;
+    }
+
+    const targetKey = findMatchingRecordKey(frontmatter, trimmedTargetProperty);
+    return targetKey ? parseWordCountTargetValue(frontmatter[targetKey]) : null;
+}
+
+function formatWordCountDisplayText(params: {
+    wordCount: number | null | undefined;
+    targetWordCount?: number | null;
+    showTargetPercentage: boolean;
+}): string | null {
+    const { wordCount, targetWordCount = null, showTargetPercentage } = params;
+    if (typeof wordCount !== 'number' || !Number.isFinite(wordCount) || wordCount <= 0) {
+        return null;
+    }
+
+    const displayWordCount = Math.trunc(wordCount);
+    const formattedWordCount = formatTextCount(displayWordCount);
+    if (targetWordCount === null) {
+        return formattedWordCount;
+    }
+
+    const percent = Math.round((displayWordCount / targetWordCount) * 100);
+    const formattedPercent = Number.isFinite(percent) ? percent : 0;
+    if (showTargetPercentage) {
+        return `${formattedPercent}%`;
+    }
+
+    const formattedTarget = formatTextCount(targetWordCount);
+    return `${formattedWordCount} / ${formattedTarget}`;
+}
+
+export function getWordCountDisplayText(params: {
+    wordCount: number | null | undefined;
+    properties: readonly PropertyItem[] | null | undefined;
+    targetProperty: string;
+    showTargetPercentage: boolean;
+}): string | null {
+    const targetWordCount = getWordCountTargetFromProperties(params.properties, params.targetProperty);
+    return formatWordCountDisplayText({
+        wordCount: params.wordCount,
+        targetWordCount,
+        showTargetPercentage: params.showTargetPercentage
+    });
 }

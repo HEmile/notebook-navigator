@@ -20,9 +20,9 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { setIcon } from 'obsidian';
 import { getIconService, useIconServiceVersion } from '../../services/icons';
 import {
+    ItemType,
     NavigationPaneItemType,
     NavigationSectionId,
-    ItemType,
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
     RECENT_NOTES_VIRTUAL_FOLDER_ID,
     SHORTCUTS_VIRTUAL_FOLDER_ID,
@@ -38,17 +38,22 @@ import { VirtualFolderComponent, type VirtualFolderTrailingAction } from '../Vir
 import type { NavigationPaneRowProps } from './NavigationPaneItemRenderer.types';
 import type { TopicTreeItem as TopicTreeItemType } from '../../types/virtualization';
 import type { NavigationPaneRowContext } from './NavigationPaneItemRenderer.types';
-import { useTopicNavigation } from '../../hooks/useTopicNavigation';
+import { useExpansionDispatch } from '../../context/ExpansionContext';
 import { useContextMenu } from '../../hooks/useContextMenu';
+import { getNavigationItemSearchMatch } from './navigationPaneItemState';
+import { getNavigationItemRenderKey } from '../../utils/navigationIndex';
+import { strings } from '../../i18n';
 
 interface TopicRowProps {
     item: TopicTreeItemType;
     context: NavigationPaneRowContext;
+    isSelected: boolean;
+    isExpanded: boolean;
 }
 
-function TopicRow({ item, context }: TopicRowProps) {
-    const { settings, expansionState, expansionDispatch, selectionState } = context;
-    const { navigateToTopic } = useTopicNavigation();
+function TopicRow({ item, context, isSelected, isExpanded }: TopicRowProps) {
+    const { settings, tree } = context;
+    const expansionDispatch = useExpansionDispatch();
     const itemRef = useRef<HTMLDivElement>(null);
     const chevronRef = useRef<HTMLDivElement>(null);
     const iconRef = useRef<HTMLSpanElement>(null);
@@ -56,8 +61,6 @@ function TopicRow({ item, context }: TopicRowProps) {
 
     const topicNode = item.data;
     const topicPath = item.key;
-    const isExpanded = expansionState.expandedTopics?.has(topicPath) ?? false;
-    const isSelected = selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath === topicPath;
     const hasChildren = topicNode.children.size > 0;
     const level = item.level ?? 0;
     const icon = item.icon;
@@ -95,9 +98,9 @@ function TopicRow({ item, context }: TopicRowProps) {
     const handleClick = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation();
-            navigateToTopic(topicPath);
+            tree.handleTopicClick(topicPath);
         },
-        [navigateToTopic, topicPath]
+        [tree, topicPath]
     );
 
     const classes = ['nn-navitem', 'nn-tag'];
@@ -118,40 +121,43 @@ function TopicRow({ item, context }: TopicRowProps) {
                     className={`nn-navitem-chevron ${hasChildren ? 'nn-navitem-chevron--has-children' : 'nn-navitem-chevron--no-children'}`}
                     onClick={handleChevronClick}
                 />
-                {settings.showTagIcons && (
-                    <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />
-                )}
-                <span className="nn-navitem-name" style={applyColorToName ? { color } : undefined}>{topicNode.name}</span>
+                {settings.showTagIcons && <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />}
+                <span className="nn-navitem-name" style={applyColorToName ? { color } : undefined}>
+                    {topicNode.name}
+                </span>
                 <span className="nn-navitem-spacer" />
-                {settings.showNoteCount && item.noteCount && (
-                    <span className="nn-navitem-count">{item.noteCount.total}</span>
-                )}
+                {settings.showNoteCount && item.noteCount && <span className="nn-navitem-count">{item.noteCount.total}</span>}
             </div>
         </div>
     );
 }
 
-export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps) {
+export function NavigationPaneTreeRow({
+    item,
+    context,
+    adjacentFilledClassName,
+    isSelected,
+    isExpanded,
+    renameTarget
+}: NavigationPaneRowProps) {
     const {
         settings,
         isMobile,
-        expansionState,
-        expansionDispatch,
-        selectionState,
         indentGuideLevelsByKey,
         firstSectionId,
         firstInlineFolderPath,
         shouldPinShortcuts,
-        shortcutsExpanded,
-        recentNotesExpanded,
         folderCounts,
         tagCounts,
         propertyCounts,
         vaultChangeVersion,
+        descendantExcludedFolders,
         getSolidBackground,
         shortcuts,
+        shortcutUiState,
         tree,
         searchHighlights,
+        inlineRename,
         onSectionContextMenu
     } = context;
 
@@ -159,7 +165,7 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
         case NavigationPaneItemType.FOLDER: {
             const folderPath = item.data.path;
             const countInfo = folderCounts.get(folderPath);
-            const indentGuideLevels = indentGuideLevelsByKey.get(item.key);
+            const indentGuideLevels = indentGuideLevelsByKey.get(getNavigationItemRenderKey(item));
             const shouldHideFolderSeparatorActions =
                 shouldPinShortcuts && firstInlineFolderPath !== null && folderPath === firstInlineFolderPath;
 
@@ -169,61 +175,52 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
                     displayName={item.displayName}
                     level={item.level}
                     indentGuideLevels={indentGuideLevels}
-                    isExpanded={expansionState.expandedFolders.has(item.data.path)}
-                    isSelected={selectionState.selectionType === ItemType.FOLDER && selectionState.selectedFolder?.path === folderPath}
+                    isExpanded={isExpanded}
+                    isSelected={isSelected}
                     isExcluded={item.isExcluded}
                     onToggle={() => tree.handleFolderToggle(item.data.path)}
                     onClick={() => tree.handleFolderClick(item.data)}
                     onNameClick={event => tree.handleFolderNameClick(item.data, event)}
                     onNameMouseDown={event => tree.handleFolderNameMouseDown(item.data, event)}
-                    onToggleAllSiblings={() => {
-                        const isCurrentlyExpanded = expansionState.expandedFolders.has(item.data.path);
-                        tree.handleFolderToggle(item.data.path);
-                        const descendantPaths = tree.getAllDescendantFolders(item.data);
-                        if (descendantPaths.length > 0) {
-                            expansionDispatch({
-                                type: 'TOGGLE_DESCENDANT_FOLDERS',
-                                descendantPaths,
-                                expand: !isCurrentlyExpanded
-                            });
-                        }
-                    }}
+                    onToggleAllSiblings={() => tree.handleFolderToggleAllSiblings(item.data)}
                     icon={item.icon}
                     color={item.color}
                     backgroundColor={getSolidBackground(item.backgroundColor)}
+                    adjacentFilledClassName={adjacentFilledClassName}
                     countInfo={countInfo}
                     excludedFolders={item.parsedExcludedFolders || []}
+                    descendantExcludedFolders={descendantExcludedFolders}
                     vaultChangeVersion={vaultChangeVersion}
                     disableNavigationSeparatorActions={shouldHideFolderSeparatorActions}
+                    onStartInlineRename={inlineRename.startFolder}
+                    inlineRename={
+                        renameTarget
+                            ? {
+                                  initialValue: renameTarget.initialValue,
+                                  ariaLabel: strings.contextMenu.folder.renameFolder,
+                                  onCommit: value => inlineRename.commit(renameTarget, value),
+                                  onCancel: inlineRename.cancel,
+                                  onRestoreFocus: inlineRename.restoreFocus
+                              }
+                            : undefined
+                    }
                 />
             );
         }
 
         case NavigationPaneItemType.VIRTUAL_FOLDER: {
             const virtualFolder = item.data;
-            const indentGuideLevels = indentGuideLevelsByKey.get(item.key);
+            const indentGuideLevels = indentGuideLevelsByKey.get(getNavigationItemRenderKey(item));
             const isShortcutsGroup = virtualFolder.id === SHORTCUTS_VIRTUAL_FOLDER_ID;
             const isRecentNotesGroup = virtualFolder.id === RECENT_NOTES_VIRTUAL_FOLDER_ID;
             const hasChildren = item.hasChildren ?? false;
-            const isExpanded = isShortcutsGroup
-                ? shortcutsExpanded
-                : isRecentNotesGroup
-                  ? recentNotesExpanded
-                  : expansionState.expandedVirtualFolders.has(virtualFolder.id);
             const tagCollectionId = item.tagCollectionId ?? null;
             const propertyCollectionId = item.propertyCollectionId ?? null;
             const isTagCollection = Boolean(tagCollectionId);
             const isPropertyCollection = Boolean(propertyCollectionId);
-            const isPropertyCollectionSelected =
-                isPropertyCollection &&
-                selectionState.selectionType === ItemType.PROPERTY &&
-                selectionState.selectedProperty === propertyCollectionId;
-            const isSelected =
-                (isTagCollection && selectionState.selectionType === ItemType.TAG && selectionState.selectedTag === tagCollectionId) ||
-                isPropertyCollectionSelected;
             const collectionCountInfo = item.noteCount ?? (tagCollectionId ? tagCounts.get(tagCollectionId) : undefined);
             const showFileCount = item.showFileCount ?? false;
-            const collectionSearchMatch = searchHighlights.getTagCollectionSearchMatch(tagCollectionId);
+            const collectionSearchMatch = getNavigationItemSearchMatch(item, searchHighlights);
             const dropConfig =
                 virtualFolder.id === TAGS_ROOT_VIRTUAL_FOLDER_ID
                     ? {
@@ -255,9 +252,9 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
             const isPropertiesGroup = virtualFolder.id === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
             const isTagsGroup = virtualFolder.id === TAGS_ROOT_VIRTUAL_FOLDER_ID;
             const trailingAction: VirtualFolderTrailingAction | undefined = isShortcutsGroup
-                ? shortcuts.shortcutHeaderTrailingAction
+                ? shortcutUiState.shortcutHeaderTrailingAction
                 : isPropertiesGroup
-                  ? shortcuts.propertiesHeaderTrailingAction
+                  ? shortcutUiState.propertiesHeaderTrailingAction
                   : undefined;
 
             return (
@@ -266,11 +263,13 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
                     level={item.level}
                     color={item.color}
                     backgroundColor={getSolidBackground(item.backgroundColor)}
+                    adjacentFilledClassName={adjacentFilledClassName}
                     indentGuideLevels={indentGuideLevels}
                     isExpanded={isExpanded}
                     hasChildren={hasChildren}
-                    isSelected={Boolean(isSelected)}
+                    isSelected={isSelected}
                     showFileCount={showFileCount}
+                    showCountLeader={!isShortcutsGroup && !isRecentNotesGroup}
                     countInfo={collectionCountInfo}
                     searchMatch={collectionSearchMatch}
                     trailingAction={trailingAction}
@@ -283,36 +282,12 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
                     }
                     onToggle={() => tree.handleVirtualFolderToggle(virtualFolder.id)}
                     onToggleAllSiblings={
-                        isTagsGroup
-                            ? () => {
-                                  const isCurrentlyExpanded = expansionState.expandedVirtualFolders.has(virtualFolder.id);
-                                  tree.handleVirtualFolderToggle(virtualFolder.id);
-                                  const descendantPaths = tree.getAllTagPaths();
-                                  if (descendantPaths.length > 0) {
-                                      expansionDispatch({
-                                          type: 'TOGGLE_DESCENDANT_TAGS',
-                                          descendantPaths,
-                                          expand: !isCurrentlyExpanded
-                                      });
-                                  }
-                              }
-                            : isPropertiesGroup
-                              ? () => {
-                                    const isCurrentlyExpanded = expansionState.expandedVirtualFolders.has(virtualFolder.id);
-                                    tree.handleVirtualFolderToggle(virtualFolder.id);
-                                    const descendantNodeIds = tree.getAllPropertyNodeIds();
-                                    if (descendantNodeIds.length > 0) {
-                                        expansionDispatch({
-                                            type: 'TOGGLE_DESCENDANT_PROPERTIES',
-                                            descendantNodeIds,
-                                            expand: !isCurrentlyExpanded
-                                        });
-                                    }
-                                }
-                              : undefined
+                        isTagsGroup || isPropertiesGroup ? () => tree.handleVirtualFolderToggleAllSiblings(virtualFolder.id) : undefined
                     }
-                    onDragOver={isShortcutsGroup && shortcuts.allowEmptyShortcutDrop ? shortcuts.handleShortcutRootDragOver : undefined}
-                    onDrop={isShortcutsGroup && shortcuts.allowEmptyShortcutDrop ? shortcuts.handleShortcutRootDrop : undefined}
+                    onDragOver={
+                        isShortcutsGroup && shortcutUiState.allowEmptyShortcutDrop ? shortcuts.handleShortcutRootDragOver : undefined
+                    }
+                    onDrop={isShortcutsGroup && shortcutUiState.allowEmptyShortcutDrop ? shortcuts.handleShortcutRootDrop : undefined}
                     dropConfig={dropConfig}
                     onContextMenu={sectionContextMenu}
                 />
@@ -322,38 +297,41 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
         case NavigationPaneItemType.TAG:
         case NavigationPaneItemType.UNTAGGED: {
             const tagNode = item.data;
-            const indentGuideLevels = indentGuideLevelsByKey.get(item.key);
-            const searchMatch = searchHighlights.getTagSearchMatch(tagNode.path);
+            const indentGuideLevels = indentGuideLevelsByKey.get(getNavigationItemRenderKey(item));
+            const searchMatch = getNavigationItemSearchMatch(item, searchHighlights);
+            const inclusionOperator = searchMatch === 'include' ? searchHighlights.getTagInclusionOperator(tagNode.path) : undefined;
 
             return (
                 <TagTreeItem
                     tagNode={tagNode}
                     level={item.level ?? 0}
                     indentGuideLevels={indentGuideLevels}
-                    isExpanded={expansionState.expandedTags.has(tagNode.path)}
-                    isSelected={selectionState.selectionType === ItemType.TAG && selectionState.selectedTag === tagNode.path}
+                    isExpanded={isExpanded}
+                    isSelected={isSelected}
                     isHidden={'isHidden' in item ? item.isHidden : false}
                     onToggle={() => tree.handleTagToggle(tagNode.path)}
                     onClick={event => tree.handleTagClick(tagNode.path, event)}
                     color={item.color}
                     backgroundColor={getSolidBackground(item.backgroundColor)}
+                    adjacentFilledClassName={adjacentFilledClassName}
                     icon={item.icon}
                     searchMatch={searchMatch}
+                    inclusionOperator={inclusionOperator}
                     isDraggable={!isMobile && tagNode.path !== UNTAGGED_TAG_ID && tagNode.path !== TAGGED_TAG_ID}
-                    onToggleAllSiblings={() => {
-                        const isCurrentlyExpanded = expansionState.expandedTags.has(tagNode.path);
-                        tree.handleTagToggle(tagNode.path);
-                        const descendantPaths = tree.getAllDescendantTags(tagNode.path);
-                        if (descendantPaths.length > 0) {
-                            expansionDispatch({
-                                type: 'TOGGLE_DESCENDANT_TAGS',
-                                descendantPaths,
-                                expand: !isCurrentlyExpanded
-                            });
-                        }
-                    }}
+                    onToggleAllSiblings={() => tree.handleTagToggleAllSiblings(tagNode.path)}
                     countInfo={item.noteCount ?? tagCounts.get(tagNode.path)}
                     showFileCount={settings.showNoteCount}
+                    inlineRename={
+                        renameTarget
+                            ? {
+                                  initialValue: renameTarget.initialValue,
+                                  ariaLabel: strings.modals.tagOperation.confirmRename,
+                                  onCommit: value => inlineRename.commit(renameTarget, value),
+                                  onCancel: inlineRename.cancel,
+                                  onRestoreFocus: inlineRename.restoreFocus
+                              }
+                            : undefined
+                    }
                 />
             );
         }
@@ -361,44 +339,47 @@ export function NavigationPaneTreeRow({ item, context }: NavigationPaneRowProps)
         case NavigationPaneItemType.PROPERTY_KEY:
         case NavigationPaneItemType.PROPERTY_VALUE: {
             const propertyNode = item.data;
-            const indentGuideLevels = indentGuideLevelsByKey.get(item.key);
-            const selectedPropertyNodeId = selectionState.selectionType === ItemType.PROPERTY ? selectionState.selectedProperty : null;
-            const searchMatch = searchHighlights.getPropertySearchMatch(propertyNode.id);
+            const indentGuideLevels = indentGuideLevelsByKey.get(getNavigationItemRenderKey(item));
+            const searchMatch = getNavigationItemSearchMatch(item, searchHighlights);
+            const inclusionOperator =
+                searchMatch === 'include' ? searchHighlights.getPropertyInclusionOperator(propertyNode.id) : undefined;
 
             return (
                 <PropertyTreeItem
                     propertyNode={propertyNode}
                     level={item.level ?? 0}
                     indentGuideLevels={indentGuideLevels}
-                    isExpanded={expansionState.expandedProperties.has(propertyNode.id)}
-                    isSelected={selectedPropertyNodeId === propertyNode.id}
+                    isExpanded={isExpanded}
+                    isSelected={isSelected}
                     onToggle={() => tree.handlePropertyToggle(propertyNode.id)}
                     onClick={event => tree.handlePropertyClick(propertyNode, event)}
-                    onToggleAllSiblings={() => {
-                        const isCurrentlyExpanded = expansionState.expandedProperties.has(propertyNode.id);
-                        tree.handlePropertyToggle(propertyNode.id);
-                        const descendantNodeIds = tree.getAllDescendantPropertyNodeIds(propertyNode);
-                        if (descendantNodeIds.length > 0) {
-                            expansionDispatch({
-                                type: 'TOGGLE_DESCENDANT_PROPERTIES',
-                                descendantNodeIds,
-                                expand: !isCurrentlyExpanded
-                            });
-                        }
-                    }}
+                    onToggleAllSiblings={() => tree.handlePropertyToggleAllSiblings(propertyNode)}
                     color={item.color}
                     backgroundColor={getSolidBackground(item.backgroundColor)}
+                    adjacentFilledClassName={adjacentFilledClassName}
                     icon={item.icon}
                     searchMatch={searchMatch}
+                    inclusionOperator={inclusionOperator}
                     isDraggable={!isMobile}
                     countInfo={propertyCounts.get(propertyNode.id)}
                     showFileCount={settings.showNoteCount}
+                    inlineRename={
+                        renameTarget
+                            ? {
+                                  initialValue: renameTarget.initialValue,
+                                  ariaLabel: strings.contextMenu.property.renameKey,
+                                  onCommit: value => inlineRename.commit(renameTarget, value),
+                                  onCancel: inlineRename.cancel,
+                                  onRestoreFocus: inlineRename.restoreFocus
+                              }
+                            : undefined
+                    }
                 />
             );
         }
 
         case NavigationPaneItemType.TOPIC:
-            return <TopicRow item={item} context={context} />;
+            return <TopicRow item={item} context={context} isSelected={isSelected} isExpanded={isExpanded} />;
 
         case NavigationPaneItemType.TOP_SPACER: {
             const spacerClass = item.hasSeparator ? 'nn-nav-top-spacer nn-nav-spacer--with-separator' : 'nn-nav-top-spacer';

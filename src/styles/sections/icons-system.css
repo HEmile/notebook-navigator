@@ -13,12 +13,15 @@
 /* Emoji icon styles */
 .nn-emoji-icon {
     font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+    font-style: normal;
+    font-weight: normal;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     text-align: center;
+    text-decoration: none;
 
     /* Prevent text selection of emoji icons */
     user-select: none;
@@ -35,13 +38,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-/* Prevent emoji icons from being affected by text styles */
-.nn-emoji-icon {
-    font-style: normal;
-    font-weight: normal;
-    text-decoration: none;
 }
 
 /* Ensure proper sizing when used in buttons */
@@ -72,11 +68,6 @@
 .nn-mobile-toolbar-button > span > svg,
 .nn-navigation-calendar-nav-button > span > svg {
     display: block;
-}
-
-/* Icon Picker Modal Styles */
-.modal.nn-icon-picker-modal .modal-content {
-    min-height: 380px;
 }
 
 /* Icon font styles */
@@ -148,7 +139,7 @@
 }
 
 .nn-icon-provider-link-row {
-    padding: 8px 12px 0 12px;
+    padding: 8px 12px 0;
     text-align: center;
 }
 
@@ -188,17 +179,4 @@
 /* Emoji preview in icon picker */
 .nn-icon-item-preview.nn-emoji-preview {
     font-size: 24px;
-}
-
-/* Icon section headers for categories */
-.nn-icon-section-header {
-    font-size: var(--font-ui-small);
-    font-weight: 600;
-    color: var(--nn-theme-foreground-muted);
-    margin-top: 12px;
-    margin-bottom: 4px;
-}
-
-.nn-icon-section-header:first-child {
-    margin-top: 0;
 }

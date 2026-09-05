@@ -26,6 +26,10 @@ import type { FileData } from '../../src/storage/IndexedDBStorage';
 import { deriveFileMetadata } from '../utils/pathMetadata';
 
 class TestMarkdownPipelineContentProvider extends MarkdownPipelineContentProvider {
+    shouldProcess(fileData: FileData | null, file: TFile, settings: NotebookNavigatorSettings): boolean {
+        return this.needsProcessing(fileData, file, settings);
+    }
+
     async runTasks(
         file: TFile,
         fileData: FileData | null,
@@ -50,7 +54,6 @@ function createSettings(overrides?: Partial<NotebookNavigatorSettings>): Noteboo
         ...DEFAULT_SETTINGS,
         showFilePreview: false,
         showFeatureImage: false,
-        notePropertyType: 'wordCount',
         ...overrides
     };
 }
@@ -123,6 +126,18 @@ function setMarkdownContent(context: ReturnType<typeof createApp>, file: TFile, 
     if (typeof bodyStartIndex === 'number' && bodyStartIndex > 0) {
         metadata.frontmatterPosition = createFrontmatterPosition(bodyStartIndex);
     }
+    if (/^(?:>\s*)*(?:[-*]|\d+\.)\s+\[[^\]]?\]/m.test(content)) {
+        metadata.listItems = [
+            {
+                parent: -1,
+                position: {
+                    start: { line: 0, col: 0, offset: 0 },
+                    end: { line: 0, col: 10, offset: 10 }
+                },
+                task: ' '
+            }
+        ];
+    }
 
     context.cachedMetadataByPath.set(file.path, metadata);
 }
@@ -136,9 +151,11 @@ function createFileData(overrides: Partial<FileData>): FileData {
         fileThumbnailsMtime: 0,
         tags: null,
         wordCount: 0,
+        characterCountWithSpaces: 0,
+        characterCountWithoutSpaces: 0,
         taskTotal: null,
         taskUnfinished: null,
-        properties: null,
+        properties: [],
         previewStatus: 'unprocessed',
         featureImage: null,
         featureImageStatus: 'unprocessed',
@@ -148,7 +165,95 @@ function createFileData(overrides: Partial<FileData>): FileData {
     };
 }
 
+function createTaskMetadata(tasks: string[]): CachedMetadata {
+    return {
+        listItems: tasks.map((task, index) => ({
+            parent: -index,
+            position: {
+                start: { line: index, col: 0, offset: index },
+                end: { line: index, col: 10, offset: index + 10 }
+            },
+            task
+        }))
+    };
+}
+
 describe('MarkdownPipelineContentProvider task counters', () => {
+    it('processes stale files with no task items so property metadata can refresh', () => {
+        const context = createApp();
+        const settings = createSettings();
+        const provider = new TestMarkdownPipelineContentProvider(context.app);
+        const file = createFile('notes/note.md');
+        file.stat.mtime = 200;
+        context.cachedMetadataByPath.set(file.path, { listItems: [] });
+
+        const fileData = createFileData({
+            mtime: file.stat.mtime,
+            markdownPipelineMtime: 100,
+            taskTotal: 0,
+            taskUnfinished: 0
+        });
+
+        expect(provider.shouldProcess(fileData, file, settings)).toBe(true);
+    });
+
+    it('processes stale files with no list items so property metadata can refresh', () => {
+        const context = createApp();
+        const settings = createSettings();
+        const provider = new TestMarkdownPipelineContentProvider(context.app);
+        const file = createFile('notes/note.md');
+        file.stat.mtime = 200;
+        context.cachedMetadataByPath.set(file.path, {});
+
+        const fileData = createFileData({
+            mtime: file.stat.mtime,
+            markdownPipelineMtime: 100,
+            taskTotal: 0,
+            taskUnfinished: 0
+        });
+
+        expect(provider.shouldProcess(fileData, file, settings)).toBe(true);
+    });
+
+    it('processes recent frontmatter-free files without metadata-cache retries', async () => {
+        const context = createApp();
+        const settings = createSettings();
+        const provider = new TestMarkdownPipelineContentProvider(context.app);
+        const file = createFile('notes/note.md');
+        file.stat.mtime = Date.now();
+        context.cachedMetadataByPath.set(file.path, { listItems: [] });
+
+        const fileData = createFileData({
+            mtime: file.stat.mtime,
+            markdownPipelineMtime: file.stat.mtime - 1,
+            taskTotal: 0,
+            taskUnfinished: 0,
+            properties: []
+        });
+
+        const result = await provider.runProcessFile(file, fileData, settings);
+
+        expect(result).toEqual({ update: null, processed: true });
+    });
+
+    it('processes stale task-only files when metadata contains task items', () => {
+        const context = createApp();
+        const settings = createSettings();
+        const provider = new TestMarkdownPipelineContentProvider(context.app);
+        const file = createFile('notes/note.md');
+        file.stat.mtime = 200;
+        context.cachedMetadataByPath.set(file.path, createTaskMetadata([' ', 'x']));
+
+        const fileData = createFileData({
+            mtime: file.stat.mtime,
+            markdownPipelineMtime: 100,
+            taskTotal: 2,
+            taskUnfinished: 1
+        });
+
+        expect(provider.shouldProcess(fileData, file, settings)).toBe(true);
+    });
+
     it('counts list item checkboxes with supported markers', async () => {
         const context = createApp();
         const settings = createSettings();
@@ -278,7 +383,7 @@ describe('MarkdownPipelineContentProvider task counters', () => {
         const file = createFile('notes/note.md');
         file.stat.mtime = 200;
         file.stat.size = LIMITS.markdown.maxReadBytes.desktop + 1;
-        context.cachedMetadataByPath.set(file.path, {});
+        context.cachedMetadataByPath.set(file.path, createTaskMetadata([' ']));
 
         const fileData = createFileData({
             mtime: file.stat.mtime,
@@ -300,7 +405,7 @@ describe('MarkdownPipelineContentProvider task counters', () => {
         const file = createFile('notes/note.md');
         file.stat.mtime = 200;
         file.stat.size = LIMITS.markdown.maxReadBytes.desktop + 1;
-        context.cachedMetadataByPath.set(file.path, {});
+        context.cachedMetadataByPath.set(file.path, createTaskMetadata([' ']));
 
         const fileData = createFileData({
             mtime: file.stat.mtime,
@@ -323,7 +428,7 @@ describe('MarkdownPipelineContentProvider task counters', () => {
         file.stat.mtime = 200;
         file.stat.size = 1;
 
-        context.cachedMetadataByPath.set(file.path, {});
+        context.cachedMetadataByPath.set(file.path, createTaskMetadata([' ']));
         context.app.vault.cachedRead = async () => {
             throw new Error('read failed');
         };
@@ -354,7 +459,7 @@ describe('MarkdownPipelineContentProvider task counters', () => {
         file.stat.mtime = 200;
         file.stat.size = 1;
 
-        context.cachedMetadataByPath.set(file.path, {});
+        context.cachedMetadataByPath.set(file.path, createTaskMetadata([' ']));
         context.app.vault.cachedRead = async () => {
             throw new Error('read failed');
         };

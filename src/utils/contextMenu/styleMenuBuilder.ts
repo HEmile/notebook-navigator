@@ -18,9 +18,10 @@
 
 import { App, Menu, MenuItem } from 'obsidian';
 import { strings } from '../../i18n';
-import { ItemType } from '../../types';
 import { MetadataService } from '../../services/MetadataService';
-import { setAsyncOnClick, tryCreateSubmenu } from './menuAsyncHelpers';
+import { resolveFolderDisplayName } from '../folderDisplayName';
+import { resolveNavigationFolderIcon } from '../uxIcons';
+import { setAsyncOnClick, setSubmenuOnClick, tryCreateSubmenu } from './menuAsyncHelpers';
 import { copyStyleToClipboard, getStyleClipboard, hasStyleData, type StyleClipboardData } from './styleClipboard';
 
 /**
@@ -55,6 +56,7 @@ interface AddFolderStyleChangeActionsParams {
     metadataService: MetadataService;
     folderPath: string;
     showFolderIcons: boolean;
+    defaultIcon?: string;
 }
 
 interface FolderStyleMenuData {
@@ -70,27 +72,48 @@ interface FolderStyleMenuData {
  * Adds folder icon/color/background actions to a context menu.
  */
 export function addFolderStyleChangeActions(params: AddFolderStyleChangeActionsParams): void {
-    const { menu, app, metadataService, folderPath, showFolderIcons } = params;
-    const folderLabel = folderPath.split('/').pop() || folderPath;
-
-    if (showFolderIcons) {
-        menu.addItem((item: MenuItem) => {
-            setAsyncOnClick(item.setTitle(strings.contextMenu.folder.changeIcon).setIcon('lucide-image'), async () => {
-                const { IconPickerModal } = await import('../../modals/IconPickerModal');
-                const modal = new IconPickerModal(app, metadataService, folderPath, ItemType.FOLDER);
-                modal.open();
-            });
+    const { menu, app, metadataService, folderPath, showFolderIcons, defaultIcon } = params;
+    const currentFolderIcon = metadataService.getFolderIcon(folderPath) ?? null;
+    // The vault root keeps its icon when folder icons are disabled, so its icon editor must remain available.
+    const canChangeFolderIcon = showFolderIcons || folderPath === '/';
+    const resolvedDefaultIcon =
+        defaultIcon ??
+        resolveNavigationFolderIcon({
+            interfaceIcons: metadataService.getSettingsProvider().settings.interfaceIcons,
+            isRoot: folderPath === '/',
+            hasChildren: false,
+            isExpanded: false
         });
-    }
+    const folderLabel = resolveFolderDisplayName({
+        app,
+        metadataService,
+        settings: metadataService.getSettingsProvider().settings,
+        folderPath,
+        fallbackName: folderPath.split('/').pop() || folderPath
+    });
+    const openAppearanceModal = async (initialTab: 'icon' | 'color' | 'background'): Promise<void> => {
+        const { AppearanceModal } = await import('../../modals/AppearanceModal');
+        const modal = new AppearanceModal(app, {
+            title: folderLabel,
+            metadataService,
+            initialTab,
+            defaultIcon: canChangeFolderIcon ? resolvedDefaultIcon : null,
+            icon: canChangeFolderIcon
+                ? {
+                      initial: currentFolderIcon,
+                      apply: async iconId => {
+                          if (iconId === null) {
+                              await metadataService.removeFolderIcon(folderPath);
+                              return;
+                          }
 
-    menu.addItem((item: MenuItem) => {
-        setAsyncOnClick(item.setTitle(strings.contextMenu.folder.changeColor).setIcon('lucide-palette'), async () => {
-            const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, {
-                title: folderLabel,
-                initialColor: metadataService.getFolderColor(folderPath) ?? null,
-                settingsProvider: metadataService.getSettingsProvider(),
-                onChooseColor: async color => {
+                          await metadataService.setFolderIcon(folderPath, iconId);
+                      }
+                  }
+                : undefined,
+            color: {
+                initial: metadataService.getFolderColor(folderPath) ?? null,
+                apply: async color => {
                     if (color === null) {
                         await metadataService.removeFolderColor(folderPath);
                         return;
@@ -98,19 +121,10 @@ export function addFolderStyleChangeActions(params: AddFolderStyleChangeActionsP
 
                     await metadataService.setFolderColor(folderPath, color);
                 }
-            });
-            modal.open();
-        });
-    });
-
-    menu.addItem((item: MenuItem) => {
-        setAsyncOnClick(item.setTitle(strings.contextMenu.folder.changeBackground).setIcon('lucide-paint-bucket'), async () => {
-            const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, {
-                title: folderLabel,
-                initialColor: metadataService.getFolderBackgroundColor(folderPath) ?? null,
-                settingsProvider: metadataService.getSettingsProvider(),
-                onChooseColor: async color => {
+            },
+            background: {
+                initial: metadataService.getFolderBackgroundColor(folderPath) ?? null,
+                apply: async color => {
                     if (color === null) {
                         await metadataService.removeFolderBackgroundColor(folderPath);
                         return;
@@ -118,8 +132,28 @@ export function addFolderStyleChangeActions(params: AddFolderStyleChangeActionsP
 
                     await metadataService.setFolderBackgroundColor(folderPath, color);
                 }
+            }
+        });
+        modal.open();
+    };
+
+    if (canChangeFolderIcon) {
+        menu.addItem((item: MenuItem) => {
+            setAsyncOnClick(item.setTitle(strings.contextMenu.folder.changeIcon).setIcon('lucide-image'), () => {
+                return openAppearanceModal('icon');
             });
-            modal.open();
+        });
+    }
+
+    menu.addItem((item: MenuItem) => {
+        setAsyncOnClick(item.setTitle(strings.contextMenu.folder.changeColor).setIcon('lucide-palette'), () => {
+            return openAppearanceModal('color');
+        });
+    });
+
+    menu.addItem((item: MenuItem) => {
+        setAsyncOnClick(item.setTitle(strings.contextMenu.folder.changeBackground).setIcon('lucide-paint-bucket'), () => {
+            return openAppearanceModal('background');
         });
     });
 }
@@ -229,8 +263,8 @@ export function addStyleMenu(config: StyleMenuConfig): void {
 
     const hasSupportedClipboardData = Boolean(
         (hasIconSupport && clipboardData?.icon) ||
-            (hasColorSupport && clipboardData?.color) ||
-            (hasBackgroundSupport && clipboardData?.background)
+        (hasColorSupport && clipboardData?.color) ||
+        (hasBackgroundSupport && clipboardData?.background)
     );
 
     const hasRemovableIcon = Boolean(config.removeIcon && hasIconSupport);
@@ -259,7 +293,7 @@ export function addStyleMenu(config: StyleMenuConfig): void {
 
         if (hasCopyableStyle) {
             styleSubmenu.addItem(subItem => {
-                setAsyncOnClick(subItem.setTitle(strings.contextMenu.style.copy).setIcon('lucide-copy'), async () => {
+                setSubmenuOnClick(config.menu, subItem.setTitle(strings.contextMenu.style.copy).setIcon('lucide-copy'), async () => {
                     copyStyleToClipboard(config.styleData);
                 });
             });
@@ -267,54 +301,70 @@ export function addStyleMenu(config: StyleMenuConfig): void {
 
         if (hasPasteableStyle) {
             styleSubmenu.addItem(subItem => {
-                setAsyncOnClick(subItem.setTitle(strings.contextMenu.style.paste).setIcon('lucide-clipboard-check'), async () => {
-                    const clipboard = getStyleClipboard();
-                    if (!clipboard || !hasStyleData(clipboard.data) || !config.applyStyle) {
-                        return;
+                setSubmenuOnClick(
+                    config.menu,
+                    subItem.setTitle(strings.contextMenu.style.paste).setIcon('lucide-clipboard-check'),
+                    async () => {
+                        const clipboard = getStyleClipboard();
+                        if (!clipboard || !hasStyleData(clipboard.data) || !config.applyStyle) {
+                            return;
+                        }
+
+                        const supportedClipboardData: StyleClipboardData = {
+                            icon: hasIconSupport ? clipboard.data.icon : undefined,
+                            color: hasColorSupport ? clipboard.data.color : undefined,
+                            background: hasBackgroundSupport ? clipboard.data.background : undefined
+                        };
+
+                        if (!hasStyleData(supportedClipboardData)) {
+                            return;
+                        }
+
+                        await config.applyStyle(supportedClipboardData);
                     }
-
-                    const supportedClipboardData: StyleClipboardData = {
-                        icon: hasIconSupport ? clipboard.data.icon : undefined,
-                        color: hasColorSupport ? clipboard.data.color : undefined,
-                        background: hasBackgroundSupport ? clipboard.data.background : undefined
-                    };
-
-                    if (!hasStyleData(supportedClipboardData)) {
-                        return;
-                    }
-
-                    await config.applyStyle(supportedClipboardData);
-                });
+                );
             });
         }
 
         if (showIndividualRemovers && hasRemovableIcon) {
             styleSubmenu.addItem(subItem => {
-                setAsyncOnClick(subItem.setTitle(strings.contextMenu.style.removeIcon).setIcon('lucide-image-off'), async () => {
-                    await config.removeIcon?.();
-                });
+                setSubmenuOnClick(
+                    config.menu,
+                    subItem.setTitle(strings.contextMenu.style.removeIcon).setIcon('lucide-image-off'),
+                    async () => {
+                        await config.removeIcon?.();
+                    }
+                );
             });
         }
 
         if (showIndividualRemovers && hasRemovableColor) {
             styleSubmenu.addItem(subItem => {
-                setAsyncOnClick(subItem.setTitle(strings.contextMenu.style.removeColor).setIcon('lucide-palette'), async () => {
-                    await config.removeColor?.();
-                });
+                setSubmenuOnClick(
+                    config.menu,
+                    subItem.setTitle(strings.contextMenu.style.removeColor).setIcon('lucide-palette'),
+                    async () => {
+                        await config.removeColor?.();
+                    }
+                );
             });
         }
 
         if (showIndividualRemovers && hasRemovableBackground) {
             styleSubmenu.addItem(subItem => {
-                setAsyncOnClick(subItem.setTitle(strings.contextMenu.style.removeBackground).setIcon('lucide-paint-bucket'), async () => {
-                    await config.removeBackground?.();
-                });
+                setSubmenuOnClick(
+                    config.menu,
+                    subItem.setTitle(strings.contextMenu.style.removeBackground).setIcon('lucide-paint-bucket'),
+                    async () => {
+                        await config.removeBackground?.();
+                    }
+                );
             });
         }
 
         if (showClearAction && hasClearAction) {
             styleSubmenu.addItem(subItem => {
-                setAsyncOnClick(subItem.setTitle(strings.contextMenu.style.clear).setIcon('lucide-eraser'), async () => {
+                setSubmenuOnClick(config.menu, subItem.setTitle(strings.contextMenu.style.clear).setIcon('lucide-eraser'), async () => {
                     if (config.clearStyle) {
                         // Single clear action path for item types that support unified metadata updates.
                         await config.clearStyle();

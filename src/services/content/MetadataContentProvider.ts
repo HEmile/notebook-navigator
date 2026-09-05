@@ -18,7 +18,7 @@
 
 import { TFile } from 'obsidian';
 import { type ContentProviderType } from '../../interfaces/IContentProvider';
-import { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { FileData } from '../../storage/IndexedDBStorage';
 import { getDBInstance } from '../../storage/fileOperations';
 import { extractMetadataFromCache } from '../../utils/metadataExtractor';

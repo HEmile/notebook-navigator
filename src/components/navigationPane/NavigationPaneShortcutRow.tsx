@@ -19,14 +19,17 @@
 import React from 'react';
 import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
-import { NavigationPaneItemType } from '../../types';
+import { ItemType, NavigationPaneItemType } from '../../types';
 import type { ShortcutContextMenuTarget } from '../../hooks/navigationPane/navigationPaneShortcutTypes';
 import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isTagShortcut, isTopicShortcut } from '../../types/shortcuts';
 import { runAsyncAction } from '../../utils/async';
 import { resolveUXIcon } from '../../utils/uxIcons';
-import { getFolderNote } from '../../utils/folderNotes';
+import { getFolderNote } from '../../utils/folderNoteLookup';
 import { getExtensionSuffix, shouldShowExtensionSuffix } from '../../utils/fileTypeUtils';
+import { shouldExcludeFolderFromDescendants } from '../../utils/fileFilters';
 import { getPathBaseName } from '../../utils/pathUtils';
+import { buildFolderTooltip } from '../../utils/navigationTooltipUtils';
+import { FileTooltipContent, FileTooltipTagRow } from '../FileTooltipContent';
 import { ShortcutItem } from '../ShortcutItem';
 import type { NavigationPaneRowProps } from './NavigationPaneItemRenderer.types';
 
@@ -55,8 +58,9 @@ function SortableShortcutItem({ sortableId, canReorder, ...rest }: SortableShort
     );
 }
 
-export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowProps) {
-    const { app, settings, showHiddenItems, getFileDisplayName, getSolidBackground, shortcuts } = context;
+export function NavigationPaneShortcutRow({ item, context, adjacentFilledClassName, isDragSource }: NavigationPaneRowProps) {
+    const { app, settings, showHiddenItems, getFileDisplayName, getSolidBackground, shortcuts, shortcutUiState } = context;
+    const shouldShowTooltip = !context.isMobile && settings.showTooltips;
 
     switch (item.type) {
         case NavigationPaneItemType.SHORTCUT_FOLDER: {
@@ -71,7 +75,7 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
             const isRootShortcut = folderPath === '/';
             const folderName = (() => {
                 if (isRootShortcut) {
-                    return settings.customVaultName || app.vault.getName();
+                    return item.displayName || settings.customVaultName || app.vault.getName();
                 }
                 if (canInteract && folder) {
                     return item.displayName || folder.name;
@@ -79,7 +83,13 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                 return getPathBaseName(folderPath);
             })();
             const folderCountInfo =
-                canInteract && folder && shortcuts.shouldShowShortcutCounts ? shortcuts.getFolderShortcutCount(folder) : undefined;
+                canInteract && folder && shortcutUiState.shouldShowShortcutCounts ? shortcuts.getFolderShortcutCount(folder) : undefined;
+            const isFolderHiddenFromParents = Boolean(
+                canInteract &&
+                folder &&
+                context.descendantExcludedFolders.length > 0 &&
+                shouldExcludeFolderFromDescendants(folder.name, context.descendantExcludedFolders, folder.path)
+            );
             const folderNote =
                 canInteract && folder && settings.enableFolderNotes && settings.enableFolderNoteLinks
                     ? getFolderNote(folder, settings)
@@ -88,8 +98,19 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
             const folderLabel = folderAlias && folderAlias.length > 0 ? folderAlias : folderName;
             const contextTarget: ShortcutContextMenuTarget =
                 canInteract && folder ? { type: 'folder', key: item.key, folder } : { type: 'missing', key: item.key, kind: 'folder' };
-            const isDragSource = shortcuts.shouldUseShortcutDnd && shortcuts.activeShortcutId === item.key;
             const shortcutBackground = isMissing ? undefined : getSolidBackground(item.backgroundColor);
+            const tooltip =
+                canInteract && folder && shouldShowTooltip
+                    ? buildFolderTooltip({
+                          app,
+                          folder,
+                          displayName: folderLabel,
+                          fileVisibility: context.fileVisibility,
+                          hiddenFolders: context.hiddenFolders,
+                          settings,
+                          showHiddenItems
+                      })
+                    : undefined;
             const shortcutProps = {
                 icon: isMissing
                     ? 'lucide-alert-triangle'
@@ -98,13 +119,16 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                       : (item.icon ?? 'lucide-folder'),
                 color: isMissing ? undefined : item.color,
                 backgroundColor: shortcutBackground,
+                adjacentFilledClassName,
                 label: folderLabel,
                 description: undefined,
                 level: item.level,
                 type: 'folder' as const,
                 countInfo: !isMissing ? folderCountInfo : undefined,
-                badge: shortcuts.shortcutNumberBadgesByKey.get(item.key),
-                forceShowCount: shortcuts.shouldShowShortcutCounts,
+                badge: shortcutUiState.shortcutNumberBadgesByKey.get(item.key),
+                tooltip,
+                forceShowCount: shortcutUiState.shouldShowShortcutCounts,
+                isHiddenFromParents: isFolderHiddenFromParents,
                 isExcluded: !isMissing ? item.isExcluded : undefined,
                 isDisabled: isMissing,
                 isMissing,
@@ -119,7 +143,7 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                 },
                 onContextMenu: (event: React.MouseEvent<HTMLDivElement>) => shortcuts.handleShortcutContextMenu(event, contextTarget),
                 dragHandlers: shortcuts.buildShortcutExternalHandlers(item.key),
-                dragHandleConfig: shortcuts.shortcutDragHandleConfig,
+                dragHandleConfig: shortcutUiState.shortcutDragHandleConfig,
                 hasFolderNote: !isMissing && Boolean(folderNote),
                 onLabelClick:
                     folder && folderNote
@@ -133,11 +157,11 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                         : undefined
             };
 
-            if (shortcuts.shouldUseShortcutDnd) {
+            if (shortcutUiState.shouldUseShortcutDnd) {
                 return (
                     <SortableShortcutItem
                         sortableId={item.key}
-                        canReorder={shortcuts.shouldUseShortcutDnd}
+                        canReorder={shortcutUiState.shouldUseShortcutDnd}
                         isDragSource={isDragSource}
                         {...shortcutProps}
                     />
@@ -152,20 +176,39 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
             const isMissing = Boolean(item.isMissing);
             const canInteract = Boolean(note) && !isMissing;
             const notePath = isNoteShortcut(item.shortcut) ? item.shortcut.path : '';
+            const noteDisplayName = canInteract && note ? getFileDisplayName(note) : '';
+            const extensionSuffix = canInteract && note && shouldShowExtensionSuffix(note) ? getExtensionSuffix(note) : '';
             const defaultLabel = (() => {
                 if (!note || !canInteract) {
                     return shortcuts.getMissingNoteLabel(notePath);
                 }
-                const displayName = getFileDisplayName(note);
-                const extensionSuffix = shouldShowExtensionSuffix(note) ? getExtensionSuffix(note) : '';
-                return extensionSuffix ? `${displayName}${extensionSuffix}` : displayName;
+                return extensionSuffix ? `${noteDisplayName}${extensionSuffix}` : noteDisplayName;
             })();
             const noteAlias = isNoteShortcut(item.shortcut) ? item.shortcut.alias : undefined;
             const label = noteAlias && noteAlias.length > 0 ? noteAlias : defaultLabel;
             const contextTarget: ShortcutContextMenuTarget =
                 canInteract && note ? { type: 'note', key: item.key, file: note } : { type: 'missing', key: item.key, kind: 'note' };
-            const isDragSource = shortcuts.shouldUseShortcutDnd && shortcuts.activeShortcutId === item.key;
             const shortcutBackground = isMissing ? undefined : getSolidBackground(item.backgroundColor);
+            const tooltip =
+                canInteract && note && shouldShowTooltip ? (
+                    <FileTooltipContent
+                        file={note}
+                        displayName={noteDisplayName}
+                        extensionSuffix={extensionSuffix}
+                        settings={settings}
+                        getFileTimestamps={context.getFileTimestamps}
+                        wordCount={context.getFileWordCount(note)}
+                        tagRow={
+                            settings.showTooltipTags ? (
+                                <FileTooltipTagRow
+                                    file={note}
+                                    fileItemPillDecorationModel={context.fileItemPillDecorationModel}
+                                    fileItemPillOrderModel={context.fileItemPillOrderModel}
+                                />
+                            ) : undefined
+                        }
+                    />
+                ) : undefined;
             const shortcutProps = {
                 icon: isMissing
                     ? 'lucide-alert-triangle'
@@ -174,20 +217,22 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                       : (item.icon ?? 'lucide-file-text'),
                 color: isMissing ? undefined : item.color,
                 backgroundColor: shortcutBackground,
+                adjacentFilledClassName,
                 label,
                 description: undefined,
                 level: item.level,
                 type: 'note' as const,
-                badge: shortcuts.shortcutNumberBadgesByKey.get(item.key),
-                forceShowCount: shortcuts.shouldShowShortcutCounts,
+                badge: shortcutUiState.shortcutNumberBadgesByKey.get(item.key),
+                tooltip,
+                forceShowCount: shortcutUiState.shouldShowShortcutCounts,
                 isExcluded: !isMissing ? item.isExcluded : undefined,
                 isDisabled: isMissing,
                 isMissing,
-                onClick: () => {
+                onClick: (event: React.MouseEvent<HTMLDivElement>) => {
                     if (!note) {
                         return;
                     }
-                    shortcuts.handleShortcutNoteActivate(note, item.key);
+                    shortcuts.handleShortcutNoteActivate(note, item.key, event);
                 },
                 onRemove: () => {
                     runAsyncAction(() => shortcuts.removeShortcut(item.key));
@@ -200,14 +245,14 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                 },
                 onContextMenu: (event: React.MouseEvent<HTMLDivElement>) => shortcuts.handleShortcutContextMenu(event, contextTarget),
                 dragHandlers: shortcuts.buildShortcutExternalHandlers(item.key),
-                dragHandleConfig: shortcuts.shortcutDragHandleConfig
+                dragHandleConfig: shortcutUiState.shortcutDragHandleConfig
             };
 
-            if (shortcuts.shouldUseShortcutDnd) {
+            if (shortcutUiState.shouldUseShortcutDnd) {
                 return (
                     <SortableShortcutItem
                         sortableId={item.key}
-                        canReorder={shortcuts.shouldUseShortcutDnd}
+                        canReorder={shortcutUiState.shouldUseShortcutDnd}
                         isDragSource={isDragSource}
                         {...shortcutProps}
                     />
@@ -219,31 +264,31 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
 
         case NavigationPaneItemType.SHORTCUT_SEARCH: {
             const searchShortcut = item.searchShortcut;
-            const isDragSource = shortcuts.shouldUseShortcutDnd && shortcuts.activeShortcutId === item.key;
             const shortcutProps = {
                 icon: 'lucide-search',
                 color: item.color,
                 backgroundColor: getSolidBackground(item.backgroundColor),
+                adjacentFilledClassName,
                 label: searchShortcut.name,
                 level: item.level,
                 type: 'search' as const,
-                badge: shortcuts.shortcutNumberBadgesByKey.get(item.key),
-                forceShowCount: shortcuts.shouldShowShortcutCounts,
+                badge: shortcutUiState.shortcutNumberBadgesByKey.get(item.key),
+                forceShowCount: shortcutUiState.shouldShowShortcutCounts,
                 onRemove: () => {
                     runAsyncAction(() => shortcuts.removeShortcut(item.key));
                 },
                 onClick: () => shortcuts.handleShortcutSearchActivate(item.key, searchShortcut),
                 onContextMenu: (event: React.MouseEvent<HTMLDivElement>) =>
-                    shortcuts.handleShortcutContextMenu(event, { type: 'search', key: item.key }),
+                    shortcuts.handleShortcutContextMenu(event, { type: 'search', key: item.key, searchShortcut }),
                 dragHandlers: shortcuts.buildShortcutExternalHandlers(item.key),
-                dragHandleConfig: shortcuts.shortcutDragHandleConfig
+                dragHandleConfig: shortcutUiState.shortcutDragHandleConfig
             };
 
-            if (shortcuts.shouldUseShortcutDnd) {
+            if (shortcutUiState.shouldUseShortcutDnd) {
                 return (
                     <SortableShortcutItem
                         sortableId={item.key}
-                        canReorder={shortcuts.shouldUseShortcutDnd}
+                        canReorder={shortcutUiState.shouldUseShortcutDnd}
                         isDragSource={isDragSource}
                         {...shortcutProps}
                     />
@@ -256,13 +301,13 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
         case NavigationPaneItemType.SHORTCUT_TAG: {
             const isMissing = Boolean(item.isMissing);
             const tagPath = isTagShortcut(item.shortcut) ? item.shortcut.tagPath : item.tagPath;
-            const tagCountInfo = !isMissing && shortcuts.shouldShowShortcutCounts ? shortcuts.getTagShortcutCount(tagPath) : undefined;
+            const tagCountInfo =
+                !isMissing && shortcutUiState.shouldShowShortcutCounts ? shortcuts.getTagShortcutCount(tagPath) : undefined;
             const tagAlias = isTagShortcut(item.shortcut) ? item.shortcut.alias : undefined;
             const tagLabel = tagAlias && tagAlias.length > 0 ? tagAlias : item.displayName;
             const contextTarget: ShortcutContextMenuTarget = !isMissing
                 ? { type: 'tag', key: item.key, tagPath }
                 : { type: 'missing', key: item.key, kind: 'tag' };
-            const isDragSource = shortcuts.shouldUseShortcutDnd && shortcuts.activeShortcutId === item.key;
             const shortcutBackground = isMissing ? undefined : getSolidBackground(item.backgroundColor);
             const shortcutProps = {
                 icon: isMissing
@@ -272,13 +317,14 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                       : (item.icon ?? 'lucide-tags'),
                 color: isMissing ? undefined : item.color,
                 backgroundColor: shortcutBackground,
+                adjacentFilledClassName,
                 label: tagLabel,
                 description: undefined,
                 level: item.level,
                 type: 'tag' as const,
                 countInfo: tagCountInfo,
-                badge: shortcuts.shortcutNumberBadgesByKey.get(item.key),
-                forceShowCount: shortcuts.shouldShowShortcutCounts,
+                badge: shortcutUiState.shortcutNumberBadgesByKey.get(item.key),
+                forceShowCount: shortcutUiState.shouldShowShortcutCounts,
                 isExcluded: !isMissing ? item.isExcluded : undefined,
                 isDisabled: isMissing,
                 isMissing,
@@ -293,14 +339,14 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                 },
                 onContextMenu: (event: React.MouseEvent<HTMLDivElement>) => shortcuts.handleShortcutContextMenu(event, contextTarget),
                 dragHandlers: shortcuts.buildShortcutExternalHandlers(item.key),
-                dragHandleConfig: shortcuts.shortcutDragHandleConfig
+                dragHandleConfig: shortcutUiState.shortcutDragHandleConfig
             };
 
-            if (shortcuts.shouldUseShortcutDnd) {
+            if (shortcutUiState.shouldUseShortcutDnd) {
                 return (
                     <SortableShortcutItem
                         sortableId={item.key}
-                        canReorder={shortcuts.shouldUseShortcutDnd}
+                        canReorder={shortcutUiState.shouldUseShortcutDnd}
                         isDragSource={isDragSource}
                         {...shortcutProps}
                     />
@@ -314,24 +360,24 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
             const isMissing = Boolean(item.isMissing);
             const propertyNodeId = item.propertyNodeId;
             const propertyCountInfo =
-                !isMissing && shortcuts.shouldShowShortcutCounts ? shortcuts.getPropertyShortcutCount(propertyNodeId) : undefined;
+                !isMissing && shortcutUiState.shouldShowShortcutCounts ? shortcuts.getPropertyShortcutCount(propertyNodeId) : undefined;
             const propertyAlias = isPropertyShortcut(item.shortcut) ? item.shortcut.alias : undefined;
             const propertyLabel = propertyAlias && propertyAlias.length > 0 ? propertyAlias : item.displayName;
             const contextTarget: ShortcutContextMenuTarget = !isMissing
                 ? { type: 'property', key: item.key, propertyNodeId }
                 : { type: 'missing', key: item.key, kind: 'property' };
-            const isDragSource = shortcuts.shouldUseShortcutDnd && shortcuts.activeShortcutId === item.key;
             const shortcutProps = {
                 icon: isMissing ? 'lucide-alert-triangle' : (item.icon ?? resolveUXIcon(settings.interfaceIcons, 'nav-property')),
                 color: isMissing ? undefined : item.color,
                 backgroundColor: isMissing ? undefined : getSolidBackground(item.backgroundColor),
+                adjacentFilledClassName,
                 label: propertyLabel,
                 description: undefined,
                 level: item.level,
                 type: 'property' as const,
                 countInfo: propertyCountInfo,
-                badge: shortcuts.shortcutNumberBadgesByKey.get(item.key),
-                forceShowCount: shortcuts.shouldShowShortcutCounts,
+                badge: shortcutUiState.shortcutNumberBadgesByKey.get(item.key),
+                forceShowCount: shortcutUiState.shouldShowShortcutCounts,
                 isDisabled: isMissing,
                 isMissing,
                 onClick: () => {
@@ -345,14 +391,14 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                 },
                 onContextMenu: (event: React.MouseEvent<HTMLDivElement>) => shortcuts.handleShortcutContextMenu(event, contextTarget),
                 dragHandlers: shortcuts.buildShortcutExternalHandlers(item.key),
-                dragHandleConfig: shortcuts.shortcutDragHandleConfig
+                dragHandleConfig: shortcutUiState.shortcutDragHandleConfig
             };
 
-            if (shortcuts.shouldUseShortcutDnd) {
+            if (shortcutUiState.shouldUseShortcutDnd) {
                 return (
                     <SortableShortcutItem
                         sortableId={item.key}
-                        canReorder={shortcuts.shouldUseShortcutDnd}
+                        canReorder={shortcutUiState.shouldUseShortcutDnd}
                         isDragSource={isDragSource}
                         {...shortcutProps}
                     />
@@ -370,17 +416,17 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
             const contextTarget: ShortcutContextMenuTarget = !isMissing
                 ? { type: 'topic', key: item.key, topicName }
                 : { type: 'missing', key: item.key, kind: 'topic' };
-            const isDragSource = shortcuts.shouldUseShortcutDnd && shortcuts.activeShortcutId === item.key;
             const shortcutProps = {
                 icon: isMissing ? 'lucide-alert-triangle' : (item.icon ?? 'lucide-tags'),
                 color: isMissing ? undefined : item.color,
                 backgroundColor: isMissing ? undefined : getSolidBackground(item.backgroundColor),
+                adjacentFilledClassName,
                 label: topicLabel,
                 description: undefined,
                 level: item.level,
                 type: 'tag' as const,
-                badge: shortcuts.shortcutNumberBadgesByKey.get(item.key),
-                forceShowCount: shortcuts.shouldShowShortcutCounts,
+                badge: shortcutUiState.shortcutNumberBadgesByKey.get(item.key),
+                forceShowCount: shortcutUiState.shouldShowShortcutCounts,
                 isDisabled: isMissing,
                 isMissing,
                 onClick: () => {
@@ -394,14 +440,14 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                 },
                 onContextMenu: (event: React.MouseEvent<HTMLDivElement>) => shortcuts.handleShortcutContextMenu(event, contextTarget),
                 dragHandlers: shortcuts.buildShortcutExternalHandlers(item.key),
-                dragHandleConfig: shortcuts.shortcutDragHandleConfig
+                dragHandleConfig: shortcutUiState.shortcutDragHandleConfig
             };
 
-            if (shortcuts.shouldUseShortcutDnd) {
+            if (shortcutUiState.shouldUseShortcutDnd) {
                 return (
                     <SortableShortcutItem
                         sortableId={item.key}
-                        canReorder={shortcuts.shouldUseShortcutDnd}
+                        canReorder={shortcutUiState.shouldUseShortcutDnd}
                         isDragSource={isDragSource}
                         {...shortcutProps}
                     />
@@ -416,18 +462,52 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
             const displayName = getFileDisplayName(note);
             const extensionSuffix = shouldShowExtensionSuffix(note) ? getExtensionSuffix(note) : '';
             const label = extensionSuffix ? `${displayName}${extensionSuffix}` : displayName;
+            const tooltip = shouldShowTooltip ? (
+                <FileTooltipContent
+                    file={note}
+                    displayName={displayName}
+                    extensionSuffix={extensionSuffix}
+                    settings={settings}
+                    getFileTimestamps={context.getFileTimestamps}
+                    wordCount={context.getFileWordCount(note)}
+                    tagRow={
+                        settings.showTooltipTags ? (
+                            <FileTooltipTagRow
+                                file={note}
+                                fileItemPillDecorationModel={context.fileItemPillDecorationModel}
+                                fileItemPillOrderModel={context.fileItemPillOrderModel}
+                            />
+                        ) : undefined
+                    }
+                />
+            ) : undefined;
 
             return (
                 <ShortcutItem
                     icon={item.icon ?? 'lucide-file-text'}
                     color={item.color}
                     backgroundColor={getSolidBackground(item.backgroundColor)}
+                    adjacentFilledClassName={adjacentFilledClassName}
                     label={label}
+                    tooltip={tooltip}
                     level={item.level}
                     type="note"
-                    onClick={() => shortcuts.handleRecentNoteActivate(note)}
+                    onClick={event => shortcuts.handleRecentNoteActivate(note, event)}
                     onMouseDown={event => shortcuts.handleShortcutNoteMouseDown(event, note)}
                     onContextMenu={event => shortcuts.handleRecentFileContextMenu(event, note)}
+                    nativeDragData={
+                        context.isMobile
+                            ? undefined
+                            : {
+                                  path: note.path,
+                                  type: ItemType.FILE,
+                                  icon: item.icon ?? 'lucide-file-text',
+                                  fallbackIcon: 'file-text',
+                                  baseIcon: 'file',
+                                  iconColor: item.color,
+                                  allowMultiFileDrag: false
+                              }
+                    }
                 />
             );
         }

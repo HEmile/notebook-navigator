@@ -138,7 +138,7 @@ export function useMobileSwipeNavigation(containerRef: React.RefObject<HTMLEleme
     const uiDispatch = useUIDispatch();
 
     // Check if RTL mode is active
-    const isRTL = document.body.classList.contains('mod-rtl');
+    const isRTL = activeDocument.body.classList.contains('mod-rtl');
     const allowAnywhereSwipe = true;
 
     const shouldIgnoreTouchStart = useCallback((event: TouchEvent) => {
@@ -152,15 +152,13 @@ export function useMobileSwipeNavigation(containerRef: React.RefObject<HTMLEleme
 
     const handleSwipeRight = useCallback(() => {
         if (!isRTL) {
-            uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'navigation' });
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+            uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
         }
     }, [isRTL, uiDispatch]);
 
     const handleSwipeLeft = useCallback(() => {
         if (isRTL) {
-            uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'navigation' });
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+            uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
         }
     }, [isRTL, uiDispatch]);
 

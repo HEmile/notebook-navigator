@@ -18,7 +18,7 @@
 
 import type { App, Menu, MenuItem } from 'obsidian';
 import type { ShortcutEntry } from '../../types/shortcuts';
-import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isTagShortcut } from '../../types/shortcuts';
+import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isSearchShortcut, isTagShortcut } from '../../types/shortcuts';
 import { setAsyncOnClick } from './menuAsyncHelpers';
 
 interface AddShortcutRenameMenuItemParams {
@@ -30,6 +30,7 @@ interface AddShortcutRenameMenuItemParams {
     title: string;
     placeholder: string;
     renameShortcut: (key: string, alias: string, defaultLabel?: string) => Promise<boolean>;
+    closeOnSubmit?: boolean;
 }
 
 function resolveInitialValue(existingShortcut: ShortcutEntry | undefined, defaultLabel: string): string {
@@ -49,25 +50,34 @@ function resolveInitialValue(existingShortcut: ShortcutEntry | undefined, defaul
         }
     }
 
+    if (isSearchShortcut(existingShortcut)) {
+        return existingShortcut.name;
+    }
+
     return defaultLabel;
 }
 
 export function addShortcutRenameMenuItem(params: AddShortcutRenameMenuItemParams): void {
-    const { app, menu, shortcutKey, defaultLabel, existingShortcut, title, placeholder, renameShortcut } = params;
+    const { app, menu, shortcutKey, defaultLabel, existingShortcut, title, placeholder, renameShortcut, closeOnSubmit } = params;
 
     menu.addItem((item: MenuItem) => {
         setAsyncOnClick(item.setTitle(title).setIcon('lucide-pencil'), async () => {
             const initialValue = resolveInitialValue(existingShortcut, defaultLabel);
 
             const { InputModal } = await import('../../modals/InputModal');
-            const modal = new InputModal(
+            let modal: InstanceType<typeof InputModal> | null = null;
+            modal = new InputModal(
                 app,
                 title,
                 placeholder,
                 async value => {
-                    await renameShortcut(shortcutKey, value, defaultLabel);
+                    const didRename = await renameShortcut(shortcutKey, value, defaultLabel);
+                    if (closeOnSubmit === false && (didRename || value.trim() === initialValue.trim())) {
+                        modal?.close();
+                    }
                 },
-                initialValue
+                initialValue,
+                { closeOnSubmit }
             );
             modal.open();
         });

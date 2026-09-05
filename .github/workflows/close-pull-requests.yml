@@ -1,0 +1,33 @@
+name: Close pull requests
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions: read-all
+
+jobs:
+  close:
+    name: Auto-close pull requests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      github.event.pull_request.author_association != 'OWNER' &&
+      github.event.pull_request.author_association != 'MEMBER' &&
+      github.event.pull_request.author_association != 'COLLABORATOR'
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Comment and close
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr comment "$PR_URL" --body "Thanks for your interest in Notebook Navigator. This project does not accept pull requests, so this one has been closed automatically.
+
+          With the emergence of agentic coding, outside code submissions cannot be quality-controlled to the standard the project maintains, so all code stays under a single design and release process.
+
+          Ideas are very welcome as feature requests — please [open an issue](https://github.com/johansan/notebook-navigator/issues). See [CONTRIBUTING.md](https://github.com/johansan/notebook-navigator/blob/main/CONTRIBUTING.md) for details."
+          gh pr close "$PR_URL"

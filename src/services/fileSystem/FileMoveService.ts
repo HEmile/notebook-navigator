@@ -67,9 +67,7 @@ interface PlannedMoveExecutionOutcomeErrored {
 }
 
 type PlannedMoveExecutionOutcome =
-    | PlannedMoveExecutionOutcomeMoved
-    | PlannedMoveExecutionOutcomeSkipped
-    | PlannedMoveExecutionOutcomeErrored;
+    PlannedMoveExecutionOutcomeMoved | PlannedMoveExecutionOutcomeSkipped | PlannedMoveExecutionOutcomeErrored;
 
 const FILE_MOVE_BATCH_SIZE = 12;
 

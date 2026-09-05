@@ -26,6 +26,7 @@ interface UseCalendarFeatureImagesOptions {
     showFeatureImages: boolean;
     targets: CalendarFeatureImageTarget[];
     maxConcurrentLoads: number;
+    onMissingFeatureImage?: (target: CalendarFeatureImageTarget) => void;
 }
 
 interface FeatureImageUrlEntry {
@@ -39,11 +40,48 @@ export interface CalendarFeatureImageTarget {
     key: string;
 }
 
+export function getCalendarFeatureImageRegenerationKey(filePath: string, featureImageKey: string): string | null {
+    if (!filePath || !featureImageKey) {
+        return null;
+    }
+
+    return `${filePath}\0${featureImageKey}`;
+}
+
+export function consumeCalendarFeatureImageRegenerationSlot({
+    regenerationKeys,
+    filePath,
+    featureImageKey
+}: {
+    regenerationKeys: Set<string>;
+    filePath: string;
+    featureImageKey: string;
+}): boolean {
+    const regenerationKey = getCalendarFeatureImageRegenerationKey(filePath, featureImageKey);
+    if (!regenerationKey || regenerationKeys.has(regenerationKey)) {
+        return false;
+    }
+
+    regenerationKeys.add(regenerationKey);
+    return true;
+}
+
+export function clearCalendarFeatureImageRegenerationSlotsForPath(regenerationKeys: Set<string>, filePath: string): void {
+    const prefix = `${filePath}\0`;
+
+    for (const key of regenerationKeys) {
+        if (key.startsWith(prefix)) {
+            regenerationKeys.delete(key);
+        }
+    }
+}
+
 export function useCalendarFeatureImages({
     db,
     showFeatureImages,
     targets,
-    maxConcurrentLoads
+    maxConcurrentLoads,
+    onMissingFeatureImage
 }: UseCalendarFeatureImagesOptions): Record<string, string> {
     const featureImageUrlMapRef = useRef<Map<string, FeatureImageUrlEntry>>(new Map());
     const [featureImageUrls, setFeatureImageUrls] = useState<Record<string, string>>({});
@@ -98,14 +136,19 @@ export function useCalendarFeatureImages({
                         return;
                     }
 
-                    let blob: Blob | null = null;
+                    let blob: Blob | null;
                     try {
                         blob = await db.getFeatureImageBlob(entry.file.path, entry.key);
                     } catch {
                         return;
                     }
 
+                    if (!isActive) {
+                        return;
+                    }
+
                     if (!blob) {
+                        onMissingFeatureImage?.(entry);
                         return;
                     }
 
@@ -164,7 +207,7 @@ export function useCalendarFeatureImages({
         return () => {
             isActive = false;
         };
-    }, [clearFeatureImageUrls, db, maxConcurrentLoads, showFeatureImages, targets]);
+    }, [clearFeatureImageUrls, db, maxConcurrentLoads, onMissingFeatureImage, showFeatureImages, targets]);
 
     return featureImageUrls;
 }

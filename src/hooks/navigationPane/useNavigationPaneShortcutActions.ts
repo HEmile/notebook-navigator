@@ -18,19 +18,26 @@
 
 import React, { useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { App, TFile, TFolder } from 'obsidian';
+import type { App, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
 import type { CommandQueueService } from '../../services/CommandQueueService';
-import type { SelectionAction, SelectionState } from '../../context/SelectionContext';
+import type { NavigationSelectionState, SelectionAction } from '../../context/SelectionContext';
 import type { UIAction } from '../../context/UIStateContext';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { SearchShortcut, ShortcutEntry } from '../../types/shortcuts';
-import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isSearchShortcut, isTagShortcut, isTopicShortcut } from '../../types/shortcuts';
+import {
+    isFolderShortcut,
+    isNoteShortcut,
+    isPropertyShortcut,
+    isSearchShortcut,
+    isTagShortcut,
+    isTopicShortcut
+} from '../../types/shortcuts';
 import { resolvePropertyShortcutNodeId } from '../../utils/propertyTree';
 import { resolveCanonicalTagPath } from '../../utils/tagUtils';
 import { runAsyncAction } from '../../utils/async';
 import { openFileInContext } from '../../utils/openFileInContext';
-import { getFolderNote, openFolderNoteFile } from '../../utils/folderNotes';
-import { resolveFolderNoteClickOpenContext } from '../../utils/keyboardOpenContext';
+import { getFolderNote, openFolderNoteFile, revealFolderNoteInNavigator, type FolderNoteOpenContext } from '../../utils/folderNotes';
+import { resolveFolderNoteClickOpenContext, shouldOpenNoteClickInNewTab } from '../../utils/keyboardOpenContext';
 import { ItemType } from '../../types';
 import type { NavigateToFolderOptions, RevealPropertyOptions, RevealTagOptions } from '../useNavigatorReveal';
 
@@ -59,7 +66,8 @@ interface UseNavigationPaneShortcutActionsProps {
     settings: NotebookNavigatorSettings;
     uiState: UIStateLike;
     uiDispatch: Dispatch<UIAction>;
-    selectionState: SelectionState;
+    selectionType: NavigationSelectionState['selectionType'];
+    selectedFolder: NavigationSelectionState['selectedFolder'];
     selectionDispatch: Dispatch<SelectionAction>;
     setActiveShortcut: Dispatch<SetStateAction<string | null>>;
     onExecuteSearchShortcut?: (shortcutKey: string, searchShortcut: SearchShortcut) => Promise<void> | void;
@@ -69,6 +77,7 @@ interface UseNavigationPaneShortcutActionsProps {
     onRevealFile: (file: TFile) => void;
     onRevealShortcutFile?: (file: TFile) => void;
     onNavigateToTopic: (topicName: string) => void;
+    openFolderNoteInRightSidebar: (folderNote: TFile) => Promise<void>;
     tagTree: Map<string, import('../../types/storage').TagTreeNode>;
     hydratedShortcuts: HydratedShortcutActionItem[];
 }
@@ -81,7 +90,8 @@ export function useNavigationPaneShortcutActions({
     settings,
     uiState,
     uiDispatch,
-    selectionState,
+    selectionType,
+    selectedFolder,
     selectionDispatch,
     setActiveShortcut,
     onExecuteSearchShortcut,
@@ -91,21 +101,55 @@ export function useNavigationPaneShortcutActions({
     onRevealFile,
     onRevealShortcutFile,
     onNavigateToTopic,
+    openFolderNoteInRightSidebar,
     tagTree,
     hydratedShortcuts
 }: UseNavigationPaneShortcutActionsProps) {
+    const focusListPaneAfterRightSidebarFolderNoteSelection = useCallback(
+        (openContext: FolderNoteOpenContext) => {
+            if (!uiState.singlePane || openContext !== 'right-sidebar') {
+                return;
+            }
+
+            uiDispatch({ type: 'ACTIVATE_PANE', target: 'files' });
+        },
+        [uiDispatch, uiState.singlePane]
+    );
+
     const scheduleShortcutRelease = useCallback(() => {
         const release = () => setActiveShortcut(null);
 
         if (typeof requestAnimationFrame !== 'undefined') {
-            requestAnimationFrame(() => {
-                requestAnimationFrame(release);
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(release);
             });
             return;
         }
 
-        setTimeout(release, 0);
+        window.setTimeout(release, 0);
     }, [setActiveShortcut]);
+
+    const openNotePreview = useCallback(
+        (note: TFile) => {
+            const getLeaf = () => app.workspace.getLeaf(false);
+
+            const openFile = async (leaf: WorkspaceLeaf | null) => {
+                if (!leaf) {
+                    return;
+                }
+
+                await leaf.openFile(note, { active: false });
+            };
+
+            if (commandQueue) {
+                runAsyncAction(() => commandQueue.executeOpenActiveFile(note, openFile, { active: false, getLeaf }));
+                return;
+            }
+
+            runAsyncAction(() => openFile(getLeaf()));
+        },
+        [app.workspace, commandQueue]
+    );
 
     const handleShortcutFolderActivate = useCallback(
         (folder: TFolder, shortcutKey: string) => {
@@ -134,17 +178,41 @@ export function useNavigationPaneShortcutActions({
                 return;
             }
 
+            const wasSelectedFolder = selectionType === ItemType.FOLDER && selectedFolder?.path === folder.path;
             selectionDispatch({ type: 'SET_SELECTED_FOLDER', folder, autoSelectedFile: null });
-            const openContext = resolveFolderNoteClickOpenContext(
-                event,
-                settings.openFolderNotesInNewTab,
-                settings.multiSelectModifier,
-                isMobile
+            const openContext = resolveFolderNoteClickOpenContext(event, settings.folderNoteOpenLocation, settings.multiSelectModifier);
+            focusListPaneAfterRightSidebarFolderNoteSelection(openContext);
+            revealFolderNoteInNavigator(selectionDispatch, folderNote);
+            if (openContext === 'right-sidebar' && settings.showNearestFolderNoteInSidebar && !wasSelectedFolder) {
+                scheduleShortcutRelease();
+                return;
+            }
+
+            runAsyncAction(() =>
+                openFolderNoteFile({
+                    app,
+                    commandQueue,
+                    folder,
+                    folderNote,
+                    context: openContext,
+                    openInRightSidebar: openFolderNoteInRightSidebar
+                })
             );
-            runAsyncAction(() => openFolderNoteFile({ app, commandQueue, folder, folderNote, context: openContext }));
             scheduleShortcutRelease();
         },
-        [app, commandQueue, handleShortcutFolderActivate, isMobile, scheduleShortcutRelease, selectionDispatch, setActiveShortcut, settings]
+        [
+            app,
+            commandQueue,
+            focusListPaneAfterRightSidebarFolderNoteSelection,
+            handleShortcutFolderActivate,
+            openFolderNoteInRightSidebar,
+            scheduleShortcutRelease,
+            selectedFolder,
+            selectionDispatch,
+            setActiveShortcut,
+            selectionType,
+            settings
+        ]
     );
 
     const handleShortcutFolderNoteMouseDown = useCallback(
@@ -161,40 +229,57 @@ export function useNavigationPaneShortcutActions({
             event.preventDefault();
             event.stopPropagation();
             selectionDispatch({ type: 'SET_SELECTED_FOLDER', folder, autoSelectedFile: null });
-            runAsyncAction(() => openFolderNoteFile({ app, commandQueue, folder, folderNote, context: 'tab' }));
+            revealFolderNoteInNavigator(selectionDispatch, folderNote);
+            runAsyncAction(() =>
+                openFolderNoteFile({
+                    app,
+                    commandQueue,
+                    folder,
+                    folderNote,
+                    context: 'tab'
+                })
+            );
         },
         [app, commandQueue, selectionDispatch, settings]
     );
 
     const handleShortcutNoteActivate = useCallback(
-        (note: TFile, shortcutKey: string) => {
+        (note: TFile, shortcutKey: string, event?: React.MouseEvent<HTMLDivElement>) => {
+            if (event && shouldOpenNoteClickInNewTab(event, settings.multiSelectModifier)) {
+                runAsyncAction(() => openFileInContext({ app, commandQueue, file: note, context: 'tab' }));
+                return;
+            }
+
             setActiveShortcut(shortcutKey);
-            if (selectionState.selectionType === ItemType.TAG && onRevealShortcutFile) {
+            if (selectionType === ItemType.TAG && onRevealShortcutFile) {
                 onRevealShortcutFile(note);
             } else {
                 onRevealFile(note);
             }
 
-            const leaf = app.workspace.getLeaf(false);
-            if (leaf) {
-                runAsyncAction(() => leaf.openFile(note, { active: false }));
-            }
+            openNotePreview(note);
+            // Closes the drawer so the opened note is visible. Safe with dual pane on
+            // tablets: Obsidian no-ops WorkspaceMobileDrawer.collapse() while the sidebar
+            // is pinned (see src/utils/paneLayout.ts), so only the overlay drawer closes.
             if (isMobile && app.workspace.leftSplit) {
                 app.workspace.leftSplit.collapse();
             }
 
             const focusPane = uiState.singlePane ? uiState.currentSinglePaneView : 'files';
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: focusPane });
+            uiDispatch({ type: 'ACTIVATE_PANE', target: focusPane });
             scheduleShortcutRelease();
         },
         [
             app,
+            commandQueue,
             isMobile,
             onRevealFile,
             onRevealShortcutFile,
+            openNotePreview,
             scheduleShortcutRelease,
-            selectionState.selectionType,
+            selectionType,
             setActiveShortcut,
+            settings.multiSelectModifier,
             uiDispatch,
             uiState.currentSinglePaneView,
             uiState.singlePane
@@ -215,30 +300,38 @@ export function useNavigationPaneShortcutActions({
     );
 
     const handleRecentNoteActivate = useCallback(
-        (note: TFile) => {
-            if (selectionState.selectionType === ItemType.TAG && onRevealShortcutFile) {
+        (note: TFile, event?: React.MouseEvent<HTMLDivElement>) => {
+            if (event && shouldOpenNoteClickInNewTab(event, settings.multiSelectModifier)) {
+                runAsyncAction(() => openFileInContext({ app, commandQueue, file: note, context: 'tab' }));
+                return;
+            }
+
+            if (selectionType === ItemType.TAG && onRevealShortcutFile) {
                 onRevealShortcutFile(note);
             } else {
                 onRevealFile(note);
             }
 
-            const leaf = app.workspace.getLeaf(false);
-            if (leaf) {
-                runAsyncAction(() => leaf.openFile(note, { active: false }));
-            }
+            openNotePreview(note);
+            // Closes the drawer so the opened note is visible. Safe with dual pane on
+            // tablets: Obsidian no-ops WorkspaceMobileDrawer.collapse() while the sidebar
+            // is pinned (see src/utils/paneLayout.ts), so only the overlay drawer closes.
             if (isMobile && app.workspace.leftSplit) {
                 app.workspace.leftSplit.collapse();
             }
 
             const focusPane = uiState.singlePane ? uiState.currentSinglePaneView : 'files';
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: focusPane });
+            uiDispatch({ type: 'ACTIVATE_PANE', target: focusPane });
         },
         [
-            app.workspace,
+            app,
+            commandQueue,
             isMobile,
             onRevealFile,
             onRevealShortcutFile,
-            selectionState.selectionType,
+            openNotePreview,
+            selectionType,
+            settings.multiSelectModifier,
             uiDispatch,
             uiState.currentSinglePaneView,
             uiState.singlePane
@@ -267,7 +360,7 @@ export function useNavigationPaneShortcutActions({
             onRevealTag(canonicalPath, { skipScroll: settings.skipAutoScroll, source: 'shortcut' });
 
             if (!uiState.singlePane) {
-                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+                uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
                 const container = rootContainerRef.current;
                 if (container) {
                     container.focus();
@@ -300,7 +393,7 @@ export function useNavigationPaneShortcutActions({
             }
 
             if (!uiState.singlePane) {
-                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+                uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
                 const container = rootContainerRef.current;
                 if (container) {
                     container.focus();

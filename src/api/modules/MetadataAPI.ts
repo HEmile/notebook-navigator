@@ -32,9 +32,9 @@ import type {
     PinContext,
     Pinned
 } from '../types';
-import type { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { PinnedNotes } from '../../types';
-import { normalizeCanonicalIconId } from '../../utils/iconizeFormat';
+import { deserializeIconFromFrontmatterStrict, serializeIconForFrontmatter } from '../../utils/iconizeFormat';
 import { normalizePropertyNodeId } from '../../utils/propertyTree';
 import { clonePinnedNotesRecord, normalizePinnedNoteContext } from '../../utils/recordUtils';
 import { normalizeTagPathValue } from '../../utils/tagPrefixMatcher';
@@ -46,7 +46,7 @@ type MetadataUpdate = {
 };
 
 type MetadataAPIHost = {
-    getApp: () => { vault: { getFolderByPath: (path: string) => TFolder | null } };
+    getApp: () => { vault: { getFolderByPath: (path: string) => TFolder | null; getRoot: () => TFolder } };
     getPlugin: () => NotebookNavigatorPlugin;
     trigger: <T extends NotebookNavigatorEventType>(
         event: T,
@@ -57,7 +57,19 @@ type MetadataAPIHost = {
 type PinnedContextSnapshot = Pinned extends Map<string, infer TValue> ? TValue : never;
 
 function freezePinnedContext(context: PinnedNotes[string]): PinnedContextSnapshot {
-    return Object.freeze({ ...normalizePinnedNoteContext(context) }) as PinnedContextSnapshot;
+    return Object.freeze({ ...normalizePinnedNoteContext(context) });
+}
+
+function normalizeIconInput(icon: string): string | null {
+    return deserializeIconFromFrontmatterStrict(icon);
+}
+
+function serializeIconOutput(icon: string | undefined): IconValue | undefined {
+    if (!icon) {
+        return undefined;
+    }
+
+    return serializeIconForFrontmatter(icon) ?? icon;
 }
 
 /**
@@ -242,6 +254,11 @@ export class MetadataAPI {
         return new Map(entries);
     }
 
+    private getFolderByPath(folderPath: string): TFolder | null {
+        const vault = this.api.getApp().vault;
+        return folderPath === '/' ? vault.getRoot() : vault.getFolderByPath(folderPath);
+    }
+
     /**
      * Update internal cache when settings change and trigger events
      * Called by the plugin when settings are modified
@@ -310,7 +327,7 @@ export class MetadataAPI {
 
         // Fire events for changed folders
         for (const folderPath of changedFolders) {
-            const folder = this.api.getApp().vault.getFolderByPath(folderPath);
+            const folder = this.getFolderByPath(folderPath);
             if (folder) {
                 const metadata = this.getFolderMeta(folder);
                 this.api.trigger('folder-changed', {
@@ -426,7 +443,7 @@ export class MetadataAPI {
                 delete iconStore[key];
                 changed = true;
             } else if (typeof meta.icon === 'string') {
-                const normalizedIcon = normalizeCanonicalIconId(meta.icon);
+                const normalizedIcon = normalizeIconInput(meta.icon);
                 if (normalizedIcon) {
                     iconStore[key] = normalizedIcon;
                     changed = true;
@@ -464,7 +481,7 @@ export class MetadataAPI {
         return {
             color: folderDisplayData.color,
             backgroundColor: folderDisplayData.backgroundColor,
-            icon: folderDisplayData.icon
+            icon: serializeIconOutput(folderDisplayData.icon)
         };
     }
 
@@ -501,7 +518,7 @@ export class MetadataAPI {
 
     /** @internal */
     emitFolderChangedForPath(folderPath: string): void {
-        const folder = this.api.getApp().vault.getFolderByPath(folderPath);
+        const folder = this.getFolderByPath(folderPath);
         if (!folder) {
             return;
         }
@@ -531,7 +548,7 @@ export class MetadataAPI {
         return {
             color,
             backgroundColor,
-            icon: icon as IconValue | undefined
+            icon: serializeIconOutput(icon)
         };
     }
 
@@ -555,7 +572,7 @@ export class MetadataAPI {
                 if (meta.icon === null) {
                     folderStyleUpdate.icon = null;
                 } else if (typeof meta.icon === 'string') {
-                    const normalizedIcon = normalizeCanonicalIconId(meta.icon);
+                    const normalizedIcon = normalizeIconInput(meta.icon);
                     if (normalizedIcon) {
                         folderStyleUpdate.icon = normalizedIcon;
                     }
@@ -622,7 +639,7 @@ export class MetadataAPI {
         return {
             color,
             backgroundColor,
-            icon: icon as IconValue | undefined
+            icon: serializeIconOutput(icon)
         };
     }
 
@@ -670,7 +687,7 @@ export class MetadataAPI {
         return {
             color,
             backgroundColor,
-            icon: icon as IconValue | undefined
+            icon: serializeIconOutput(icon)
         };
     }
 

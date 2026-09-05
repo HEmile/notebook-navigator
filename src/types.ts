@@ -37,6 +37,12 @@ export const NOTEBOOK_NAVIGATOR_VIEW = 'notebook-navigator';
 export const NOTEBOOK_NAVIGATOR_CALENDAR_VIEW = 'notebook-navigator-calendar';
 
 /**
+ * Unique identifier for the folder note sidebar placeholder view.
+ * Used to keep a stable right sidebar slot when no folder note is open.
+ */
+export const NOTEBOOK_NAVIGATOR_FOLDER_NOTE_SIDEBAR_VIEW = 'notebook-navigator-folder-note-sidebar';
+
+/**
  * Virtual tag collection id for notes without tags.
  * Stored in tag selection state and used as a tag filter token.
  */
@@ -92,6 +98,7 @@ export const ItemType = {
  */
 export const ListPaneItemType = {
     HEADER: 'header',
+    HEADER_SPACER: 'header-spacer',
     FILE: 'file',
     TOP_SPACER: 'top-spacer',
     BOTTOM_SPACER: 'bottom-spacer'
@@ -112,6 +119,16 @@ export const PINNED_SECTION_HEADER_KEY = 'header-pinned';
  * Represents different browsing contexts in the navigator
  */
 export type NavigatorContext = 'folder' | 'tag' | 'property' | 'topic';
+
+/**
+ * Key for a pinned section collapse state in a specific navigation item.
+ */
+export type PinnedSectionCollapseKey = `${NavigatorContext}:${string}`;
+
+/**
+ * Set-like record of navigation items where the pinned section is collapsed.
+ */
+export type CollapsedPinnedContexts = Partial<Record<PinnedSectionCollapseKey, boolean>>;
 
 /**
  * Type alias for pinned notes storage structure
@@ -222,9 +239,9 @@ export const LISTPANE_MEASUREMENTS = {
 /**
  * Platform measurements used for mobile layout math.
  *
- * Keep in sync with CSS in `src/styles/sections/platform-ios-obsidian-1-11.css`.
+ * Keep in sync with CSS in `src/styles/sections/platform-ios.css`.
  */
-export const IOS_OBSIDIAN_1_11_PLUS_GLASS_TOOLBAR_HEIGHT_PX = 58;
+export const IOS_FLOATING_TOOLBAR_HEIGHT_PX = 58;
 
 /**
  * Pane transition duration limits for single-pane view animations (milliseconds)
@@ -263,6 +280,9 @@ export interface LocalStorageKeys {
     navigationPaneWidthKey: string;
     navigationPaneHeightKey: string;
     dualPaneOrientationKey: string;
+    narrowSidebarLayoutKey: string;
+    narrowSidebarTriggerModeKey: string;
+    narrowSidebarCustomWidthKey: string;
     dualPaneKey: string;
     uiScaleKey: string;
     shortcutsExpandedKey: string;
@@ -272,10 +292,12 @@ export interface LocalStorageKeys {
     navigationSectionOrderKey: string;
     pinnedShortcutsMaxHeightKey: string;
     uxPreferencesKey: string;
-    fileCacheKey: string;
     databaseSchemaVersionKey: string;
     databaseContentVersionKey: string;
+    frontmatterMetadataCacheSignatureKey: string;
     cacheRebuildNoticeKey: string;
+    debugLoggingEnabledKey: string;
+    lastShownVersionKey: string;
     // PDF_CRASH_DIAGNOSTICS: vault-scoped key used by the PDF crash diagnostic flow.
     pdfProcessingDiagnosticKey: string;
     localStorageVersionKey: string;
@@ -302,6 +324,11 @@ export interface LocalStorageKeys {
     compactItemHeightScaleTextKey: string;
     featureImageSizeKey: string;
     featureImagePixelSizeKey: string;
+    collapsedListGroupsKey: string;
+    collapsedPinnedContextsKey: string;
+    mergeNotesSeparatorKey: string;
+    mergeNotesMoveSourcesToTrashKey: string;
+    settingsImportBackupToRootKey: string;
 }
 
 /**
@@ -322,6 +349,9 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     navigationPaneWidthKey: 'notebook-navigator-navigation-pane-width',
     navigationPaneHeightKey: 'notebook-navigator-navigation-pane-height',
     dualPaneOrientationKey: 'notebook-navigator-dual-pane-orientation',
+    narrowSidebarLayoutKey: 'notebook-navigator-narrow-sidebar-layout',
+    narrowSidebarTriggerModeKey: 'notebook-navigator-narrow-sidebar-trigger-mode',
+    narrowSidebarCustomWidthKey: 'notebook-navigator-narrow-sidebar-custom-width',
     dualPaneKey: 'notebook-navigator-dual-pane',
     uiScaleKey: 'notebook-navigator-ui-scale',
     shortcutsExpandedKey: 'notebook-navigator-shortcuts-expanded',
@@ -331,10 +361,12 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     navigationSectionOrderKey: 'notebook-navigator-section-order',
     pinnedShortcutsMaxHeightKey: 'notebook-navigator-pinned-shortcuts-max-height',
     uxPreferencesKey: 'notebook-navigator-ux-preferences',
-    fileCacheKey: 'notebook-navigator-file-cache',
     databaseSchemaVersionKey: 'notebook-navigator-db-schema-version',
     databaseContentVersionKey: 'notebook-navigator-db-content-version',
+    frontmatterMetadataCacheSignatureKey: 'notebook-navigator-frontmatter-metadata-cache-signature',
     cacheRebuildNoticeKey: 'notebook-navigator-cache-rebuild-notice',
+    debugLoggingEnabledKey: 'notebook-navigator-debug-logging-enabled',
+    lastShownVersionKey: 'notebook-navigator-last-shown-version',
     // PDF_CRASH_DIAGNOSTICS: persists the last PDF path being processed on mobile support builds.
     pdfProcessingDiagnosticKey: 'notebook-navigator-pdf-processing-diagnostic',
     localStorageVersionKey: 'notebook-navigator-localstorage-version',
@@ -360,7 +392,12 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     compactItemHeightKey: 'notebook-navigator-compact-item-height',
     compactItemHeightScaleTextKey: 'notebook-navigator-compact-item-height-scale-text',
     featureImageSizeKey: 'notebook-navigator-feature-image-size',
-    featureImagePixelSizeKey: 'notebook-navigator-feature-image-pixel-size'
+    featureImagePixelSizeKey: 'notebook-navigator-feature-image-pixel-size',
+    collapsedListGroupsKey: 'notebook-navigator-collapsed-list-groups',
+    collapsedPinnedContextsKey: 'notebook-navigator-collapsed-pinned-contexts',
+    mergeNotesSeparatorKey: 'notebook-navigator-merge-notes-separator',
+    mergeNotesMoveSourcesToTrashKey: 'notebook-navigator-merge-notes-move-sources-to-trash',
+    settingsImportBackupToRootKey: 'notebook-navigator-settings-import-backup-to-root'
 };
 
 export interface UXPreferences {
@@ -437,6 +474,10 @@ export function getSupportedLeaves(app: App): WorkspaceLeaf[] {
     return SUPPORTED_LEAF_TYPES.flatMap(type => app.workspace.getLeavesOfType(type));
 }
 
+export function isSupportedLeafType(viewType: string): viewType is SupportedLeafType {
+    return SUPPORTED_LEAF_TYPES.includes(viewType as SupportedLeafType);
+}
+
 /**
  * Virtual folder for organizing tags
  * These are not real folders but act like folders in the UI
@@ -466,6 +507,7 @@ export interface DragDropAttributes {
     'data-drag-type'?: ItemType;
     'data-drag-path'?: string;
     'data-drag-handle'?: 'true';
+    'data-drag-allow-multi-file'?: 'false';
 
     // Drop zone attributes
     'data-drop-zone'?: typeof ItemType.FOLDER;

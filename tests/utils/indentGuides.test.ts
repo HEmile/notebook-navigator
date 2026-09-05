@@ -18,7 +18,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { NavigationPaneItemType, TAGS_ROOT_VIRTUAL_FOLDER_ID } from '../../src/types';
-import { buildIndentGuideLevelsMap, type IndentGuideItem } from '../../src/utils/navigationIndex';
+import { buildIndentGuideLevelsMap, getNavigationItemRenderKey, type IndentGuideItem } from '../../src/utils/navigationIndex';
 
 const createItem = (key: string, type: NavigationPaneItemType, level?: number): IndentGuideItem => ({
     key,
@@ -85,5 +85,18 @@ describe('buildIndentGuideLevelsMap', () => {
         const connectors = buildIndentGuideLevelsMap(items);
 
         expect(connectors.size).toBe(0);
+    });
+
+    it('can namespace connector keys for rows with colliding item keys', () => {
+        const folderItem = createItem('shared', NavigationPaneItemType.FOLDER, 0);
+        const tagItem = createItem('shared', NavigationPaneItemType.TAG, 1);
+        const items: IndentGuideItem[] = [folderItem, tagItem];
+
+        const connectors = buildIndentGuideLevelsMap(items, getNavigationItemRenderKey);
+
+        expect(getNavigationItemRenderKey(folderItem)).toBe('folder:shared');
+        expect(getNavigationItemRenderKey(tagItem)).toBe('tag:shared');
+        expect(connectors.has('shared')).toBe(false);
+        expect(connectors.get('tag:shared')).toEqual([0]);
     });
 });

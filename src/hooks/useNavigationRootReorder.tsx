@@ -18,7 +18,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { type App, type TFolder } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
 import type { PropertyTreeNode, TagTreeNode } from '../types/storage';
 import type { CombinedNavigationItem } from '../types/virtualization';
 import { NavigationPaneItemType, UNTAGGED_TAG_ID, STORAGE_KEYS, NavigationSectionId } from '../types';
@@ -797,16 +797,22 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                     } else {
                         icon = foldersSectionExpanded ? 'open-vault' : 'vault';
                     }
-                    label = customVaultName || app.vault.getName();
+                    label = resolveFolderDisplayName({
+                        app,
+                        metadataService,
+                        settings: { customVaultName },
+                        folderPath: vaultRootDescriptor.key,
+                        fallbackName: vaultRootDescriptor.folder?.name ?? app.vault.getRoot().name
+                    });
                 } else {
                     icon = NOTEBOOK_NAVIGATOR_ICON_ID;
-                    label = strings.settings.sections.folders;
+                    label = strings.navigationPane.folders;
                 }
                 chevronIcon = foldersSectionExpanded ? 'lucide-chevron-down' : 'lucide-chevron-right';
                 onClick = handleToggleFoldersSection;
             } else if (identifier === NavigationSectionId.TAGS) {
                 icon = resolveUXIcon(settings.interfaceIcons, 'nav-tags');
-                label = strings.settings.sections.tags;
+                label = strings.navigationPane.tags;
                 chevronIcon = tagsSectionExpanded ? 'lucide-chevron-down' : 'lucide-chevron-right';
                 onClick = handleToggleTagsSection;
             } else if (identifier === NavigationSectionId.PROPERTIES) {
@@ -844,7 +850,8 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         rootFolderIconMap,
         rootFolderColorMap,
         customVaultName,
-        app.vault,
+        app,
+        metadataService,
         settings.interfaceIcons,
         foldersSectionExpanded,
         tagsSectionExpanded,

@@ -6,7 +6,7 @@
 
 .nn-update-banner {
     position: absolute;
-    top: calc(var(--nn-date-header-height-mobile, var(--nn-date-header-height)) + 8px);
+    top: calc(var(--nn-list-group-header-height-mobile, var(--nn-list-group-header-height)) + 8px);
     left: 50%;
     transform: translate(-50%, 0);
     z-index: 10;

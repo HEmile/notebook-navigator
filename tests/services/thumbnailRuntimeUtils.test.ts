@@ -21,7 +21,7 @@ import { createOnceLogger, createRenderBudgetLimiter } from '../../src/services/
 
 describe('createOnceLogger', () => {
     it('logs a key once and evicts old keys', () => {
-        const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const logOnce = createOnceLogger(2);
 
         logOnce('a', 'A');
@@ -41,16 +41,16 @@ describe('createOnceLogger', () => {
 
 describe('createRenderBudgetLimiter', () => {
     async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-        let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
+        let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
         const timeout = new Promise<never>((_, reject) => {
-            timeoutId = globalThis.setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
+            timeoutId = window.setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
         });
 
         try {
             return await Promise.race([promise, timeout]);
         } finally {
             if (timeoutId !== null) {
-                globalThis.clearTimeout(timeoutId);
+                window.clearTimeout(timeoutId);
             }
         }
     }

@@ -83,14 +83,15 @@ export function useLocalDayKey(): string {
         };
 
         scheduleNextTick();
+        const doc = activeDocument;
         window.addEventListener('focus', handleResume);
         window.addEventListener('pageshow', handleResume);
-        document.addEventListener('visibilitychange', handleResume);
+        doc.addEventListener('visibilitychange', handleResume);
 
         return () => {
             window.removeEventListener('focus', handleResume);
             window.removeEventListener('pageshow', handleResume);
-            document.removeEventListener('visibilitychange', handleResume);
+            doc.removeEventListener('visibilitychange', handleResume);
             clearTimer();
         };
     }, []);

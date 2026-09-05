@@ -34,6 +34,7 @@ interface CalendarYearPanelProps {
     highlightedMonthImageUrls: Record<string, string>;
     onNavigateYear: (delta: number) => void;
     onYearPeriodClick: (event: React.MouseEvent<HTMLElement>) => void;
+    onYearPeriodMouseDown: (event: React.MouseEvent<HTMLElement>) => void;
     onYearPeriodContextMenu: (event: React.MouseEvent<HTMLElement>) => void;
     onSelectYearMonth: (event: React.MouseEvent<HTMLButtonElement>, date: CalendarYearMonthEntry['date']) => void;
 }
@@ -51,6 +52,7 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
     highlightedMonthImageUrls,
     onNavigateYear,
     onYearPeriodClick,
+    onYearPeriodMouseDown,
     onYearPeriodContextMenu,
     onSelectYearMonth
 }: CalendarYearPanelProps) {
@@ -80,9 +82,11 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                         .filter(Boolean)
                         .join(' ')}
                     aria-live="polite"
+                    onMouseDown={onYearPeriodMouseDown}
                     onClick={onYearPeriodClick}
                     onContextMenu={onYearPeriodContextMenu}
                 >
+                    <span className="nn-navigation-calendar-active-outline" aria-hidden="true" />
                     {displayedYearValue}
                 </button>
                 <button
@@ -125,6 +129,7 @@ export const CalendarYearPanel = React.memo(function CalendarYearPanel({
                             style={style}
                             onClick={event => onSelectYearMonth(event, entry.date)}
                         >
+                            <span className="nn-navigation-calendar-active-outline" aria-hidden="true" />
                             <span className="nn-navigation-calendar-year-month-label">{entry.shortLabel}</span>
                             {entry.hasUnfinishedTasks ? (
                                 <span className="nn-navigation-calendar-year-month-unfinished-task-indicator" aria-hidden="true" />

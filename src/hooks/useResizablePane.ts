@@ -91,7 +91,7 @@ export function useResizablePane({
             let currentSize = startSize;
 
             // Check if RTL mode is active for horizontal dragging
-            const isRTL = orientation === 'horizontal' && document.body.classList.contains('mod-rtl');
+            const isRTL = orientation === 'horizontal' && activeDocument.body.classList.contains('mod-rtl');
             // Set resizing state
             setIsResizing(true);
 

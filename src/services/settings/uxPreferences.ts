@@ -47,6 +47,8 @@ const UX_PREFERENCE_KEYS = Object.keys(UX_PREFERENCES_DEFAULTS.base).filter((key
     return key in UX_PREFERENCES_DEFAULTS.base;
 });
 
+const UX_PREFERENCE_KEY_SET = new Set<string>(UX_PREFERENCE_KEYS);
+
 export function getDefaultUXPreferences(): UXPreferences {
     const overrides = Platform.isMobile ? UX_PREFERENCES_DEFAULTS.platform.mobile : UX_PREFERENCES_DEFAULTS.platform.desktop;
 
@@ -70,4 +72,34 @@ export function isUXPreferencesRecord(value: unknown): value is Partial<UXPrefer
     }
 
     return true;
+}
+
+export function normalizeUXPreferencesRecord(
+    value: unknown,
+    defaults: UXPreferences = getDefaultUXPreferences()
+): { preferences: UXPreferences; changed: boolean } {
+    const preferences = { ...defaults };
+    if (value === null || typeof value !== 'object') {
+        return { preferences, changed: true };
+    }
+
+    const record = value as Record<string, unknown>;
+    let changed = false;
+    Object.keys(record).forEach(key => {
+        if (!UX_PREFERENCE_KEY_SET.has(key)) {
+            changed = true;
+        }
+    });
+
+    for (const key of UX_PREFERENCE_KEYS) {
+        const entry = record[key];
+        if (typeof entry === 'boolean') {
+            preferences[key] = entry;
+            continue;
+        }
+
+        changed = true;
+    }
+
+    return { preferences, changed };
 }

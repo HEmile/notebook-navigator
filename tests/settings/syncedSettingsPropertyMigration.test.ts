@@ -19,6 +19,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import {
+    applyExistingUserDefaults,
     applyLegacyPropertyFieldsMigration,
     extractLegacyPropertyFields,
     migrateLegacySyncedSettings
@@ -29,6 +30,45 @@ import { STORAGE_KEYS } from '../../src/types';
 function createSettings(): NotebookNavigatorSettings {
     return structuredClone(DEFAULT_SETTINGS);
 }
+
+describe('applyExistingUserDefaults', () => {
+    it('shows release notes when the setting is missing', () => {
+        const settings = createSettings();
+        const settingsRecord = settings as unknown as Record<string, unknown>;
+        delete settingsRecord['showReleaseNotes'];
+
+        applyExistingUserDefaults({ settings });
+
+        expect(settings.showReleaseNotes).toBe(true);
+    });
+
+    it('hides group header item counts when the setting is missing', () => {
+        const settings = createSettings();
+        const settingsRecord = settings as unknown as Record<string, unknown>;
+        delete settingsRecord['showGroupHeaderItemCounts'];
+
+        applyExistingUserDefaults({ settings });
+
+        expect(settings.showGroupHeaderItemCounts).toBe(false);
+    });
+});
+
+describe('migrateLegacySyncedSettings defaults', () => {
+    it('defaults parent folder labels to the closest folder when the full path setting is missing', () => {
+        const settings = createSettings();
+        const settingsRecord = settings as unknown as Record<string, unknown>;
+        delete settingsRecord['showParentFolderFullPath'];
+
+        migrateLegacySyncedSettings({
+            settings,
+            storedData: null,
+            keys: STORAGE_KEYS,
+            defaultSettings: DEFAULT_SETTINGS
+        });
+
+        expect(settings.showParentFolderFullPath).toBe(false);
+    });
+});
 
 describe('migrateLegacySyncedSettings property key migration', () => {
     it('migrates legacy customProperty settings keys', () => {
@@ -54,7 +94,9 @@ describe('migrateLegacySyncedSettings property key migration', () => {
         const legacyPropertyFields = extractLegacyPropertyFields({ settings, storedData: null });
         applyLegacyPropertyFieldsMigration({ settings, legacyPropertyFields });
 
-        expect(settings.notePropertyType).toBe('wordCount');
+        expect(settings.textCountDisplay).toBe('words');
+        expect(settings.textCountPlacement).toBe('title');
+        expect(Object.prototype.hasOwnProperty.call(settingsRecord, 'notePropertyType')).toBe(false);
         expect(settings.vaultProfiles[0]?.propertyKeys).toEqual([
             { key: 'status', showInNavigation: true, showInList: true, showInFileMenu: false },
             { key: 'type', showInNavigation: true, showInList: true, showInFileMenu: false }
@@ -87,6 +129,42 @@ describe('migrateLegacySyncedSettings property key migration', () => {
         expect(settings.enablePropertyExternalLinks).toBe(true);
     });
 
+    it('migrates old note property word count setting to the word count title setting', () => {
+        const settings = createSettings();
+        const settingsRecord = settings as unknown as Record<string, unknown>;
+        settingsRecord['notePropertyType'] = 'wordCount';
+
+        migrateLegacySyncedSettings({
+            settings,
+            storedData: { notePropertyType: 'wordCount' },
+            keys: STORAGE_KEYS,
+            defaultSettings: DEFAULT_SETTINGS
+        });
+
+        expect(settings.textCountDisplay).toBe('words');
+        expect(settings.textCountPlacement).toBe('title');
+        expect(Object.prototype.hasOwnProperty.call(settingsRecord, 'notePropertyType')).toBe(false);
+    });
+
+    it('migrates legacy word count display settings to text count settings', () => {
+        const settings = createSettings();
+        const settingsRecord = settings as unknown as Record<string, unknown>;
+        settingsRecord['showWordCount'] = true;
+        settingsRecord['wordCountPlacement'] = 'property';
+
+        migrateLegacySyncedSettings({
+            settings,
+            storedData: { showWordCount: true, wordCountPlacement: 'property' },
+            keys: STORAGE_KEYS,
+            defaultSettings: DEFAULT_SETTINGS
+        });
+
+        expect(settings.textCountDisplay).toBe('words');
+        expect(settings.textCountPlacement).toBe('property');
+        expect(Object.prototype.hasOwnProperty.call(settingsRecord, 'showWordCount')).toBe(false);
+        expect(Object.prototype.hasOwnProperty.call(settingsRecord, 'wordCountPlacement')).toBe(false);
+    });
+
     it('migrates legacy folder appearance customPropertyType override', () => {
         const settings = createSettings();
         settings.folderAppearances = { Inbox: {} };
@@ -101,7 +179,27 @@ describe('migrateLegacySyncedSettings property key migration', () => {
             defaultSettings: DEFAULT_SETTINGS
         });
 
-        expect(settings.folderAppearances['Inbox']?.notePropertyType).toBe('none');
+        expect(Object.prototype.hasOwnProperty.call(appearanceRecord, 'notePropertyType')).toBe(false);
         expect(Object.prototype.hasOwnProperty.call(appearanceRecord, 'customPropertyType')).toBe(false);
+    });
+
+    it('preserves none grouping', () => {
+        const settings = createSettings();
+        settings.noteGrouping = 'none';
+        settings.folderAppearances = { Inbox: { groupBy: 'none' } };
+        settings.tagAppearances = { '#work': { groupBy: 'none' } };
+        settings.propertyAppearances = { 'key:status': { groupBy: 'none' } };
+
+        migrateLegacySyncedSettings({
+            settings,
+            storedData: { noteGrouping: 'none' },
+            keys: STORAGE_KEYS,
+            defaultSettings: DEFAULT_SETTINGS
+        });
+
+        expect(settings.noteGrouping).toBe('none');
+        expect(settings.folderAppearances.Inbox?.groupBy).toBe('none');
+        expect(settings.tagAppearances['#work']?.groupBy).toBe('none');
+        expect(settings.propertyAppearances['key:status']?.groupBy).toBe('none');
     });
 });

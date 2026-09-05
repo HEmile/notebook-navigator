@@ -1,6 +1,6 @@
 # Notebook Navigator Scroll Orchestration
 
-Updated: March 17, 2026
+Updated: July 9, 2026
 
 ## Table of Contents
 
@@ -33,6 +33,7 @@ Updated: March 17, 2026
   - [Observability](#observability)
   - [Common Issues](#common-issues)
   - [Key Debugging Points](#key-debugging-points)
+- [Related Tests](#related-tests)
 - [See Also](#see-also)
 
 ## Overview
@@ -46,6 +47,7 @@ Primary implementation:
 - `src/hooks/useListPaneScroll.ts`
 - Support modules: `src/types/scroll.ts`
 - Navigation-specific index resolution: `src/utils/navigationIndex.ts`
+- Related tests: `tests/hooks/useListPaneScroll.test.ts`
 
 ## The Problem
 
@@ -94,9 +96,9 @@ Key principles:
 
 Both panes maintain `indexVersionRef` counters.
 
-- **Navigation pane** increments when the `pathToIndex` map changes size or identity.
-- **List pane** increments when the `filePathToIndex` map changes size or identity and triggers `rowVirtualizer.measure()`
-  so item heights stay current.
+- **Navigation pane** increments when the effective `pathToIndex` mapping changes.
+- **List pane** increments when the effective `filePathToIndex` mapping changes, so pending scrolls wait for the
+  rebuilt list before executing.
 
 These counters allow pending scrolls to specify the version they require before execution.
 
@@ -151,7 +153,7 @@ requests.
   container or any parent is hidden.
 - The composed `isScrollContainerReady` flag requires both logical visibility and physical dimensions.
 - Both panes use TanStack Virtual `scrollMargin` to align row math with pane chrome. The list pane also uses
-  `scrollPaddingStart`, and both panes can use `scrollPaddingEnd` for bottom overlays.
+  `scrollPaddingStart`, and both panes can use `scrollPaddingEnd` for overlays that cover the bottom of the scroller.
 - In the list pane, mobile taps on the pane header call `handleScrollToTop`, which performs a smooth
   `scrollTo({ top: 0 })`.
 
@@ -163,18 +165,20 @@ spacers).
 - **Virtualizer setup**: Item height estimates follow navigation settings and mobile overrides. `scrollMargin` aligns
   virtualization math and `scrollToIndex` below the unpinned banner, and `scrollPaddingEnd` is used when bottom
   overlays need extra space.
+- **Root reorder mode**: `NavigationPaneContent` swaps the virtualized tree for `NavigationRootReorderPanel`, disables
+  keyboard item maps, and scrolls the scroller to top when root reorder mode opens.
 - **Safe viewport adjustment**: `scrollToIndexSafely` runs `scrollToIndex`, then `ensureIndexNotCovered` applies a
   bottom-overlap correction when `scrollPaddingEnd` is non-zero. Top alignment is handled by `scrollMargin`.
 - **Selection handling**: The hook watches folder/tag/property selection, pane focus, and visibility. It suppresses auto-scroll
   when a shortcut is active or when `skipAutoScroll` is enabled for shortcut reveals.
-- **Hidden item toggles**: When `showHiddenItems` changes, the current selection is queued with intent
-  `visibilityToggle` and `minIndexVersion = current + 1`.
+- **Hidden item toggles**: When `showHiddenItems` changes while a tag or property is selected, the selection is queued
+  with intent `visibilityToggle` and `minIndexVersion = current + 1`.
 - **Tag/property selection**: Tag and property rows can load after folders, so selection scrolling for these types is handled in a dedicated effect.
 - **Pending execution**: While a visibility toggle is in progress, only `visibilityToggle` requests can execute. After
   running such a scroll, the hook rechecks the index on the next animation frame and queues a follow-up if the index
   moved again.
-- **External entries**: `requestScroll` normalizes the path and queues an `external` intent so reveal flows can drive
-  the navigation pane.
+- **External entries**: `requestScroll` normalizes the path and queues an `external` intent. Callers include reveal
+  flows and the inline folder rename flow in `NavigationPaneContent`, which scrolls the folder row into view.
 - **Mobile drawer**: A `notebook-navigator-visible` event first attempts an immediate scroll for the current selection.
   If the pane is not ready or the row index is not available yet, the hook queues a `mobile-visibility` pending scroll.
 - **Settings changes**: Navigation sizing changes trigger `measure()` and an `auto` scroll to keep the selection within
@@ -182,11 +186,17 @@ spacers).
 
 ### List Pane Scrolling
 
-`useListPaneScroll` manages article lists, pinned groups, spacers, and date headers.
+`useListPaneScroll` manages file lists, pinned groups, spacers, and date headers.
 
 - **Virtualizer setup**: Height estimation mirrors `FileItem` logic, looking up preview availability synchronously and
-  respecting compact mode. `scrollMargin` and `scrollPaddingStart`/`scrollPaddingEnd` keep scroll math aligned with
-  overlay chrome and the mobile bottom toolbar.
+  respecting compact mode. The hook supports `scrollMargin` and `scrollPaddingStart`; the current list pane passes
+  `scrollMargin: 0` and uses `scrollPaddingEnd` for the iOS floating toolbar. Calendar overlay changes trigger a
+  follow-up `scrollToIndexSafely` outside the hook.
+- **Manual sort edit mode**: `ListPane` passes `enabled: false` and renders `ManualSortListContent` instead of
+  `ListPaneVirtualContent`, so the list virtualizer and list keyboard scroll handling are inactive during manual-sort
+  edits.
+- **Safe viewport adjustment**: `scrollToIndexSafely` runs `scrollToIndex`, then `ensureIndexNotCovered` corrects sticky
+  group-header overlap at the top and bottom-overlay overlap when `scrollPaddingEnd` is non-zero.
 - **Priority queue**: `setPending` wraps `rankListPending`, replacing lower-ranked requests.
 - **Selected file tracking**: `selectedFilePathRef` avoids executing stale config scrolls for files that are no longer
   selected.
@@ -194,24 +204,30 @@ spacers).
   header exists directly above it; otherwise it returns the file index.
 - **Context tracking**: `contextIndexVersionRef` maintains the last version seen per folder/tag/property context. When the index
   advances within a folder, tag, or property context (pin/unpin, reorder, delete), the hook queues a `list-structure-change` scroll (when
-  `revealFileOnListChanges` is enabled) so the selected file remains visible.
+  `revealFileOnListChanges` is enabled) so the selected file remains visible. Group collapse changes can advance the
+  index version but skip this preservation scroll.
 - **Folder navigation**: When the list context changes or `isFolderNavigation` is true, the hook clears stale pending
   work, then sets a pending request (file or top) and clears the navigation flag. Pending entries can be queued even
   when the pane is hidden and execute once the list becomes ready.
 - **Reveal operations**: Reveal flows queue a `reveal` pending scroll. Startup reveals override alignment to `'center'`.
 - **Mobile drawer**: The `notebook-navigator-visible` event queues a visibility-change scroll when a file is selected.
-- **Settings and search**: Appearance changes and descendant toggles queue `list-structure-change` entries. Search
-  filters queue a `top` scroll when the selected file drops out of the filtered list, respecting mobile suppression
-  flags.
-- **Dynamic height updates**: The hook re-measures the list when list indices change and when the in-memory database
-  reports preview, feature image, tag, metadata, or property updates.
+- **Settings and search**: Appearance, grouping, sort, sticky-header, descendant, visible-property, and selected-pill
+  changes participate in the scroll preservation signature. Matching changes queue `list-structure-change` entries
+  against the current index version when `revealFileOnListChanges` is enabled and a file is selected. Search filters
+  queue a `top` scroll when the selected file drops out of the filtered list, respecting mobile suppression flags.
+- **Direct safe-scroll consumers**: `useListPaneKeyboard`, `useListPaneSelectionCoordinator`, inline rename, property
+  keyboard reordering, and calendar overlay correction call `scrollToIndexSafely` directly after resolving current
+  indices. These paths bypass the pending queue but still use sticky-header and bottom-overlay correction.
+- **Height estimate updates**: The hook refreshes virtualizer size estimates when row-height inputs change, when storage
+  becomes ready after cold boot, and when the in-memory database reports preview, feature image, tag, property, word
+  count, or character count updates.
 
 ## Common Scenarios
 
 ### Toggling Hidden Items
 
 1. `showHiddenItems` flips in UX preferences.
-2. The navigation hook queues the current selection with `intent: 'visibilityToggle'` and
+2. When a tag or property is selected, the navigation hook queues the selection with `intent: 'visibilityToggle'` and
    `minIndexVersion = current + 1`, then waits for the next `pathToIndex` rebuild to advance `indexVersion`.
 3. After the tree rebuild, the pending scroll resolves the selection and runs.
 4. The stabilization check revalidates the index on the next frame and queues another scroll if the index moved again.
@@ -227,11 +243,12 @@ spacers).
 
 1. Navigation line height or indentation updates trigger `rowVirtualizer.measure()` followed by a deferred selection
    scroll when auto-scroll is allowed.
-2. List appearance or descendant toggles queue a `list-structure-change` scroll with `minIndexVersion = current + 1`
-   when `revealFileOnListChanges` is enabled and a file is selected. Disabling descendants can queue a `top` scroll
-   when no file is selected or `revealFileOnListChanges` is disabled.
+2. List appearance, grouping, sort, sticky-header, descendant, visible-property, or selected-pill changes queue a
+   `list-structure-change` scroll with `minIndexVersion = current` because layout-only changes can keep the same
+   path/index map. This happens when `revealFileOnListChanges` is enabled and a file is selected. Disabling descendants
+   can queue a `top` scroll when no file is selected or `revealFileOnListChanges` is disabled.
 3. Reorders within the same folder/tag/property context update `indexVersion` and enqueue a `list-structure-change` scroll so the
-   selected file remains visible.
+   selected file remains visible. Group collapse state changes are ignored by this preservation path.
 
 ### Reveal Operations
 
@@ -281,12 +298,14 @@ export function rankListPending(p?: { type: 'file' | 'top'; reason?: ListScrollI
 ```
 
 `setPending` compares these ranks and only replaces the current request when the new one is equal or higher.
+`requestPendingScroll` first tries to execute a higher-priority queued request before accepting a lower-priority new
+request.
 
 ### Alignment Policies
 
 - **Navigation pane**: `selection` centers on mobile and uses `auto` on desktop. `visibilityToggle`, `external`, and
   `mobile-visibility` use `auto`. `startup` defaults to `center` and `reveal` maps to `auto` in `getNavAlign`.
-- **List pane**: `folder-navigation` centers on mobile, others use `auto`. Startup reveals override to `center` after
+- **List pane**: `folder-navigation` centers on mobile, others use `auto`. Startup reveals override to `center` at
   execution.
 
 ### Safe Viewport
@@ -294,6 +313,8 @@ export function rankListPending(p?: { type: 'file' | 'top'; reason?: ListScrollI
 - Both panes pass scroll insets to TanStack Virtual so row offsets and `scrollToIndex` align with pane chrome.
 - Navigation runs a post-scroll adjustment step (`ensureIndexNotCovered`) that corrects bottom overlap after
   `scrollToIndex`, retrying for a few animation frames while virtualization settles.
+- The list pane runs the same adjustment pattern, correcting sticky group-header overlap at the top and
+  `scrollPaddingEnd` overlap at the bottom.
 
 ### Stabilization Mechanisms
 
@@ -321,7 +342,8 @@ export function rankListPending(p?: { type: 'file' | 'top'; reason?: ListScrollI
 
 **Scroll lands on wrong item**
 
-- Confirm `minIndexVersion` is set to `indexVersionRef.current + 1` when a rebuild is pending.
+- Confirm `minIndexVersion` is set to `indexVersionRef.current + 1` when a future index-map rebuild is pending, and to
+  the current version for layout-only changes that do not change the index map.
 - Ensure the path resolves through `getNavigationIndex` or `getSelectionIndex`.
 
 **Scroll does not execute**
@@ -341,6 +363,11 @@ export function rankListPending(p?: { type: 'file' | 'top'; reason?: ListScrollI
 2. Log path-to-index resolution results to confirm indices match expectations.
 3. Log pending intent, required version, and alignment when the execution effect runs.
 4. Log priority comparisons inside `setPending` to see why a request was replaced or kept.
+
+## Related Tests
+
+- `tests/hooks/useListPaneScroll.test.ts` covers row-height-affecting content changes, row-height input resolution, and
+  coalesced animation-frame remeasurement.
 
 ## See Also
 

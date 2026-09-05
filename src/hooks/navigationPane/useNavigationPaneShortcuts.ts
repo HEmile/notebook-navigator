@@ -27,7 +27,12 @@ import {
     useTagOperations
 } from '../../context/ServicesContext';
 import { useExpansionDispatch, useExpansionState } from '../../context/ExpansionContext';
-import { useSelectionDispatch, useSelectionState } from '../../context/SelectionContext';
+import {
+    useNavigationSelection,
+    useSelectionDispatch,
+    useSelectionStateRefValue,
+    useSelectionStateSubscription
+} from '../../context/SelectionContext';
 import { useSettingsState, useActiveProfile } from '../../context/SettingsContext';
 import { useShortcuts } from '../../context/ShortcutsContext';
 import { useFileCache } from '../../context/StorageContext';
@@ -90,7 +95,9 @@ export function useNavigationPaneShortcuts({
     const propertyOperations = usePropertyOperations();
     const expansionState = useExpansionState();
     const expansionDispatch = useExpansionDispatch();
-    const selectionState = useSelectionState();
+    const selectionState = useNavigationSelection();
+    const selectionStateRef = useSelectionStateRefValue();
+    const selectionStateSubscription = useSelectionStateSubscription();
     const selectionDispatch = useSelectionDispatch();
     const settings = useSettingsState();
     const activeProfile = useActiveProfile();
@@ -111,13 +118,14 @@ export function useNavigationPaneShortcuts({
         addShortcutsBatch,
         clearShortcuts,
         removeShortcut,
+        renameShortcut,
         hasFolderShortcut,
         hasNoteShortcut
     } = shortcuts;
 
     const includeDescendantNotes = uxPreferences.includeDescendantNotes;
     const showHiddenItems = uxPreferences.showHiddenItems;
-    const { hiddenFolders, hiddenFileNames, hiddenFileTags, fileVisibility } = activeProfile;
+    const { hiddenFolders, descendantExcludedFolders, hiddenFileNames, hiddenFileTags, fileVisibility } = activeProfile;
     const effectiveFrontmatterExclusions = getEffectiveFrontmatterExclusions(settings, showHiddenItems);
     const effectiveFrontmatterExclusionMatcher = useMemo(() => {
         return createFrontmatterPropertyExclusionMatcher(effectiveFrontmatterExclusions);
@@ -175,7 +183,9 @@ export function useNavigationPaneShortcuts({
         settings,
         hydratedShortcuts,
         shortcutMap,
-        selectionState
+        selectionState,
+        selectionStateRef,
+        subscribeSelectionState: selectionStateSubscription.subscribe
     });
 
     const shortcutDnD = useNavigationPaneShortcutDnD({
@@ -208,7 +218,8 @@ export function useNavigationPaneShortcuts({
         settings,
         uiState,
         uiDispatch,
-        selectionState,
+        selectionType: selectionState.selectionType,
+        selectedFolder: selectionState.selectedFolder,
         selectionDispatch,
         setActiveShortcut: shortcutState.setActiveShortcut,
         onExecuteSearchShortcut,
@@ -218,6 +229,7 @@ export function useNavigationPaneShortcuts({
         onRevealFile,
         onRevealShortcutFile,
         onNavigateToTopic: navigateToTopic,
+        openFolderNoteInRightSidebar: folderNote => plugin.openFolderNoteInRightSidebar(folderNote),
         tagTree: fileData.tagTree,
         hydratedShortcuts
     });
@@ -230,6 +242,7 @@ export function useNavigationPaneShortcuts({
         fileVisibility,
         noteCountDB,
         hiddenFolders,
+        descendantExcludedFolders,
         effectiveFrontmatterExclusions,
         effectiveFrontmatterExclusionMatcher,
         folderCountFileNameMatcher,
@@ -248,64 +261,118 @@ export function useNavigationPaneShortcuts({
     const shortcutMenus = useNavigationPaneShortcutMenus({
         settings,
         menuServices,
-        selectionState,
+        selectionStateRef,
         expansionState,
         selectionDispatch,
         expansionDispatch,
         uiDispatch,
         removeShortcut,
+        renameShortcut,
         setIsShortcutContextMenuOpen: shortcutState.setIsShortcutContextMenuOpen
     });
 
-    return {
-        shortcutsExpanded: shortcutState.shortcutsExpanded,
-        setShortcutsExpanded: shortcutState.setShortcutsExpanded,
-        recentNotesExpanded: shortcutState.recentNotesExpanded,
-        setRecentNotesExpanded: shortcutState.setRecentNotesExpanded,
-        activeShortcutKey: shortcutState.activeShortcutKey,
-        clearActiveShortcut: shortcutState.clearActiveShortcut,
-        pinToggleLabel: shortcutDisplay.pinToggleLabel,
-        handleShortcutSplitToggle,
-        isShortcutSorting: shortcutDnD.isShortcutSorting,
-        shortcutIds: shortcutDnD.shortcutIds,
-        shortcutSensors: shortcutDnD.shortcutSensors,
-        handleShortcutDragStart: shortcutDnD.handleShortcutDragStart,
-        handleShortcutDragEnd: shortcutDnD.handleShortcutDragEnd,
-        handleShortcutDragCancel: shortcutDnD.handleShortcutDragCancel,
-        shortcutsCount: shortcutsList.length,
-        tagShortcutKeysByPath,
-        propertyShortcutKeysByNodeId,
-        clearShortcuts,
-        addTagShortcut,
-        addPropertyShortcut,
-        openShortcutByNumber: shortcutActions.openShortcutByNumber,
-        activeShortcutId: shortcutDnD.activeShortcutId,
-        shouldUseShortcutDnd: shortcutDnD.shouldUseShortcutDnd,
-        allowEmptyShortcutDrop: shortcutDnD.allowEmptyShortcutDrop,
-        shortcutDragHandleConfig: shortcutDnD.shortcutDragHandleConfig,
-        shortcutHeaderTrailingAction: shortcutDisplay.shortcutHeaderTrailingAction,
-        propertiesHeaderTrailingAction: shortcutDisplay.propertiesHeaderTrailingAction,
-        shortcutNumberBadgesByKey: shortcutState.shortcutNumberBadgesByKey,
-        shouldShowShortcutCounts: shortcutState.shouldShowShortcutCounts,
-        removeShortcut,
-        handleShortcutFolderActivate: shortcutActions.handleShortcutFolderActivate,
-        handleShortcutFolderNoteClick: shortcutActions.handleShortcutFolderNoteClick,
-        handleShortcutFolderNoteMouseDown: shortcutActions.handleShortcutFolderNoteMouseDown,
-        handleShortcutNoteActivate: shortcutActions.handleShortcutNoteActivate,
-        handleShortcutNoteMouseDown: shortcutActions.handleShortcutNoteMouseDown,
-        handleRecentNoteActivate: shortcutActions.handleRecentNoteActivate,
-        handleShortcutSearchActivate: shortcutActions.handleShortcutSearchActivate,
-        handleShortcutTagActivate: shortcutActions.handleShortcutTagActivate,
-        handleShortcutPropertyActivate: shortcutActions.handleShortcutPropertyActivate,
-        handleShortcutTopicActivate: shortcutActions.handleShortcutTopicActivate,
-        handleShortcutContextMenu: shortcutMenus.handleShortcutContextMenu,
-        handleRecentFileContextMenu: shortcutMenus.handleRecentFileContextMenu,
-        handleShortcutRootDragOver: shortcutDnD.handleShortcutRootDragOver,
-        handleShortcutRootDrop: shortcutDnD.handleShortcutRootDrop,
-        buildShortcutExternalHandlers: shortcutDnD.buildShortcutExternalHandlers,
-        getFolderShortcutCount: shortcutDisplay.getFolderShortcutCount,
-        getTagShortcutCount: shortcutDisplay.getTagShortcutCount,
-        getPropertyShortcutCount: shortcutDisplay.getPropertyShortcutCount,
-        getMissingNoteLabel: shortcutDisplay.getMissingNoteLabel
-    };
+    return useMemo(
+        () => ({
+            shortcutsExpanded: shortcutState.shortcutsExpanded,
+            setShortcutsExpanded: shortcutState.setShortcutsExpanded,
+            recentNotesExpanded: shortcutState.recentNotesExpanded,
+            setRecentNotesExpanded: shortcutState.setRecentNotesExpanded,
+            activeShortcutKey: shortcutState.activeShortcutKey,
+            clearActiveShortcut: shortcutState.clearActiveShortcut,
+            pinToggleLabel: shortcutDisplay.pinToggleLabel,
+            handleShortcutSplitToggle,
+            isShortcutSorting: shortcutDnD.isShortcutSorting,
+            shortcutIds: shortcutDnD.shortcutIds,
+            shortcutSensors: shortcutDnD.shortcutSensors,
+            handleShortcutDragStart: shortcutDnD.handleShortcutDragStart,
+            handleShortcutDragEnd: shortcutDnD.handleShortcutDragEnd,
+            handleShortcutDragCancel: shortcutDnD.handleShortcutDragCancel,
+            shortcutsCount: shortcutsList.length,
+            tagShortcutKeysByPath,
+            propertyShortcutKeysByNodeId,
+            clearShortcuts,
+            addTagShortcut,
+            addPropertyShortcut,
+            openShortcutByNumber: shortcutActions.openShortcutByNumber,
+            activeShortcutId: shortcutDnD.activeShortcutId,
+            shouldUseShortcutDnd: shortcutDnD.shouldUseShortcutDnd,
+            allowEmptyShortcutDrop: shortcutDnD.allowEmptyShortcutDrop,
+            shortcutDragHandleConfig: shortcutDnD.shortcutDragHandleConfig,
+            shortcutHeaderTrailingAction: shortcutDisplay.shortcutHeaderTrailingAction,
+            propertiesHeaderTrailingAction: shortcutDisplay.propertiesHeaderTrailingAction,
+            shortcutNumberBadgesByKey: shortcutState.shortcutNumberBadgesByKey,
+            shouldShowShortcutCounts: shortcutState.shouldShowShortcutCounts,
+            removeShortcut,
+            handleShortcutFolderActivate: shortcutActions.handleShortcutFolderActivate,
+            handleShortcutFolderNoteClick: shortcutActions.handleShortcutFolderNoteClick,
+            handleShortcutFolderNoteMouseDown: shortcutActions.handleShortcutFolderNoteMouseDown,
+            handleShortcutNoteActivate: shortcutActions.handleShortcutNoteActivate,
+            handleShortcutNoteMouseDown: shortcutActions.handleShortcutNoteMouseDown,
+            handleRecentNoteActivate: shortcutActions.handleRecentNoteActivate,
+            handleShortcutSearchActivate: shortcutActions.handleShortcutSearchActivate,
+            handleShortcutTagActivate: shortcutActions.handleShortcutTagActivate,
+            handleShortcutPropertyActivate: shortcutActions.handleShortcutPropertyActivate,
+            handleShortcutTopicActivate: shortcutActions.handleShortcutTopicActivate,
+            handleShortcutContextMenu: shortcutMenus.handleShortcutContextMenu,
+            handleRecentFileContextMenu: shortcutMenus.handleRecentFileContextMenu,
+            handleShortcutRootDragOver: shortcutDnD.handleShortcutRootDragOver,
+            handleShortcutRootDrop: shortcutDnD.handleShortcutRootDrop,
+            buildShortcutExternalHandlers: shortcutDnD.buildShortcutExternalHandlers,
+            getFolderShortcutCount: shortcutDisplay.getFolderShortcutCount,
+            getTagShortcutCount: shortcutDisplay.getTagShortcutCount,
+            getPropertyShortcutCount: shortcutDisplay.getPropertyShortcutCount,
+            getMissingNoteLabel: shortcutDisplay.getMissingNoteLabel
+        }),
+        [
+            addPropertyShortcut,
+            addTagShortcut,
+            clearShortcuts,
+            handleShortcutSplitToggle,
+            propertyShortcutKeysByNodeId,
+            removeShortcut,
+            shortcutActions.handleRecentNoteActivate,
+            shortcutActions.handleShortcutFolderActivate,
+            shortcutActions.handleShortcutFolderNoteClick,
+            shortcutActions.handleShortcutFolderNoteMouseDown,
+            shortcutActions.handleShortcutNoteActivate,
+            shortcutActions.handleShortcutNoteMouseDown,
+            shortcutActions.handleShortcutPropertyActivate,
+            shortcutActions.handleShortcutSearchActivate,
+            shortcutActions.handleShortcutTagActivate,
+            shortcutActions.handleShortcutTopicActivate,
+            shortcutActions.openShortcutByNumber,
+            shortcutDisplay.getFolderShortcutCount,
+            shortcutDisplay.getMissingNoteLabel,
+            shortcutDisplay.getPropertyShortcutCount,
+            shortcutDisplay.getTagShortcutCount,
+            shortcutDisplay.pinToggleLabel,
+            shortcutDisplay.propertiesHeaderTrailingAction,
+            shortcutDisplay.shortcutHeaderTrailingAction,
+            shortcutDnD.activeShortcutId,
+            shortcutDnD.allowEmptyShortcutDrop,
+            shortcutDnD.buildShortcutExternalHandlers,
+            shortcutDnD.handleShortcutDragCancel,
+            shortcutDnD.handleShortcutDragEnd,
+            shortcutDnD.handleShortcutDragStart,
+            shortcutDnD.handleShortcutRootDragOver,
+            shortcutDnD.handleShortcutRootDrop,
+            shortcutDnD.isShortcutSorting,
+            shortcutDnD.shortcutDragHandleConfig,
+            shortcutDnD.shortcutIds,
+            shortcutDnD.shortcutSensors,
+            shortcutDnD.shouldUseShortcutDnd,
+            shortcutMenus.handleRecentFileContextMenu,
+            shortcutMenus.handleShortcutContextMenu,
+            shortcutState.activeShortcutKey,
+            shortcutState.clearActiveShortcut,
+            shortcutState.recentNotesExpanded,
+            shortcutState.setRecentNotesExpanded,
+            shortcutState.setShortcutsExpanded,
+            shortcutState.shortcutNumberBadgesByKey,
+            shortcutState.shortcutsExpanded,
+            shortcutState.shouldShowShortcutCounts,
+            shortcutsList.length,
+            tagShortcutKeysByPath
+        ]
+    );
 }

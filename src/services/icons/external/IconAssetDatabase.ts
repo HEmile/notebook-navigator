@@ -94,7 +94,6 @@ export class IconAssetDatabase {
                 }
 
                 // Invalid record found in database, return null instead
-                console.log('[IconAssetDatabase] Ignoring invalid icon asset record', { id });
                 resolve(null);
             };
             request.onerror = () => {
@@ -157,7 +156,6 @@ export class IconAssetDatabase {
                 // Validate that getAll returned an array
                 const result: unknown = request.result;
                 if (!Array.isArray(result)) {
-                    console.log('[IconAssetDatabase] Unexpected result when fetching all icon assets');
                     resolve([]);
                     return;
                 }
@@ -167,8 +165,6 @@ export class IconAssetDatabase {
                 for (const entry of result) {
                     if (isIconAssetRecord(entry)) {
                         records.push(entry);
-                    } else {
-                        console.log('[IconAssetDatabase] Skipping invalid icon asset record');
                     }
                 }
 

@@ -16,13 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { TFile } from 'obsidian';
-import { useSelectionState, useSelectionDispatch } from '../context/SelectionContext';
+import { useFileSelection, useSelectionDispatch } from '../context/SelectionContext';
 import { useServices } from '../context/ServicesContext';
 import { useSettingsState } from '../context/SettingsContext';
 import { useFileOpener } from './useFileOpener';
-import { findFileIndex, getFilesInRange } from '../utils/selectionUtils';
+import { findFileIndex, getFilesInRange, mergeFilesIntoSelection } from '../utils/selectionUtils';
 
 interface ShiftArrowSelectionOptions {
     /**
@@ -37,7 +37,9 @@ interface ShiftArrowSelectionOptions {
  * Provides clean API for selection operations like Shift+Click, Cmd+Click, etc.
  */
 export function useMultiSelection() {
-    const selectionState = useSelectionState();
+    const fileSelection = useFileSelection();
+    const fileSelectionRef = useRef(fileSelection);
+    fileSelectionRef.current = fileSelection;
     const selectionDispatch = useSelectionDispatch();
     const { app } = useServices();
     const settings = useSettingsState();
@@ -49,6 +51,8 @@ export function useMultiSelection() {
      */
     const handleMultiSelectClick = useCallback(
         (file: TFile, fileIndex?: number, orderedFiles?: TFile[]) => {
+            const selectionState = fileSelectionRef.current;
+
             // Check if we're trying to deselect
             const isDeselecting = selectionState.selectedFiles.has(file.path);
 
@@ -89,7 +93,7 @@ export function useMultiSelection() {
                 openFileInWorkspace(file);
             }
         },
-        [selectionState.selectedFiles, selectionState.selectedFile, selectionDispatch, openFileInWorkspace, workspace]
+        [selectionDispatch, openFileInWorkspace, workspace]
     );
 
     /**
@@ -97,6 +101,8 @@ export function useMultiSelection() {
      */
     const handleRangeSelectClick = useCallback(
         (file: TFile, fileIndex: number, orderedFiles: TFile[]) => {
+            const selectionState = fileSelectionRef.current;
+
             // Find cursor position in the orderedFiles array
             const cursorIndex = findFileIndex(orderedFiles, selectionState.selectedFile);
 
@@ -109,20 +115,20 @@ export function useMultiSelection() {
             // Get all files in range
             const filesInRange = getFilesInRange(orderedFiles, cursorIndex, fileIndex);
 
-            // Select all files in range that aren't already selected
-            filesInRange.forEach(f => {
-                if (!selectionState.selectedFiles.has(f.path)) {
-                    selectionDispatch({ type: 'TOGGLE_FILE_SELECTION', file: f });
-                }
-            });
+            const { selectedFiles, changed: selectionChanged } = mergeFilesIntoSelection(selectionState.selectedFiles, filesInRange);
 
             // Move cursor to the clicked position
-            selectionDispatch({ type: 'UPDATE_CURRENT_FILE', file });
+            selectionDispatch({
+                type: 'APPLY_FILE_SELECTION',
+                selectedFiles,
+                selectedFile: file,
+                lastMovementDirection: selectionChanged ? null : selectionState.lastMovementDirection
+            });
 
             // Open the file without changing focus
             openFileInWorkspace(file);
         },
-        [selectionState.selectedFile, selectionState.selectedFiles, selectionDispatch, openFileInWorkspace]
+        [selectionDispatch, openFileInWorkspace]
     );
 
     /**
@@ -133,12 +139,15 @@ export function useMultiSelection() {
      */
     const handleShiftArrowSelection = useCallback(
         (direction: 'up' | 'down', currentIndex: number, files: TFile[], options?: ShiftArrowSelectionOptions): number => {
+            const selectionState = fileSelectionRef.current;
+
             // Can't extend selection if nothing is selected
             if (currentIndex === -1 || !selectionState.selectedFile) {
                 return -1;
             }
 
             const currentFile = selectionState.selectedFile;
+            const selectedFiles = new Set(selectionState.selectedFiles);
 
             // Calculate next position
             const nextIndex = direction === 'down' ? Math.min(currentIndex + 1, files.length - 1) : Math.max(currentIndex - 1, 0);
@@ -160,7 +169,7 @@ export function useMultiSelection() {
                 // Check where we're moving TO
                 if (selectionState.selectedFiles.has(nextFile.path)) {
                     // Moving FROM selected item TO another selected item - deselect current
-                    selectionDispatch({ type: 'TOGGLE_FILE_SELECTION', file: currentFile });
+                    selectedFiles.delete(currentFile.path);
                     jumpingEnabled = false;
 
                     // Check if we deselected the active file
@@ -176,7 +185,7 @@ export function useMultiSelection() {
 
             if (!arrivedAtWasSelected) {
                 // This new cell is unselected, select it
-                selectionDispatch({ type: 'TOGGLE_FILE_SELECTION', file: nextFile });
+                selectedFiles.add(nextFile.path);
             }
 
             // STEP 3: Jumping logic (only if enabled)
@@ -200,10 +209,7 @@ export function useMultiSelection() {
 
             // STEP 4: Move cursor to final position
             const finalFile = files[finalIndex];
-            selectionDispatch({ type: 'UPDATE_CURRENT_FILE', file: finalFile });
-
-            // Update movement direction
-            selectionDispatch({ type: 'SET_MOVEMENT_DIRECTION', direction });
+            selectionDispatch({ type: 'APPLY_FILE_SELECTION', selectedFiles, selectedFile: finalFile, lastMovementDirection: direction });
 
             // Open the file at cursor without changing focus
             // Always open if we deselected the active file, or if cursor moved to a different file
@@ -214,14 +220,7 @@ export function useMultiSelection() {
             // Return the final index for the caller to handle scrolling
             return finalIndex;
         },
-        [
-            selectionState.selectedFile,
-            selectionState.selectedFiles,
-            selectionDispatch,
-            openFileInWorkspace,
-            settings.enterToOpenFiles,
-            workspace
-        ]
+        [selectionDispatch, openFileInWorkspace, settings.enterToOpenFiles, workspace]
     );
 
     /**
@@ -231,50 +230,27 @@ export function useMultiSelection() {
         (files: TFile[]) => {
             if (files.length === 0) return;
 
-            // Clear current selection and select all files
-            selectionDispatch({ type: 'CLEAR_FILE_SELECTION' });
-            files.forEach(file => {
-                selectionDispatch({ type: 'TOGGLE_FILE_SELECTION', file });
-            });
+            const selectionState = fileSelectionRef.current;
 
             // Keep cursor on current file or first file if none selected
             const currentFile = selectionState.selectedFile || files[0];
-            if (currentFile) {
-                selectionDispatch({ type: 'UPDATE_CURRENT_FILE', file: currentFile });
-            }
+            selectionDispatch({ type: 'SET_FILE_SELECTION', files, selectedFile: currentFile });
         },
-        [selectionState.selectedFile, selectionDispatch]
+        [selectionDispatch]
     );
-
-    /**
-     * Clear all selections
-     */
-    const clearSelection = useCallback(() => {
-        selectionDispatch({ type: 'CLEAR_FILE_SELECTION' });
-    }, [selectionDispatch]);
 
     /**
      * Check if a specific file is selected
      */
-    const isFileSelected = useCallback(
-        (file: TFile) => {
-            return selectionState.selectedFiles.has(file.path);
-        },
-        [selectionState.selectedFiles]
-    );
+    const isFileSelected = useCallback((file: TFile) => {
+        return fileSelectionRef.current.selectedFiles.has(file.path);
+    }, []);
 
     return {
-        // State
-        selectedFiles: selectionState.selectedFiles,
-        selectedFile: selectionState.selectedFile,
-        selectedCount: selectionState.selectedFiles.size,
-
-        // Actions
         handleMultiSelectClick,
         handleRangeSelectClick,
         handleShiftArrowSelection,
         selectAll,
-        clearSelection,
         isFileSelected
     };
 }

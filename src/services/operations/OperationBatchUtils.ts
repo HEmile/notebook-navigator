@@ -33,11 +33,11 @@ export interface OperationUsageSummary {
  */
 export async function yieldToEventLoop(): Promise<void> {
     await new Promise<void>(resolve => {
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(() => resolve());
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => resolve());
             return;
         }
-        setTimeout(resolve, 0);
+        window.setTimeout(resolve, 0);
     });
 }
 

@@ -21,20 +21,13 @@
     min-height: calc(49px + var(--nn-mobile-safe-area-bottom));
 }
 
-/* Mobile toolbars: distribute buttons evenly; Obsidian 1.11+ iOS overrides this via platform stylesheet. */
+/* Mobile toolbars: distribute buttons evenly; iOS floating toolbars override this via platform stylesheet. */
 .notebook-navigator-mobile .nn-mobile-toolbar {
     justify-content: space-evenly;
 }
 
 .nn-pane-bottom-toolbar {
     flex-shrink: 0;
-}
-
-.notebook-navigator-mobile .nn-mobile-toolbar-left,
-.notebook-navigator-mobile .nn-mobile-toolbar-right,
-.notebook-navigator-mobile .nn-mobile-toolbar-pill,
-.notebook-navigator-mobile .nn-mobile-toolbar-circle {
-    display: contents;
 }
 
 /* Mobile toolbar grouping containers */
@@ -64,7 +57,7 @@
 }
 
 /* Mobile toolbar buttons */
-.nn-mobile-toolbar-button {
+button.nn-mobile-toolbar-button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -72,8 +65,7 @@
     height: 44px;
     min-width: 44px;
     min-height: 44px;
-    background: transparent !important;
-    background-color: transparent !important;
+    background: transparent;
     border: none;
     border-radius: var(--radius-m);
     color: var(--nn-theme-mobile-toolbar-button-icon-color);
@@ -82,7 +74,7 @@
         color 0.15s ease;
     cursor: pointer;
     padding: 0;
-    box-shadow: none !important;
+    box-shadow: none;
 }
 
 .nn-mobile-toolbar-button-circle {
@@ -93,6 +85,9 @@
 .nn-mobile-toolbar-button svg {
     width: 24px;
     height: 24px;
+}
+
+.nn-mobile-toolbar-button svg:not(.nn-vault-icon-svg) {
     stroke-width: 1.5;
     stroke: var(--nn-theme-mobile-toolbar-button-icon-color);
 }
@@ -103,13 +98,13 @@
 }
 
 /* Active mobile toolbar button state - toggled on */
-.nn-mobile-toolbar-button-active {
-    color: var(--nn-theme-mobile-toolbar-button-active-icon-color) !important;
-    background-color: var(--nn-theme-mobile-toolbar-button-active-bg) !important;
+.notebook-navigator-mobile button.nn-mobile-toolbar-button.nn-mobile-toolbar-button-active {
+    color: var(--nn-theme-mobile-toolbar-button-active-icon-color);
+    background-color: var(--nn-theme-mobile-toolbar-button-active-bg);
 }
 
-.nn-mobile-toolbar-button-active svg {
-    stroke: var(--nn-theme-mobile-toolbar-button-active-icon-color) !important;
+.notebook-navigator-mobile button.nn-mobile-toolbar-button.nn-mobile-toolbar-button-active svg:not(.nn-vault-icon-svg) {
+    stroke: var(--nn-theme-mobile-toolbar-button-active-icon-color);
     stroke-width: 2;
 }
 

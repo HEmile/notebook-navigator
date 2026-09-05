@@ -19,7 +19,7 @@
 import { TFile, WorkspaceLeaf } from 'obsidian';
 import type NotebookNavigatorPlugin from '../../main';
 import { NOTEBOOK_NAVIGATOR_CALENDAR_VIEW, NOTEBOOK_NAVIGATOR_VIEW } from '../../types';
-import { NotebookNavigatorView } from '../../view/NotebookNavigatorView';
+import { isNotebookNavigatorView } from '../../view/viewGuards';
 import type { RevealFileOptions } from '../../hooks/useNavigatorReveal';
 
 /**
@@ -65,7 +65,8 @@ export default class WorkspaceCoordinator {
             return shouldContinue() ? existingLeaf : null;
         }
 
-        const leaf = workspace.getRightLeaf(false);
+        // Split instead of reusing the current right sidebar leaf so file views stay intact.
+        const leaf = workspace.getRightLeaf(true) ?? workspace.getRightLeaf(false);
         if (!leaf) {
             return null;
         }
@@ -92,7 +93,7 @@ export default class WorkspaceCoordinator {
     async activateNavigatorView(): Promise<WorkspaceLeaf | null> {
         const { workspace } = this.plugin.app;
 
-        let leaf: WorkspaceLeaf | null = null;
+        let leaf: WorkspaceLeaf | null;
         const leaves = workspace.getLeavesOfType(NOTEBOOK_NAVIGATOR_VIEW);
 
         if (leaves.length > 0) {
@@ -127,7 +128,7 @@ export default class WorkspaceCoordinator {
     revealFileInActualFolder(file: TFile, options?: RevealFileOptions): void {
         this.getNavigatorLeaves().forEach(leaf => {
             const { view } = leaf;
-            if (view instanceof NotebookNavigatorView) {
+            if (isNotebookNavigatorView(view)) {
                 view.navigateToFile(file, options);
             }
         });
@@ -140,7 +141,7 @@ export default class WorkspaceCoordinator {
     revealFileInNearestFolder(file: TFile, options?: RevealFileOptions): void {
         this.getNavigatorLeaves().forEach(leaf => {
             const { view } = leaf;
-            if (view instanceof NotebookNavigatorView) {
+            if (isNotebookNavigatorView(view)) {
                 view.revealFileInNearestFolder(file, options);
             }
         });
@@ -149,7 +150,7 @@ export default class WorkspaceCoordinator {
     revealTopic(topicPath: string): void {
         this.getNavigatorLeaves().forEach(leaf => {
             const { view } = leaf;
-            if (view instanceof NotebookNavigatorView) {
+            if (isNotebookNavigatorView(view)) {
                 view.revealTopic(topicPath);
             }
         });
@@ -158,7 +159,7 @@ export default class WorkspaceCoordinator {
     revealTopicAllPaths(topicPath: string): void {
         this.getNavigatorLeaves().forEach(leaf => {
             const { view } = leaf;
-            if (view instanceof NotebookNavigatorView) {
+            if (isNotebookNavigatorView(view)) {
                 view.revealTopicAllPaths(topicPath);
             }
         });

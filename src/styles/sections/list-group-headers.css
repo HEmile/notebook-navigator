@@ -1,0 +1,386 @@
+/* Source: src/styles/sections/list-group-headers.css */
+
+/* ========================================================================
+   List Group Headers
+   ======================================================================== */
+
+/* List group headers for grouped files */
+.nn-list-group-header {
+    height: var(--nn-list-group-header-height-mobile, var(--nn-list-group-header-height));
+    box-sizing: border-box;
+    padding: 0 var(--nn-file-item-padding-horizontal);
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    font-weight: var(--nn-theme-list-group-header-font-weight);
+    color: var(--nn-theme-list-group-header-color);
+    background-color: transparent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* The whole header row toggles collapse, not just the chevron button */
+.nn-list-group-header--collapsible {
+    cursor: pointer;
+}
+
+.nn-list-group-header-spacer {
+    height: var(--item-height);
+}
+
+.nn-list-sticky-header {
+    position: sticky;
+    top: 0;
+    /* Keep the sticky copy out of layout so it overlays the virtualized list rows. */
+    height: 0;
+    flex: 0 0 0;
+    overflow: visible;
+    z-index: 200;
+    pointer-events: none;
+}
+
+.nn-list-pane-scroller .nn-virtual-list-group-header:not(.nn-hide-list-group-header-separator)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    inset-inline-start: var(--nn-file-item-padding-horizontal);
+    inset-inline-end: var(--nn-file-item-padding-horizontal);
+    height: var(--nn-separator-height);
+    background-color: var(--nn-theme-list-separator-color);
+    z-index: 100;
+    pointer-events: none;
+}
+
+.nn-list-pane-scroller .nn-virtual-list-group-header.nn-hide-separator-selection::after {
+    display: none;
+}
+
+.nn-list-sticky-header .nn-list-group-header {
+    position: relative;
+    overflow: visible;
+    background-color: var(--nn-theme-list-bg);
+    pointer-events: auto;
+}
+
+.nn-list-sticky-header .nn-list-group-header::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    bottom: 0;
+    inset-inline-start: calc(-1 * var(--nn-scroller-padding));
+    inset-inline-end: calc(-1 * var(--nn-scroller-padding));
+    background-color: var(--nn-theme-list-bg);
+    z-index: -1;
+}
+
+.nn-list-sticky-header .nn-manual-sort-group-header-shell {
+    overflow: visible;
+    background-color: var(--nn-theme-list-bg);
+    pointer-events: auto;
+}
+
+.nn-list-sticky-header .nn-manual-sort-group-header-shell::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    bottom: 0;
+    inset-inline-start: calc(-1 * var(--nn-scroller-padding));
+    inset-inline-end: calc(-1 * var(--nn-scroller-padding));
+    background-color: var(--nn-theme-list-bg);
+    z-index: -1;
+}
+
+.nn-list-sticky-header .nn-manual-sort-group-header-shell .nn-list-group-header {
+    background-color: transparent;
+}
+
+.nn-list-sticky-header .nn-manual-sort-group-header-shell .nn-list-group-header::before {
+    content: none;
+}
+
+.nn-list-group-header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--nn-list-group-header-icon-size, var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)));
+    height: var(--nn-list-group-header-icon-size, var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)));
+    color: var(--nn-theme-list-group-header-color);
+    flex: 0 0 auto;
+}
+
+.nn-list-group-header-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.nn-list-group-header--manual-sort {
+    --nn-manual-sort-group-header-accent: var(--interactive-accent);
+}
+
+.nn-manual-sort-group-header-shell {
+    --nn-manual-sort-group-header-accent: var(--interactive-accent);
+    height: var(--nn-list-group-goal-header-height-mobile, var(--nn-list-group-goal-header-height));
+    position: relative;
+    overflow: hidden;
+    background-color: var(--nn-theme-list-bg);
+}
+
+.nn-manual-sort-group-header-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.nn-manual-sort-group-header-content--accent-all {
+    color: var(--nn-manual-sort-group-header-accent);
+}
+
+.nn-manual-sort-group-header-custom-icon {
+    flex: 0 0 auto;
+    width: var(--nn-list-group-header-icon-size, var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)));
+    height: var(--nn-list-group-header-icon-size, var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)));
+    color: currentColor;
+}
+
+.nn-manual-sort-group-header-content--accent-icon .nn-manual-sort-group-header-custom-icon {
+    color: var(--nn-manual-sort-group-header-accent);
+}
+
+.nn-manual-sort-group-header-custom-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.nn-manual-sort-group-header-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nn-manual-sort-group-header-count {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 400;
+    color: var(--nn-theme-foreground-muted);
+}
+
+.nn-manual-sort-group-header-content--accent-all .nn-manual-sort-group-header-count {
+    color: inherit;
+}
+
+.nn-manual-sort-group-header-percent {
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    font-weight: 600;
+    color: var(--nn-manual-sort-group-header-accent);
+}
+
+.nn-manual-sort-group-header-progress {
+    position: relative;
+    width: 100%;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 999px;
+}
+
+.nn-manual-sort-group-header-progress::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: var(--nn-manual-sort-group-header-accent);
+    opacity: 0.1;
+}
+
+.nn-manual-sort-group-header-progress-fill {
+    position: relative;
+    width: var(--nn-manual-sort-group-header-progress);
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--nn-manual-sort-group-header-accent);
+}
+
+.nn-manual-sort-group-header-progress-row {
+    box-sizing: border-box;
+    position: absolute;
+    z-index: 1;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    bottom: var(--nn-list-group-progress-gap-after);
+    height: 3px;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--nn-file-item-padding-horizontal);
+    pointer-events: none;
+}
+
+.nn-list-group-header-text {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nn-list-group-header-text--custom-color {
+    font-weight: var(--nn-theme-navitem-custom-color-name-font-weight);
+}
+
+.nn-list-group-header-item-count {
+    flex: 0 0 auto;
+    font-weight: 400;
+    color: var(--nn-theme-foreground-muted);
+}
+
+.nn-list-group-header-path {
+    display: inline-flex;
+    align-items: center;
+}
+
+.nn-list-group-header-folder-segment {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nn-list-group-header-folder-segment:not(:last-child) {
+    flex-shrink: 0;
+}
+
+.nn-list-group-header-folder-segment:last-child {
+    flex: 1 1 auto;
+}
+
+.nn-list-group-header-path-separator {
+    flex: 0 0 auto;
+    padding-inline: 4px;
+}
+
+button.nn-list-group-header-collapse-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: var(--nn-list-group-header-height-mobile, var(--nn-list-group-header-height));
+    height: var(--nn-list-group-header-height-mobile, var(--nn-list-group-header-height));
+    margin-inline-start: auto;
+    margin-inline-end: -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    color: var(--nn-theme-list-group-header-color);
+    background: transparent;
+    box-shadow: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+button.nn-list-group-header-collapse-button:focus-visible {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+button.nn-list-group-header-collapse-button .nn-list-group-header-icon {
+    width: var(--nn-list-group-header-icon-size, var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)));
+    height: var(--nn-list-group-header-icon-size, var(--nn-file-icon-size-mobile, var(--nn-file-icon-size)));
+}
+
+.nn-list-group-header-text--folder-note {
+    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration);
+}
+
+.nn-list-group-header-text--folder-note:hover {
+    cursor: pointer;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration);
+}
+
+.nn-pinned-section-header {
+    align-items: center;
+    user-select: none;
+}
+
+/* Virtual list item - absolute positioning for list pane items */
+.nn-list-pane-scroller .nn-virtual-item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+/* Skeleton view - minimal loading state */
+.nn-skeleton-navigation-pane {
+    background-color: var(--nn-theme-nav-bg);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-skeleton-list-pane {
+    background-color: var(--nn-theme-list-bg);
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.nn-skeleton-navigation-pane-vertical {
+    width: 100%;
+    min-height: var(--nn-navigation-pane-min-height);
+    flex: 0 1 auto;
+}
+
+.nn-skeleton-list-pane-vertical {
+    min-height: var(--nn-list-pane-min-height);
+}
+
+.nn-skeleton-nav-header {
+    height: 32px;
+    background-color: var(--nn-theme-nav-bg);
+    flex-shrink: 0;
+}
+
+/* Add right border to nav header in dual pane mode */
+.nn-split-container.nn-orientation-horizontal:not(.nn-single-pane) .nn-skeleton-nav-header {
+    border-right: 1px solid var(--nn-theme-divider-border-color);
+}
+
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-skeleton-nav-header {
+    border-right: none;
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
+}
+
+.nn-skeleton-list-header {
+    height: 32px;
+    background-color: var(--nn-theme-list-bg);
+    flex-shrink: 0;
+}
+
+.nn-skeleton-content {
+    flex: 1;
+    overflow: hidden;
+    background-color: inherit;
+}
+
+.nn-skeleton-search-bar {
+    height: 40px;
+    background-color: var(--nn-theme-list-bg);
+    flex-shrink: 0;
+}
+
+/* Add right border only to nav content area in dual pane mode */
+.nn-split-container.nn-orientation-horizontal:not(.nn-single-pane) .nn-skeleton-navigation-pane .nn-skeleton-content {
+    border-right: 1px solid var(--nn-theme-divider-border-color);
+}
+
+.nn-split-container.nn-orientation-vertical:not(.nn-single-pane) .nn-skeleton-navigation-pane .nn-skeleton-content {
+    border-right: none;
+    border-bottom: 1px solid var(--nn-theme-divider-border-color);
+}

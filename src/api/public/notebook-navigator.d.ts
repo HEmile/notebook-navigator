@@ -31,7 +31,7 @@
  * if (nn) {
  *   const folder = app.vault.getFolderByPath('Projects');
  *   if (folder) {
- *     await nn.metadata.setFolderMeta(folder, { icon: 'lucide:folder-star' });
+ *     await nn.metadata.setFolderMeta(folder, { icon: 'folder-star' });
  *   }
  * }
  * ```
@@ -42,31 +42,26 @@ import { EventRef, MenuItem, TFile, TFolder } from 'obsidian';
 // Core types
 
 /**
- * Icon provider identifiers supported by the public API
+ * Short icon provider prefixes used by Notebook Navigator frontmatter values.
  */
-export type IconProviderId =
-    | 'lucide'
-    | 'bootstrap-icons'
-    | 'fontawesome-solid'
-    | 'material-icons'
-    | 'phosphor'
-    | 'rpg-awesome'
-    | 'simple-icons';
+export type IconProviderPrefix = 'bi' | 'fas' | 'mi' | 'ph' | 'ra' | 'si';
 
 /**
- * Canonical icon input format
- * Must be provider-prefixed (e.g., 'phosphor:folder') or an emoji literal
+ * Typed short-provider icon input format used in frontmatter.
+ * Bare Lucide slugs and bare emoji are accepted as plain strings.
  */
-export type IconString = `${IconProviderId}:${string}` | `emoji:${string}`;
+export type IconString = `${IconProviderPrefix}-${string}`;
 
 /**
  * Icon input type accepted by public API setters.
- * Use `IconString` when you want canonical provider-prefixed or emoji input.
+ * Setters parse the same icon value format Notebook Navigator writes to frontmatter.
  */
 export type IconInput = string;
 
 /**
- * Icon value returned by public API getters and events
+ * Icon value returned by public API getters and events.
+ * Supported icons use the same value format as frontmatter: Lucide slug,
+ * short provider-prefixed slug, or bare emoji.
  */
 export type IconValue = string;
 

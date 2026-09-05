@@ -16,12 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
-import type { TFile } from 'obsidian';
+import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
+import type { App, TFile } from 'obsidian';
 import { TIMEOUTS } from '../../types/obsidian-extended';
 import type { ContentProviderType, FileContentType } from '../../interfaces/IContentProvider';
 import type { ContentProviderRegistry } from '../../services/content/ContentProviderRegistry';
-import type { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { calculateFileDiff } from '../../storage/diffCalculator';
 import { type FileData as DBFileData } from '../../storage/IndexedDBStorage';
 import { getDBInstance, recordFileChanges, removeFilesFromCache } from '../../storage/fileOperations';
@@ -30,11 +30,16 @@ import {
     getActiveHiddenFileNames,
     getActiveHiddenFileTags,
     getActiveHiddenFileProperties,
-    getActiveHiddenFolders,
-    getActivePropertyFields
+    getActiveHiddenFolders
 } from '../../utils/vaultProfiles';
 import { clearCacheRebuildNoticeState, getCacheRebuildNoticeState, setCacheRebuildNoticeState } from './cacheRebuildNoticeStorage';
 import { getCacheRebuildProgressTypes, getMetadataDependentTypes, haveStringArraysChanged } from './storageContentTypes';
+import {
+    clearFrontmatterMetadataCacheSignature,
+    haveFrontmatterMetadataCacheSettingsChanged,
+    markFrontmatterMetadataCacheCurrent
+} from '../../utils/frontmatterMetadataCache';
+import { haveMarkdownCountConsumersChanged } from '../../utils/markdownPipelineContentTypes';
 
 /**
  * Reacts to settings/profile changes that affect storage and derived content.
@@ -49,9 +54,10 @@ import { getCacheRebuildProgressTypes, getMetadataDependentTypes, haveStringArra
  *   new visibility rules.
  */
 export function useStorageSettingsSync(params: {
+    app: App;
     settings: NotebookNavigatorSettings;
-    stoppedRef: RefObject<boolean>;
-    contentRegistryRef: RefObject<ContentProviderRegistry | null>;
+    stoppedRef: MutableRefObject<boolean>;
+    contentRegistryRef: MutableRefObject<ContentProviderRegistry | null>;
     hiddenFolders: string[];
     hiddenFileProperties: string[];
     hiddenFileNames: string[];
@@ -59,7 +65,7 @@ export function useStorageSettingsSync(params: {
     scheduleTagTreeRebuild: (options?: { flush?: boolean }) => void;
     schedulePropertyTreeRebuild: (options?: { flush?: boolean }) => void;
     getIndexableFiles: () => TFile[];
-    pendingRenameDataRef: RefObject<Map<string, DBFileData>>;
+    pendingRenameDataRef: MutableRefObject<Map<string, DBFileData>>;
     queueMetadataContentWhenReady: (
         files: TFile[],
         includeTypes?: ContentProviderType[],
@@ -71,6 +77,7 @@ export function useStorageSettingsSync(params: {
     clearCacheRebuildNotice: () => void;
 }): { resetPendingSettingsChanges: () => void } {
     const {
+        app,
         settings,
         stoppedRef,
         contentRegistryRef,
@@ -128,12 +135,19 @@ export function useStorageSettingsSync(params: {
 
             // Provider-level settings may change which files need content and which providers should run.
             const affectedProviders = await registry.handleSettingsChange(oldSettings, newSettings);
+            if (haveFrontmatterMetadataCacheSettingsChanged(oldSettings, newSettings)) {
+                if (newSettings.useFrontmatterMetadata) {
+                    markFrontmatterMetadataCacheCurrent(newSettings);
+                } else {
+                    clearFrontmatterMetadataCacheSignature();
+                }
+            }
 
             const enabledFeatureImages = oldSettings.showFeatureImage !== newSettings.showFeatureImage && newSettings.showFeatureImage;
             const shouldShowIndexNotice = (affectedProviders.length > 0 || enabledFeatureImages) && !stoppedRef.current;
 
             if (shouldShowIndexNotice) {
-                const enabledTypes = getCacheRebuildProgressTypes(newSettings);
+                const enabledTypes = getCacheRebuildProgressTypes(newSettings, app);
                 if (enabledTypes.length > 0) {
                     const state = getCacheRebuildNoticeState();
                     if (state?.source !== 'rebuild') {
@@ -155,7 +169,7 @@ export function useStorageSettingsSync(params: {
                 return;
             }
 
-            const metadataDependentTypes = getMetadataDependentTypes(newSettings);
+            const metadataDependentTypes = getMetadataDependentTypes(newSettings, app);
             const affectedProviderTypeSet = new Set<ContentProviderType>(affectedProviders);
             // Queue only metadata providers that were affected by this settings change.
             const metadataTypesToQueue = metadataDependentTypes.filter(type => affectedProviderTypeSet.has(type));
@@ -179,6 +193,7 @@ export function useStorageSettingsSync(params: {
             }
         },
         [
+            app,
             clearCacheRebuildNotice,
             contentRegistryRef,
             getIndexableFiles,
@@ -259,10 +274,10 @@ export function useStorageSettingsSync(params: {
         const registry = contentRegistryRef.current;
         const relevantSettings = registry?.getAllRelevantSettings() ?? [];
         const hasRelevantSettingsChange =
-            !registry || relevantSettings.some(settingKey => previousSettings[settingKey] !== settings[settingKey]);
-        const propertyFieldsChanged = getActivePropertyFields(previousSettings) !== getActivePropertyFields(settings);
-
-        if (hasRelevantSettingsChange || propertyFieldsChanged) {
+            !registry ||
+            relevantSettings.some(settingKey => previousSettings[settingKey] !== settings[settingKey]) ||
+            haveMarkdownCountConsumersChanged(previousSettings, settings, app);
+        if (hasRelevantSettingsChange) {
             scheduleSettingsChanges(previousSettings, settings);
         }
 
@@ -282,14 +297,14 @@ export function useStorageSettingsSync(params: {
             runAsyncAction(async () => {
                 try {
                     const allFiles = getIndexableFiles();
-                    const { toAdd, toUpdate, toRemove, cachedFiles } = await calculateFileDiff(allFiles);
+                    const { toAdd, toUpdate, toRemove, existingData } = calculateFileDiff(allFiles);
 
                     if (toRemove.length > 0) {
                         await removeFilesFromCache(toRemove);
                     }
 
                     if (toAdd.length > 0 || toUpdate.length > 0) {
-                        await recordFileChanges([...toAdd, ...toUpdate], cachedFiles, pendingRenameDataRef.current);
+                        await recordFileChanges([...toAdd, ...toUpdate], existingData, pendingRenameDataRef.current);
                     }
 
                     if (settings.showTags) {
@@ -311,6 +326,7 @@ export function useStorageSettingsSync(params: {
 
         prevSettingsRef.current = settings;
     }, [
+        app,
         contentRegistryRef,
         getIndexableFiles,
         hiddenFileNames,

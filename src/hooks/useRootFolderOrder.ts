@@ -20,7 +20,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TFile, TFolder, debounce } from 'obsidian';
 import { useServices } from '../context/ServicesContext';
 import { useSettingsUpdate } from '../context/SettingsContext';
-import type { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
 import { naturalCompare } from '../utils/sortUtils';
 import { areStringArraysEqual, createIndexMap } from '../utils/arrayUtils';
 import { compareFolderOrderWithFallback } from '../utils/treeFlattener';
@@ -50,7 +50,9 @@ export interface RootFileChangeEvent {
 
 export interface UseRootFolderOrderParams {
     settings: NotebookNavigatorSettings;
+    showHiddenItems: boolean; // Reveals the vault root as a hidden item when the root folder setting is off
     onFileChange?: (change: RootFileChangeEvent) => void; // Callback triggered when files change
+    onFolderChange?: () => void; // Callback triggered when folders are created, deleted, or renamed
 }
 
 /**
@@ -148,7 +150,12 @@ function sortFoldersByOrder(folders: TFolder[], orderMap: Map<string, number>): 
  * Hook that manages the custom ordering of root-level folders.
  * Tracks folder creation, deletion, and renaming to maintain order consistency.
  */
-export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrderParams): RootFolderOrderState {
+export function useRootFolderOrder({
+    settings,
+    showHiddenItems,
+    onFileChange,
+    onFolderChange
+}: UseRootFolderOrderParams): RootFolderOrderState {
     const { app } = useServices();
     const updateSettings = useSettingsUpdate();
     const [rootFolders, setRootFolders] = useState<TFolder[]>([]);
@@ -168,6 +175,10 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
 
     useEffect(() => {
         const pendingChanges = pendingRootOrderChangesRef.current;
+
+        // A root folder hidden by the setting counts as a hidden item, so the show hidden items
+        // toggle reveals it; the tree renders it as excluded while it is only visible this way
+        const includeRootFolder = settings.showRootFolder || showHiddenItems;
 
         // Rebuilds the folder structure and applies pending changes
         const buildFolders = () => {
@@ -210,7 +221,7 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
 
                 setRootLevelFolders(alphabeticalChildren);
 
-                if (settings.showRootFolder) {
+                if (includeRootFolder) {
                     setRootFolders([root]);
                 } else {
                     setRootFolders(alphabeticalChildren);
@@ -237,7 +248,7 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
             setMissingRootFolderPaths(prev => (areStringArraysEqual(prev, missingPaths) ? prev : missingPaths));
             setRootLevelFolders(orderedChildren);
 
-            if (settings.showRootFolder) {
+            if (includeRootFolder) {
                 setRootFolders([root]);
             } else {
                 setRootFolders(orderedChildren);
@@ -250,6 +261,13 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
         const notifyFileChange = (change: RootFileChangeEvent) => {
             if (onFileChange) {
                 onFileChange(change);
+            }
+        };
+
+        // Notifies parent component of folder structure changes ahead of the debounced rebuild
+        const notifyFolderChange = () => {
+            if (onFolderChange) {
+                onFolderChange();
             }
         };
 
@@ -299,6 +317,7 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
             app.vault.on('create', file => {
                 if (file instanceof TFolder) {
                     handleFolderCreate(file);
+                    notifyFolderChange();
                 }
                 if (file instanceof TFile) {
                     notifyFileChange({ type: 'create', path: file.path });
@@ -307,6 +326,7 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
             app.vault.on('delete', file => {
                 if (file instanceof TFolder) {
                     handleFolderDelete(file);
+                    notifyFolderChange();
                 }
                 if (file instanceof TFile) {
                     notifyFileChange({ type: 'delete', path: file.path });
@@ -315,6 +335,7 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
             app.vault.on('rename', (file, oldPath) => {
                 if (file instanceof TFolder) {
                     handleFolderRename(file, oldPath);
+                    notifyFolderChange();
                 }
                 if (file instanceof TFile) {
                     notifyFileChange({ type: 'rename', path: file.path, oldPath });
@@ -326,7 +347,16 @@ export function useRootFolderOrder({ settings, onFileChange }: UseRootFolderOrde
             events.forEach(eventRef => app.vault.offref(eventRef));
             rebuildFolders.cancel();
         };
-    }, [app, onFileChange, settings.showRootFolder, settings.rootFolderOrder, settings.folderSortOrder, updateSettings]);
+    }, [
+        app,
+        onFileChange,
+        onFolderChange,
+        settings.showRootFolder,
+        settings.rootFolderOrder,
+        settings.folderSortOrder,
+        showHiddenItems,
+        updateSettings
+    ]);
 
     return {
         rootFolders,

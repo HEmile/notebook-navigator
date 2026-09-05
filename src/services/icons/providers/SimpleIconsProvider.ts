@@ -24,9 +24,7 @@ import { BaseFontIconProvider, BaseFontIconProviderOptions } from './BaseFontIco
  */
 type SimpleIconsSearchPrimitive = string | number | boolean | null;
 type SimpleIconsSearchEntry =
-    | SimpleIconsSearchPrimitive
-    | SimpleIconsSearchPrimitive[]
-    | Record<string, SimpleIconsSearchPrimitive | SimpleIconsSearchPrimitive[]>;
+    SimpleIconsSearchPrimitive | SimpleIconsSearchPrimitive[] | Record<string, SimpleIconsSearchPrimitive | SimpleIconsSearchPrimitive[]>;
 
 interface SimpleIconsMetadataItem {
     unicode?: string; // Unicode character code for the icon

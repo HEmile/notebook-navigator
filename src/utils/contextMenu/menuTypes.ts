@@ -19,7 +19,7 @@
 import { Menu, TFile, TFolder, App } from 'obsidian';
 import { ItemType } from '../../types';
 import type { VisibilityPreferences } from '../../types';
-import { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { FileSystemOperations } from '../../services/FileSystemService';
 import { MetadataService } from '../../services/MetadataService';
 import { PropertyOperations } from '../../services/PropertyOperations';
@@ -43,6 +43,7 @@ export type MenuConfig =
     | {
           type: typeof ItemType.FILE;
           item: TFile;
+          options?: FileMenuOptions;
       }
     | {
           type: typeof ItemType.FOLDER;
@@ -64,6 +65,7 @@ export type MenuConfig =
     | {
           type: typeof EMPTY_LIST_MENU_TYPE;
           item: TFolder | null;
+          options?: EmptyListMenuOptions;
       };
 
 /**
@@ -116,6 +118,7 @@ export interface MenuBuilderParams {
 
 export interface FolderMenuOptions {
     disableNavigationSeparatorActions?: boolean;
+    onStartInlineRename?: (folder: TFolder) => boolean;
 }
 
 export interface TagMenuOptions {
@@ -124,6 +127,17 @@ export interface TagMenuOptions {
 
 export interface PropertyMenuOptions {
     disableNavigationSeparatorActions?: boolean;
+}
+
+export interface FileMenuOptions {
+    source?: 'list-pane';
+    orderedFiles?: readonly TFile[];
+    onStartInlineRename?: (file: TFile) => boolean;
+}
+
+export interface EmptyListMenuOptions {
+    orderedFiles?: readonly TFile[];
+    onStartInlineRename?: (file: TFile) => boolean;
 }
 
 /**
@@ -155,4 +169,5 @@ export interface PropertyMenuBuilderParams extends MenuBuilderParams {
  */
 export interface FileMenuBuilderParams extends MenuBuilderParams {
     file: TFile;
+    options?: FileMenuOptions;
 }

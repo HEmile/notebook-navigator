@@ -1,5 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Submit an issue
-    url: https://github.com/johansan/notebook-navigator/issues
-    about: We're not accepting pull requests at this time. Please submit feature requests and bug reports through our issue tracker.

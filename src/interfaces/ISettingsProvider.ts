@@ -16,7 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
+import type { CollapsedPinnedContexts } from '../types';
 
 /**
  * Interface for providing access to plugin settings
@@ -61,6 +62,18 @@ export interface ISettingsProvider {
      * @param recentIcons - Map of provider id to ordered icon id list
      */
     setRecentIcons(recentIcons: Record<string, string[]>): void;
+
+    /**
+     * Gets a copy of the pinned-section collapse state stored outside of synced settings
+     */
+    getCollapsedPinnedContexts(): CollapsedPinnedContexts;
+
+    /**
+     * Mutates the pinned-section collapse state stored outside of synced settings.
+     * When the mutator reports a change the record is persisted to vault-local storage.
+     * @returns True when the mutator changed the record
+     */
+    updateCollapsedPinnedContexts(mutator: (record: CollapsedPinnedContexts) => boolean): boolean;
 
     /**
      * Gets the cached list of recently used colors stored outside of synced settings

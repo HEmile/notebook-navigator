@@ -31,6 +31,7 @@ import { mutateFrontmatterTagFields } from '../tagRename/frontmatterTagMutator';
 import { mergeRanges, NumericRange } from '../../utils/arrayUtils';
 import { findFencedCodeBlockRanges, findInlineCodeRanges, isIndexInRanges } from '../../utils/codeRangeUtils';
 import { parseCommaSeparatedList } from '../../utils/commaSeparatedListUtils';
+import { findHtmlTagRanges } from '../../utils/htmlParsingUtils';
 import { findMatchingRecordKey } from '../../utils/recordUtils';
 
 /**
@@ -419,7 +420,7 @@ export class TagFileMutations {
                 error.message = `[Notebook Navigator] Failed to ${failureContext}: ${error.message}`;
                 throw error;
             }
-            throw new Error(`[Notebook Navigator] Failed to ${failureContext}`);
+            throw Object.assign(new Error(`[Notebook Navigator] Failed to ${failureContext}`), { cause: error });
         }
         return changed;
     }
@@ -756,27 +757,8 @@ export class TagFileMutations {
     private computeInlineTagExclusionRanges(content: string): NumericRange[] {
         const fencedBlocks = findFencedCodeBlockRanges(content);
         const inlineCodeSpans = findInlineCodeRanges(content, fencedBlocks);
-        const htmlTagRanges = this.findHtmlTagRanges(content);
+        const htmlTagRanges = findHtmlTagRanges(content);
         return mergeRanges([...fencedBlocks, ...inlineCodeSpans, ...htmlTagRanges]);
-    }
-
-    /**
-     * Finds ranges of HTML tags where hash symbols should be preserved
-     */
-    private findHtmlTagRanges(content: string): NumericRange[] {
-        const ranges: NumericRange[] = [];
-        // Matches HTML tags including attributes
-        const htmlPattern = /<\/?[A-Za-z](?:[\w:-]*)(?:\s[^<>]*?)?>/g;
-        let match: RegExpExecArray | null;
-
-        while ((match = htmlPattern.exec(content)) !== null) {
-            ranges.push({
-                start: match.index,
-                end: match.index + match[0].length
-            });
-        }
-
-        return ranges;
     }
 
     /**

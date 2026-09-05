@@ -26,15 +26,18 @@ import {
     buildFileItemTagRainbowColors,
     type FileItemPillDecorationModel
 } from '../utils/fileItemPillDecoration';
+import type { NavigationPaneTreeSectionsResult } from './navigationPane/data/useNavigationPaneTreeSections';
 
 interface UseFileItemPillDecorationStateParams {
     sourceState: NavigationPaneSourceState;
+    treeSections: Pick<NavigationPaneTreeSectionsResult, 'renderTagTree' | 'renderedRootTagKeys'>;
     includeDescendantNotes: boolean;
     navRainbowState: NavigationRainbowState;
 }
 
 export function useFileItemPillDecorationState({
     sourceState,
+    treeSections,
     includeDescendantNotes,
     navRainbowState
 }: UseFileItemPillDecorationStateParams): FileItemPillDecorationModel {
@@ -52,7 +55,8 @@ export function useFileItemPillDecorationState({
         }
 
         return buildFileItemTagRainbowColors({
-            visibleTagTree: sourceState.visibleTagTree,
+            visibleTagTree: treeSections.renderTagTree,
+            rootTagKeys: treeSections.renderedRootTagKeys,
             rootTagOrderMap: sourceState.rootTagOrderMap,
             tagComparator: sourceState.tagComparator,
             palette,
@@ -67,9 +71,10 @@ export function useFileItemPillDecorationState({
         settings.inheritTagColors,
         settings.showAllTagsFolder,
         settings.tagTreeSortOverrides,
+        treeSections.renderedRootTagKeys,
+        treeSections.renderTagTree,
         sourceState.rootTagOrderMap,
-        sourceState.tagComparator,
-        sourceState.visibleTagTree
+        sourceState.tagComparator
     ]);
 
     const propertyRainbowColors = useMemo(() => {

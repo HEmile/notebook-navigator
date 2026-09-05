@@ -86,8 +86,6 @@
 }
 
 .nn-preview-label,
-.nn-rgb-label,
-.nn-rgb-title,
 .nn-hex-title {
     font-size: 11px;
     color: var(--nn-theme-foreground-muted);
@@ -118,21 +116,21 @@
 .nn-checkerboard,
 .nn-preview-color.nn-no-color {
     background-image:
-        linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc),
-        linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc);
+        linear-gradient(45deg, #cccccc 25%, transparent 25%, transparent 75%, #cccccc 75%, #cccccc),
+        linear-gradient(45deg, #cccccc 25%, transparent 25%, transparent 75%, #cccccc 75%, #cccccc);
     background-size: 10px 10px;
     background-position:
         0 0,
         5px 5px;
-    background-color: #fff;
+    background-color: #ffffff;
 }
 
 .theme-dark .nn-checkerboard,
 .theme-dark .nn-preview-color.nn-no-color {
     background-image:
-        linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444 75%, #444),
-        linear-gradient(45deg, #444 25%, transparent 25%, transparent 75%, #444 75%, #444);
-    background-color: #222;
+        linear-gradient(45deg, #444444 25%, transparent 25%, transparent 75%, #444444 75%, #444444),
+        linear-gradient(45deg, #444444 25%, transparent 25%, transparent 75%, #444444 75%, #444444);
+    background-color: #222222;
 }
 
 .nn-preview-arrow {
@@ -148,99 +146,121 @@
     height: 16px;
 }
 
-/* RGB sliders section */
-.nn-rgb-section,
+/* Visual color picker section */
+.nn-color-area-section,
 .nn-color-preview-section {
     padding-bottom: 15px;
 }
 
-.nn-rgb-section {
+.nn-color-area-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     margin-bottom: auto; /* Push everything below to the bottom */
 }
 
-.nn-rgb-title {
-    margin-bottom: 6px;
+.nn-color-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.nn-rgb-row {
+/* Header above the saturation/value area; matches the preset header height so the picker
+   lines up with the swatch grid in the left column. Hidden on mobile where the area sits
+   beside the sliders. */
+.nn-sv-header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    min-height: 20px;
     margin-bottom: 8px;
 }
 
-.nn-rgb-row:last-child {
+.nn-sv-area {
+    position: relative;
+    width: 100%;
+    height: 150px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background-color: var(--nn-sv-hue, #ff0000);
+    background-image: linear-gradient(to top, #000000, rgba(0, 0, 0, 0)), linear-gradient(to right, #ffffff, rgba(255, 255, 255, 0));
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.nn-sv-thumb {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: var(--nn-thumb-color, #ffffff);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+.nn-color-slider {
+    position: relative;
+    width: calc(100% - 16px);
+    height: 14px;
+    margin: 0 8px;
+    border-radius: 7px;
+    cursor: pointer;
+    touch-action: none;
+}
+
+.nn-hue-slider {
+    background: linear-gradient(
+        to right,
+        #ff0000 0%,
+        #ffff00 16.66%,
+        #00ff00 33.33%,
+        #00ffff 50%,
+        #0000ff 66.66%,
+        #ff00ff 83.33%,
+        #ff0000 100%
+    );
+}
+
+.nn-alpha-gradient {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0), var(--nn-alpha-color, #000000));
+    pointer-events: none;
+}
+
+.nn-color-slider .nn-slider-thumb {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+/* Hex input section - sits at the bottom of the picker, below the alpha slider */
+.nn-hex-section {
     margin-bottom: 0;
 }
 
-.nn-rgb-label {
-    width: 16px;
-}
-
-.nn-rgb-slider {
-    flex: 1;
-    height: 4px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: var(--background-modifier-border);
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-}
-
-/* Slider thumb */
-.nn-rgb-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--interactive-accent);
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.nn-rgb-slider::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--interactive-accent);
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-/* RGB value display */
-.nn-rgb-value {
-    width: 32px;
-    text-align: right;
-    font-size: 11px;
-    color: var(--nn-theme-foreground-muted);
-    font-family: var(--font-monospace);
-}
-
-/* Color gradients for sliders */
-.nn-rgb-slider-r {
-    background: linear-gradient(to right, #000000, #ff0000);
-}
-
-.nn-rgb-slider-g {
-    background: linear-gradient(to right, #000000, #00ff00);
-}
-
-.nn-rgb-slider-b {
-    background: linear-gradient(to right, #000000, #0000ff);
-}
-
-/* Hex input section */
-.nn-hex-section {
-    margin-bottom: 20px;
+.nn-hex-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
 }
 
 .nn-hex-title {
     display: block;
-    margin-bottom: 6px;
     height: 17px; /* Match the preview label height for alignment */
+    margin-bottom: 0;
 }
 
 .nn-hex-container {
@@ -358,9 +378,12 @@
 }
 
 /* Preset and Recent colors sections */
-.nn-preset-section,
-.nn-recent-section {
+.nn-preset-section {
     margin-top: auto; /* Align to bottom */
+}
+
+.nn-recent-section {
+    margin-top: 0;
 }
 
 .nn-preset-colors,
@@ -369,6 +392,16 @@
     grid-template-columns: repeat(5, 1fr);
     gap: 6px;
     overflow: hidden;
+}
+
+.nn-recent-colors {
+    grid-template-columns: repeat(10, 36px);
+}
+
+.nn-recent-colors .nn-color-dot {
+    width: 36px;
+    height: 36px;
+    aspect-ratio: auto;
 }
 
 .nn-preset-colors {
@@ -514,6 +547,29 @@
     .nn-preset-colors,
     .nn-recent-colors {
         grid-template-columns: repeat(8, 1fr);
+    }
+
+    .nn-sv-header {
+        display: none;
+    }
+
+    /* Saturation/value area on the left, hue + transparency + hex stacked on the right.
+       The SV area stretches to match the height of that stack. */
+    .nn-color-area-section {
+        flex-direction: row;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .nn-sv-area {
+        flex: 1 1 0;
+        width: auto;
+        height: auto;
+    }
+
+    .nn-color-controls {
+        flex: 1 1 0;
+        min-width: 0;
     }
 
     .modal.nn-color-picker-modal .modal-content {

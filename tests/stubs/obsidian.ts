@@ -35,7 +35,11 @@ interface TestVault {
     registerFolder(folder: TFolder): void;
     unregisterFolder(path: string): void;
     getFolderByPath(path: string): TFolder | null;
+    getFileByPath(path: string): TFile | null;
     getAbstractFileByPath(path: string): TFile | TFolder | null;
+    getRoot(): TFolder;
+    getAllLoadedFiles(): Array<TFile | TFolder>;
+    getMarkdownFiles(): TFile[];
     cachedRead(file: TFile): Promise<string>;
     adapter: {
         readBinary(path: string): Promise<ArrayBuffer>;
@@ -57,6 +61,7 @@ export class App {
     constructor() {
         const files = new Map<string, TFile>();
         const folders = new Map<string, TFolder>();
+        const root = new TFolder('/');
 
         this.vault = {
             _files: files,
@@ -76,8 +81,20 @@ export class App {
             getFolderByPath(path: string): TFolder | null {
                 return folders.get(path) ?? null;
             },
+            getFileByPath(path: string): TFile | null {
+                return files.get(path) ?? null;
+            },
             getAbstractFileByPath(path: string): TFile | TFolder | null {
                 return files.get(path) ?? folders.get(path) ?? null;
+            },
+            getRoot(): TFolder {
+                return root;
+            },
+            getAllLoadedFiles(): Array<TFile | TFolder> {
+                return [...folders.values(), ...files.values()];
+            },
+            getMarkdownFiles(): TFile[] {
+                return Array.from(files.values()).filter(file => file.extension === 'md');
             },
             cachedRead: async () => '',
             adapter: {
@@ -172,21 +189,72 @@ export class Plugin {
     }
 }
 
+export type SettingDefinitionItem = Record<string, unknown>;
+
+export class PluginSettingTab {
+    app: App;
+    plugin: Plugin;
+    icon = '';
+    containerEl = { isConnected: false } as HTMLElement;
+    settingItems: SettingDefinitionItem[] = [];
+
+    constructor(app: App, plugin: Plugin) {
+        this.app = app;
+        this.plugin = plugin;
+    }
+
+    getSettingDefinitions(): SettingDefinitionItem[] {
+        return [];
+    }
+
+    getControlValue(): unknown {
+        return undefined;
+    }
+
+    setControlValue(): void {}
+
+    display(): void {}
+
+    hide(): void {}
+
+    update(): void {
+        this.settingItems = this.getSettingDefinitions();
+    }
+}
+
 export class Menu {}
 export class MenuItem {}
 export class Setting {}
+export class SettingGroup {
+    constructor(public containerEl: HTMLElement) {}
+
+    setHeading(_heading?: string | DocumentFragment): this {
+        return this;
+    }
+
+    addSetting(callback: (setting: Setting) => void): this {
+        callback(new Setting());
+        return this;
+    }
+}
 export class ButtonComponent {}
 export class SliderComponent {}
 export class WorkspaceLeaf {}
+export class FileView {
+    file: TFile | null = null;
+}
 
 export const Platform = {
     isDesktopApp: true,
     isMobile: false,
+    isTablet: false,
+    isPhone: false,
     isIosApp: false
 };
 
 export const normalizePath = (value: string) => value;
 export const setIcon = () => {};
+export const addIcon = () => {};
 export const getIconIds = () => [
     'lucide-home',
     'lucide-user',
@@ -199,10 +267,12 @@ export const getIconIds = () => [
     'lucide-brain',
     'lucide-calendar',
     'lucide-check-circle',
+    'lucide-ph-test',
     'lucide-receipt',
     'lucide-book-open'
 ];
 export const getLanguage = () => 'en';
+export const requireApiVersion = () => true;
 type RequestUrlResponse = {
     status: number;
     arrayBuffer?: ArrayBuffer;

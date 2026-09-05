@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import { App } from 'obsidian';
-import type { ReactNode } from 'react';
+import type { MutableRefObject, ReactNode } from 'react';
 import { useSettingsState } from './SettingsContext';
 import { useUXPreferences } from './UXPreferencesContext';
 import type { NotebookNavigatorAPI } from '../api/NotebookNavigatorAPI';
@@ -31,7 +31,7 @@ import {
     useSelectionEnhancedDispatch,
     useSelectionPersistence,
     useSelectionReconciliation,
-    useSelectionStateRef
+    useSelectionStateRef as useSelectionStateRefInternal
 } from './selection/useSelectionProvider';
 import { selectionReducer } from './selection/state';
 import type { SelectionAction, SelectionState } from './selection/types';
@@ -39,7 +39,29 @@ import type { SelectionAction, SelectionState } from './selection/types';
 export type { SelectionAction, SelectionDispatch, SelectionRevealSource, SelectionState } from './selection/types';
 export { resolvePrimarySelectedFile } from './selection/state';
 
-const SelectionContext = createContext<SelectionState | null>(null);
+export type NavigationSelectionState = Pick<
+    SelectionState,
+    'selectionType' | 'selectedFolder' | 'selectedTag' | 'selectedProperty' | 'selectedTopicPath'
+>;
+export type FileSelectionState = Pick<SelectionState, 'selectedFiles' | 'selectedFile' | 'anchorIndex' | 'lastMovementDirection'>;
+export type SelectionFlagsState = Pick<
+    SelectionState,
+    'isRevealOperation' | 'isFolderChangeWithAutoSelect' | 'isKeyboardNavigation' | 'isFolderNavigation' | 'revealSource'
+>;
+export type SelectionRevealState = Pick<SelectionState, 'isRevealOperation' | 'revealSource'>;
+export type SelectionHistoryState = Pick<SelectionState, 'navigationHistory' | 'navigationHistoryIndex'>;
+type SelectionStateListener = (state: SelectionState) => void;
+interface SelectionStateSubscription {
+    subscribe: (listener: SelectionStateListener) => () => void;
+}
+
+const NavigationSelectionContext = createContext<NavigationSelectionState | null>(null);
+const FileSelectionContext = createContext<FileSelectionState | null>(null);
+const SelectionFlagsContext = createContext<SelectionFlagsState | null>(null);
+const SelectionRevealContext = createContext<SelectionRevealState | null>(null);
+const SelectionHistoryContext = createContext<SelectionHistoryState | null>(null);
+const SelectionStateRefContext = createContext<MutableRefObject<SelectionState> | null>(null);
+const SelectionStateSubscriptionContext = createContext<SelectionStateSubscription | null>(null);
 const SelectionDispatchContext = createContext<React.Dispatch<SelectionAction> | null>(null);
 
 // Provider component
@@ -51,7 +73,6 @@ interface SelectionProviderProps {
     propertyTreeService: IPropertyTreeProvider | null; // Property tree service for property operations
     onFileRename?: (listenerId: string, callback: (oldPath: string, newPath: string) => void) => void;
     onFileRenameUnsubscribe?: (listenerId: string) => void;
-    isMobile: boolean;
 }
 
 export function SelectionProvider({
@@ -61,8 +82,7 @@ export function SelectionProvider({
     tagTreeService,
     propertyTreeService,
     onFileRename,
-    onFileRenameUnsubscribe,
-    isMobile
+    onFileRenameUnsubscribe
 }: SelectionProviderProps) {
     const settings = useSettingsState();
     const uxPreferences = useUXPreferences();
@@ -73,12 +93,23 @@ export function SelectionProvider({
         undefined,
         () => loadInitialSelectionState({ app, settings })
     );
-    const stateRef = useSelectionStateRef(state);
+    const stateRef = useSelectionStateRefInternal(state);
+    const stateListenersRef = useRef(new Set<SelectionStateListener>());
+    const stateSubscription = useMemo<SelectionStateSubscription>(
+        () => ({
+            subscribe: listener => {
+                stateListenersRef.current.add(listener);
+                return () => {
+                    stateListenersRef.current.delete(listener);
+                };
+            }
+        }),
+        []
+    );
     const enhancedDispatch = useSelectionEnhancedDispatch({
         app,
         dispatch,
         includeDescendantNotes: uxPreferences.includeDescendantNotes,
-        isMobile,
         propertyTreeService,
         settings,
         showHiddenItems: uxPreferences.showHiddenItems,
@@ -102,20 +133,155 @@ export function SelectionProvider({
     });
     useSelectionPersistence({ api, app, state });
 
+    useEffect(() => {
+        stateListenersRef.current.forEach(listener => {
+            listener(state);
+        });
+    }, [state]);
+
+    const navigationSelection = useMemo<NavigationSelectionState>(
+        () => ({
+            selectionType: state.selectionType,
+            selectedFolder: state.selectedFolder,
+            selectedTag: state.selectedTag,
+            selectedProperty: state.selectedProperty,
+            selectedTopicPath: state.selectedTopicPath
+        }),
+        [state.selectedFolder, state.selectedProperty, state.selectedTag, state.selectedTopicPath, state.selectionType]
+    );
+    const fileSelection = useMemo<FileSelectionState>(
+        () => ({
+            selectedFiles: state.selectedFiles,
+            selectedFile: state.selectedFile,
+            anchorIndex: state.anchorIndex,
+            lastMovementDirection: state.lastMovementDirection
+        }),
+        [state.anchorIndex, state.lastMovementDirection, state.selectedFile, state.selectedFiles]
+    );
+    const selectionFlags = useMemo<SelectionFlagsState>(
+        () => ({
+            isRevealOperation: state.isRevealOperation,
+            isFolderChangeWithAutoSelect: state.isFolderChangeWithAutoSelect,
+            isKeyboardNavigation: state.isKeyboardNavigation,
+            isFolderNavigation: state.isFolderNavigation,
+            revealSource: state.revealSource
+        }),
+        [
+            state.isFolderChangeWithAutoSelect,
+            state.isFolderNavigation,
+            state.isKeyboardNavigation,
+            state.isRevealOperation,
+            state.revealSource
+        ]
+    );
+    const selectionReveal = useMemo<SelectionRevealState>(
+        () => ({
+            isRevealOperation: state.isRevealOperation,
+            revealSource: state.revealSource
+        }),
+        [state.isRevealOperation, state.revealSource]
+    );
+    const selectionHistory = useMemo<SelectionHistoryState>(
+        () => ({
+            navigationHistory: state.navigationHistory,
+            navigationHistoryIndex: state.navigationHistoryIndex
+        }),
+        [state.navigationHistory, state.navigationHistoryIndex]
+    );
+
     return (
-        <SelectionContext.Provider value={state}>
-            <SelectionDispatchContext.Provider value={enhancedDispatch}>{children}</SelectionDispatchContext.Provider>
-        </SelectionContext.Provider>
+        <NavigationSelectionContext.Provider value={navigationSelection}>
+            <FileSelectionContext.Provider value={fileSelection}>
+                <SelectionFlagsContext.Provider value={selectionFlags}>
+                    <SelectionRevealContext.Provider value={selectionReveal}>
+                        <SelectionHistoryContext.Provider value={selectionHistory}>
+                            <SelectionStateRefContext.Provider value={stateRef}>
+                                <SelectionStateSubscriptionContext.Provider value={stateSubscription}>
+                                    <SelectionDispatchContext.Provider value={enhancedDispatch}>
+                                        {children}
+                                    </SelectionDispatchContext.Provider>
+                                </SelectionStateSubscriptionContext.Provider>
+                            </SelectionStateRefContext.Provider>
+                        </SelectionHistoryContext.Provider>
+                    </SelectionRevealContext.Provider>
+                </SelectionFlagsContext.Provider>
+            </FileSelectionContext.Provider>
+        </NavigationSelectionContext.Provider>
     );
 }
 
 // Custom hooks
-export function useSelectionState() {
-    const context = useContext(SelectionContext);
+export function useNavigationSelection(): NavigationSelectionState {
+    const context = useContext(NavigationSelectionContext);
     if (!context) {
-        throw new Error('useSelectionState must be used within SelectionProvider');
+        throw new Error('useNavigationSelection must be used within SelectionProvider');
     }
     return context;
+}
+
+export function useFileSelection(): FileSelectionState {
+    const context = useContext(FileSelectionContext);
+    if (!context) {
+        throw new Error('useFileSelection must be used within SelectionProvider');
+    }
+    return context;
+}
+
+function useSelectionFlags(): SelectionFlagsState {
+    const context = useContext(SelectionFlagsContext);
+    if (!context) {
+        throw new Error('useSelectionFlags must be used within SelectionProvider');
+    }
+    return context;
+}
+
+export function useSelectionReveal(): SelectionRevealState {
+    const context = useContext(SelectionRevealContext);
+    if (!context) {
+        throw new Error('useSelectionReveal must be used within SelectionProvider');
+    }
+    return context;
+}
+
+export function useSelectionStateRefValue(): MutableRefObject<SelectionState> {
+    const context = useContext(SelectionStateRefContext);
+    if (!context) {
+        throw new Error('useSelectionStateRefValue must be used within SelectionProvider');
+    }
+    return context;
+}
+
+export function useSelectionStateSubscription(): SelectionStateSubscription {
+    const context = useContext(SelectionStateSubscriptionContext);
+    if (!context) {
+        throw new Error('useSelectionStateSubscription must be used within SelectionProvider');
+    }
+    return context;
+}
+
+function useSelectionHistory(): SelectionHistoryState {
+    const context = useContext(SelectionHistoryContext);
+    if (!context) {
+        throw new Error('useSelectionHistory must be used within SelectionProvider');
+    }
+    return context;
+}
+
+export function useSelectionState(): SelectionState {
+    const navigationSelection = useNavigationSelection();
+    const fileSelection = useFileSelection();
+    const selectionFlags = useSelectionFlags();
+    const selectionHistory = useSelectionHistory();
+
+    return useMemo(
+        () => ({
+            ...navigationSelection,
+            ...fileSelection,
+            ...selectionFlags,
+            ...selectionHistory
+        }),
+        [fileSelection, navigationSelection, selectionFlags, selectionHistory]
+    );
 }
 
 export function useSelectionDispatch() {

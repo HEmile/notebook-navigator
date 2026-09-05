@@ -6,7 +6,7 @@
  * Paste this entire script into the Obsidian developer console to run tests.
  *
  * Tests include:
- * - Icon format validation (lucide:* and emoji:*)
+ * - Icon format validation (frontmatter-style icon values)
  * - NavItem type for navigation selection
  * - Event API with all supported event types
  * - Context-aware pinning with PinContext type
@@ -344,15 +344,15 @@
                     this.assertExists(afterColor, 'Should return metadata after setting color');
                     this.assertEqual(afterColor.color, '#ff0000', 'Color should be set');
 
-                    // Set icon - test both lucide and emoji formats
-                    await this.api.metadata.setFolderMeta(testFolder, { icon: 'lucide:folder-open' });
+                    // Set icon - test both Lucide and emoji formats
+                    await this.api.metadata.setFolderMeta(testFolder, { icon: 'folder-open' });
                     const afterIcon = this.api.metadata.getFolderMeta(testFolder);
-                    this.assertEqual(afterIcon.icon, 'lucide:folder-open', 'Icon should be set');
+                    this.assertEqual(afterIcon.icon, 'folder-open', 'Icon should be set');
 
                     // Test emoji icon format
-                    await this.api.metadata.setFolderMeta(testFolder, { icon: 'emoji:📁' });
+                    await this.api.metadata.setFolderMeta(testFolder, { icon: '📁' });
                     const afterEmoji = this.api.metadata.getFolderMeta(testFolder);
-                    this.assertEqual(afterEmoji.icon, 'emoji:📁', 'Emoji icon should be set');
+                    this.assertEqual(afterEmoji.icon, '📁', 'Emoji icon should be set');
 
                     // Clear metadata by passing null
                     await this.api.metadata.setFolderMeta(testFolder, { color: null, icon: null });
@@ -373,15 +373,15 @@
                     this.assertExists(afterColor, 'Should return metadata after setting color');
                     this.assertEqual(afterColor.color, '#00ff00', 'Tag color should be set');
 
-                    // Set icon - test both lucide and emoji formats
-                    await this.api.metadata.setTagMeta(testTag, { icon: 'lucide:tag' });
+                    // Set icon - test both Lucide and emoji formats
+                    await this.api.metadata.setTagMeta(testTag, { icon: 'tag' });
                     const afterIcon = this.api.metadata.getTagMeta(testTag);
-                    this.assertEqual(afterIcon.icon, 'lucide:tag', 'Tag icon should be set');
+                    this.assertEqual(afterIcon.icon, 'tag', 'Tag icon should be set');
 
                     // Test emoji icon format
-                    await this.api.metadata.setTagMeta(testTag, { icon: 'emoji:🏷️' });
+                    await this.api.metadata.setTagMeta(testTag, { icon: '🏷️' });
                     const afterEmoji = this.api.metadata.getTagMeta(testTag);
-                    this.assertEqual(afterEmoji.icon, 'emoji:🏷️', 'Emoji icon should be set');
+                    this.assertEqual(afterEmoji.icon, '🏷️', 'Emoji icon should be set');
 
                     // Clear metadata by passing null
                     await this.api.metadata.setTagMeta(testTag, { color: null, icon: null });
@@ -429,30 +429,30 @@
                     // Set both color and icon
                     await this.api.metadata.setFolderMeta(testFolder, {
                         color: '#ff0000',
-                        icon: 'lucide:folder'
+                        icon: 'folder'
                     });
 
                     let meta = this.api.metadata.getFolderMeta(testFolder);
                     this.assertEqual(meta.color, '#ff0000', 'Color should be set');
-                    this.assertEqual(meta.icon, 'lucide:folder', 'Icon should be set');
+                    this.assertEqual(meta.icon, 'folder', 'Icon should be set');
 
                     // Update only color (icon should be preserved)
                     await this.api.metadata.setFolderMeta(testFolder, { color: '#00ff00' });
                     meta = this.api.metadata.getFolderMeta(testFolder);
                     this.assertEqual(meta.color, '#00ff00', 'Color should be updated');
-                    this.assertEqual(meta.icon, 'lucide:folder', 'Icon should be preserved when not specified');
+                    this.assertEqual(meta.icon, 'folder', 'Icon should be preserved when not specified');
 
                     // Update only icon (color should be preserved)
-                    await this.api.metadata.setFolderMeta(testFolder, { icon: 'emoji:📂' });
+                    await this.api.metadata.setFolderMeta(testFolder, { icon: '📂' });
                     meta = this.api.metadata.getFolderMeta(testFolder);
                     this.assertEqual(meta.color, '#00ff00', 'Color should be preserved when not specified');
-                    this.assertEqual(meta.icon, 'emoji:📂', 'Icon should be updated');
+                    this.assertEqual(meta.icon, '📂', 'Icon should be updated');
 
                     // Clear only color (icon should remain)
                     await this.api.metadata.setFolderMeta(testFolder, { color: null });
                     meta = this.api.metadata.getFolderMeta(testFolder);
                     this.assertEqual(meta.color, undefined, 'Color should be cleared');
-                    this.assertEqual(meta.icon, 'emoji:📂', 'Icon should still be present');
+                    this.assertEqual(meta.icon, '📂', 'Icon should still be present');
 
                     // Clear icon as well
                     await this.api.metadata.setFolderMeta(testFolder, { icon: null });

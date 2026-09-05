@@ -1,14 +1,13 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import obsidianmd from 'eslint-plugin-obsidianmd';
-import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import { fixupPluginRules } from '@eslint/compat';
 import globals from 'globals';
 
 export default tseslint.config(
     {
-        ignores: ['node_modules/**', 'dist/**', 'build/**', 'main.js', '*.min.js', 'web/**', 'codemods/**', 'tests/api-test-suite.js'],
+        ignores: ['node_modules/**', 'dist/**', 'build/**', 'main.js', '*.min.js', 'web/**', 'tests/api-test-suite.js'],
         linterOptions: {
             reportUnusedDisableDirectives: 'error'
         }
@@ -23,13 +22,16 @@ export default tseslint.config(
                 ...globals.node
             },
             parserOptions: {
-                project: './tsconfig.json'
+                project: './tsconfig.eslint.json'
             }
         },
         rules: {
             // Tests may legitimately use Node built-ins (e.g. reading fixture files).
             // Keep this rule enabled for `src/**` to avoid shipping Node-only imports in the plugin runtime.
             'import/no-nodejs-modules': 'off',
+            'obsidianmd/no-nodejs-modules': 'off',
+            // Tests run in Node and may use test harness globals instead of Obsidian's active document.
+            'obsidianmd/prefer-active-doc': 'off',
             'no-restricted-properties': [
                 'error',
                 {
@@ -68,22 +70,14 @@ export default tseslint.config(
             }
         },
         plugins: {
-            react: fixupPluginRules(react),
             'react-hooks': fixupPluginRules(reactHooks),
             obsidianmd: obsidianmd
-        },
-        settings: {
-            react: {
-                version: 'detect'
-            }
         },
         rules: {
             '@typescript-eslint/no-explicit-any': 'error',
             '@typescript-eslint/no-unused-vars': 'error',
             '@typescript-eslint/explicit-module-boundary-types': 'off',
             '@typescript-eslint/no-non-null-assertion': 'warn',
-            'react/react-in-jsx-scope': 'off',
-            'react/prop-types': 'off',
             'react-hooks/rules-of-hooks': 'error',
             'react-hooks/exhaustive-deps': 'warn',
             'no-console': 'off',
@@ -97,7 +91,7 @@ export default tseslint.config(
                     message: 'Use showNotice(...) instead of new Notice(...).'
                 }
             ],
-            // Upgrade obsidianmd rules from warn to error
+            // Upgrade the Obsidian trash rule from warn to error.
             'obsidianmd/prefer-file-manager-trash-file': 'error',
 
             // Type assertions

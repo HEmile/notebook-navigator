@@ -47,7 +47,7 @@ export interface SyncModeRegistryEntry {
     hasPersistedValue: (storedData: Record<string, unknown>) => boolean;
     deleteFromPersisted: (persisted: Record<string, unknown>) => void;
     mirrorToLocalStorage: () => void;
-    resolveOnLoad: (params: { storedData: Record<string, unknown> | null }) => { migrated: boolean };
+    resolveOnLoad: (params: { storedData: Record<string, unknown> | null; preferRecordValue: boolean }) => { migrated: boolean };
 }
 
 export type SyncModeRegistry = Record<SyncModeSettingId, SyncModeRegistryEntry>;
@@ -66,6 +66,9 @@ interface CreateSyncModeRegistryParams {
     sanitizeBooleanSetting: (value: unknown, fallback: boolean) => boolean;
     sanitizeHomepageSetting: (value: unknown) => NotebookNavigatorSettings['homepage'];
     sanitizeDualPaneOrientationSetting: (value: unknown) => DualPaneOrientation;
+    sanitizeNarrowSidebarLayoutSetting: (value: unknown) => NotebookNavigatorSettings['narrowSidebarLayout'];
+    sanitizeNarrowSidebarTriggerModeSetting: (value: unknown) => NotebookNavigatorSettings['narrowSidebarTriggerMode'];
+    sanitizeNarrowSidebarCustomWidthSetting: (value: unknown) => number;
     sanitizeTagSortOrderSetting: (value: unknown) => NotebookNavigatorSettings['tagSortOrder'];
     sanitizeFolderSortOrderSetting: (value: unknown) => NotebookNavigatorSettings['folderSortOrder'];
     sanitizePaneTransitionDurationSetting: (value: unknown) => number;
@@ -115,7 +118,9 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
     const createEntry = (entryParams: {
         persistedKeys: readonly PersistedKey[];
         loadPhase: 'preProfiles' | 'postProfiles';
-        resolveOnLoad: (entryParams: { storedData: Record<string, unknown> | null }) => { migrated: boolean };
+        resolveOnLoad: (entryParams: { storedData: Record<string, unknown> | null; preferRecordValue: boolean }) => {
+            migrated: boolean;
+        };
         mirrorToLocalStorage: () => void;
         cleanupOnLoad?: boolean;
         hasPersistedValue?: (storedData: Record<string, unknown>) => boolean;
@@ -158,8 +163,8 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
             cleanupOnLoad: entryParams.cleanupOnLoad,
             hasPersistedValue: entryParams.hasPersistedValue,
             deleteFromPersisted: entryParams.deleteFromPersisted,
-            resolveOnLoad: ({ storedData }) => {
-                if (params.isLocal(entryParams.settingId)) {
+            resolveOnLoad: ({ storedData, preferRecordValue }) => {
+                if (params.isLocal(entryParams.settingId) && !preferRecordValue) {
                     const resolved = entryParams.resolveDeviceLocal(storedData);
                     entryParams.setCurrent(resolved.value);
                     return { migrated: resolved.migrated };
@@ -205,7 +210,7 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
         return createEntry({
             persistedKeys: [entryParams.persistedKey],
             loadPhase: 'preProfiles',
-            resolveOnLoad: () => {
+            resolveOnLoad: ({ preferRecordValue }) => {
                 const storedUXPreferences = localStorage.get<unknown>(params.keys.uxPreferencesKey);
                 const storedValid = params.isUXPreferencesRecord(storedUXPreferences);
                 const base: UXPreferences = storedValid
@@ -213,9 +218,13 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
                     : { ...params.defaultUXPreferences };
                 const isLocal = params.isLocal(entryParams.settingId);
                 const settings = params.getSettings();
-                const nextValue = isLocal
-                    ? base[entryParams.persistedKey]
-                    : params.sanitizeBooleanSetting(settings[entryParams.persistedKey], params.defaultSettings[entryParams.persistedKey]);
+                const nextValue =
+                    isLocal && !preferRecordValue
+                        ? base[entryParams.persistedKey]
+                        : params.sanitizeBooleanSetting(
+                              settings[entryParams.persistedKey],
+                              params.defaultSettings[entryParams.persistedKey]
+                          );
                 settings[entryParams.persistedKey] = nextValue;
 
                 if (!storedValid || base[entryParams.persistedKey] !== nextValue) {
@@ -246,13 +255,15 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
         if (useMobileHomepage) {
             return {
                 source: Platform.isMobile ? (resolvedMobileHomepage ? 'file' : 'none') : homepage ? 'file' : 'none',
-                file: Platform.isMobile ? resolvedMobileHomepage : homepage
+                file: Platform.isMobile ? resolvedMobileHomepage : homepage,
+                createMissingPeriodicNote: params.defaultSettings.homepage.createMissingPeriodicNote
             };
         }
 
         return {
             source: homepage ? 'file' : 'none',
-            file: homepage
+            file: homepage,
+            createMissingPeriodicNote: params.defaultSettings.homepage.createMissingPeriodicNote
         };
     };
 
@@ -260,12 +271,13 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
         vaultProfile: createEntry({
             persistedKeys: ['vaultProfile'],
             loadPhase: 'postProfiles',
-            resolveOnLoad: () => {
+            resolveOnLoad: ({ preferRecordValue }) => {
                 const isLocal = params.isLocal('vaultProfile');
                 const settings = params.getSettings();
-                settings.vaultProfile = isLocal
-                    ? params.resolveActiveVaultProfileId()
-                    : params.sanitizeVaultProfileId(settings.vaultProfile);
+                settings.vaultProfile =
+                    isLocal && !preferRecordValue
+                        ? params.resolveActiveVaultProfileId()
+                        : params.sanitizeVaultProfileId(settings.vaultProfile);
                 setLocalStorage(params.keys.vaultProfileKey, settings.vaultProfile);
                 return { migrated: false };
             },
@@ -339,14 +351,15 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
         dualPane: createEntry({
             persistedKeys: ['dualPane'],
             loadPhase: 'preProfiles',
-            resolveOnLoad: () => {
+            resolveOnLoad: ({ preferRecordValue }) => {
                 const isLocal = params.isLocal('dualPane');
                 const storedDualPane = localStorage.get<unknown>(params.keys.dualPaneKey);
                 const parsedDualPane = params.parseDualPanePreference(storedDualPane);
                 const settings = params.getSettings();
-                const dualPane = isLocal
-                    ? (parsedDualPane ?? params.defaultSettings.dualPane)
-                    : params.sanitizeBooleanSetting(settings.dualPane, params.defaultSettings.dualPane);
+                const dualPane =
+                    isLocal && !preferRecordValue
+                        ? (parsedDualPane ?? params.defaultSettings.dualPane)
+                        : params.sanitizeBooleanSetting(settings.dualPane, params.defaultSettings.dualPane);
                 settings.dualPane = dualPane;
                 setLocalStorage(params.keys.dualPaneKey, dualPane ? '1' : '0');
                 return { migrated: false };
@@ -356,19 +369,77 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
         dualPaneOrientation: createEntry({
             persistedKeys: ['dualPaneOrientation'],
             loadPhase: 'preProfiles',
-            resolveOnLoad: () => {
+            resolveOnLoad: ({ preferRecordValue }) => {
                 const isLocal = params.isLocal('dualPaneOrientation');
                 const storedDualPaneOrientation = localStorage.get<unknown>(params.keys.dualPaneOrientationKey);
                 const parsedDualPaneOrientation = params.parseDualPaneOrientation(storedDualPaneOrientation);
                 const settings = params.getSettings();
-                const dualPaneOrientation = isLocal
-                    ? (parsedDualPaneOrientation ?? params.defaultSettings.dualPaneOrientation)
-                    : params.sanitizeDualPaneOrientationSetting(settings.dualPaneOrientation);
+                const dualPaneOrientation =
+                    isLocal && !preferRecordValue
+                        ? (parsedDualPaneOrientation ?? params.defaultSettings.dualPaneOrientation)
+                        : params.sanitizeDualPaneOrientationSetting(settings.dualPaneOrientation);
                 settings.dualPaneOrientation = dualPaneOrientation;
                 setLocalStorage(params.keys.dualPaneOrientationKey, dualPaneOrientation);
                 return { migrated: false };
             },
             mirrorToLocalStorage: mirrorFromSettings(params.keys.dualPaneOrientationKey, () => params.getSettings().dualPaneOrientation)
+        }),
+        narrowSidebarLayout: createEntry({
+            persistedKeys: ['narrowSidebarLayout'],
+            loadPhase: 'preProfiles',
+            resolveOnLoad: ({ preferRecordValue }) => {
+                const isLocal = params.isLocal('narrowSidebarLayout');
+                const storedNarrowSidebarLayout = localStorage.get<unknown>(params.keys.narrowSidebarLayoutKey);
+                const settings = params.getSettings();
+                const narrowSidebarLayout =
+                    isLocal && !preferRecordValue
+                        ? params.sanitizeNarrowSidebarLayoutSetting(storedNarrowSidebarLayout)
+                        : params.sanitizeNarrowSidebarLayoutSetting(settings.narrowSidebarLayout);
+                settings.narrowSidebarLayout = narrowSidebarLayout;
+                setLocalStorage(params.keys.narrowSidebarLayoutKey, narrowSidebarLayout);
+                return { migrated: false };
+            },
+            mirrorToLocalStorage: mirrorFromSettings(params.keys.narrowSidebarLayoutKey, () => params.getSettings().narrowSidebarLayout)
+        }),
+        narrowSidebarTriggerMode: createEntry({
+            persistedKeys: ['narrowSidebarTriggerMode'],
+            loadPhase: 'preProfiles',
+            resolveOnLoad: ({ preferRecordValue }) => {
+                const isLocal = params.isLocal('narrowSidebarTriggerMode');
+                const storedTriggerMode = localStorage.get<unknown>(params.keys.narrowSidebarTriggerModeKey);
+                const settings = params.getSettings();
+                const triggerMode =
+                    isLocal && !preferRecordValue
+                        ? params.sanitizeNarrowSidebarTriggerModeSetting(storedTriggerMode)
+                        : params.sanitizeNarrowSidebarTriggerModeSetting(settings.narrowSidebarTriggerMode);
+                settings.narrowSidebarTriggerMode = triggerMode;
+                setLocalStorage(params.keys.narrowSidebarTriggerModeKey, triggerMode);
+                return { migrated: false };
+            },
+            mirrorToLocalStorage: mirrorFromSettings(
+                params.keys.narrowSidebarTriggerModeKey,
+                () => params.getSettings().narrowSidebarTriggerMode
+            )
+        }),
+        narrowSidebarCustomWidth: createEntry({
+            persistedKeys: ['narrowSidebarCustomWidth'],
+            loadPhase: 'preProfiles',
+            resolveOnLoad: ({ preferRecordValue }) => {
+                const isLocal = params.isLocal('narrowSidebarCustomWidth');
+                const storedCustomWidth = localStorage.get<unknown>(params.keys.narrowSidebarCustomWidthKey);
+                const settings = params.getSettings();
+                const customWidth =
+                    isLocal && !preferRecordValue
+                        ? params.sanitizeNarrowSidebarCustomWidthSetting(storedCustomWidth)
+                        : params.sanitizeNarrowSidebarCustomWidthSetting(settings.narrowSidebarCustomWidth);
+                settings.narrowSidebarCustomWidth = customWidth;
+                setLocalStorage(params.keys.narrowSidebarCustomWidthKey, customWidth);
+                return { migrated: false };
+            },
+            mirrorToLocalStorage: mirrorFromSettings(
+                params.keys.narrowSidebarCustomWidthKey,
+                () => params.getSettings().narrowSidebarCustomWidth
+            )
         }),
         paneTransitionDuration: createResolvedLocalStorageSettingEntry({
             settingId: 'paneTransitionDuration',
@@ -513,10 +584,10 @@ export function createSyncModeRegistry(params: CreateSyncModeRegistryParams): Sy
                     delete persisted['mobileScale'];
                 }
             },
-            resolveOnLoad: ({ storedData }) => {
+            resolveOnLoad: ({ storedData, preferRecordValue }) => {
                 const isLocal = params.isLocal('uiScale');
                 const settings = params.getSettings();
-                if (isLocal) {
+                if (isLocal && !preferRecordValue) {
                     const migratedScales = migrateUIScales({
                         settings,
                         storedData,

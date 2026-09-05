@@ -92,7 +92,7 @@ export class PropertyKeyRenameModal extends Modal {
         });
 
         this.scope.register([], 'Enter', event => {
-            if (document.activeElement === this.inputEl) {
+            if (activeDocument.activeElement === this.inputEl) {
                 event.preventDefault();
                 runAsyncAction(() => this.handleSubmit());
             }

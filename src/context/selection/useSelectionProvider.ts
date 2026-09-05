@@ -17,12 +17,12 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { RefObject } from 'react';
+import type { MutableRefObject } from 'react';
 import { App, TFile, TFolder } from 'obsidian';
 import { getFilesForFolder, getFilesForProperty, getFilesForTag } from '../../utils/fileFinder';
 import { localStorage } from '../../utils/localStorage';
 import { INTERNAL_NOTEBOOK_NAVIGATOR_API, type NotebookNavigatorAPI } from '../../api/NotebookNavigatorAPI';
-import type { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, STORAGE_KEYS, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../../types';
 import type { IPropertyTreeProvider } from '../../interfaces/IPropertyTreeProvider';
 import type { ITagTreeProvider } from '../../interfaces/ITagTreeProvider';
@@ -38,6 +38,7 @@ import {
     parseStoredPropertySelectionNodeId,
     type PropertySelectionNodeId
 } from '../../utils/propertyTree';
+import { supportsKeyboardInteractions } from '../../utils/paneLayout';
 import { normalizeTagPath } from '../../utils/tagUtils';
 import { getActivePropertyKeySet } from '../../utils/vaultProfiles';
 import { getFirstSelectedFile } from './state';
@@ -53,7 +54,6 @@ interface UseSelectionEnhancedDispatchArgs {
     app: App;
     dispatch: SelectionDispatch;
     includeDescendantNotes: boolean;
-    isMobile: boolean;
     propertyTreeService: IPropertyTreeProvider | null;
     settings: NotebookNavigatorSettings;
     showHiddenItems: boolean;
@@ -80,7 +80,7 @@ interface UseSelectionReconciliationArgs {
     } | null;
     propertyTreeService: IPropertyTreeProvider | null;
     state: SelectionState;
-    stateRef: RefObject<SelectionState>;
+    stateRef: MutableRefObject<SelectionState>;
     tagOperations: {
         addTagRenameListener(listener: (payload: TagRenameEventPayload) => void): () => void;
         addTagDeleteListener(listener: (payload: TagDeleteEventPayload) => void): () => void;
@@ -228,12 +228,9 @@ export function loadInitialSelectionState({ app, settings }: LoadInitialSelectio
     };
 }
 
-export function useSelectionStateRef(state: SelectionState): RefObject<SelectionState> {
+export function useSelectionStateRef(state: SelectionState): MutableRefObject<SelectionState> {
     const stateRef = useRef(state);
-
-    useEffect(() => {
-        stateRef.current = state;
-    }, [state]);
+    stateRef.current = state;
 
     return stateRef;
 }
@@ -242,7 +239,6 @@ export function useSelectionEnhancedDispatch({
     app,
     dispatch,
     includeDescendantNotes,
-    isMobile,
     propertyTreeService,
     settings,
     showHiddenItems,
@@ -250,7 +246,7 @@ export function useSelectionEnhancedDispatch({
 }: UseSelectionEnhancedDispatchArgs): SelectionDispatch {
     const resolveAutoSelectedFile = useCallback(
         (filesInScope: TFile[]): TFile | null => {
-            if (!isMobile && settings.autoSelectFirstFileOnFocusChange && filesInScope.length > 0) {
+            if (supportsKeyboardInteractions() && settings.autoSelectFirstFileOnFocusChange && filesInScope.length > 0) {
                 return filesInScope[0];
             }
 
@@ -261,7 +257,7 @@ export function useSelectionEnhancedDispatch({
 
             return null;
         },
-        [app.workspace, isMobile, settings.autoSelectFirstFileOnFocusChange]
+        [app.workspace, settings.autoSelectFirstFileOnFocusChange]
     );
 
     return useCallback(
@@ -294,24 +290,16 @@ export function useSelectionEnhancedDispatch({
                 return;
             }
 
-            if (action.type === 'CLEANUP_DELETED_FILE' && isMobile) {
+            // Phones clear the next-file selection after a delete; desktop and tablets
+            // keep it so keyboard flows stay anchored on the adjacent file.
+            if (action.type === 'CLEANUP_DELETED_FILE' && !supportsKeyboardInteractions()) {
                 dispatch({ ...action, nextFileToSelect: null });
                 return;
             }
 
             dispatch(action);
         },
-        [
-            app,
-            dispatch,
-            includeDescendantNotes,
-            isMobile,
-            propertyTreeService,
-            resolveAutoSelectedFile,
-            settings,
-            showHiddenItems,
-            tagTreeService
-        ]
+        [app, dispatch, includeDescendantNotes, propertyTreeService, resolveAutoSelectedFile, settings, showHiddenItems, tagTreeService]
     );
 }
 

@@ -38,6 +38,63 @@ const forceUpdate = args.includes('--force');
 const generateOnly = args.includes('--generate-only');
 const requestedIds = new Set(args.filter(arg => !arg.startsWith('--')));
 
+function resolveIconAssetOutputPath(pack: IconPackConfig, fileName: string): string {
+    if (!PACK_ID_TO_PROVIDER_ID[pack.id]) {
+        throw new Error(`[${pack.id}] Unknown icon pack`);
+    }
+
+    const allowedFileNames = new Set([pack.files.font, pack.files.metadata, 'latest.json']);
+    if (!allowedFileNames.has(fileName) || path.basename(fileName) !== fileName) {
+        throw new Error(`[${pack.id}] Invalid icon asset output filename: ${fileName}`);
+    }
+
+    const outputPath = path.resolve(ICON_ASSETS_ROOT, pack.id, fileName);
+    const packRoot = path.resolve(ICON_ASSETS_ROOT, pack.id);
+    const relativePath = path.relative(packRoot, outputPath);
+
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        throw new Error(`[${pack.id}] Icon asset output path escapes pack directory: ${fileName}`);
+    }
+
+    return outputPath;
+}
+
+function validateFontAsset(pack: IconPackConfig, contents: Buffer): Buffer {
+    const signature = contents.subarray(0, 4).toString('ascii');
+    const isValid =
+        (pack.files.mimeType === 'font/woff2' && signature === 'wOF2') || (pack.files.mimeType === 'font/woff' && signature === 'wOFF');
+
+    if (!isValid) {
+        throw new Error(`[${pack.id}] Downloaded font does not match ${pack.files.mimeType}`);
+    }
+
+    return contents;
+}
+
+function validateMetadataAsset(pack: IconPackConfig, metadata: string): string {
+    let parsed: unknown;
+
+    try {
+        parsed = JSON.parse(metadata) as unknown;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`[${pack.id}] Downloaded metadata is not valid JSON: ${message}`);
+    }
+
+    const hasEntries = Array.isArray(parsed) ? parsed.length > 0 : !!parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0;
+
+    if (!hasEntries) {
+        throw new Error(`[${pack.id}] Downloaded metadata is empty`);
+    }
+
+    return metadata.endsWith('\n') ? metadata : metadata + '\n';
+}
+
+async function writeIconAssetOutput(outputPath: string, contents: string | Buffer): Promise<void> {
+    // codeql[js/http-to-file-access] Output paths are restricted to known icon asset filenames and downloaded assets are validated before writing.
+    await fs.writeFile(outputPath, contents);
+}
+
 function extractMetadataIconIds(raw: string): string[] {
     const parsed = JSON.parse(raw) as unknown;
     if (Array.isArray(parsed)) {
@@ -96,12 +153,9 @@ async function writeIconizeReverseMaps(): Promise<void> {
     const exceptionLines = Object.entries(exceptionMaps)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([providerId, map]) => {
-            const mapString = JSON.stringify(map, null, 4)
-                .split('\n')
-                .map((line, index) => (index === 0 ? line : `        ${line}`))
-                .join('\n');
+            const mapString = formatTsObjectLiteral(map, '        ');
 
-            return `    '${providerId}': ${mapString}`;
+            return `    ${formatTsPropertyKey(providerId)}: ${mapString}`;
         });
     const contents = [
         '/*',
@@ -218,7 +272,7 @@ async function processIconPack(pack: IconPackConfig): Promise<void> {
 
     console.log(`[${pack.id}] Downloading font from ${urls.font}`);
     const fontContents = await downloadBinary(urls.font);
-    await fs.writeFile(path.join(packDir, pack.files.font), fontContents);
+    await writeIconAssetOutput(resolveIconAssetOutputPath(pack, pack.files.font), validateFontAsset(pack, fontContents));
 
     // Process metadata
     let metadata: string;
@@ -239,9 +293,7 @@ async function processIconPack(pack: IconPackConfig): Promise<void> {
         metadata = await downloadText(urls.metadata);
     }
 
-    // Ensure metadata ends with newline
-    const metadataWithNewline = metadata.endsWith('\n') ? metadata : metadata + '\n';
-    await fs.writeFile(path.join(packDir, pack.files.metadata), metadataWithNewline);
+    await writeIconAssetOutput(resolveIconAssetOutputPath(pack, pack.files.metadata), validateMetadataAsset(pack, metadata));
 
     // Generate latest.json
     const latestManifest = {
@@ -252,7 +304,7 @@ async function processIconPack(pack: IconPackConfig): Promise<void> {
         metadataFormat: 'json'
     };
 
-    await fs.writeFile(path.join(packDir, 'latest.json'), `${JSON.stringify(latestManifest, null, 2)}\n`);
+    await writeIconAssetOutput(resolveIconAssetOutputPath(pack, 'latest.json'), `${JSON.stringify(latestManifest, null, 2)}\n`);
 
     if (needsUpdate) {
         console.log(`[${pack.id}] Successfully updated from ${currentVersion} to ${latestVersion}`);
@@ -289,7 +341,7 @@ async function writeBundledManifest(): Promise<void> {
 
     const lines = entries.map(entry => {
         const manifestString = formatTsObjectLiteral(entry.manifest, '        ');
-        return `    '${entry.providerId}': ${manifestString}`;
+        return `    ${formatTsPropertyKey(entry.providerId)}: ${manifestString}`;
     });
 
     const contents = [

@@ -16,22 +16,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { App, Setting } from 'obsidian';
+import type { App, ButtonComponent, Setting } from 'obsidian';
 import type NotebookNavigatorPlugin from '../../main';
 
 export type SettingsTabId =
     | 'general'
+    | 'vault-filters'
+    | 'appearance-behavior'
     | 'navigation-pane'
     | 'shortcuts'
-    | 'calendar'
     | 'folders'
-    | 'tags'
-    | 'topics'
-    | 'properties'
+    | 'tags-properties'
     | 'list-pane'
+    | 'file-operations'
     | 'frontmatter'
     | 'notes'
+    | 'calendar'
     | 'files'
+    | 'tags'
+    | 'properties'
+    | 'topics'
     | 'icon-packs'
     | 'advanced';
 
@@ -113,7 +117,7 @@ export type InfoSettingFactory = (
 
 /**
  * Context object passed to settings tab render functions
- * Provides access to app, plugin, and utility methods for tab rendering
+ * Shared by native render definitions and the legacy display() path.
  */
 export interface SettingsTabContext {
     app: App;
@@ -129,16 +133,18 @@ export interface SettingsTabContext {
     registerSettingsUpdateListener(id: string, listener: () => void): void;
     /** Unregisters a previously registered settings update listener */
     unregisterSettingsUpdateListener(id: string): void;
-    /** Registers the element where metadata info should be displayed */
-    registerMetadataInfoElement(element: HTMLElement): void;
+    /** Registers cleanup work tied to the current settings render lifecycle */
+    registerSettingsRenderCleanup(cleanup: () => void): void;
+    /** Registers the elements where metadata info should be displayed */
+    registerMetadataInfoElement(element: HTMLElement, exportButton: ButtonComponent): void;
     /** Registers the element where statistics should be displayed */
     registerStatsTextElement(element: HTMLElement): void;
     /** Requests an immediate statistics refresh */
     requestStatisticsRefresh(): void;
+    /** Re-evaluates native setting visibility and disabled states */
+    refreshSettingsDomState(): void;
     /** Ensures the statistics update interval is running */
     ensureStatisticsInterval(): void;
-    /** Activates another settings tab */
-    openSettingsTab(tabId: SettingsTabId): void;
     /** Registers a listener for show tags visibility changes */
     registerShowTagsListener(listener: (visible: boolean) => void): void;
     /** Notifies all listeners of show tags visibility change */

@@ -19,8 +19,10 @@
 import { isDateFilterCandidate, parseDateFilterRange } from './filterSearchDate';
 import { evaluateTagExpression, parseTagModeTokens, propertyTokenMatches, tagMatchesToken } from './filterSearchExpression';
 import type { DateFilterRange, FilterSearchTokens, FolderFilterToken, InclusionOperator, PropertySearchToken } from './filterSearchTypes';
+import { EMPTY_SEARCH_NAV_FILTER_STATE, type SearchNavFilterState } from '../types/search';
 import { casefold, foldSearchText, foldSearchTextFromLowercase } from './recordUtils';
-import { normalizePropertyTreeValuePath } from './propertyTree';
+import { buildPropertyKeyNodeId, buildPropertyValueNodeId, normalizePropertyTreeValuePath } from './propertyTree';
+import { resolvePropertyDisplayText } from './propertyUtils';
 
 export { DATE_FILTER_RELATIVE_KEYWORDS, fileMatchesDateFilterTokens, parseDateFieldPrefix } from './filterSearchDate';
 export type { FilterMode, FilterSearchTokens, FolderFilterToken, InclusionOperator, PropertySearchToken } from './filterSearchTypes';
@@ -64,6 +66,12 @@ const PROPERTY_FILTER_PREFIX = '.';
 
 const normalizePropertyFilterKey = (value: string): string => {
     return casefold(value.trim());
+};
+
+// Property search evaluates the text rendered by pills, so query values must unwrap link markup
+// to the same label. Otherwise filters generated from Markdown-link property nodes cannot match them.
+const normalizePropertyFilterValue = (value: string): string => {
+    return normalizePropertyTreeValuePath(resolvePropertyDisplayText(value));
 };
 
 const isPropertyFilterCandidate = (token: string): boolean => {
@@ -164,9 +172,13 @@ const parsePropertyFilterToken = (token: string): PropertySearchToken | null => 
     const rawKey = unescapePropertyFilterPart(tryUnquotePropertyFilterPart(content.slice(0, separatorIndex)));
     const rawValue = unescapePropertyFilterPart(tryUnquotePropertyFilterPart(content.slice(separatorIndex + 1)));
     const normalizedKey = normalizePropertyFilterKey(rawKey);
-    const normalizedValue = normalizePropertyTreeValuePath(rawValue);
-    if (!normalizedKey || !normalizedValue) {
+    if (!normalizedKey) {
         return null;
+    }
+
+    const normalizedValue = normalizePropertyFilterValue(rawValue);
+    if (!normalizedValue) {
+        return { key: normalizedKey, value: null };
     }
 
     return {
@@ -183,16 +195,45 @@ const foldPropertySearchToken = (token: PropertySearchToken): PropertySearchToke
     };
 };
 
-function tokenizeFilterSearchQuery(query: string): string[] {
-    const tokens: string[] = [];
+/**
+ * Raw token emitted by the query tokenizer with quote metadata preserved.
+ *
+ * `text` is the quote-stripped payload. `literal` marks terms the user opened with a quote
+ * (`"..."`) or a minus directly followed by a quote (`-"..."`); classification must match their
+ * text against names instead of interpreting filter prefixes such as `.`, `#`, or `@`.
+ * `negated` is only set for literal terms because the minus of `-"..."` sits outside the quoted
+ * payload; unquoted negation stays inside `text` and is resolved during classification. This keeps
+ * `-".F"` (exclude names containing `.F`) distinct from `"-.F"` (include names containing `-.F`).
+ */
+interface RawSearchToken {
+    text: string;
+    literal: boolean;
+    negated: boolean;
+}
+
+const createMutationToken = (text: string): RawSearchToken => ({ text, literal: false, negated: false });
+
+function tokenizeFilterSearchQuery(query: string): RawSearchToken[] {
+    const tokens: RawSearchToken[] = [];
     const input = query.trim();
     if (!input) {
         return tokens;
     }
 
     let current = '';
+    let literal = false;
+    let negated = false;
     let inQuotes = false;
     let index = 0;
+
+    const pushCurrent = () => {
+        if (current.length > 0) {
+            tokens.push({ text: current, literal, negated });
+        }
+        current = '';
+        literal = false;
+        negated = false;
+    };
 
     while (index < input.length) {
         const char = input[index];
@@ -207,16 +248,26 @@ function tokenizeFilterSearchQuery(query: string): string[] {
         }
 
         if (char === '"') {
+            if (!inQuotes && !literal) {
+                // A quote opening at the start of a term marks it literal so payloads such as
+                // `.F` or `#work` are matched as name text instead of being classified as
+                // property or tag filters. A quote right after a single leading minus keeps the
+                // minus outside the payload as an exclusion marker.
+                if (current === '') {
+                    literal = true;
+                } else if (current === '-') {
+                    literal = true;
+                    negated = true;
+                    current = '';
+                }
+            }
             inQuotes = !inQuotes;
             index += 1;
             continue;
         }
 
         if (!inQuotes && /\s/.test(char)) {
-            if (current.length > 0) {
-                tokens.push(current);
-                current = '';
-            }
+            pushCurrent();
             index += 1;
             continue;
         }
@@ -225,9 +276,7 @@ function tokenizeFilterSearchQuery(query: string): string[] {
         index += 1;
     }
 
-    if (current.length > 0) {
-        tokens.push(current);
-    }
+    pushCurrent();
 
     return tokens;
 }
@@ -452,20 +501,29 @@ const extensionMatchesToken = (fileExtension: string, token: string): boolean =>
 };
 
 // Parses raw tokens into classified tokens with metadata
-const classifyRawTokens = (rawTokens: string[]): TokenClassificationResult => {
+const classifyRawTokens = (rawTokens: RawSearchToken[]): TokenClassificationResult => {
     const tokens: ClassifiedToken[] = [];
     let hasTagOperand = false;
     let hasNonTagOperand = false;
     let hasInvalidToken = false;
 
     for (const token of rawTokens) {
-        if (!token) {
+        if (!token.text) {
+            continue;
+        }
+
+        // Literal terms bypass every prefix and connector interpretation so quoted text such as
+        // `".F"`, `"#work"`, or `"AND"` is matched against names and aliases verbatim.
+        if (token.literal) {
+            hasNonTagOperand = true;
+            const foldedLiteral = foldSearchTextFromLowercase(token.text.toLowerCase());
+            tokens.push(token.negated ? { kind: 'nameNegation', value: foldedLiteral } : { kind: 'name', value: foldedLiteral });
             continue;
         }
 
         // Token shape detection (operators, prefixes, separators) is done on lowercase text.
         // Accent folding is applied only to operand payloads that participate in matching.
-        const lowercaseToken = token.toLowerCase();
+        const lowercaseToken = token.text.toLowerCase();
         let foldedLowercaseToken: string | null = null;
         const getFoldedLowercaseToken = (): string => {
             if (foldedLowercaseToken !== null) {
@@ -792,6 +850,8 @@ const parseFilterModeTokens = (
  * Inclusion patterns (must match):
  * - #tag - Include notes with tags containing "tag"
  * - # - Include only notes that have at least one tag
+ * - .key - Include notes with property key
+ * - .key=value - Include notes where the property value contains "value"
  * - @today - Include notes matching the default date field on the current day
  * - @YYYY-MM-DD / @YYYYMMDD - Include notes matching the default date field on a specific day
  * - @YYYY - Include notes matching the default date field inside a calendar year
@@ -806,18 +866,24 @@ const parseFilterModeTokens = (
  * - folder:/ - Include notes in the vault root
  * - ext:md - Include notes with extension "md"
  * - word - Include notes with "word" in their name
+ * - "text" - Include notes with "text" in their name, matched literally without filter interpretation
  *
  * Exclusion patterns (must NOT match):
  * - -#tag - Exclude notes with tags containing "tag"
  * - -# - Exclude all tagged notes (show only untagged)
+ * - -.key - Exclude notes with property key
+ * - -.key=value - Exclude notes where the property value contains "value"
  * - -@... - Exclude notes matching a date token or range
  * - -has:task - Exclude notes with unfinished tasks
  * - -folder:archive - Exclude notes where any folder segment contains "archive"
  * - -folder:/archive - Exclude notes whose parent folder path is exactly "archive"
  * - -ext:pdf - Exclude notes with extension "pdf"
  * - -word - Exclude notes with "word" in their name
+ * - -"text" - Exclude notes with "text" in their name, matched literally without filter interpretation
  *
  * Special handling:
+ * - A term opening with a double quote is literal: `".F"` matches names containing ".F" instead of
+ *   filtering on a property, and `"-.F"` matches names containing "-.F" (the minus is part of the text)
  * - AND/OR act as operators only in pure tag queries
  * - Mixed queries treat AND/OR as literal name tokens
  * - In pure tag queries, AND has higher precedence than OR
@@ -857,7 +923,7 @@ export function parseFilterSearchTokens(query: string): FilterSearchTokens {
     // Tokenization preserves original code points.
     // Normalization is handled in classification so token type detection and token folding
     // stay explicit and testable.
-    const rawTokens = tokenizeFilterSearchQuery(trimmedQuery).filter(Boolean);
+    const rawTokens = tokenizeFilterSearchQuery(trimmedQuery);
     if (rawTokens.length === 0) {
         if (!hasTopicTokens) return EMPTY_TOKENS;
         return { ...EMPTY_TOKENS, topicTokens, excludeTopicTokens };
@@ -895,7 +961,102 @@ export function parseFilterSearchTokens(query: string): FilterSearchTokens {
         }
     }
 
-    return { ...parseFilterModeTokens(classifiedTokens, excludeTagTokens, excludePropertyTokens, hasUntaggedOperand), topicTokens, excludeTopicTokens };
+    return {
+        ...parseFilterModeTokens(classifiedTokens, excludeTagTokens, excludePropertyTokens, hasUntaggedOperand),
+        topicTokens,
+        excludeTopicTokens
+    };
+}
+
+const isSearchNavOperandToken = (
+    token: ClassifiedToken
+): token is Extract<ClassifiedToken, { kind: 'tag' | 'tagNegation' | 'property' | 'propertyNegation' }> => {
+    return token.kind === 'tag' || token.kind === 'tagNegation' || token.kind === 'property' || token.kind === 'propertyNegation';
+};
+
+const buildSearchNavPropertyNodeId = (token: PropertySearchToken): string => {
+    return token.value === null ? buildPropertyKeyNodeId(token.key) : buildPropertyValueNodeId(token.key, token.value);
+};
+
+/**
+ * Builds the navigation highlight state for the active search query.
+ * Include operators are only tracked for tag-mode expressions where AND/OR act as connectors.
+ */
+export function buildSearchNavFilterState(query: string): SearchNavFilterState {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+        return EMPTY_SEARCH_NAV_FILTER_STATE;
+    }
+
+    const tokens = parseFilterSearchTokens(trimmedQuery);
+    const tagIncludeSet = new Set<string>();
+    const tagExcludeSet = new Set<string>();
+    const propertyIncludeSet = new Set<string>();
+    const propertyExcludeSet = new Set<string>();
+
+    tokens.includedTagTokens.forEach(token => {
+        if (token) {
+            tagIncludeSet.add(token);
+        }
+    });
+    tokens.excludeTagTokens.forEach(token => {
+        if (token) {
+            tagExcludeSet.add(token);
+        }
+    });
+    tokens.propertyTokens.forEach(token => {
+        propertyIncludeSet.add(buildSearchNavPropertyNodeId(token));
+    });
+    tokens.excludePropertyTokens.forEach(token => {
+        propertyExcludeSet.add(buildSearchNavPropertyNodeId(token));
+    });
+
+    const tagIncludeOperators: Record<string, InclusionOperator> = {};
+    const propertyIncludeOperators: Record<string, InclusionOperator> = {};
+
+    if (tokens.mode === 'tag') {
+        const rawTokens = tokenizeFilterSearchQuery(trimmedQuery);
+        const classification = classifyRawTokens(rawTokens);
+        let hasPriorOperand = false;
+        let pendingOperator: InclusionOperator | null = null;
+
+        for (const token of classification.tokens) {
+            if (token.kind === 'operator') {
+                pendingOperator = token.operator;
+                continue;
+            }
+
+            if (!isSearchNavOperandToken(token)) {
+                continue;
+            }
+
+            const operator = hasPriorOperand ? (pendingOperator ?? 'AND') : null;
+            if (token.kind === 'tag' && token.value && operator) {
+                tagIncludeOperators[token.value] = operator;
+            } else if (token.kind === 'property' && operator) {
+                propertyIncludeOperators[buildSearchNavPropertyNodeId(token.value)] = operator;
+            }
+
+            hasPriorOperand = true;
+            pendingOperator = null;
+        }
+    }
+
+    return {
+        tags: {
+            include: Array.from(tagIncludeSet),
+            exclude: Array.from(tagExcludeSet),
+            includeOperators: tagIncludeOperators,
+            excludeTagged: tokens.excludeTagged,
+            includeUntagged: tokens.includeUntagged,
+            requireTagged: tokens.requireTagged
+        },
+        properties: {
+            include: Array.from(propertyIncludeSet),
+            exclude: Array.from(propertyExcludeSet),
+            includeOperators: propertyIncludeOperators
+        }
+    };
 }
 
 // Checks if a token is a recognized connector word
@@ -904,6 +1065,15 @@ const isConnectorToken = (value: string | undefined): boolean => {
         return false;
     }
     return CONNECTOR_TOKEN_SET.has(value.toLowerCase());
+};
+
+// Checks if a raw token acts as a connector word. Quoted terms are never connectors because
+// literal `"AND"` / `"OR"` must survive query mutations as name text.
+const isConnectorRawToken = (token: RawSearchToken | undefined): boolean => {
+    if (!token || token.literal) {
+        return false;
+    }
+    return isConnectorToken(token.text);
 };
 
 // Checks whether a query contains only tag/property operands and connector words.
@@ -917,7 +1087,12 @@ const isTagOnlyMutationQuery = (query: string): boolean => {
     let hasTagOperand = false;
 
     for (const token of tokens) {
-        const lowercaseToken = token.toLowerCase();
+        // Literal terms are name operands, so their presence makes the query mixed.
+        if (token.literal) {
+            return false;
+        }
+
+        const lowercaseToken = token.text.toLowerCase();
         if (isConnectorToken(lowercaseToken)) {
             continue;
         }
@@ -951,18 +1126,27 @@ const shouldQuoteQueryTokenPart = (value: string): boolean => {
     return /\s/.test(value) || value.includes('"') || value.includes('\\') || value.includes('=');
 };
 
-const escapePropertyFilterPartForQuery = (value: string): string => {
-    return value.replace(/\\/g, '\\\\').replace(/=/g, '\\=');
+const escapePropertyFilterPartForQuery = (value: string, includeQuotes = false): string => {
+    let escaped = '';
+
+    for (const char of value) {
+        if (char === '\\' || char === '=' || (includeQuotes && char === '"')) {
+            escaped += '\\';
+        }
+        escaped += char;
+    }
+
+    return escaped;
 };
 
 const formatPropertyFilterPartForQuery = (value: string): string => {
-    const escaped = escapePropertyFilterPartForQuery(value);
-    if (!shouldQuoteQueryTokenPart(value)) {
+    const shouldQuote = shouldQuoteQueryTokenPart(value);
+    const escaped = escapePropertyFilterPartForQuery(value, shouldQuote);
+    if (!shouldQuote) {
         return escaped;
     }
 
-    const escapedQuotes = escaped.replace(/"/g, '\\"');
-    return `"${escapedQuotes}"`;
+    return `"${escaped}"`;
 };
 
 const formatPropertyTokenForQuery = (propertyToken: PropertySearchToken, negated = false): string => {
@@ -976,8 +1160,21 @@ const formatPropertyTokenForQuery = (propertyToken: PropertySearchToken, negated
     return `${prefix}${serializedKey}=${serializedValue}`;
 };
 
-const serializeMutationToken = (token: string): string => {
-    const normalized = token.toLowerCase();
+// Filter prefixes that must stay outside the quotes when a re-serialized payload needs quoting.
+// A term that opens with a double quote parses as a literal name term, so `"folder:my folder"`
+// would silently drop the folder filter; `folder:"my folder"` keeps it.
+const QUOTED_SERIALIZATION_PREFIXES = [FOLDER_FILTER_PREFIX, EXT_FILTER_PREFIX, '#'];
+
+const serializeMutationToken = (token: RawSearchToken): string => {
+    // Literal serialization must run before property detection so a quoted `.F` keeps its quotes
+    // instead of being rewritten into a property token on the next parse. The minus is placed
+    // outside the quotes so exclusion survives the round trip as `-"..."`.
+    if (token.literal) {
+        return `${token.negated ? '-' : ''}"${escapeQuotedTokenValue(token.text)}"`;
+    }
+
+    const text = token.text;
+    const normalized = text.toLowerCase();
     if (normalized.startsWith('-.') || normalized.startsWith('.')) {
         const negated = normalized.startsWith('-.');
         const candidate = negated ? normalized.slice(1) : normalized;
@@ -987,14 +1184,23 @@ const serializeMutationToken = (token: string): string => {
         }
     }
 
-    if (/\s/.test(token) || token.includes('"') || token.includes('\\')) {
-        return `"${escapeQuotedTokenValue(token)}"`;
+    if (/\s/.test(text) || text.includes('"') || text.includes('\\')) {
+        // A leading minus stays outside the quotes so exclusions survive the round trip as
+        // `-"..."` / `-folder:"..."` instead of re-parsing as literal inclusions.
+        const negationPrefix = text.startsWith('-') ? '-' : '';
+        const body = text.slice(negationPrefix.length);
+        const lowercaseBody = body.toLowerCase();
+        const matchedPrefix = QUOTED_SERIALIZATION_PREFIXES.find(prefix => lowercaseBody.startsWith(prefix));
+        // Preserve the prefix's original casing; classification lowercases token shapes on parse.
+        const filterPrefix = matchedPrefix ? body.slice(0, matchedPrefix.length) : '';
+        const payload = body.slice(filterPrefix.length);
+        return `${negationPrefix}${filterPrefix}"${escapeQuotedTokenValue(payload)}"`;
     }
 
-    return token;
+    return text;
 };
 
-const serializeMutationTokens = (tokens: string[]): string => {
+const serializeMutationTokens = (tokens: RawSearchToken[]): string => {
     return tokens
         .map(token => serializeMutationToken(token))
         .join(' ')
@@ -1018,7 +1224,7 @@ export interface UpdateFilterQueryWithPropertyResult {
     changed: boolean;
 }
 
-const removeMutationToken = (tokens: string[], removalIndex: number, expressionMode: boolean): string[] => {
+const removeMutationToken = (tokens: RawSearchToken[], removalIndex: number, expressionMode: boolean): RawSearchToken[] => {
     const updatedTokens = tokens.slice();
     updatedTokens.splice(removalIndex, 1);
 
@@ -1027,43 +1233,48 @@ const removeMutationToken = (tokens: string[], removalIndex: number, expressionM
     }
 
     const precedingIndex = removalIndex - 1;
-    if (precedingIndex >= 0 && isConnectorToken(updatedTokens[precedingIndex])) {
+    if (precedingIndex >= 0 && isConnectorRawToken(updatedTokens[precedingIndex])) {
         updatedTokens.splice(precedingIndex, 1);
     }
 
-    while (updatedTokens.length > 0 && isConnectorToken(updatedTokens[0])) {
+    while (updatedTokens.length > 0 && isConnectorRawToken(updatedTokens[0])) {
         updatedTokens.shift();
     }
 
     for (let index = 0; index < updatedTokens.length - 1; index += 1) {
-        if (isConnectorToken(updatedTokens[index]) && isConnectorToken(updatedTokens[index + 1])) {
+        if (isConnectorRawToken(updatedTokens[index]) && isConnectorRawToken(updatedTokens[index + 1])) {
             updatedTokens.splice(index + 1, 1);
             index -= 1;
         }
     }
 
-    while (updatedTokens.length > 0 && isConnectorToken(updatedTokens[updatedTokens.length - 1])) {
+    while (updatedTokens.length > 0 && isConnectorRawToken(updatedTokens[updatedTokens.length - 1])) {
         updatedTokens.pop();
     }
 
     return updatedTokens;
 };
 
-const appendMutationToken = (tokens: string[], token: string, operator: InclusionOperator, expressionMode: boolean): string[] => {
+const appendMutationToken = (
+    tokens: RawSearchToken[],
+    token: string,
+    operator: InclusionOperator,
+    expressionMode: boolean
+): RawSearchToken[] => {
     const nextTokens = tokens.slice();
     if (!expressionMode) {
-        nextTokens.push(token);
+        nextTokens.push(createMutationToken(token));
         return nextTokens;
     }
 
     const connector = operator === 'OR' ? 'OR' : 'AND';
     if (nextTokens.length === 0) {
-        nextTokens.push(token);
-    } else if (isConnectorToken(nextTokens[nextTokens.length - 1])) {
-        nextTokens[nextTokens.length - 1] = connector;
-        nextTokens.push(token);
+        nextTokens.push(createMutationToken(token));
+    } else if (isConnectorRawToken(nextTokens[nextTokens.length - 1])) {
+        nextTokens[nextTokens.length - 1] = createMutationToken(connector);
+        nextTokens.push(createMutationToken(token));
     } else {
-        nextTokens.push(connector, token);
+        nextTokens.push(createMutationToken(connector), createMutationToken(token));
     }
 
     return nextTokens;
@@ -1093,7 +1304,9 @@ export function updateFilterQueryWithTag(
     const tokens = trimmed.length > 0 ? tokenizeFilterSearchQuery(trimmed) : [];
     const tagOnlyQuery = isTagOnlyMutationQuery(trimmed);
     const lowerTarget = foldSearchText(formattedTag);
-    const removalIndex = tokens.findIndex(token => foldSearchText(token) === lowerTarget);
+    // Literal terms never match: a quoted `"#work"` is name text, so toggling the `#work` tag
+    // must add a tag filter instead of removing the literal.
+    const removalIndex = tokens.findIndex(token => !token.literal && foldSearchText(token.text) === lowerTarget);
 
     if (removalIndex !== -1) {
         const updatedTokens = removeMutationToken(tokens, removalIndex, tagOnlyQuery);
@@ -1134,7 +1347,7 @@ export function updateFilterQueryWithProperty(
 
     let normalizedValue: string | null = null;
     if (typeof value === 'string') {
-        const normalizedCandidate = normalizePropertyTreeValuePath(value);
+        const normalizedCandidate = normalizePropertyFilterValue(value);
         if (!normalizedCandidate) {
             return {
                 query: trimmed,
@@ -1153,10 +1366,12 @@ export function updateFilterQueryWithProperty(
     const foldedTargetValue = foldSearchText(propertyToken.value ?? '');
 
     const removalIndex = tokens.findIndex(token => {
-        if (token.startsWith('-')) {
+        // Literal terms never match: a quoted `".status"` is name text, so toggling the `status`
+        // property must add a property filter instead of removing the literal.
+        if (token.literal || token.text.startsWith('-')) {
             return false;
         }
-        const parsed = parsePropertyFilterToken(token);
+        const parsed = parsePropertyFilterToken(token.text);
         if (!parsed) {
             return false;
         }
@@ -1247,48 +1462,121 @@ export function filterSearchRequiresTagsForEveryMatch(tokens: FilterSearchTokens
 
 export interface FilterSearchMatchOptions {
     hasUnfinishedTasks: boolean;
+    foldedAliases?: readonly string[];
     foldedFolderPath?: string;
     foldedExtension?: string;
     propertyValuesByKey?: Map<string, string[]>;
 }
 
+export interface FilterSearchNameMatch {
+    aliasIndexes: readonly number[];
+}
+
 /**
- * Check if a file matches parsed filter search tokens.
- *
- * Filtering logic:
- * - Inclusion clauses are evaluated with AND semantics; the file must satisfy every token inside a clause
- * - If any clause matches, the file is accepted (OR across clauses)
- * - All exclusion tokens (-name, -#tag, -folder:..., -ext:...) are ANDed - file must match NONE
- * - Tag requirements (# or -#) control whether tagged/untagged notes are shown
- *
- * @param foldedName - File display name in folded search form
- * @param foldedTags - File tags in folded search form
- * @param tokens - Parsed query tokens with include/exclude criteria
- * @param options - Match options containing task, folder path, and extension context
- * @returns True when the file passes all filter criteria
+ * `matches: false` means a criterion rejected the file and no name state is retained. `matches: true` with a `nameMatch`
+ * records the aliases used by filter-mode name tokens; `nameMatch: null` means the query had no filter-mode name tokens.
  */
-export function fileMatchesFilterTokens(
+export type FilterSearchFileMatch =
+    { readonly matches: false; readonly nameMatch: null } | { readonly matches: true; readonly nameMatch: FilterSearchNameMatch | null };
+
+const FILTER_SEARCH_NO_MATCH: FilterSearchFileMatch = { matches: false, nameMatch: null };
+const FILTER_SEARCH_MATCH_WITHOUT_NAME: FilterSearchFileMatch = { matches: true, nameMatch: null };
+
+/**
+ * Matches every name token across the display name and aliases.
+ * Returns an empty alias index list when the display name covers every token, alias indexes in frontmatter order when aliases
+ * are required, or null when the combined name candidates do not cover every token.
+ */
+export function findFilterSearchNameMatch(
+    foldedName: string,
+    foldedAliases: readonly string[],
+    nameTokens: readonly string[]
+): FilterSearchNameMatch | null {
+    const aliasRequiredTokens = Array.from(new Set(nameTokens.filter(token => !foldedName.includes(token))));
+    const unmatchedTokens = new Set(aliasRequiredTokens);
+    if (unmatchedTokens.size === 0) {
+        return { aliasIndexes: [] };
+    }
+
+    const aliasIndexes: number[] = [];
+    while (unmatchedTokens.size > 0) {
+        let bestAliasIndex = -1;
+        let bestCoverage = 0;
+
+        // Prefer the alias covering the most remaining tokens so a combined alias does not produce redundant labels.
+        // Equal coverage retains frontmatter order because only a larger count replaces the current candidate.
+        foldedAliases.forEach((alias, aliasIndex) => {
+            let coverage = 0;
+            unmatchedTokens.forEach(token => {
+                if (alias.includes(token)) {
+                    coverage += 1;
+                }
+            });
+
+            if (coverage > bestCoverage) {
+                bestAliasIndex = aliasIndex;
+                bestCoverage = coverage;
+            }
+        });
+
+        if (bestAliasIndex === -1) {
+            return null;
+        }
+
+        aliasIndexes.push(bestAliasIndex);
+        const matchedAlias = foldedAliases[bestAliasIndex];
+        unmatchedTokens.forEach(token => {
+            if (matchedAlias.includes(token)) {
+                unmatchedTokens.delete(token);
+            }
+        });
+    }
+
+    // A later greedy choice can make an earlier alias redundant. Remove redundant aliases from the end first so frontmatter
+    // order remains the tie-breaker when either alias can be retained.
+    aliasIndexes.sort((left, right) => left - right);
+    for (let position = aliasIndexes.length - 1; position >= 0; position -= 1) {
+        const remainingAliasIndexes = aliasIndexes.filter((_aliasIndex, index) => index !== position);
+        const stillCoversEveryToken = aliasRequiredTokens.every(token =>
+            remainingAliasIndexes.some(aliasIndex => foldedAliases[aliasIndex]?.includes(token))
+        );
+        if (stillCoversEveryToken) {
+            aliasIndexes.splice(position, 1);
+        }
+    }
+
+    return { aliasIndexes };
+}
+
+/**
+ * Matches a file against parsed filter search tokens and retains the name/alias coverage result.
+ *
+ * The detailed result lets list rendering reuse alias coverage from the acceptance pass instead of matching the name twice.
+ */
+export function getFileFilterSearchMatch(
     foldedName: string,
     foldedTags: string[],
     tokens: FilterSearchTokens,
     options?: FilterSearchMatchOptions
-): boolean {
+): FilterSearchFileMatch {
     const hasUnfinishedTasks = options?.hasUnfinishedTasks ?? false;
-    // Callers provide pre-folded folder/extension values so this matcher can use direct comparisons.
+    // Callers provide pre-folded aliases/folder/extension values so this matcher can use direct comparisons.
+    const foldedAliases = options?.foldedAliases ?? [];
     const foldedFolderPath = options?.foldedFolderPath ?? '';
     const foldedExtension = options?.foldedExtension ?? '';
     // Property map keys and values are expected in folded form.
     const propertyValuesByKey = options?.propertyValuesByKey ?? EMPTY_PROPERTY_VALUE_MAP;
 
     if (tokens.excludeUnfinishedTasks && hasUnfinishedTasks) {
-        return false;
+        return FILTER_SEARCH_NO_MATCH;
     }
 
     if (tokens.requireUnfinishedTasks && !hasUnfinishedTasks) {
-        return false;
+        return FILTER_SEARCH_NO_MATCH;
     }
 
     if (tokens.mode === 'filter') {
+        let nameMatch: FilterSearchNameMatch | null = null;
         const hasFolderCriteria = tokens.excludeFolderTokens.length > 0 || tokens.folderTokens.length > 0;
         const normalizedFolderPath = hasFolderCriteria ? normalizeFolderPathForMatch(foldedFolderPath) : '';
         const needsFolderSegments =
@@ -1298,9 +1586,11 @@ export function fileMatchesFilterTokens(
         const folderSegments = needsFolderSegments ? normalizedFolderPath.split('/').filter(Boolean) : null;
 
         if (tokens.excludeNameTokens.length > 0) {
-            const hasExcludedName = tokens.excludeNameTokens.some(token => foldedName.includes(token));
+            const hasExcludedName = tokens.excludeNameTokens.some(
+                token => foldedName.includes(token) || foldedAliases.some(alias => alias.includes(token))
+            );
             if (hasExcludedName) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
         }
 
@@ -1309,39 +1599,39 @@ export function fileMatchesFilterTokens(
                 folderMatchesTokenWithNormalizedPath(normalizedFolderPath, folderSegments, token)
             );
             if (hasExcludedFolder) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
         }
 
         if (tokens.excludeExtensionTokens.length > 0) {
             const hasExcludedExtension = tokens.excludeExtensionTokens.some(token => extensionMatchesToken(foldedExtension, token));
             if (hasExcludedExtension) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
         }
 
         if (tokens.excludeTagged) {
             if (foldedTags.length > 0) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
         } else if (tokens.excludeTagTokens.length > 0 && foldedTags.length > 0) {
             const hasExcludedTag = tokens.excludeTagTokens.some(token => foldedTags.some(tag => tagMatchesToken(tag, token)));
             if (hasExcludedTag) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
         }
 
         if (tokens.excludePropertyTokens.length > 0) {
             const hasExcludedProperty = tokens.excludePropertyTokens.some(token => propertyTokenMatches(propertyValuesByKey, token));
             if (hasExcludedProperty) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
         }
 
         if (tokens.nameTokens.length > 0) {
-            const matchesName = tokens.nameTokens.every(token => foldedName.includes(token));
-            if (!matchesName) {
-                return false;
+            nameMatch = findFilterSearchNameMatch(foldedName, foldedAliases, tokens.nameTokens);
+            if (!nameMatch) {
+                return FILTER_SEARCH_NO_MATCH;
             }
         }
 
@@ -1350,48 +1640,64 @@ export function fileMatchesFilterTokens(
                 folderMatchesTokenWithNormalizedPath(normalizedFolderPath, folderSegments, token)
             );
             if (!matchesFolders) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
         }
 
         if (tokens.extensionTokens.length > 0) {
             const matchesExtensions = tokens.extensionTokens.every(token => extensionMatchesToken(foldedExtension, token));
             if (!matchesExtensions) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
         }
 
         if (tokens.propertyTokens.length > 0) {
             const matchesProperties = tokens.propertyTokens.every(token => propertyTokenMatches(propertyValuesByKey, token));
             if (!matchesProperties) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
         }
 
         if (tokens.requireTagged || tokens.tagTokens.length > 0) {
             if (foldedTags.length === 0) {
-                return false;
+                return FILTER_SEARCH_NO_MATCH;
             }
             if (tokens.tagTokens.length > 0) {
                 const matchesTags = tokens.tagTokens.every(token => foldedTags.some(tag => tagMatchesToken(tag, token)));
                 if (!matchesTags) {
-                    return false;
+                    return FILTER_SEARCH_NO_MATCH;
                 }
             }
         }
 
-        return true;
+        return nameMatch ? { matches: true, nameMatch } : FILTER_SEARCH_MATCH_WITHOUT_NAME;
     }
 
     if (tokens.excludeTagged) {
         if (foldedTags.length > 0) {
-            return false;
+            return FILTER_SEARCH_NO_MATCH;
         }
     }
 
     if (tokens.expression.length === 0) {
-        return true;
+        return FILTER_SEARCH_MATCH_WITHOUT_NAME;
     }
 
-    return evaluateTagExpression(tokens.expression, foldedTags, propertyValuesByKey);
+    return evaluateTagExpression(tokens.expression, foldedTags, propertyValuesByKey)
+        ? FILTER_SEARCH_MATCH_WITHOUT_NAME
+        : FILTER_SEARCH_NO_MATCH;
+}
+
+/**
+ * Check if a file matches parsed filter search tokens.
+ *
+ * @returns True when the file passes all filter criteria
+ */
+export function fileMatchesFilterTokens(
+    foldedName: string,
+    foldedTags: string[],
+    tokens: FilterSearchTokens,
+    options?: FilterSearchMatchOptions
+): boolean {
+    return getFileFilterSearchMatch(foldedName, foldedTags, tokens, options).matches;
 }

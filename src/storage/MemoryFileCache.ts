@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FileData } from './IndexedDBStorage';
+import type { FileData } from './IndexedDBStorage';
 import { PreviewTextCache } from './PreviewTextCache';
 import { clonePropertyItems } from '../utils/propertyUtils';
 
@@ -30,6 +30,8 @@ function cloneFileData(data: FileData): FileData {
         fileThumbnailsMtime: data.fileThumbnailsMtime,
         tags: data.tags ? [...data.tags] : null,
         wordCount: data.wordCount,
+        characterCountWithSpaces: data.characterCountWithSpaces,
+        characterCountWithoutSpaces: data.characterCountWithoutSpaces,
         taskTotal: data.taskTotal,
         taskUnfinished: data.taskUnfinished,
         // Clone property items to prevent consumers from mutating cached records.

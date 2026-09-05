@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import React from 'react';
 import { useSelectionState } from '../context/SelectionContext';
 import { useServices } from '../context/ServicesContext';
 import { useSettingsState } from '../context/SettingsContext';
@@ -25,8 +26,9 @@ import { useVaultProfileMenu } from '../hooks/useVaultProfileMenu';
 import { strings } from '../i18n';
 import { ServiceIcon } from './ServiceIcon';
 import { useNavigationActions } from '../hooks/useNavigationActions';
-import { hasHiddenItemSources } from '../utils/exclusionUtils';
 import { runAsyncAction } from '../utils/async';
+import { showNotice } from '../utils/noticeUtils';
+import { usesMobileChrome } from '../utils/paneLayout';
 import { resolveUXIcon } from '../utils/uxIcons';
 
 interface NavigationPaneHeaderProps {
@@ -37,14 +39,14 @@ interface NavigationPaneHeaderProps {
     showVaultTitleInHeader: boolean;
 }
 
-export function NavigationPaneHeader({
+export const NavigationPaneHeader = React.memo(function NavigationPaneHeader({
     onTreeUpdateComplete,
     onToggleRootFolderReorder,
     rootReorderActive,
     rootReorderDisabled,
     showVaultTitleInHeader
 }: NavigationPaneHeaderProps) {
-    const { isMobile, plugin } = useServices();
+    const { plugin } = useServices();
     const settings = useSettingsState();
     const uxPreferences = useUXPreferences();
     const { toggleShowCalendar } = useUXPreferenceActions();
@@ -60,13 +62,15 @@ export function NavigationPaneHeader({
 
     // Hook providing shared navigation actions (expand/collapse, folder creation, toggle visibility)
     const { shouldCollapseItems, handleExpandCollapseAll, handleNewFolder, handleToggleShowExcludedFolders } = useNavigationActions();
-    // Detects if any hidden folders, tags, or files are configured to determine if toggle should be shown
-    const hasHiddenItems = hasHiddenItemSources(settings);
     const navigationVisibility = settings.toolbarVisibility.navigation;
+    // Mobile chrome (profile-only header, actions in the tab bar) applies to phones only.
+    // Tablets render the desktop header in both pane layouts so the toolbars stay at the
+    // top when switching between single and dual pane.
+    const useMobileChrome = usesMobileChrome();
     const showToggleDualPaneButton = navigationVisibility.toggleDualPane;
     const showExpandCollapseButton = navigationVisibility.expandCollapse;
     const showCalendarButton = navigationVisibility.calendar && settings.calendarEnabled && settings.calendarPlacement !== 'right-sidebar';
-    const showHiddenItemsButton = navigationVisibility.hiddenItems && hasHiddenItems;
+    const showHiddenItemsButton = navigationVisibility.hiddenItems;
     const showRootReorderButton = navigationVisibility.rootReorder;
     const showNewFolderButton = navigationVisibility.newFolder;
 
@@ -75,7 +79,7 @@ export function NavigationPaneHeader({
     }
 
     // Clickable element that displays the active profile name and opens the profile menu on interaction
-    const shouldRenderProfileTrigger = hasMultipleProfiles && (isMobile || showVaultTitleInHeader);
+    const shouldRenderProfileTrigger = hasMultipleProfiles && (useMobileChrome || showVaultTitleInHeader);
     const profileTriggerContent = (
         <>
             <span className="nn-pane-header-text">{activeProfileName}</span>
@@ -87,7 +91,7 @@ export function NavigationPaneHeader({
         </>
     );
     const profileTrigger = shouldRenderProfileTrigger ? (
-        isMobile ? (
+        useMobileChrome ? (
             <div
                 className="nn-pane-header-title nn-pane-header-profile"
                 aria-label={strings.navigationPane.profileMenuAria}
@@ -114,7 +118,7 @@ export function NavigationPaneHeader({
         )
     ) : null;
 
-    if (isMobile) {
+    if (useMobileChrome) {
         if (!profileTrigger) {
             return null;
         }
@@ -134,6 +138,9 @@ export function NavigationPaneHeader({
         return null;
     }
 
+    const dualPanePreference = plugin.useDualPane();
+    const dualPaneAutoFallbackActive = dualPanePreference && uiState.singlePane;
+
     return (
         <div className="nn-pane-header">
             <div className="nn-header-actions nn-header-actions--space-between">
@@ -141,9 +148,13 @@ export function NavigationPaneHeader({
                     {showToggleDualPaneButton ? (
                         <button
                             className="nn-icon-button"
-                            aria-label={uiState.dualPane ? strings.paneHeader.showSinglePane : strings.paneHeader.showDualPane}
+                            aria-label={dualPanePreference ? strings.paneHeader.showSinglePane : strings.paneHeader.showDualPane}
                             onClick={() => {
-                                plugin.setDualPanePreference(!plugin.useDualPane());
+                                if (dualPaneAutoFallbackActive) {
+                                    showNotice(strings.paneHeader.dualPaneAutoFallbackNotice, { variant: 'warning' });
+                                    return;
+                                }
+                                plugin.setDualPanePreference(!dualPanePreference);
                             }}
                             tabIndex={-1}
                             type="button"
@@ -151,7 +162,7 @@ export function NavigationPaneHeader({
                             <ServiceIcon
                                 iconId={resolveUXIcon(
                                     settings.interfaceIcons,
-                                    uiState.dualPane ? 'nav-show-single-pane' : 'nav-show-dual-pane'
+                                    dualPanePreference ? 'nav-show-single-pane' : 'nav-show-dual-pane'
                                 )}
                             />
                         </button>
@@ -167,7 +178,7 @@ export function NavigationPaneHeader({
                                 handleExpandCollapseAll();
                                 if (onTreeUpdateComplete) {
                                     // Defer callback until after DOM updates complete
-                                    requestAnimationFrame(() => {
+                                    window.requestAnimationFrame(() => {
                                         onTreeUpdateComplete();
                                     });
                                 }
@@ -190,12 +201,11 @@ export function NavigationPaneHeader({
                                 handleToggleShowExcludedFolders();
                                 if (onTreeUpdateComplete) {
                                     // Defer callback until after DOM updates complete
-                                    requestAnimationFrame(() => {
+                                    window.requestAnimationFrame(() => {
                                         onTreeUpdateComplete();
                                     });
                                 }
                             }}
-                            disabled={!hasHiddenItems}
                             tabIndex={-1}
                         >
                             <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'nav-hidden-items')} />
@@ -242,4 +252,4 @@ export function NavigationPaneHeader({
             </div>
         </div>
     );
-}
+});

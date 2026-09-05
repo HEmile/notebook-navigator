@@ -19,10 +19,11 @@
 import React, { useCallback, useMemo } from 'react';
 import type { TFile } from 'obsidian';
 import { useMetadataService, useServices } from '../../context/ServicesContext';
-import { useSelectionState } from '../../context/SelectionContext';
+import { useNavigationSelection } from '../../context/SelectionContext';
 import { useTagNavigation } from '../../hooks/useTagNavigation';
 import type { PropertyItem } from '../../storage/IndexedDBStorage';
-import type { NotePropertyType, NotebookNavigatorSettings } from '../../settings/types';
+import type { PropertySearchMatch, PropertySearchValueMatch } from '../../types/search';
+import { showsCharacterCount, showsWordCount, type NotebookNavigatorSettings } from '../../settings/types';
 import { runAsyncAction } from '../../utils/async';
 import {
     forEachVisibleFrontmatterProperty,
@@ -31,10 +32,18 @@ import {
     type VisibleFrontmatterPropertyEntry
 } from '../../utils/listPaneMeasurements';
 import { naturalCompare } from '../../utils/sortUtils';
-import { getTagSearchModifierOperator, normalizeTagPath } from '../../utils/tagUtils';
-import { isSupportedCssColor, parsePropertyLinkTarget, type PropertyLinkTarget } from '../../utils/propertyUtils';
-import { casefold } from '../../utils/recordUtils';
+import { getTagSearchModifierOperator } from '../../utils/tagUtils';
+import {
+    buildPropertySearchEvidence,
+    isSupportedCssColor,
+    parsePropertyLinkTarget,
+    resolvePropertyDisplayText,
+    type PropertyLinkTarget,
+    type PropertySearchEvidenceGroup
+} from '../../utils/propertyUtils';
+import { casefold, foldSearchText, hasOwnRecordEntries } from '../../utils/recordUtils';
 import { resolveUXIcon } from '../../utils/uxIcons';
+import { getFoldedSearchHighlightRanges } from '../../utils/searchHighlight';
 import type { InclusionOperator } from '../../utils/filterSearch';
 import {
     buildPropertyKeyNodeId,
@@ -43,11 +52,10 @@ import {
     parsePropertyNodeId
 } from '../../utils/propertyTree';
 import type { HiddenTagVisibility } from '../../utils/tagPrefixMatcher';
-import {
-    resolveFileItemPropertyDecorationColors,
-    resolveFileItemTagDecorationColors,
-    type FileItemPillDecorationModel
-} from '../../utils/fileItemPillDecoration';
+import { resolveFileItemPropertyDecorationColors, type FileItemPillDecorationModel } from '../../utils/fileItemPillDecoration';
+import { compareFileItemPropertyKeysByNavigationOrder, type FileItemPillOrderModel } from '../../utils/fileItemPillOrder';
+import { useFileItemTagPills } from './useFileItemTagPills';
+import { renderTextWithHighlightRanges } from './searchHighlightRendering';
 import { ServiceIcon } from '../ServiceIcon';
 
 type PropertyPill = {
@@ -63,6 +71,8 @@ type PropertyPill = {
     propertySearchKey?: string;
     propertySearchValuePath?: string | null;
     canNavigateToProperty?: boolean;
+    hasCustomColor?: boolean;
+    searchMatchTerms?: readonly string[];
 };
 
 export interface UseFileItemPillsParams {
@@ -71,29 +81,43 @@ export interface UseFileItemPillsParams {
     tags: string[];
     properties: PropertyItem[] | null;
     wordCount: number | null;
-    notePropertyType: NotePropertyType;
+    characterCount: number | null;
+    wordCountDisplayText: string | null;
+    characterCountDisplayText: string | null;
     settings: NotebookNavigatorSettings;
+    showTags: boolean;
+    showProperties: boolean;
+    textCountDisplay: NotebookNavigatorSettings['textCountDisplay'];
     visiblePropertyKeys: ReadonlySet<string>;
     visibleNavigationPropertyKeys: ReadonlySet<string>;
+    matchedProperties?: readonly PropertySearchMatch[];
     hiddenTagVisibility: HiddenTagVisibility;
     onModifySearchWithTag?: (tag: string, operator: InclusionOperator) => void;
     onModifySearchWithProperty?: (key: string, value: string | null, operator: InclusionOperator) => void;
     fileItemPillDecorationModel: FileItemPillDecorationModel;
+    fileItemPillOrderModel: FileItemPillOrderModel;
 }
 
 export interface FileItemPillsState {
     shouldShowFileTags: boolean;
     shouldShowProperty: boolean;
-    shouldShowWordCountProperty: boolean;
+    shouldShowTextCountProperty: boolean;
     hasVisiblePillRows: boolean;
+    propertySearchEvidenceGroups: readonly PropertySearchEvidenceGroup[];
+    propertySearchEvidenceHiddenGroupCount: number;
+    /**
+     * Non-clickable tag pill row for the file hover tooltip, matching the rendered tag
+     * pills in filtering, order, display name, colors, and icons. Null when tooltip tags
+     * are disabled or the file has no visible tags.
+     */
+    tooltipTagRow: React.ReactNode;
     pillRows: React.ReactNode;
 }
 
-const EMPTY_COLOR_MAP = new Map<string, { color?: string; background?: string }>();
 const EXTERNAL_PROPERTY_LINK_ICON_ID = 'external-link';
 
-function sortTagsAlphabetically(tags: string[]): void {
-    tags.sort((firstTag, secondTag) => naturalCompare(firstTag, secondTag));
+function buildPropertySearchValueIdentity(fieldKey: string, valueKind: PropertyItem['valueKind'], rawValue: string): string {
+    return `${casefold(fieldKey.trim())}\u0000${valueKind ?? ''}\u0000${rawValue}`;
 }
 
 function sortPropertyPillsAlphabetically(pills: PropertyPill[]): void {
@@ -112,35 +136,73 @@ function sortPropertyPillsAlphabetically(pills: PropertyPill[]): void {
     });
 }
 
-function sortPropertyPillGroup(pills: readonly PropertyPill[], prioritizeColoredPills: boolean): PropertyPill[] {
+function sortPropertyPillGroup(pills: readonly PropertyPill[], prioritizeCustomColoredPills: boolean): PropertyPill[] {
     if (pills.length <= 1) {
         return [...pills];
     }
 
-    if (!prioritizeColoredPills) {
+    if (!prioritizeCustomColoredPills) {
         const sortedPills = [...pills];
         sortPropertyPillsAlphabetically(sortedPills);
         return sortedPills;
     }
 
-    const coloredPills: PropertyPill[] = [];
+    const customColoredPills: PropertyPill[] = [];
     const regularPills: PropertyPill[] = [];
 
     pills.forEach(pill => {
-        const hasColor = typeof pill.color === 'string' && pill.color.trim().length > 0;
-        const hasBackground = typeof pill.background === 'string' && pill.background.trim().length > 0;
-        if (hasColor || hasBackground) {
-            coloredPills.push(pill);
+        if (pill.hasCustomColor === true) {
+            customColoredPills.push(pill);
             return;
         }
 
         regularPills.push(pill);
     });
 
-    sortPropertyPillsAlphabetically(coloredPills);
+    sortPropertyPillsAlphabetically(customColoredPills);
     sortPropertyPillsAlphabetically(regularPills);
 
-    return [...coloredPills, ...regularPills];
+    return [...customColoredPills, ...regularPills];
+}
+
+function hasCustomColoredPropertyPill(pills: readonly PropertyPill[] | undefined): boolean {
+    if (!pills) {
+        return false;
+    }
+
+    return pills.some(pill => pill.hasCustomColor === true);
+}
+
+function sortPropertyGroupOrder(
+    groupOrder: readonly string[],
+    groupedPills: ReadonlyMap<string, readonly PropertyPill[]>,
+    prioritizeCustomColoredPills: boolean,
+    orderModel: FileItemPillOrderModel,
+    visibleNavigationPropertyKeys: ReadonlySet<string>
+): string[] {
+    if (groupOrder.length <= 1) {
+        return [...groupOrder];
+    }
+
+    const sortedGroupOrder = [...groupOrder];
+    sortedGroupOrder.sort((leftGroupKey, rightGroupKey) => {
+        if (prioritizeCustomColoredPills) {
+            const leftHasCustomColor = hasCustomColoredPropertyPill(groupedPills.get(leftGroupKey));
+            const rightHasCustomColor = hasCustomColoredPropertyPill(groupedPills.get(rightGroupKey));
+            if (leftHasCustomColor !== rightHasCustomColor) {
+                return leftHasCustomColor ? -1 : 1;
+            }
+        }
+
+        return compareFileItemPropertyKeysByNavigationOrder(
+            leftGroupKey,
+            rightGroupKey,
+            orderModel.rootPropertyNavigationOrderMap,
+            visibleNavigationPropertyKeys
+        );
+    });
+
+    return sortedGroupOrder;
 }
 
 function resolveNormalizedPropertyKeyNodeId(fieldKey: string | undefined): string | undefined {
@@ -153,61 +215,58 @@ function resolveNormalizedPropertyKeyNodeId(fieldKey: string | undefined): strin
     return normalizePropertyNodeId(rawKeyNodeId) ?? rawKeyNodeId;
 }
 
-function hasOwnRecordEntries(record: Record<string, string> | undefined): boolean {
-    if (!record) {
-        return false;
-    }
-
-    for (const key in record) {
-        if (Object.prototype.hasOwnProperty.call(record, key)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 export function useFileItemPills({
     file,
     isCompactMode,
     tags,
     properties,
     wordCount,
-    notePropertyType,
+    characterCount,
+    wordCountDisplayText,
+    characterCountDisplayText,
     settings,
+    showTags,
+    showProperties,
+    textCountDisplay,
     visiblePropertyKeys,
     visibleNavigationPropertyKeys,
+    matchedProperties,
     hiddenTagVisibility,
     onModifySearchWithTag,
     onModifySearchWithProperty,
-    fileItemPillDecorationModel
+    fileItemPillDecorationModel,
+    fileItemPillOrderModel
 }: UseFileItemPillsParams): FileItemPillsState {
-    const { app, isMobile } = useServices();
+    const { app } = useServices();
     const metadataService = useMetadataService();
-    const selectionState = useSelectionState();
+    const { selectionType, selectedTag, selectedProperty } = useNavigationSelection();
     const { navigateToTag, navigateToProperty } = useTagNavigation();
     const wordCountPillIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'file-word-count'), [settings.interfaceIcons]);
+    const characterCountPillIconId = useMemo(
+        () => resolveUXIcon(settings.interfaceIcons, 'file-character-count'),
+        [settings.interfaceIcons]
+    );
     const selectedTagToHide = useMemo(() => {
         return getSelectedTagPillToHide({
-            selectionType: selectionState.selectionType,
-            selectedTag: selectionState.selectedTag,
+            selectionType,
+            selectedTag,
             showSelectedNavigationPills: settings.showSelectedNavigationPills
         });
-    }, [selectionState.selectedTag, selectionState.selectionType, settings.showSelectedNavigationPills]);
+    }, [selectedTag, selectionType, settings.showSelectedNavigationPills]);
     const selectedPropertyValueNodeIdToHide = useMemo(() => {
         return getSelectedPropertyValuePillToHide({
-            selectionType: selectionState.selectionType,
-            selectedProperty: selectionState.selectedProperty,
+            selectionType,
+            selectedProperty,
             showSelectedNavigationPills: settings.showSelectedNavigationPills
         });
-    }, [selectionState.selectedProperty, selectionState.selectionType, settings.showSelectedNavigationPills]);
+    }, [selectedProperty, selectionType, settings.showSelectedNavigationPills]);
 
     const handleTagClick = useCallback(
         (event: React.MouseEvent, tag: string) => {
             event.stopPropagation();
 
             if (onModifySearchWithTag) {
-                const operator = getTagSearchModifierOperator(event, settings.multiSelectModifier, isMobile);
+                const operator = getTagSearchModifierOperator(event, settings.multiSelectModifier);
                 if (operator) {
                     event.preventDefault();
                     onModifySearchWithTag(tag, operator);
@@ -217,7 +276,7 @@ export function useFileItemPills({
 
             navigateToTag(tag, { preserveNavigationFocus: false });
         },
-        [isMobile, navigateToTag, onModifySearchWithTag, settings.multiSelectModifier]
+        [navigateToTag, onModifySearchWithTag, settings.multiSelectModifier]
     );
 
     const handlePropertyClick = useCallback(
@@ -232,7 +291,7 @@ export function useFileItemPills({
             }
 
             if (canNavigateToProperty && onModifySearchWithProperty && propertySearchKey) {
-                const operator = getTagSearchModifierOperator(event, settings.multiSelectModifier, isMobile);
+                const operator = getTagSearchModifierOperator(event, settings.multiSelectModifier);
                 if (operator) {
                     event.preventDefault();
                     onModifySearchWithProperty(propertySearchKey, pill.propertySearchValuePath ?? null, operator);
@@ -262,7 +321,6 @@ export function useFileItemPills({
         [
             app.workspace,
             file.path,
-            isMobile,
             navigateToProperty,
             onModifySearchWithProperty,
             settings.enablePropertyExternalLinks,
@@ -271,107 +329,17 @@ export function useFileItemPills({
         ]
     );
 
-    const getTagColorData = useCallback(
-        (tag: string): { color?: string; background?: string } => {
-            return metadataService.getTagColorData(tag);
-        },
-        [metadataService]
-    );
-
-    const visibleTags = useMemo(() => {
-        if (tags.length === 0) {
-            return tags;
-        }
-
-        if (!hiddenTagVisibility.shouldFilterHiddenTags && !selectedTagToHide) {
-            return tags;
-        }
-
-        return tags.filter(tag => {
-            if (hiddenTagVisibility.shouldFilterHiddenTags && !hiddenTagVisibility.isTagVisible(tag)) {
-                return false;
-            }
-
-            if (!selectedTagToHide) {
-                return true;
-            }
-
-            return normalizeTagPath(tag) !== selectedTagToHide;
-        });
-    }, [hiddenTagVisibility, selectedTagToHide, tags]);
-
-    const tagColorData = useMemo(() => {
-        void settings.tagColors;
-        void settings.tagBackgroundColors;
-        void settings.inheritTagColors;
-
-        if (!settings.colorFileTags || visibleTags.length === 0) {
-            return EMPTY_COLOR_MAP;
-        }
-
-        const entries = new Map<string, { color?: string; background?: string }>();
-        visibleTags.forEach(tag => {
-            const tagColorData = getTagColorData(tag);
-            const resolved = resolveFileItemTagDecorationColors({
-                model: fileItemPillDecorationModel,
-                tagPath: tag,
-                color: tagColorData.color,
-                backgroundColor: tagColorData.background
-            });
-            if (resolved.color || resolved.backgroundColor) {
-                entries.set(tag, {
-                    color: resolved.color,
-                    background: resolved.backgroundColor
-                });
-            }
-        });
-
-        return entries;
-    }, [
+    const { categorizedTags, tagColorData, tagPillIcons, getTagDisplayName, tooltipTagRow } = useFileItemTagPills({
+        tags,
+        settings,
+        hiddenTagVisibility,
+        selectedTagToHide,
         fileItemPillDecorationModel,
-        getTagColorData,
-        settings.colorFileTags,
-        settings.inheritTagColors,
-        settings.tagBackgroundColors,
-        settings.tagColors,
-        visibleTags
-    ]);
-
-    const categorizedTags = useMemo(() => {
-        if (visibleTags.length === 0) {
-            return visibleTags;
-        }
-
-        if (!settings.prioritizeColoredFileTags || !settings.colorFileTags) {
-            const sortedTags = [...visibleTags];
-            sortTagsAlphabetically(sortedTags);
-            return sortedTags;
-        }
-
-        const coloredTags: string[] = [];
-        const regularTags: string[] = [];
-
-        visibleTags.forEach(tag => {
-            const tagColors = tagColorData.get(tag);
-            const hasTagColor = Boolean(tagColors?.color);
-            const hasTagBackground = Boolean(tagColors?.background);
-
-            if (hasTagColor || hasTagBackground) {
-                coloredTags.push(tag);
-                return;
-            }
-
-            regularTags.push(tag);
-        });
-
-        sortTagsAlphabetically(coloredTags);
-        sortTagsAlphabetically(regularTags);
-
-        return [...coloredTags, ...regularTags];
-    }, [settings.colorFileTags, settings.prioritizeColoredFileTags, tagColorData, visibleTags]);
+        fileItemPillOrderModel
+    });
 
     const shouldShowFileTags = useMemo(() => {
-        if (!settings.showTags || !settings.showFileTags) {
+        if (!showTags) {
             return false;
         }
 
@@ -379,12 +347,8 @@ export function useFileItemPills({
             return false;
         }
 
-        if (isCompactMode && !settings.showFileTagsInCompactMode) {
-            return false;
-        }
-
         return true;
-    }, [categorizedTags, isCompactMode, settings.showFileTags, settings.showFileTagsInCompactMode, settings.showTags]);
+    }, [categorizedTags, showTags]);
 
     const visibleFrontmatterProperties = useMemo(() => {
         const entries: VisibleFrontmatterPropertyEntry[] = [];
@@ -392,13 +356,15 @@ export function useFileItemPills({
             properties,
             visiblePropertyKeys,
             hiddenPropertyValueNodeId: selectedPropertyValueNodeIdToHide,
-            visitor: property => entries.push(property)
+            visitor: property => {
+                entries.push(property);
+            }
         });
         return entries;
     }, [properties, selectedPropertyValueNodeIdToHide, visiblePropertyKeys]);
 
     const propertyColorSignature = useMemo(() => {
-        if (!settings.showFileProperties || !settings.colorFileProperties || visibleFrontmatterProperties.length === 0) {
+        if (!showProperties || !settings.colorFileProperties || visibleFrontmatterProperties.length === 0) {
             return '';
         }
 
@@ -444,7 +410,7 @@ export function useFileItemPills({
         settings.inheritPropertyColors,
         settings.propertyBackgroundColors,
         settings.propertyColors,
-        settings.showFileProperties,
+        showProperties,
         visibleFrontmatterProperties
     ]);
 
@@ -460,8 +426,82 @@ export function useFileItemPills({
         return true;
     }, [file.extension, isCompactMode, settings.showFilePropertiesInCompactMode]);
 
+    // The list filter retains only matching clauses for every result. Resolve concrete cached values
+    // here so hidden-property evidence and pill highlights allocate data only for mounted virtual rows.
+    const propertySearchValueMatches = useMemo<PropertySearchValueMatch[]>(() => {
+        if (!matchedProperties || matchedProperties.length === 0 || !properties || properties.length === 0) {
+            return [];
+        }
+
+        const matches: PropertySearchValueMatch[] = [];
+        const seen = new Set<string>();
+        properties.forEach(entry => {
+            const normalizedKey = foldSearchText(entry.fieldKey.trim());
+            if (!normalizedKey) {
+                return;
+            }
+
+            let displayValue: string | null = null;
+            let foldedDisplayValue: string | null = null;
+            matchedProperties.forEach(match => {
+                const { clause } = match;
+                const keyMatches = clause.value === null ? normalizedKey.startsWith(clause.key) : normalizedKey === clause.key;
+                if (!keyMatches) {
+                    return;
+                }
+
+                displayValue ??= resolvePropertyDisplayText(entry.value);
+                if (clause.value !== null) {
+                    foldedDisplayValue ??= foldSearchText(displayValue);
+                    if (!foldedDisplayValue.includes(clause.value)) {
+                        return;
+                    }
+                }
+
+                const identity = `${clause.key}\u0000${clause.value ?? ''}\u0000${normalizedKey}\u0000${entry.valueKind ?? ''}\u0000${entry.value}`;
+                if (seen.has(identity)) {
+                    return;
+                }
+                seen.add(identity);
+                matches.push({
+                    clause,
+                    propertyKey: entry.fieldKey,
+                    rawValue: entry.value,
+                    valueKind: entry.valueKind,
+                    displayValue
+                });
+            });
+        });
+        return matches;
+    }, [matchedProperties, properties]);
+
+    const propertySearchEvidence = useMemo(() => {
+        if (propertySearchValueMatches.length === 0) {
+            return { groups: [], hiddenGroupCount: 0 };
+        }
+
+        const renderedPropertyValues = new Set<string>();
+        if (canShowPropertyPills && showProperties) {
+            visibleFrontmatterProperties.forEach(({ entry }) => {
+                renderedPropertyValues.add(buildPropertySearchValueIdentity(entry.fieldKey, entry.valueKind, entry.value));
+            });
+        }
+
+        const evidenceMatches = propertySearchValueMatches.filter(
+            match =>
+                match.clause.value === null ||
+                !renderedPropertyValues.has(buildPropertySearchValueIdentity(match.propertyKey, match.valueKind, match.rawValue))
+        );
+        return buildPropertySearchEvidence(evidenceMatches);
+    }, [canShowPropertyPills, propertySearchValueMatches, showProperties, visibleFrontmatterProperties]);
+
     const wordCountPropertyPill = useMemo<PropertyPill | null>(() => {
-        if (!canShowPropertyPills || notePropertyType !== 'wordCount') {
+        if (
+            !canShowPropertyPills ||
+            !showsWordCount(textCountDisplay) ||
+            settings.textCountPlacement !== 'property' ||
+            wordCountDisplayText === null
+        ) {
             return null;
         }
 
@@ -472,11 +512,64 @@ export function useFileItemPills({
         const truncatedWordCount = Math.trunc(wordCount);
         return {
             value: truncatedWordCount.toString(),
-            label: truncatedWordCount.toLocaleString(),
+            label: wordCountDisplayText,
             linkTarget: null,
             iconId: wordCountPillIconId
         };
-    }, [canShowPropertyPills, notePropertyType, wordCount, wordCountPillIconId]);
+    }, [canShowPropertyPills, textCountDisplay, settings.textCountPlacement, wordCount, wordCountDisplayText, wordCountPillIconId]);
+
+    const characterCountPropertyPill = useMemo<PropertyPill | null>(() => {
+        if (
+            !canShowPropertyPills ||
+            !showsCharacterCount(textCountDisplay) ||
+            settings.textCountPlacement !== 'property' ||
+            characterCountDisplayText === null
+        ) {
+            return null;
+        }
+
+        if (typeof characterCount !== 'number' || !Number.isFinite(characterCount) || characterCount <= 0) {
+            return null;
+        }
+
+        const truncatedCharacterCount = Math.trunc(characterCount);
+        return {
+            value: truncatedCharacterCount.toString(),
+            label: characterCountDisplayText,
+            linkTarget: null,
+            iconId: characterCountPillIconId
+        };
+    }, [
+        canShowPropertyPills,
+        characterCount,
+        characterCountDisplayText,
+        characterCountPillIconId,
+        textCountDisplay,
+        settings.textCountPlacement
+    ]);
+
+    const textCountPropertyPills = useMemo(
+        () => [wordCountPropertyPill, characterCountPropertyPill].filter((pill): pill is PropertyPill => pill !== null),
+        [characterCountPropertyPill, wordCountPropertyPill]
+    );
+
+    const propertySearchTermsByValue = useMemo(() => {
+        const termsByValue = new Map<string, Set<string>>();
+        propertySearchValueMatches.forEach(match => {
+            if (!match.clause.value) {
+                return;
+            }
+
+            const identity = buildPropertySearchValueIdentity(match.propertyKey, match.valueKind, match.rawValue);
+            let terms = termsByValue.get(identity);
+            if (!terms) {
+                terms = new Set();
+                termsByValue.set(identity, terms);
+            }
+            terms.add(match.clause.value);
+        });
+        return termsByValue;
+    }, [propertySearchValueMatches]);
 
     const propertyPills = useMemo<PropertyPill[]>(() => {
         void propertyColorSignature;
@@ -484,11 +577,11 @@ export function useFileItemPills({
         const pills: PropertyPill[] = [];
         const frontmatterPills: PropertyPill[] = [];
 
-        if (!canShowPropertyPills || !settings.showFileProperties || visibleFrontmatterProperties.length === 0) {
+        if (!canShowPropertyPills || !showProperties || visibleFrontmatterProperties.length === 0) {
             return pills;
         }
 
-        const colorLookupCache = new Map<string, { color?: string; background?: string }>();
+        const colorLookupCache = new Map<string, { color?: string; background?: string; hasCustomColor: boolean }>();
         for (const property of visibleFrontmatterProperties) {
             const { entry, rawValue, trimmedFieldKey, normalizedValuePath, isKeyOnlyValue, propertyNodeId } = property;
             const linkTarget = isKeyOnlyValue ? null : parsePropertyLinkTarget(rawValue);
@@ -498,6 +591,7 @@ export function useFileItemPills({
             if (!colorData) {
                 if (settings.colorFileProperties && propertyNodeId) {
                     const baseColorData = metadataService.getPropertyColorData(propertyNodeId);
+                    const hasCustomColor = Boolean(baseColorData.color || baseColorData.background);
                     const resolved = resolveFileItemPropertyDecorationColors({
                         model: fileItemPillDecorationModel,
                         nodeId: propertyNodeId,
@@ -506,10 +600,11 @@ export function useFileItemPills({
                     });
                     colorData = {
                         color: resolved.color,
-                        background: resolved.backgroundColor
+                        background: resolved.backgroundColor,
+                        hasCustomColor
                     };
                 } else {
-                    colorData = {};
+                    colorData = { hasCustomColor: false };
                 }
                 colorLookupCache.set(cacheKey, colorData);
             }
@@ -534,10 +629,14 @@ export function useFileItemPills({
                 propertyKeyNodeId,
                 color: colorData.color,
                 background: colorData.background,
+                hasCustomColor: colorData.hasCustomColor,
                 propertyNodeId,
                 propertySearchKey: propertySearchKey.length > 0 ? propertySearchKey : undefined,
                 propertySearchValuePath,
-                canNavigateToProperty
+                canNavigateToProperty,
+                searchMatchTerms: Array.from(
+                    propertySearchTermsByValue.get(buildPropertySearchValueIdentity(entry.fieldKey, entry.valueKind, entry.value)) ?? []
+                )
             });
         }
 
@@ -557,7 +656,15 @@ export function useFileItemPills({
             groupOrder.push(key);
         });
 
-        groupOrder.forEach(groupKey => {
+        const sortedGroupOrder = sortPropertyGroupOrder(
+            groupOrder,
+            groupedPills,
+            prioritizeColoredPills,
+            fileItemPillOrderModel,
+            visibleNavigationPropertyKeys
+        );
+
+        sortedGroupOrder.forEach(groupKey => {
             const group = groupedPills.get(groupKey);
             if (!group || group.length === 0) {
                 return;
@@ -570,11 +677,13 @@ export function useFileItemPills({
     }, [
         canShowPropertyPills,
         fileItemPillDecorationModel,
+        fileItemPillOrderModel,
         metadataService,
         propertyColorSignature,
+        propertySearchTermsByValue,
         settings.colorFileProperties,
         settings.prioritizeColoredFileProperties,
-        settings.showFileProperties,
+        showProperties,
         visibleNavigationPropertyKeys,
         visibleFrontmatterProperties
     ]);
@@ -630,7 +739,7 @@ export function useFileItemPills({
     }, [propertyPills]);
 
     const shouldShowProperty = propertyPills.length > 0;
-    const shouldShowWordCountProperty = Boolean(wordCountPropertyPill);
+    const shouldShowTextCountProperty = textCountPropertyPills.length > 0;
 
     const propertyRows = useMemo((): PropertyPill[][] => {
         if (!settings.showPropertiesOnSeparateRows) {
@@ -663,38 +772,6 @@ export function useFileItemPills({
 
         return rows;
     }, [propertyPills, settings.showPropertiesOnSeparateRows]);
-
-    const getTagDisplayName = useCallback(
-        (tag: string): string => {
-            if (settings.showFileTagAncestors) {
-                return tag;
-            }
-
-            const segments = tag.split('/').filter(segment => segment.length > 0);
-            if (segments.length === 0) {
-                return tag;
-            }
-
-            return segments[segments.length - 1];
-        },
-        [settings.showFileTagAncestors]
-    );
-
-    const tagPillIcons = useMemo(() => {
-        const icons = new Map<string, string>();
-        if (!settings.tagIcons || !hasOwnRecordEntries(settings.tagIcons) || categorizedTags.length === 0) {
-            return icons;
-        }
-
-        categorizedTags.forEach(tag => {
-            const iconId = metadataService.getTagIcon(tag);
-            if (iconId) {
-                icons.set(tag, iconId);
-            }
-        });
-
-        return icons;
-    }, [categorizedTags, metadataService, settings.tagIcons]);
 
     const propertyPillIcons = useMemo(() => {
         const icons = new Map<PropertyPill, string>();
@@ -745,12 +822,14 @@ export function useFileItemPills({
             }
         });
 
-        if (wordCountPropertyPill?.iconId) {
-            icons.set(wordCountPropertyPill, wordCountPropertyPill.iconId);
+        for (const textCountPill of textCountPropertyPills) {
+            if (textCountPill.iconId) {
+                icons.set(textCountPill, textCountPill.iconId);
+            }
         }
 
         return icons;
-    }, [metadataService, propertyPills, settings.enablePropertyExternalLinks, settings.propertyIcons, wordCountPropertyPill]);
+    }, [metadataService, propertyPills, settings.enablePropertyExternalLinks, settings.propertyIcons, textCountPropertyPills]);
 
     const renderPropertyPill = useCallback(
         (pill: PropertyPill, index: number) => {
@@ -775,6 +854,8 @@ export function useFileItemPills({
             const hasColor = Boolean(resolvedColorData?.hasColor);
             const hasBackground = Boolean(resolvedColorData?.hasBackground);
             const propertyIconId = propertyPillIcons.get(pill);
+            const highlightRanges = getFoldedSearchHighlightRanges(pill.label, pill.searchMatchTerms ?? []);
+            const label = renderTextWithHighlightRanges(pill.label, highlightRanges);
 
             return (
                 <span
@@ -790,7 +871,7 @@ export function useFileItemPills({
                     {propertyIconId ? (
                         <ServiceIcon iconId={propertyIconId} className="nn-file-pill-inline-icon" aria-hidden={true} />
                     ) : null}
-                    {pill.label}
+                    {label}
                 </span>
             );
         },
@@ -866,29 +947,32 @@ export function useFileItemPills({
         );
     }, [propertyPills, propertyRows, renderPropertyPill, settings.showPropertiesOnSeparateRows, shouldShowProperty]);
 
-    const wordCountRow = useMemo(() => {
-        if (!shouldShowWordCountProperty || !wordCountPropertyPill) {
+    const textCountRow = useMemo(() => {
+        if (!shouldShowTextCountProperty) {
             return null;
         }
 
-        return <div className="nn-file-property-row">{renderPropertyPill(wordCountPropertyPill, 0)}</div>;
-    }, [renderPropertyPill, shouldShowWordCountProperty, wordCountPropertyPill]);
+        return <div className="nn-file-property-row">{textCountPropertyPills.map(renderPropertyPill)}</div>;
+    }, [renderPropertyPill, shouldShowTextCountProperty, textCountPropertyPills]);
 
     const pillRows = useMemo(() => {
         return (
             <>
                 {tagRows}
                 {propertyRowsNode}
-                {wordCountRow}
+                {textCountRow}
             </>
         );
-    }, [propertyRowsNode, tagRows, wordCountRow]);
+    }, [propertyRowsNode, tagRows, textCountRow]);
 
     return {
         shouldShowFileTags,
         shouldShowProperty,
-        shouldShowWordCountProperty,
-        hasVisiblePillRows: shouldShowFileTags || shouldShowProperty || shouldShowWordCountProperty,
+        shouldShowTextCountProperty,
+        hasVisiblePillRows: shouldShowFileTags || shouldShowProperty || shouldShowTextCountProperty,
+        propertySearchEvidenceGroups: propertySearchEvidence.groups,
+        propertySearchEvidenceHiddenGroupCount: propertySearchEvidence.hiddenGroupCount,
+        tooltipTagRow,
         pillRows
     };
 }

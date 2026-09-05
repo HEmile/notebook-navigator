@@ -17,12 +17,13 @@
  */
 
 import { TFile, TFolder, App } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
 import type { NavigatorContext, PinnedNotes, VisibilityPreferences } from '../types';
 import { ItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../types';
 import {
     createFrontmatterPropertyExclusionMatcher,
     shouldExcludeFolder,
+    shouldExcludeFolderFromDescendants,
     shouldExcludeFileWithMatcher,
     createHiddenFileNameMatcherForVisibility,
     getFilteredDocumentFiles,
@@ -31,16 +32,19 @@ import {
     isFolderInExcludedFolder
 } from './fileFilters';
 import { shouldDisplayFile, FILE_VISIBILITY } from './fileTypeUtils';
-import { getEffectiveSortOption, isPropertySortOption, sortFiles } from './sortUtils';
+import { getEffectiveListSort, getPropertySortValueFromRecord, isPropertySortOption, sortFiles, type EffectiveListSort } from './sortUtils';
 import { getDBInstanceOrNull } from '../storage/fileOperations';
-import { extractMetadata } from '../utils/metadataExtractor';
+import { extractMetadata, type ProcessedMetadata } from '../utils/metadataExtractor';
+import { extractCurrentFrontmatterMetadataFromFileData } from './frontmatterMetadataCache';
 import { METADATA_SENTINEL } from '../storage/IndexedDBStorage';
 import { getFileDisplayName as getDisplayName } from './fileNameUtils';
-import { getFolderNote, getFolderNoteDetectionSettings } from './folderNotes';
+import { getFolderNote, getFolderNoteDetectionSettings } from './folderNoteLookup';
 import { createHiddenTagVisibility, normalizeTagPathValue } from './tagPrefixMatcher';
-import { isRecord } from './typeGuards';
+import { collectTopicDescendants } from './topicGraph';
+import type { TopicNode } from '../types/storage';
 import {
     getActiveFileVisibility,
+    getActiveDescendantExcludedFolders,
     getActiveHiddenFileNames,
     getActiveHiddenFileTags,
     getActiveHiddenFileProperties,
@@ -49,7 +53,7 @@ import {
     getActivePropertyKeySet
 } from './vaultProfiles';
 import { getCachedFileTags } from './tagUtils';
-import { casefold, getMatchingRecordValue, normalizePinnedNoteContext } from './recordUtils';
+import { casefold, normalizePinnedNoteContext } from './recordUtils';
 import { getParentFolderPath } from './pathUtils';
 import {
     buildPropertyKeyNodeId,
@@ -62,6 +66,7 @@ import {
 } from './propertyTree';
 import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
 import type { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
+import { shouldHideDrawingCompanionImageFile } from './drawingFeatureImages';
 
 interface PinnedDisplayScope {
     restrictToFolderPath?: string;
@@ -111,6 +116,7 @@ function isFileVisibleForScopedSelection(
         fileNameMatcher: ReturnType<typeof createHiddenFileNameMatcherForVisibility>;
         shouldFilterHiddenFileTags: boolean;
         hiddenFileTagVisibility: ReturnType<typeof createHiddenTagVisibility>;
+        hideDrawingPreviewImages: boolean;
         app: App;
         db: ReturnType<typeof getDBInstanceOrNull>;
     }
@@ -122,11 +128,16 @@ function isFileVisibleForScopedSelection(
         fileNameMatcher,
         shouldFilterHiddenFileTags,
         hiddenFileTagVisibility,
+        hideDrawingPreviewImages,
         app,
         db
     } = options;
 
     if (!showHiddenItems && excludedFolderPatterns.length > 0 && isPathInExcludedFolder(file.path, excludedFolderPatterns)) {
+        return false;
+    }
+
+    if (!showHiddenItems && shouldHideDrawingCompanionImageFile(app, file, { hideDrawingPreviewImages })) {
         return false;
     }
 
@@ -168,41 +179,6 @@ function collectVisibleMarkdownFilesFromPaths(paths: Iterable<string>, app: App,
     return files;
 }
 
-function extractPropertySortParts(value: unknown): string[] {
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        return trimmed.length > 0 ? [trimmed] : [];
-    }
-
-    if (typeof value === 'number') {
-        return Number.isFinite(value) ? [value.toString()] : [];
-    }
-
-    if (typeof value === 'boolean') {
-        return [value ? 'true' : 'false'];
-    }
-
-    if (Array.isArray(value)) {
-        const parts: string[] = [];
-        for (const entry of value) {
-            parts.push(...extractPropertySortParts(entry));
-        }
-        return parts;
-    }
-
-    return [];
-}
-
-function extractPropertySortValue(frontmatter: Record<string, unknown>, propertyKey: string): string | null {
-    const parts = extractPropertySortParts(getMatchingRecordValue(frontmatter, propertyKey));
-    if (parts.length === 0) {
-        return null;
-    }
-
-    const joined = parts.join(' ').trim();
-    return joined.length > 0 ? joined : null;
-}
-
 function createPropertySortValueGetter(app: App, propertySortKey: string): (file: TFile) => string | null {
     const trimmedKey = propertySortKey.trim();
     const cache = new Map<string, string | null>();
@@ -220,30 +196,32 @@ function createPropertySortValueGetter(app: App, propertySortKey: string): (file
         }
 
         const fileCache = app.metadataCache.getFileCache(file);
-        const frontmatter = fileCache?.frontmatter;
-        const extracted = frontmatter && isRecord(frontmatter) ? extractPropertySortValue(frontmatter, trimmedKey) : null;
+        const extracted = getPropertySortValueFromRecord(fileCache?.frontmatter, trimmedKey);
         cache.set(file.path, extracted);
         return extracted;
     };
 }
 
-function sortNavigationFiles(
-    files: TFile[],
-    settings: NotebookNavigatorSettings,
-    app: App,
-    sortOption: ReturnType<typeof getEffectiveSortOption>
-): void {
+function sortNavigationFiles(files: TFile[], settings: NotebookNavigatorSettings, app: App, sortSpec: EffectiveListSort): void {
+    const sortOption = sortSpec.option;
     const isPropertySort = isPropertySortOption(sortOption);
-    const propertySortKey = settings.propertySortKey.trim();
+    const propertySortKey = sortSpec.propertyKey.trim();
     const getPropertySortValue =
         isPropertySort && propertySortKey.length > 0 ? createPropertySortValueGetter(app, propertySortKey) : undefined;
 
     if (settings.useFrontmatterMetadata) {
-        const metadataCache = new Map<string, ReturnType<typeof extractMetadata>>();
+        const db = getDBInstanceOrNull();
+        const metadataCache = new Map<string, ProcessedMetadata>();
         const getCached = (file: TFile) => {
+            if (file.extension !== 'md') {
+                return {};
+            }
+
             let metadata = metadataCache.get(file.path);
             if (!metadata) {
-                metadata = extractMetadata(app, file, settings);
+                metadata =
+                    extractCurrentFrontmatterMetadataFromFileData(file, db?.getFile(file.path) ?? null, settings) ??
+                    extractMetadata(app, file, settings);
                 metadataCache.set(file.path, metadata);
             }
             return metadata;
@@ -278,14 +256,14 @@ function sortNavigationFiles(
             return getDisplayName(file, { fn: metadata.fn }, settings);
         };
 
-        sortFiles(files, sortOption, getCreatedTime, getModifiedTime, getTitle, getPropertySortValue, settings.propertySortSecondary);
+        sortFiles(files, sortOption, getCreatedTime, getModifiedTime, getTitle, getPropertySortValue, sortSpec.propertySortSecondary);
         return;
     }
 
     const getCreatedTime = (file: TFile) => file.stat.ctime;
     const getModifiedTime = (file: TFile) => file.stat.mtime;
     const getTitle = (file: TFile) => file.basename;
-    sortFiles(files, sortOption, getCreatedTime, getModifiedTime, getTitle, getPropertySortValue, settings.propertySortSecondary);
+    sortFiles(files, sortOption, getCreatedTime, getModifiedTime, getTitle, getPropertySortValue, sortSpec.propertySortSecondary);
 }
 
 /**
@@ -383,6 +361,7 @@ export function getFilesForFolder(
 ): TFile[] {
     const files: TFile[] = [];
     const excludedFolderPatterns = getActiveHiddenFolders(settings);
+    const descendantExcludedFolderPatterns = getActiveDescendantExcludedFolders(settings);
     const excludedFileProperties = getActiveHiddenFileProperties(settings);
     const excludedFilePropertyMatcher = createFrontmatterPropertyExclusionMatcher(excludedFileProperties);
     const excludedFileNamePatterns = getActiveHiddenFileNames(settings);
@@ -404,7 +383,13 @@ export function getFilesForFolder(
         for (const child of f.children) {
             if (child instanceof TFile) {
                 // Check if file should be displayed based on visibility setting
-                if (shouldDisplayFile(child, fileVisibility, app)) {
+                if (
+                    shouldDisplayFile(child, fileVisibility, app) &&
+                    (visibility.showHiddenItems ||
+                        !shouldHideDrawingCompanionImageFile(app, child, {
+                            hideDrawingPreviewImages: settings.hideDrawingPreviewImages
+                        }))
+                ) {
                     files.push(child);
                 }
             } else if (visibility.includeDescendantNotes && child instanceof TFolder) {
@@ -414,7 +399,10 @@ export function getFilesForFolder(
                 if (excludedFolderPatterns.length > 0 && shouldExcludeFolder(child.name, excludedFolderPatterns, child.path)) {
                     childHidden = true;
                 }
-                const shouldTraverse = showHiddenFolders || !childHidden;
+                const childExcludedFromDescendants =
+                    descendantExcludedFolderPatterns.length > 0 &&
+                    shouldExcludeFolderFromDescendants(child.name, descendantExcludedFolderPatterns, child.path);
+                const shouldTraverse = (showHiddenFolders || !childHidden) && !childExcludedFromDescendants;
                 if (shouldTraverse) {
                     collectFiles(child, childHidden);
                 }
@@ -468,8 +456,8 @@ export function getFilesForFolder(
         return allFiles;
     }
 
-    const sortOption = getEffectiveSortOption(settings, 'folder', folder);
-    sortNavigationFiles(allFiles, settings, app, sortOption);
+    const sortSpec = getEffectiveListSort(settings, 'folder', folder);
+    sortNavigationFiles(allFiles, settings, app, sortSpec);
 
     const pinnedDisplayScope = settings.filterPinnedByFolder ? { restrictToFolderPath: folder.path } : undefined;
     return applyPinnedOrdering(allFiles, settings, 'folder', pinnedDisplayScope);
@@ -522,12 +510,13 @@ export function getFilesForTag(
             fileNameMatcher,
             shouldFilterHiddenFileTags,
             hiddenFileTagVisibility,
+            hideDrawingPreviewImages: settings.hideDrawingPreviewImages,
             app,
             db
         });
     };
 
-    let filteredFiles: TFile[] = [];
+    let filteredFiles: TFile[];
 
     // Special case for untagged files
     if (tag === UNTAGGED_TAG_ID) {
@@ -612,8 +601,8 @@ export function getFilesForTag(
         return filteredFiles;
     }
 
-    const sortOption = getEffectiveSortOption(settings, 'tag', null, tag);
-    sortNavigationFiles(filteredFiles, settings, app, sortOption);
+    const sortSpec = getEffectiveListSort(settings, 'tag', null, tag);
+    sortNavigationFiles(filteredFiles, settings, app, sortSpec);
 
     return applyPinnedOrdering(filteredFiles, settings, 'tag');
 }
@@ -704,6 +693,7 @@ export function getFilesForProperty(
             fileNameMatcher,
             shouldFilterHiddenFileTags,
             hiddenFileTagVisibility,
+            hideDrawingPreviewImages: settings.hideDrawingPreviewImages,
             app,
             db
         });
@@ -775,14 +765,15 @@ export function getFilesForProperty(
         return matchedFiles;
     }
 
-    const sortOption = getEffectiveSortOption(settings, ItemType.PROPERTY, null, null, propertyNodeId);
-    sortNavigationFiles(matchedFiles, settings, app, sortOption);
+    const sortSpec = getEffectiveListSort(settings, ItemType.PROPERTY, null, null, propertyNodeId);
+    sortNavigationFiles(matchedFiles, settings, app, sortSpec);
 
     return applyPinnedOrdering(matchedFiles, settings, 'property');
 }
 
 /**
  * Gets a sorted list of files for a topic, looked up by name.
+ * @public Retained alongside getFilesForTopicByPath for topic shortcut lookups.
  */
 export function getFilesForTopicByName(
     topicName: string,
@@ -809,12 +800,7 @@ export function getFilesForTopicByPath(
     return getFilesForTopic(topicNode, settings, app);
 }
 
-function getFilesForTopic(
-    topicNode: import('../types/storage').TopicNode,
-    settings: NotebookNavigatorSettings,
-    app: App
-): TFile[] {
-    const { collectTopicDescendants } = require('./topicGraph') as typeof import('./topicGraph');
+function getFilesForTopic(topicNode: TopicNode, settings: NotebookNavigatorSettings, app: App): TFile[] {
     const excludedFolderPatterns = getActiveHiddenFolders(settings);
     const showHiddenItems = false;
     const fileVisibility = getActiveFileVisibility(settings);
@@ -827,9 +813,7 @@ function getFilesForTopic(
         file => excludedFolderPatterns.length === 0 || !isPathInExcludedFolder(file.path, excludedFolderPatterns)
     );
 
-    const topicsToInclude = settings.includeDescendantNotes
-        ? collectTopicDescendants(topicNode)
-        : new Set([topicNode]);
+    const topicsToInclude = settings.includeDescendantNotes ? collectTopicDescendants(topicNode) : new Set([topicNode]);
 
     const filesToInclude = new Set<string>();
     for (const topic of topicsToInclude) {
@@ -840,8 +824,8 @@ function getFilesForTopic(
 
     const filteredFiles = baseFiles.filter(file => filesToInclude.has(file.path));
 
-    const sortOption = getEffectiveSortOption(settings, ItemType.TOPIC, null, null, null, topicNode.name);
-    sortNavigationFiles(filteredFiles, settings, app, sortOption);
+    const sortSpec = getEffectiveListSort(settings, ItemType.TOPIC, null, null, null, topicNode.name);
+    sortNavigationFiles(filteredFiles, settings, app, sortSpec);
 
     return applyPinnedOrdering(filteredFiles, settings, 'topic');
 }

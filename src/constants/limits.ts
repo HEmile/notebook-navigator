@@ -85,6 +85,33 @@ export const LIMITS = {
                  */
                 quality: 0.75
             },
+            svg: {
+                /**
+                 * Maximum SVG source size (bytes) accepted for feature image rasterization.
+                 *
+                 * Used by:
+                 * - `FeatureImageContentProvider` before decoding SVG text.
+                 *
+                 * Rationale:
+                 * - SVG sources are parsed with `DOMParser` on the main thread; this bounds one-time parse cost.
+                 * - Vector sources for a small thumbnail rarely need more than a couple of megabytes.
+                 */
+                maxSourceBytes: 2_000_000,
+                /**
+                 * Maximum element count in a parsed SVG accepted for feature image rasterization.
+                 * Applied to both the parsed element count and the painted count after `use` expansion.
+                 *
+                 * Used by:
+                 * - `prepareSvgFeatureImageSource()` during validation.
+                 *
+                 * Rationale:
+                 * - Bounds transient DOM size during validation and the one-time rasterization cost.
+                 * - Nested `use` references multiply painted elements beyond the parsed count, so the
+                 *   expanded count is capped as well.
+                 * - Larger than the vault icon cap (2000) because thumbnails rasterize once instead of rendering live.
+                 */
+                maxElementCount: 10_000
+            },
             externalRequest: {
                 /**
                  * Per-request timeout (ms) for `requestUrl()` fetches for external images.
@@ -224,29 +251,6 @@ export const LIMITS = {
              * - Keeps the worker around briefly to speed up bursts, but releases memory when idle.
              */
             workerIdleTimeoutMs: 60_000
-        },
-        excalidraw: {
-            /**
-             * Limits for Excalidraw thumbnails (ExcalidrawAutomate).
-             *
-             * Rationale:
-             * - The Excalidraw API uses global state; rendering in parallel can create conflicts. We serialize renders.
-             */
-            maxParallelRenders: 1,
-            /**
-             * Clamp output dimensions to avoid generating huge images from large canvases.
-             */
-            maxExportDimensionPx: 1024,
-            exportScale: {
-                /**
-                 * Default scale for Excalidraw export; trades sharpness for speed and memory.
-                 */
-                default: 0.25,
-                /**
-                 * Minimum scale used when clamping to `maxExportDimensionPx` would otherwise reduce scale too much.
-                 */
-                min: 0.05
-            }
         }
     },
     storage: {
@@ -263,6 +267,11 @@ export const LIMITS = {
          * Previews are small strings; 10k keeps scrolling snappy in large vaults without being too memory heavy.
          */
         previewTextCacheMaxEntriesDefault: 10_000,
+        /**
+         * Maximum number of formatted date/time strings cached in memory.
+         * Keys include the format, timestamp, timezone offset, and UI language.
+         */
+        dateFormatCacheMaxEntries: 8192,
         /**
          * Maximum number of previews loaded in a single batch when warming the preview cache.
          * Keeps IndexedDB transactions short and avoids long main-thread stalls.

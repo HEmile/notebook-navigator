@@ -1,6 +1,6 @@
 # Notebook Navigator metadata pipeline
 
-Updated: March 17, 2026
+Updated: July 9, 2026
 
 ## Table of contents
 
@@ -22,23 +22,24 @@ Notebook Navigator maintains a local file cache in IndexedDB and mirrors it into
 The pipeline has three layers:
 
 - Vault sync: keep a `FileData` record for each indexable file path up to date with the vault state.
-- Derived content: generate tags, frontmatter metadata, preview text, word count, task counters, property pills, and feature images using background content providers.
+- Derived content: generate tags, frontmatter metadata, preview text, word/character counts, task counters, property pills, and feature images using background content providers.
 - Tree indexing: build tag and property trees from cached markdown metadata for navigation and selection.
 
 The cache includes:
 
 - File mtimes plus provider-specific processed mtimes
-- Tags, frontmatter-derived metadata, word count, task counters, property pills
+- Tags, frontmatter-derived metadata, word/character counts, task counters, property pills
 - Status fields for preview text and feature images, and stable source keys for feature images
 - Preview text and feature image blobs stored in dedicated stores (status/key fields live in the main record)
 
 ## Data model
 
-Notebook Navigator indexes markdown notes and PDFs through `getIndexableFiles()` in
-`src/context/storage/useStorageFileQueries.ts`, backed by `getFilteredMarkdownAndPdfFiles(..., { showHiddenItems: true })`
-in `src/utils/fileFilters.ts`.
+Notebook Navigator indexes markdown notes, PDFs and SVG files allowed by the active file visibility setting, and
+supported non-markdown drawing source files through `getIndexableFiles()` in `src/context/storage/useStorageFileQueries.ts`,
+backed by `getFilteredIndexableFiles(..., { showHiddenItems: true })` in `src/utils/fileFilters.ts`.
 
-Each indexed file path has a `FileData` record (`src/storage/IndexedDBStorage.ts`) containing:
+Each indexed file path has a `FileData` record (`src/storage/indexeddb/fileData.ts`, re-exported through
+`src/storage/IndexedDBStorage.ts`) containing:
 
 - `mtime`: last observed vault mtime for the file
 - Provider processed mtimes:
@@ -50,13 +51,15 @@ Each indexed file path has a `FileData` record (`src/storage/IndexedDBStorage.ts
   - `tags`: extracted tags (`null` until extracted; markdown only)
   - `metadata`: extracted frontmatter metadata and hidden state (`null` until extracted; markdown only)
   - `wordCount`: word count (`null` until generated; markdown only)
+  - `characterCountWithSpaces` / `characterCountWithoutSpaces`: character counts (`null` until generated; markdown only)
   - `taskTotal` / `taskUnfinished`: task counters (`null` until generated; markdown only)
-  - `properties`: resolved property pill list (`null` until generated; markdown only)
+  - `properties`: supported scalar frontmatter values used by property search, trees, and pills (`null` until generated; markdown only)
 
-Defaults are set by `createDefaultFileData()` (`src/storage/IndexedDBStorage.ts`):
+Defaults are set by `createDefaultFileData()` (`src/storage/indexeddb/fileData.ts`, re-exported through
+`src/storage/IndexedDBStorage.ts`):
 
-- Markdown: `tags=null`, `metadata=null`, `wordCount=null`, `taskTotal=null`, `taskUnfinished=null`, `properties=null`, `previewStatus='unprocessed'`
-- PDF: `tags=[]`, `metadata={}`, `wordCount=0`, `taskTotal=0`, `taskUnfinished=0`, `properties=null`, `previewStatus='none'`
+- Markdown: `tags=null`, `metadata=null`, `wordCount=null`, `characterCountWithSpaces=null`, `characterCountWithoutSpaces=null`, `taskTotal=null`, `taskUnfinished=null`, `properties=null`, `previewStatus='unprocessed'`
+- Non-markdown: `tags=[]`, `metadata={}`, `wordCount=0`, `characterCountWithSpaces=0`, `characterCountWithoutSpaces=0`, `taskTotal=0`, `taskUnfinished=0`, `properties=null`, `previewStatus='none'`
 
 Preview text and feature images are stored separately and tracked through status fields:
 
@@ -71,10 +74,10 @@ Preview text and feature images are stored separately and tracked through status
 - `featureImageKey` (stable source key):
   - `null`: not generated yet
   - `''`: processed and resolved to “no image”
-  - `f:<path>@<mtime>`: local vault file reference (image embeds, PDF cover thumbnails)
+  - `f:<path>@<mtime>`: local vault file reference (image embeds, PDF cover thumbnails, rasterized SVG thumbnails)
   - `e:<url>`: external https URL reference (normalized, hash stripped)
   - `y:<videoId>`: YouTube thumbnail reference
-  - `x:<path>@<mtime>`: Excalidraw thumbnail reference
+  - `d:<provider>:<path>`: drawing file with provider-owned preview rendering
 
 The dedicated stores are cleared alongside the main file store during a full rebuild:
 
@@ -97,12 +100,14 @@ The dedicated stores are cleared alongside the main file store during a full reb
   - `useCacheRebuildNotice`: shows and updates the rebuild progress notice
 - `IndexedDBStorage` (`src/storage/IndexedDBStorage.ts`) persists file records and emits `onContentChange` notifications.
 - `MemoryFileCache` (`src/storage/MemoryFileCache.ts`) mirrors file records (and small caches like preview text) for synchronous reads.
+- `src/utils/frontmatterMetadataCache.ts` persists a signature of the frontmatter metadata settings in `localStorage`. Frontmatter-driven display name and timestamp reads (`StorageContext`) and navigation sorting (`src/utils/fileFinder.ts`) use the mirrored `metadata` field when the signature matches the current settings and `metadataMtime` matches the file mtime, and fall back to `extractMetadata()` against the Obsidian metadata cache otherwise.
+- `MetadataService` (`src/services/MetadataService.ts`) and its sub-services manage settings-backed appearances, pinned notes, and separators; frontmatter-backed file/folder-note style writes patch cached `metadata` through `IndexedDBStorage.updateFileMetadata()`.
 - `ContentProviderRegistry` (`src/services/content/ContentProviderRegistry.ts`) runs provider batches and coordinates settings changes.
 - Content providers (`src/services/content/*`):
-  - `MarkdownPipelineContentProvider` (`markdownPipeline`): preview, word count, task counters, property pills, markdown feature images
+  - `MarkdownPipelineContentProvider` (`markdownPipeline`): preview, word/character counts, task counters, property pills, markdown feature images
   - `TagContentProvider` (`tags`): tag extraction from Obsidian metadata cache
   - `MetadataContentProvider` (`metadata`): frontmatter metadata + hidden state
-  - `FeatureImageContentProvider` (`fileThumbnails`): non-markdown feature images (PDF covers)
+  - `FeatureImageContentProvider` (`fileThumbnails`): non-markdown feature images (PDF covers, rasterized SVG files, and supported drawing source files)
 
 ```mermaid
 graph TD
@@ -130,13 +135,14 @@ graph TD
 
 The metadata pipeline is driven by a mix of manual actions, vault events, metadata cache events, and settings changes:
 
-- Startup: once IndexedDB initialization completes, the initial cache build runs (`useStorageVaultSync`).
+- Startup: once IndexedDB initialization completes, the initial cache build runs (`useStorageVaultSync`). The build also compares the persisted frontmatter metadata settings signature and clears cached `metadata` (`batchClearAllFileContent('metadata')`) when those settings changed while the plugin was unloaded.
 - Vault sync:
   - `create` / `delete`: debounced diff using `calculateFileDiff()` and `recordFileChanges()` (`useStorageVaultSync`)
   - `rename`: seed/move cached artifacts, then schedule a diff to reconcile state (`useStorageVaultSync`)
   - `modify`: record the new mtime and queue derived content for that file (`useStorageVaultSync`)
 - Obsidian metadata cache: `metadataCache.on('changed', file)` can trigger a regeneration pass even when vault mtimes did not update in the expected order (`markFilesForRegeneration()` resets provider processed mtimes and a re-queue follows).
-- Settings changes: `ContentProviderRegistry.handleSettingsChange()` can stop providers, clear affected content, and re-queue regeneration (`useStorageSettingsSync`).
+- Settings changes: `ContentProviderRegistry.handleSettingsChange()` can stop providers, clear affected content, and re-queue regeneration (`useStorageSettingsSync`). When frontmatter metadata settings change, `useStorageSettingsSync` also updates the frontmatter metadata cache signature, or clears it when frontmatter metadata is disabled.
+- Metadata service writes: `FileMetadataService` and `FolderNoteMetadataAdapter` can update markdown frontmatter through `app.fileManager.processFrontMatter(...)`, then patch the cached `metadata` object through `IndexedDBStorage.updateFileMetadata()` so file and folder-note style changes emit `onContentChange` before the later metadata-cache regeneration pass.
 - Manual rebuild: Settings → Notebook Navigator → Advanced → Rebuild cache, or the `notebook-navigator:rebuild-cache` command.
 
 ## Vault sync
@@ -147,7 +153,8 @@ The file cache is seeded and kept up to date with a diff-based sync:
   - `toAdd`: new paths
   - `toUpdate`: paths whose `file.stat.mtime` changed
   - `toRemove`: cached paths no longer present in the vault
-- `recordFileChanges(files, cachedFiles, ...)` (`src/storage/fileOperations.ts`) updates the database:
+  - `existingData`: cached records for the `toUpdate` paths, consumed by `recordFileChanges`
+- `recordFileChanges(files, existingData, ...)` (`src/storage/fileOperations.ts`) updates the database:
   - New files: create default `FileData` with “unprocessed”/`null` markers for derived content
   - Modified files: patch only `mtime` and leave provider-owned fields intact, so existing derived content remains visible until providers regenerate
 - `removeFilesFromCache(paths)` removes the file record and associated preview/blob store entries.
@@ -161,7 +168,7 @@ Renames are handled with a seed-and-move step before the diff runs:
 
 Derived content is generated by content providers managed by `ContentProviderRegistry` (`src/services/content/ContentProviderRegistry.ts`):
 
-- Providers decide whether a file needs work by comparing their processed mtime field (`*Mtime`) to `file.stat.mtime` and checking status fields (`previewStatus`, `featureImageStatus`, `featureImageKey`, `tags`, `metadata`, `wordCount`, `taskTotal`, `taskUnfinished`, `properties`).
+- Providers decide whether a file needs work by comparing their processed mtime field (`*Mtime`) to `file.stat.mtime` and checking status fields (`previewStatus`, `featureImageStatus`, `featureImageKey`, `tags`, `metadata`, `wordCount`, `characterCountWithSpaces`, `characterCountWithoutSpaces`, `taskTotal`, `taskUnfinished`, `properties`).
 - Providers update content fields and their processed mtime in one IndexedDB transaction (`IndexedDBStorage.batchUpdateFileContentAndProviderProcessedMtimes`), and processed mtime updates are guarded to avoid overwriting forced regeneration resets.
 - `markFilesForRegeneration()` (`src/storage/fileOperations.ts`) resets provider processed mtimes without clearing existing provider output fields, forcing providers to re-run against the current metadata cache/settings.
 - Markdown providers are metadata-gated via `queueMetadataContentWhenReady(...)` (`useMetadataCacheQueue`), which tracks pending work per path and flushes it when `app.metadataCache.getFileCache(file)` is available.
@@ -207,7 +214,7 @@ sequenceDiagram
     Storage->>Storage: isStorageReady=true
 
     Storage->>Obsidian: queueMetadataContentWhenReady(markdown files, markdownPipeline/tags/metadata)
-    Storage->>Registry: queue fileThumbnails (PDF)
+    Storage->>Registry: queue fileThumbnails (supported non-markdown feature images)
 
     Note over Registry,Providers: Background content generation
     Registry->>Providers: startProcessing(settings)
@@ -225,13 +232,13 @@ sequenceDiagram
   - Feature image blob store
   - In-memory mirrors and LRU caches
 - `buildFileCache(true)` (initial-load path in `useStorageVaultSync`) seeds the database by diffing against an empty cache:
-  - New markdown records start with `tags=null`, `metadata=null`, `wordCount=null`, `taskTotal=null`, `taskUnfinished=null`, `properties=null`, and `previewStatus='unprocessed'`.
-  - New PDF records start with `tags=[]`, `metadata={}`, `wordCount=0`, `taskTotal=0`, `taskUnfinished=0`, `properties=null`, and `previewStatus='none'`.
-  - Feature image fields start as `featureImageStatus='unprocessed'` and `featureImageKey=null` for both markdown and PDF records.
+  - New markdown records start with `tags=null`, `metadata=null`, `wordCount=null`, `characterCountWithSpaces=null`, `characterCountWithoutSpaces=null`, `taskTotal=null`, `taskUnfinished=null`, `properties=null`, and `previewStatus='unprocessed'`.
+  - New non-markdown records start with `tags=[]`, `metadata={}`, `wordCount=0`, `characterCountWithSpaces=0`, `characterCountWithoutSpaces=0`, `taskTotal=0`, `taskUnfinished=0`, `properties=null`, and `previewStatus='none'`.
+  - Feature image fields start as `featureImageStatus='unprocessed'` and `featureImageKey=null` for markdown and supported non-markdown records.
 - `queueMetadataContentWhenReady(...)` gates markdown providers on `app.metadataCache.getFileCache(file)`:
   - Filters to files that still need content based on status fields and processed mtimes.
   - Tracks pending work per file path and flushes it when Obsidian emits `metadataCache` `resolved`/`changed` events.
-- PDF feature image generation is queued directly through the registry (`fileThumbnails`) when `showFeatureImage` is enabled.
+- Non-markdown feature image generation is queued directly through the registry (`fileThumbnails`) when `showFeatureImage` is enabled.
 
 ## Markdown pipeline stages
 
@@ -247,22 +254,25 @@ flowchart LR
     E --> F
     F --> P1[Processor: preview]
     P1 --> P2[Processor: word count]
-    P2 --> P3[Processor: tasks]
-    P3 --> P4[Processor: properties]
-    P4 --> P5[Processor: feature image]
-    P5 --> G["Write patch to IndexedDB: update stores, status fields, markdownPipelineMtime"]
+    P2 --> P3[Processor: character count]
+    P3 --> P4[Processor: tasks]
+    P4 --> P5[Processor: properties]
+    P5 --> P6[Processor: feature image]
+    P6 --> G["Write patch to IndexedDB: update stores, status fields, markdownPipelineMtime"]
 ```
 
 Body reads are only performed when at least one output requires markdown content:
 
 - Preview text extraction
-- Word count (counts words from the markdown body start index)
+- Word count (uses Obsidian text-count frontmatter slicing)
+- Character counts (use Obsidian text-count frontmatter slicing)
 - Task counting
 - Feature image reference resolution from the note body (when not resolved from frontmatter)
 
 The provider can also skip reads for large markdown files and still apply “safe” updates derived from
-frontmatter/metadata (for example, setting `wordCount=0`, `taskTotal=0`, and `taskUnfinished=0`, and clearing previews
-by writing an empty preview string).
+frontmatter/metadata (for example, setting `wordCount=0`, `characterCountWithSpaces=0`,
+`characterCountWithoutSpaces=0`, `taskTotal=0`, and `taskUnfinished=0`, and clearing previews by writing an empty
+preview string).
 
 Feature image references can be resolved from frontmatter without reading the note body. Exclusion rules (`featureImageExcludeProperties`) can force the “no image” marker (`featureImageKey=''`, `featureImageStatus='none'`).
 
@@ -307,7 +317,37 @@ Processing boundaries in Notebook Navigator:
 - The preview source is clipped before stripping (`MAX_PREVIEW_TEXT_LENGTH`, `PREVIEW_SOURCE_SLACK`, `PREVIEW_EXTENSION_LIMIT`)
 - Stripping runs only on non-code segments; inline and fenced code ranges are preserved
 - Cache invalidation for preview regeneration is triggered when `stripLatexInPreview` changes
-  (`MarkdownPipelineContentProvider.getRelevantSettings()` and `getClearFlags()`)
+  (`MarkdownPipelineContentProvider.getRelevantSettings()` and `getMarkdownPipelineClearFlags()`)
+
+## Preview callout and blockquote fence rules
+
+Callout removal and blockquote fence detection are implemented in `src/utils/codeRangeUtils.ts`
+(`removeCalloutBlocks`, `scanFencedCodeSegments`) and applied in
+`src/utils/previewText/previewPipeline.ts`. The rules match Obsidian Reading view rendering
+(verified against Obsidian 1.13), which applies blockquote lazy continuation more broadly than
+CommonMark.
+
+Rule set for callout membership:
+
+- A callout starts at a line whose blockquote prefix is followed by a `[!type]` marker, with an optional `+` or `-` fold suffix
+- Every following line with blockquote depth at least the header depth is callout content, including nested callouts and fenced code
+- Lazy continuation: a non-blank line at shallower depth is still callout content unless it starts a heading, list item, thematic break, or fence. This includes lines directly after a fenced code block or a `>`-only line
+- A blank line or an interrupting block line ends the callout; that line is kept
+- Callout markers inside fenced code blocks are code and are not treated as callouts
+
+Rule set for fences inside blockquotes:
+
+- Closing fences must use the same fence character, be at least as long as the opener, and appear at the same blockquote depth
+- Shallower non-blank lines are absorbed into an open blockquote fence as code content
+- A blank line, or a shallower line starting a heading, list item, thematic break, or another fence, ends the blockquote and the open fence with it; a shallower fence marker then starts its own fence
+- An unclosed fence otherwise runs to the end of input
+
+Processing boundaries in Notebook Navigator:
+
+- Callout removal runs only when `skipCalloutsInPreview` is enabled; it runs before clipping so a leading callout longer than the clip window does not blank the preview
+- When `skipCalloutsInPreview` is disabled, callout markers are stripped but callout title text and content remain in the preview
+- Cache invalidation for preview regeneration is triggered when `skipCalloutsInPreview` changes
+  (`MarkdownPipelineContentProvider.getRelevantSettings()` and `getMarkdownPipelineClearFlags()`)
 
 ## Completion signals
 
@@ -317,9 +357,10 @@ Processing boundaries in Notebook Navigator:
   - Preview: markdown files where `previewStatus === 'unprocessed'` (when preview tracking is enabled)
   - Tags: markdown files where `tags === null` (when tag tracking is enabled)
   - Metadata: markdown files where `metadata === null` (when metadata tracking is enabled)
-  - Word count: markdown files where `wordCount === null` (always tracked)
+  - Word count: markdown files where `wordCount === null` (when word-count tracking is enabled)
+  - Character count: markdown files where `characterCountWithSpaces === null` or `characterCountWithoutSpaces === null` (when character-count tracking is enabled)
   - Tasks: markdown files where `taskTotal === null` or `taskUnfinished === null` (always tracked)
-  - Properties: markdown files where `properties === null` (when property tracking is enabled)
+  - Properties: markdown files where `properties === null` (always tracked)
   - Feature image: files where `featureImageKey === null` or `featureImageStatus === 'unprocessed'` (when feature image tracking is enabled)
 - Once the database has been seeded, the notice can complete after two empty polls even if no new queueable work is
   observed in that tick.

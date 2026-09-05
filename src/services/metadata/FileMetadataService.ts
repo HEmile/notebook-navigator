@@ -21,10 +21,11 @@ import { BaseMetadataService } from './BaseMetadataService';
 import type { CleanupValidators } from '../MetadataService';
 import { ItemType, NavigatorContext } from '../../types';
 import { isNoteShortcut } from '../../types/shortcuts';
-import type { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { getDBInstance } from '../../storage/fileOperations';
 import { deserializeIconFromFrontmatterCompat, normalizeCanonicalIconId, serializeIconForFrontmatter } from '../../utils/iconizeFormat';
 import { findMatchingRecordKey, normalizePinnedNoteContext } from '../../utils/recordUtils';
+import { createShortcutTargetPathEventMatcher } from '../../utils/shortcutPathResolver';
 
 /**
  * Service for managing file-specific metadata operations
@@ -486,6 +487,7 @@ export class FileMetadataService extends BaseMetadataService {
      * @param filePath - Path of the deleted file
      */
     async handleFileDelete(filePath: string): Promise<void> {
+        const matchesShortcutPath = createShortcutTargetPathEventMatcher(this.app, 'note', filePath);
         await this.saveAndUpdate(settings => {
             if (settings.pinnedNotes?.[filePath]) {
                 delete settings.pinnedNotes[filePath];
@@ -504,7 +506,7 @@ export class FileMetadataService extends BaseMetadataService {
                 if (!isNoteShortcut(shortcut)) {
                     return undefined;
                 }
-                return shortcut.path === filePath ? null : undefined;
+                return matchesShortcutPath(shortcut.path) ? null : undefined;
             });
         });
     }
@@ -518,6 +520,7 @@ export class FileMetadataService extends BaseMetadataService {
         const isVaultIconRename = this.isVaultSvgIconPath(oldPath) && this.isVaultSvgIconPath(newPath);
         const oldVaultIconId = isVaultIconRename ? this.formatVaultIconId(oldPath) : null;
         const newVaultIconId = isVaultIconRename ? this.formatVaultIconId(newPath) : null;
+        const matchesShortcutPath = createShortcutTargetPathEventMatcher(this.app, 'note', oldPath, newPath);
 
         await this.saveAndUpdate(settings => {
             let changed = false;
@@ -543,7 +546,7 @@ export class FileMetadataService extends BaseMetadataService {
                     if (!isNoteShortcut(shortcut)) {
                         return undefined;
                     }
-                    if (shortcut.path !== oldPath) {
+                    if (!matchesShortcutPath(shortcut.path)) {
                         return undefined;
                     }
 

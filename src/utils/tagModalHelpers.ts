@@ -17,8 +17,8 @@
  */
 
 import type { App, TFile } from 'obsidian';
-import NotebookNavigatorPlugin from '../main';
-import { TagOperations } from '../services/TagOperations';
+import type NotebookNavigatorPlugin from '../main';
+import type { TagOperations } from '../services/TagOperations';
 import { TagSuggestModal } from '../modals/TagSuggestModal';
 import { RemoveTagModal } from '../modals/RemoveTagModal';
 import { ConfirmModal } from '../modals/ConfirmModal';

@@ -16,7 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { describe, it, expect } from 'vitest';
-import { getExtensionSuffix, isPrimaryDocumentFile, shouldShowExtensionSuffix } from '../../src/utils/fileTypeUtils';
+import {
+    getExtensionSuffix,
+    isGeneratedThumbnailFile,
+    isPrimaryDocumentFile,
+    isRasterImageExtension,
+    isRasterImageFile,
+    isSvgExtension,
+    isSvgFile,
+    shouldShowExtensionSuffix
+} from '../../src/utils/fileTypeUtils';
 import { createTestTFile } from './createTestTFile';
 
 describe('fileTypeUtils', () => {
@@ -50,6 +59,22 @@ describe('fileTypeUtils', () => {
             expect(isPrimaryDocumentFile(createTestTFile('Board.canvas'))).toBe(true);
             expect(isPrimaryDocumentFile(createTestTFile('Data.base'))).toBe(true);
             expect(isPrimaryDocumentFile(createTestTFile('Asset.png'))).toBe(false);
+        });
+
+        it('excludes SVG files from raster image helpers', () => {
+            expect(isSvgExtension('SVG')).toBe(true);
+            expect(isSvgFile(createTestTFile('Vector.svg'))).toBe(true);
+            expect(isSvgFile(createTestTFile('Photo.png'))).toBe(false);
+            expect(isRasterImageExtension('svg')).toBe(false);
+            expect(isRasterImageFile(createTestTFile('Vector.svg'))).toBe(false);
+            expect(isRasterImageFile(createTestTFile('Photo.png'))).toBe(true);
+        });
+
+        it('identifies PDF and SVG files as generated thumbnail sources', () => {
+            expect(isGeneratedThumbnailFile(createTestTFile('Document.pdf'))).toBe(true);
+            expect(isGeneratedThumbnailFile(createTestTFile('Vector.svg'))).toBe(true);
+            expect(isGeneratedThumbnailFile(createTestTFile('Photo.png'))).toBe(false);
+            expect(isGeneratedThumbnailFile(createTestTFile('Note.md'))).toBe(false);
         });
     });
 });

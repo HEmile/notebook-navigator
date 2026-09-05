@@ -32,9 +32,9 @@ import {
     type HiddenFileNameMatcher
 } from '../../../utils/fileFilters';
 import { getDirectPropertyKeyNoteCount } from '../../../utils/propertyTree';
-import { casefold } from '../../../utils/recordUtils';
 import { createHiddenTagVisibility } from '../../../utils/tagPrefixMatcher';
 import { excludeFromTagTree } from '../../../utils/tagTree';
+import { getPropertyKeySet } from '../../../utils/vaultProfiles';
 import type { FolderNavigationSourceState } from '../../useFolderNavigationSourceState';
 import { useRootPropertyOrder } from '../../useRootPropertyOrder';
 import { useRootTagOrder } from '../../useRootTagOrder';
@@ -61,6 +61,7 @@ export interface UseNavigationPaneSourceStateParams {
 export interface NavigationPaneSourceState {
     effectiveFrontmatterExclusions: string[];
     hiddenFolders: string[];
+    descendantExcludedFolders: string[];
     hiddenTags: string[];
     hiddenFileProperties: string[];
     hiddenFileNames: string[];
@@ -89,13 +90,16 @@ export interface NavigationPaneSourceState {
     propertyKeyComparator: PropertyNodeComparator;
     rootPropertyOrderMap: Map<string, number>;
     missingRootPropertyKeys: string[];
-    visiblePropertyNavigationKeySet: Set<string>;
+    visiblePropertyNavigationKeySet: ReadonlySet<string>;
     metadataDecorationVersion: number;
+    metadataVisibilityVersion: number;
+    tagDataVersion: number;
+    propertyDataVersion: number;
     getFolderSortName: (folder: TFolder) => string;
     folderExclusionByFolderNote: ((folder: TFolder) => boolean) | undefined;
     recentNotesHiddenFileMatcher: ReturnType<typeof createFileHiddenMatcher>;
     fileChangeVersion: number;
-    bumpVaultChangeVersion: () => void;
+    folderChangeVersion: number;
 }
 
 export function useNavigationPaneSourceState({
@@ -110,6 +114,7 @@ export function useNavigationPaneSourceState({
 }: UseNavigationPaneSourceStateParams): NavigationPaneSourceState {
     const {
         hiddenFolders: profileHiddenFolders,
+        descendantExcludedFolders,
         hiddenFileProperties,
         hiddenFileNames,
         hiddenTags,
@@ -135,8 +140,11 @@ export function useNavigationPaneSourceState({
         rootFolderOrderMap,
         missingRootFolderPaths,
         fileChangeVersion,
-        bumpFileChangeVersion,
+        folderChangeVersion,
         metadataDecorationVersion,
+        metadataVisibilityVersion,
+        tagDataVersion,
+        propertyDataVersion,
         getFolderSortName,
         folderExclusionByFolderNote
     } = folderNavigationSource;
@@ -213,39 +221,38 @@ export function useNavigationPaneSourceState({
         comparator: propertyKeyComparator
     });
 
-    const visiblePropertyNavigationKeySet = useMemo(() => {
-        const keys = new Set<string>();
-        const seen = new Set<string>();
-        const entries = activeProfile.profile.propertyKeys ?? [];
-        entries.forEach(entry => {
-            if (!entry.showInNavigation) {
-                return;
-            }
-
-            const normalizedKey = casefold(entry.key);
-            if (!normalizedKey || seen.has(normalizedKey)) {
-                return;
-            }
-
-            seen.add(normalizedKey);
-            keys.add(normalizedKey);
-        });
-
-        return keys;
-    }, [activeProfile.profile.propertyKeys]);
+    const visiblePropertyNavigationKeySet = useMemo(
+        () => getPropertyKeySet(activeProfile.propertyKeys, 'navigation'),
+        [activeProfile.propertyKeys]
+    );
 
     const recentNotesHiddenFileMatcher = useMemo(() => {
         return createFileHiddenMatcher(
-            { hiddenFileProperties, hiddenFolders: profileHiddenFolders, hiddenFileNames, hiddenFileTags },
+            {
+                hiddenFileProperties,
+                hiddenFolders: profileHiddenFolders,
+                hiddenFileNames,
+                hiddenFileTags,
+                hideDrawingPreviewImages: settings.hideDrawingPreviewImages
+            },
             app,
             showHiddenItems
         );
-    }, [app, showHiddenItems, hiddenFileProperties, profileHiddenFolders, hiddenFileNames, hiddenFileTags]);
+    }, [
+        app,
+        showHiddenItems,
+        hiddenFileProperties,
+        profileHiddenFolders,
+        hiddenFileNames,
+        hiddenFileTags,
+        settings.hideDrawingPreviewImages
+    ]);
 
     return useMemo(
         () => ({
             effectiveFrontmatterExclusions,
             hiddenFolders,
+            descendantExcludedFolders,
             hiddenTags,
             hiddenFileProperties,
             hiddenFileNames,
@@ -276,14 +283,18 @@ export function useNavigationPaneSourceState({
             missingRootPropertyKeys,
             visiblePropertyNavigationKeySet,
             metadataDecorationVersion,
+            metadataVisibilityVersion,
+            tagDataVersion,
+            propertyDataVersion,
             getFolderSortName,
             folderExclusionByFolderNote,
             recentNotesHiddenFileMatcher,
             fileChangeVersion,
-            bumpVaultChangeVersion: bumpFileChangeVersion
+            folderChangeVersion
         }),
         [
             effectiveFrontmatterExclusions,
+            descendantExcludedFolders,
             hiddenFolders,
             hiddenTags,
             hiddenFileProperties,
@@ -315,11 +326,14 @@ export function useNavigationPaneSourceState({
             missingRootPropertyKeys,
             visiblePropertyNavigationKeySet,
             metadataDecorationVersion,
+            metadataVisibilityVersion,
+            tagDataVersion,
+            propertyDataVersion,
             getFolderSortName,
             folderExclusionByFolderNote,
             recentNotesHiddenFileMatcher,
             fileChangeVersion,
-            bumpFileChangeVersion
+            folderChangeVersion
         ]
     );
 }

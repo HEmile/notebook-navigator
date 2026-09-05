@@ -58,10 +58,10 @@
  *    - Must be done in CSS because .nn-mobile class redefines these on inner element
  *    - Uses: calc(21px * var(--nn-android-font-scale-reciprocal, 1))
  *
- * 3. Multi-line row caps (via CSS calc):
- *    - max-height for .nn-file-name and .nn-file-preview
+ * 3. Fixed multi-line row heights (via CSS calc):
+ *    - height/min-height for .nn-file-name and .nn-file-preview
  *    - These use line-height vars which are pre-compensated, so we multiply by
- *      scale to get the original cap value (which Android won't scale)
+ *      scale to get the fixed row height (which Android won't scale)
  *    - Uses: calc(var(--line-height) * rows * var(--nn-android-font-scale, 1))
  *
  * 4. Text elements with hardcoded sizes (via CSS):
@@ -107,7 +107,7 @@ type FontSizeVariableName = (typeof ANDROID_FONT_SIZE_VARIABLES)[number];
 
 function createMeasurementProbe(container: HTMLElement): HTMLElement {
     // Hidden probe lets us read computed font sizes without disturbing layout
-    const probe = container.ownerDocument.createElement('div');
+    const probe = container.win.createDiv();
     probe.style.cssText = `
         position: absolute;
         visibility: hidden;

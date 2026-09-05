@@ -16,15 +16,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback, useEffect, useMemo, useRef, type Dispatch, type RefObject, type SetStateAction } from 'react';
-import { App, debounce, TAbstractFile, TFile, TFolder } from 'obsidian';
-import type { Debouncer } from 'obsidian';
-import { TIMEOUTS } from '../../types/obsidian-extended';
+import { useCallback, useEffect, useMemo, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { App, TAbstractFile, TFile, TFolder } from 'obsidian';
 import type { PropertyTreeService } from '../../services/PropertyTreeService';
 import { getDBInstance } from '../../storage/fileOperations';
 import type { StorageFileData } from './storageFileData';
-import type { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { FileVisibility } from '../../utils/fileTypeUtils';
+import { createFileVisibilityChecker, isPathInExcludedFolder } from '../../utils/fileFilters';
+import type { TreeRebuildFn } from './useTreeRebuildScheduler';
 import {
     buildPropertyKeyNodeId,
     buildPropertyTreeFromDatabase,
@@ -33,7 +33,7 @@ import {
 } from '../../utils/propertyTree';
 import { casefold } from '../../utils/recordUtils';
 import type { PropertyTreeNode } from '../../types/storage';
-import { clonePropertyKeys, getActivePropertyFields, getActiveVaultProfile } from '../../utils/vaultProfiles';
+import { clonePropertyKeys, getActivePropertyFields, getActivePropertyKeySet, getActiveVaultProfile } from '../../utils/vaultProfiles';
 
 type SchedulePropertyTreeRebuildOptions = {
     flush?: boolean;
@@ -91,16 +91,17 @@ export function usePropertyTreeSync(params: {
     fileVisibility: FileVisibility;
     profileId: string;
     isStorageReady: boolean;
-    isStorageReadyRef: RefObject<boolean>;
-    latestSettingsRef: RefObject<NotebookNavigatorSettings>;
-    stoppedRef: RefObject<boolean>;
+    isStorageReadyRef: MutableRefObject<boolean>;
+    latestSettingsRef: MutableRefObject<NotebookNavigatorSettings>;
+    stoppedRef: MutableRefObject<boolean>;
     setFileData: Dispatch<SetStateAction<StorageFileData>>;
     getVisibleMarkdownFiles: () => TFile[];
     propertyTreeService: PropertyTreeService | null;
+    scheduleTreeRebuild: (kind: 'tags' | 'properties', options?: { flush?: boolean }) => void;
+    propertyTreeRebuildFnRef: MutableRefObject<TreeRebuildFn | null>;
 }): {
-    rebuildPropertyTree: () => Map<string, PropertyTreeNode>;
+    rebuildPropertyTree: (getVisibleFiles?: () => TFile[]) => Map<string, PropertyTreeNode>;
     schedulePropertyTreeRebuild: (options?: SchedulePropertyTreeRebuildOptions) => void;
-    cancelPropertyTreeRebuildDebouncer: (options?: { reset?: boolean }) => void;
 } {
     const {
         app,
@@ -118,17 +119,15 @@ export function usePropertyTreeSync(params: {
         stoppedRef,
         setFileData,
         getVisibleMarkdownFiles,
-        propertyTreeService
+        propertyTreeService,
+        scheduleTreeRebuild,
+        propertyTreeRebuildFnRef
     } = params;
 
     const hiddenFoldersRef = useRef(hiddenFolders);
-    const rebuildPropertyTreeFnRef = useRef<(() => Map<string, PropertyTreeNode>) | null>(null);
-    const propertyTreeRebuildDebouncerRef = useRef<Debouncer<[], void> | null>(null);
     const isPropertyTreeEnabled = useMemo(() => shouldEnablePropertyTree(settings), [settings]);
     const propertyTreeRebuildReadyGateRef = useRef(false);
     const activePropertyFields = getActivePropertyFields(settings);
-    const previousPropertyFieldsRef = useRef(activePropertyFields);
-    const previousShowPropertiesRef = useRef(settings.showProperties);
 
     useEffect(() => {
         hiddenFoldersRef.current = hiddenFolders;
@@ -141,146 +140,89 @@ export function usePropertyTreeSync(params: {
         return emptyTree;
     }, [propertyTreeService, setFileData]);
 
-    const rebuildPropertyTree = useCallback(() => {
-        const liveSettings = latestSettingsRef.current;
-        const configuredDisplayByKey = buildConfiguredPropertyDisplayByKey(liveSettings);
-        const includedPropertyKeys = new Set(configuredDisplayByKey.keys());
-        const shouldBuildTree = liveSettings.showProperties && configuredDisplayByKey.size > 0;
-        if (!shouldBuildTree) {
-            return clearPropertyTree();
-        }
-
-        const db = getDBInstance();
-        const excludedFolderPatterns = showHiddenItems ? [] : hiddenFoldersRef.current;
-        const visibleMarkdownPaths = getVisibleMarkdownFiles().map(file => file.path);
-        const propertyTree = buildPropertyTreeFromDatabase(
-            {
-                forEachFile: callback => {
-                    visibleMarkdownPaths.forEach(path => {
-                        const fileData = db.getFile(path);
-                        if (!fileData) {
-                            return;
-                        }
-                        callback(path, fileData);
-                    });
-                }
-            },
-            {
-                excludedFolderPatterns,
-                includedPropertyKeys
+    // Rebuilds the property tree from database contents. Accepts an optional visible-file getter so a
+    // scheduler pass can share one vault scan between the tag and property tree rebuilds.
+    const rebuildPropertyTree = useCallback(
+        (getVisibleFiles?: () => TFile[]) => {
+            const liveSettings = latestSettingsRef.current;
+            const configuredDisplayByKey = buildConfiguredPropertyDisplayByKey(liveSettings);
+            const includedPropertyKeys = new Set(configuredDisplayByKey.keys());
+            const shouldBuildTree = liveSettings.showProperties && configuredDisplayByKey.size > 0;
+            if (!shouldBuildTree) {
+                return clearPropertyTree();
             }
-        );
-        includeConfiguredPropertyKeys(propertyTree, configuredDisplayByKey);
 
-        setFileData(previous => ({ ...previous, propertyTree }));
-        propertyTreeService?.updatePropertyTree(propertyTree);
-        return propertyTree;
-    }, [clearPropertyTree, getVisibleMarkdownFiles, latestSettingsRef, propertyTreeService, setFileData, showHiddenItems]);
+            const db = getDBInstance();
+            const excludedFolderPatterns = showHiddenItems ? [] : hiddenFoldersRef.current;
+            const visibleFiles = getVisibleFiles ? getVisibleFiles() : getVisibleMarkdownFiles();
+            const visibleMarkdownPaths = visibleFiles.map(file => file.path);
+            const propertyTree = buildPropertyTreeFromDatabase(
+                {
+                    forEachFile: callback => {
+                        visibleMarkdownPaths.forEach(path => {
+                            const fileData = db.getFile(path);
+                            if (!fileData) {
+                                return;
+                            }
+                            callback(path, fileData);
+                        });
+                    }
+                },
+                {
+                    excludedFolderPatterns,
+                    includedPropertyKeys
+                }
+            );
+            includeConfiguredPropertyKeys(propertyTree, configuredDisplayByKey);
 
-    rebuildPropertyTreeFnRef.current = rebuildPropertyTree;
+            setFileData(previous => ({ ...previous, propertyTree }));
+            propertyTreeService?.updatePropertyTree(propertyTree);
+            return propertyTree;
+        },
+        [clearPropertyTree, getVisibleMarkdownFiles, latestSettingsRef, propertyTreeService, setFileData, showHiddenItems]
+    );
 
-    const cancelPropertyTreeRebuildDebouncer = useCallback((options?: { reset?: boolean }) => {
-        const debouncer = propertyTreeRebuildDebouncerRef.current;
-        if (!debouncer) {
-            return;
-        }
-        try {
-            debouncer.cancel();
-        } catch {
-            // ignore
-        }
-
-        if (options?.reset) {
-            propertyTreeRebuildDebouncerRef.current = null;
-        }
-    }, []);
+    // Exposes the latest rebuild implementation to the shared scheduler. rebuildPropertyTree clears the
+    // tree itself when the feature is disabled.
+    propertyTreeRebuildFnRef.current = getVisibleFiles => {
+        rebuildPropertyTree(getVisibleFiles);
+    };
 
     const schedulePropertyTreeRebuild = useCallback(
         (options?: SchedulePropertyTreeRebuildOptions) => {
-            const liveSettings = latestSettingsRef.current;
             if (stoppedRef.current || !isStorageReadyRef.current) {
                 return;
             }
 
-            if (!shouldEnablePropertyTree(liveSettings)) {
+            if (!shouldEnablePropertyTree(latestSettingsRef.current)) {
                 clearPropertyTree();
                 return;
             }
 
-            if (!propertyTreeRebuildDebouncerRef.current) {
-                propertyTreeRebuildDebouncerRef.current = debounce(
-                    () => {
-                        if (stoppedRef.current || !isStorageReadyRef.current) {
-                            return;
-                        }
-
-                        if (!shouldEnablePropertyTree(latestSettingsRef.current)) {
-                            clearPropertyTree();
-                            return;
-                        }
-
-                        rebuildPropertyTreeFnRef.current?.();
-                    },
-                    TIMEOUTS.DEBOUNCE_TAG_TREE,
-                    true
-                );
-            }
-
-            propertyTreeRebuildDebouncerRef.current();
-
-            if (options?.flush) {
-                try {
-                    propertyTreeRebuildDebouncerRef.current.run();
-                } catch {
-                    // ignore
-                }
-            }
+            scheduleTreeRebuild('properties', options);
         },
-        [clearPropertyTree, isStorageReadyRef, latestSettingsRef, stoppedRef]
+        [clearPropertyTree, isStorageReadyRef, latestSettingsRef, scheduleTreeRebuild, stoppedRef]
     );
 
     useEffect(() => {
-        const previousPropertyFields = previousPropertyFieldsRef.current;
-        const previousShowProperties = previousShowPropertiesRef.current;
-        const propertyFieldsChanged = previousPropertyFields !== activePropertyFields;
-        const showPropertiesChanged = previousShowProperties !== settings.showProperties;
-        const commitCurrentSettingsSnapshot = () => {
-            previousPropertyFieldsRef.current = activePropertyFields;
-            previousShowPropertiesRef.current = settings.showProperties;
-        };
-
         if (!isStorageReady) {
             // Resets the ready gate so the next ready transition is ignored.
             propertyTreeRebuildReadyGateRef.current = false;
-            commitCurrentSettingsSnapshot();
             return;
         }
 
         if (!propertyTreeRebuildReadyGateRef.current) {
             // Initial cache build creates the property tree before storage is marked ready.
             propertyTreeRebuildReadyGateRef.current = true;
-            commitCurrentSettingsSnapshot();
             return;
         }
 
         if (!isPropertyTreeEnabled) {
             clearPropertyTree();
-            commitCurrentSettingsSnapshot();
-            return;
-        }
-
-        const visibleMarkdownFileCount = getVisibleMarkdownFiles().length;
-        // Property-field changes are followed by markdown metadata regeneration.
-        // Skip the immediate rebuild here and let the incoming metadata batch trigger it.
-        const shouldDeferPropertyFieldRebuild =
-            propertyFieldsChanged && !showPropertiesChanged && settings.showProperties && visibleMarkdownFileCount > 0;
-        if (shouldDeferPropertyFieldRebuild) {
-            commitCurrentSettingsSnapshot();
             return;
         }
 
         schedulePropertyTreeRebuild();
-        commitCurrentSettingsSnapshot();
     }, [
         showHiddenItems,
         isStorageReady,
@@ -311,26 +253,63 @@ export function usePropertyTreeSync(params: {
                 return;
             }
 
+            let isFileVisible: ((file: TFile) => boolean) | null = null;
+            const excludedFolderPatterns = showHiddenItems ? [] : hiddenFoldersRef.current;
             let hasRelevantChanges = false;
             let shouldFlush = false;
             let activeFilePath: string | null = null;
             let activeFileResolved = false;
+            const configuredPropertyKeys = getActivePropertyKeySet(latestSettingsRef.current, 'any');
             for (const change of changes) {
-                const hasPropertyChange = change.changes.properties !== undefined;
+                const changedPropertyKeys = change.changedPropertyKeys;
+                const hasPropertyChange =
+                    change.changes.properties !== undefined &&
+                    (changedPropertyKeys === undefined || changedPropertyKeys.some(key => configuredPropertyKeys.has(key)));
                 const hasTagVisibilityChange = shouldRebuildOnTagVisibilityChanges && change.changes.tags !== undefined;
-                const hasFrontmatterVisibilityChange = shouldRebuildOnFrontmatterVisibilityChanges && change.changes.metadata !== undefined;
+                const hasFrontmatterVisibilityChange = shouldRebuildOnFrontmatterVisibilityChanges && change.metadataHiddenChanged === true;
                 if (!hasPropertyChange && !hasTagVisibilityChange && !hasFrontmatterVisibilityChange) {
                     continue;
                 }
 
-                hasRelevantChanges = true;
+                // Files in excluded folders never enter the property tree, so no change to them (including
+                // visibility flips) affects it.
+                if (excludedFolderPatterns.length > 0 && isPathInExcludedFolder(change.path, excludedFolderPatterns)) {
+                    continue;
+                }
 
                 if (!activeFileResolved) {
                     activeFilePath = app.workspace.getActiveFile()?.path ?? null;
                     activeFileResolved = true;
                 }
+                const isActiveFileChange = activeFilePath !== null && change.path === activeFilePath;
 
-                if (activeFilePath && change.path === activeFilePath) {
+                // Once a rebuild is known to be needed, the only remaining question is whether the active
+                // file itself has a relevant change (it decides the flush), so other files skip the
+                // visibility work.
+                if (hasRelevantChanges && !isActiveFileChange) {
+                    continue;
+                }
+
+                // Visibility-flip changes always rebuild. Plain property changes only rebuild when the file
+                // is part of the visible set the tree is built from: hidden files are indexed and generate
+                // content, but the tree excludes them, so their property changes do not require a rebuild.
+                if (!hasTagVisibilityChange && !hasFrontmatterVisibilityChange) {
+                    const abstract = app.vault.getAbstractFileByPath(change.path);
+                    if (!(abstract instanceof TFile)) {
+                        // Deleted files leave the tree through the vault delete handler, which schedules its own rebuild.
+                        continue;
+                    }
+                    if (!isFileVisible) {
+                        isFileVisible = createFileVisibilityChecker(app, latestSettingsRef.current, { showHiddenItems });
+                    }
+                    if (!isFileVisible(abstract)) {
+                        continue;
+                    }
+                }
+
+                hasRelevantChanges = true;
+
+                if (isActiveFileChange) {
                     shouldFlush = true;
                     break;
                 }
@@ -345,11 +324,12 @@ export function usePropertyTreeSync(params: {
 
         return unsubscribe;
     }, [
-        app.workspace,
+        app,
         hiddenFileProperties,
         hiddenFileTags,
         isStorageReady,
         isPropertyTreeEnabled,
+        latestSettingsRef,
         schedulePropertyTreeRebuild,
         showHiddenItems,
         stoppedRef
@@ -397,5 +377,5 @@ export function usePropertyTreeSync(params: {
         };
     }, [app.vault, isStorageReady, isPropertyTreeEnabled, schedulePropertyTreeRebuild, stoppedRef]);
 
-    return { rebuildPropertyTree, schedulePropertyTreeRebuild, cancelPropertyTreeRebuildDebouncer };
+    return { rebuildPropertyTree, schedulePropertyTreeRebuild };
 }

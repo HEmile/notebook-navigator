@@ -18,20 +18,20 @@
 
 import { App, Platform, RequestUrlParam, RequestUrlResponse, requestUrl, TFile } from 'obsidian';
 import { type ContentProviderType } from '../../interfaces/IContentProvider';
-import { NotebookNavigatorSettings } from '../../settings';
-import type { FeatureImagePixelSizeSetting } from '../../settings/types';
+import type { FeatureImagePixelSizeSetting, NotebookNavigatorSettings } from '../../settings/types';
 import { FileData } from '../../storage/IndexedDBStorage';
 import { getDBInstance } from '../../storage/fileOperations';
-import { isPdfFile } from '../../utils/fileTypeUtils';
+import { isGeneratedThumbnailFile, isPdfFile } from '../../utils/fileTypeUtils';
 import { getYoutubeThumbnailUrl } from '../../utils/youtubeUtils';
 import { BaseContentProvider, type ContentProviderProcessResult } from './BaseContentProvider';
 import type { ContentReadCache } from './ContentReadCache';
 import { isValidHttpsUrl, type FeatureImageReference } from './featureImageReferenceResolver';
-import { renderExcalidrawThumbnail } from './excalidraw/excalidrawThumbnail';
 import { renderPdfCoverThumbnail } from './pdf/pdfCoverThumbnail';
 import { detectImageMimeTypeFromBuffer, getImageDimensionsPairFromBuffer, normalizeImageMimeType } from './thumbnail/imageDimensions';
+import { decodeSvgSourceText, prepareSvgFeatureImageSource } from './thumbnail/svgFeatureImage';
 import { createOnceLogger, createRenderBudgetLimiter, createRenderLimiter } from './thumbnail/thumbnailRuntimeUtils';
 import { LIMITS } from '../../constants/limits';
+import { getDrawingDirectFeatureImageKey, getDrawingFeatureImageSource } from '../../utils/drawingFeatureImages';
 
 type FeatureImageThumbnailDimensions = {
     width: number;
@@ -69,6 +69,8 @@ const MAX_LOCAL_IMAGE_BYTES = Platform.isMobile
 const MAX_EXTERNAL_IMAGE_BYTES = Platform.isMobile
     ? LIMITS.thumbnails.featureImage.maxImageBytes.external.mobile
     : LIMITS.thumbnails.featureImage.maxImageBytes.external.desktop;
+// Maximum SVG source size (in bytes) accepted for rasterized thumbnails.
+const MAX_SVG_SOURCE_BYTES = LIMITS.thumbnails.featureImage.svg.maxSourceBytes;
 
 const SUPPORTED_IMAGE_MIME_TYPES = new Set([
     'image/jpeg',
@@ -98,6 +100,10 @@ const MIME_TYPE_BY_EXTENSION: Record<string, string> = {
 type ImageBuffer = { buffer: ArrayBuffer; mimeType: string };
 
 type ThumbnailSourceKind = 'local' | 'external';
+
+type ExternalImagePreflight = {
+    mimeType: string;
+};
 
 export type FeatureImageThumbnailRuntime = {
     externalRequestLimiter: ReturnType<typeof createRenderLimiter>;
@@ -205,9 +211,21 @@ export class FeatureImageContentProvider extends BaseContentProvider {
 
         const fileModified = fileData !== null && fileData.fileThumbnailsMtime !== file.stat.mtime;
 
-        if (isPdfFile(file)) {
-            // PDFs can have generated thumbnails; changes need reprocessing.
+        if (isGeneratedThumbnailFile(file)) {
+            // PDFs and SVGs can have generated thumbnails; changes need reprocessing.
             const expectedKey = this.getFeatureImageKey({ kind: 'local', file });
+            return (
+                fileModified ||
+                !fileData ||
+                fileData.featureImageStatus === 'unprocessed' ||
+                fileData.featureImageKey === null ||
+                fileData.featureImageKey !== expectedKey
+            );
+        }
+
+        const drawingSource = getDrawingFeatureImageSource(this.app, file);
+        if (drawingSource) {
+            const expectedKey = getDrawingDirectFeatureImageKey(file, drawingSource.providerId);
             return (
                 fileModified ||
                 !fileData ||
@@ -234,12 +252,12 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             return { update: null, processed: true };
         }
 
-        // Generate cover thumbnail for PDF files using the first page
-        if (isPdfFile(job.file)) {
+        // Generate thumbnails for PDF files (first page cover) and SVG files (rasterized vector)
+        if (isGeneratedThumbnailFile(job.file)) {
             const reference: FeatureImageReference = { kind: 'local', file: job.file };
             const featureImageKey = this.getFeatureImageKey(reference);
 
-            // For PDFs, `featureImageKey` is the durable marker for the selected source (it includes the PDF mtime).
+            // `featureImageKey` is the durable marker for the selected source (it includes the file mtime).
             // Forced provider-mtime resets must still re-render thumbnails when `fileThumbnailsMtime` is stale.
             const isUpToDate =
                 fileData &&
@@ -259,6 +277,17 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             return { update: { path: job.path, featureImage: thumbnail, featureImageKey }, processed: true };
         }
 
+        const drawingSource = getDrawingFeatureImageSource(this.app, job.file);
+        if (drawingSource) {
+            const featureImageKey = getDrawingDirectFeatureImageKey(job.file, drawingSource.providerId);
+            const isUpToDate = fileData?.featureImageKey === featureImageKey && fileData.featureImageStatus === 'none';
+            if (isUpToDate) {
+                return { update: null, processed: true };
+            }
+
+            return { update: { path: job.path, featureImage: this.createEmptyBlob(), featureImageKey }, processed: true };
+        }
+
         const nextKey = '';
         const nextImage = this.createEmptyBlob();
         // Empty blobs are used as a processed marker; storage drops them and keeps the key.
@@ -271,34 +300,6 @@ export class FeatureImageContentProvider extends BaseContentProvider {
 
     protected createEmptyBlob(): Blob {
         return new Blob([]);
-    }
-
-    // Creates a cache key for Excalidraw files based on path and modification time
-    protected getExcalidrawFeatureImageKey(file: TFile): string {
-        return `x:${file.path}@${file.stat.mtime}`;
-    }
-
-    // Renders an Excalidraw file to a resized thumbnail blob
-    protected async createExcalidrawThumbnail(file: TFile): Promise<Blob | null> {
-        const pngBlob = await renderExcalidrawThumbnail(this.app, file, { padding: 0 });
-        if (!pngBlob) {
-            return null;
-        }
-
-        try {
-            const mimeType = pngBlob.type || 'image/png';
-            const buffer = await pngBlob.arrayBuffer();
-            const thumbnail = await this.createThumbnailBlobFromBuffer(
-                buffer,
-                mimeType,
-                file.path,
-                'local',
-                this.getThumbnailDimensions(this.currentBatchSettings?.featureImagePixelSize)
-            );
-            return thumbnail ?? pngBlob;
-        } catch {
-            return pngBlob;
-        }
     }
 
     protected getFeatureImageKey(reference: FeatureImageReference): string {
@@ -390,6 +391,15 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             return null;
         }
 
+        // SVG sources have a stricter byte cap; checking the file stat avoids reading oversized files into memory.
+        if (mimeType === 'image/svg+xml' && file.stat.size > MAX_SVG_SOURCE_BYTES) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-svg-too-large:${MAX_SVG_SOURCE_BYTES}:${file.path}`,
+                `[${file.path}] Skipping SVG feature image (${file.stat.size} bytes) - source too large`
+            );
+            return null;
+        }
+
         try {
             const buffer = await this.app.vault.adapter.readBinary(file.path);
             return { buffer, mimeType };
@@ -406,9 +416,10 @@ export class FeatureImageContentProvider extends BaseContentProvider {
         // Acquire limiter slot to control concurrent external requests
         const releaseLimiter = await this.thumbnailRuntime.externalRequestLimiter.acquire();
         let limiterReleased = false;
-        let hardReleaseId: ReturnType<typeof globalThis.setTimeout> | null = null;
+        const timerWindow = activeWindow;
+        let hardReleaseId: ReturnType<typeof window.setTimeout> | null = null;
         let timeoutDebtAdded = false;
-        let timeoutDebtTimerId: ReturnType<typeof globalThis.setTimeout> | null = null;
+        let timeoutDebtTimerId: ReturnType<typeof window.setTimeout> | null = null;
 
         const safeReleaseLimiter = () => {
             if (limiterReleased) {
@@ -416,7 +427,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             }
             limiterReleased = true;
             if (hardReleaseId !== null) {
-                globalThis.clearTimeout(hardReleaseId);
+                timerWindow.clearTimeout(hardReleaseId);
                 hardReleaseId = null;
             }
             releaseLimiter();
@@ -428,7 +439,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             }
             timeoutDebtAdded = false;
             if (timeoutDebtTimerId !== null) {
-                globalThis.clearTimeout(timeoutDebtTimerId);
+                timerWindow.clearTimeout(timeoutDebtTimerId);
                 timeoutDebtTimerId = null;
             }
             this.thumbnailRuntime.externalRequestTimeoutDebt = Math.max(0, this.thumbnailRuntime.externalRequestTimeoutDebt - 1);
@@ -445,15 +456,15 @@ export class FeatureImageContentProvider extends BaseContentProvider {
 
             this.thumbnailRuntime.externalRequestTimeoutDebt += 1;
             timeoutDebtAdded = true;
-            timeoutDebtTimerId = globalThis.setTimeout(() => safeReleaseTimeoutDebt(), EXTERNAL_REQUEST_MAX_LIFETIME_MS);
+            timeoutDebtTimerId = timerWindow.setTimeout(() => safeReleaseTimeoutDebt(), EXTERNAL_REQUEST_MAX_LIFETIME_MS);
             return true;
         };
 
-        hardReleaseId = globalThis.setTimeout(() => safeReleaseLimiter(), EXTERNAL_REQUEST_MAX_LIFETIME_MS);
+        hardReleaseId = timerWindow.setTimeout(() => safeReleaseLimiter(), EXTERNAL_REQUEST_MAX_LIFETIME_MS);
 
-        let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
+        let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
         const timeoutPromise = new Promise<null>(resolve => {
-            timeoutId = globalThis.setTimeout(() => {
+            timeoutId = timerWindow.setTimeout(() => {
                 // When a request times out, optionally free the limiter slot so other requests can proceed.
                 // This can oversubscribe real in-flight requests since `requestUrl()` cannot be aborted, so it is bounded
                 // by EXTERNAL_REQUEST_TIMEOUT_DEBT_MAX. When the debt budget is exhausted, we keep the limiter slot until
@@ -484,7 +495,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             return null;
         } finally {
             if (timeoutId !== null) {
-                globalThis.clearTimeout(timeoutId);
+                timerWindow.clearTimeout(timeoutId);
             }
         }
     }
@@ -497,6 +508,11 @@ export class FeatureImageContentProvider extends BaseContentProvider {
 
         return await this.getOrCreateDownload(`ext:${trimmedUrl}`, async () => {
             try {
+                const preflight = await this.preflightExternalImage(trimmedUrl);
+                if (!preflight) {
+                    return null;
+                }
+
                 const response = await this.requestUrlWithTimeout(
                     {
                         url: trimmedUrl,
@@ -513,15 +529,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
                 // Determine the image type from the response headers.
                 // iOS can return `Content-Type` instead of `content-type`, so use a case-insensitive lookup.
                 const contentTypeHeader = this.getHeaderValue(response.headers, 'content-type');
-                if (!contentTypeHeader) {
-                    this.thumbnailRuntime.logOnce(
-                        `featureImage-external-missing-content-type:${trimmedUrl}`,
-                        `[${trimmedUrl}] Skipping external image - missing Content-Type header`
-                    );
-                    return null;
-                }
-
-                const mimeType = this.getMimeTypeFromContentType(contentTypeHeader);
+                const mimeType = contentTypeHeader ? this.getMimeTypeFromContentType(contentTypeHeader) : preflight.mimeType;
                 if (!mimeType) {
                     this.thumbnailRuntime.logOnce(
                         `featureImage-external-unsupported-content-type:${contentTypeHeader}:${trimmedUrl}`,
@@ -551,6 +559,71 @@ export class FeatureImageContentProvider extends BaseContentProvider {
                 return null;
             }
         });
+    }
+
+    private async preflightExternalImage(imageUrl: string): Promise<ExternalImagePreflight | null> {
+        const response = await this.requestUrlWithTimeout(
+            {
+                url: imageUrl,
+                method: 'HEAD',
+                throw: false
+            },
+            EXTERNAL_REQUEST_TIMEOUT_MS
+        );
+
+        if (!response || response.status < 200 || response.status >= 300) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-external-head-failed:${imageUrl}`,
+                `[${imageUrl}] Skipping external image - HEAD request failed`
+            );
+            return null;
+        }
+
+        const contentTypeHeader = this.getHeaderValue(response.headers, 'content-type');
+        if (!contentTypeHeader) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-external-missing-content-type:${imageUrl}`,
+                `[${imageUrl}] Skipping external image - missing Content-Type header`
+            );
+            return null;
+        }
+
+        const mimeType = this.getMimeTypeFromContentType(contentTypeHeader);
+        if (!mimeType) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-external-unsupported-content-type:${contentTypeHeader}:${imageUrl}`,
+                `[${imageUrl}] Skipping external image - unsupported Content-Type: ${contentTypeHeader}`
+            );
+            return null;
+        }
+
+        const contentLength = this.parseContentLength(this.getHeaderValue(response.headers, 'content-length'));
+        if (contentLength === null) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-external-missing-content-length:${imageUrl}`,
+                `[${imageUrl}] Skipping external image - missing Content-Length header`
+            );
+            return null;
+        }
+
+        if (contentLength > MAX_EXTERNAL_IMAGE_BYTES) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-external-too-large:${MAX_EXTERNAL_IMAGE_BYTES}:${imageUrl}`,
+                `[${imageUrl}] Skipping external image (${contentLength} bytes) - file too large`
+            );
+            return null;
+        }
+
+        // SVG sources have a stricter byte cap; checking the reported length avoids downloading oversized bodies.
+        if (mimeType === 'image/svg+xml' && contentLength > MAX_SVG_SOURCE_BYTES) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-svg-too-large:${MAX_SVG_SOURCE_BYTES}:${imageUrl}`,
+                `[${imageUrl}] Skipping SVG feature image (${contentLength} bytes) - source too large`
+            );
+            return null;
+        }
+
+        return { mimeType };
     }
 
     private async downloadYoutubeThumbnail(videoId: string): Promise<ImageBuffer | null> {
@@ -635,8 +708,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
         }
 
         if (effectiveMimeType === 'image/svg+xml') {
-            // Keep SVG data as-is without raster encoding.
-            return new Blob([buffer], { type: effectiveMimeType });
+            return await this.createSvgThumbnailBlob(buffer, source, thumbnailDimensions);
         }
 
         // Extract dimensions from the image header to determine if resizing is needed.
@@ -663,36 +735,11 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             thumbnailDimensions
         );
 
-        const shouldSkipDecode =
-            targetWidth === displayDimensions.width && targetHeight === displayDimensions.height && pixelCount <= maxFallbackPixels;
-
         const sourceBlob = new Blob([buffer], { type: effectiveMimeType });
-
-        if (shouldSkipDecode) {
-            // Skip decoding when the image is already within thumbnail limits.
-            //
-            // When the container metadata indicates a display transform (crop/rotation), attempt a re-encode so thumbnails
-            // bake the transform into pixels. Fall back to the original blob when decoding is unavailable or fails.
-            const hasTransformMetadata =
-                displayDimensions.width !== codedDimensions.width || displayDimensions.height !== codedDimensions.height;
-
-            if (!hasTransformMetadata) {
-                return sourceBlob;
-            }
-
-            const releaseDecodeBudget = await this.thumbnailRuntime.imageDecodeLimiter.acquire(pixelCount);
-            try {
-                const reencoded = await this.tryCreateThumbnailFromBitmap(sourceBlob, thumbnailDimensions, true);
-                return reencoded ?? sourceBlob;
-            } finally {
-                releaseDecodeBudget();
-            }
-        }
-
         const releaseDecodeBudget = await this.thumbnailRuntime.imageDecodeLimiter.acquire(pixelCount);
 
         try {
-            // Attempt direct bitmap resize which is more memory-efficient for large images.
+            // Attempt direct bitmap resize/encode, which is more memory-efficient for large images.
             const resizedBitmapResult = await this.tryCreateThumbnailFromResizedBitmap(sourceBlob, targetWidth, targetHeight);
             if (resizedBitmapResult) {
                 return resizedBitmapResult;
@@ -722,12 +769,58 @@ export class FeatureImageContentProvider extends BaseContentProvider {
                 }
 
                 const { width, height } = this.calculateThumbnailDimensions(sourceWidth, sourceHeight, thumbnailDimensions);
-                if (width === sourceWidth && height === sourceHeight) {
-                    // Skip re-encoding when the image is already within thumbnail limits.
-                    return sourceBlob;
-                }
                 return await this.resizeImageToBlob(image, width, height);
             });
+        } finally {
+            releaseDecodeBudget();
+        }
+    }
+
+    /**
+     * Rasterizes a vector-only SVG source into a thumbnail blob.
+     *
+     * The source is validated and sized by `prepareSvgFeatureImageSource()`, then decoded through
+     * an image element because `createImageBitmap()` does not accept SVG blobs in Chromium.
+     * Decoding an SVG in an image element runs in the browser's static image mode, so scripts
+     * do not execute and external resources do not load.
+     */
+    private async createSvgThumbnailBlob(
+        buffer: ArrayBuffer,
+        source: string,
+        thumbnailDimensions: FeatureImageThumbnailDimensions
+    ): Promise<Blob | null> {
+        if (buffer.byteLength > MAX_SVG_SOURCE_BYTES) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-svg-too-large:${MAX_SVG_SOURCE_BYTES}:${source}`,
+                `[${source}] Skipping SVG feature image (${buffer.byteLength} bytes) - source too large`
+            );
+            return null;
+        }
+
+        const svgText = decodeSvgSourceText(buffer);
+        const prepared = prepareSvgFeatureImageSource({
+            svgText,
+            maxWidth: thumbnailDimensions.width,
+            maxHeight: thumbnailDimensions.height
+        });
+        if (!prepared.source) {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-svg-rejected:${prepared.reason}:${source}`,
+                `[${source}] Skipping SVG feature image - ${prepared.reason}`
+            );
+            return null;
+        }
+
+        const { blob, width, height } = prepared.source;
+        const releaseDecodeBudget = await this.thumbnailRuntime.imageDecodeLimiter.acquire(width * height);
+        try {
+            return await this.withImageFromBlob(blob, async image => await this.resizeSourceToBlob(image, width, height));
+        } catch {
+            this.thumbnailRuntime.logOnce(
+                `featureImage-svg-decode-failed:${source}`,
+                `[${source}] Skipping SVG feature image - decode failed`
+            );
+            return null;
         } finally {
             releaseDecodeBudget();
         }
@@ -744,7 +837,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             return null;
         }
 
-        let bitmap: ImageBitmap | null = null;
+        let bitmap: ImageBitmap;
         try {
             bitmap = await createImageBitmap(blob, {
                 imageOrientation: 'from-image',
@@ -763,17 +856,13 @@ export class FeatureImageContentProvider extends BaseContentProvider {
         }
     }
 
-    // Decodes a blob to an ImageBitmap and resizes it to thumbnail dimensions
-    private async tryCreateThumbnailFromBitmap(
-        blob: Blob,
-        thumbnailDimensions: FeatureImageThumbnailDimensions,
-        forceReencode = false
-    ): Promise<Blob | null> {
+    // Decodes a blob to an ImageBitmap and encodes it to thumbnail dimensions
+    private async tryCreateThumbnailFromBitmap(blob: Blob, thumbnailDimensions: FeatureImageThumbnailDimensions): Promise<Blob | null> {
         if (typeof createImageBitmap === 'undefined') {
             return null;
         }
 
-        let bitmap: ImageBitmap | null = null;
+        let bitmap: ImageBitmap;
         try {
             bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
         } catch {
@@ -789,11 +878,6 @@ export class FeatureImageContentProvider extends BaseContentProvider {
             }
 
             const { width, height } = this.calculateThumbnailDimensions(sourceWidth, sourceHeight, thumbnailDimensions);
-            if (!forceReencode && width === sourceWidth && height === sourceHeight) {
-                // Skip re-encoding when the image is already within thumbnail limits.
-                return blob;
-            }
-
             return await this.resizeSourceToBlob(bitmap, width, height);
         } finally {
             this.closeBitmap(bitmap);
@@ -878,7 +962,7 @@ export class FeatureImageContentProvider extends BaseContentProvider {
                 return canvas;
             }
         }
-        const canvas = document.createElement('canvas');
+        const canvas = createEl('canvas');
         canvas.width = width;
         canvas.height = height;
         return canvas;
@@ -1001,5 +1085,19 @@ export class FeatureImageContentProvider extends BaseContentProvider {
         }
 
         return mimeType;
+    }
+
+    private parseContentLength(contentLength: string | undefined): number | null {
+        if (!contentLength) {
+            return null;
+        }
+
+        const trimmed = contentLength.trim();
+        if (!/^\d+$/.test(trimmed)) {
+            return null;
+        }
+
+        const parsed = Number(trimmed);
+        return Number.isSafeInteger(parsed) ? parsed : null;
     }
 }

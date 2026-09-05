@@ -5,10 +5,10 @@
    ======================================================================== */
 
 /* Icon button base style - transparent buttons matching Obsidian's design */
-.nn-icon-button {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
+button.nn-icon-button {
+    background: transparent;
+    background-color: transparent;
+    border: none;
     border-radius: var(--radius-s);
     padding: 0 8px;
     color: var(--nn-theme-header-button-icon-color);
@@ -16,8 +16,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: none !important;
-    outline: none !important;
+    box-shadow: none;
+    outline: none;
 }
 
 /* Desktop pane header buttons - enforce Obsidian-muted icon color */
@@ -25,7 +25,7 @@
     color: var(--nn-theme-header-button-icon-color);
 }
 
-.nn-desktop .nn-pane-header .nn-icon-button svg {
+.nn-desktop .nn-pane-header .nn-icon-button svg:not(.nn-vault-icon-svg) {
     stroke: currentColor;
 }
 
@@ -37,20 +37,9 @@
     height: 25px;
 }
 
-/* iPad-specific adjustment for icon buttons in headers */
-@media (min-width: 768px) {
-    .notebook-navigator-mobile .nn-header-actions button.nn-icon-button {
-        /* Maintain same dimensions as desktop for consistency */
-        padding: 0 8px;
-        width: auto;
-        min-width: 34px;
-        height: 25px;
-    }
-}
-
 /* Icon button hover state - subtle background on hover - desktop only */
-.nn-desktop .nn-icon-button:hover {
-    background-color: var(--nn-theme-header-button-hover-bg) !important;
+.nn-desktop button.nn-icon-button:hover {
+    background-color: var(--nn-theme-header-button-hover-bg);
     opacity: 1;
 }
 
@@ -60,14 +49,14 @@
 }
 
 /* Icon button active state - for toggle buttons that are "ON" */
-.nn-icon-button-active {
-    background-color: var(--nn-theme-header-button-active-bg) !important;
-    color: var(--nn-theme-header-button-active-icon-color) !important;
+button.nn-icon-button.nn-icon-button-active {
+    background-color: var(--nn-theme-header-button-active-bg);
+    color: var(--nn-theme-header-button-active-icon-color);
 }
 
 /* Active button icon color */
-.nn-icon-button-active svg {
-    stroke: var(--nn-theme-header-button-active-icon-color) !important;
+button.nn-icon-button.nn-icon-button-active svg:not(.nn-vault-icon-svg) {
+    stroke: var(--nn-theme-header-button-active-icon-color);
 }
 
 /* Icon button disabled state - visual indicator for unavailable actions */
@@ -78,7 +67,7 @@
 }
 
 /* Disabled icon svg stroke color */
-.nn-icon-button:disabled svg {
+.nn-icon-button:disabled svg:not(.nn-vault-icon-svg) {
     stroke: currentColor;
 }
 
@@ -89,7 +78,7 @@
 }
 
 /* Disabled icon color - maintains muted appearance */
-.nn-desktop .nn-icon-button:disabled:hover svg {
+.nn-desktop .nn-icon-button:disabled:hover svg:not(.nn-vault-icon-svg) {
     stroke: currentColor;
 }
 
@@ -105,6 +94,9 @@
 .nn-icon-button svg {
     width: 16px;
     height: 16px;
+}
+
+.nn-icon-button svg:not(.nn-vault-icon-svg) {
     stroke: currentColor;
     stroke-width: 2;
     fill: none;

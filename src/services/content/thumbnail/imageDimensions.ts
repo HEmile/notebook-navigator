@@ -42,14 +42,7 @@ export function normalizeImageMimeType(mimeType: string): string {
 }
 
 type DetectedImageMimeType =
-    | 'image/png'
-    | 'image/gif'
-    | 'image/jpeg'
-    | 'image/webp'
-    | 'image/bmp'
-    | 'image/avif'
-    | 'image/heic'
-    | 'image/heif';
+    'image/png' | 'image/gif' | 'image/jpeg' | 'image/webp' | 'image/bmp' | 'image/avif' | 'image/heic' | 'image/heif';
 
 export function detectImageMimeTypeFromBuffer(buffer: ArrayBuffer): DetectedImageMimeType | null {
     const bytes = new Uint8Array(buffer);

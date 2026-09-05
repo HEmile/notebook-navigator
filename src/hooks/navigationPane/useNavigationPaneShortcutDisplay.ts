@@ -22,7 +22,7 @@ import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { NoteCountInfo } from '../../types/noteCounts';
 import { strings } from '../../i18n';
 import type { FileVisibility } from '../../utils/fileTypeUtils';
-import { getFolderNoteDetectionSettings } from '../../utils/folderNotes';
+import { getFolderNoteDetectionSettings } from '../../utils/folderNoteLookup';
 import { calculateFolderNoteCounts } from '../../utils/noteCountUtils';
 import { createTagNoteCountInfo, findTagNode } from '../../utils/tagTree';
 import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../types';
@@ -43,6 +43,7 @@ interface UseNavigationPaneShortcutDisplayProps {
     fileVisibility: FileVisibility;
     noteCountDB: ReturnType<typeof import('../../storage/fileOperations').getDBInstanceOrNull>;
     hiddenFolders: string[];
+    descendantExcludedFolders: string[];
     effectiveFrontmatterExclusions: string[];
     effectiveFrontmatterExclusionMatcher: ReturnType<typeof import('../../utils/fileFilters').createFrontmatterPropertyExclusionMatcher>;
     folderCountFileNameMatcher: ReturnType<typeof import('../../utils/fileFilters').createHiddenFileNameMatcherForVisibility>;
@@ -66,6 +67,7 @@ export function useNavigationPaneShortcutDisplay({
     fileVisibility,
     noteCountDB,
     hiddenFolders,
+    descendantExcludedFolders,
     effectiveFrontmatterExclusions,
     effectiveFrontmatterExclusionMatcher,
     folderCountFileNameMatcher,
@@ -121,7 +123,6 @@ export function useNavigationPaneShortcutDisplay({
 
             const folderNoteSettings = getFolderNoteDetectionSettings({
                 enableFolderNotes: settings.enableFolderNotes,
-                folderNoteName: settings.folderNoteName,
                 folderNoteNamePattern: settings.folderNoteNamePattern
             });
 
@@ -132,6 +133,7 @@ export function useNavigationPaneShortcutDisplay({
                 excludedFiles: effectiveFrontmatterExclusions,
                 excludedFileMatcher: effectiveFrontmatterExclusionMatcher,
                 excludedFolders: hiddenFolders,
+                descendantExcludedFolders,
                 fileNameMatcher: folderCountFileNameMatcher,
                 hiddenFileTagVisibility,
                 includeDescendants: includeDescendantNotes,
@@ -144,6 +146,7 @@ export function useNavigationPaneShortcutDisplay({
             app,
             effectiveFrontmatterExclusionMatcher,
             effectiveFrontmatterExclusions,
+            descendantExcludedFolders,
             fileVisibility,
             folderCountFileNameMatcher,
             getFolderCounts,

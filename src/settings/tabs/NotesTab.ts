@@ -16,16 +16,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Setting } from 'obsidian';
+import { Setting, setIcon } from 'obsidian';
+import type { SettingDefinitionItem } from 'obsidian';
 import { strings } from '../../i18n';
 import { showNotice } from '../../utils/noticeUtils';
 import type { SettingsTabContext } from './SettingsTabContext';
 import { runAsyncAction } from '../../utils/async';
-import { createSettingGroupFactory } from '../settingGroups';
 import { addSettingSyncModeToggle } from '../syncModeToggle';
-import { setElementVisible, wireToggleSettingWithSubSettings } from '../subSettings';
+import { attachColorSwatchSetting } from '../colorSwatchSetting';
 import { DEFAULT_SETTINGS } from '../defaultSettings';
-import type { FeatureImagePixelSizeSetting, FeatureImageSizeSetting } from '../types';
+import { createDropdownDefinition, createGroupDefinition, createRenderDefinition, createToggleDefinition } from '../nativeSettingControls';
+import { isFeatureImagePixelSizeSetting, isFeatureImageSizeSetting, showsCharacterCount, showsWordCount } from '../types';
 import {
     normalizeFileNameIconMapKey,
     normalizeFileTypeIconMapKey,
@@ -34,6 +35,16 @@ import {
     type IconMapParseResult
 } from '../../utils/iconizeFormat';
 import { formatCommaSeparatedList, parseCommaSeparatedList } from '../../utils/commaSeparatedListUtils';
+import { EXTERNAL_ICON_PROVIDERS } from '../../services/icons/external/providerRegistry';
+import { FILE_TYPE_ICON_PROVIDER_PRESET_IDS, isFileTypeIconPreset, isFileTypeIconProviderPreset } from '../../utils/fileTypeIconPresets';
+import {
+    getMarkdownTextCountDependencies,
+    subscribeMarkdownWordCountConsumerChanges,
+    type MarkdownTextCountDependency
+} from '../../utils/markdownPipelineContentTypes';
+import { parsePropertyNodeId } from '../../utils/propertyTree';
+import { ItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../../types';
+import { getVirtualTagCollection, isVirtualTagCollectionId } from '../../utils/virtualTagCollections';
 
 function parseFileTypeIconMapText(value: string): IconMapParseResult {
     return parseIconMapText(value, normalizeFileTypeIconMapKey);
@@ -49,320 +60,703 @@ interface ColorSettingAccess {
     defaultValue: string;
 }
 
-/** Renders the notes settings tab */
-export function renderNotesTab(context: SettingsTabContext): void {
-    const { app, containerEl, plugin } = context;
+interface FileTypeIconPresetOption {
+    label: string;
+    isInstalled: boolean;
+}
 
-    const createGroup = createSettingGroupFactory(containerEl);
-    const tasksGroup = createGroup(strings.settings.groups.notes.tasks);
-    const iconGroup = createGroup(strings.settings.groups.notes.icon);
-    const titleGroup = createGroup(strings.settings.groups.notes.title);
-    const previewTextGroup = createGroup(strings.settings.groups.notes.previewText);
-    const featureImageGroup = createGroup(strings.settings.groups.notes.featureImage);
-    const tagsGroup = createGroup(strings.settings.groups.notes.tags);
-    const notePropertyGroup = createGroup(strings.settings.groups.notes.properties);
-    const dateGroup = createGroup(strings.settings.groups.notes.date);
-    const parentFolderGroup = createGroup(strings.settings.groups.notes.parentFolder);
+const MAX_VISIBLE_TEXT_COUNT_DEPENDENCIES = 3;
 
-    const setGroupVisible = (groupRootEl: HTMLElement, visible: boolean) => {
-        setElementVisible(groupRootEl, visible);
+export function formatTextCountDependencyScope(dependency: MarkdownTextCountDependency): string {
+    if (dependency.reason === 'group-header') {
+        return dependency.path;
+    }
 
-        const headingEl = groupRootEl.previousElementSibling;
-        if (headingEl instanceof HTMLElement && headingEl.classList.contains('setting-item-heading')) {
-            setElementVisible(headingEl, visible);
+    const labels = strings.settings.items.textCountActiveNotice.scopes;
+    switch (dependency.selectionType) {
+        case ItemType.FOLDER:
+            return labels.folder.replace('{name}', dependency.key);
+        case ItemType.TAG:
+            if (isVirtualTagCollectionId(dependency.key)) {
+                return getVirtualTagCollection(dependency.key).getLabel();
+            }
+            return labels.tag.replace('{name}', dependency.key);
+        case ItemType.PROPERTY: {
+            if (dependency.key === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
+                return strings.navigationPane.properties;
+            }
+            const parsed = parsePropertyNodeId(dependency.key);
+            const name = parsed ? (parsed.valuePath ? `${parsed.key} = ${parsed.valuePath}` : parsed.key) : dependency.key;
+            return labels.property.replace('{name}', name);
+        }
+        default:
+            return dependency.key;
+    }
+}
+
+/** Renders the explanatory footer shown when non-display settings keep word or character counting active. */
+export function renderTextCountActiveNotice(setting: Setting, context: SettingsTabContext): void {
+    const dependencies = getMarkdownTextCountDependencies(context.app, context.plugin.settings);
+    const copy = strings.settings.items.textCountActiveNotice;
+
+    setting.setName('').setDesc('');
+    setting.settingEl.addClass('nn-setting-info-container');
+    setting.settingEl.addClass('nn-setting-info-list');
+    setting.settingEl.addClass('nn-setting-text-count-warning');
+    setting.descEl.empty();
+
+    const headerEl = setting.descEl.createDiv({ cls: 'nn-setting-text-count-warning-header' });
+    const iconEl = headerEl.createSpan({ cls: 'nn-setting-text-count-warning-icon', attr: { 'aria-hidden': 'true' } });
+    setIcon(iconEl, 'lucide-triangle-alert');
+    headerEl.createEl('strong', { text: copy.title });
+
+    setting.descEl.createDiv({ text: copy.summary });
+
+    const listEl = setting.descEl.createEl('ol');
+    dependencies.slice(0, MAX_VISIBLE_TEXT_COUNT_DEPENDENCIES).forEach(dependency => {
+        const itemEl = listEl.createEl('li');
+        const reason = copy.reasons[dependency.reason];
+        itemEl.createEl('strong', { text: reason });
+        itemEl.appendText(`: ${formatTextCountDependencyScope(dependency)}`);
+    });
+    if (dependencies.length > MAX_VISIBLE_TEXT_COUNT_DEPENDENCIES) {
+        const remainingCount = dependencies.length - MAX_VISIBLE_TEXT_COUNT_DEPENDENCIES;
+        listEl.createEl('li', { text: copy.more.replace('{count}', remainingCount.toString()) });
+    }
+}
+
+/** Builds native 1.13 setting definitions for note appearance and metadata settings. */
+export function createNotesSettingDefinitions(context: SettingsTabContext): SettingDefinitionItem[] {
+    const { plugin } = context;
+
+    return [
+        createGroupDefinition(strings.settings.pages.fileDisplay.groups.icon, [
+            createToggleDefinition('showFileIcons', {
+                name: strings.settings.items.showFileIcons.name,
+                desc: strings.settings.items.showFileIcons.desc
+            }),
+            createDropdownDefinition('unfinishedTaskIcon', {
+                name: strings.settings.items.unfinishedTaskIcon.name,
+                desc: strings.settings.items.unfinishedTaskIcon.desc,
+                aliases: Object.values(strings.settings.items.unfinishedTaskIcon.options),
+                options: {
+                    none: strings.settings.items.unfinishedTaskIcon.options.disabled,
+                    compact: strings.settings.items.unfinishedTaskIcon.options.compact,
+                    all: strings.settings.items.unfinishedTaskIcon.options.standardAndCompact
+                },
+                visible: () => plugin.settings.showFileIcons
+            }),
+            createToggleDefinition('useFolderIconForFiles', {
+                name: strings.settings.items.useFolderIcon.name,
+                desc: strings.settings.items.useFolderIcon.desc,
+                visible: () => plugin.settings.showFileIcons
+            }),
+            createToggleDefinition('showFilenameMatchIcons', {
+                name: strings.settings.items.showFileNameIcons.name,
+                desc: strings.settings.items.showFileNameIcons.desc,
+                visible: () => plugin.settings.showFileIcons
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.fileNameIconMap.name,
+                desc: strings.settings.items.fileNameIconMap.desc,
+                aliases: [strings.settings.items.fileNameIconMap.placeholder, strings.settings.items.fileNameIconMap.editTooltip],
+                visible: () => plugin.settings.showFileIcons && plugin.settings.showFilenameMatchIcons,
+                render: setting =>
+                    renderIconMapSetting(setting, context, {
+                        name: strings.settings.items.fileNameIconMap.name,
+                        desc: strings.settings.items.fileNameIconMap.desc,
+                        placeholder: strings.settings.items.fileNameIconMap.placeholder,
+                        tooltip: strings.settings.items.fileNameIconMap.editTooltip,
+                        mode: 'fileName',
+                        getMap: () => plugin.settings.fileNameIconMap,
+                        setMap: nextMap => {
+                            plugin.settings.fileNameIconMap = nextMap;
+                        },
+                        parse: parseFileNameIconMapText,
+                        normalizeKey: normalizeFileNameIconMapKey
+                    })
+            }),
+            createToggleDefinition('showCategoryIcons', {
+                name: strings.settings.items.showFileTypeIcons.name,
+                desc: strings.settings.items.showFileTypeIcons.desc,
+                visible: () => plugin.settings.showFileIcons
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.fileTypeIconPreset.name,
+                desc: strings.settings.items.fileTypeIconPreset.desc,
+                aliases: Object.values(getFileTypeIconPresetOptions(context)).map(option => option.label),
+                visible: () => plugin.settings.showFileIcons && plugin.settings.showCategoryIcons,
+                render: setting => renderFileTypeIconPresetSetting(setting, context)
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.fileTypeIconMap.name,
+                desc: strings.settings.items.fileTypeIconMap.desc,
+                aliases: [strings.settings.items.fileTypeIconMap.placeholder, strings.settings.items.fileTypeIconMap.editTooltip],
+                visible: () => plugin.settings.showFileIcons && plugin.settings.showCategoryIcons,
+                render: setting =>
+                    renderIconMapSetting(setting, context, {
+                        name: strings.settings.items.fileTypeIconMap.name,
+                        desc: strings.settings.items.fileTypeIconMap.desc,
+                        placeholder: strings.settings.items.fileTypeIconMap.placeholder,
+                        tooltip: strings.settings.items.fileTypeIconMap.editTooltip,
+                        mode: 'fileType',
+                        getMap: () => plugin.settings.fileTypeIconMap,
+                        setMap: nextMap => {
+                            plugin.settings.fileTypeIconMap = nextMap;
+                        },
+                        parse: parseFileTypeIconMapText,
+                        normalizeKey: normalizeFileTypeIconMapKey
+                    })
+            })
+        ]),
+        createGroupDefinition(strings.settings.pages.fileDisplay.groups.title, [
+            createRenderDefinition({
+                name: strings.settings.items.titleRows.name,
+                desc: strings.settings.items.titleRows.desc,
+                aliases: Object.values(strings.settings.items.titleRows.options),
+                render: setting => renderFileNameRowsSetting(setting, context)
+            }),
+            createToggleDefinition('useFolderColorForTitles', {
+                name: strings.settings.items.useFolderColor.name,
+                desc: strings.settings.items.useFolderColor.desc
+            })
+        ]),
+        createGroupDefinition(strings.settings.pages.fileDisplay.groups.previewText, [
+            createToggleDefinition('showFilePreview', {
+                name: strings.settings.items.showNotePreview.name,
+                desc: strings.settings.items.showNotePreview.desc
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.previewRows.name,
+                desc: strings.settings.items.previewRows.desc,
+                aliases: Object.values(strings.settings.items.previewRows.options),
+                visible: () => plugin.settings.showFilePreview,
+                render: setting => renderPreviewRowsSetting(setting, context)
+            }),
+            createToggleDefinition('skipHeadingsInPreview', {
+                name: strings.settings.items.skipHeadingsInPreview.name,
+                desc: strings.settings.items.skipHeadingsInPreview.desc,
+                visible: () => plugin.settings.showFilePreview
+            }),
+            createToggleDefinition('skipCodeBlocksInPreview', {
+                name: strings.settings.items.skipCodeBlocksInPreview.name,
+                desc: strings.settings.items.skipCodeBlocksInPreview.desc,
+                visible: () => plugin.settings.showFilePreview
+            }),
+            createToggleDefinition('skipCalloutsInPreview', {
+                name: strings.settings.items.skipCalloutsInPreview.name,
+                desc: strings.settings.items.skipCalloutsInPreview.desc,
+                visible: () => plugin.settings.showFilePreview
+            }),
+            createToggleDefinition('stripHtmlInPreview', {
+                name: strings.settings.items.stripHtmlInPreview.name,
+                desc: strings.settings.items.stripHtmlInPreview.desc,
+                visible: () => plugin.settings.showFilePreview
+            }),
+            createToggleDefinition('stripLatexInPreview', {
+                name: strings.settings.items.stripLatexInPreview.name,
+                desc: strings.settings.items.stripLatexInPreview.desc,
+                visible: () => plugin.settings.showFilePreview
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.previewProperties.name,
+                desc: strings.settings.items.previewProperties.desc,
+                aliases: [strings.settings.items.previewProperties.placeholder],
+                visible: () => plugin.settings.showFilePreview,
+                render: setting =>
+                    renderCommaSeparatedTextSetting(setting, context, {
+                        name: strings.settings.items.previewProperties.name,
+                        desc: strings.settings.items.previewProperties.desc,
+                        placeholder: strings.settings.items.previewProperties.placeholder,
+                        getValue: () => formatCommaSeparatedList(plugin.settings.previewProperties),
+                        setValue: value => {
+                            plugin.settings.previewProperties = parseCommaSeparatedList(value);
+                        },
+                        onAfterUpdate: () => context.refreshSettingsDomState()
+                    })
+            }),
+            createToggleDefinition('previewPropertiesFallback', {
+                name: strings.settings.items.fallbackToNoteContent.name,
+                desc: strings.settings.items.fallbackToNoteContent.desc,
+                visible: () => plugin.settings.showFilePreview && plugin.settings.previewProperties.length > 0
+            })
+        ]),
+        createGroupDefinition(strings.settings.pages.fileDisplay.groups.featureImage, [
+            createToggleDefinition('showFeatureImage', {
+                name: strings.settings.items.showFeatureImage.name,
+                desc: strings.settings.items.showFeatureImage.desc
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.featureImageProperties.name,
+                desc: strings.settings.items.featureImageProperties.desc,
+                aliases: [strings.settings.items.featureImageProperties.placeholder],
+                visible: () => plugin.settings.showFeatureImage,
+                render: setting =>
+                    renderCommaSeparatedTextSetting(setting, context, {
+                        name: strings.settings.items.featureImageProperties.name,
+                        desc: strings.settings.items.featureImageProperties.desc,
+                        placeholder: strings.settings.items.featureImageProperties.placeholder,
+                        getValue: () => formatCommaSeparatedList(plugin.settings.featureImageProperties),
+                        setValue: value => {
+                            plugin.settings.featureImageProperties = parseCommaSeparatedList(value);
+                        }
+                    })
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.featureImageExcludeProperties.name,
+                desc: strings.settings.items.featureImageExcludeProperties.desc,
+                aliases: [strings.settings.items.featureImageExcludeProperties.placeholder],
+                visible: () => plugin.settings.showFeatureImage,
+                render: setting =>
+                    renderCommaSeparatedTextSetting(setting, context, {
+                        name: strings.settings.items.featureImageExcludeProperties.name,
+                        desc: strings.settings.items.featureImageExcludeProperties.desc,
+                        placeholder: strings.settings.items.featureImageExcludeProperties.placeholder,
+                        getValue: () => formatCommaSeparatedList(plugin.settings.featureImageExcludeProperties),
+                        setValue: value => {
+                            plugin.settings.featureImageExcludeProperties = parseCommaSeparatedList(value);
+                        }
+                    })
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.featureImageDisplaySize.name,
+                desc: strings.settings.items.featureImageDisplaySize.desc,
+                aliases: Object.values(strings.settings.items.featureImageDisplaySize.options),
+                visible: () => plugin.settings.showFeatureImage,
+                render: setting => renderFeatureImageSizeSetting(setting, context)
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.featureImagePixelSize.name,
+                desc: strings.settings.items.featureImagePixelSize.desc,
+                aliases: Object.values(strings.settings.items.featureImagePixelSize.options),
+                visible: () => plugin.settings.showFeatureImage,
+                render: setting => renderFeatureImagePixelSizeSetting(setting, context)
+            }),
+            createToggleDefinition('forceSquareFeatureImage', {
+                name: strings.settings.items.forceSquareFeatureImage.name,
+                desc: strings.settings.items.forceSquareFeatureImage.desc,
+                visible: () => plugin.settings.showFeatureImage
+            }),
+            createToggleDefinition('downloadExternalFeatureImages', {
+                name: strings.settings.items.downloadExternalFeatureImages.name,
+                desc: strings.settings.items.downloadExternalFeatureImages.desc,
+                visible: () => plugin.settings.showFeatureImage
+            })
+        ]),
+        createGroupDefinition(
+            strings.settings.pages.fileDisplay.groups.tags,
+            [
+                createToggleDefinition('showFileTags', {
+                    name: strings.settings.items.showFileTags.name,
+                    desc: strings.settings.items.showFileTags.desc
+                }),
+                createToggleDefinition('colorFileTags', {
+                    name: strings.settings.items.colorFileTags.name,
+                    desc: strings.settings.items.colorFileTags.desc,
+                    visible: () => plugin.settings.showFileTags
+                }),
+                createToggleDefinition('prioritizeColoredFileTags', {
+                    name: strings.settings.items.showColoredTagsFirst.name,
+                    desc: strings.settings.items.showColoredTagsFirst.desc,
+                    visible: () => plugin.settings.showFileTags && plugin.settings.colorFileTags
+                }),
+                createToggleDefinition('showFileTagAncestors', {
+                    name: strings.settings.items.showFullTagPaths.name,
+                    desc: strings.settings.items.showFullTagPaths.desc,
+                    visible: () => plugin.settings.showFileTags
+                }),
+                createToggleDefinition('showFileTagsInCompactMode', {
+                    name: strings.settings.items.showFileTagsInCompactMode.name,
+                    desc: strings.settings.items.showFileTagsInCompactMode.desc,
+                    visible: () => plugin.settings.showFileTags
+                })
+            ],
+            { visible: () => plugin.settings.showTags }
+        ),
+        createGroupDefinition(strings.settings.pages.fileDisplay.groups.properties, [
+            createToggleDefinition('showFileProperties', {
+                name: strings.settings.items.showFileProperties.name,
+                desc: strings.settings.items.showFileProperties.desc
+            }),
+            createToggleDefinition('colorFileProperties', {
+                name: strings.settings.items.colorFileProperties.name,
+                desc: strings.settings.items.colorFileProperties.desc,
+                visible: () => plugin.settings.showFileProperties
+            }),
+            createToggleDefinition('prioritizeColoredFileProperties', {
+                name: strings.settings.items.showColoredPropertiesFirst.name,
+                desc: strings.settings.items.showColoredPropertiesFirst.desc,
+                visible: () => plugin.settings.showFileProperties && plugin.settings.colorFileProperties
+            }),
+            createToggleDefinition('showFilePropertiesInCompactMode', {
+                name: strings.settings.items.showFilePropertiesInCompactMode.name,
+                desc: strings.settings.items.showFilePropertiesInCompactMode.desc,
+                visible: () => plugin.settings.showFileProperties
+            }),
+            createToggleDefinition('showPropertiesOnSeparateRows', {
+                name: strings.settings.items.showPropertiesOnSeparateRows.name,
+                desc: strings.settings.items.showPropertiesOnSeparateRows.desc,
+                visible: () => plugin.settings.showFileProperties
+            }),
+            createToggleDefinition('enablePropertyInternalLinks', {
+                name: strings.settings.items.linkPropertyPillsToNotes.name,
+                desc: strings.settings.items.linkPropertyPillsToNotes.desc,
+                visible: () => plugin.settings.showFileProperties
+            }),
+            createToggleDefinition('enablePropertyExternalLinks', {
+                name: strings.settings.items.linkPropertyPillsToUrls.name,
+                desc: strings.settings.items.linkPropertyPillsToUrls.desc,
+                visible: () => plugin.settings.showFileProperties
+            })
+        ]),
+        createGroupDefinition(strings.settings.pages.fileDisplay.groups.tasks, [
+            createToggleDefinition('showFileTaskProgress', {
+                name: strings.settings.items.showFileTaskProgress.name,
+                desc: strings.settings.items.showFileTaskProgress.desc
+            }),
+            createToggleDefinition('showFileTaskProgressCount', {
+                name: strings.settings.items.showFileTaskProgressCount.name,
+                desc: strings.settings.items.showFileTaskProgressCount.desc,
+                visible: () => plugin.settings.showFileTaskProgress
+            }),
+            createToggleDefinition('showFileTaskProgressBar', {
+                name: strings.settings.items.showFileTaskProgressBar.name,
+                desc: strings.settings.items.showFileTaskProgressBar.desc,
+                visible: () => plugin.settings.showFileTaskProgress
+            }),
+            createToggleDefinition('hideFileTaskProgressWhenComplete', {
+                name: strings.settings.items.hideFileTaskProgressWhenComplete.name,
+                desc: strings.settings.items.hideFileTaskProgressWhenComplete.desc,
+                visible: () => plugin.settings.showFileTaskProgress
+            }),
+            createToggleDefinition('showFileBackgroundUnfinishedTask', {
+                name: strings.settings.items.unfinishedTaskBackground.name,
+                desc: strings.settings.items.unfinishedTaskBackground.desc
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.unfinishedTaskBackgroundColor.name,
+                desc: strings.settings.items.unfinishedTaskBackgroundColor.desc,
+                visible: () => plugin.settings.showFileBackgroundUnfinishedTask,
+                render: setting =>
+                    renderColorSetting(setting, context, {
+                        name: strings.settings.items.unfinishedTaskBackgroundColor.name,
+                        desc: strings.settings.items.unfinishedTaskBackgroundColor.desc,
+                        access: {
+                            getValue: () => plugin.settings.unfinishedTaskBackgroundColor,
+                            setValue: value => {
+                                plugin.settings.unfinishedTaskBackgroundColor = value;
+                            },
+                            defaultValue: DEFAULT_SETTINGS.unfinishedTaskBackgroundColor
+                        },
+                        darkAccess: {
+                            getValue: () => plugin.settings.unfinishedTaskBackgroundColorDark,
+                            setValue: value => {
+                                plugin.settings.unfinishedTaskBackgroundColorDark = value;
+                            },
+                            defaultValue: DEFAULT_SETTINGS.unfinishedTaskBackgroundColorDark
+                        }
+                    })
+            })
+        ]),
+        createGroupDefinition(strings.settings.pages.fileDisplay.groups.date, [
+            createToggleDefinition('showFileDate', {
+                name: strings.settings.items.showFileDate.name,
+                desc: strings.settings.items.showFileDate.desc
+            }),
+            createDropdownDefinition('alphabeticalDateMode', {
+                name: strings.settings.items.dateWhenSortingByName.name,
+                desc: strings.settings.items.dateWhenSortingByName.desc,
+                aliases: Object.values(strings.settings.items.dateWhenSortingByName.options),
+                visible: () => plugin.settings.showFileDate,
+                options: {
+                    created: strings.settings.items.dateWhenSortingByName.options.created,
+                    modified: strings.settings.items.dateWhenSortingByName.options.modified
+                }
+            })
+        ]),
+        createGroupDefinition(strings.settings.pages.fileDisplay.groups.parentFolder, [
+            createToggleDefinition('showParentFolder', {
+                name: strings.settings.items.showParentFolder.name,
+                desc: strings.settings.items.showParentFolder.desc
+            }),
+            createToggleDefinition('showParentFolderFullPath', {
+                name: strings.settings.items.showFolderPath.name,
+                desc: strings.settings.items.showFolderPath.desc,
+                visible: () => plugin.settings.showParentFolder
+            }),
+            createToggleDefinition('parentFolderClickRevealsFile', {
+                name: strings.settings.items.parentFolderClickOpensFolder.name,
+                desc: strings.settings.items.parentFolderClickOpensFolder.desc,
+                visible: () => plugin.settings.showParentFolder
+            }),
+            createToggleDefinition('showParentFolderColor', {
+                name: strings.settings.items.showParentFolderColor.name,
+                desc: strings.settings.items.showParentFolderColor.desc,
+                visible: () => plugin.settings.showParentFolder
+            }),
+            createToggleDefinition('showParentFolderIcon', {
+                name: strings.settings.items.showParentFolderIcon.name,
+                desc: strings.settings.items.showParentFolderIcon.desc,
+                visible: () => plugin.settings.showParentFolder
+            })
+        ]),
+        createGroupDefinition(strings.settings.pages.fileDisplay.groups.wordAndCharacterCount, [
+            createDropdownDefinition('textCountDisplay', {
+                name: strings.settings.items.textCountType.name,
+                desc: strings.settings.items.textCountType.desc,
+                aliases: Object.values(strings.settings.items.textCountType.options),
+                options: {
+                    none: strings.settings.items.textCountType.options.none,
+                    words: strings.settings.items.textCountType.options.words,
+                    characters: strings.settings.items.textCountType.options.characters,
+                    both: strings.settings.items.textCountType.options.both
+                }
+            }),
+            createDropdownDefinition('textCountPlacement', {
+                name: strings.settings.items.textCountPlacement.name,
+                desc: strings.settings.items.textCountPlacement.desc,
+                aliases: Object.values(strings.settings.items.textCountPlacement.options),
+                visible: () => plugin.settings.textCountDisplay !== 'none',
+                options: {
+                    title: strings.settings.items.textCountPlacement.options.title,
+                    property: strings.settings.items.textCountPlacement.options.property
+                }
+            }),
+            createDropdownDefinition('characterCountSpaces', {
+                name: strings.settings.items.characterCountSpaces.name,
+                desc: strings.settings.items.characterCountSpaces.desc,
+                aliases: Object.values(strings.settings.items.characterCountSpaces.options),
+                visible: () => showsCharacterCount(plugin.settings.textCountDisplay),
+                options: {
+                    include: strings.settings.items.characterCountSpaces.options.include,
+                    exclude: strings.settings.items.characterCountSpaces.options.exclude
+                }
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.wordCountTargetProperty.name,
+                desc: strings.settings.items.wordCountTargetProperty.desc,
+                aliases: [DEFAULT_SETTINGS.wordCountTargetProperty],
+                visible: () => showsWordCount(plugin.settings.textCountDisplay),
+                render: setting => {
+                    context.configureDebouncedTextSetting(
+                        setting,
+                        strings.settings.items.wordCountTargetProperty.name,
+                        strings.settings.items.wordCountTargetProperty.desc,
+                        DEFAULT_SETTINGS.wordCountTargetProperty,
+                        () => plugin.settings.wordCountTargetProperty,
+                        value => {
+                            plugin.settings.wordCountTargetProperty = value.trim();
+                        }
+                    );
+                    setting.controlEl.addClass('nn-setting-wide-input');
+                }
+            }),
+            createToggleDefinition('showWordCountPercentage', {
+                name: strings.settings.items.showTargetPercentage.name,
+                desc: strings.settings.items.showTargetPercentage.desc,
+                visible: () => showsWordCount(plugin.settings.textCountDisplay)
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.textCountActiveNotice.title,
+                searchable: false,
+                visible: () => getMarkdownTextCountDependencies(context.app, plugin.settings).length > 0,
+                render: setting => {
+                    const refresh = () => renderTextCountActiveNotice(setting, context);
+                    context.registerSettingsUpdateListener('notes-text-count-active-notice', refresh);
+                    const unsubscribe = subscribeMarkdownWordCountConsumerChanges(context.app, () => {
+                        refresh();
+                        context.refreshSettingsDomState();
+                    });
+                    context.registerSettingsRenderCleanup(unsubscribe);
+                    refresh();
+                }
+            })
+        ])
+    ];
+}
+
+function renderColorSetting(
+    setting: Setting,
+    context: SettingsTabContext,
+    params: { name: string; desc: string; access: ColorSettingAccess; darkAccess?: ColorSettingAccess }
+): void {
+    attachColorSwatchSetting({
+        app: context.app,
+        plugin: context.plugin,
+        setting,
+        name: params.name,
+        desc: params.desc,
+        access: params.access,
+        darkAccess: params.darkAccess,
+        showRestoreDefault: true
+    });
+}
+
+function getFileTypeIconPresetOptions(context: SettingsTabContext): Record<string, FileTypeIconPresetOption> {
+    const options: Record<string, FileTypeIconPresetOption> = {
+        none: {
+            label: strings.settings.items.fileTypeIconPreset.options.builtIn,
+            isInstalled: true
         }
     };
 
-    const createColorSetting = (params: { containerEl: HTMLElement; name: string; desc: string; access: ColorSettingAccess }): void => {
-        const setting = new Setting(params.containerEl).setName(params.name).setDesc(params.desc);
+    FILE_TYPE_ICON_PROVIDER_PRESET_IDS.forEach(providerId => {
+        const config = EXTERNAL_ICON_PROVIDERS[providerId];
+        const isInstalled = context.plugin.isExternalIconProviderInstalled(providerId);
+        options[providerId] = {
+            label: config.name,
+            isInstalled
+        };
+    });
 
-        const previewEl = setting.controlEl.createDiv({ cls: 'nn-setting-color-preview' });
-        const swatchButtonEl = previewEl.createEl('button', {
-            cls: 'nn-setting-color-swatch-button',
-            attr: {
-                type: 'button',
-                'aria-label': params.name
+    return options;
+}
+
+function isSelectedFileTypeIconPresetUnavailable(context: SettingsTabContext): boolean {
+    const { plugin } = context;
+    const preset = plugin.settings.fileTypeIconPreset;
+    return isFileTypeIconProviderPreset(preset) && !plugin.isExternalIconProviderInstalled(preset);
+}
+
+function renderFileTypeIconPresetSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+    const options = getFileTypeIconPresetOptions(context);
+
+    setting.setName(strings.settings.items.fileTypeIconPreset.name).setDesc(strings.settings.items.fileTypeIconPreset.desc);
+    const warningEl = setting.descEl.createDiv({
+        cls: 'setting-item-description nn-setting-hidden nn-setting-warning'
+    });
+
+    const updateWarning = () => {
+        const showWarning = isSelectedFileTypeIconPresetUnavailable(context);
+        warningEl.setText(showWarning ? strings.settings.items.fileTypeIconPreset.notInstalledWarning : '');
+        warningEl.toggleClass('nn-setting-hidden', !showWarning);
+    };
+
+    setting.addDropdown(dropdown => {
+        Object.entries(options).forEach(([value, option]) => {
+            dropdown.addOption(value, option.label);
+        });
+
+        Object.entries(options).forEach(([value, option]) => {
+            if (option.isInstalled) {
+                return;
+            }
+
+            const optionEl = Array.from(dropdown.selectEl.options).find(candidate => candidate.value === value);
+            if (optionEl) {
+                optionEl.disabled = true;
             }
         });
-        const swatchEl = swatchButtonEl.createDiv({ cls: 'nn-setting-color-swatch' });
 
-        const renderValue = () => {
-            const current = params.access.getValue();
-            swatchEl.style.backgroundColor = current;
-            swatchButtonEl.setAttribute('title', current);
-        };
+        dropdown.setValue(plugin.settings.fileTypeIconPreset).onChange(async value => {
+            if (!isFileTypeIconPreset(value)) {
+                return;
+            }
 
-        const openColorPicker = () => {
-            runAsyncAction(async () => {
-                if (!plugin.metadataService) {
-                    showNotice(strings.common.unknownError, { variant: 'warning' });
-                    return;
-                }
-
-                const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-                const modal = new ColorPickerModal(app, {
-                    title: params.name,
-                    initialColor: params.access.getValue(),
-                    settingsProvider: plugin.metadataService.getSettingsProvider(),
-                    onChooseColor: async color => {
-                        const nextValue = typeof color === 'string' && color.trim().length > 0 ? color.trim() : params.access.defaultValue;
-                        params.access.setValue(nextValue);
-                        await plugin.saveSettingsAndUpdate();
-                        renderValue();
-                    }
-                });
-
-                modal.open();
-            });
-        };
-
-        swatchButtonEl.addEventListener('click', openColorPicker);
-
-        renderValue();
-
-        setting.addExtraButton(button => {
-            button
-                .setIcon('lucide-rotate-ccw')
-                .setTooltip(`${strings.common.restoreDefault} (${params.access.defaultValue})`)
-                .onClick(() => {
-                    runAsyncAction(async () => {
-                        const current = params.access.getValue();
-                        if (current === params.access.defaultValue) {
-                            return;
-                        }
-
-                        params.access.setValue(params.access.defaultValue);
-                        await plugin.saveSettingsAndUpdate();
-                        renderValue();
-                    });
-                });
+            plugin.settings.fileTypeIconPreset = value;
+            updateWarning();
+            await plugin.saveSettingsAndUpdate();
         });
-    };
-
-    tasksGroup.addSetting(setting => {
-        setting
-            .setName(strings.settings.items.showFileIconUnfinishedTask.name)
-            .setDesc(strings.settings.items.showFileIconUnfinishedTask.desc)
-            .addToggle(toggle =>
-                toggle.setValue(plugin.settings.showFileIconUnfinishedTask).onChange(async value => {
-                    plugin.settings.showFileIconUnfinishedTask = value;
-                    await plugin.saveSettingsAndUpdate();
-                })
-            );
     });
 
-    const showFileBackgroundUnfinishedTaskSetting = tasksGroup.addSetting(setting => {
-        setting
-            .setName(strings.settings.items.showFileBackgroundUnfinishedTask.name)
-            .setDesc(strings.settings.items.showFileBackgroundUnfinishedTask.desc);
-    });
+    updateWarning();
+}
 
-    const unfinishedTaskBackgroundSettingsEl = wireToggleSettingWithSubSettings(
-        showFileBackgroundUnfinishedTaskSetting,
-        () => plugin.settings.showFileBackgroundUnfinishedTask,
-        async value => {
-            plugin.settings.showFileBackgroundUnfinishedTask = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    createColorSetting({
-        containerEl: unfinishedTaskBackgroundSettingsEl,
-        name: strings.settings.items.unfinishedTaskBackgroundColor.name,
-        desc: strings.settings.items.unfinishedTaskBackgroundColor.desc,
-        access: {
-            getValue: () => plugin.settings.unfinishedTaskBackgroundColor,
-            setValue: value => {
-                plugin.settings.unfinishedTaskBackgroundColor = value;
-            },
-            defaultValue: DEFAULT_SETTINGS.unfinishedTaskBackgroundColor
-        }
-    });
-
-    const showFileIconsSetting = iconGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.showFileIcons.name).setDesc(strings.settings.items.showFileIcons.desc);
-    });
-
-    const fileIconSubSettingsEl = wireToggleSettingWithSubSettings(
-        showFileIconsSetting,
-        () => plugin.settings.showFileIcons,
-        async value => {
-            plugin.settings.showFileIcons = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    let updateFileNameIconMapVisibility: (() => void) | null = null;
-    let updateFileTypeIconMapVisibility: (() => void) | null = null;
-
-    /**
-     * Adds an edit button to an icon map setting that opens the visual rule editor modal
-     */
-    const addIconMapEditorButton = (options: {
-        setting: Setting;
+function renderIconMapSetting(
+    setting: Setting,
+    context: SettingsTabContext,
+    options: {
+        name: string;
+        desc: string;
+        placeholder: string;
         tooltip: string;
-        title: string;
         mode: 'fileName' | 'fileType';
         getMap: () => Record<string, string>;
         setMap: (nextMap: Record<string, string>) => void;
+        parse: (value: string) => IconMapParseResult;
         normalizeKey: (input: string) => string;
-    }): void => {
-        options.setting.addExtraButton(button =>
-            button
-                .setIcon('lucide-pencil')
-                .setTooltip(options.tooltip)
-                .onClick(() => {
-                    runAsyncAction(async () => {
-                        const metadataService = plugin.metadataService;
-                        if (!metadataService) {
-                            showNotice(strings.common.unknownError, { variant: 'warning' });
-                            return;
-                        }
+    }
+): void {
+    const { app, plugin } = context;
 
-                        const { FileIconRuleEditorModal } = await import('../../modals/FileIconRuleEditorModal');
-                        const modal = new FileIconRuleEditorModal(app, {
-                            title: options.title,
-                            mode: options.mode,
-                            initialMap: options.getMap(),
-                            fallbackIconId: 'file',
-                            metadataService,
-                            normalizeKey: options.normalizeKey,
-                            onSave: async nextMap => {
-                                options.setMap(nextMap);
+    context.configureDebouncedTextAreaSetting(
+        setting,
+        options.name,
+        options.desc,
+        options.placeholder,
+        () => serializeIconMapRecord(options.getMap()),
+        value => {
+            const parsed = options.parse(value);
+            options.setMap(parsed.map);
+        },
+        {
+            rows: 3,
+            validator: value => options.parse(value).invalidLines.length === 0
+        }
+    );
 
-                                const textarea = options.setting.controlEl.querySelector('textarea');
-                                if (textarea instanceof HTMLTextAreaElement) {
-                                    textarea.value = serializeIconMapRecord(nextMap);
-                                }
+    setting.addExtraButton(button =>
+        button
+            .setIcon('lucide-pencil')
+            .setTooltip(options.tooltip)
+            .onClick(() => {
+                runAsyncAction(async () => {
+                    const metadataService = plugin.metadataService;
+                    if (!metadataService) {
+                        showNotice(strings.common.unknownError, { variant: 'warning' });
+                        return;
+                    }
 
-                                await plugin.saveSettingsAndUpdate();
+                    const { FileIconRuleEditorModal } = await import('../../modals/FileIconRuleEditorModal');
+                    const modal = new FileIconRuleEditorModal(app, {
+                        title: options.name,
+                        mode: options.mode,
+                        initialMap: options.getMap(),
+                        fallbackIconId: 'file',
+                        metadataService,
+                        normalizeKey: options.normalizeKey,
+                        onSave: async nextMap => {
+                            options.setMap(nextMap);
+
+                            const textarea = setting.controlEl.querySelector('textarea');
+                            if (textarea instanceof HTMLTextAreaElement) {
+                                textarea.value = serializeIconMapRecord(nextMap);
                             }
-                        });
-                        modal.open();
+
+                            await plugin.saveSettingsAndUpdate();
+                        }
                     });
+                    modal.open();
+                });
+            })
+    );
+    setting.controlEl.addClass('nn-setting-wide-input');
+}
+
+function renderFileNameRowsSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+
+    setting
+        .setName(strings.settings.items.titleRows.name)
+        .setDesc(strings.settings.items.titleRows.desc)
+        .addDropdown(dropdown =>
+            dropdown
+                .addOption('1', strings.settings.items.titleRows.options['1'])
+                .addOption('2', strings.settings.items.titleRows.options['2'])
+                .addOption('3', strings.settings.items.titleRows.options['3'])
+                .setValue(plugin.settings.fileNameRows.toString())
+                .onChange(async value => {
+                    plugin.settings.fileNameRows = parseInt(value, 10);
+                    await plugin.saveSettingsAndUpdate();
                 })
         );
-    };
+}
 
-    new Setting(fileIconSubSettingsEl)
-        .setName(strings.settings.items.showFilenameMatchIcons.name)
-        .setDesc(strings.settings.items.showFilenameMatchIcons.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showFilenameMatchIcons).onChange(async value => {
-                plugin.settings.showFilenameMatchIcons = value;
-                await plugin.saveSettingsAndUpdate();
-                updateFileNameIconMapVisibility?.();
-            })
-        );
+function renderPreviewRowsSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
 
-    const fileNameIconMapSetting = context.createDebouncedTextAreaSetting(
-        fileIconSubSettingsEl,
-        strings.settings.items.fileNameIconMap.name,
-        strings.settings.items.fileNameIconMap.desc,
-        strings.settings.items.fileNameIconMap.placeholder,
-        () => serializeIconMapRecord(plugin.settings.fileNameIconMap),
-        value => {
-            const parsed = parseFileNameIconMapText(value);
-            plugin.settings.fileNameIconMap = parsed.map;
-        },
-        {
-            rows: 3,
-            validator: value => parseFileNameIconMapText(value).invalidLines.length === 0
-        }
-    );
-
-    addIconMapEditorButton({
-        setting: fileNameIconMapSetting,
-        tooltip: strings.settings.items.fileNameIconMap.editTooltip,
-        title: strings.settings.items.fileNameIconMap.name,
-        mode: 'fileName',
-        getMap: () => plugin.settings.fileNameIconMap,
-        setMap: nextMap => {
-            plugin.settings.fileNameIconMap = nextMap;
-        },
-        normalizeKey: normalizeFileNameIconMapKey
-    });
-    fileNameIconMapSetting.controlEl.addClass('nn-setting-wide-input');
-    updateFileNameIconMapVisibility = () => {
-        setElementVisible(fileNameIconMapSetting.settingEl, plugin.settings.showFilenameMatchIcons);
-    };
-    updateFileNameIconMapVisibility();
-
-    new Setting(fileIconSubSettingsEl)
-        .setName(strings.settings.items.showCategoryIcons.name)
-        .setDesc(strings.settings.items.showCategoryIcons.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showCategoryIcons).onChange(async value => {
-                plugin.settings.showCategoryIcons = value;
-                await plugin.saveSettingsAndUpdate();
-                updateFileTypeIconMapVisibility?.();
-            })
-        );
-
-    const fileTypeIconMapSetting = context.createDebouncedTextAreaSetting(
-        fileIconSubSettingsEl,
-        strings.settings.items.fileTypeIconMap.name,
-        strings.settings.items.fileTypeIconMap.desc,
-        strings.settings.items.fileTypeIconMap.placeholder,
-        () => serializeIconMapRecord(plugin.settings.fileTypeIconMap),
-        value => {
-            const parsed = parseFileTypeIconMapText(value);
-            plugin.settings.fileTypeIconMap = parsed.map;
-        },
-        {
-            rows: 3,
-            validator: value => parseFileTypeIconMapText(value).invalidLines.length === 0
-        }
-    );
-
-    addIconMapEditorButton({
-        setting: fileTypeIconMapSetting,
-        tooltip: strings.settings.items.fileTypeIconMap.editTooltip,
-        title: strings.settings.items.fileTypeIconMap.name,
-        mode: 'fileType',
-        getMap: () => plugin.settings.fileTypeIconMap,
-        setMap: nextMap => {
-            plugin.settings.fileTypeIconMap = nextMap;
-        },
-        normalizeKey: normalizeFileTypeIconMapKey
-    });
-    fileTypeIconMapSetting.controlEl.addClass('nn-setting-wide-input');
-    updateFileTypeIconMapVisibility = () => {
-        setElementVisible(fileTypeIconMapSetting.settingEl, plugin.settings.showCategoryIcons);
-    };
-    updateFileTypeIconMapVisibility();
-
-    titleGroup.addSetting(setting => {
-        setting
-            .setName(strings.settings.items.fileNameRows.name)
-            .setDesc(strings.settings.items.fileNameRows.desc)
-            .addDropdown(dropdown =>
-                dropdown
-                    .addOption('1', strings.settings.items.fileNameRows.options['1'])
-                    .addOption('2', strings.settings.items.fileNameRows.options['2'])
-                    .addOption('3', strings.settings.items.fileNameRows.options['3'])
-                    .setValue(plugin.settings.fileNameRows.toString())
-                    .onChange(async value => {
-                        plugin.settings.fileNameRows = parseInt(value, 10);
-                        await plugin.saveSettingsAndUpdate();
-                    })
-            );
-    });
-
-    const showPreviewSetting = previewTextGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.showFilePreview.name).setDesc(strings.settings.items.showFilePreview.desc);
-    });
-
-    const previewSettingsEl = wireToggleSettingWithSubSettings(
-        showPreviewSetting,
-        () => plugin.settings.showFilePreview,
-        async value => {
-            plugin.settings.showFilePreview = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    new Setting(previewSettingsEl)
+    setting
         .setName(strings.settings.items.previewRows.name)
         .setDesc(strings.settings.items.previewRows.desc)
         .addDropdown(dropdown =>
@@ -378,382 +772,73 @@ export function renderNotesTab(context: SettingsTabContext): void {
                     await plugin.saveSettingsAndUpdate();
                 })
         );
+}
 
-    new Setting(previewSettingsEl)
-        .setName(strings.settings.items.skipHeadingsInPreview.name)
-        .setDesc(strings.settings.items.skipHeadingsInPreview.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.skipHeadingsInPreview).onChange(async value => {
-                plugin.settings.skipHeadingsInPreview = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(previewSettingsEl)
-        .setName(strings.settings.items.skipCodeBlocksInPreview.name)
-        .setDesc(strings.settings.items.skipCodeBlocksInPreview.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.skipCodeBlocksInPreview).onChange(async value => {
-                plugin.settings.skipCodeBlocksInPreview = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(previewSettingsEl)
-        .setName(strings.settings.items.stripHtmlInPreview.name)
-        .setDesc(strings.settings.items.stripHtmlInPreview.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.stripHtmlInPreview).onChange(async value => {
-                plugin.settings.stripHtmlInPreview = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(previewSettingsEl)
-        .setName(strings.settings.items.stripLatexInPreview.name)
-        .setDesc(strings.settings.items.stripLatexInPreview.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.stripLatexInPreview).onChange(async value => {
-                plugin.settings.stripLatexInPreview = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    const previewPropertiesSetting = context.createDebouncedTextSetting(
-        previewSettingsEl,
-        strings.settings.items.previewProperties.name,
-        strings.settings.items.previewProperties.desc,
-        strings.settings.items.previewProperties.placeholder,
-        () => formatCommaSeparatedList(plugin.settings.previewProperties),
-        value => {
-            plugin.settings.previewProperties = parseCommaSeparatedList(value);
-        },
+function renderCommaSeparatedTextSetting(
+    setting: Setting,
+    context: SettingsTabContext,
+    options: {
+        name: string;
+        desc: string;
+        placeholder: string;
+        getValue: () => string;
+        setValue: (value: string) => void;
+        onAfterUpdate?: () => void;
+    }
+): void {
+    context.configureDebouncedTextSetting(
+        setting,
+        options.name,
+        options.desc,
+        options.placeholder,
+        options.getValue,
+        options.setValue,
         undefined,
-        () => {
-            updatePreviewFallbackVisibility();
-        }
+        options.onAfterUpdate
     );
-    previewPropertiesSetting.controlEl.addClass('nn-setting-wide-input');
+    setting.controlEl.addClass('nn-setting-wide-input');
+}
 
-    const previewFallbackSetting = new Setting(previewSettingsEl)
-        .setName(strings.settings.items.previewPropertiesFallback.name)
-        .setDesc(strings.settings.items.previewPropertiesFallback.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.previewPropertiesFallback).onChange(async value => {
-                plugin.settings.previewPropertiesFallback = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
+function renderFeatureImageSizeSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
 
-    const updatePreviewFallbackVisibility = () => {
-        setElementVisible(previewFallbackSetting.settingEl, plugin.settings.previewProperties.length > 0);
-    };
-    updatePreviewFallbackVisibility();
-
-    const showFeatureImageSetting = featureImageGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.showFeatureImage.name).setDesc(strings.settings.items.showFeatureImage.desc);
-    });
-
-    const featureImageSettingsEl = wireToggleSettingWithSubSettings(
-        showFeatureImageSetting,
-        () => plugin.settings.showFeatureImage,
-        async value => {
-            plugin.settings.showFeatureImage = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    const featurePropertiesSetting = context.createDebouncedTextSetting(
-        featureImageSettingsEl,
-        strings.settings.items.featureImageProperties.name,
-        strings.settings.items.featureImageProperties.desc,
-        strings.settings.items.featureImageProperties.placeholder,
-        () => formatCommaSeparatedList(plugin.settings.featureImageProperties),
-        value => {
-            plugin.settings.featureImageProperties = parseCommaSeparatedList(value);
-        }
-    );
-    featurePropertiesSetting.controlEl.addClass('nn-setting-wide-input');
-
-    const featureExcludePropertiesSetting = context.createDebouncedTextSetting(
-        featureImageSettingsEl,
-        strings.settings.items.featureImageExcludeProperties.name,
-        strings.settings.items.featureImageExcludeProperties.desc,
-        strings.settings.items.featureImageExcludeProperties.placeholder,
-        () => formatCommaSeparatedList(plugin.settings.featureImageExcludeProperties),
-        value => {
-            plugin.settings.featureImageExcludeProperties = parseCommaSeparatedList(value);
-        }
-    );
-    featureExcludePropertiesSetting.controlEl.addClass('nn-setting-wide-input');
-
-    const featureImageSizeSetting = new Setting(featureImageSettingsEl)
-        .setName(strings.settings.items.featureImageSize.name)
-        .setDesc(strings.settings.items.featureImageSize.desc)
+    setting
+        .setName(strings.settings.items.featureImageDisplaySize.name)
+        .setDesc(strings.settings.items.featureImageDisplaySize.desc)
         .addDropdown(dropdown =>
             dropdown
-                .addOption('64', strings.settings.items.featureImageSize.options.standard)
-                .addOption('96', strings.settings.items.featureImageSize.options.large)
-                .addOption('128', strings.settings.items.featureImageSize.options.extraLarge)
+                .addOption('64', strings.settings.items.featureImageDisplaySize.options['64'])
+                .addOption('96', strings.settings.items.featureImageDisplaySize.options['96'])
+                .addOption('128', strings.settings.items.featureImageDisplaySize.options['128'])
                 .setValue(plugin.settings.featureImageSize)
-                .onChange((value: FeatureImageSizeSetting) => {
+                .onChange(value => {
+                    if (!isFeatureImageSizeSetting(value)) {
+                        return;
+                    }
                     plugin.setFeatureImageSize(value);
                 })
         );
-    addSettingSyncModeToggle({ setting: featureImageSizeSetting, plugin, settingId: 'featureImageSize' });
+    addSettingSyncModeToggle({ setting, plugin, settingId: 'featureImageSize' });
+}
 
-    const featureImagePixelSizeSetting = new Setting(featureImageSettingsEl)
+function renderFeatureImagePixelSizeSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+
+    setting
         .setName(strings.settings.items.featureImagePixelSize.name)
         .setDesc(strings.settings.items.featureImagePixelSize.desc)
         .addDropdown(dropdown =>
             dropdown
-                .addOption('256', strings.settings.items.featureImagePixelSize.options.standard)
-                .addOption('384', strings.settings.items.featureImagePixelSize.options.large)
-                .addOption('512', strings.settings.items.featureImagePixelSize.options.extraLarge)
+                .addOption('256', strings.settings.items.featureImagePixelSize.options['256x144'])
+                .addOption('384', strings.settings.items.featureImagePixelSize.options['384x216'])
+                .addOption('512', strings.settings.items.featureImagePixelSize.options['512x288'])
                 .setValue(plugin.settings.featureImagePixelSize)
-                .onChange((value: FeatureImagePixelSizeSetting) => {
+                .onChange(value => {
+                    if (!isFeatureImagePixelSizeSetting(value)) {
+                        return;
+                    }
                     plugin.setFeatureImagePixelSize(value);
                 })
         );
-    addSettingSyncModeToggle({ setting: featureImagePixelSizeSetting, plugin, settingId: 'featureImagePixelSize' });
-
-    new Setting(featureImageSettingsEl)
-        .setName(strings.settings.items.forceSquareFeatureImage.name)
-        .setDesc(strings.settings.items.forceSquareFeatureImage.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.forceSquareFeatureImage).onChange(async value => {
-                plugin.settings.forceSquareFeatureImage = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(featureImageSettingsEl)
-        .setName(strings.settings.items.downloadExternalFeatureImages.name)
-        .setDesc(strings.settings.items.downloadExternalFeatureImages.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.downloadExternalFeatureImages).onChange(async value => {
-                plugin.settings.downloadExternalFeatureImages = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    const showFileTagsSetting = tagsGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.showFileTags.name).setDesc(strings.settings.items.showFileTags.desc);
-    });
-
-    const fileTagsSubSettingsEl = wireToggleSettingWithSubSettings(
-        showFileTagsSetting,
-        () => plugin.settings.showFileTags,
-        async value => {
-            plugin.settings.showFileTags = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    const colorFileTagsSetting = new Setting(fileTagsSubSettingsEl)
-        .setName(strings.settings.items.colorFileTags.name)
-        .setDesc(strings.settings.items.colorFileTags.desc);
-    const colorFileTagsSubSettingsEl = wireToggleSettingWithSubSettings(
-        colorFileTagsSetting,
-        () => plugin.settings.colorFileTags,
-        async value => {
-            plugin.settings.colorFileTags = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    new Setting(colorFileTagsSubSettingsEl)
-        .setName(strings.settings.items.prioritizeColoredFileTags.name)
-        .setDesc(strings.settings.items.prioritizeColoredFileTags.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.prioritizeColoredFileTags).onChange(async value => {
-                plugin.settings.prioritizeColoredFileTags = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(fileTagsSubSettingsEl)
-        .setName(strings.settings.items.showFileTagAncestors.name)
-        .setDesc(strings.settings.items.showFileTagAncestors.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showFileTagAncestors).onChange(async value => {
-                plugin.settings.showFileTagAncestors = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(fileTagsSubSettingsEl)
-        .setName(strings.settings.items.showFileTagsInCompactMode.name)
-        .setDesc(strings.settings.items.showFileTagsInCompactMode.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showFileTagsInCompactMode).onChange(async value => {
-                plugin.settings.showFileTagsInCompactMode = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    const showFilePropertiesSetting = notePropertyGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.showFileProperties.name).setDesc(strings.settings.items.showFileProperties.desc);
-    });
-
-    const filePropertiesSubSettingsEl = wireToggleSettingWithSubSettings(
-        showFilePropertiesSetting,
-        () => plugin.settings.showFileProperties,
-        async value => {
-            plugin.settings.showFileProperties = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    const colorFilePropertiesSetting = new Setting(filePropertiesSubSettingsEl)
-        .setName(strings.settings.items.colorFileProperties.name)
-        .setDesc(strings.settings.items.colorFileProperties.desc);
-
-    const colorFilePropertiesSubSettingsEl = wireToggleSettingWithSubSettings(
-        colorFilePropertiesSetting,
-        () => plugin.settings.colorFileProperties,
-        async value => {
-            plugin.settings.colorFileProperties = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    new Setting(colorFilePropertiesSubSettingsEl)
-        .setName(strings.settings.items.prioritizeColoredFileProperties.name)
-        .setDesc(strings.settings.items.prioritizeColoredFileProperties.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.prioritizeColoredFileProperties).onChange(async value => {
-                plugin.settings.prioritizeColoredFileProperties = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(filePropertiesSubSettingsEl)
-        .setName(strings.settings.items.showFilePropertiesInCompactMode.name)
-        .setDesc(strings.settings.items.showFilePropertiesInCompactMode.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showFilePropertiesInCompactMode).onChange(async value => {
-                plugin.settings.showFilePropertiesInCompactMode = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(filePropertiesSubSettingsEl)
-        .setName(strings.settings.items.showPropertiesOnSeparateRows.name)
-        .setDesc(strings.settings.items.showPropertiesOnSeparateRows.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showPropertiesOnSeparateRows).onChange(async value => {
-                plugin.settings.showPropertiesOnSeparateRows = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(filePropertiesSubSettingsEl)
-        .setName(strings.settings.items.enablePropertyInternalLinks.name)
-        .setDesc(strings.settings.items.enablePropertyInternalLinks.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.enablePropertyInternalLinks).onChange(async value => {
-                plugin.settings.enablePropertyInternalLinks = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(filePropertiesSubSettingsEl)
-        .setName(strings.settings.items.enablePropertyExternalLinks.name)
-        .setDesc(strings.settings.items.enablePropertyExternalLinks.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.enablePropertyExternalLinks).onChange(async value => {
-                plugin.settings.enablePropertyExternalLinks = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    notePropertyGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.notePropertyType.name).setDesc(strings.settings.items.notePropertyType.desc);
-        setting.addDropdown(dropdown =>
-            dropdown
-                .addOption('none', strings.settings.items.notePropertyType.options.none)
-                .addOption('wordCount', strings.settings.items.notePropertyType.options.wordCount)
-                .setValue(plugin.settings.notePropertyType)
-                .onChange(async value => {
-                    plugin.settings.notePropertyType = value === 'wordCount' ? 'wordCount' : 'none';
-                    await plugin.saveSettingsAndUpdate();
-                })
-        );
-    });
-
-    const showFileDateSetting = dateGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.showFileDate.name).setDesc(strings.settings.items.showFileDate.desc);
-    });
-
-    const fileDateSubSettingsEl = wireToggleSettingWithSubSettings(
-        showFileDateSetting,
-        () => plugin.settings.showFileDate,
-        async value => {
-            plugin.settings.showFileDate = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    // Dropdown to choose which date to display when sorting alphabetically
-    new Setting(fileDateSubSettingsEl)
-        .setName(strings.settings.items.alphabeticalDateMode.name)
-        .setDesc(strings.settings.items.alphabeticalDateMode.desc)
-        .addDropdown(dropdown =>
-            dropdown
-                .addOption('created', strings.settings.items.alphabeticalDateMode.options.created)
-                .addOption('modified', strings.settings.items.alphabeticalDateMode.options.modified)
-                .setValue(plugin.settings.alphabeticalDateMode)
-                .onChange(async value => {
-                    plugin.settings.alphabeticalDateMode = value === 'modified' ? 'modified' : 'created';
-                    await plugin.saveSettingsAndUpdate();
-                })
-        );
-
-    const showParentFolderSetting = parentFolderGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.showParentFolder.name).setDesc(strings.settings.items.showParentFolder.desc);
-    });
-
-    const parentFolderSettingsEl = wireToggleSettingWithSubSettings(
-        showParentFolderSetting,
-        () => plugin.settings.showParentFolder,
-        async value => {
-            plugin.settings.showParentFolder = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    new Setting(parentFolderSettingsEl)
-        .setName(strings.settings.items.parentFolderClickRevealsFile.name)
-        .setDesc(strings.settings.items.parentFolderClickRevealsFile.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.parentFolderClickRevealsFile).onChange(async value => {
-                plugin.settings.parentFolderClickRevealsFile = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(parentFolderSettingsEl)
-        .setName(strings.settings.items.showParentFolderColor.name)
-        .setDesc(strings.settings.items.showParentFolderColor.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showParentFolderColor).onChange(async value => {
-                plugin.settings.showParentFolderColor = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(parentFolderSettingsEl)
-        .setName(strings.settings.items.showParentFolderIcon.name)
-        .setDesc(strings.settings.items.showParentFolderIcon.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.showParentFolderIcon).onChange(async value => {
-                plugin.settings.showParentFolderIcon = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    context.registerShowTagsListener(visible => {
-        setGroupVisible(tagsGroup.rootEl, visible);
-    });
+    addSettingSyncModeToggle({ setting, plugin, settingId: 'featureImagePixelSize' });
 }

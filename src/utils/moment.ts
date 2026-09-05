@@ -17,9 +17,11 @@
  */
 
 import { getCurrentLanguage } from '../i18n';
+import type { CalendarPeriodicNotesLocaleSource } from '../settings/types';
 
 export interface MomentLocaleData {
     firstDayOfWeek(): number;
+    firstDayOfYear?(): number;
     weekdaysMin(): string[];
     weekdaysShort(): string[];
 }
@@ -188,4 +190,17 @@ export function resolveCalendarLocales(
         displayLocale,
         calendarRulesLocale: resolvedCalendarRulesLocale
     };
+}
+
+export function resolveDailyNoteLocale(momentApi: MomentApi | null): string {
+    const fallbackLocale = momentApi?.locale() || 'en';
+    return resolveMomentLocale(fallbackLocale, momentApi, fallbackLocale);
+}
+
+export function resolveCalendarPeriodicNotesLocale(
+    source: CalendarPeriodicNotesLocaleSource,
+    calendarRulesLocale: string,
+    momentApi: MomentApi | null
+): string {
+    return source === 'obsidian' ? resolveDailyNoteLocale(momentApi) : calendarRulesLocale;
 }

@@ -18,7 +18,7 @@
 
 import { App, Modal, setIcon, TFile } from 'obsidian';
 import { strings } from '../i18n';
-import { isImageFile } from '../utils/fileTypeUtils';
+import { isRasterImageFile } from '../utils/fileTypeUtils';
 
 type AttachmentViewMode = 'tree' | 'gallery';
 
@@ -168,7 +168,7 @@ class DeleteFileAttachmentsModal extends Modal {
 
         for (const binding of this.buttonBindings) {
             binding.element.removeEventListener('click', binding.handler);
-            if (binding.element instanceof HTMLInputElement) {
+            if (binding.element.instanceOf(HTMLInputElement)) {
                 binding.element.removeEventListener('change', binding.handler);
             }
         }
@@ -337,7 +337,7 @@ class DeleteFileAttachmentsModal extends Modal {
             this.registerFileCheckbox(file.path, checkboxEl);
 
             const embedEl = itemEl.createDiv({ cls: ['download-attachment-embed', 'media-embed', 'image-embed', 'is-loaded'] });
-            if (isImageFile(file)) {
+            if (isRasterImageFile(file)) {
                 const src = resourcePathCache.get(file.path) ?? this.app.vault.getResourcePath(file);
                 resourcePathCache.set(file.path, src);
                 embedEl.createEl('img', { attr: { src, alt: file.name } });

@@ -23,7 +23,7 @@ import { PropertyTreeNode, TagTreeNode } from '../types/storage';
 import type { FolderTreeItem, TagTreeItem } from '../types/virtualization';
 import { isFolderInExcludedFolder } from './fileFilters';
 import { matchesHiddenTagPattern, HiddenTagMatcher } from './tagPrefixMatcher';
-import type { AlphaSortOrder } from '../settings';
+import type { AlphaSortOrder } from '../settings/types';
 
 /** Options for flattenFolderTree function */
 interface FlattenFolderTreeOptions {

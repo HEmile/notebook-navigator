@@ -4,129 +4,45 @@
    Settings Page Styles
    ======================================================================== */
 
-/* Settings page indentation for sub-settings */
-.nn-sub-settings {
-    margin-inline-start: 20px;
-    padding-left: 1em;
-}
-
-/* Restore bottom padding on last setting inside sub-settings containers
-   (Obsidian's .setting-item:last-child removes it, but nested containers need it) */
-.nn-sub-settings > .setting-item:last-child {
-    padding-bottom: var(--size-4-4);
-}
-
 /* Settings layout root */
 .nn-settings-tab-root {
     display: block;
     min-height: 0;
 }
 
-/* Settings tabs layout and navigation */
-.nn-settings-tabs {
-    display: block;
-    min-height: 0;
-}
-
-.nn-settings-tabs-nav {
-    display: flex;
-    flex-direction: column;
-    gap: var(--size-2-3);
-    flex-shrink: 0;
-    margin-bottom: var(--size-4-4);
-}
-
-.nn-settings-tabs-nav-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--size-2-3);
-}
-
-.nn-settings-tabs-nav-row.is-hidden {
+.nn-settings-tab-root .setting-group.nn-settings-lifecycle-group {
     display: none;
 }
 
-.nn-settings-tabs-nav-row.is-icons-hidden .nn-settings-tab-icon {
-    display: none;
-}
-
-/* Separator between primary and secondary tab rows */
-.nn-settings-tabs-nav-secondary {
-    gap: var(--size-2-2);
-    border-top: 1px solid var(--background-modifier-border);
-    padding-top: var(--size-2-3);
-}
-
-.nn-settings-tab-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--size-2-2);
-    padding: 6px 12px;
-    font-size: var(--font-ui-small);
-}
-
-/* Icon inside settings tab buttons */
-.nn-settings-tab-icon {
-    display: inline-flex;
-    align-items: center;
-}
-
-.nn-settings-tab-icon svg {
-    width: 16px;
-    height: 16px;
-    stroke-width: 2;
-}
-
-.nn-settings-tab-button.is-hidden {
-    display: none;
-}
-
-.nn-settings-tab-button-primary.is-group-active {
-    background-color: transparent;
-    color: var(--interactive-accent);
-    opacity: 0.85;
-}
-
-.nn-settings-tab-button-primary.is-group-active:hover {
-    background-color: var(--background-modifier-hover);
-    opacity: 1;
-}
-
-.nn-settings-tab-button-secondary {
-    padding: 5px 10px;
-}
-
-.nn-settings-tab-button-secondary.is-active {
-    background-color: var(--background-modifier-hover);
-    color: var(--text-normal);
-}
-
-.nn-settings-tabs-content {
-    position: static;
-    min-height: 0;
-    overflow: visible;
-    box-sizing: border-box;
-    padding-inline-end: 0;
-}
-
-/* Hide tabs by default, show only active tab */
-.nn-settings-tab {
-    display: none;
-}
-
-.nn-settings-tab.is-active {
-    display: block;
+.nn-settings-tab-root .setting-group.nn-settings-lifecycle-group + .setting-group {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
 /* Settings section header spacing */
-.setting-item-heading {
+.nn-settings-tab-root .setting-item-heading {
     margin-top: 30px;
 }
 
 /* First settings header - no top margin */
-.setting-item-heading:first-child {
+.nn-settings-tab-root .setting-item-heading:first-child {
     margin-top: 0;
+}
+
+.nn-settings-legacy-titlebar {
+    padding-inline: 0;
+}
+
+.nn-settings-legacy-titlebar .setting-item-name {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+}
+
+.nn-settings-legacy-page-link:focus-visible {
+    outline: 2px solid var(--background-modifier-border-focus);
+    outline-offset: -2px;
 }
 
 /* Utility class for conditionally hidden settings */
@@ -164,48 +80,37 @@
     opacity: 1;
 }
 
-/* Setting name marker appended to setting names */
-.nn-settings-tab-root .setting-item-name.nn-setting-name-marker::after {
-    content: ' ' attr(data-nn-setting-marker);
-    color: var(--text-muted);
-    font-weight: normal;
-}
-
-.mod-rtl .nn-settings-tab-root .setting-item-name.nn-setting-name-marker::after {
-    content: '';
-}
-
-.mod-rtl .nn-settings-tab-root .setting-item-name.nn-setting-name-marker::before {
-    content: attr(data-nn-setting-marker) ' ';
-    color: var(--text-muted);
-    font-weight: normal;
-}
-
-/* Dim disabled calendar pattern text inputs */
-.nn-settings-tab-root .setting-item.nn-setting-disabled input[type='text']:disabled {
-    opacity: 0.6;
-    pointer-events: none;
-    -webkit-user-select: none;
-    user-select: none;
-}
-
 /* Container for additional info below settings */
 .nn-setting-info-container {
     margin-top: 8px;
     margin-bottom: 8px;
 }
 
-.nn-setting-info-container.nn-setting-info-centered.setting-item {
-    justify-content: center;
+.nn-setting-info-list ol {
+    margin: 6px 0 0 1.5em;
+    padding: 0;
 }
 
-.nn-setting-info-container.nn-setting-info-centered .setting-item-info,
-.nn-setting-info-container.nn-setting-info-centered .setting-item-description {
-    text-align: center;
+.nn-setting-info-list li + li {
+    margin-top: 4px;
 }
 
-.nn-sub-settings > .setting-item.nn-setting-property-keys-info:last-child {
-    padding-bottom: 0;
+.nn-setting-text-count-warning-header {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    margin-bottom: var(--size-2-2);
+}
+
+.nn-setting-text-count-warning-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--text-warning);
+}
+
+.nn-setting-text-count-warning-icon svg {
+    width: 16px;
+    height: 16px;
 }
 
 /* Wider text inputs for settings that benefit from more space */
@@ -279,24 +184,6 @@
     box-sizing: border-box;
 }
 
-.nn-toolbar-visibility-sections {
-    display: flex;
-    flex-direction: column;
-    gap: var(--size-4-4);
-}
-
-.nn-toolbar-visibility-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--size-2-2);
-}
-
-.nn-toolbar-visibility-group-label {
-    font-size: var(--font-ui-small);
-    font-weight: var(--font-semibold);
-    color: var(--nn-theme-foreground-muted);
-}
-
 .nn-toolbar-visibility-grid {
     display: flex;
     flex-wrap: wrap;
@@ -328,18 +215,31 @@
     margin-inline-start: auto;
 }
 
-.nn-toolbar-visibility-toggle {
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button {
     position: relative;
     padding: 0;
-    /* Override mobile toolbar button dimensions for settings */
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
 }
 
-.nn-toolbar-visibility-toggle:not(.nn-mobile-toolbar-button-active) {
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button:not(.nn-mobile-toolbar-button-active) {
     opacity: 0.6;
+}
+
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button.nn-mobile-toolbar-button-active {
+    color: var(--nn-theme-mobile-toolbar-button-active-icon-color);
+    background-color: var(--nn-theme-mobile-toolbar-button-active-bg);
+}
+
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button.nn-mobile-toolbar-button-active .nn-toolbar-visibility-icon {
+    color: var(--nn-theme-mobile-toolbar-button-active-icon-color);
+}
+
+button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button.nn-mobile-toolbar-button-active svg:not(.nn-vault-icon-svg) {
+    stroke: var(--nn-theme-mobile-toolbar-button-active-icon-color);
+    stroke-width: 2;
 }
 
 .nn-toolbar-visibility-icon {
@@ -351,10 +251,15 @@
     color: var(--nn-theme-foreground);
 }
 
-.nn-toolbar-visibility-icon svg {
+.nn-toolbar-visibility-icon svg:not(.nn-vault-icon-svg) {
     width: 18px;
     height: 18px;
     stroke-width: 1.5;
+}
+
+.nn-toolbar-visibility-icon svg.nn-vault-icon-svg {
+    width: 18px;
+    height: 18px;
 }
 
 /* Mobile-specific toolbar visibility button styles */
@@ -383,28 +288,28 @@
 }
 
 /* YouTube-style play button used in settings */
-.nn-youtube-button {
-    background-color: #ff0000 !important;
-    border: none !important;
-    color: #ffffff !important;
+button.nn-youtube-button {
+    background-color: #ff0000;
+    border: none;
+    color: #ffffff;
     min-width: 54px;
 }
 
-.nn-youtube-button:hover {
-    background-color: #cc0000 !important;
+button.nn-youtube-button:hover {
+    background-color: #cc0000;
 }
 
-.nn-youtube-button svg {
-    color: #ffffff !important;
-    fill: #ffffff !important;
-    stroke: none !important;
+button.nn-youtube-button svg {
+    color: #ffffff;
+    fill: #ffffff;
+    stroke: none;
 }
 
-.is-mobile .nn-toolbar-visibility-toggle {
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
+.is-mobile button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
 }
 
 .is-mobile .nn-toolbar-visibility-icon {
@@ -418,11 +323,11 @@
 }
 
 /* Android-specific adjustments for smaller buttons */
-.notebook-navigator-android .nn-toolbar-visibility-toggle {
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-    min-height: 40px !important;
+.notebook-navigator-android button.nn-toolbar-visibility-toggle.nn-mobile-toolbar-button {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
 }
 
 .notebook-navigator-android .nn-toolbar-visibility-icon {
@@ -445,11 +350,113 @@
     max-width: none;
 }
 
+.nn-slider-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nn-slider-control input[type='range'] {
+    flex: 0 0 100px;
+}
+
 .nn-slider-value {
-    margin-left: 12px;
+    flex: 0 0 48px;
     font-size: var(--font-ui-smaller);
     color: var(--nn-theme-foreground-muted);
-    min-width: 48px;
     text-align: right;
     font-variant-numeric: tabular-nums;
+}
+
+/* Cards linking to the author's other plugins on the settings start page */
+.setting-item.nn-plugin-cards {
+    display: block;
+}
+
+/* One column when the settings pane is narrow, because the description needs the width */
+.nn-plugin-card-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16em, 1fr));
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-2);
+}
+
+/* A button so the whole card can be reached from the keyboard. The declarations before the
+   layout undo the button styling a theme applies. */
+.nn-plugin-card {
+    height: auto;
+    padding: var(--size-4-3);
+    background-color: var(--background-secondary);
+    box-shadow: none;
+    text-align: start;
+    white-space: normal;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--size-4-3);
+    width: 100%;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    cursor: pointer;
+}
+
+.nn-plugin-card:hover {
+    border-color: var(--background-modifier-border-hover);
+    background-color: var(--background-modifier-hover);
+}
+
+.nn-plugin-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: var(--size-4-8);
+    height: var(--size-4-8);
+    border-radius: var(--radius-m);
+    background-color: var(--background-primary);
+    color: var(--text-accent);
+}
+
+/* min-width lets a long word wrap instead of stretching the card past its column */
+.nn-plugin-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-1);
+    min-width: 0;
+}
+
+.nn-plugin-card-name {
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold);
+    line-height: 1.3;
+}
+
+/* One line whatever the language, cut with an ellipsis, so every card is the same height */
+.nn-plugin-card-description {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Sits at the far edge, the way Obsidian marks a row that opens somewhere else. It keeps to
+   the middle of the card while the icon and the name line up at the top. */
+.nn-plugin-card-arrow {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    color: var(--text-faint);
+}
+
+.nn-plugin-card-arrow .svg-icon {
+    width: var(--icon-s);
+    height: var(--icon-s);
+}
+
+.nn-plugin-card:hover .nn-plugin-card-arrow {
+    color: var(--text-muted);
 }

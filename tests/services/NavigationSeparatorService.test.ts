@@ -24,9 +24,11 @@ import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { ISettingsProvider } from '../../src/interfaces/ISettingsProvider';
 import type { CleanupValidators } from '../../src/services/MetadataService';
 import { createDefaultFileData } from '../../src/storage/indexeddb/fileData';
+import type { TagTreeNode } from '../../src/types/storage';
 import { buildPropertySeparatorKey, buildTagSeparatorKey } from '../../src/utils/navigationSeparators';
 import { buildPropertyValueNodeId } from '../../src/utils/propertyTree';
 import { setActivePropertyFields } from '../../src/utils/vaultProfiles';
+import type { CollapsedPinnedContexts } from '../../src/types';
 
 class TestSettingsProvider implements ISettingsProvider {
     constructor(public settings: NotebookNavigatorSettings) {}
@@ -46,6 +48,16 @@ class TestSettingsProvider implements ISettingsProvider {
     }
 
     setRecentIcons(): void {}
+
+    collapsedPinnedContexts: CollapsedPinnedContexts = {};
+
+    getCollapsedPinnedContexts(): CollapsedPinnedContexts {
+        return { ...this.collapsedPinnedContexts };
+    }
+
+    updateCollapsedPinnedContexts(mutator: (record: CollapsedPinnedContexts) => boolean): boolean {
+        return mutator(this.collapsedPinnedContexts);
+    }
 
     getRecentColors(): string[] {
         return [];
@@ -80,6 +92,16 @@ function createMarkdownFileWithProperty(path: string, fieldKey: string, value: s
         }
     ];
     return { path, data };
+}
+
+function createTagNode(path: string, children: TagTreeNode[] = []): TagTreeNode {
+    return {
+        name: path.split('/').pop() ?? path,
+        path,
+        displayPath: path,
+        children: new Map(children.map(child => [child.path, child])),
+        notesWithTag: new Set()
+    };
 }
 
 describe('NavigationSeparatorService property cleanup', () => {
@@ -177,10 +199,11 @@ describe('NavigationSeparatorService tag cleanup', () => {
 
         const provider = new TestSettingsProvider(settings);
         const service = new NavigationSeparatorService(app, provider, () => null);
+        const reunionNode = createTagNode('réunion');
         const validators = {
             ...createValidators([]),
-            tagTree: new Map([['réunion', {}]])
-        } as CleanupValidators;
+            tagTree: new Map([[reunionNode.path, reunionNode]])
+        };
 
         const changed = await service.cleanupWithValidators(validators, settings);
 
@@ -206,5 +229,29 @@ describe('NavigationSeparatorService tag cleanup', () => {
 
         expect(changed).toBe(true);
         expect(settings.navigationSeparators).toEqual({});
+    });
+
+    it('keeps nested tag separators when the validator tree contains the descendant', async () => {
+        const settings = createSettings();
+        const separatorKey = buildTagSeparatorKey('projects/client');
+        settings.navigationSeparators = {
+            [separatorKey]: true
+        };
+
+        const provider = new TestSettingsProvider(settings);
+        const service = new NavigationSeparatorService(app, provider, () => null);
+        const childNode = createTagNode('projects/client');
+        const rootNode = createTagNode('projects', [childNode]);
+        const validators = {
+            ...createValidators([]),
+            tagTree: new Map([[rootNode.path, rootNode]])
+        };
+
+        const changed = await service.cleanupWithValidators(validators, settings);
+
+        expect(changed).toBe(false);
+        expect(settings.navigationSeparators).toEqual({
+            [separatorKey]: true
+        });
     });
 });

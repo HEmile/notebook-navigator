@@ -16,15 +16,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import React from 'react';
 import { useServices } from '../context/ServicesContext';
 import { useSettingsState } from '../context/SettingsContext';
 import { useVaultProfileMenu } from '../hooks/useVaultProfileMenu';
 import { strings } from '../i18n';
+import { usesMobileChrome } from '../utils/paneLayout';
 import { resolveUXIcon } from '../utils/uxIcons';
 import { ServiceIcon } from './ServiceIcon';
 
-export function VaultTitleArea() {
-    const { isMobile, plugin } = useServices();
+export const VaultTitleArea = React.memo(function VaultTitleArea() {
+    const { plugin } = useServices();
     const settings = useSettingsState();
 
     const { hasProfiles, hasMultipleProfiles, activeProfileName, handleTriggerClick, handleTriggerKeyDown } = useVaultProfileMenu({
@@ -33,7 +35,8 @@ export function VaultTitleArea() {
         activeProfileId: settings.vaultProfile
     });
 
-    if (isMobile || !hasProfiles || !hasMultipleProfiles) {
+    // Phones render the profile trigger inside the mobile chrome header instead.
+    if (usesMobileChrome() || !hasProfiles || !hasMultipleProfiles) {
         return null;
     }
 
@@ -56,4 +59,4 @@ export function VaultTitleArea() {
             </div>
         </div>
     );
-}
+});

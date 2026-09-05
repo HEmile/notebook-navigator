@@ -59,7 +59,7 @@ function readProviderIconIds(relativePath: string): string[] {
         return [];
     }
 
-    return Object.keys(raw as Record<string, unknown>);
+    return Object.keys(raw);
 }
 
 describe('convertIconizeToIconId', () => {
@@ -176,9 +176,11 @@ describe('normalizeCanonicalIconId', () => {
 });
 
 describe('frontmatter icon helpers', () => {
-    it('serializes canonical identifiers to the short prefixed format', () => {
-        expect(serializeIconForFrontmatter('phosphor:ph-apple-logo')).toBe('ph:apple-logo');
-        expect(serializeIconForFrontmatter('material-icons:crop_16_9')).toBe('mi:crop_16_9');
+    it('serializes canonical identifiers to the short slug format', () => {
+        expect(serializeIconForFrontmatter('phosphor:ph-apple-logo')).toBe('ph-apple-logo');
+        expect(serializeIconForFrontmatter('phosphor:file-pdf')).toBe('ph-file-pdf');
+        expect(serializeIconForFrontmatter('phosphor:receipt')).toBe('ph-receipt');
+        expect(serializeIconForFrontmatter('material-icons:crop_16_9')).toBe('mi-crop_16_9');
         expect(serializeIconForFrontmatter('home')).toBe('home');
     });
 
@@ -198,6 +200,18 @@ describe('frontmatter icon helpers', () => {
 
     it('deserializes values stored in the new frontmatter format', () => {
         expect(deserializeIconFromFrontmatter('home')).toBe('home');
+        expect(deserializeIconFromFrontmatter('ph-apple-logo')).toBe('phosphor:apple-logo');
+        expect(deserializeIconFromFrontmatter('ph-file-pdf')).toBe('phosphor:file-pdf');
+        expect(deserializeIconFromFrontmatter('ph-receipt')).toBe('phosphor:receipt');
+        expect(deserializeIconFromFrontmatter('mi-crop_16_9')).toBe('material-icons:crop_16_9');
+        expect(deserializeIconFromFrontmatter('li-star')).toBe('star');
+    });
+
+    it('prefers supported Lucide slugs before short provider values', () => {
+        expect(deserializeIconFromFrontmatter('ph-test')).toBe('ph-test');
+    });
+
+    it('deserializes legacy short provider values', () => {
         expect(deserializeIconFromFrontmatter('ph:apple-logo')).toBe('phosphor:apple-logo');
         expect(deserializeIconFromFrontmatter('mi:crop_16_9')).toBe('material-icons:crop_16_9');
         expect(deserializeIconFromFrontmatter('li:star')).toBe('star');
@@ -256,11 +270,38 @@ describe('frontmatter icon helpers', () => {
     });
 });
 
+describe('icon map examples', () => {
+    it('uses icons that exist in the bundled Phosphor metadata', () => {
+        const phosphorIconIds = new Set(readProviderIconIds('icon-assets/phosphor/icons.json'));
+
+        expect(phosphorIconIds.has('calendar')).toBe(true);
+        expect(phosphorIconIds.has('receipt')).toBe(true);
+        expect(phosphorIconIds.has('file-code')).toBe(true);
+        expect(phosphorIconIds.has('file-pdf')).toBe(true);
+    });
+});
+
 describe('parseIconMapText', () => {
     it('normalizes mapping values to frontmatter icon values', () => {
         const parsed = parseIconMapText('pdf=SiGithub', normalizeFileTypeIconMapKey);
         expect(parsed.invalidLines).toEqual([]);
-        expect(parsed.map.pdf).toBe('si:github');
+        expect(parsed.map.pdf).toBe('si-github');
+    });
+
+    it('accepts preferred short provider icon values for file type mappings', () => {
+        const parsed = parseIconMapText('cpp=ph-file-code\npdf=ph-file-pdf', normalizeFileTypeIconMapKey);
+
+        expect(parsed.invalidLines).toEqual([]);
+        expect(parsed.map.cpp).toBe('ph-file-code');
+        expect(parsed.map.pdf).toBe('ph-file-pdf');
+    });
+
+    it('accepts preferred short provider icon values for file name mappings', () => {
+        const parsed = parseIconMapText('meeting=ph-calendar\ninvoice=ph-receipt', normalizeFileNameIconMapKey);
+
+        expect(parsed.invalidLines).toEqual([]);
+        expect(parsed.map.meeting).toBe('ph-calendar');
+        expect(parsed.map.invoice).toBe('ph-receipt');
     });
 
     it('preserves plain emoji mapping values', () => {

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FileData, IndexedDBStorage } from '../storage/IndexedDBStorage';
+import { IndexedDBStorage } from '../storage/IndexedDBStorage';
 import { TopicNode } from '../types/storage';
 import { isPathInExcludedFolder } from './fileFilters';
 import { HiddenTagMatcher } from './tagPrefixMatcher';
@@ -25,10 +25,41 @@ import { App, CachedMetadata, TFile } from 'obsidian';
 // Cache for note counts to avoid recalculation
 let noteCountCache: WeakMap<TopicNode, number> | null = null;
 
-export const SUBSET_RELATIONS = ["subset", "in", "partOf", 'groep', "worksIn", 'decennium', "year", "eeuw", "maand", "stroming", "festival", "genre", "voor", "project"];
-export const HAS_TOPIC_RELATIONS = SUBSET_RELATIONS.concat(["hasTopic", "isA", "for", 'with', "author", "publishedIn", "by", "artiest", "live", "adres", "gerecht", "at"]);
-export const DEFAULT_TOPIC_TAGS = ["topic", "jaar", "decennium", "maand"];
+export const SUBSET_RELATIONS = [
+    'subset',
+    'in',
+    'partOf',
+    'groep',
+    'worksIn',
+    'decennium',
+    'year',
+    'eeuw',
+    'maand',
+    'stroming',
+    'festival',
+    'genre',
+    'voor',
+    'project'
+];
+export const HAS_TOPIC_RELATIONS = SUBSET_RELATIONS.concat([
+    'hasTopic',
+    'isA',
+    'for',
+    'with',
+    'author',
+    'publishedIn',
+    'by',
+    'artiest',
+    'live',
+    'adres',
+    'gerecht',
+    'at'
+]);
+export const DEFAULT_TOPIC_TAGS = ['topic', 'jaar', 'decennium', 'maand'];
 
+/**
+ * @public Retained cache reset for topic note counts.
+ */
 export function clearNoteCountCache(): void {
     noteCountCache = null;
 }
@@ -41,10 +72,10 @@ function getNoteCountCache(): WeakMap<TopicNode, number> {
 }
 
 export function getTopicNameFromPath(topicPath: string): string {
-    if (topicPath.includes("/")) {
+    if (topicPath.includes('/')) {
         topicPath = topicPath.split('/').pop() || '';
     }
-    if (topicPath.endsWith(".md")) {
+    if (topicPath.endsWith('.md')) {
         return topicPath.split('.').slice(0, -1).join('') || '';
     }
     return topicPath;
@@ -61,10 +92,10 @@ export function getTopicRelations(metadata: CachedMetadata, isTopicNote: boolean
     let topics: string[] = [];
     const relations = isTopicNote ? HAS_TOPIC_RELATIONS.filter(relation => !SUBSET_RELATIONS.includes(relation)) : HAS_TOPIC_RELATIONS;
     for (const relation of relations) {
-        const value = metadata.frontmatter?.[relation];
-        if (value && Symbol.iterator in Object(value)) {
-            for (const topic of metadata.frontmatter?.[relation] as string[]) {
-                if (typeof topic === "string" && topic.startsWith('[[') && topic.endsWith(']]')) {
+        const value: unknown = metadata.frontmatter?.[relation];
+        if (value && typeof value === 'object' && Symbol.iterator in value) {
+            for (const topic of value as Iterable<unknown>) {
+                if (typeof topic === 'string' && topic.startsWith('[[') && topic.endsWith(']]')) {
                     topics.push(topic);
                 }
             }
@@ -78,19 +109,25 @@ export function hasTopicTag(tags: string[], topicTags: string[] = DEFAULT_TOPIC_
     return tags?.some(tag => topicTags.some((topicTag: string) => tag.contains(topicTag)));
 }
 
-function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, app: App, visitedTopics: Set<string>, topicTags: string[]): TopicNode {
+function traverseTopicsUp(
+    allTopics: Map<string, TopicNode>,
+    topicPath: string,
+    app: App,
+    visitedTopics: Set<string>,
+    topicTags: string[]
+): TopicNode {
     const topicName = getTopicNameFromPath(topicPath);
 
     if (allTopics.has(topicName)) {
         return allTopics.get(topicName) as TopicNode;
     }
 
-    const topicNode = {
+    const topicNode: TopicNode = {
         name: topicName,
         parents: new Map(),
         children: new Map(),
         notesWithTag: new Set()
-    } as TopicNode;
+    };
     allTopics.set(topicName, topicNode);
 
     const file = app.vault.getFileByPath(topicPath);
@@ -113,13 +150,13 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
     }
 
     for (const parentTopic of topics) {
-        if (typeof parentTopic !== "string" || parentTopic.length === 0) {
+        if (typeof parentTopic !== 'string' || parentTopic.length === 0) {
             continue;
         }
         if (!(parentTopic.startsWith('[[') && parentTopic.endsWith(']]'))) {
             continue;
         }
-        const parentFile = app.metadataCache.getFirstLinkpathDest(parentTopic.slice(2, -2).split("|")[0], "");
+        const parentFile = app.metadataCache.getFirstLinkpathDest(parentTopic.slice(2, -2).split('|')[0], '');
         if (!parentFile) {
             continue;
         }
@@ -187,14 +224,14 @@ export function buildTopicGraphFromDatabase(
         }
 
         for (let topic of topics) {
-            if (typeof topic !== "string" || topic.length === 0) {
+            if (typeof topic !== 'string' || topic.length === 0) {
                 continue;
             }
             if (!(topic.startsWith('[[') && topic.endsWith(']]'))) {
                 continue;
             }
-            topic = topic.slice(2, -2).split("|")[0];
-            const topicFile = app.metadataCache.getFirstLinkpathDest(topic, "");
+            topic = topic.slice(2, -2).split('|')[0];
+            const topicFile = app.metadataCache.getFirstLinkpathDest(topic, '');
             if (!topicFile || visitedPaths.has(topicFile.path)) {
                 continue;
             }
@@ -272,7 +309,11 @@ export function getTotalNoteCount(node: TopicNode): number {
     return count;
 }
 
-export function collectTopicDescendants(node: TopicNode, paths: Set<TopicNode> = new Set(), visitedTopics: Set<string> = new Set()): Set<TopicNode> {
+export function collectTopicDescendants(
+    node: TopicNode,
+    paths: Set<TopicNode> = new Set(),
+    visitedTopics: Set<string> = new Set()
+): Set<TopicNode> {
     paths.add(node);
     if (visitedTopics.has(node.name)) {
         return paths;
@@ -388,7 +429,38 @@ export function getAllTopicPathsToRoot(topicNode: TopicNode): string[][] {
     return allPaths;
 }
 
-export function excludeFromTopicTree(tree: Map<string, TopicNode>, matcher: HiddenTagMatcher): Map<string, TopicNode> {
+/**
+ * Resolves a topic path or a bare topic name to a full slash-separated topic path.
+ *
+ * Navigation pane rows pass a full path, but topic shortcuts store only a topic name.
+ * A nested topic's name does not resolve through findTopicNodeByPath, because the top
+ * level of the graph holds root topics only, so fall back to a name search and rebuild
+ * the path from the node's first ancestor chain.
+ *
+ * @returns The resolved path, or null when the topic is not in the graph.
+ */
+export function resolveTopicPath(graph: Map<string, TopicNode>, topicPathOrName: string): string | null {
+    if (!topicPathOrName) {
+        return null;
+    }
+
+    if (findTopicNodeByPath(graph, topicPathOrName)) {
+        return topicPathOrName;
+    }
+
+    const topicNode = findTopicNode(graph, topicPathOrName);
+    if (!topicNode) {
+        return null;
+    }
+
+    const ancestorPaths = getAllTopicPathsToRoot(topicNode);
+    return ancestorPaths.length > 0 ? `${ancestorPaths[0].join('/')}/${topicNode.name}` : topicNode.name;
+}
+
+/**
+ * @public Placeholder for hidden-topic filtering; see the TODO below.
+ */
+export function excludeFromTopicTree(tree: Map<string, TopicNode>, _matcher: HiddenTagMatcher): Map<string, TopicNode> {
     // TODO: Implement topic exclusion filtering
     return tree;
 }

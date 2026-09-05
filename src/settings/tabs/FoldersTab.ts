@@ -17,185 +17,191 @@
  */
 
 import { Setting } from 'obsidian';
+import type { SettingDefinitionItem } from 'obsidian';
 import { strings } from '../../i18n';
-import { isFolderNoteCreationPreference } from '../../types/folderNote';
 import { isAlphaSortOrder } from '../types';
 import type { SettingsTabContext } from './SettingsTabContext';
-import { createSettingGroupFactory } from '../settingGroups';
+import {
+    createDropdownDefinition,
+    createGroupDefinition,
+    createRenderDefinition,
+    createTextDefinition,
+    createToggleDefinition
+} from '../nativeSettingControls';
 import { addSettingSyncModeToggle } from '../syncModeToggle';
-import { wireToggleSettingWithSubSettings } from '../subSettings';
 import { FilePathInputSuggest } from '../../suggest/FilePathInputSuggest';
-import { FOLDER_NOTE_NAME_PATTERN_PLACEHOLDER } from '../../utils/folderNoteName';
+import { FOLDER_NOTE_NAME_PATTERN_TOKEN } from '../../utils/folderNoteName';
 import { normalizeOptionalVaultFilePath } from '../../utils/pathUtils';
+import { getTemplaterCreateNoteFromTemplate } from '../../utils/templaterIntegration';
+import { isFolderNoteTemplateCompatible, isSupportedFolderNoteExtension } from '../../utils/folderNotes';
+import { setElementVisible } from '../dependentSettings';
 
-/** Renders the folders settings tab */
-export function renderFoldersTab(context: SettingsTabContext): void {
-    const { containerEl, plugin, addToggleSetting } = context;
-    const createGroup = createSettingGroupFactory(containerEl);
+/** Builds native 1.13 setting definitions for folder and folder note settings. */
+export function createFoldersSettingDefinitions(context: SettingsTabContext, heading?: string): SettingDefinitionItem[] {
+    const { plugin } = context;
 
-    const foldersGroup = createGroup(undefined);
-
-    addToggleSetting(
-        foldersGroup.addSetting,
-        strings.settings.items.showFolderIcons.name,
-        strings.settings.items.showFolderIcons.desc,
-        () => plugin.settings.showFolderIcons,
-        value => {
-            plugin.settings.showFolderIcons = value;
-        }
-    );
-
-    addToggleSetting(
-        foldersGroup.addSetting,
-        strings.settings.items.showRootFolder.name,
-        strings.settings.items.showRootFolder.desc,
-        () => plugin.settings.showRootFolder,
-        value => {
-            plugin.settings.showRootFolder = value;
-        }
-    );
-
-    addToggleSetting(
-        foldersGroup.addSetting,
-        strings.settings.items.inheritFolderColors.name,
-        strings.settings.items.inheritFolderColors.desc,
-        () => plugin.settings.inheritFolderColors,
-        value => {
-            plugin.settings.inheritFolderColors = value;
-        }
-    );
-
-    const folderSortOrderSetting = foldersGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.folderSortOrder.name).setDesc(strings.settings.items.folderSortOrder.desc);
-        setting.addDropdown(dropdown => {
-            dropdown
-                .addOption('alpha-asc', strings.settings.items.folderSortOrder.options.alphaAsc)
-                .addOption('alpha-desc', strings.settings.items.folderSortOrder.options.alphaDesc)
-                .setValue(plugin.getFolderSortOrder())
-                .onChange(value => {
-                    if (!isAlphaSortOrder(value)) {
-                        return;
+    return [
+        createGroupDefinition(heading, [
+            createToggleDefinition('showFolderIcons', {
+                name: strings.settings.items.showFolderIcons.name,
+                desc: strings.settings.items.showFolderIcons.desc
+            }),
+            createToggleDefinition('showRootFolder', {
+                name: strings.settings.items.showRootFolder.name,
+                desc: strings.settings.items.showRootFolder.desc
+            }),
+            createToggleDefinition('inheritFolderColors', {
+                name: strings.settings.items.inheritFolderColors.name,
+                desc: strings.settings.items.inheritFolderColors.desc
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.folderSortOrder.name,
+                desc: strings.settings.items.folderSortOrder.desc,
+                aliases: Object.values(strings.settings.items.folderSortOrder.options),
+                render: setting => renderFolderSortOrderSetting(setting, context)
+            })
+        ]),
+        createGroupDefinition(strings.settings.pages.foldersAndFolderNotes.groups.folderNotes, [
+            createToggleDefinition('enableFolderNotes', {
+                name: strings.settings.items.enableFolderNotes.name,
+                desc: strings.settings.items.enableFolderNotes.desc
+            }),
+            createDropdownDefinition('folderNoteOpenLocation', {
+                name: strings.settings.items.folderNoteOpenLocation.name,
+                desc: strings.settings.items.folderNoteOpenLocation.desc,
+                aliases: Object.values(strings.settings.items.folderNoteOpenLocation.options),
+                visible: () => plugin.settings.enableFolderNotes,
+                options: {
+                    'current-tab': strings.settings.items.folderNoteOpenLocation.options.currentTab,
+                    'new-tab': strings.settings.items.folderNoteOpenLocation.options.newTab,
+                    'right-sidebar': strings.settings.items.folderNoteOpenLocation.options.rightSidebar
+                }
+            }),
+            createToggleDefinition('showNearestFolderNoteInSidebar', {
+                name: strings.settings.items.showClosestFolderNoteInRightSidebar.name,
+                desc: strings.settings.items.showClosestFolderNoteInRightSidebar.desc,
+                visible: () => plugin.settings.enableFolderNotes && plugin.settings.folderNoteOpenLocation === 'right-sidebar'
+            }),
+            createToggleDefinition('enableFolderNoteLinks', {
+                name: strings.settings.items.folderNamesOpenFolderNotes.name,
+                desc: strings.settings.items.folderNamesOpenFolderNotes.desc,
+                visible: () => plugin.settings.enableFolderNotes
+            }),
+            createToggleDefinition('hideFolderNoteInList', {
+                name: strings.settings.items.hideFolderNoteInList.name,
+                desc: strings.settings.items.hideFolderNoteInList.desc,
+                visible: () => plugin.settings.enableFolderNotes
+            }),
+            createToggleDefinition('pinCreatedFolderNote', {
+                name: strings.settings.items.pinCreatedFolderNote.name,
+                desc: strings.settings.items.pinCreatedFolderNote.desc,
+                visible: () => plugin.settings.enableFolderNotes
+            })
+        ]),
+        createGroupDefinition(
+            strings.settings.pages.foldersAndFolderNotes.groups.folderNoteFiles,
+            [
+                createDropdownDefinition('folderNoteType', {
+                    name: strings.settings.items.folderNoteType.name,
+                    desc: strings.settings.items.folderNoteType.desc,
+                    aliases: Object.values(strings.settings.items.folderNoteType.options),
+                    options: {
+                        ask: strings.settings.items.folderNoteType.options.ask,
+                        markdown: strings.settings.items.folderNoteType.options.markdown,
+                        canvas: strings.settings.items.folderNoteType.options.canvas,
+                        base: strings.settings.items.folderNoteType.options.base
                     }
-                    plugin.setFolderSortOrder(value);
-                });
-        });
+                }),
+                createTextDefinition('folderNoteNamePattern', {
+                    name: strings.settings.items.folderNoteName.name,
+                    desc: strings.settings.items.folderNoteName.desc,
+                    aliases: ['index', FOLDER_NOTE_NAME_PATTERN_TOKEN],
+                    placeholder: FOLDER_NOTE_NAME_PATTERN_TOKEN
+                }),
+                createRenderDefinition({
+                    name: strings.settings.items.folderNoteTemplate.name,
+                    desc: strings.settings.items.folderNoteTemplate.desc,
+                    render: setting => renderFolderNoteTemplateSetting(setting, context)
+                }),
+                createRenderDefinition({
+                    name: 'Templater',
+                    searchable: false,
+                    render: setting => renderFolderNoteTemplateInfoSetting(setting, context)
+                })
+            ],
+            { visible: () => plugin.settings.enableFolderNotes }
+        )
+    ];
+}
+
+function renderFolderSortOrderSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+
+    setting.setName(strings.settings.items.folderSortOrder.name).setDesc(strings.settings.items.folderSortOrder.desc);
+    setting.addDropdown(dropdown => {
+        dropdown
+            .addOption('alpha-asc', strings.settings.items.folderSortOrder.options.alphaAsc)
+            .addOption('alpha-desc', strings.settings.items.folderSortOrder.options.alphaDesc)
+            .setValue(plugin.getFolderSortOrder())
+            .onChange(value => {
+                if (!isAlphaSortOrder(value)) {
+                    return;
+                }
+                plugin.setFolderSortOrder(value);
+            });
     });
 
-    addSettingSyncModeToggle({ setting: folderSortOrderSetting, plugin, settingId: 'folderSortOrder' });
+    addSettingSyncModeToggle({ setting, plugin, settingId: 'folderSortOrder' });
+}
 
-    const folderNotesGroup = createGroup(strings.settings.sections.folderNotes);
+function renderFolderNoteTemplateSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+    let updateWarning = () => {};
 
-    const enableFolderNotesSetting = folderNotesGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.enableFolderNotes.name).setDesc(strings.settings.items.enableFolderNotes.desc);
-    });
-    const folderNotesSettingsEl = wireToggleSettingWithSubSettings(
-        enableFolderNotesSetting,
-        () => plugin.settings.enableFolderNotes,
-        async value => {
-            plugin.settings.enableFolderNotes = value;
-            await plugin.saveSettingsAndUpdate();
-        }
-    );
-
-    new Setting(folderNotesSettingsEl)
-        .setName(strings.settings.items.folderNoteType.name)
-        .setDesc(strings.settings.items.folderNoteType.desc)
-        .addDropdown(dropdown => {
-            dropdown
-                .addOption('ask', strings.settings.items.folderNoteType.options.ask)
-                .addOption('markdown', strings.settings.items.folderNoteType.options.markdown)
-                .addOption('canvas', strings.settings.items.folderNoteType.options.canvas)
-                .addOption('base', strings.settings.items.folderNoteType.options.base)
-                .setValue(plugin.settings.folderNoteType)
-                .onChange(async value => {
-                    if (!isFolderNoteCreationPreference(value)) {
-                        return;
-                    }
-                    plugin.settings.folderNoteType = value;
-                    await plugin.saveSettingsAndUpdate();
-                });
-        });
-
-    // Use context directly to satisfy eslint exhaustive-deps requirements
-    context.createDebouncedTextSetting(
-        folderNotesSettingsEl,
-        strings.settings.items.folderNoteName.name,
-        strings.settings.items.folderNoteName.desc,
-        strings.settings.items.folderNoteName.placeholder,
-        () => plugin.settings.folderNoteName,
-        value => {
-            plugin.settings.folderNoteName = value;
-        }
-    );
-
-    context.createDebouncedTextSetting(
-        folderNotesSettingsEl,
-        strings.settings.items.folderNoteNamePattern.name,
-        strings.settings.items.folderNoteNamePattern.desc,
-        FOLDER_NOTE_NAME_PATTERN_PLACEHOLDER,
-        () => plugin.settings.folderNoteNamePattern,
-        value => {
-            plugin.settings.folderNoteNamePattern = value;
-        }
-    );
-
-    const folderNoteTemplateSetting = context.createDebouncedTextSetting(
-        folderNotesSettingsEl,
+    context.configureDebouncedTextSetting(
+        setting,
         strings.settings.items.folderNoteTemplate.name,
         strings.settings.items.folderNoteTemplate.desc,
         '',
         () => plugin.settings.folderNoteTemplate ?? '',
         value => {
             plugin.settings.folderNoteTemplate = normalizeOptionalVaultFilePath(value);
-        }
+        },
+        undefined,
+        () => updateWarning()
     );
-    folderNoteTemplateSetting.controlEl.addClass('nn-setting-wide-input');
-    const folderNoteTemplateInputEl = folderNoteTemplateSetting.controlEl.querySelector<HTMLInputElement>('input');
+    setting.controlEl.addClass('nn-setting-wide-input');
+    const warningEl = setting.descEl.createDiv({
+        cls: 'setting-item-description nn-setting-hidden nn-setting-warning'
+    });
+    const folderNoteTemplateInputEl = setting.controlEl.querySelector<HTMLInputElement>('input');
+    updateWarning = () => {
+        const templatePath = folderNoteTemplateInputEl?.value ?? plugin.settings.folderNoteTemplate ?? '';
+        const isCompatible = isFolderNoteTemplateCompatible(templatePath, plugin.settings.folderNoteType);
+        warningEl.setText(isCompatible ? '' : strings.settings.items.folderNoteTemplate.formatWarning);
+        setElementVisible(warningEl, !isCompatible);
+    };
+
     if (folderNoteTemplateInputEl) {
         const templateSuggest = new FilePathInputSuggest(context.app, folderNoteTemplateInputEl, {
             getBaseFolder: () => plugin.settings.calendarTemplateFolder,
-            includeFile: file => file.extension === 'md'
+            includeFile: file => isSupportedFolderNoteExtension(file.extension)
         });
+        folderNoteTemplateInputEl.addEventListener('input', updateWarning);
         folderNoteTemplateInputEl.addEventListener('click', () => templateSuggest.open());
     }
 
-    new Setting(folderNotesSettingsEl)
-        .setName(strings.settings.items.enableFolderNoteLinks.name)
-        .setDesc(strings.settings.items.enableFolderNoteLinks.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.enableFolderNoteLinks).onChange(async value => {
-                plugin.settings.enableFolderNoteLinks = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
+    context.registerSettingsUpdateListener('folders-folder-note-template-warning', updateWarning);
+    updateWarning();
+}
 
-    new Setting(folderNotesSettingsEl)
-        .setName(strings.settings.items.hideFolderNoteInList.name)
-        .setDesc(strings.settings.items.hideFolderNoteInList.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.hideFolderNoteInList).onChange(async value => {
-                plugin.settings.hideFolderNoteInList = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
+function renderFolderNoteTemplateInfoSetting(setting: Setting, context: SettingsTabContext): void {
+    setting.setName('').setDesc('');
+    setting.settingEl.addClass('nn-setting-info-container');
+    setting.descEl.empty();
 
-    new Setting(folderNotesSettingsEl)
-        .setName(strings.settings.items.pinCreatedFolderNote.name)
-        .setDesc(strings.settings.items.pinCreatedFolderNote.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.pinCreatedFolderNote).onChange(async value => {
-                plugin.settings.pinCreatedFolderNote = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
-
-    new Setting(folderNotesSettingsEl)
-        .setName(strings.settings.items.openFolderNotesInNewTab.name)
-        .setDesc(strings.settings.items.openFolderNotesInNewTab.desc)
-        .addToggle(toggle =>
-            toggle.setValue(plugin.settings.openFolderNotesInNewTab).onChange(async value => {
-                plugin.settings.openFolderNotesInNewTab = value;
-                await plugin.saveSettingsAndUpdate();
-            })
-        );
+    const templaterSupportText = getTemplaterCreateNoteFromTemplate(context.app)
+        ? strings.settings.items.templaterSupport.installed
+        : strings.settings.items.templaterSupport.missing;
+    setting.descEl.createEl('strong', { text: templaterSupportText });
 }

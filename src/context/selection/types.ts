@@ -94,6 +94,14 @@ export type SelectionAction =
     | { type: 'TOGGLE_FILE_SELECTION'; file: TFile; anchorIndex?: number }
     | { type: 'EXTEND_SELECTION'; toIndex: number; files: TFile[]; allFiles: TFile[] }
     | { type: 'CLEAR_FILE_SELECTION' }
+    | { type: 'SET_FILE_SELECTION'; files: TFile[]; selectedFile: TFile }
+    | {
+          type: 'APPLY_FILE_SELECTION';
+          selectedFiles: ReadonlySet<string>;
+          selectedFile: TFile | null;
+          anchorIndex?: number | null;
+          lastMovementDirection?: 'up' | 'down' | null;
+      }
     | { type: 'SET_ANCHOR_INDEX'; index: number | null }
     | { type: 'SET_MOVEMENT_DIRECTION'; direction: 'up' | 'down' | null }
     | { type: 'UPDATE_CURRENT_FILE'; file: TFile }

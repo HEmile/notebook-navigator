@@ -16,17 +16,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { EventRef, TFile } from 'obsidian';
-import { SortOption, type AlphaSortOrder, type NotebookNavigatorSettings } from '../../settings';
+import { EventRef, TFile, type TFolder } from 'obsidian';
+import type { AlphaSortOrder, ListSortOverrideValue, NotebookNavigatorSettings } from '../../settings/types';
 import { getDBInstanceOrNull } from '../../storage/fileOperations';
-import { ItemType } from '../../types';
+import { ItemType, type CollapsedPinnedContexts } from '../../types';
 import { isFolderShortcut } from '../../types/shortcuts';
 import type { FileContentChange } from '../../storage/IndexedDBStorage';
 import { normalizeCanonicalIconId } from '../../utils/iconizeFormat';
 import { getParentFolderPath } from '../../utils/pathUtils';
-import { ensureRecord, isStringRecordValue } from '../../utils/recordUtils';
+import { createShortcutTargetPathEventMatcher } from '../../utils/shortcutPathResolver';
+import {
+    deleteCollapsedPinnedContextKeys,
+    ensureRecord,
+    isStringRecordValue,
+    updateCollapsedPinnedContextKeys
+} from '../../utils/recordUtils';
 import type { CleanupValidators } from '../MetadataService';
-import { BaseMetadataService } from './BaseMetadataService';
+import { BaseMetadataService, type MetadataCleanupResult } from './BaseMetadataService';
 import { FolderDisplayCache } from './folderMetadata/FolderDisplayCache';
 import { FolderNoteMetadataAdapter } from './folderMetadata/FolderNoteMetadataAdapter';
 import { resolveFolderDisplayData, resolveInheritedFolderStyleValues } from './folderMetadata/folderDisplayResolver';
@@ -91,7 +97,6 @@ export class FolderMetadataService extends BaseMetadataService {
             useFrontmatterMetadata: settings.useFrontmatterMetadata,
             enableFolderNotes: settings.enableFolderNotes,
             inheritFolderColors: settings.inheritFolderColors,
-            folderNoteName: settings.folderNoteName.trim(),
             folderNoteNamePattern: settings.folderNoteNamePattern.trim(),
             frontmatterNameField: settings.frontmatterNameField.trim(),
             frontmatterIconField: settings.frontmatterIconField.trim(),
@@ -373,7 +378,11 @@ export class FolderMetadataService extends BaseMetadataService {
     }
 
     private validateFolder(folderPath: string): boolean {
-        return this.app.vault.getFolderByPath(folderPath) !== null;
+        return this.getFolderByPath(folderPath) !== null;
+    }
+
+    private getFolderByPath(folderPath: string): TFolder | null {
+        return folderPath === '/' ? this.app.vault.getRoot() : this.app.vault.getFolderByPath(folderPath);
     }
 
     private getFolderStyleFromSettings(folderPath: string): FolderStyleValues {
@@ -678,18 +687,18 @@ export class FolderMetadataService extends BaseMetadataService {
         }).icon;
     }
 
-    async setFolderSortOverride(folderPath: string, sortOption: SortOption): Promise<void> {
+    async setFolderSortOverride(folderPath: string, sortOverride: ListSortOverrideValue): Promise<void> {
         if (!this.validateFolder(folderPath)) {
             return;
         }
-        return this.setEntitySortOverride(ItemType.FOLDER, folderPath, sortOption);
+        return this.setEntitySortOverride(ItemType.FOLDER, folderPath, sortOverride);
     }
 
     async removeFolderSortOverride(folderPath: string): Promise<void> {
         return this.removeEntitySortOverride(ItemType.FOLDER, folderPath);
     }
 
-    getFolderSortOverride(folderPath: string): SortOption | undefined {
+    getFolderSortOverride(folderPath: string): ListSortOverrideValue | undefined {
         return this.getEntitySortOverride(ItemType.FOLDER, folderPath);
     }
 
@@ -710,6 +719,11 @@ export class FolderMetadataService extends BaseMetadataService {
 
     async handleFolderRename(oldPath: string, newPath: string, extraMutation?: SettingsMutation): Promise<void> {
         this.folderDisplayCache.clear();
+        const matchesShortcutPath = createShortcutTargetPathEventMatcher(this.app, 'folder', oldPath, newPath);
+        // Pinned-section collapse state persists to vault-local storage on its own, outside the settings transaction.
+        this.settingsProvider.updateCollapsedPinnedContexts(record =>
+            updateCollapsedPinnedContextKeys(record, ItemType.FOLDER, oldPath, newPath, { descendantDelimiter: '/' })
+        );
         await this.saveAndUpdate(settings => {
             let changed = false;
 
@@ -721,7 +735,7 @@ export class FolderMetadataService extends BaseMetadataService {
             changed = this.updateNestedPaths(settings.folderAppearances, oldPath, newPath) || changed;
 
             const shortcutsChanged = this.updateShortcuts(settings, shortcut => {
-                if (!isFolderShortcut(shortcut) || shortcut.path !== oldPath) {
+                if (!isFolderShortcut(shortcut) || !matchesShortcutPath(shortcut.path)) {
                     return undefined;
                 }
 
@@ -742,6 +756,11 @@ export class FolderMetadataService extends BaseMetadataService {
 
     async handleFolderDelete(folderPath: string, extraMutation?: SettingsMutation): Promise<void> {
         this.folderDisplayCache.clear();
+        const matchesShortcutPath = createShortcutTargetPathEventMatcher(this.app, 'folder', folderPath);
+        // Pinned-section collapse state persists to vault-local storage on its own, outside the settings transaction.
+        this.settingsProvider.updateCollapsedPinnedContexts(record =>
+            deleteCollapsedPinnedContextKeys(record, ItemType.FOLDER, folderPath, { descendantDelimiter: '/' })
+        );
         await this.saveAndUpdate(settings => {
             let changed = false;
 
@@ -756,7 +775,7 @@ export class FolderMetadataService extends BaseMetadataService {
                 if (!isFolderShortcut(shortcut)) {
                     return undefined;
                 }
-                return shortcut.path === folderPath ? null : undefined;
+                return matchesShortcutPath(shortcut.path) ? null : undefined;
             });
             changed = shortcutsChanged || changed;
 
@@ -768,9 +787,17 @@ export class FolderMetadataService extends BaseMetadataService {
         });
     }
 
-    async cleanupFolderMetadata(targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings): Promise<boolean> {
+    async cleanupFolderMetadata(
+        targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings,
+        collapsedPinnedContextsOverride?: CollapsedPinnedContexts
+    ): Promise<boolean> {
         this.folderDisplayCache.clear();
-        const validator = (path: string) => this.app.vault.getFolderByPath(path) !== null;
+        const validator = (path: string) => this.getFolderByPath(path) !== null;
+        const collapsedPinnedContextChanges = this.cleanupCollapsedPinnedContexts(
+            ItemType.FOLDER,
+            validator,
+            collapsedPinnedContextsOverride
+        );
 
         const results = await Promise.all([
             this.cleanupMetadata(targetSettings, 'folderColors', validator),
@@ -781,15 +808,21 @@ export class FolderMetadataService extends BaseMetadataService {
             this.cleanupMetadata(targetSettings, 'folderAppearances', validator)
         ]);
 
-        return results.some(changed => changed);
+        return collapsedPinnedContextChanges || results.some(changed => changed);
     }
 
     async cleanupWithValidators(
         validators: CleanupValidators,
-        targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings
-    ): Promise<boolean> {
+        targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings,
+        collapsedPinnedContextsOverride?: CollapsedPinnedContexts
+    ): Promise<MetadataCleanupResult> {
         this.folderDisplayCache.clear();
         const validator = (path: string) => validators.vaultFolders.has(path);
+        const collapsedPinnedContextChanges = this.cleanupCollapsedPinnedContexts(
+            ItemType.FOLDER,
+            validator,
+            collapsedPinnedContextsOverride
+        );
 
         const results = await Promise.all([
             this.cleanupMetadata(targetSettings, 'folderColors', validator),
@@ -800,6 +833,9 @@ export class FolderMetadataService extends BaseMetadataService {
             this.cleanupMetadata(targetSettings, 'folderAppearances', validator)
         ]);
 
-        return results.some(changed => changed);
+        return {
+            settingsChanged: results.some(changed => changed),
+            localChanged: collapsedPinnedContextChanges
+        };
     }
 }

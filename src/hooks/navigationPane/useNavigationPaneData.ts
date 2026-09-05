@@ -123,7 +123,7 @@ interface UseNavigationPaneDataResult {
     rootPropertyOrderMap: Map<string, number>;
     /** Keys for properties in custom order that are not currently present */
     missingRootPropertyKeys: string[];
-    /** Version marker that bumps when vault files or metadata change */
+    /** Version marker that bumps when vault file structure changes */
     vaultChangeVersion: number;
     /** Path to the navigation banner from the active vault profile */
     navigationBannerPath: string | null;
@@ -160,6 +160,7 @@ export function useNavigationPaneData({
     const {
         effectiveFrontmatterExclusions,
         hiddenFolders,
+        descendantExcludedFolders,
         hiddenFileTags,
         fileVisibility,
         navigationBannerPath,
@@ -173,8 +174,10 @@ export function useNavigationPaneData({
         rootPropertyOrderMap,
         missingRootPropertyKeys,
         metadataDecorationVersion,
+        metadataVisibilityVersion,
+        tagDataVersion,
         fileChangeVersion,
-        bumpVaultChangeVersion
+        folderChangeVersion
     } = sourceState;
 
     const {
@@ -206,7 +209,6 @@ export function useNavigationPaneData({
         shortcutsExpanded,
         recentNotesExpanded,
         pinShortcuts,
-        showHiddenItems,
         propertiesSectionActive
     });
 
@@ -254,12 +256,15 @@ export function useNavigationPaneData({
         propertyCollectionCount,
         effectiveFrontmatterExclusions,
         hiddenFolders,
+        descendantExcludedFolders,
         hiddenFileTags,
         showHiddenItems,
         folderCountFileNameMatcher,
         fileVisibility,
+        folderChangeVersion,
         vaultChangeVersion: fileChangeVersion,
-        bumpVaultChangeVersion
+        metadataVisibilityVersion,
+        tagDataVersion
     });
 
     return {

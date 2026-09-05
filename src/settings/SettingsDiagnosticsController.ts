@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { App } from 'obsidian';
+import type { App, ButtonComponent } from 'obsidian';
 import { showNotice } from '../utils/noticeUtils';
 import { strings } from '../i18n';
 import { TIMEOUTS } from '../types/obsidian-extended';
@@ -46,10 +46,12 @@ interface MetadataInfoText {
     failurePercentage: number;
 }
 
+// Owns diagnostics UI state across native and legacy settings page lifecycles.
 export class SettingsDiagnosticsController {
     private activeTabId: SettingsTabId | null = null;
     private statsTextEl: HTMLElement | null = null;
     private metadataInfoEl: HTMLElement | null = null;
+    private metadataExportButton: ButtonComponent | null = null;
     private statsUpdateInterval: number | null = null;
     private metadataInfoChangeUnsubscribe: (() => void) | null = null;
     private pendingStatisticsRefresh: number | null = null;
@@ -64,8 +66,17 @@ export class SettingsDiagnosticsController {
         this.statsTextEl = element;
     }
 
-    registerMetadataInfoElement(element: HTMLElement): void {
+    registerMetadataInfoElement(element: HTMLElement, exportButton: ButtonComponent): void {
         this.metadataInfoEl = element;
+        this.metadataExportButton = exportButton;
+        exportButton
+            .setButtonText(strings.settings.items.metadataInfo.exportFailed)
+            .onClick(() => runAsyncAction(() => this.exportFailedMetadataReport()));
+        exportButton.buttonEl.addClass('nn-setting-hidden');
+
+        if (this.isMetadataInfoTab(this.activeTabId)) {
+            runAsyncAction(() => this.updateMetadataInfo());
+        }
     }
 
     prepareForRender(): void {
@@ -73,6 +84,7 @@ export class SettingsDiagnosticsController {
         this.stopMetadataInfoListener();
         this.statsTextEl = null;
         this.metadataInfoEl = null;
+        this.metadataExportButton = null;
     }
 
     dispose(): void {
@@ -185,31 +197,16 @@ export class SettingsDiagnosticsController {
 
     private renderMetadataInfo(element: HTMLElement, metadataInfo: MetadataInfoText): void {
         element.empty();
+        this.metadataExportButton?.buttonEl.toggleClass('nn-setting-hidden', !metadataInfo.hasFailures);
 
-        const metadataContainer = element.createEl('div', {
-            cls: 'nn-metadata-info-row'
-        });
-        const textContainer = metadataContainer.createEl('div', {
-            cls: 'nn-metadata-info-text'
-        });
-        textContainer.createSpan({ text: metadataInfo.infoText });
+        element.createSpan({ text: metadataInfo.infoText });
 
         if (metadataInfo.failedText) {
-            textContainer.createEl('br');
-            textContainer.createSpan({
+            element.createEl('br');
+            element.createSpan({
                 text: metadataInfo.failedText,
                 cls: metadataInfo.failurePercentage > 70 ? 'nn-metadata-error-text' : undefined
             });
-        }
-
-        if (metadataInfo.hasFailures) {
-            const exportButton = metadataContainer.createEl('button', {
-                text: strings.settings.items.metadataInfo.exportFailed,
-                cls: 'nn-metadata-export-button'
-            });
-            exportButton.onclick = () => {
-                runAsyncAction(() => this.exportFailedMetadataReport());
-            };
         }
     }
 
@@ -226,6 +223,7 @@ export class SettingsDiagnosticsController {
 
         if (!this.deps.plugin.settings.useFrontmatterMetadata) {
             metadataInfoEl.empty();
+            this.metadataExportButton?.buttonEl.addClass('nn-setting-hidden');
             return;
         }
 
@@ -240,9 +238,12 @@ export class SettingsDiagnosticsController {
             }
             if (!this.deps.plugin.settings.useFrontmatterMetadata) {
                 metadataInfoEl.empty();
+                this.metadataExportButton?.buttonEl.addClass('nn-setting-hidden');
                 return;
             }
             if (!stats) {
+                metadataInfoEl.empty();
+                this.metadataExportButton?.buttonEl.addClass('nn-setting-hidden');
                 return;
             }
 

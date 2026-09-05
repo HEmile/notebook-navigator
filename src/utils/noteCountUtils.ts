@@ -21,8 +21,13 @@ import { TFile, TFolder } from 'obsidian';
 import type { NoteCountInfo } from '../types/noteCounts';
 import { shouldDisplayFile, type FileVisibility } from './fileTypeUtils';
 import type { HiddenFileNameMatcher } from './fileFilters';
-import { createFrontmatterPropertyExclusionMatcher, shouldExcludeFileWithMatcher, shouldExcludeFolder } from './fileFilters';
-import { isFolderNote, type FolderNoteDetectionSettings } from './folderNotes';
+import {
+    createFrontmatterPropertyExclusionMatcher,
+    shouldExcludeFileWithMatcher,
+    shouldExcludeFolder,
+    shouldExcludeFolderFromDescendants
+} from './fileFilters';
+import { isFolderNote, type FolderNoteDetectionSettings } from './folderNoteLookup';
 import type { HiddenTagVisibility } from './tagPrefixMatcher';
 import { type CachedFileTagsDB, getCachedFileTags } from './tagUtils';
 
@@ -36,6 +41,7 @@ export interface FolderNoteCountOptions {
     excludedFiles: string[];
     excludedFileMatcher?: ReturnType<typeof createFrontmatterPropertyExclusionMatcher>;
     excludedFolders: string[];
+    descendantExcludedFolders: string[];
     fileNameMatcher: HiddenFileNameMatcher | null;
     hiddenFileTagVisibility: HiddenTagVisibility | null;
     includeDescendants: boolean;
@@ -98,6 +104,13 @@ export function calculateFolderNoteCounts(folder: TFolder, options: FolderNoteCo
 
             // Skip excluded/hidden folders
             if (!options.showHiddenFolders && shouldExcludeFolder(child.name, options.excludedFolders, child.path)) {
+                continue;
+            }
+
+            if (
+                options.descendantExcludedFolders.length > 0 &&
+                shouldExcludeFolderFromDescendants(child.name, options.descendantExcludedFolders, child.path)
+            ) {
                 continue;
             }
 

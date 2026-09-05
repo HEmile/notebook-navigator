@@ -220,7 +220,7 @@ export function useKeyboardNavigation<T>({
                 virtualizer.scrollToIndex(index, { align: 'auto' });
             },
             getItemAt: (index: number) => safeGetItem(items, index),
-            isRTL: () => document.body.classList.contains('mod-rtl')
+            isRTL: () => activeDocument.body.classList.contains('mod-rtl')
         };
     }, [items, isSelectable, virtualizer]);
 

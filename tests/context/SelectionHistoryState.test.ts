@@ -202,6 +202,96 @@ describe('selectionReducer navigation history', () => {
         expect(selectedFileState.selectedFile?.path).toBe('Alpha/note.md');
     });
 
+    it('sets the selected file set without changing the current navigation context', () => {
+        const root = createFolder('/');
+        const alpha = createFolder('Alpha', root);
+        const firstFile = createFile('Alpha/first.md', alpha);
+        const secondFile = createFile('Alpha/second.md', alpha);
+
+        const initialState = createSelectionState(root);
+        const folderState = selectionReducer(initialState, { type: 'SET_SELECTED_FOLDER', folder: alpha });
+        const selectedState = selectionReducer(
+            {
+                ...folderState,
+                anchorIndex: 3,
+                lastMovementDirection: 'down'
+            },
+            {
+                type: 'SET_FILE_SELECTION',
+                files: [firstFile, secondFile],
+                selectedFile: secondFile
+            }
+        );
+
+        expect(selectedState.selectionType).toBe('folder');
+        expect(selectedState.selectedFolder?.path).toBe('Alpha');
+        expect(Array.from(selectedState.selectedFiles)).toEqual(['Alpha/first.md', 'Alpha/second.md']);
+        expect(selectedState.selectedFile?.path).toBe('Alpha/second.md');
+        expect(selectedState.anchorIndex).toBeNull();
+        expect(selectedState.lastMovementDirection).toBeNull();
+    });
+
+    it('applies a computed file selection without changing the current navigation context', () => {
+        const root = createFolder('/');
+        const alpha = createFolder('Alpha', root);
+        const firstFile = createFile('Alpha/first.md', alpha);
+        const secondFile = createFile('Alpha/second.md', alpha);
+        const selectedFiles = new Set([firstFile.path, secondFile.path]);
+
+        const initialState = createSelectionState(root);
+        const folderState = selectionReducer(initialState, { type: 'SET_SELECTED_FOLDER', folder: alpha });
+        const selectedState = selectionReducer(
+            {
+                ...folderState,
+                anchorIndex: 3,
+                lastMovementDirection: 'down'
+            },
+            {
+                type: 'APPLY_FILE_SELECTION',
+                selectedFiles,
+                selectedFile: secondFile
+            }
+        );
+
+        selectedFiles.clear();
+
+        expect(selectedState.selectionType).toBe('folder');
+        expect(selectedState.selectedFolder?.path).toBe('Alpha');
+        expect(Array.from(selectedState.selectedFiles)).toEqual(['Alpha/first.md', 'Alpha/second.md']);
+        expect(selectedState.selectedFile?.path).toBe('Alpha/second.md');
+        expect(selectedState.anchorIndex).toBe(3);
+        expect(selectedState.lastMovementDirection).toBeNull();
+    });
+
+    it('applies a computed file selection with movement state', () => {
+        const root = createFolder('/');
+        const alpha = createFolder('Alpha', root);
+        const firstFile = createFile('Alpha/first.md', alpha);
+        const secondFile = createFile('Alpha/second.md', alpha);
+
+        const initialState = createSelectionState(root);
+        const selectedState = selectionReducer(
+            {
+                ...initialState,
+                selectedFiles: new Set([firstFile.path]),
+                selectedFile: firstFile,
+                anchorIndex: 3
+            },
+            {
+                type: 'APPLY_FILE_SELECTION',
+                selectedFiles: new Set([secondFile.path]),
+                selectedFile: secondFile,
+                anchorIndex: null,
+                lastMovementDirection: 'up'
+            }
+        );
+
+        expect(Array.from(selectedState.selectedFiles)).toEqual(['Alpha/second.md']);
+        expect(selectedState.selectedFile?.path).toBe('Alpha/second.md');
+        expect(selectedState.anchorIndex).toBeNull();
+        expect(selectedState.lastMovementDirection).toBe('up');
+    });
+
     it('clears the reveal flag without changing the revealed selection', () => {
         const root = createFolder('/');
         const alpha = createFolder('Alpha', root);
@@ -223,5 +313,21 @@ describe('selectionReducer navigation history', () => {
         expect(clearedState.revealSource).toBe('manual');
         expect(clearedState.navigationHistory).toEqual(revealedState.navigationHistory);
         expect(clearedState.navigationHistoryIndex).toBe(revealedState.navigationHistoryIndex);
+    });
+
+    it('ignores deleted-file cleanup when the deleted file is not selected', () => {
+        const root = createFolder('/');
+        const alpha = createFolder('Alpha', root);
+        const selectedFile = createFile('Alpha/selected.md', alpha);
+
+        const initialState = createSelectionState(root);
+        const selectedState = selectionReducer(initialState, { type: 'SET_SELECTED_FILE', file: selectedFile });
+        const cleanupState = selectionReducer(selectedState, {
+            type: 'CLEANUP_DELETED_FILE',
+            deletedPath: 'Alpha/deleted.md',
+            nextFileToSelect: null
+        });
+
+        expect(cleanupState).toBe(selectedState);
     });
 });

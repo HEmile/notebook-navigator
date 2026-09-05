@@ -21,7 +21,11 @@ import { TagMetadataService } from '../../src/services/metadata/TagMetadataServi
 import type { NotebookNavigatorSettings } from '../../src/settings';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { ISettingsProvider } from '../../src/interfaces/ISettingsProvider';
+import type { CleanupValidators } from '../../src/services/MetadataService';
+import { createDefaultFileData } from '../../src/storage/indexeddb/fileData';
+import type { FileData } from '../../src/storage/IndexedDBStorage';
 import { createVaultProfile } from '../../src/utils/vaultProfiles';
+import { TAGGED_TAG_ID, UNTAGGED_TAG_ID, type CollapsedPinnedContexts } from '../../src/types';
 
 class TestSettingsProvider implements ISettingsProvider {
     constructor(public settings: NotebookNavigatorSettings) {}
@@ -47,6 +51,16 @@ class TestSettingsProvider implements ISettingsProvider {
     }
 
     setRecentColors(): void {}
+
+    collapsedPinnedContexts: CollapsedPinnedContexts = {};
+
+    getCollapsedPinnedContexts(): CollapsedPinnedContexts {
+        return { ...this.collapsedPinnedContexts };
+    }
+
+    updateCollapsedPinnedContexts(mutator: (record: CollapsedPinnedContexts) => boolean): boolean {
+        return mutator(this.collapsedPinnedContexts);
+    }
 }
 
 function createSettings(): NotebookNavigatorSettings {
@@ -67,6 +81,21 @@ function createSettings(): NotebookNavigatorSettings {
             shortcuts: [...profile.shortcuts]
         }))
     };
+}
+
+function createValidators(dbFiles: CleanupValidators['dbFiles']): CleanupValidators {
+    return {
+        dbFiles,
+        tagTree: new Map(),
+        vaultFiles: new Set(),
+        vaultFolders: new Set(['/'])
+    };
+}
+
+function createMarkdownFile(path: string, tags: string[]): { path: string; data: FileData } {
+    const data = createDefaultFileData({ path, mtime: 1 });
+    data.tags = tags;
+    return { path, data };
 }
 
 describe('TagMetadataService.handleTagRename', () => {
@@ -286,5 +315,40 @@ describe('TagMetadataService.handleTagDelete', () => {
         expect(activeProfile.hiddenTags).toEqual(['draft*', '*draft', 'keep']);
         expect(settings.vaultProfiles[1].hiddenTags).toEqual(['*draft', 'draft*', 'other']);
         expect(provider.saveSettingsAndUpdate).not.toHaveBeenCalled();
+    });
+});
+
+describe('TagMetadataService.cleanupWithValidators', () => {
+    const app = new App();
+
+    it('removes stale tag metadata when processed cache data contains no tags', async () => {
+        const settings = createSettings();
+        settings.tagColors = { stale: '#ff0000' };
+        const provider = new TestSettingsProvider(settings);
+        const service = new TagMetadataService(app, provider, () => null);
+
+        const changes = await service.cleanupWithValidators(createValidators([createMarkdownFile('Note.md', [])]), settings);
+
+        expect(changes).toEqual({ settingsChanged: true, localChanged: false });
+        expect(settings.tagColors).toEqual({});
+    });
+
+    it('keeps collapsed state for virtual tag contexts during cleanup', async () => {
+        const settings = createSettings();
+        const provider = new TestSettingsProvider(settings);
+        provider.collapsedPinnedContexts = {
+            [`tag:${TAGGED_TAG_ID}`]: true,
+            [`tag:${UNTAGGED_TAG_ID}`]: true,
+            'tag:stale': true
+        };
+        const service = new TagMetadataService(app, provider, () => null);
+
+        const changes = await service.cleanupWithValidators(createValidators([createMarkdownFile('Note.md', [])]), settings);
+
+        expect(changes).toEqual({ settingsChanged: false, localChanged: true });
+        expect(provider.collapsedPinnedContexts).toEqual({
+            [`tag:${TAGGED_TAG_ID}`]: true,
+            [`tag:${UNTAGGED_TAG_ID}`]: true
+        });
     });
 });

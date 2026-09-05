@@ -241,6 +241,16 @@ describe('TagFileMutations', () => {
         expect(linkLine).toContain('href="#D10000"');
     });
 
+    it('keeps matches inside html attributes that contain greater-than signs', async () => {
+        const file = createFile('Projects/HtmlAttribute.md', {}, 'Inline #D10000 <span title="a > b #D10000">example</span>');
+        cachedTagsByPath.set(file.path, ['D10000']);
+
+        const removed = await fileMutations.removeTagFromFile(file, 'D10000');
+
+        expect(removed).toBe(true);
+        expect(file.content).toBe('Inline <span title="a > b #D10000">example</span>');
+    });
+
     it('removes inline tags surrounded by comparison operators', async () => {
         const file = createFile('Projects/Compare.md', {}, 'Value < 5 #D10000 > threshold');
         cachedTagsByPath.set(file.path, ['D10000']);

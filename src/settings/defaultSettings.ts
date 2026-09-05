@@ -21,8 +21,14 @@ import { getDefaultKeyboardShortcuts } from '../utils/keyboardShortcuts';
 import { FILE_VISIBILITY } from '../utils/fileTypeUtils';
 import { LISTPANE_MEASUREMENTS, NAVPANE_MEASUREMENTS, type PinnedNotes } from '../types';
 import { DEFAULT_UI_SCALE } from '../utils/uiScale';
-import type { FolderAppearance, TagAppearance } from '../hooks/useListPaneAppearance';
-import { SYNC_MODE_SETTING_IDS, type NavRainbowSettings, type NotebookNavigatorSettings, type SettingSyncMode } from './types';
+import type { ListPaneAppearance } from './listPaneAppearance';
+import {
+    NARROW_SIDEBAR_CUSTOM_WIDTH_DEFAULT,
+    SYNC_MODE_SETTING_IDS,
+    type NavRainbowSettings,
+    type NotebookNavigatorSettings,
+    type SettingSyncMode
+} from './types';
 import { sanitizeRecord } from '../utils/recordUtils';
 import {
     DEFAULT_CALENDAR_CUSTOM_FILE_PATTERN,
@@ -31,6 +37,8 @@ import {
     DEFAULT_CALENDAR_CUSTOM_WEEK_PATTERN,
     DEFAULT_CALENDAR_CUSTOM_YEAR_PATTERN
 } from '../utils/calendarCustomNotePatterns';
+import { DEFAULT_FILE_TYPE_ICON_PRESET } from '../utils/fileTypeIconPresets';
+import { FOLDER_NOTE_NAME_PATTERN_TOKEN } from '../utils/folderNoteName';
 
 const defaultSettingsSync = sanitizeRecord<SettingSyncMode>(undefined);
 SYNC_MODE_SETTING_IDS.forEach(settingId => {
@@ -52,8 +60,8 @@ export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
         enabled: false,
         firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
         lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
-        darkFirstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
-        darkLastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT,
         transitionStyle: 'rgb'
     },
 
@@ -61,8 +69,8 @@ export const NAV_RAINBOW_DEFAULTS: NavRainbowSettings = {
         enabled: false,
         firstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
         lastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
-        darkFirstColor: NAV_RAINBOW_FIRST_COLOR_DEFAULT,
-        darkLastColor: NAV_RAINBOW_LAST_COLOR_DEFAULT,
+        darkFirstColor: NAV_RAINBOW_DARK_FIRST_COLOR_DEFAULT,
+        darkLastColor: NAV_RAINBOW_DARK_LAST_COLOR_DEFAULT,
         transitionStyle: 'rgb'
     },
 
@@ -123,6 +131,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
             fileVisibility: FILE_VISIBILITY.SUPPORTED,
             propertyKeys: [],
             hiddenFolders: [],
+            descendantExcludedFolders: [],
             hiddenTags: [],
             hiddenFileNames: [],
             hiddenFileTags: [],
@@ -161,14 +170,20 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     // General tab - Homepage
     homepage: {
         source: 'none',
-        file: null
+        file: null,
+        createMissingPeriodicNote: true
     },
 
     // General tab - Desktop appearance
     dualPane: true,
     dualPaneOrientation: 'horizontal',
+    narrowSidebarLayout: 'singlePane',
+    narrowSidebarTriggerMode: 'fitPanes',
+    narrowSidebarCustomWidth: NARROW_SIDEBAR_CUSTOM_WIDTH_DEFAULT,
     showTooltips: false,
     showTooltipPath: true,
+    showTooltipTags: false,
+    showTooltipWordCount: false,
     desktopBackground: 'separate',
     desktopScale: DEFAULT_UI_SCALE,
 
@@ -190,7 +205,9 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
         list: {
             back: true,
             search: true,
+            reveal: false,
             descendants: true,
+            groupExpansion: false,
             sort: true,
             appearance: true,
             newNote: true
@@ -214,6 +231,9 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     // Icon packs tab
     externalIconProviders: sanitizeRecord<boolean>(undefined),
 
+    // About
+    showReleaseNotes: true,
+
     // Advanced tab
     checkForUpdatesOnStart: true,
 
@@ -222,6 +242,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showNoteCount: true,
     separateNoteCounts: true,
     showIndentGuides: false,
+    navCountLeaderStyle: 'none',
     rootLevelSpacing: 0,
     navIndent: NAVPANE_MEASUREMENTS.defaultIndent,
     navItemHeight: NAVPANE_MEASUREMENTS.defaultItemHeight,
@@ -230,6 +251,8 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     // Navigation pane tab - Behavior
     collapseBehavior: 'all',
     smartCollapse: true,
+    excludeVaultRootFromCollapse: false,
+    collapseOtherBranchesOnExpand: false,
     autoSelectFirstFileOnFocusChange: false,
     autoExpandNavItems: false,
     springLoadedFolders: true,
@@ -253,13 +276,13 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     folderSortOrder: 'alpha-asc',
     enableFolderNotes: false,
     folderNoteType: 'markdown',
-    folderNoteName: '',
-    folderNoteNamePattern: '',
+    folderNoteNamePattern: FOLDER_NOTE_NAME_PATTERN_TOKEN,
     folderNoteTemplate: null,
     enableFolderNoteLinks: true,
     hideFolderNoteInList: true,
     pinCreatedFolderNote: false,
-    openFolderNotesInNewTab: false,
+    folderNoteOpenLocation: 'current-tab',
+    showNearestFolderNoteInSidebar: true,
 
     // Tags tab
     showTags: true,
@@ -273,7 +296,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
 
     // Topics
     showTopics: true,
-    topicTags: ['topic', "jaar", "decennium", "maand"],
+    topicTags: ['topic', 'jaar', 'decennium', 'maand'],
     topicSortOrder: 'alpha-asc',
     hiddenTopics: [],
     rootTopicOrder: [],
@@ -290,16 +313,23 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     defaultListMode: 'standard',
     includeDescendantNotes: false,
     defaultFolderSort: 'modified-desc',
+    defaultFolderSortPropertyKey: '',
     propertySortKey: '',
+    propertyGroupKey: '',
     propertySortSecondary: 'title',
+    manualSortPropertyKey: 'sort_index',
+    manualSortGroupHeaderProperty: 'group_header',
+    manualSortNewNotePlacement: 'below-selected-note',
+    confirmBeforeManualSort: true,
     revealFileOnListChanges: true,
     listPaneTitle: 'header',
     noteGrouping: 'date',
     showSelectedNavigationPills: false,
+    stickyGroupHeaders: true,
+    showFolderGroupPaths: true,
+    showGroupHeaderItemCounts: false,
+    showCurrentFolderFilesAtBottom: false,
     filterPinnedByFolder: false,
-    showPinnedGroupHeader: true,
-    showPinnedIcon: true,
-    optimizeNoteHeight: true,
     compactItemHeight: LISTPANE_MEASUREMENTS.defaultCompactItemHeight,
     compactItemHeightScaleText: true,
     showQuickActions: true,
@@ -308,6 +338,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     quickActionAddToShortcuts: true,
     quickActionPinNote: true,
     quickActionOpenInNewTab: false,
+    hideDrawingPreviewImages: true,
 
     // Frontmatter tab
     useFrontmatterMetadata: false,
@@ -320,18 +351,27 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     frontmatterDateFormat: '',
 
     // Notes tab
-    showFileIconUnfinishedTask: false,
+    showFileTaskProgress: true,
+    showFileTaskProgressBar: true,
+    showFileTaskProgressCount: true,
+    hideFileTaskProgressWhenComplete: false,
     showFileBackgroundUnfinishedTask: false,
     unfinishedTaskBackgroundColor: UNFINISHED_TASK_BACKGROUND_COLOR_DEFAULT,
+    unfinishedTaskBackgroundColorDark: UNFINISHED_TASK_BACKGROUND_COLOR_DEFAULT,
     showFileIcons: true,
+    unfinishedTaskIcon: 'compact',
+    useFolderIconForFiles: false,
     showFilenameMatchIcons: false,
     fileNameIconMap: sanitizeRecord<string>(undefined),
     showCategoryIcons: false,
     fileTypeIconMap: sanitizeRecord<string>(undefined),
+    fileTypeIconPreset: DEFAULT_FILE_TYPE_ICON_PRESET,
     fileNameRows: 1,
+    useFolderColorForTitles: false,
     showFilePreview: true,
     skipHeadingsInPreview: true,
     skipCodeBlocksInPreview: true,
+    skipCalloutsInPreview: false,
     stripHtmlInPreview: true,
     stripLatexInPreview: true,
     previewRows: 2,
@@ -356,11 +396,16 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showPropertiesOnSeparateRows: false,
     enablePropertyInternalLinks: true,
     enablePropertyExternalLinks: true,
-    notePropertyType: 'none',
+    textCountDisplay: 'none',
+    textCountPlacement: 'title',
+    characterCountSpaces: 'include',
+    wordCountTargetProperty: 'word-goal',
+    showWordCountPercentage: false,
     showFileDate: true,
     // Default to showing modified date when sorting alphabetically
     alphabeticalDateMode: 'modified',
     showParentFolder: true,
+    showParentFolderFullPath: false,
     parentFolderClickRevealsFile: false,
     showParentFolderColor: false,
     showParentFolderIcon: false,
@@ -369,20 +414,24 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     calendarEnabled: true,
     calendarPlacement: 'left-sidebar',
     calendarConfirmBeforeCreate: true,
+    calendarShowHiddenItems: false,
     calendarLocale: 'system-default',
     calendarWeekendDays: 'sat-sun',
     calendarMonthHeadingFormat: 'full',
     calendarHighlightToday: true,
     calendarShowFeatureImage: true,
+    calendarShowTasks: true,
     calendarMonthHighlights: sanitizeRecord<string>(undefined),
     calendarShowWeekNumber: false,
     calendarShowQuarter: false,
+    calendarShowOutsideMonthDays: true,
     calendarShowYearCalendar: true,
     calendarLeftPlacement: 'navigation',
     calendarWeeksToShow: 1,
 
     // Calendar tab - Calendar integration
     calendarIntegrationMode: 'notebook-navigator',
+    calendarPeriodicNotesLocaleSource: 'calendar',
     calendarCustomFilePattern: DEFAULT_CALENDAR_CUSTOM_FILE_PATTERN,
     calendarCustomWeekPattern: DEFAULT_CALENDAR_CUSTOM_WEEK_PATTERN,
     calendarCustomMonthPattern: DEFAULT_CALENDAR_CUSTOM_MONTH_PATTERN,
@@ -409,21 +458,22 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     folderBackgroundColors: sanitizeRecord<string>(undefined),
     folderSortOverrides: sanitizeRecord<NotebookNavigatorSettings['folderSortOverrides'][string]>(undefined),
     folderTreeSortOverrides: sanitizeRecord<NotebookNavigatorSettings['folderTreeSortOverrides'][string]>(undefined),
-    folderAppearances: sanitizeRecord<FolderAppearance>(undefined),
+    folderAppearances: sanitizeRecord<ListPaneAppearance>(undefined),
     tagIcons: sanitizeRecord<string>(undefined),
     tagColors: sanitizeRecord<string>(undefined),
     tagBackgroundColors: sanitizeRecord<string>(undefined),
     tagSortOverrides: sanitizeRecord<NotebookNavigatorSettings['tagSortOverrides'][string]>(undefined),
     tagTreeSortOverrides: sanitizeRecord<NotebookNavigatorSettings['tagTreeSortOverrides'][string]>(undefined),
-    tagAppearances: sanitizeRecord<TagAppearance>(undefined),
+    tagAppearances: sanitizeRecord<ListPaneAppearance>(undefined),
     propertyIcons: sanitizeRecord<string>(undefined),
     propertyColors: sanitizeRecord<string>(undefined),
     propertyBackgroundColors: sanitizeRecord<string>(undefined),
     propertySortOverrides: sanitizeRecord<NotebookNavigatorSettings['propertySortOverrides'][string]>(undefined),
     propertyTreeSortOverrides: sanitizeRecord<NotebookNavigatorSettings['propertyTreeSortOverrides'][string]>(undefined),
-    propertyAppearances: sanitizeRecord<FolderAppearance>(undefined),
+    propertyAppearances: sanitizeRecord<ListPaneAppearance>(undefined),
+
     topicSortOverrides: sanitizeRecord<NotebookNavigatorSettings['topicSortOverrides'][string]>(undefined),
-    topicAppearances: sanitizeRecord<FolderAppearance>(undefined),
+    topicAppearances: sanitizeRecord<ListPaneAppearance>(undefined),
     virtualFolderColors: sanitizeRecord<string>(undefined),
     virtualFolderBackgroundColors: sanitizeRecord<string>(undefined),
     navigationSeparators: sanitizeRecord<boolean>(undefined),

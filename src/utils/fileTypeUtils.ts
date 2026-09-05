@@ -33,6 +33,10 @@ export const FILE_VISIBILITY = {
  */
 export type FileVisibility = (typeof FILE_VISIBILITY)[keyof typeof FILE_VISIBILITY];
 
+export function isFileVisibility(value: unknown): value is FileVisibility {
+    return value === FILE_VISIBILITY.DOCUMENTS || value === FILE_VISIBILITY.SUPPORTED || value === FILE_VISIBILITY.ALL;
+}
+
 /**
  * Core file types that Obsidian supports natively
  * This is a fallback list in case we can't access the view registry
@@ -90,17 +94,24 @@ function getSupportedExtensions(app: App): Set<string> {
 }
 
 /**
- * Common image extensions that can be displayed as feature images.
- * Used by the feature image pipeline.
+ * Common raster image extensions that can be displayed as generated thumbnails or direct previews.
+ * SVG files are excluded from raster helpers; they are rasterized into generated thumbnails instead.
  */
-const SUPPORTED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'avif', 'heic', 'heif', 'bmp'] as const;
-const IMAGE_EXTENSIONS = new Set<string>(SUPPORTED_IMAGE_EXTENSIONS);
+const SUPPORTED_RASTER_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'heic', 'heif', 'bmp'] as const;
+const RASTER_IMAGE_EXTENSIONS = new Set<string>(SUPPORTED_RASTER_IMAGE_EXTENSIONS);
 
-export function isImageExtension(extension: string): boolean {
+export function isSvgExtension(extension: string): boolean {
     if (!extension) {
         return false;
     }
-    return IMAGE_EXTENSIONS.has(extension.toLowerCase());
+    return extension.toLowerCase() === 'svg';
+}
+
+export function isRasterImageExtension(extension: string): boolean {
+    if (!extension) {
+        return false;
+    }
+    return RASTER_IMAGE_EXTENSIONS.has(extension.toLowerCase());
 }
 
 // Checks if a file extension is PDF (case-insensitive)
@@ -155,13 +166,23 @@ export function shouldDisplayFile(file: TFile, visibility: FileVisibility, app: 
 }
 
 /**
- * Check if a file is an image that can be displayed as a feature image
+ * Check if a file is a raster image that can be displayed as a generated thumbnail or direct preview.
  */
-export function isImageFile(file: TFile): boolean {
+export function isRasterImageFile(file: TFile): boolean {
     if (!file?.extension) {
         return false;
     }
-    return isImageExtension(file.extension);
+    return isRasterImageExtension(file.extension);
+}
+
+/**
+ * Check if a file is an SVG image that can be rasterized into a generated thumbnail.
+ */
+export function isSvgFile(file: TFile): boolean {
+    if (!file?.extension) {
+        return false;
+    }
+    return isSvgExtension(file.extension);
 }
 
 // Checks if a TFile is a PDF document
@@ -170,6 +191,13 @@ export function isPdfFile(file: TFile): boolean {
         return false;
     }
     return isPdfExtension(file.extension);
+}
+
+/**
+ * Check if a file's feature image is a thumbnail generated from the file contents (PDF cover pages and rasterized SVG files).
+ */
+export function isGeneratedThumbnailFile(file: TFile): boolean {
+    return isPdfFile(file) || isSvgFile(file);
 }
 
 export function isMarkdownPath(path: string): boolean {

@@ -28,6 +28,9 @@ export function getTopicNote(topicName: string, app: App): TFile | null {
     return topicFile;
 }
 
+/**
+ * @public Retained topic-note predicate used by the topic feature's unfinished paths.
+ */
 export function isTopicNote(file: TFile, app: App): boolean {
     const metadata = app.metadataCache.getFileCache(file);
     if (!metadata) {
@@ -40,7 +43,12 @@ export function getTopicNameFromFile(file: TFile): string {
     return getTopicNameFromPath(file.path);
 }
 
-export function findFirstTopicPathInHierarchy(file: TFile, app: App, topicGraph: Map<string, TopicNode>, visited: Set<string> = new Set()): string | null {
+export function findFirstTopicPathInHierarchy(
+    file: TFile,
+    app: App,
+    topicGraph: Map<string, TopicNode>,
+    visited: Set<string> = new Set()
+): string | null {
     if (visited.has(file.path)) {
         return null;
     }
@@ -67,8 +75,8 @@ export function findFirstTopicPathInHierarchy(file: TFile, app: App, topicGraph:
             }
             visitedNodes.add(node.name);
             pathParts.unshift(node.name);
-            if (node.parents.size > 0) {
-                const firstParent = node.parents.values().next().value;
+            const firstParent = node.parents.values().next().value;
+            if (firstParent) {
                 traverseUp(firstParent);
             }
         }

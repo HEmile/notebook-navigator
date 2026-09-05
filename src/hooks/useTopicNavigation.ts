@@ -17,33 +17,35 @@
  */
 
 import { useCallback } from 'react';
-import { useExpansionDispatch } from '../context/ExpansionContext';
 import { useSelectionDispatch } from '../context/SelectionContext';
 import { useUIState, useUIDispatch } from '../context/UIStateContext';
-import { useServices } from '../context/ServicesContext';
+import { useServices, useTopicService } from '../context/ServicesContext';
 import { getTopicNote } from '../utils/topicNotes';
-import { getTopicNameFromPath } from '../utils/topicGraph';
+import { getTopicNameFromPath, resolveTopicPath } from '../utils/topicGraph';
 
 export function useTopicNavigation() {
     const selectionDispatch = useSelectionDispatch();
-    const expansionDispatch = useExpansionDispatch();
     const uiState = useUIState();
     const uiDispatch = useUIDispatch();
     const { app } = useServices();
+    const topicService = useTopicService();
 
     const navigateToTopic = useCallback(
-        (topicPath: string) => {
-            if (!topicPath) {
+        (topicPathOrName: string) => {
+            if (!topicPathOrName) {
                 return;
             }
 
-            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: topicPath });
+            // Tree rows pass a full topic path, topic shortcuts pass a bare topic name.
+            // Normalize to a path so the file list and the selected row both resolve.
+            const topicGraph = topicService?.getTopicGraph();
+            const topicPath = (topicGraph ? resolveTopicPath(topicGraph, topicPathOrName) : null) ?? topicPathOrName;
 
-            if (uiState.singlePane) {
-                uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'files' });
-            }
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath });
 
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
+            // ACTIVATE_PANE sets the focused pane and the visible single-pane view together:
+            // single pane reveals the file list, dual pane keeps focus in the navigation pane.
+            uiDispatch({ type: 'ACTIVATE_PANE', target: uiState.singlePane ? 'files' : 'navigation' });
 
             // Open the topic note file in the editor if it exists
             const topicName = getTopicNameFromPath(topicPath);
@@ -51,11 +53,11 @@ export function useTopicNavigation() {
             if (topicFile) {
                 const leaf = app.workspace.getLeaf(false);
                 if (leaf) {
-                    leaf.openFile(topicFile, { active: false });
+                    void leaf.openFile(topicFile, { active: false });
                 }
             }
         },
-        [selectionDispatch, expansionDispatch, uiState.singlePane, uiDispatch, app]
+        [selectionDispatch, uiState.singlePane, uiDispatch, app, topicService]
     );
 
     return { navigateToTopic };

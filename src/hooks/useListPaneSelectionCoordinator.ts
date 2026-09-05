@@ -18,7 +18,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 import { TFile, debounce } from 'obsidian';
-import { Virtualizer } from '@tanstack/react-virtual';
 import { resolvePrimarySelectedFile, useSelectionDispatch, useSelectionState } from '../context/SelectionContext';
 import { useServices } from '../context/ServicesContext';
 import { useSettingsState } from '../context/SettingsContext';
@@ -31,7 +30,9 @@ import { runAsyncAction } from '../utils/async';
 import { isKeyboardEventContextBlocked } from '../utils/domUtils';
 import { isCmdCtrlModifierPressed, isMultiSelectModifierPressed } from '../utils/keyboardOpenContext';
 import { openFileInContext } from '../utils/openFileInContext';
+import { supportsKeyboardInteractions } from '../utils/paneLayout';
 import { getAdjacentFile } from '../utils/selectionUtils';
+import type { Align } from '../types/scroll';
 
 export interface SelectFileOptions {
     markKeyboardNavigation?: boolean;
@@ -55,14 +56,14 @@ interface UseListPaneSelectionCoordinatorParams {
     rootContainerRef: RefObject<HTMLDivElement | null>;
     orderedFiles: TFile[];
     filePathToIndex: Map<string, number>;
-    rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
+    scrollToIndexSafely: (index: number, align: Align) => void;
 }
 
 interface UseListPaneSelectionCoordinatorResult {
     selectFileFromList: (file: TFile, options?: SelectFileOptions) => void;
     selectAdjacentFile: (direction: 'next' | 'previous') => boolean;
     ensureSelectionForCurrentFilter: (options?: EnsureSelectionOptions) => EnsureSelectionResult;
-    handleFileItemClick: (file: TFile, fileIndex: number | undefined, event: ReactMouseEvent) => void;
+    handleFileItemClick: (file: TFile, fileIndex: number | undefined, event: ReactMouseEvent, filesOverride?: TFile[]) => void;
     lastSelectedFilePath: string | null;
     isFileSelected: (file: TFile) => boolean;
     scheduleKeyboardSelectionOpen: () => void;
@@ -74,7 +75,7 @@ export function useListPaneSelectionCoordinator({
     rootContainerRef,
     orderedFiles,
     filePathToIndex,
-    rowVirtualizer
+    scrollToIndexSafely
 }: UseListPaneSelectionCoordinatorParams): UseListPaneSelectionCoordinatorResult {
     const { app, commandQueue, isMobile } = useServices();
     const openFileInWorkspace = useFileOpener();
@@ -85,7 +86,7 @@ export function useListPaneSelectionCoordinator({
     const uiDispatch = useUIDispatch();
     const uxPreferences = useUXPreferences();
     const isSearchActive = uxPreferences.searchActive;
-    const multiSelection = useMultiSelection();
+    const { handleMultiSelectClick, handleRangeSelectClick, isFileSelected } = useMultiSelection();
 
     const isUserSelectionRef = useRef(false);
     const keyboardOpenPendingRef = useRef(false);
@@ -369,31 +370,34 @@ export function useListPaneSelectionCoordinator({
 
             const virtualIndex = filePathToIndex.get(targetFile.path);
             if (virtualIndex !== undefined) {
-                rowVirtualizer.scrollToIndex(virtualIndex, { align: 'auto' });
+                scrollToIndexSafely(virtualIndex, 'auto');
             }
 
             return true;
         },
-        [app, filePathToIndex, orderedFiles, rowVirtualizer, selectFileFromList, selectionState, settings.enterToOpenFiles]
+        [app, filePathToIndex, orderedFiles, scrollToIndexSafely, selectFileFromList, selectionState, settings.enterToOpenFiles]
     );
 
     const handleFileClick = useCallback(
-        (file: TFile, event: ReactMouseEvent, fileIndex?: number) => {
+        (file: TFile, event: ReactMouseEvent, fileIndex?: number, filesOverride?: TFile[]) => {
             if (event.button === 1) {
                 return;
             }
 
             isUserSelectionRef.current = true;
 
+            const clickOrderedFiles = filesOverride ?? orderedFiles;
             const isShiftKey = event.shiftKey;
             const isCmdCtrlClick = isCmdCtrlModifierPressed(event);
-            const shouldMultiSelect = !isMobile && isMultiSelectModifierPressed(event, settings.multiSelectModifier);
-            const shouldOpenInNewTab = !isMobile && !shouldMultiSelect && settings.multiSelectModifier === 'optionAlt' && isCmdCtrlClick;
+            const modifierSelectEnabled = supportsKeyboardInteractions();
+            const shouldMultiSelect = modifierSelectEnabled && isMultiSelectModifierPressed(event, settings.multiSelectModifier);
+            const shouldOpenInNewTab =
+                modifierSelectEnabled && !shouldMultiSelect && settings.multiSelectModifier === 'optionAlt' && isCmdCtrlClick;
 
             if (shouldMultiSelect) {
-                multiSelection.handleMultiSelectClick(file, fileIndex, orderedFiles);
-            } else if (!isMobile && isShiftKey && fileIndex !== undefined) {
-                multiSelection.handleRangeSelectClick(file, fileIndex, orderedFiles);
+                handleMultiSelectClick(file, fileIndex, clickOrderedFiles);
+            } else if (modifierSelectEnabled && isShiftKey && fileIndex !== undefined) {
+                handleRangeSelectClick(file, fileIndex, clickOrderedFiles);
             } else {
                 selectFileFromList(file, {
                     markUserSelection: true,
@@ -401,22 +405,35 @@ export function useListPaneSelectionCoordinator({
                 });
             }
 
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
+            uiDispatch({ type: 'ACTIVATE_PANE', target: 'files' });
 
             if (!shouldMultiSelect && !isShiftKey && shouldOpenInNewTab) {
                 runAsyncAction(() => openFileInContext({ app, commandQueue, file, context: 'tab' }));
             }
 
+            // Closes the drawer so the opened note is visible. Safe with dual pane on
+            // tablets: Obsidian no-ops WorkspaceMobileDrawer.collapse() while the sidebar
+            // is pinned (see src/utils/paneLayout.ts), so only the overlay drawer closes.
             if (isMobile && app.workspace.leftSplit && !shouldMultiSelect && !isShiftKey) {
                 app.workspace.leftSplit.collapse();
             }
         },
-        [app, commandQueue, isMobile, multiSelection, orderedFiles, selectFileFromList, settings.multiSelectModifier, uiDispatch]
+        [
+            app,
+            commandQueue,
+            handleMultiSelectClick,
+            handleRangeSelectClick,
+            isMobile,
+            orderedFiles,
+            selectFileFromList,
+            settings.multiSelectModifier,
+            uiDispatch
+        ]
     );
 
     const handleFileItemClick = useCallback(
-        (file: TFile, fileIndex: number | undefined, event: ReactMouseEvent) => {
-            handleFileClick(file, event, fileIndex);
+        (file: TFile, fileIndex: number | undefined, event: ReactMouseEvent, filesOverride?: TFile[]) => {
+            handleFileClick(file, event, fileIndex, filesOverride);
         },
         [handleFileClick]
     );
@@ -444,7 +461,7 @@ export function useListPaneSelectionCoordinator({
         let selectionStateChangedBySearchSync = false;
         let handledSearchFolderAutoSelect = false;
 
-        if (isSearchActive && settings.autoSelectFirstFileOnFocusChange && !isMobile && isFolderChangeWithAutoSelect) {
+        if (isSearchActive && settings.autoSelectFirstFileOnFocusChange && supportsKeyboardInteractions() && isFolderChangeWithAutoSelect) {
             const ensureResult = ensureSelectionForCurrentFilter({
                 openInEditor: true,
                 clearIfEmpty: true,
@@ -460,17 +477,14 @@ export function useListPaneSelectionCoordinator({
             selectedFile &&
             !isUserSelectionRef.current &&
             settings.autoSelectFirstFileOnFocusChange &&
-            !isMobile
+            supportsKeyboardInteractions() &&
+            isFolderChangeWithAutoSelect &&
+            !settings.enterToOpenFiles
         ) {
-            const navigatorEl = document.querySelector('.nn-split-container');
-            const hasNavigatorFocus = navigatorEl instanceof HTMLElement && navigatorEl.contains(document.activeElement);
-
-            if ((!hasNavigatorFocus || isFolderChangeWithAutoSelect) && !settings.enterToOpenFiles) {
-                if (shouldDebounceFolderAutoOpen) {
-                    scheduleKeyboardOpen(selectedFile);
-                } else {
-                    openFileInWorkspace(selectedFile);
-                }
+            if (shouldDebounceFolderAutoOpen) {
+                scheduleKeyboardOpen(selectedFile);
+            } else {
+                openFileInWorkspace(selectedFile);
             }
         }
 
@@ -484,7 +498,6 @@ export function useListPaneSelectionCoordinator({
         isUserSelectionRef.current = false;
     }, [
         ensureSelectionForCurrentFilter,
-        isMobile,
         isSearchActive,
         openFileInWorkspace,
         scheduleKeyboardOpen,
@@ -495,7 +508,7 @@ export function useListPaneSelectionCoordinator({
     ]);
 
     useEffect(() => {
-        if (uiState.singlePane || isMobile) {
+        if (uiState.singlePane || !supportsKeyboardInteractions()) {
             return;
         }
 
@@ -521,7 +534,6 @@ export function useListPaneSelectionCoordinator({
     }, [
         app.workspace,
         ensureSelectionForCurrentFilter,
-        isMobile,
         orderedFiles,
         selectionDispatch,
         selectionState.isKeyboardNavigation,
@@ -536,7 +548,7 @@ export function useListPaneSelectionCoordinator({
         ensureSelectionForCurrentFilter,
         handleFileItemClick,
         lastSelectedFilePath: lastSelectedFilePathRef.current,
-        isFileSelected: multiSelection.isFileSelected,
+        isFileSelected,
         scheduleKeyboardSelectionOpen,
         scheduleKeyboardSelectionOpenForFile,
         commitPendingKeyboardSelectionOpen

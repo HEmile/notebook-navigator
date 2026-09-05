@@ -17,12 +17,14 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TFile } from 'obsidian';
+import { App, TFile } from 'obsidian';
+import type { CachedMetadata, ListItemCache } from 'obsidian';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { ContentProviderType } from '../../src/interfaces/IContentProvider';
 import type { NotebookNavigatorSettings } from '../../src/settings/types';
 import type { FileData } from '../../src/storage/IndexedDBStorage';
-import { filterFilesRequiringMetadataSources, filterPdfFilesRequiringThumbnails } from '../../src/context/storageQueueFilters';
+import { filterFilesRequiringFileThumbnails, filterFilesRequiringMetadataSources } from '../../src/context/storageQueueFilters';
+import { getDrawingDirectFeatureImageKey } from '../../src/utils/drawingFeatureImages';
 
 class FakeDB {
     private readonly files = new Map<string, FileData>();
@@ -67,6 +69,23 @@ function createFileData(overrides: Partial<FileData>): FileData {
         featureImageKey: null,
         metadata: null,
         ...overrides
+    };
+}
+
+function createTaskItem(line: number, task: string): ListItemCache {
+    return {
+        parent: -line,
+        position: {
+            start: { line, col: 0, offset: line },
+            end: { line, col: 10, offset: line + 10 }
+        },
+        task
+    };
+}
+
+function createTaskMetadata(tasks: string[]): CachedMetadata {
+    return {
+        listItems: tasks.map((task, index) => createTaskItem(index, task))
     };
 }
 
@@ -150,6 +169,103 @@ describe('Storage queue filters', () => {
         expect(result).toEqual([file]);
     });
 
+    it('includes markdown drawing files when the direct drawing marker is stale', () => {
+        const file = new TFile();
+        file.path = 'drawings/sketch.md';
+        file.extension = 'md';
+        file.stat.mtime = 456;
+        const app = new App();
+        app.metadataCache.getFileCache = () => ({ frontmatter: { 'tldraw-file': true } });
+
+        db.setFile(
+            file.path,
+            createFileData({
+                mtime: file.stat.mtime,
+                markdownPipelineMtime: file.stat.mtime,
+                wordCount: 0,
+                taskTotal: 0,
+                taskUnfinished: 0,
+                previewStatus: 'none',
+                featureImageStatus: 'none',
+                featureImageKey: ''
+            })
+        );
+
+        settings = { ...settings, showFeatureImage: true };
+
+        const types: ContentProviderType[] = ['markdownPipeline'];
+        const result = filterFilesRequiringMetadataSources([file], types, settings, { app });
+
+        expect(result).toEqual([file]);
+    });
+
+    it('excludes markdown drawing files when the direct drawing marker is current', () => {
+        const file = new TFile();
+        file.path = 'drawings/sketch.md';
+        file.extension = 'md';
+        file.stat.mtime = 456;
+        const app = new App();
+        app.metadataCache.getFileCache = () => ({ frontmatter: { 'tldraw-file': true } });
+
+        db.setFile(
+            file.path,
+            createFileData({
+                mtime: file.stat.mtime,
+                markdownPipelineMtime: file.stat.mtime,
+                wordCount: 0,
+                taskTotal: 0,
+                taskUnfinished: 0,
+                previewStatus: 'none',
+                featureImageStatus: 'none',
+                featureImageKey: getDrawingDirectFeatureImageKey(file, 'tldraw'),
+                properties: []
+            })
+        );
+
+        settings = { ...settings, showFilePreview: false, showFeatureImage: true };
+
+        const types: ContentProviderType[] = ['markdownPipeline'];
+        const result = filterFilesRequiringMetadataSources([file], types, settings, { app });
+
+        expect(result).toEqual([]);
+    });
+
+    it('excludes markdown drawing files when the empty feature-image marker is current and feature images are excluded', () => {
+        const file = new TFile();
+        file.path = 'drawings/sketch.md';
+        file.extension = 'md';
+        file.stat.mtime = 456;
+        const app = new App();
+        app.metadataCache.getFileCache = () => ({ frontmatter: { 'tldraw-file': true, private: true } });
+
+        db.setFile(
+            file.path,
+            createFileData({
+                mtime: file.stat.mtime,
+                markdownPipelineMtime: file.stat.mtime,
+                wordCount: 0,
+                taskTotal: 0,
+                taskUnfinished: 0,
+                previewStatus: 'none',
+                featureImageStatus: 'none',
+                featureImageKey: '',
+                properties: []
+            })
+        );
+
+        settings = {
+            ...settings,
+            showFilePreview: false,
+            showFeatureImage: true,
+            featureImageExcludeProperties: ['private']
+        };
+
+        const types: ContentProviderType[] = ['markdownPipeline'];
+        const result = filterFilesRequiringMetadataSources([file], types, settings, { app });
+
+        expect(result).toEqual([]);
+    });
+
     it('includes markdown files when task counters are pending', () => {
         const file = new TFile();
         file.path = 'notes/note.md';
@@ -174,6 +290,161 @@ describe('Storage queue filters', () => {
 
         const types: ContentProviderType[] = ['markdownPipeline'];
         const result = filterFilesRequiringMetadataSources([file], types, settings);
+
+        expect(result).toEqual([file]);
+    });
+
+    it('includes stale markdown pipeline files so property metadata can refresh', () => {
+        const file = new TFile();
+        file.path = 'notes/note.md';
+        file.extension = 'md';
+        file.stat.mtime = 456;
+        const app = new App();
+        app.metadataCache.getFileCache = () => ({ listItems: [] });
+
+        db.setFile(
+            file.path,
+            createFileData({
+                mtime: file.stat.mtime,
+                markdownPipelineMtime: 100,
+                wordCount: 0,
+                taskTotal: 0,
+                taskUnfinished: 0,
+                previewStatus: 'none',
+                featureImageStatus: 'none',
+                featureImageKey: '',
+                properties: []
+            })
+        );
+
+        settings = {
+            ...settings,
+            showFilePreview: false,
+            showFeatureImage: false,
+            showTooltips: false,
+            textCountDisplay: 'none',
+            calendarEnabled: true
+        };
+
+        const types: ContentProviderType[] = ['markdownPipeline'];
+        const result = filterFilesRequiringMetadataSources([file], types, settings, { app });
+
+        expect(result).toEqual([file]);
+    });
+
+    it('includes stale markdown pipeline files when metadata contains task items', () => {
+        const file = new TFile();
+        file.path = 'notes/note.md';
+        file.extension = 'md';
+        file.stat.mtime = 456;
+        const app = new App();
+        app.metadataCache.getFileCache = () => createTaskMetadata([' ', 'x']);
+
+        db.setFile(
+            file.path,
+            createFileData({
+                mtime: file.stat.mtime,
+                markdownPipelineMtime: 100,
+                wordCount: 0,
+                taskTotal: 2,
+                taskUnfinished: 1,
+                previewStatus: 'none',
+                featureImageStatus: 'none',
+                featureImageKey: '',
+                properties: []
+            })
+        );
+
+        settings = {
+            ...settings,
+            showFilePreview: false,
+            showFeatureImage: false,
+            showTooltips: false,
+            textCountDisplay: 'none',
+            calendarEnabled: true
+        };
+
+        const types: ContentProviderType[] = ['markdownPipeline'];
+        const result = filterFilesRequiringMetadataSources([file], types, settings, { app });
+
+        expect(result).toEqual([file]);
+    });
+
+    it('excludes current markdown pipeline files when task counters are current even if metadata contains task items', () => {
+        const file = new TFile();
+        file.path = 'notes/note.md';
+        file.extension = 'md';
+        file.stat.mtime = 456;
+        const app = new App();
+        app.metadataCache.getFileCache = () => createTaskMetadata([' ']);
+
+        db.setFile(
+            file.path,
+            createFileData({
+                mtime: file.stat.mtime,
+                markdownPipelineMtime: file.stat.mtime,
+                wordCount: 0,
+                taskTotal: 0,
+                taskUnfinished: 0,
+                previewStatus: 'none',
+                featureImageStatus: 'none',
+                featureImageKey: '',
+                properties: []
+            })
+        );
+
+        settings = {
+            ...settings,
+            showFilePreview: false,
+            showFeatureImage: false,
+            showTooltips: false,
+            textCountDisplay: 'none',
+            calendarEnabled: true
+        };
+
+        const types: ContentProviderType[] = ['markdownPipeline'];
+        const result = filterFilesRequiringMetadataSources([file], types, settings, { app });
+
+        expect(result).toEqual([]);
+    });
+
+    it('includes current markdown pipeline files with task metadata when current task comparison is requested', () => {
+        const file = new TFile();
+        file.path = 'notes/note.md';
+        file.extension = 'md';
+        file.stat.mtime = 456;
+        const app = new App();
+        app.metadataCache.getFileCache = () => createTaskMetadata([' ']);
+
+        db.setFile(
+            file.path,
+            createFileData({
+                mtime: file.stat.mtime,
+                markdownPipelineMtime: file.stat.mtime,
+                wordCount: 0,
+                taskTotal: 0,
+                taskUnfinished: 0,
+                previewStatus: 'none',
+                featureImageStatus: 'none',
+                featureImageKey: '',
+                properties: []
+            })
+        );
+
+        settings = {
+            ...settings,
+            showFilePreview: false,
+            showFeatureImage: false,
+            showTooltips: false,
+            textCountDisplay: 'none',
+            calendarEnabled: true
+        };
+
+        const types: ContentProviderType[] = ['markdownPipeline'];
+        const result = filterFilesRequiringMetadataSources([file], types, settings, {
+            app,
+            compareCurrentTaskMetadata: true
+        });
 
         expect(result).toEqual([file]);
     });
@@ -203,12 +474,34 @@ describe('Storage queue filters', () => {
             ]
         };
 
+        const app = new App();
+        app.metadataCache.getFileCache = () => ({ frontmatter: { title: 'Note' } });
+
         const types: ContentProviderType[] = ['metadata'];
         const strictResult = filterFilesRequiringMetadataSources([file], types, settings);
         expect(strictResult).toEqual([]);
 
-        const conservativeResult = filterFilesRequiringMetadataSources([file], types, settings, { conservativeMetadata: true });
-        expect(conservativeResult).toEqual([file]);
+        const conservativeReadyResult = filterFilesRequiringMetadataSources([file], types, settings, {
+            conservativeMetadata: true,
+            app
+        });
+        expect(conservativeReadyResult).toEqual([]);
+
+        app.metadataCache.getFileCache = () => ({ frontmatter: { hide: true } });
+
+        const conservativeChangedResult = filterFilesRequiringMetadataSources([file], types, settings, {
+            conservativeMetadata: true,
+            app
+        });
+        expect(conservativeChangedResult).toEqual([file]);
+
+        app.metadataCache.getFileCache = () => null;
+
+        const conservativeMissingResult = filterFilesRequiringMetadataSources([file], types, settings, {
+            conservativeMetadata: true,
+            app
+        });
+        expect(conservativeMissingResult).toEqual([file]);
     });
 
     it('includes PDF files when fileThumbnailsMtime is reset even if featureImageKey matches', () => {
@@ -229,7 +522,7 @@ describe('Storage queue filters', () => {
 
         settings = { ...settings, showFeatureImage: true };
 
-        const result = filterPdfFilesRequiringThumbnails([file], settings);
+        const result = filterFilesRequiringFileThumbnails([file], settings);
 
         expect(result).toEqual([file]);
     });
@@ -252,7 +545,53 @@ describe('Storage queue filters', () => {
 
         settings = { ...settings, showFeatureImage: true };
 
-        const result = filterPdfFilesRequiringThumbnails([file], settings);
+        const result = filterFilesRequiringFileThumbnails([file], settings);
+
+        expect(result).toEqual([]);
+    });
+
+    it('includes raw Tldraw files when the direct drawing marker is missing', () => {
+        const file = new TFile();
+        file.path = 'drawings/sketch.tldr';
+        file.extension = 'tldr';
+        file.stat.mtime = 222;
+
+        db.setFile(
+            file.path,
+            createFileData({
+                mtime: file.stat.mtime,
+                fileThumbnailsMtime: file.stat.mtime,
+                featureImageKey: '',
+                featureImageStatus: 'none'
+            })
+        );
+
+        settings = { ...settings, showFeatureImage: true };
+
+        const result = filterFilesRequiringFileThumbnails([file], settings);
+
+        expect(result).toEqual([file]);
+    });
+
+    it('excludes raw Tldraw files when the direct drawing marker is up-to-date', () => {
+        const file = new TFile();
+        file.path = 'drawings/sketch.tldr';
+        file.extension = 'tldr';
+        file.stat.mtime = 333;
+
+        db.setFile(
+            file.path,
+            createFileData({
+                mtime: file.stat.mtime,
+                fileThumbnailsMtime: file.stat.mtime,
+                featureImageKey: getDrawingDirectFeatureImageKey(file, 'tldraw'),
+                featureImageStatus: 'none'
+            })
+        );
+
+        settings = { ...settings, showFeatureImage: true };
+
+        const result = filterFilesRequiringFileThumbnails([file], settings);
 
         expect(result).toEqual([]);
     });

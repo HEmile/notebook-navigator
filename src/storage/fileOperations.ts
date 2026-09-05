@@ -17,7 +17,10 @@
  */
 
 import { TFile } from 'obsidian';
-import { createDefaultFileData, IndexedDBStorage, FileData } from './IndexedDBStorage';
+import { createDefaultFileData, IndexedDBStorage, type FileData } from './IndexedDBStorage';
+import { recordStartupDiagnostic } from '../services/diagnostics/DebugLoggingService';
+import type { ContentProviderType } from '../interfaces/IContentProvider';
+import { getProviderProcessedMtimeField } from './providerMtime';
 
 /**
  * FileOperations - IndexedDB storage access layer and cache management
@@ -120,7 +123,13 @@ export async function initializeDatabase(
         previewLoadMaxBatch?: number;
     }
 ): Promise<void> {
+    const initStartMs = performance.now();
+    recordStartupDiagnostic('fileOperations.initializeDatabase.start', {
+        appId: appIdParam,
+        hasExistingInstance: dbInstance !== null
+    });
     if (isShuttingDown) {
+        recordStartupDiagnostic('fileOperations.initializeDatabase.skipped', { reason: 'shutdown' });
         return;
     }
     if (isShutdownState) {
@@ -136,7 +145,6 @@ export async function initializeDatabase(
     }
     const existing = dbInstance;
     if (existing && existing.isInitialized()) {
-        existing.startPreviewTextWarmup();
         return;
     }
 
@@ -144,6 +152,7 @@ export async function initializeDatabase(
     initializationPromise = (async () => {
         try {
             if (isShutdownInProgress()) {
+                recordStartupDiagnostic('fileOperations.initializeDatabase.skipped', { reason: 'shutdownInProgress' });
                 return;
             }
             appId = appIdParam;
@@ -162,7 +171,9 @@ export async function initializeDatabase(
             if (isShutdownInProgress() || dbInstance !== db) {
                 return;
             }
-            db.startPreviewTextWarmup();
+            recordStartupDiagnostic('fileOperations.initializeDatabase.complete', {
+                elapsedMs: Math.round(performance.now() - initStartMs)
+            });
         } finally {
             isInitializing = false;
         }
@@ -189,7 +200,7 @@ export async function waitForDatabaseInitialization(): Promise<IndexedDBStorage 
         const waitStart = Date.now();
         while (!appId && !isShutdownInProgress() && Date.now() - waitStart < 5000) {
             await new Promise<void>(resolve => {
-                globalThis.setTimeout(resolve, 50);
+                window.setTimeout(resolve, 50);
             });
         }
     }
@@ -212,20 +223,19 @@ export async function waitForDatabaseInitialization(): Promise<IndexedDBStorage 
         return null;
     }
 
-    if (!db.isInitialized()) {
+    if (isShutdownInProgress() || dbInstance !== db) {
+        return null;
+    }
+    // Await init unconditionally: `isInitialized()` reports true once the connection opens, which can be
+    // before cache hydration completes. `init()` is idempotent and resolves immediately when done.
+    try {
+        await db.init();
         if (isShutdownInProgress() || dbInstance !== db) {
             return null;
         }
-        try {
-            await db.init();
-            if (isShutdownInProgress() || dbInstance !== db) {
-                return null;
-            }
-            db.startPreviewTextWarmup();
-        } catch (error) {
-            console.error('Failed to initialize database while waiting:', error);
-            return null;
-        }
+    } catch (error) {
+        console.error('Failed to initialize database while waiting:', error);
+        return null;
     }
 
     return db;
@@ -314,6 +324,8 @@ export async function recordFileChanges(
                 fileThumbnailsMtime: renamed.fileThumbnailsMtime,
                 tags: renamed.tags,
                 wordCount: renamed.wordCount,
+                characterCountWithSpaces: renamed.characterCountWithSpaces,
+                characterCountWithoutSpaces: renamed.characterCountWithoutSpaces,
                 taskTotal: renamed.taskTotal,
                 taskUnfinished: renamed.taskUnfinished,
                 properties: renamed.properties,
@@ -345,11 +357,16 @@ export async function recordFileChanges(
  *
  * @param files - Array of Obsidian files to mark for regeneration
  */
-export async function markFilesForRegeneration(files: TFile[]): Promise<void> {
+export async function markFilesForRegeneration(
+    files: TFile[],
+    providers?: readonly ContentProviderType[],
+    dbOverride?: Pick<IndexedDBStorage, 'getFiles' | 'upsertFilesWithPatch'>
+): Promise<void> {
     if (isShutdownInProgress()) return;
-    const db = getDBInstance();
+    const db = dbOverride ?? getDBInstance();
     const paths = files.map(f => f.path);
     const existingData = db.getFiles(paths);
+    const providersToReset = providers && providers.length > 0 ? providers : null;
     // Reset provider processed mtimes without clearing provider output fields.
     const updates: { path: string; create: FileData; patch?: Partial<FileData> }[] = [];
 
@@ -361,12 +378,18 @@ export async function markFilesForRegeneration(files: TFile[]): Promise<void> {
         } else {
             // Force regeneration by resetting provider processed mtimes without clearing existing content fields.
             const patch: Partial<FileData> = {
-                mtime: file.stat.mtime,
-                markdownPipelineMtime: 0,
-                tagsMtime: 0,
-                metadataMtime: 0,
-                fileThumbnailsMtime: 0
+                mtime: file.stat.mtime
             };
+            if (providersToReset) {
+                for (const provider of providersToReset) {
+                    patch[getProviderProcessedMtimeField(provider)] = 0;
+                }
+            } else {
+                patch.markdownPipelineMtime = 0;
+                patch.tagsMtime = 0;
+                patch.metadataMtime = 0;
+                patch.fileThumbnailsMtime = 0;
+            }
             const createdData: FileData = { ...existing, ...patch };
             updates.push({ path: file.path, create: createdData, patch });
         }

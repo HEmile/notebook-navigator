@@ -23,14 +23,19 @@ import {
     cloneNavRainbowSettings,
     cloneShortcuts,
     createValidatedVaultProfileFromTemplate,
+    getActiveDescendantExcludedFolders,
     getActiveFileVisibility,
     getActiveHiddenFileNames,
     getActiveHiddenFileTags,
     getActiveHiddenFileProperties,
     getActiveHiddenFolders,
     getActiveHiddenTags,
+    getActivePropertyKeySet,
     getActiveVaultProfile,
+    getHiddenFolderBoundaryMatcher,
     getHiddenFolderMatcher,
+    getPropertyFieldsFromPropertyKeys,
+    getPropertyKeySet,
     normalizeHiddenFolderPath,
     removeHiddenFileTagPrefixMatches,
     removeHiddenTagPrefixMatches,
@@ -54,12 +59,14 @@ describe('updateHiddenFolderExactMatches', () => {
             {
                 ...baseProfile,
                 id: 'default',
-                hiddenFolders: ['/Projects/Archive', '/Reports/*', 'Archive']
+                hiddenFolders: ['/Projects/Archive', '/Reports/*', 'Archive'],
+                descendantExcludedFolders: ['/Projects/Archive', '/Daily']
             },
             {
                 ...baseProfile,
                 id: 'profile-b',
-                hiddenFolders: ['/Projects/Archive/', '/Other']
+                hiddenFolders: ['/Projects/Archive/', '/Other'],
+                descendantExcludedFolders: ['/Projects/Archive/']
             }
         ];
         settings.vaultProfile = 'default';
@@ -73,6 +80,11 @@ describe('updateHiddenFolderExactMatches', () => {
             'Archive'
         ]);
         expect(settings.vaultProfiles.find(profile => profile.id === 'profile-b')?.hiddenFolders).toEqual(['/Areas/Archive', '/Other']);
+        expect(settings.vaultProfiles.find(profile => profile.id === 'default')?.descendantExcludedFolders).toEqual([
+            '/Areas/Archive',
+            '/Daily'
+        ]);
+        expect(settings.vaultProfiles.find(profile => profile.id === 'profile-b')?.descendantExcludedFolders).toEqual(['/Areas/Archive']);
     });
 
     it('renames path patterns even when casing differs', () => {
@@ -195,6 +207,125 @@ describe('updateHiddenFolderExactMatches', () => {
         expect(didChange).toBe(true);
         expect(settings.vaultProfiles[0]?.hiddenFolders).toEqual(['/Areas/*/Archive']);
     });
+
+    it('keeps nested pattern segments when a folder moves into another folder', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                hiddenFolders: ['/Personligt/Dagbok'],
+                descendantExcludedFolders: ['/Personligt/Dagbok']
+            }
+        ];
+
+        const didChange = updateHiddenFolderExactMatches(settings, '/Personligt', '/Musik/Personligt');
+
+        expect(didChange).toBe(true);
+        expect(settings.vaultProfiles[0]?.hiddenFolders).toEqual(['/Musik/Personligt/Dagbok']);
+        expect(settings.vaultProfiles[0]?.descendantExcludedFolders).toEqual(['/Musik/Personligt/Dagbok']);
+    });
+
+    it('keeps nested pattern segments when a folder moves to the vault root', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                descendantExcludedFolders: ['/Musik/Personligt/Dagbok']
+            }
+        ];
+
+        const didChange = updateHiddenFolderExactMatches(settings, '/Musik/Personligt', '/Personligt');
+
+        expect(didChange).toBe(true);
+        expect(settings.vaultProfiles[0]?.descendantExcludedFolders).toEqual(['/Personligt/Dagbok']);
+    });
+
+    it('does not rewrite a parent pattern when a child folder moves', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                hiddenFolders: ['/Projects']
+            }
+        ];
+
+        expect(updateHiddenFolderExactMatches(settings, '/Projects/Client', '/Areas/Client')).toBe(false);
+        expect(updateHiddenFolderExactMatches(settings, '/Projects/Client', '/Client')).toBe(false);
+        expect(settings.vaultProfiles[0]?.hiddenFolders).toEqual(['/Projects']);
+    });
+
+    it('keeps mid-segment wildcard alignment when a deeper child moves to a new depth', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                hiddenFolders: ['/Projects/*/Archive']
+            }
+        ];
+
+        const didChange = updateHiddenFolderExactMatches(settings, '/Projects/Client', '/Work/Projects/Client');
+
+        expect(didChange).toBe(true);
+        expect(settings.vaultProfiles[0]?.hiddenFolders).toEqual(['/Work/Projects/*/Archive']);
+    });
+
+    it('does not rewrite a prefix-segment pattern when the moved folder does not match the prefix', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                hiddenFolders: ['/Projects/Client*/Archive']
+            }
+        ];
+
+        expect(updateHiddenFolderExactMatches(settings, '/Projects/Other', '/Areas/Other')).toBe(false);
+        expect(updateHiddenFolderExactMatches(settings, '/Projects/Other', '/Work/Projects/Other')).toBe(false);
+        expect(settings.vaultProfiles[0]?.hiddenFolders).toEqual(['/Projects/Client*/Archive']);
+    });
+
+    it('rewrites a prefix-segment pattern when the moved folder matches the prefix', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                hiddenFolders: ['/Projects/Client*/Archive']
+            }
+        ];
+
+        const didChange = updateHiddenFolderExactMatches(settings, '/Projects/clientA', '/Work/Projects/clientA');
+
+        expect(didChange).toBe(true);
+        expect(settings.vaultProfiles[0]?.hiddenFolders).toEqual(['/Work/Projects/Client*/Archive']);
+    });
+
+    it('does not rewrite a prefix-segment pattern when the new folder name does not match the prefix', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                hiddenFolders: ['/Projects/Client*/Archive']
+            }
+        ];
+
+        const didChange = updateHiddenFolderExactMatches(settings, '/Projects/ClientA', '/Areas/Other');
+
+        expect(didChange).toBe(false);
+        expect(settings.vaultProfiles[0]?.hiddenFolders).toEqual(['/Projects/Client*/Archive']);
+    });
 });
 
 describe('removeHiddenFolderExactMatches', () => {
@@ -205,12 +336,14 @@ describe('removeHiddenFolderExactMatches', () => {
             {
                 ...baseProfile,
                 id: 'default',
-                hiddenFolders: ['/Projects/Archive', '/Reports/*', 'Archive']
+                hiddenFolders: ['/Projects/Archive', '/Reports/*', 'Archive'],
+                descendantExcludedFolders: ['/Projects/Archive', '/Daily']
             },
             {
                 ...baseProfile,
                 id: 'profile-b',
-                hiddenFolders: ['/Projects/Archive/', '/Other']
+                hiddenFolders: ['/Projects/Archive/', '/Other'],
+                descendantExcludedFolders: ['/Projects/Archive/']
             }
         ];
 
@@ -219,6 +352,8 @@ describe('removeHiddenFolderExactMatches', () => {
         expect(didRemove).toBe(true);
         expect(settings.vaultProfiles.find(profile => profile.id === 'default')?.hiddenFolders).toEqual(['/Reports/*', 'Archive']);
         expect(settings.vaultProfiles.find(profile => profile.id === 'profile-b')?.hiddenFolders).toEqual(['/Other']);
+        expect(settings.vaultProfiles.find(profile => profile.id === 'default')?.descendantExcludedFolders).toEqual(['/Daily']);
+        expect(settings.vaultProfiles.find(profile => profile.id === 'profile-b')?.descendantExcludedFolders).toEqual([]);
     });
 
     it('removes path patterns even when casing differs', () => {
@@ -480,6 +615,57 @@ describe('hidden tag pattern updates', () => {
         expect(settings.vaultProfiles[0]?.hiddenTags).toEqual(['areas/*/drafts']);
     });
 
+    it('keeps nested tag pattern segments when a tag rename changes depth', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                hiddenTags: ['projects/secret']
+            }
+        ];
+
+        expect(updateHiddenTagPrefixMatches(settings, 'projects', 'work/projects')).toBe(true);
+        expect(settings.vaultProfiles[0]?.hiddenTags).toEqual(['work/projects/secret']);
+
+        expect(updateHiddenTagPrefixMatches(settings, 'work/projects', 'projects')).toBe(true);
+        expect(settings.vaultProfiles[0]?.hiddenTags).toEqual(['projects/secret']);
+    });
+
+    it('only rewrites prefix-segment tag patterns when the renamed tag matches the prefix', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                hiddenTags: ['projects/client*/archive']
+            }
+        ];
+
+        expect(updateHiddenTagPrefixMatches(settings, 'projects/other', 'areas/other')).toBe(false);
+        expect(settings.vaultProfiles[0]?.hiddenTags).toEqual(['projects/client*/archive']);
+
+        expect(updateHiddenTagPrefixMatches(settings, 'projects/clienta', 'work/projects/clienta')).toBe(true);
+        expect(settings.vaultProfiles[0]?.hiddenTags).toEqual(['work/projects/client*/archive']);
+    });
+
+    it('does not rewrite prefix-segment tag patterns when the new tag name does not match the prefix', () => {
+        const settings = createSettings();
+        const [baseProfile] = settings.vaultProfiles;
+        settings.vaultProfiles = [
+            {
+                ...baseProfile,
+                id: 'default',
+                hiddenTags: ['projects/client*/archive']
+            }
+        ];
+
+        expect(updateHiddenTagPrefixMatches(settings, 'projects/clienta', 'areas/other')).toBe(false);
+        expect(settings.vaultProfiles[0]?.hiddenTags).toEqual(['projects/client*/archive']);
+    });
+
     it('removes descendant path rules ending with /* on delete', () => {
         const settings = createSettings();
         const [baseProfile] = settings.vaultProfiles;
@@ -537,7 +723,45 @@ describe('vault profile selectors', () => {
         expect(getActiveHiddenFileNames(settings)).toBe(settings.vaultProfiles[0].hiddenFileNames);
         expect(getActiveHiddenTags(settings)).toBe(settings.vaultProfiles[0].hiddenTags);
         expect(getActiveHiddenFileTags(settings)).toBe(settings.vaultProfiles[0].hiddenFileTags);
+        expect(getActiveDescendantExcludedFolders(settings)).toBe(settings.vaultProfiles[0].descendantExcludedFolders);
         expect(getActiveFileVisibility(settings)).toBe(settings.vaultProfiles[0].fileVisibility);
+    });
+});
+
+describe('property key selectors', () => {
+    it('filters property keys by visibility mode and normalizes duplicates', () => {
+        const propertyKeys = [
+            { key: 'Status', showInNavigation: true, showInList: false, showInFileMenu: false },
+            { key: ' status ', showInNavigation: true, showInList: true, showInFileMenu: true },
+            { key: 'Priority', showInNavigation: false, showInList: true, showInFileMenu: false },
+            { key: 'Menu', showInNavigation: false, showInList: false, showInFileMenu: true },
+            { key: 'Hidden', showInNavigation: false, showInList: false, showInFileMenu: false },
+            { key: ' ', showInNavigation: true, showInList: true, showInFileMenu: true }
+        ];
+
+        expect(Array.from(getPropertyKeySet(propertyKeys, 'navigation'))).toEqual(['status']);
+        expect(Array.from(getPropertyKeySet(propertyKeys, 'list'))).toEqual(['status', 'priority']);
+        expect(Array.from(getPropertyKeySet(propertyKeys, 'file-menu'))).toEqual(['status', 'menu']);
+        expect(Array.from(getPropertyKeySet(propertyKeys, 'any'))).toEqual(['status', 'priority', 'menu']);
+    });
+
+    it('reads property keys from the active profile', () => {
+        const settings = createSettings();
+        settings.vaultProfiles[0].propertyKeys = [{ key: 'Status', showInNavigation: true, showInList: false, showInFileMenu: false }];
+
+        expect(Array.from(getActivePropertyKeySet(settings, 'navigation'))).toEqual(['status']);
+        expect(Array.from(getActivePropertyKeySet(settings, 'list'))).toEqual([]);
+    });
+
+    it('formats property fields from property keys with normalized duplicates removed', () => {
+        const propertyKeys = [
+            { key: 'Status', showInNavigation: true, showInList: false, showInFileMenu: false },
+            { key: ' status ', showInNavigation: true, showInList: true, showInFileMenu: true },
+            { key: 'Priority', showInNavigation: false, showInList: true, showInFileMenu: false },
+            { key: ' ', showInNavigation: true, showInList: true, showInFileMenu: true }
+        ];
+
+        expect(getPropertyFieldsFromPropertyKeys(propertyKeys)).toBe('Status, Priority');
     });
 });
 
@@ -592,6 +816,16 @@ describe('hidden folder matcher', () => {
 
         expect(matcher.matches('/Projects')).toBe(false);
         expect(matcher.matches('/Projects/Client')).toBe(true);
+    });
+
+    it('matches boundary paths without matching descendants', () => {
+        const matcher = getHiddenFolderBoundaryMatcher(['/Daily', '/Projects/*', '/Res*']);
+
+        expect(matcher.matches('/Daily')).toBe(true);
+        expect(matcher.matches('/Daily/2026')).toBe(false);
+        expect(matcher.matches('/Projects/Client')).toBe(true);
+        expect(matcher.matches('/Projects/Client/Archive')).toBe(false);
+        expect(matcher.matches('/Resources')).toBe(true);
     });
 });
 

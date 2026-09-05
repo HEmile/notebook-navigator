@@ -81,7 +81,7 @@ describe('navigation menu extension placement', () => {
             menu: menu as never,
             settings,
             state: state as never,
-            dispatchers: dispatchers as never,
+            dispatchers: dispatchers,
             services: {
                 app: app as never,
                 plugin: {
@@ -128,7 +128,7 @@ describe('navigation menu extension placement', () => {
             menu: menu as never,
             settings,
             state: state as never,
-            dispatchers: dispatchers as never,
+            dispatchers: dispatchers,
             services: {
                 app: app as never,
                 plugin: {

@@ -226,16 +226,18 @@ export class NotebookNavigatorAPI {
      * Subscribe to Notebook Navigator events with type safety
      */
     on<T extends NotebookNavigatorEventType>(event: T, callback: (data: NotebookNavigatorEvents[T]) => void): EventRef {
-        return this.events.on(event, callback);
+        return this.events.on(event, data => {
+            callback(data as NotebookNavigatorEvents[T]);
+        });
     }
 
     /**
      * Subscribe to an event only once - automatically unsubscribes after first trigger
      */
     once<T extends NotebookNavigatorEventType>(event: T, callback: (data: NotebookNavigatorEvents[T]) => void): EventRef {
-        const ref = this.events.on(event, (data: NotebookNavigatorEvents[T]) => {
+        const ref = this.events.on(event, data => {
             this.events.offref(ref);
-            callback(data);
+            callback(data as NotebookNavigatorEvents[T]);
         });
         return ref;
     }
@@ -254,8 +256,6 @@ export class NotebookNavigatorAPI {
         event: T,
         ...args: NotebookNavigatorEvents[T] extends void ? [] : [data: NotebookNavigatorEvents[T]]
     ): void {
-        // For void events, don't pass any data; for others, pass the data
-        const data = args.length > 0 ? args[0] : undefined;
-        this.events.trigger(event, data);
+        this.events.trigger(event, ...args);
     }
 }

@@ -22,11 +22,10 @@ import { strings } from '../../i18n';
 import { cleanupTagPatterns, createHiddenTagMatcher, matchesHiddenTagPattern } from '../tagPrefixMatcher';
 import { ItemType, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../../types';
 import { normalizeTagPath } from '../tagUtils';
-import { resetHiddenToggleIfNoSources } from '../exclusionUtils';
-import { setAsyncOnClick, tryCreateSubmenu } from './menuAsyncHelpers';
+import { setAsyncOnClick, setSubmenuOnClick, tryCreateSubmenu } from './menuAsyncHelpers';
 import { addShortcutRenameMenuItem } from './shortcutRenameMenuItem';
 import { addStyleMenu } from './styleMenuBuilder';
-import { resolveUXIconForMenu } from '../uxIcons';
+import { resolveUXIcon, resolveUXIconForMenu } from '../uxIcons';
 import { getVirtualTagCollection, isVirtualTagCollectionId } from '../virtualTagCollections';
 import { getActiveHiddenTags, getActiveVaultProfile } from '../vaultProfiles';
 import { resolveDisplayTagPath } from '../../services/tagOperations/TagOperationUtils';
@@ -53,12 +52,13 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
     // Add rename/delete options only for real tags (not virtual aggregations)
     const isVirtualTag = tagPath === UNTAGGED_TAG_ID || tagPath === TAGGED_TAG_ID;
 
-    const ensureTagSelected = () => {
+    const ensureTagSelected = (): boolean => {
         if (selectionState.selectionType === ItemType.TAG && selectionState.selectedTag === tagPath) {
-            return;
+            return false;
         }
 
         selectionDispatch({ type: 'SET_SELECTED_TAG', tag: tagPath });
+        return true;
     };
 
     const handleFileCreation = (file: TFile | null | undefined) => {
@@ -67,41 +67,55 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
         }
 
         selectionDispatch({ type: 'SET_SELECTED_FILE', file });
-        uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
+        uiDispatch({ type: 'ACTIVATE_PANE', target: 'files' });
     };
 
     if (!isVirtualTag) {
         menu.addItem((item: MenuItem) => {
             setAsyncOnClick(item.setTitle(strings.contextMenu.folder.newNote).setIcon('lucide-pen-box'), async () => {
-                ensureTagSelected();
+                const selectionChanged = ensureTagSelected();
                 const sourcePath = selectionState.selectedFile?.path ?? app.workspace.getActiveFile()?.path ?? '';
-                const createdFile = await fileSystemOps.createNewFileForTag(tagPath, sourcePath, settings.createNewNotesInNewTab);
+                const normalizedTagPath = normalizeTagPath(tagPath);
+                const manualSortContext = normalizedTagPath
+                    ? await fileSystemOps.getManualSortNewFileContextForTarget('tag', normalizedTagPath, {
+                          waitForSelectionUpdate: selectionChanged
+                      })
+                    : null;
+                const createdFile = await fileSystemOps.createNewFileForTag(
+                    tagPath,
+                    sourcePath,
+                    settings.createNewNotesInNewTab,
+                    manualSortContext
+                );
                 handleFileCreation(createdFile);
             });
         });
         menu.addSeparator();
     }
 
-    // Change icon
-    if (settings.showTagIcons) {
-        menu.addItem((item: MenuItem) => {
-            setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeIcon).setIcon('lucide-image'), async () => {
-                const { IconPickerModal } = await import('../../modals/IconPickerModal');
-                const modal = new IconPickerModal(app, metadataService, tagPath, ItemType.TAG);
-                modal.open();
-            });
-        });
-    }
+    const openAppearanceModal = async (initialTab: 'icon' | 'color' | 'background'): Promise<void> => {
+        const { AppearanceModal } = await import('../../modals/AppearanceModal');
+        const modal = new AppearanceModal(app, {
+            title: `#${tagPath}`,
+            metadataService,
+            initialTab,
+            defaultIcon: settings.showTagIcons ? resolveUXIcon(settings.interfaceIcons, 'nav-tag') : null,
+            icon: settings.showTagIcons
+                ? {
+                      initial: metadataService.getTagIcon(tagPath) ?? null,
+                      apply: async iconId => {
+                          if (iconId === null) {
+                              await metadataService.removeTagIcon(tagPath);
+                              return;
+                          }
 
-    // Change color
-    menu.addItem((item: MenuItem) => {
-        setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeColor).setIcon('lucide-palette'), async () => {
-            const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, {
-                title: `#${tagPath}`,
-                initialColor: metadataService.getTagColor(tagPath) ?? null,
-                settingsProvider: metadataService.getSettingsProvider(),
-                onChooseColor: async color => {
+                          await metadataService.setTagIcon(tagPath, iconId);
+                      }
+                  }
+                : undefined,
+            color: {
+                initial: metadataService.getTagColor(tagPath) ?? null,
+                apply: async color => {
                     if (color === null) {
                         await metadataService.removeTagColor(tagPath);
                         return;
@@ -109,20 +123,10 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
 
                     await metadataService.setTagColor(tagPath, color);
                 }
-            });
-            modal.open();
-        });
-    });
-
-    // Change background color
-    menu.addItem((item: MenuItem) => {
-        setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeBackground).setIcon('lucide-paint-bucket'), async () => {
-            const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, {
-                title: `#${tagPath}`,
-                initialColor: metadataService.getTagBackgroundColor(tagPath) ?? null,
-                settingsProvider: metadataService.getSettingsProvider(),
-                onChooseColor: async color => {
+            },
+            background: {
+                initial: metadataService.getTagBackgroundColor(tagPath) ?? null,
+                apply: async color => {
                     if (color === null) {
                         await metadataService.removeTagBackgroundColor(tagPath);
                         return;
@@ -130,71 +134,30 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
 
                     await metadataService.setTagBackgroundColor(tagPath, color);
                 }
-            });
-            modal.open();
-        });
-    });
-
-    // Child tag sort order
-    if (typeof MenuItem.prototype.setSubmenu === 'function') {
-        menu.addItem((item: MenuItem) => {
-            const currentOverride = metadataService.getTagChildSortOrderOverride(tagPath);
-            const effectiveOrder = currentOverride ?? settings.tagSortOrder;
-            const sortIcon = currentOverride
-                ? effectiveOrder.endsWith('-desc')
-                    ? 'lucide-sort-desc'
-                    : 'lucide-sort-asc'
-                : 'lucide-sliders-horizontal';
-
-            const sortOrderSubmenu = tryCreateSubmenu(item);
-            if (!sortOrderSubmenu) {
-                item.setTitle(strings.paneHeader.changeSortOrder).setIcon(sortIcon).setDisabled(true);
-                return;
             }
+        });
+        modal.open();
+    };
 
-            const globalDefaultLabel = (() => {
-                switch (settings.tagSortOrder) {
-                    case 'alpha-desc':
-                        return strings.settings.items.tagSortOrder.options.alphaDesc;
-                    case 'frequency-asc':
-                        return strings.settings.items.tagSortOrder.options.lowToHigh;
-                    case 'frequency-desc':
-                        return strings.settings.items.tagSortOrder.options.highToLow;
-                    case 'alpha-asc':
-                    default:
-                        return strings.settings.items.tagSortOrder.options.alphaAsc;
-                }
-            })();
-
-            item.setTitle(strings.paneHeader.changeSortOrder).setIcon(sortIcon);
-
-            sortOrderSubmenu.addItem(subItem => {
-                subItem.setTitle(`${strings.folderAppearance.defaultLabel} (${globalDefaultLabel})`).setChecked(!currentOverride);
-                setAsyncOnClick(subItem, async () => {
-                    await metadataService.removeTagChildSortOrderOverride(tagPath);
-                    app.workspace.requestSaveLayout();
-                });
-            });
-
-            sortOrderSubmenu.addSeparator();
-
-            sortOrderSubmenu.addItem(subItem => {
-                subItem.setTitle(strings.settings.items.tagSortOrder.options.alphaAsc).setChecked(currentOverride === 'alpha-asc');
-                setAsyncOnClick(subItem, async () => {
-                    await metadataService.setTagChildSortOrderOverride(tagPath, 'alpha-asc');
-                    app.workspace.requestSaveLayout();
-                });
-            });
-
-            sortOrderSubmenu.addItem(subItem => {
-                subItem.setTitle(strings.settings.items.tagSortOrder.options.alphaDesc).setChecked(currentOverride === 'alpha-desc');
-                setAsyncOnClick(subItem, async () => {
-                    await metadataService.setTagChildSortOrderOverride(tagPath, 'alpha-desc');
-                    app.workspace.requestSaveLayout();
-                });
+    if (settings.showTagIcons) {
+        menu.addItem((item: MenuItem) => {
+            setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeIcon).setIcon('lucide-image'), () => {
+                return openAppearanceModal('icon');
             });
         });
     }
+
+    menu.addItem((item: MenuItem) => {
+        setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeColor).setIcon('lucide-palette'), () => {
+            return openAppearanceModal('color');
+        });
+    });
+
+    menu.addItem((item: MenuItem) => {
+        setAsyncOnClick(item.setTitle(strings.contextMenu.tag.changeBackground).setIcon('lucide-paint-bucket'), () => {
+            return openAppearanceModal('background');
+        });
+    });
 
     // These include inherited values; direct settings entries are used to decide which "remove" actions to show.
     const tagIcon = metadataService.getTagIcon(tagPath);
@@ -239,6 +202,69 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
         removeColor: hasRemovableColor ? async () => metadataService.removeTagColor(tagPath) : undefined,
         removeBackground: hasRemovableBackground ? async () => metadataService.removeTagBackgroundColor(tagPath) : undefined
     });
+
+    // Child tag sort order
+    if (typeof MenuItem.prototype.setSubmenu === 'function') {
+        menu.addSeparator();
+
+        menu.addItem((item: MenuItem) => {
+            const currentOverride = metadataService.getTagChildSortOrderOverride(tagPath);
+            const effectiveOrder = currentOverride ?? settings.tagSortOrder;
+            const sortIcon = currentOverride
+                ? effectiveOrder.endsWith('-desc')
+                    ? 'lucide-sort-desc'
+                    : 'lucide-sort-asc'
+                : 'lucide-sliders-horizontal';
+
+            const sortOrderSubmenu = tryCreateSubmenu(item);
+            if (!sortOrderSubmenu) {
+                item.setTitle(strings.paneHeader.changeChildSortOrder).setIcon(sortIcon).setDisabled(true);
+                return;
+            }
+
+            const globalDefaultLabel = (() => {
+                switch (settings.tagSortOrder) {
+                    case 'alpha-desc':
+                        return strings.settings.items.tagSortOrder.options.alphaDesc;
+                    case 'frequency-asc':
+                        return strings.settings.items.tagSortOrder.options.lowToHigh;
+                    case 'frequency-desc':
+                        return strings.settings.items.tagSortOrder.options.highToLow;
+                    case 'alpha-asc':
+                    default:
+                        return strings.settings.items.tagSortOrder.options.alphaAsc;
+                }
+            })();
+
+            item.setTitle(strings.paneHeader.changeChildSortOrder).setIcon(sortIcon);
+
+            sortOrderSubmenu.addItem(subItem => {
+                subItem.setTitle(`${strings.folderAppearance.defaultLabel} (${globalDefaultLabel})`).setChecked(!currentOverride);
+                setSubmenuOnClick(menu, subItem, async () => {
+                    await metadataService.removeTagChildSortOrderOverride(tagPath);
+                    app.workspace.requestSaveLayout();
+                });
+            });
+
+            sortOrderSubmenu.addSeparator();
+
+            sortOrderSubmenu.addItem(subItem => {
+                subItem.setTitle(strings.settings.items.tagSortOrder.options.alphaAsc).setChecked(currentOverride === 'alpha-asc');
+                setSubmenuOnClick(menu, subItem, async () => {
+                    await metadataService.setTagChildSortOrderOverride(tagPath, 'alpha-asc');
+                    app.workspace.requestSaveLayout();
+                });
+            });
+
+            sortOrderSubmenu.addItem(subItem => {
+                subItem.setTitle(strings.settings.items.tagSortOrder.options.alphaDesc).setChecked(currentOverride === 'alpha-desc');
+                setSubmenuOnClick(menu, subItem, async () => {
+                    await metadataService.setTagChildSortOrderOverride(tagPath, 'alpha-desc');
+                    app.workspace.requestSaveLayout();
+                });
+            });
+        });
+    }
 
     const disableNavigationSeparatorActions = Boolean(options?.disableNavigationSeparatorActions);
     const shouldAddShortcutSectionSeparator = Boolean(services.shortcuts) || !disableNavigationSeparatorActions;
@@ -349,11 +375,6 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
                         const cleanedHiddenTags = cleanupTagPatterns(hiddenTags, tagPath);
 
                         activeProfile.hiddenTags = cleanedHiddenTags;
-                        resetHiddenToggleIfNoSources({
-                            settings: plugin.settings,
-                            showHiddenItems: services.visibility.showHiddenItems,
-                            setShowHiddenItems: value => plugin.setShowHiddenItems(value)
-                        });
                         await plugin.saveSettingsAndUpdate();
                     });
                 });
@@ -365,11 +386,6 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
                             return !(normalizedPattern && !normalizedPattern.includes('*') && normalizedPattern === normalizedTagPath);
                         });
 
-                        resetHiddenToggleIfNoSources({
-                            settings: plugin.settings,
-                            showHiddenItems: services.visibility.showHiddenItems,
-                            setShowHiddenItems: value => plugin.setShowHiddenItems(value)
-                        });
                         await plugin.saveSettingsAndUpdate();
                     });
                 });
@@ -384,9 +400,12 @@ export function buildTagMenu(params: TagMenuBuilderParams): void {
             });
 
             menu.addItem((item: MenuItem) => {
-                setAsyncOnClick(item.setTitle(strings.modals.tagOperation.confirmDelete).setIcon('lucide-trash'), async () => {
-                    await services.tagOperations.promptDeleteTag(tagPath);
-                });
+                setAsyncOnClick(
+                    item.setTitle(strings.modals.tagOperation.confirmDelete).setIcon('lucide-trash').setWarning(true),
+                    async () => {
+                        await services.tagOperations.promptDeleteTag(tagPath);
+                    }
+                );
             });
         }
     }

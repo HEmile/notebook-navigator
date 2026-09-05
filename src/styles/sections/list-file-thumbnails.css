@@ -32,7 +32,7 @@
 
 /* Dynamic sizing based on calculated item height */
 .nn-virtual-file-item .nn-file-thumbnail {
-    /* Size based on item height minus total padding */
+    /* Size based on the same padded content box as the text stack. */
     --image-size: clamp(
         var(--nn-file-thumbnail-min-size),
         calc(var(--item-height) - var(--nn-file-padding-total-mobile, var(--nn-file-padding-total))),
@@ -43,6 +43,11 @@
 .nn-virtual-file-item .nn-file-thumbnail--square {
     width: var(--image-size);
     height: var(--image-size);
+}
+
+.nn-virtual-file-item .nn-file-thumbnail--extension-badge {
+    width: var(--nn-file-thumbnail-min-size);
+    height: var(--nn-file-thumbnail-min-size);
 }
 
 .nn-virtual-file-item .nn-file-thumbnail--natural {
@@ -56,6 +61,7 @@
     height: 100%;
 }
 
+/* Inset highlight overlay - masked by the thumbnail image so it only covers opaque pixels */
 .nn-file-thumbnail--inset-highlight::before {
     content: '';
     position: absolute;
@@ -67,6 +73,19 @@
         inset 0 -1px 0 rgba(255, 255, 255, 0.05);
     pointer-events: none;
     z-index: 1;
+    mask-image: var(--nn-file-thumbnail-mask-image, none);
+    mask-repeat: no-repeat;
+}
+
+/* Mask geometry mirrors the img object-fit and object-position per variant */
+.nn-file-thumbnail--square.nn-file-thumbnail--inset-highlight::before {
+    mask-size: cover;
+    mask-position: center top;
+}
+
+.nn-file-thumbnail--natural.nn-file-thumbnail--inset-highlight::before {
+    mask-size: contain;
+    mask-position: center;
 }
 
 .nn-file-thumbnail--square .nn-file-thumbnail-img {
@@ -103,4 +122,10 @@
     color: var(--nn-theme-foreground-muted);
     text-transform: uppercase;
     letter-spacing: 0.1px;
+}
+
+.nn-file-extension-icon {
+    width: min(24px, 42%);
+    height: min(24px, 42%);
+    color: var(--nn-theme-foreground-muted);
 }
