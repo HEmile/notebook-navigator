@@ -1098,9 +1098,7 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
             if (!topicService) return;
 
             const isPath = topicPath.includes('/');
-            const topicNode = isPath
-                ? topicService.findTopicNodeByPath(topicPath)
-                : topicService.findTopicNodeByName(topicPath);
+            const topicNode = isPath ? topicService.findTopicNodeByPath(topicPath) : topicService.findTopicNodeByName(topicPath);
             if (!topicNode) return;
 
             const ancestorNames = getTopicAncestors(topicNode);

@@ -961,7 +961,11 @@ export function parseFilterSearchTokens(query: string): FilterSearchTokens {
         }
     }
 
-    return { ...parseFilterModeTokens(classifiedTokens, excludeTagTokens, excludePropertyTokens, hasUntaggedOperand), topicTokens, excludeTopicTokens };
+    return {
+        ...parseFilterModeTokens(classifiedTokens, excludeTagTokens, excludePropertyTokens, hasUntaggedOperand),
+        topicTokens,
+        excludeTopicTokens
+    };
 }
 
 const isSearchNavOperandToken = (

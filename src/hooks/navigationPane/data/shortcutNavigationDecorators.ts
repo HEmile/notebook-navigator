@@ -136,7 +136,10 @@ function decorateShortcutNoteNavigationItem(
     };
 }
 
-function decorateShortcutTopicNavigationItem(ctx: NavigationItemDecorationContext, item: ShortcutTopicNavigationItem): CombinedNavigationItem {
+function decorateShortcutTopicNavigationItem(
+    ctx: NavigationItemDecorationContext,
+    item: ShortcutTopicNavigationItem
+): CombinedNavigationItem {
     const tagColorData = ctx.metadataService.getTagColorData(item.topicName);
     const colors = resolveShortcutDecorationColors({
         ctx,

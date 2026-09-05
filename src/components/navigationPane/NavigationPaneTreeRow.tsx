@@ -123,14 +123,12 @@ function TopicRow({ item, context, isSelected, isExpanded }: TopicRowProps) {
                     className={`nn-navitem-chevron ${hasChildren ? 'nn-navitem-chevron--has-children' : 'nn-navitem-chevron--no-children'}`}
                     onClick={handleChevronClick}
                 />
-                {settings.showTagIcons && (
-                    <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />
-                )}
-                <span className="nn-navitem-name" style={applyColorToName ? { color } : undefined}>{topicNode.name}</span>
+                {settings.showTagIcons && <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />}
+                <span className="nn-navitem-name" style={applyColorToName ? { color } : undefined}>
+                    {topicNode.name}
+                </span>
                 <span className="nn-navitem-spacer" />
-                {settings.showNoteCount && item.noteCount && (
-                    <span className="nn-navitem-count">{item.noteCount.total}</span>
-                )}
+                {settings.showNoteCount && item.noteCount && <span className="nn-navitem-count">{item.noteCount.total}</span>}
             </div>
         </div>
     );

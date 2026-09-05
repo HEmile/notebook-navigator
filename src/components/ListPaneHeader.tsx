@@ -114,7 +114,9 @@ export const ListPaneHeader = React.memo(function ListPaneHeader({
     const showSortButton = listToolbarVisibility.sort;
     const showAppearanceButton = listToolbarVisibility.appearance;
     const showNewNoteButton = listToolbarVisibility.newNote;
-    const hasNavigationSelection = Boolean(selectionState.selectedFolder || selectionState.selectedTag || selectionState.selectedProperty || selectionState.selectedTopicPath);
+    const hasNavigationSelection = Boolean(
+        selectionState.selectedFolder || selectionState.selectedTag || selectionState.selectedProperty || selectionState.selectedTopicPath
+    );
 
     const shouldRenderBreadcrumbSegments = useMobileChrome;
     const shouldShowHeaderTitle = !useMobileChrome && listPaneTitlePreference === 'header';

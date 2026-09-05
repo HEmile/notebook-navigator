@@ -238,10 +238,7 @@ function setSortOverridesForTarget(
 }
 
 /** Reads the stored appearance record for the selection type, sanitized for mutation. */
-function getAppearancesForTarget(
-    settings: NotebookNavigatorSettings,
-    target: SelectionSortTarget
-): Record<string, ListPaneAppearance> {
+function getAppearancesForTarget(settings: NotebookNavigatorSettings, target: SelectionSortTarget): Record<string, ListPaneAppearance> {
     return sanitizeRecord(ensureRecord(SELECTION_TARGET_RECORDS[target.type].getAppearances(settings)));
 }
 

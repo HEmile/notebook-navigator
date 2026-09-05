@@ -27,7 +27,7 @@ interface TopicSuggestionItem {
 
 interface ActiveTopicRange {
     start: number; // index of the opening quote
-    end: number;   // index just after the closing fragment
+    end: number; // index just after the closing fragment
     query: string; // text inside the quotes so far
 }
 

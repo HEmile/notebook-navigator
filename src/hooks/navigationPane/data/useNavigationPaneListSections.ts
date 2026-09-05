@@ -28,7 +28,14 @@ import {
     SHORTCUTS_VIRTUAL_FOLDER_ID
 } from '../../../types';
 import type { TagTreeNode } from '../../../types/storage';
-import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isSearchShortcut, isTagShortcut, isTopicShortcut } from '../../../types/shortcuts';
+import {
+    isFolderShortcut,
+    isNoteShortcut,
+    isPropertyShortcut,
+    isSearchShortcut,
+    isTagShortcut,
+    isTopicShortcut
+} from '../../../types/shortcuts';
 import type { CombinedNavigationItem } from '../../../types/virtualization';
 import { isFolderInExcludedFolder, shouldExcludeFileName, shouldExcludeFileWithMatcher } from '../../../utils/fileFilters';
 import { getDBInstance } from '../../../storage/fileOperations';

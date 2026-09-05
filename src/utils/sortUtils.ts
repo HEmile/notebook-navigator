@@ -580,8 +580,7 @@ export function getEffectiveSortOption(
     selectionType: NavigationItemType,
     selectedFolder: TFolder | null,
     selectedTag?: string | null,
-    selectedProperty?: string | null,
-    selectedTopic?: string | null
+    selectedProperty?: string | null
 ): SortOption {
     return getEffectiveListSort(settings, selectionType, selectedFolder, selectedTag, selectedProperty).option;
 }

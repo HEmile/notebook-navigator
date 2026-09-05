@@ -24,7 +24,14 @@ import type { NavigationSelectionState, SelectionAction } from '../../context/Se
 import type { UIAction } from '../../context/UIStateContext';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { SearchShortcut, ShortcutEntry } from '../../types/shortcuts';
-import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isSearchShortcut, isTagShortcut, isTopicShortcut } from '../../types/shortcuts';
+import {
+    isFolderShortcut,
+    isNoteShortcut,
+    isPropertyShortcut,
+    isSearchShortcut,
+    isTagShortcut,
+    isTopicShortcut
+} from '../../types/shortcuts';
 import { resolvePropertyShortcutNodeId } from '../../utils/propertyTree';
 import { resolveCanonicalTagPath } from '../../utils/tagUtils';
 import { runAsyncAction } from '../../utils/async';

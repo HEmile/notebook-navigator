@@ -196,7 +196,8 @@ export interface NotebookNavigatorHandle {
  */
 export const NotebookNavigatorComponent = React.memo(
     forwardRef<NotebookNavigatorHandle>(function NotebookNavigatorComponent(_, ref) {
-        const { app, isMobile, fileSystemOps, plugin, tagTreeService, propertyTreeService, topicService, commandQueue, tagOperations } = useServices();
+        const { app, isMobile, fileSystemOps, plugin, tagTreeService, propertyTreeService, topicService, commandQueue, tagOperations } =
+            useServices();
         const settings = useSettingsState();
         const activeProfile = useActiveProfile();
         const expansionState = useExpansionState();

@@ -1006,10 +1006,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
         [propertyShortcutKeysByNodeId]
     );
 
-    const hasTopicShortcut = useCallback(
-        (topicName: string) => topicShortcutKeysByName.has(topicName),
-        [topicShortcutKeysByName]
-    );
+    const hasTopicShortcut = useCallback((topicName: string) => topicShortcutKeysByName.has(topicName), [topicShortcutKeysByName]);
 
     // Finds a search shortcut by name (case-insensitive)
     const findSearchShortcut = useCallback(

@@ -773,6 +773,7 @@ export function getFilesForProperty(
 
 /**
  * Gets a sorted list of files for a topic, looked up by name.
+ * @public Retained alongside getFilesForTopicByPath for topic shortcut lookups.
  */
 export function getFilesForTopicByName(
     topicName: string,
@@ -812,9 +813,7 @@ function getFilesForTopic(topicNode: TopicNode, settings: NotebookNavigatorSetti
         file => excludedFolderPatterns.length === 0 || !isPathInExcludedFolder(file.path, excludedFolderPatterns)
     );
 
-    const topicsToInclude = settings.includeDescendantNotes
-        ? collectTopicDescendants(topicNode)
-        : new Set([topicNode]);
+    const topicsToInclude = settings.includeDescendantNotes ? collectTopicDescendants(topicNode) : new Set([topicNode]);
 
     const filesToInclude = new Set<string>();
     for (const topic of topicsToInclude) {
