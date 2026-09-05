@@ -16,22 +16,68 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useEffect, type Dispatch, type RefObject, type SetStateAction } from 'react';
-import { App, EventRef, TAbstractFile, TFile, debounce } from 'obsidian';
+import { useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { App, EventRef, TAbstractFile, TFile, TFolder, debounce } from 'obsidian';
 import { TIMEOUTS } from '../../types/obsidian-extended';
 import { INTERNAL_NOTEBOOK_NAVIGATOR_API, type NotebookNavigatorAPI } from '../../api/NotebookNavigatorAPI';
-import type { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { ContentProviderType, FileContentType } from '../../interfaces/IContentProvider';
 import type { ContentProviderRegistry } from '../../services/content/ContentProviderRegistry';
 import type { PropertyTreeNode, TagTreeNode } from '../../types/storage';
 import { calculateFileDiff } from '../../storage/diffCalculator';
 import { type FileData as DBFileData } from '../../storage/IndexedDBStorage';
+import { remapSelfReferentialFeatureImageKey } from '../../storage/FeatureImageBlobStore';
 import { getDBInstance, markFilesForRegeneration, recordFileChanges, removeFilesFromCache } from '../../storage/fileOperations';
+import { createRenameFlushController, excludeReoccupiedRenameTargets, type PendingRenameFlushBuffer } from './renameFlush';
 import { runAsyncAction } from '../../utils/async';
-import { isMarkdownPath, isPdfFile } from '../../utils/fileTypeUtils';
+import { isMarkdownPath } from '../../utils/fileTypeUtils';
 import { isPropertyFeatureEnabled } from '../../utils/propertyTree';
-import { filterPdfFilesRequiringThumbnails } from '../storageQueueFilters';
+import { emitDrawingCompanionImageChange, findDrawingFileForCompanionImage } from '../../utils/drawingFeatureImages';
+import { filterFilesRequiringFileThumbnails, shouldQueueFileThumbnailProvider } from '../storageQueueFilters';
 import { getCacheRebuildProgressTypes, getContentWorkTotal, getMetadataDependentTypes } from './storageContentTypes';
+import { finishStartupDiagnostics, isDebugLogPath, recordStartupDiagnostic } from '../../services/diagnostics/DebugLoggingService';
+import {
+    clearFrontmatterMetadataCacheSignature,
+    isFrontmatterMetadataCacheCurrent,
+    markFrontmatterMetadataCacheCurrent
+} from '../../utils/frontmatterMetadataCache';
+import {
+    refreshMarkdownWordCountConsumerForFile,
+    removeMarkdownWordCountConsumerForFile,
+    removeMarkdownWordCountConsumersInFolder,
+    renameMarkdownWordCountConsumerForFile,
+    renameMarkdownWordCountConsumersInFolder,
+    type MarkdownWordCountConsumerUpdate
+} from '../../utils/markdownPipelineContentTypes';
+
+/**
+ * Buffered vault/metadata events awaiting a debounced flush. The whole buffer (files, timer, processing flag) is
+ * shared through a ref so an in-flight flush started before an effect remount and a flush scheduled after it
+ * operate on the same state.
+ */
+export interface PendingFileFlushBuffer {
+    /** Pending files keyed by path */
+    files: Map<string, TFile>;
+    /** Active flush timer id, or null when no flush is scheduled */
+    timerId: number | null;
+    /** True while a flush batch is being processed */
+    isProcessing: boolean;
+}
+
+async function ensureFrontmatterMetadataCacheMatchesSettings(settings: NotebookNavigatorSettings): Promise<boolean> {
+    if (!settings.useFrontmatterMetadata) {
+        clearFrontmatterMetadataCacheSignature();
+        return false;
+    }
+
+    if (isFrontmatterMetadataCacheCurrent(settings)) {
+        return false;
+    }
+
+    await getDBInstance().batchClearAllFileContent('metadata');
+    markFrontmatterMetadataCacheCurrent(settings);
+    return true;
+}
 
 /**
  * Syncs vault changes into the IndexedDB cache and triggers derived-content generation.
@@ -46,42 +92,55 @@ import { getCacheRebuildProgressTypes, getContentWorkTotal, getMetadataDependent
  * Design notes:
  * - Vault events can arrive in bursts or in multi-step sequences (especially renames/moves). A shared debouncer
  *   (TIMEOUTS.FILE_OPERATION_DELAY) collapses those bursts into a single `calculateFileDiff()` pass.
- * - Rename handling preserves existing cached content by seeding the new path with the old record and moving any
- *   stored blobs/text before the next diff runs.
+ * - A markdown save fires both `vault.on('modify')` and `metadataCache.on('changed')`. The modify flush records
+ *   stat changes and queues non-markdown thumbnails only; markdown content generation is queued by the
+ *   metadata-change flush so providers read the metadata cache after Obsidian has indexed the save.
+ * - Rename handling preserves existing cached content by seeding the new path with the old record at event time
+ *   and buffering the move. A zero-delay flush then persists the whole burst's seeded records in one `setFiles`
+ *   call and moves stored blobs/preview text in one batched transaction per store, each replayed in vault event
+ *   order (a folder move with N files runs a handful of transactions instead of ~3N).
+ * - The modify/metadata flush buffers are refs owned by `StorageContext`. This effect re-runs on settings changes,
+ *   and events buffered but not yet flushed must survive the remount: cleanup clears only the flush timers, and
+ *   the mount path reschedules flushes for entries still in the buffers. The rename buffer is flushed by cleanup
+ *   instead: its entries seed the plugin-lifetime memory mirror and must not outlive the effect unpersisted.
  * - `latestSettingsRef` is used inside async callbacks to avoid stale closures when settings change mid-queue.
  */
 export function useStorageVaultSync(params: {
     app: App;
     api: NotebookNavigatorAPI | null;
     settings: NotebookNavigatorSettings;
-    latestSettingsRef: RefObject<NotebookNavigatorSettings>;
-    stoppedRef: RefObject<boolean>;
-    isFirstLoadRef: RefObject<boolean>;
+    latestSettingsRef: MutableRefObject<NotebookNavigatorSettings>;
+    stoppedRef: MutableRefObject<boolean>;
+    isFirstLoadRef: MutableRefObject<boolean>;
     isIndexedDBReady: boolean;
-    hasBuiltInitialCacheRef: RefObject<boolean>;
+    hasBuiltInitialCacheRef: MutableRefObject<boolean>;
     setIsStorageReady: Dispatch<SetStateAction<boolean>>;
-    isStorageReadyRef: RefObject<boolean>;
-    contentRegistryRef: RefObject<ContentProviderRegistry | null>;
-    pendingSyncTimeoutIdRef: RefObject<number | null>;
-    pendingRenameDataRef: RefObject<Map<string, DBFileData>>;
-    buildFileCacheFnRef: RefObject<((isInitialLoad?: boolean) => Promise<void>) | null>;
-    rebuildFileCacheRef: RefObject<ReturnType<typeof debounce> | null>;
-    activeVaultEventRefsRef: RefObject<EventRef[] | null>;
-    activeMetadataEventRefRef: RefObject<EventRef | null>;
-    rebuildTagTree: () => Map<string, TagTreeNode>;
+    isStorageReadyRef: MutableRefObject<boolean>;
+    contentRegistryRef: MutableRefObject<ContentProviderRegistry | null>;
+    pendingSyncTimeoutIdRef: MutableRefObject<number | null>;
+    pendingRenameDataRef: MutableRefObject<Map<string, DBFileData>>;
+    modifyFlushBufferRef: MutableRefObject<PendingFileFlushBuffer>;
+    metadataChangeFlushBufferRef: MutableRefObject<PendingFileFlushBuffer>;
+    renameFlushBufferRef: MutableRefObject<PendingRenameFlushBuffer>;
+    buildFileCacheFnRef: MutableRefObject<((isInitialLoad?: boolean) => Promise<void>) | null>;
+    rebuildFileCacheRef: MutableRefObject<ReturnType<typeof debounce> | null>;
+    activeVaultEventRefsRef: MutableRefObject<EventRef[] | null>;
+    activeMetadataEventRefRef: MutableRefObject<EventRef | null>;
+    rebuildTagTree: (getVisibleFiles?: () => TFile[]) => Map<string, TagTreeNode>;
     scheduleTagTreeRebuild: (options?: { flush?: boolean }) => void;
-    cancelTagTreeRebuildDebouncer: (options?: { reset?: boolean }) => void;
-    rebuildPropertyTree: () => Map<string, PropertyTreeNode>;
+    rebuildPropertyTree: (getVisibleFiles?: () => TFile[]) => Map<string, PropertyTreeNode>;
     rebuildTopicTree: () => void;
     schedulePropertyTreeRebuild: (options?: { flush?: boolean }) => void;
-    cancelPropertyTreeRebuildDebouncer: (options?: { reset?: boolean }) => void;
+    cancelTreeRebuildDebouncer: (options?: { reset?: boolean }) => void;
     startCacheRebuildNotice: (total: number, enabledTypes: FileContentType[]) => void;
     getIndexableFiles: () => TFile[];
+    getVisibleMarkdownFiles: () => TFile[];
     queueMetadataContentWhenReady: (
         files: TFile[],
         includeTypes?: ContentProviderType[],
         settingsOverride?: NotebookNavigatorSettings
     ) => void;
+    queueAllMarkdownForWordCountActivation: () => void;
     queueIndexableFilesForContentGeneration: (files: TFile[], settings: NotebookNavigatorSettings) => { markdownFiles: TFile[] };
     queueIndexableFilesNeedingContentGeneration: (filesToCheck: TFile[], allFiles: TFile[], settings: NotebookNavigatorSettings) => void;
     disposeMetadataWaitDisposers: () => void;
@@ -100,20 +159,24 @@ export function useStorageVaultSync(params: {
         contentRegistryRef,
         pendingSyncTimeoutIdRef,
         pendingRenameDataRef,
+        modifyFlushBufferRef,
+        metadataChangeFlushBufferRef,
+        renameFlushBufferRef,
         buildFileCacheFnRef,
         rebuildFileCacheRef,
         activeVaultEventRefsRef,
         activeMetadataEventRefRef,
         rebuildTagTree,
         scheduleTagTreeRebuild,
-        cancelTagTreeRebuildDebouncer,
         rebuildPropertyTree,
         rebuildTopicTree,
         schedulePropertyTreeRebuild,
-        cancelPropertyTreeRebuildDebouncer,
+        cancelTreeRebuildDebouncer,
         startCacheRebuildNotice,
         getIndexableFiles,
+        getVisibleMarkdownFiles,
         queueMetadataContentWhenReady,
+        queueAllMarkdownForWordCountActivation,
         queueIndexableFilesForContentGeneration,
         queueIndexableFilesNeedingContentGeneration,
         disposeMetadataWaitDisposers
@@ -130,19 +193,35 @@ export function useStorageVaultSync(params: {
             }
 
             if (isInitialLoad) {
+                const initialLoadStartMs = performance.now();
                 try {
-                    const { toAdd, toUpdate, toRemove, cachedFiles } = await calculateFileDiff(allFiles);
+                    recordStartupDiagnostic('storage.initialLoad.start', { indexableFileCount: allFiles.length });
+                    const diffStartMs = performance.now();
+                    const { toAdd, toUpdate, toRemove, existingData, cachedFileCount } = calculateFileDiff(allFiles);
+                    const diffElapsedMs = Math.round(performance.now() - diffStartMs);
 
                     if (toRemove.length > 0) {
                         await removeFilesFromCache(toRemove);
                     }
 
                     if (toAdd.length > 0 || toUpdate.length > 0) {
-                        await recordFileChanges([...toAdd, ...toUpdate], cachedFiles, pendingRenameDataRef.current);
+                        await recordFileChanges([...toAdd, ...toUpdate], existingData, pendingRenameDataRef.current);
                     }
+                    const frontmatterMetadataCacheInvalidated = await ensureFrontmatterMetadataCacheMatchesSettings(settings);
 
-                    rebuildTagTree();
-                    rebuildPropertyTree();
+                    // Both tree rebuilds share one visible-file scan.
+                    let visibleFilesForTrees: TFile[] | null = null;
+                    const getVisibleFilesForTrees = () => (visibleFilesForTrees ??= getVisibleMarkdownFiles());
+                    let tagTreeElapsedMs = 0;
+                    if (settings.showTags) {
+                        const tagTreeStartMs = performance.now();
+                        rebuildTagTree(getVisibleFilesForTrees);
+                        tagTreeElapsedMs = Math.round(performance.now() - tagTreeStartMs);
+                    }
+                    const propertyTreeStartMs = performance.now();
+                    rebuildPropertyTree(getVisibleFilesForTrees);
+                    const propertyTreeElapsedMs = Math.round(performance.now() - propertyTreeStartMs);
+                    // Topic graph rebuild is a no-op when the topics section is disabled.
                     rebuildTopicTree();
 
                     isStorageReadyRef.current = true;
@@ -150,20 +229,22 @@ export function useStorageVaultSync(params: {
 
                     api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].setStorageReady(true);
 
-                    const metadataDependentTypes = getMetadataDependentTypes(settings);
+                    const metadataDependentTypes = getMetadataDependentTypes(settings, app);
                     const contentEnabled = metadataDependentTypes.length > 0;
+                    const queuedStartupDetails: Record<string, unknown> = { metadataDependentTypes, frontmatterMetadataCacheInvalidated };
 
                     if (contentRegistryRef.current && contentEnabled) {
                         const markdownFiles: TFile[] = [];
-                        const pdfFiles: TFile[] = [];
+                        const fileThumbnailFiles: TFile[] = [];
+                        let filesNeedingThumbnailCount = 0;
 
                         for (const file of allFiles) {
                             if (file.extension === 'md') {
                                 markdownFiles.push(file);
                                 continue;
                             }
-                            if (isPdfFile(file)) {
-                                pdfFiles.push(file);
+                            if (shouldQueueFileThumbnailProvider(file)) {
+                                fileThumbnailFiles.push(file);
                             }
                         }
 
@@ -171,16 +252,45 @@ export function useStorageVaultSync(params: {
                             queueMetadataContentWhenReady(markdownFiles, metadataDependentTypes, settings);
                         }
 
-                        if (settings.showFeatureImage && pdfFiles.length > 0) {
-                            const filesNeedingThumbnails = filterPdfFilesRequiringThumbnails(pdfFiles, settings);
+                        if (settings.showFeatureImage && fileThumbnailFiles.length > 0) {
+                            const filesNeedingThumbnails = filterFilesRequiringFileThumbnails(fileThumbnailFiles, settings);
+                            filesNeedingThumbnailCount = filesNeedingThumbnails.length;
                             if (filesNeedingThumbnails.length > 0) {
                                 contentRegistryRef.current.queueFilesForAllProviders(filesNeedingThumbnails, settings, {
                                     include: ['fileThumbnails']
                                 });
                             }
                         }
+
+                        queuedStartupDetails.markdownFiles = markdownFiles.length;
+                        queuedStartupDetails.fileThumbnailFiles = fileThumbnailFiles.length;
+                        queuedStartupDetails.filesNeedingThumbnails = filesNeedingThumbnailCount;
                     }
+
+                    finishStartupDiagnostics({
+                        status: 'storageReady',
+                        indexableFileCount: allFiles.length,
+                        cachedFileCount,
+                        diff: {
+                            toAdd: toAdd.length,
+                            toUpdate: toUpdate.length,
+                            toRemove: toRemove.length
+                        },
+                        queued: queuedStartupDetails,
+                        timingsMs: {
+                            diff: diffElapsedMs,
+                            tagTree: tagTreeElapsedMs,
+                            propertyTree: propertyTreeElapsedMs,
+                            initialLoad: Math.round(performance.now() - initialLoadStartMs)
+                        }
+                    });
                 } catch (error: unknown) {
+                    recordStartupDiagnostic('storage.initialLoad.failed', { error });
+                    finishStartupDiagnostics({
+                        status: 'initialLoadFailed',
+                        indexableFileCount: allFiles.length,
+                        error
+                    });
                     console.error('Failed during initial load sequence:', error);
                 }
             } else {
@@ -194,23 +304,47 @@ export function useStorageVaultSync(params: {
                 const processDiff = async () => {
                     if (stoppedRef.current) return;
                     try {
-                        const { toAdd, toUpdate, toRemove, cachedFiles } = await calculateFileDiff(allFiles);
+                        const { toAdd, toUpdate, toRemove, existingData, cachedFileCount } = calculateFileDiff(allFiles);
+                        recordStartupDiagnostic('storage.diff.processed', {
+                            indexableFileCount: allFiles.length,
+                            cachedFileCount,
+                            toAdd: toAdd.length,
+                            toUpdate: toUpdate.length,
+                            toRemove: toRemove.length
+                        });
 
                         if (toAdd.length > 0 || toUpdate.length > 0 || toRemove.length > 0) {
                             try {
                                 const filesToUpdate = [...toAdd, ...toUpdate];
                                 if (filesToUpdate.length > 0) {
-                                    await recordFileChanges(filesToUpdate, cachedFiles, pendingRenameDataRef.current);
+                                    await recordFileChanges(filesToUpdate, existingData, pendingRenameDataRef.current);
                                 }
 
                                 if (toRemove.length > 0) {
-                                    await removeFilesFromCache(toRemove);
-                                    if (settings.showTags) {
-                                        scheduleTagTreeRebuild();
-                                    }
-                                    if (isPropertyFeatureEnabled(settings)) {
-                                        // Flush rebuild after cache removals so deleted files are reflected in the property tree counts.
-                                        schedulePropertyTreeRebuild({ flush: true });
+                                    // A rename landing after this diff's vault snapshot (during the awaited
+                                    // record update above) can re-occupy a path classified as removed; the
+                                    // rename flush persists a seeded record and moves stored artifacts there
+                                    // ahead of this delete. Skip such paths; the diff rescheduled by the
+                                    // rename handler reconciles them.
+                                    const pathsToRemove = excludeReoccupiedRenameTargets({
+                                        paths: toRemove,
+                                        buffer: renameFlushBufferRef.current,
+                                        pendingRenameData: pendingRenameDataRef.current,
+                                        isPathInVault: path => app.vault.getAbstractFileByPath(path) instanceof TFile
+                                    });
+                                    if (pathsToRemove.length > 0) {
+                                        await removeFilesFromCache(pathsToRemove);
+                                        if (settings.showTags) {
+                                            // Flush so the rebuild runs in the current task. Cache deletions emit no
+                                            // content-change events, and a settings update reacting to the same delete
+                                            // (for example a root folder order change) reruns this effect, whose
+                                            // cleanup cancels pending debounced rebuilds.
+                                            scheduleTagTreeRebuild({ flush: true });
+                                        }
+                                        if (isPropertyFeatureEnabled(settings)) {
+                                            // Flush rebuild after cache removals so deleted files are reflected in the property tree counts.
+                                            schedulePropertyTreeRebuild({ flush: true });
+                                        }
                                     }
                                 }
                             } catch (error: unknown) {
@@ -271,41 +405,283 @@ export function useStorageVaultSync(params: {
             const db = getDBInstance();
             if (db.consumePendingRebuildNotice()) {
                 const liveSettings = latestSettingsRef.current;
-                const enabledTypes = getCacheRebuildProgressTypes(liveSettings);
+                const enabledTypes = getCacheRebuildProgressTypes(liveSettings, app);
                 const total = getContentWorkTotal(getIndexableFiles(), enabledTypes);
                 startCacheRebuildNotice(total, enabledTypes);
             }
             runAsyncAction(() => buildFileCache(true));
         }
 
+        const queueFilesContentRefresh = (files: TFile[]) => {
+            if (stoppedRef.current || !contentRegistryRef.current) {
+                return;
+            }
+
+            try {
+                const liveSettings = latestSettingsRef.current;
+                const metadataDependentTypes = getMetadataDependentTypes(liveSettings, app);
+                const { markdownFiles } = queueIndexableFilesForContentGeneration(files, liveSettings);
+                if (metadataDependentTypes.length > 0) {
+                    queueMetadataContentWhenReady(markdownFiles, metadataDependentTypes, liveSettings);
+                }
+            } catch (error: unknown) {
+                console.error('Failed to queue content refresh for files:', error);
+            }
+        };
+
+        const modifyFlushBuffer = modifyFlushBufferRef.current;
+        const metadataChangeFlushBuffer = metadataChangeFlushBufferRef.current;
+
+        const clearPendingModifyFlushTimer = () => {
+            if (modifyFlushBuffer.timerId === null) {
+                return;
+            }
+            if (typeof window !== 'undefined') {
+                window.clearTimeout(modifyFlushBuffer.timerId);
+            }
+            modifyFlushBuffer.timerId = null;
+        };
+
+        const clearPendingMetadataChangeFlushTimer = () => {
+            if (metadataChangeFlushBuffer.timerId === null) {
+                return;
+            }
+            if (typeof window !== 'undefined') {
+                window.clearTimeout(metadataChangeFlushBuffer.timerId);
+            }
+            metadataChangeFlushBuffer.timerId = null;
+        };
+
+        const resolveLiveFiles = (files: TFile[]): TFile[] => {
+            const filesByPath = new Map<string, TFile>();
+            for (const file of files) {
+                const abstract = app.vault.getAbstractFileByPath(file.path);
+                if (abstract instanceof TFile) {
+                    filesByPath.set(abstract.path, abstract);
+                }
+            }
+            return Array.from(filesByPath.values());
+        };
+
+        const flushModifiedFiles = () => {
+            modifyFlushBuffer.timerId = null;
+            if (modifyFlushBuffer.isProcessing) {
+                return;
+            }
+
+            runAsyncAction(async () => {
+                if (stoppedRef.current) {
+                    modifyFlushBuffer.files.clear();
+                    return;
+                }
+
+                const pendingFiles = Array.from(modifyFlushBuffer.files.values());
+                modifyFlushBuffer.files.clear();
+                if (pendingFiles.length === 0) {
+                    return;
+                }
+
+                const files = resolveLiveFiles(pendingFiles);
+                if (files.length === 0) {
+                    return;
+                }
+
+                let recordedChanges = false;
+                modifyFlushBuffer.isProcessing = true;
+                try {
+                    const db = getDBInstance();
+                    const existingData = db.getFiles(files.map(file => file.path));
+                    await recordFileChanges(files, existingData, pendingRenameDataRef.current);
+                    recordedChanges = true;
+                } catch (error: unknown) {
+                    console.error('Failed to record file changes on modify:', error);
+                } finally {
+                    modifyFlushBuffer.isProcessing = false;
+                }
+
+                if (recordedChanges) {
+                    // Markdown content is queued by the metadata-change flush once Obsidian has indexed the
+                    // modified file. Queueing markdown here as well runs the metadata-dependent providers a
+                    // second time per save, against a metadata cache that may not reflect the save yet.
+                    const nonMarkdownFiles = files.filter(file => file.extension !== 'md');
+                    if (nonMarkdownFiles.length > 0) {
+                        queueFilesContentRefresh(nonMarkdownFiles);
+                    }
+                }
+
+                if (modifyFlushBuffer.files.size > 0 && !stoppedRef.current) {
+                    scheduleModifiedFilesFlush();
+                }
+            });
+        };
+
+        const scheduleModifiedFilesFlush = () => {
+            if (stoppedRef.current || modifyFlushBuffer.isProcessing || modifyFlushBuffer.timerId !== null) {
+                return;
+            }
+
+            if (typeof window !== 'undefined') {
+                modifyFlushBuffer.timerId = window.setTimeout(flushModifiedFiles, TIMEOUTS.FILE_OPERATION_DELAY);
+                return;
+            }
+
+            flushModifiedFiles();
+        };
+
+        const flushMetadataChangedFiles = () => {
+            metadataChangeFlushBuffer.timerId = null;
+            if (metadataChangeFlushBuffer.isProcessing) {
+                return;
+            }
+
+            runAsyncAction(async () => {
+                if (stoppedRef.current) {
+                    metadataChangeFlushBuffer.files.clear();
+                    return;
+                }
+
+                const pendingFiles = Array.from(metadataChangeFlushBuffer.files.values());
+                metadataChangeFlushBuffer.files.clear();
+                if (pendingFiles.length === 0) {
+                    return;
+                }
+
+                const files = resolveLiveFiles(pendingFiles).filter(file => file.extension === 'md' && !isDebugLogPath(file.path));
+                if (files.length === 0) {
+                    return;
+                }
+
+                const liveSettings = latestSettingsRef.current;
+                const metadataDependentTypes = getMetadataDependentTypes(liveSettings, app);
+
+                metadataChangeFlushBuffer.isProcessing = true;
+                try {
+                    if (metadataDependentTypes.length > 0) {
+                        // Obsidian's metadata cache can change after initial indexing even when file mtime did
+                        // not trigger a "modify" handler in the expected order. Mark files for regeneration so
+                        // metadata-dependent providers re-run against the updated cache snapshot.
+                        // The processed-mtime reset also invalidates in-flight provider batches whose
+                        // `expectedPreviousMtime` snapshot was non-zero: their guarded writes are dropped after
+                        // the reset, so such a batch cannot persist content from a pre-change cache snapshot.
+                        await markFilesForRegeneration(files, metadataDependentTypes);
+                    }
+                } catch (error: unknown) {
+                    console.error('Failed to mark files for regeneration:', error);
+                } finally {
+                    metadataChangeFlushBuffer.isProcessing = false;
+                }
+
+                // Queue even when marking fails: this flush is the only content trigger for markdown saves, and
+                // files whose processed mtimes are already stale still pass the queue filters without the reset.
+                queueFilesContentRefresh(files);
+
+                if (metadataChangeFlushBuffer.files.size > 0 && !stoppedRef.current) {
+                    scheduleMetadataChangedFilesFlush();
+                }
+            });
+        };
+
+        const scheduleMetadataChangedFilesFlush = () => {
+            if (stoppedRef.current || metadataChangeFlushBuffer.isProcessing || metadataChangeFlushBuffer.timerId !== null) {
+                return;
+            }
+
+            if (typeof window !== 'undefined') {
+                metadataChangeFlushBuffer.timerId = window.setTimeout(flushMetadataChangedFiles, TIMEOUTS.FILE_OPERATION_DELAY);
+                return;
+            }
+
+            flushMetadataChangedFiles();
+        };
+
+        const applyWordCountConsumerUpdate = (update: MarkdownWordCountConsumerUpdate): void => {
+            if (update.becameActive) {
+                queueAllMarkdownForWordCountActivation();
+            }
+        };
+
+        // Entries buffered before an effect remount have no active timer (cleanup cleared it); reschedule their
+        // flushes. When a flush batch from the previous effect run is still in flight, the schedule guard skips
+        // and that batch reschedules on completion if the buffer is non-empty.
+        if (modifyFlushBuffer.files.size > 0) {
+            scheduleModifiedFilesFlush();
+        }
+        if (metadataChangeFlushBuffer.files.size > 0) {
+            scheduleMetadataChangedFilesFlush();
+        }
+
+        const notifyDrawingCompanionChange = (imagePath: string) => {
+            emitDrawingCompanionImageChange(app, imagePath);
+        };
+
+        const renameFlushBuffer = renameFlushBufferRef.current;
+
+        const renameFlushController = createRenameFlushController({
+            buffer: renameFlushBuffer,
+            pendingRenameData: pendingRenameDataRef.current,
+            isStopped: () => stoppedRef.current,
+            getStore: () => getDBInstance(),
+            cancelScheduledDiff: () => {
+                if (pendingSyncTimeoutIdRef.current !== null) {
+                    if (typeof window !== 'undefined') {
+                        window.clearTimeout(pendingSyncTimeoutIdRef.current);
+                    }
+                    pendingSyncTimeoutIdRef.current = null;
+                }
+            },
+            queueContentRefresh: files => queueFilesContentRefresh(files),
+            scheduleDiff: () => rebuildFileCache?.()
+        });
+
         const handleRename = (file: TAbstractFile, oldPath: string) => {
+            if (file instanceof TFolder) {
+                const liveSettings = latestSettingsRef.current;
+                // Obsidian emits one event for a folder move and no rename events for its descendants.
+                // Rewrite cached header paths by prefix so the event does not scan every markdown note.
+                applyWordCountConsumerUpdate(renameMarkdownWordCountConsumersInFolder(app, oldPath, file.path, liveSettings));
+            }
             if (file instanceof TFile) {
+                const liveSettings = latestSettingsRef.current;
+                const wasMarkdown = isMarkdownPath(oldPath);
+                const isMarkdown = file.extension === 'md';
+                if (wasMarkdown && isMarkdown) {
+                    applyWordCountConsumerUpdate(renameMarkdownWordCountConsumerForFile(app, oldPath, file.path, liveSettings));
+                } else if (wasMarkdown) {
+                    applyWordCountConsumerUpdate(removeMarkdownWordCountConsumerForFile(app, oldPath, liveSettings));
+                }
+
+                notifyDrawingCompanionChange(oldPath);
+                notifyDrawingCompanionChange(file.path);
+
                 try {
                     const db = getDBInstance();
                     const existing = db.getFile(oldPath);
                     if (existing) {
-                        // Renames are handled as "seed + move artifacts":
+                        // Renames are handled as "seed + batched move":
                         // - Seed the new path in the in-memory mirror so synchronous reads during the rename window see a consistent record.
-                        // - Persist the seeded record to IndexedDB before any provider writes run for the new path.
-                        // - Move any stored blobs/text keyed by path.
+                        // - Begin blob/preview move markers so reads fall back to the old path until the stores move.
+                        // - Buffer the move in event order; the zero-delay flush persists the burst's seeded records
+                        //   and moves stored blobs/preview text in one batched transaction per store.
                         // - Schedule a diff afterwards to reconcile final state and update mtimes.
-                        const wasMarkdown = isMarkdownPath(oldPath);
                         const isMarkdown = isMarkdownPath(file.path);
                         const nextPreviewStatus: DBFileData['previewStatus'] = isMarkdown
                             ? wasMarkdown
                                 ? existing.previewStatus
                                 : 'unprocessed'
                             : 'none';
+                        const remappedFeatureImageKey = remapSelfReferentialFeatureImageKey(existing.featureImageKey, oldPath, file.path);
                         const seeded: DBFileData = {
                             ...existing,
                             previewStatus: nextPreviewStatus,
+                            featureImageKey: remappedFeatureImageKey ?? existing.featureImageKey,
                             markdownPipelineMtime: wasMarkdown && isMarkdown ? 0 : existing.markdownPipelineMtime,
                             metadataMtime: wasMarkdown && isMarkdown ? 0 : existing.metadataMtime
                         };
 
                         pendingRenameDataRef.current.set(file.path, seeded);
                         db.seedMemoryFile(file.path, seeded);
-                        if (existing.featureImageStatus === 'has') {
+                        const hasStoredBlob = existing.featureImageStatus === 'has';
+                        if (hasStoredBlob) {
                             // Prevent `getFeatureImageBlob(newPath)` from returning null before the blob store key moves.
                             db.beginFeatureImageBlobMove(oldPath, file.path);
                         }
@@ -313,39 +689,17 @@ export function useStorageVaultSync(params: {
                             // Prevent preview status repairs while the preview store key is moving from oldPath -> newPath.
                             db.beginPreviewTextMove(oldPath, file.path);
                         }
-                        runAsyncAction(async () => {
-                            try {
-                                // Persist the seeded record at `newPath` before content providers run.
-                                //
-                                // Content providers can still run during the rename window (before the next diff reconciles the vault).
-                                // Provider writes fetch the main IndexedDB record for the path first. If the record is missing, the
-                                // provider layer creates a default record, which resets preview/feature-image fields (status/key) and
-                                // also drops any cached preview text for the path.
-                                //
-                                // Keeping a real record in IndexedDB avoids the default-record path and preserves the seeded fields
-                                // until the diff finishes and deletes `oldPath`.
-                                await db.setFile(file.path, { ...seeded, mtime: file.stat.mtime });
-                                const operations: Promise<void>[] = [db.moveFeatureImageBlob(oldPath, file.path)];
-
-                                if (wasMarkdown && isMarkdown) {
-                                    operations.push(db.movePreviewText(oldPath, file.path));
-                                } else if (wasMarkdown) {
-                                    operations.push(
-                                        db.deletePreviewText(oldPath).catch((error: unknown) => {
-                                            console.error('Failed to delete preview text after rename:', {
-                                                oldPath,
-                                                newPath: file.path,
-                                                error
-                                            });
-                                        })
-                                    );
-                                }
-
-                                await Promise.all(operations);
-                            } finally {
-                                rebuildFileCache?.();
-                            }
+                        renameFlushBuffer.moves.push({
+                            file,
+                            oldPath,
+                            newPath: file.path,
+                            seeded,
+                            wasMarkdown,
+                            isMarkdown,
+                            hasStoredBlob
                         });
+                        renameFlushController.scheduleFlush();
+                        rebuildFileCache?.();
                         return;
                     }
                 } catch (error: unknown) {
@@ -355,49 +709,56 @@ export function useStorageVaultSync(params: {
             rebuildFileCache?.();
         };
 
-        const queueFileContentRefresh = (file: TFile) => {
-            if (stoppedRef.current || !contentRegistryRef.current) {
-                return;
-            }
-
-            try {
-                const liveSettings = latestSettingsRef.current;
-                const metadataDependentTypes = getMetadataDependentTypes(liveSettings);
-                const { markdownFiles } = queueIndexableFilesForContentGeneration([file], liveSettings);
-                if (metadataDependentTypes.length > 0) {
-                    queueMetadataContentWhenReady(markdownFiles, metadataDependentTypes, liveSettings);
-                }
-            } catch (error: unknown) {
-                console.error('Failed to queue content refresh for file:', file.path, error);
-            }
-        };
-
         const handleModify = (file: TAbstractFile) => {
             if (stoppedRef.current) {
                 return;
             }
-            if (!(file instanceof TFile) || (file.extension !== 'md' && !isPdfFile(file))) {
+            if (!(file instanceof TFile)) {
+                return;
+            }
+            if (isDebugLogPath(file.path)) {
                 return;
             }
 
-            runAsyncAction(async () => {
-                try {
-                    const db = getDBInstance();
-                    const existingData = db.getFiles([file.path]);
-                    await recordFileChanges([file], existingData, pendingRenameDataRef.current);
-                } catch (error: unknown) {
-                    console.error('Failed to record file change on modify:', error);
-                    return;
-                }
+            const drawingFile = findDrawingFileForCompanionImage(app, file.path);
+            if (drawingFile) {
+                notifyDrawingCompanionChange(file.path);
+                return;
+            }
 
-                // Content generation can depend on metadata cache readiness, so always go through the queue helpers.
-                queueFileContentRefresh(file);
-            });
+            if (file.extension !== 'md' && !shouldQueueFileThumbnailProvider(file)) {
+                return;
+            }
+
+            modifyFlushBuffer.files.set(file.path, file);
+            scheduleModifiedFilesFlush();
+        };
+
+        const handleCreateOrDelete = (file: TAbstractFile) => {
+            if (file instanceof TFile && isDebugLogPath(file.path)) {
+                return;
+            }
+            rebuildFileCache?.();
+            if (file instanceof TFile) {
+                notifyDrawingCompanionChange(file.path);
+            }
+        };
+
+        const handleDelete = (file: TAbstractFile) => {
+            if (file instanceof TFolder) {
+                const liveSettings = latestSettingsRef.current;
+                // Obsidian emits one event for a folder deletion and no delete events for its descendants.
+                applyWordCountConsumerUpdate(removeMarkdownWordCountConsumersInFolder(app, file.path, liveSettings));
+            } else if (file instanceof TFile && file.extension === 'md') {
+                const liveSettings = latestSettingsRef.current;
+                applyWordCountConsumerUpdate(removeMarkdownWordCountConsumerForFile(app, file.path, liveSettings));
+            }
+            handleCreateOrDelete(file);
         };
 
         const vaultEvents = [
-            app.vault.on('create', rebuildFileCache),
-            app.vault.on('delete', rebuildFileCache),
+            app.vault.on('create', handleCreateOrDelete),
+            app.vault.on('delete', handleDelete),
             app.vault.on('rename', handleRename),
             app.vault.on('modify', handleModify)
         ];
@@ -407,27 +768,22 @@ export function useStorageVaultSync(params: {
             if (stoppedRef.current) {
                 return;
             }
-            if (!(file instanceof TFile) || file.extension !== 'md') {
+            if (!(file instanceof TFile) || file.extension !== 'md' || isDebugLogPath(file.path)) {
+                return;
+            }
+            const liveSettings = latestSettingsRef.current;
+            const wordCountConsumerUpdate = refreshMarkdownWordCountConsumerForFile(app, file, liveSettings);
+
+            if (getMetadataDependentTypes(liveSettings, app).length === 0) {
                 return;
             }
 
-            runAsyncAction(async () => {
-                const liveSettings = latestSettingsRef.current;
-                const metadataDependentTypes = getMetadataDependentTypes(liveSettings);
-                if (metadataDependentTypes.length > 0) {
-                    try {
-                        // Obsidian's metadata cache can change after initial indexing even when the file mtime did
-                        // not trigger a "modify" handler in the expected order. Mark the file for regeneration so
-                        // metadata-dependent providers re-run against the updated cache snapshot.
-                        await markFilesForRegeneration([file]);
-                    } catch (error: unknown) {
-                        console.error('Failed to mark file for regeneration:', error);
-                        return;
-                    }
-                }
+            applyWordCountConsumerUpdate(wordCountConsumerUpdate);
 
-                queueFileContentRefresh(file);
-            });
+            // Activation queues only the markdown pipeline, so the triggering file must still take the
+            // normal metadata path to refresh separate tag and frontmatter-metadata providers.
+            metadataChangeFlushBuffer.files.set(file.path, file);
+            scheduleMetadataChangedFilesFlush();
         };
 
         const metadataEvent = app.metadataCache.on('changed', handleMetadataChange);
@@ -446,10 +802,18 @@ export function useStorageVaultSync(params: {
                 }
                 pendingSyncTimeoutIdRef.current = null;
             }
+            // Keep buffered files so the next effect run can reschedule their flushes; only cancel the timers.
+            clearPendingModifyFlushTimer();
+            clearPendingMetadataChangeFlushTimer();
+
+            // Flush buffered renames now: their seeded memory records must not outlive the effect
+            // unpersisted. A plain view close never remounts this effect, and the next session's diff
+            // would treat the seeded paths as unchanged while deleting the old-path artifacts. On plugin
+            // shutdown `stopAllProcessing` has already emptied the buffer and the flush drops out.
+            renameFlushController.flushNow();
 
             // Clears debouncers and pending waits so no background work continues after teardown.
-            cancelTagTreeRebuildDebouncer({ reset: true });
-            cancelPropertyTreeRebuildDebouncer({ reset: true });
+            cancelTreeRebuildDebouncer({ reset: true });
             disposeMetadataWaitDisposers();
         };
     }, [
@@ -458,25 +822,29 @@ export function useStorageVaultSync(params: {
         activeMetadataEventRefRef,
         activeVaultEventRefsRef,
         buildFileCacheFnRef,
-        cancelTagTreeRebuildDebouncer,
-        cancelPropertyTreeRebuildDebouncer,
+        cancelTreeRebuildDebouncer,
         contentRegistryRef,
         disposeMetadataWaitDisposers,
         getIndexableFiles,
+        getVisibleMarkdownFiles,
         hasBuiltInitialCacheRef,
         isFirstLoadRef,
         isIndexedDBReady,
         isStorageReadyRef,
         latestSettingsRef,
+        metadataChangeFlushBufferRef,
+        modifyFlushBufferRef,
         pendingRenameDataRef,
         pendingSyncTimeoutIdRef,
         queueIndexableFilesForContentGeneration,
         queueIndexableFilesNeedingContentGeneration,
+        queueAllMarkdownForWordCountActivation,
         queueMetadataContentWhenReady,
         rebuildFileCacheRef,
         rebuildTagTree,
         rebuildPropertyTree,
         rebuildTopicTree,
+        renameFlushBufferRef,
         scheduleTagTreeRebuild,
         schedulePropertyTreeRebuild,
         setIsStorageReady,

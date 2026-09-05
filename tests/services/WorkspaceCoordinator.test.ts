@@ -108,7 +108,7 @@ describe('WorkspaceCoordinator', () => {
         const leaf = await coordinator.ensureCalendarViewInRightSidebar({ reveal: true, activate: true });
 
         expect(leaf).toBe(createdLeaf);
-        expect(getRightLeaf).toHaveBeenCalledWith(false);
+        expect(getRightLeaf).toHaveBeenCalledWith(true);
         expect(setViewState).toHaveBeenCalledWith({
             type: NOTEBOOK_NAVIGATOR_CALENDAR_VIEW,
             active: true

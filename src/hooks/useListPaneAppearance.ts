@@ -18,170 +18,34 @@
 
 import { useMemo } from 'react';
 import { useSettingsState } from '../context/SettingsContext';
-import { useSelectionState } from '../context/SelectionContext';
-import type { NotePropertyType, ListDisplayMode, ListNoteGroupingOption } from '../settings/types';
-import type { NotebookNavigatorSettings } from '../settings';
+import { useNavigationSelection } from '../context/SelectionContext';
+import { resolveListPaneAppearance } from '../settings/listPaneAppearance';
 import { ItemType } from '../types';
-import { resolveListGrouping } from '../utils/listGrouping';
-
-export interface FolderAppearance {
-    mode?: ListDisplayMode;
-    titleRows?: number;
-    previewRows?: number;
-    notePropertyType?: NotePropertyType;
-    groupBy?: ListNoteGroupingOption;
-}
-
-export type TagAppearance = FolderAppearance;
-
-export interface ListPaneAppearanceSettings {
-    mode: ListDisplayMode;
-    titleRows: number;
-    previewRows: number;
-    notePropertyType: NotePropertyType;
-    showDate: boolean;
-    showPreview: boolean;
-    showImage: boolean;
-    groupBy: ListNoteGroupingOption;
-}
-
-export function getDefaultListMode(settings: NotebookNavigatorSettings): ListDisplayMode {
-    return settings.defaultListMode === 'compact' ? 'compact' : 'standard';
-}
 
 /**
- * Resolve the effective list mode for a folder/tag appearance.
- */
-export function resolveListMode({
-    appearance,
-    defaultMode
-}: {
-    appearance?: FolderAppearance;
-    defaultMode: ListDisplayMode;
-}): ListDisplayMode {
-    if (appearance?.mode === 'compact' || appearance?.mode === 'standard') {
-        return appearance.mode;
-    }
-
-    return defaultMode;
-}
-
-/** Return visibility flags for a given list mode */
-function getVisibilityForMode(mode: ListDisplayMode, settings: NotebookNavigatorSettings) {
-    if (mode === 'compact') {
-        return {
-            showDate: false,
-            showPreview: false,
-            showImage: false
-        };
-    }
-
-    return {
-        showDate: settings.showFileDate,
-        showPreview: settings.showFilePreview,
-        showImage: settings.showFeatureImage
-    };
-}
-
-/**
- * Hook to get effective appearance settings for the current selection (folder or tag)
- * Merges folder/tag-specific settings with defaults
+ * Hook to get effective appearance settings for the current folder, tag, or property selection.
  */
 export function useListPaneAppearance() {
     const settings = useSettingsState();
-    const { selectedFolder, selectedTag, selectedProperty, selectedTopicPath, selectionType } = useSelectionState();
-
-    return useMemo<ListPaneAppearanceSettings>(() => {
-        const defaultMode = getDefaultListMode(settings);
-
-        const buildAppearance = (appearance: FolderAppearance | undefined) => {
-            const mode = resolveListMode({ appearance, defaultMode });
-            const visibility = getVisibilityForMode(mode, settings);
-
-            return {
-                mode,
-                titleRows: appearance?.titleRows ?? settings.fileNameRows,
-                previewRows: appearance?.previewRows ?? settings.previewRows,
-                notePropertyType: appearance?.notePropertyType ?? settings.notePropertyType,
-                showDate: visibility.showDate,
-                showPreview: visibility.showPreview,
-                showImage: visibility.showImage
-            };
-        };
-
-        // For folders
-        if (selectionType === ItemType.FOLDER && selectedFolder) {
-            const folderPath = selectedFolder.path;
-            const folderAppearance = settings.folderAppearances?.[folderPath];
-            // Resolve effective grouping mode for this folder
-            const grouping = resolveListGrouping({
-                settings,
-                selectionType,
-                folderPath
-            });
-
-            const appearance = buildAppearance(folderAppearance);
-
-            return {
-                ...appearance,
-                groupBy: grouping.effectiveGrouping
-            };
-        }
-
-        // For tags
-        if (selectionType === ItemType.TAG && selectedTag) {
-            const tagAppearance = settings.tagAppearances?.[selectedTag];
-            // Resolve effective grouping mode for this tag
-            const grouping = resolveListGrouping({
-                settings,
-                selectionType,
-                tag: selectedTag
-            });
-
-            const appearance = buildAppearance(tagAppearance);
-
-            return {
-                ...appearance,
-                groupBy: grouping.effectiveGrouping
-            };
-        }
-
-        // For properties
-        if (selectionType === ItemType.PROPERTY && selectedProperty) {
-            const propertyAppearance = settings.propertyAppearances?.[selectedProperty];
-            const grouping = resolveListGrouping({
-                settings,
-                selectionType,
-                propertyNodeId: selectedProperty
-            });
-
-            const appearance = buildAppearance(propertyAppearance);
-
-            return {
-                ...appearance,
-                groupBy: grouping.effectiveGrouping
-            };
-        }
-
-        // For topics
-        if (selectionType === ItemType.TOPIC && selectedTopicPath) {
-            const topicName = selectedTopicPath.split('/').pop() ?? selectedTopicPath;
-            const topicAppearance = settings.topicAppearances?.[topicName];
-            const grouping = resolveListGrouping({ settings });
-            const appearance = buildAppearance(topicAppearance);
-            return {
-                ...appearance,
-                groupBy: grouping.effectiveGrouping
-            };
-        }
-
-        // Default (no selection or other selection types)
-        // Resolve default grouping mode when no folder or tag is selected
-        const grouping = resolveListGrouping({ settings });
-        const appearance = buildAppearance(undefined);
-        return {
-            ...appearance,
-            groupBy: grouping.effectiveGrouping
-        };
-    }, [settings, selectedFolder, selectedTag, selectedProperty, selectedTopicPath, selectionType]);
+    const { selectedFolder, selectedTag, selectedProperty, selectedTopicPath, selectionType } = useNavigationSelection();
+    const selectedFolderPath = selectionType === ItemType.FOLDER ? (selectedFolder?.path ?? null) : null;
+    const selectedTagPath = selectionType === ItemType.TAG ? selectedTag : null;
+    const selectedPropertyNodeId = selectionType === ItemType.PROPERTY ? selectedProperty : null;
+    // Topic appearances are keyed by topic name rather than the full hierarchy path
+    const selectedTopicName =
+        selectionType === ItemType.TOPIC && selectedTopicPath ? (selectedTopicPath.split('/').pop() ?? selectedTopicPath) : null;
+    const selectedAppearance =
+        selectedFolderPath !== null
+            ? settings.folderAppearances?.[selectedFolderPath]
+            : selectedTagPath !== null
+              ? settings.tagAppearances?.[selectedTagPath]
+              : selectedPropertyNodeId !== null
+                ? settings.propertyAppearances?.[selectedPropertyNodeId]
+                : selectedTopicName !== null
+                  ? settings.topicAppearances?.[selectedTopicName]
+                  : undefined;
+    return useMemo(
+        () => resolveListPaneAppearance({ settings, appearance: selectedAppearance, selectionType }),
+        [selectedAppearance, selectionType, settings]
+    );
 }

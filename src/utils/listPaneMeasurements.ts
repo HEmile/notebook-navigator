@@ -17,10 +17,11 @@
  */
 
 import type { TFile } from 'obsidian';
-import { ItemType, type NavigationItemType } from '../types';
+import { ItemType, ListPaneItemType, type NavigationItemType } from '../types';
 import type { FeatureImageStatus, FileData } from '../storage/IndexedDBStorage';
-import { type FeatureImageSizeSetting, type NotePropertyType } from '../settings/types';
-import { isImageFile } from './fileTypeUtils';
+import { type FeatureImageSizeSetting } from '../settings/types';
+import type { ListPaneItem } from '../types/virtualization';
+import { isRasterImageFile } from './fileTypeUtils';
 import {
     buildPropertyKeyNodeId,
     buildPropertyValueNodeId,
@@ -32,6 +33,7 @@ import {
 import { casefold } from './recordUtils';
 import type { HiddenTagVisibility } from './tagPrefixMatcher';
 import { normalizeTagPath } from './tagUtils';
+import { shouldShowManualSortGroupHeaderProgress } from './manualSort';
 
 /**
  * Layout measurements used by the list pane virtualizer.
@@ -43,9 +45,10 @@ export interface ListPaneMeasurements {
     singleTextLineHeight: number;
     multilineTextLineHeight: number;
     tagRowHeight: number;
-    featureImageHeight: number;
-    firstHeader: number;
-    subsequentHeader: number;
+    featureImageMinHeight: number;
+    groupHeaderHeight: number;
+    manualSortGoalHeaderHeight: number;
+    groupHeaderSpacerBefore: number;
     fileIconSize: number;
     topSpacer: number;
     bottomSpacer: number;
@@ -67,9 +70,10 @@ const DESKTOP_MEASUREMENTS: ListPaneMeasurements = Object.freeze({
     singleTextLineHeight: 19,
     multilineTextLineHeight: 18,
     tagRowHeight: 26, // 22px row + 4px gap
-    featureImageHeight: 42,
-    firstHeader: 35,
-    subsequentHeader: 50,
+    featureImageMinHeight: 42,
+    groupHeaderHeight: 27,
+    manualSortGoalHeaderHeight: 32,
+    groupHeaderSpacerBefore: 20,
     fileIconSize: 16,
     topSpacer: 8,
     bottomSpacer: 20
@@ -81,9 +85,10 @@ const MOBILE_MEASUREMENTS: ListPaneMeasurements = Object.freeze({
     singleTextLineHeight: 20,
     multilineTextLineHeight: 19,
     tagRowHeight: 26, // 22px row + 4px gap
-    featureImageHeight: 42,
-    firstHeader: 43, // 35px + 8px mobile increment
-    subsequentHeader: 58, // 50px + 8px mobile increment
+    featureImageMinHeight: 42,
+    groupHeaderHeight: 35, // 27px + 8px mobile increment
+    manualSortGoalHeaderHeight: 40, // 35px header row + 5px below progress
+    groupHeaderSpacerBefore: 20,
     fileIconSize: 20, // 16px + 4px mobile increment
     topSpacer: 8,
     bottomSpacer: 20
@@ -98,6 +103,19 @@ export function getFeatureImageDisplayMeasurements(featureImageSize: FeatureImag
 
 export function getListPaneMeasurements(isMobile: boolean): ListPaneMeasurements {
     return isMobile ? MOBILE_MEASUREMENTS : DESKTOP_MEASUREMENTS;
+}
+
+export function getListPaneHeaderHeight(item: ListPaneItem | undefined, measurements: ListPaneMeasurements): number {
+    if (
+        item?.type === ListPaneItemType.HEADER &&
+        item.headerKind === 'manual-sort-custom' &&
+        item.manualSortHeader !== undefined &&
+        shouldShowManualSortGroupHeaderProgress(item.manualSortHeader, item.manualSortHeaderTargetWordCount)
+    ) {
+        return measurements.manualSortGoalHeaderHeight;
+    }
+
+    return measurements.groupHeaderHeight;
 }
 
 export function getSelectedTagPillToHide({
@@ -162,7 +180,7 @@ export function hasVisibleTagPills({
 }
 
 type FrontmatterPropertyEntry = NonNullable<FileData['properties']>[number];
-type FrontmatterPropertyEntries = Exclude<FileData['properties'], null>;
+type FrontmatterPropertyEntries = NonNullable<FileData['properties']>;
 
 export interface VisibleFrontmatterPropertyEntry {
     entry: FrontmatterPropertyEntry;
@@ -182,27 +200,27 @@ export function forEachVisibleFrontmatterProperty({
     properties: FileData['properties'] | undefined;
     visiblePropertyKeys?: ReadonlySet<string>;
     hiddenPropertyValueNodeId?: string | null;
-    visitor: (property: VisibleFrontmatterPropertyEntry) => void;
+    visitor: (property: VisibleFrontmatterPropertyEntry) => void | false;
 }): void {
     if (!properties || properties.length === 0) {
         return;
     }
 
-    properties.forEach(entry => {
+    for (const entry of properties) {
         const normalizedFieldKey = casefold(entry.fieldKey);
         if (visiblePropertyKeys && !visiblePropertyKeys.has(normalizedFieldKey)) {
-            return;
+            continue;
         }
 
         const rawValue = entry.value;
         if (rawValue.trim().length === 0) {
-            return;
+            continue;
         }
 
         const normalizedValuePath = normalizePropertyTreeValuePath(rawValue);
         const isKeyOnlyValue = entry.valueKind === 'boolean' ? false : isPropertyKeyOnlyValuePath(normalizedValuePath, entry.valueKind);
         if (entry.valueKind === undefined && isKeyOnlyValue) {
-            return;
+            continue;
         }
 
         const trimmedFieldKey = entry.fieldKey.trim();
@@ -215,10 +233,10 @@ export function forEachVisibleFrontmatterProperty({
         const propertyNodeId = rawPropertyNodeId ? (normalizePropertyNodeId(rawPropertyNodeId) ?? rawPropertyNodeId) : undefined;
 
         if (hiddenPropertyValueNodeId && propertyNodeId === hiddenPropertyValueNodeId) {
-            return;
+            continue;
         }
 
-        visitor({
+        const result = visitor({
             entry,
             trimmedFieldKey,
             rawValue,
@@ -226,123 +244,245 @@ export function forEachVisibleFrontmatterProperty({
             isKeyOnlyValue,
             propertyNodeId
         });
-    });
+        if (result === false) {
+            return;
+        }
+    }
 }
 
-export function isListPaneCompactMode({
-    showDate,
-    showPreview,
-    showImage
-}: {
-    showDate: boolean;
-    showPreview: boolean;
-    showImage: boolean;
-}): boolean {
-    return !showDate && !showPreview && !showImage;
-}
-
-export function estimateRenderedTextRows({
-    text,
-    maxRows,
-    charsPerRow
-}: {
-    text: string | null | undefined;
-    maxRows: number;
-    charsPerRow: number;
-}): number {
-    const normalizedMaxRows = Number.isFinite(maxRows) && maxRows > 0 ? Math.floor(maxRows) : 1;
-    const normalizedCharsPerRow = Number.isFinite(charsPerRow) && charsPerRow > 0 ? Math.floor(charsPerRow) : 1;
-    const normalizedText = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : '';
-    if (normalizedText.length === 0) {
-        return 0;
+export function getTagPillDisplayName(tag: string, showFileTagAncestors: boolean): string {
+    if (showFileTagAncestors) {
+        return tag;
     }
 
-    if (normalizedMaxRows === 1) {
-        return 1;
+    const segments = tag.split('/').filter(segment => segment.length > 0);
+    if (segments.length === 0) {
+        return tag;
     }
 
-    return Math.min(normalizedMaxRows, Math.max(1, Math.ceil(normalizedText.length / normalizedCharsPerRow)));
+    return segments[segments.length - 1];
 }
 
 export interface FileItemLayoutState {
     isCompactMode: boolean;
-    pinnedItemShouldUseCompactLayout: boolean;
-    shouldUseSingleLineForDateAndPreview: boolean;
-    shouldUseMultiLinePreviewLayout: boolean;
-    shouldCollapseEmptyPreviewSpace: boolean;
-    shouldUseExpandedMultiLineLayout: boolean;
-    shouldSuppressEmptyPreviewLines: boolean;
+    isPinned: boolean;
+    shouldShowMultilinePreview: boolean;
+    shouldReplaceEmptyPreviewWithPills: boolean;
     shouldShowDateForItem: boolean;
-    shouldShowSingleLineSecondLine: boolean;
-    multilinePreviewRowCount: number;
+    isPinnedImageRow: boolean;
 }
 
-export function getFileItemLayoutState({
-    showDate,
-    showPreview,
-    showImage,
-    previewRows,
-    optimizeNoteHeight,
-    isPinned,
-    hasPreviewContent,
-    showFeatureImageArea,
-    hasVisiblePillRows
-}: {
-    showDate: boolean;
-    showPreview: boolean;
-    showImage: boolean;
-    previewRows: number;
-    optimizeNoteHeight: boolean;
+export interface FileRowHeightInputs {
     isPinned: boolean;
     hasPreviewContent: boolean;
     showFeatureImageArea: boolean;
+    showExtensionBadgeThumbnail: boolean;
+    showParentFolderLine: boolean;
+    showTaskProgressLine: boolean;
+    visiblePillRowCount: number;
+}
+
+export interface FileRowHeightConfig {
+    heights: ListPaneMeasurements;
+    titleRows: number;
+    previewRows: number;
+    isCompactMode: boolean;
+    showDate: boolean;
+    showPreview: boolean;
+    showImage: boolean;
+    compactPaddingTotal: number;
+}
+
+export function getFileItemLayoutState({
+    isCompactMode = false,
+    showDate,
+    showPreview,
+    isPinned,
+    hasPreviewContent,
+    showFeatureImageArea,
+    showExtensionBadgeThumbnail = false,
+    hasVisiblePillRows
+}: {
+    isCompactMode?: boolean;
+    showDate: boolean;
+    showPreview: boolean;
+    showImage?: boolean;
+    isPinned: boolean;
+    hasPreviewContent: boolean;
+    showFeatureImageArea: boolean;
+    showExtensionBadgeThumbnail?: boolean;
     hasVisiblePillRows: boolean;
 }): FileItemLayoutState {
-    const isCompactMode = isListPaneCompactMode({ showDate, showPreview, showImage });
-    const pinnedItemShouldUseCompactLayout = isPinned && optimizeNoteHeight;
-    const shouldUseSingleLineForDateAndPreview = pinnedItemShouldUseCompactLayout || previewRows < 2;
-    const shouldUseMultiLinePreviewLayout = !pinnedItemShouldUseCompactLayout && previewRows >= 2;
-    const shouldCollapseEmptyPreviewSpace = optimizeNoteHeight && !hasPreviewContent && !showFeatureImageArea;
-    const shouldUseExpandedMultiLineLayout = !optimizeNoteHeight || hasPreviewContent || showFeatureImageArea;
-    const shouldSuppressEmptyPreviewLines = !hasPreviewContent && hasVisiblePillRows;
-    const shouldShowDateForItem = showDate && !pinnedItemShouldUseCompactLayout;
-    const shouldShowSingleLineSecondLine = shouldShowDateForItem || (showPreview && !shouldSuppressEmptyPreviewLines);
-    const multilinePreviewRowCount = showPreview && shouldUseExpandedMultiLineLayout && !shouldSuppressEmptyPreviewLines ? previewRows : 0;
+    const hasImageTextArea = showFeatureImageArea && !showExtensionBadgeThumbnail;
+    const isPinnedImageRow = isPinned && hasImageTextArea;
+    const shouldReplaceEmptyPreviewWithPills = !hasPreviewContent && hasVisiblePillRows;
+    const shouldShowDateForItem = showDate && !isPinned;
+    const shouldShowMultilinePreview = showPreview && !shouldReplaceEmptyPreviewWithPills && (hasPreviewContent || hasImageTextArea);
 
     return {
         isCompactMode,
-        pinnedItemShouldUseCompactLayout,
-        shouldUseSingleLineForDateAndPreview,
-        shouldUseMultiLinePreviewLayout,
-        shouldCollapseEmptyPreviewSpace,
-        shouldUseExpandedMultiLineLayout,
-        shouldSuppressEmptyPreviewLines,
+        isPinned,
+        shouldShowMultilinePreview,
+        shouldReplaceEmptyPreviewWithPills,
         shouldShowDateForItem,
-        shouldShowSingleLineSecondLine,
-        multilinePreviewRowCount
+        isPinnedImageRow
     };
+}
+
+export function calculateNormalListFileRowHeightEstimate({
+    heights,
+    titleRows,
+    previewRows,
+    layoutState,
+    showFeatureImageArea,
+    showExtensionBadgeThumbnail,
+    showParentFolderLine,
+    showTaskProgressLine,
+    visiblePillRowCount
+}: {
+    heights: ListPaneMeasurements;
+    titleRows: number;
+    previewRows: number;
+    layoutState: FileItemLayoutState;
+    showFeatureImageArea: boolean;
+    showExtensionBadgeThumbnail: boolean;
+    showParentFolderLine: boolean;
+    showTaskProgressLine: boolean;
+    visiblePillRowCount: number;
+}): number {
+    const titleContentHeight = heights.titleLineHeight * titleRows;
+    const pillRowCount = Math.max(0, visiblePillRowCount);
+    const hasPillRows = pillRowCount > 0;
+    const hasPreviewSlot = layoutState.shouldShowMultilinePreview;
+    const previewSlotHeight = hasPreviewSlot ? heights.multilineTextLineHeight * previewRows : 0;
+    const metadataLineHeight =
+        layoutState.shouldShowDateForItem || showParentFolderLine || showTaskProgressLine ? heights.singleTextLineHeight : 0;
+    const singleTextLineCount = metadataLineHeight > 0 ? 1 : 0;
+    const contentLineCount = singleTextLineCount + pillRowCount;
+    const hasImageTextArea = showFeatureImageArea && !showExtensionBadgeThumbnail;
+    const fillsPreviewSlotWithPills = layoutState.shouldReplaceEmptyPreviewWithPills && hasImageTextArea;
+    const replacementPreviewSlotHeight = fillsPreviewSlotWithPills ? heights.multilineTextLineHeight * previewRows : 0;
+    const canUseBaseHeight = !hasPreviewSlot && !hasImageTextArea;
+    const applyFeatureImageFloor = (contentHeight: number): number =>
+        showFeatureImageArea ? Math.max(contentHeight, heights.featureImageMinHeight) : contentHeight;
+
+    if (canUseBaseHeight && contentLineCount === 0) {
+        return heights.basePadding + applyFeatureImageFloor(titleContentHeight);
+    }
+
+    if (canUseBaseHeight && contentLineCount <= 1) {
+        const contentLineHeight = Math.max(
+            singleTextLineCount > 0 ? heights.singleTextLineHeight : 0,
+            hasPillRows ? heights.tagRowHeight : 0
+        );
+
+        return heights.basePadding + applyFeatureImageFloor(titleContentHeight + contentLineHeight);
+    }
+
+    // Pinned rows place task progress and the one-line preview beside each other, so both
+    // occupy one secondary line. Adding their heights would make the virtual row taller
+    // than the rendered two-line layout and leave empty space below the item.
+    const sharesPinnedSecondaryLine = layoutState.isPinned && showTaskProgressLine && hasPreviewSlot;
+    const reservedPreviewSlotHeight = sharesPinnedSecondaryLine
+        ? Math.max(previewSlotHeight, metadataLineHeight)
+        : Math.max(previewSlotHeight, replacementPreviewSlotHeight);
+    const reserveImageMetadataLine = hasImageTextArea && !layoutState.isPinnedImageRow;
+    const reservedMetadataLineHeight = sharesPinnedSecondaryLine
+        ? 0
+        : reserveImageMetadataLine
+          ? heights.singleTextLineHeight
+          : metadataLineHeight;
+    const reservedEmptyMetadataLineHeight = reserveImageMetadataLine && metadataLineHeight === 0 ? reservedMetadataLineHeight : 0;
+    const richContentHeight = titleContentHeight + reservedPreviewSlotHeight + reservedMetadataLineHeight;
+    const pillRowsHeight = heights.tagRowHeight * pillRowCount;
+    const pillRowsReservedHeight = replacementPreviewSlotHeight + reservedEmptyMetadataLineHeight;
+    const pillRowsExtraHeight = Math.max(0, pillRowsHeight - pillRowsReservedHeight);
+
+    return heights.basePadding + applyFeatureImageFloor(richContentHeight + pillRowsExtraHeight);
+}
+
+export function estimateFileRowHeight(inputs: FileRowHeightInputs, config: FileRowHeightConfig): number {
+    const { heights, titleRows, previewRows, compactPaddingTotal } = config;
+    const visiblePillRowCount = Math.max(0, inputs.visiblePillRowCount);
+    const layoutState = getFileItemLayoutState({
+        isCompactMode: config.isCompactMode,
+        showDate: config.showDate,
+        showPreview: config.showPreview,
+        isPinned: inputs.isPinned,
+        hasPreviewContent: inputs.hasPreviewContent,
+        showFeatureImageArea: inputs.showFeatureImageArea,
+        showExtensionBadgeThumbnail: inputs.showExtensionBadgeThumbnail,
+        hasVisiblePillRows: visiblePillRowCount > 0
+    });
+
+    if (layoutState.isCompactMode) {
+        const textContentHeight = heights.titleLineHeight * titleRows + heights.tagRowHeight * visiblePillRowCount;
+        return compactPaddingTotal + textContentHeight;
+    }
+
+    return calculateNormalListFileRowHeightEstimate({
+        heights,
+        titleRows,
+        previewRows: inputs.isPinned ? 1 : previewRows,
+        layoutState,
+        showFeatureImageArea: inputs.showFeatureImageArea,
+        showExtensionBadgeThumbnail: inputs.showExtensionBadgeThumbnail,
+        showParentFolderLine: inputs.showParentFolderLine,
+        showTaskProgressLine: inputs.showTaskProgressLine,
+        visiblePillRowCount
+    });
+}
+
+/**
+ * Shared visibility rule for task progress in standard metadata lines and pinned
+ * secondary lines. FileItem rendering and the list pane height estimator must agree
+ * or virtualized rows get wrong height estimates.
+ */
+export function shouldShowFileItemTaskProgress({
+    showTaskProgress,
+    hideWhenComplete,
+    taskTotal,
+    taskUnfinished
+}: {
+    showTaskProgress: boolean;
+    hideWhenComplete: boolean;
+    taskTotal: number | null | undefined;
+    taskUnfinished: number | null | undefined;
+}): boolean {
+    if (!showTaskProgress || typeof taskTotal !== 'number' || taskTotal <= 0) {
+        return false;
+    }
+
+    // Unfinished count 0 means every task is completed. Counters persist as a pair
+    // (normalizeTaskCounters), so a positive total always comes with a numeric unfinished
+    // count; a null unfinished count cannot reach this branch from stored records.
+    if (hideWhenComplete && taskUnfinished === 0) {
+        return false;
+    }
+
+    return true;
 }
 
 export function shouldShowFileItemParentFolderLine({
     showParentFolder,
-    pinnedItemShouldUseCompactLayout,
+    isPinned,
     selectionType,
     includeDescendantNotes,
     parentFolder,
     fileParentPath
 }: {
     showParentFolder: boolean;
-    pinnedItemShouldUseCompactLayout: boolean;
+    isPinned: boolean;
     selectionType: NavigationItemType | null | undefined;
     includeDescendantNotes: boolean;
     parentFolder: string | null | undefined;
     fileParentPath: string | null | undefined;
 }): boolean {
-    if (!showParentFolder || pinnedItemShouldUseCompactLayout || !fileParentPath || fileParentPath === '/') {
+    if (!showParentFolder || isPinned || !fileParentPath || fileParentPath === '/') {
         return false;
     }
 
-    if (selectionType === 'tag') {
+    if (selectionType === 'tag' || selectionType === 'property') {
         return true;
     }
 
@@ -356,12 +496,14 @@ export function shouldShowFeatureImageArea({
     showImage,
     file,
     featureImageStatus,
-    hasFeatureImageUrl
+    hasFeatureImageUrl,
+    showDrawingFeatureImage
 }: {
     showImage: boolean;
     file: TFile | null;
     featureImageStatus?: FeatureImageStatus | null;
     hasFeatureImageUrl?: boolean;
+    showDrawingFeatureImage?: boolean;
 }): boolean {
     if (!showImage || !file) {
         return false;
@@ -375,11 +517,37 @@ export function shouldShowFeatureImageArea({
         return true;
     }
 
-    if (isImageFile(file)) {
+    if (isRasterImageFile(file)) {
+        return true;
+    }
+
+    if (showDrawingFeatureImage) {
         return true;
     }
 
     return featureImageStatus === 'has';
+}
+
+export function shouldShowExtensionBadgeThumbnail({
+    showFeatureImageArea,
+    file,
+    hasFeatureImageUrl,
+    showDrawingMissingFeatureImage
+}: {
+    showFeatureImageArea: boolean;
+    file: TFile | null;
+    hasFeatureImageUrl?: boolean;
+    showDrawingMissingFeatureImage?: boolean;
+}): boolean {
+    if (!showFeatureImageArea || !file || hasFeatureImageUrl) {
+        return false;
+    }
+
+    if (showDrawingMissingFeatureImage) {
+        return true;
+    }
+
+    return file.extension === 'canvas' || file.extension === 'base';
 }
 
 type VisibleFrontmatterPropertySummary = {
@@ -421,7 +589,6 @@ function getVisibleFrontmatterPropertySummary({
         visibleFrontmatterPropertySummaryCache.set(properties, cacheContainer);
     }
 
-    const hiddenPropertyCacheKey = hiddenPropertyValueNodeId ?? '';
     let cacheBucket: Map<string, VisibleFrontmatterPropertySummary>;
     if (!visiblePropertyKeys) {
         cacheBucket = cacheContainer.unfiltered;
@@ -435,6 +602,7 @@ function getVisibleFrontmatterPropertySummary({
         }
     }
 
+    const hiddenPropertyCacheKey = hiddenPropertyValueNodeId ?? '';
     const cachedSummary = cacheBucket.get(hiddenPropertyCacheKey);
     if (cachedSummary) {
         return cachedSummary;
@@ -469,24 +637,26 @@ function getVisibleFrontmatterPropertySummary({
 }
 
 export function getPropertyRowCount({
-    notePropertyType,
+    showTextCountProperty,
     showFileProperties,
     showPropertiesOnSeparateRows,
     showFilePropertiesInCompactMode,
     isCompactMode,
     file,
     wordCount,
+    characterCount,
     properties,
     visiblePropertyKeys,
     hiddenPropertyValueNodeId
 }: {
-    notePropertyType: NotePropertyType;
+    showTextCountProperty: boolean;
     showFileProperties: boolean;
     showPropertiesOnSeparateRows: boolean;
     showFilePropertiesInCompactMode: boolean;
     isCompactMode: boolean;
     file: TFile | null;
     wordCount: FileData['wordCount'] | undefined;
+    characterCount: FileData['characterCountWithSpaces'] | undefined;
     properties: FileData['properties'] | undefined;
     visiblePropertyKeys?: ReadonlySet<string>;
     hiddenPropertyValueNodeId?: string | null;
@@ -501,8 +671,9 @@ export function getPropertyRowCount({
         return 0;
     }
 
-    const wordCountEnabled =
-        notePropertyType === 'wordCount' && typeof wordCount === 'number' && Number.isFinite(wordCount) && wordCount > 0;
+    const wordCountEnabled = showTextCountProperty && typeof wordCount === 'number' && Number.isFinite(wordCount) && wordCount > 0;
+    const characterCountEnabled =
+        showTextCountProperty && typeof characterCount === 'number' && Number.isFinite(characterCount) && characterCount > 0;
     const propertySummary = showFileProperties
         ? getVisibleFrontmatterPropertySummary({
               properties,
@@ -511,12 +682,11 @@ export function getPropertyRowCount({
           })
         : EMPTY_VISIBLE_FRONTMATTER_PROPERTY_SUMMARY;
 
-    if (!wordCountEnabled && !propertySummary.hasVisiblePills) {
-        // No property row will be rendered.
+    if (!wordCountEnabled && !characterCountEnabled && !propertySummary.hasVisiblePills) {
         return 0;
     }
 
-    const wordCountRowCount = wordCountEnabled ? 1 : 0;
+    const textCountRowCount = wordCountEnabled || characterCountEnabled ? 1 : 0;
 
     let frontmatterPropertyRowCount = 0;
     if (!showPropertiesOnSeparateRows) {
@@ -526,13 +696,12 @@ export function getPropertyRowCount({
     }
 
     if (frontmatterPropertyRowCount === 0) {
-        return wordCountRowCount;
+        return textCountRowCount;
     }
 
     if (!showPropertiesOnSeparateRows) {
-        // Frontmatter properties share one row in non-separate mode; word count remains its own row.
-        return 1 + wordCountRowCount;
+        return 1 + textCountRowCount;
     }
 
-    return frontmatterPropertyRowCount + wordCountRowCount;
+    return frontmatterPropertyRowCount + textCountRowCount;
 }

@@ -1,0 +1,305 @@
+/* Source: src/styles/sections/modal-appearance.css */
+
+/* ========================================================================
+   Appearance Modal - icon, foreground color, and background color editor
+   ======================================================================== */
+
+.modal.nn-appearance-modal {
+    width: 620px;
+    max-width: calc(100vw - 40px);
+    max-height: 86vh;
+}
+
+.modal.nn-appearance-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 16px;
+    overflow: hidden;
+}
+
+.modal.nn-appearance-modal .modal-close-button {
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.nn-appearance-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background: var(--background-secondary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .nn-appearance-preview-item:hover .nn-appearance-clear-button,
+    .nn-appearance-preview-item:focus-within .nn-appearance-clear-button {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+}
+
+.nn-appearance-clear-button.nn-appearance-clear-hidden {
+    display: none;
+}
+
+.nn-appearance-preview-item {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: var(--radius-s);
+    background: var(--nn-preview-bg, var(--background-secondary));
+    color: var(--nn-preview-fg, var(--nn-theme-foreground));
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.nn-appearance-preview-icon {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.nn-appearance-preview-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.nn-appearance-preview-icon-empty {
+    display: none;
+}
+
+.nn-appearance-preview-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nn-appearance-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.nn-appearance-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 7px 12px;
+    margin: 0 0 -1px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--nn-theme-foreground-muted);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.nn-appearance-tab:hover {
+    color: var(--nn-theme-foreground);
+}
+
+.nn-appearance-tab.nn-active {
+    border-bottom-color: var(--interactive-accent);
+    color: var(--nn-theme-foreground);
+}
+
+.nn-appearance-tab-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.nn-appearance-tab-icon-chip {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-s);
+    color: var(--nn-theme-foreground);
+}
+
+.nn-appearance-tab-icon-chip svg {
+    width: 16px;
+    height: 16px;
+}
+
+.nn-appearance-tab-color-chip {
+    width: 32px;
+    height: 18px;
+    border-radius: 4px;
+}
+
+.nn-appearance-tab-chip-empty {
+    opacity: 0.55;
+}
+
+.nn-appearance-tab-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nn-appearance-body {
+    flex: 1 1 auto;
+    height: 360px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.nn-appearance-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    min-height: 0;
+}
+
+.nn-appearance-panel-hidden {
+    display: none;
+}
+
+.nn-appearance-reset-button {
+    padding: 4px 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background: transparent;
+    color: var(--nn-theme-foreground-muted);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.nn-appearance-reset-button:hover {
+    border-color: var(--background-modifier-border-hover);
+    color: var(--nn-theme-foreground);
+}
+
+.nn-appearance-reset-button.nn-appearance-reset-active {
+    border-color: var(--interactive-accent);
+    color: var(--interactive-accent);
+}
+
+.nn-appearance-picker-host {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.nn-appearance-picker-host .nn-icon-provider-tabs {
+    margin-bottom: 0;
+}
+
+.nn-appearance-picker-host .nn-icon-search-container {
+    padding: 0 8px;
+    border-bottom: 0;
+}
+
+.nn-appearance-picker-host .nn-icon-results-container {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+}
+
+.nn-appearance-picker-host .nn-color-picker-content {
+    gap: 16px;
+    padding-bottom: 0;
+    overflow: visible;
+}
+
+.nn-appearance-picker-host .nn-color-picker-left {
+    flex-basis: 220px;
+}
+
+.nn-appearance-picker-host .nn-color-picker-left-no-preview .nn-preset-section {
+    margin-top: 0;
+}
+
+.nn-appearance-picker-host .nn-recent-section {
+    margin-top: 4px;
+}
+
+.nn-appearance-picker-host .nn-preset-header,
+.nn-appearance-picker-host .nn-hex-header,
+.nn-appearance-picker-host .nn-recent-header {
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.nn-appearance-picker-host .nn-recent-colors {
+    grid-template-columns: repeat(5, 1fr);
+}
+
+.nn-appearance-picker-host .nn-recent-colors .nn-color-dot {
+    width: auto;
+    height: auto;
+    aspect-ratio: 1;
+}
+
+.nn-icon-item.nn-icon-item-selected {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -2px;
+}
+
+.nn-appearance-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.nn-appearance-footer-actions {
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-width: 600px) {
+    .modal.nn-appearance-modal {
+        width: 100%;
+        max-width: calc(100vw - 20px);
+    }
+
+    .nn-appearance-tabs {
+        overflow-x: auto;
+    }
+
+    .nn-appearance-tab {
+        flex: 0 0 auto;
+    }
+
+    /* Size the body to its content rather than a fixed height so the modal adapts to large
+       fonts and display scaling. The base max-height caps it to the viewport and the body
+       scrolls instead of clipping. The modal resizes between tabs because each tab fits its
+       own content. */
+    .nn-appearance-body {
+        height: auto;
+        min-height: 0;
+    }
+
+    .nn-appearance-picker-host .nn-icon-results-container {
+        flex: 0 0 auto;
+        height: 240px;
+        min-height: 240px;
+    }
+
+    .nn-appearance-picker-host .nn-recent-colors {
+        grid-template-columns: repeat(8, 1fr);
+    }
+}

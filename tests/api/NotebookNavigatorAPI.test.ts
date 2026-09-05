@@ -55,7 +55,7 @@ type WhenReadyHost = {
 };
 
 const invokeWhenReady = (host: WhenReadyHost): Promise<void> =>
-    NotebookNavigatorAPI.prototype.whenReady.call(host as unknown as NotebookNavigatorAPI) as Promise<void>;
+    NotebookNavigatorAPI.prototype.whenReady.call(host as unknown as NotebookNavigatorAPI);
 
 describe('NotebookNavigatorAPI', () => {
     it('resolves whenReady immediately when storage is already ready', async () => {

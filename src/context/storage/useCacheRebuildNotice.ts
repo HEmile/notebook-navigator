@@ -16,13 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback, useRef, type RefObject } from 'react';
+import { useCallback, useRef, type MutableRefObject } from 'react';
 import { TFile, type App } from 'obsidian';
 import type { FileContentType } from '../../interfaces/IContentProvider';
 import { strings } from '../../i18n';
 import { getDBInstance } from '../../storage/fileOperations';
 import { showNotice } from '../../utils/noticeUtils';
 import { isMarkdownPath } from '../../utils/fileTypeUtils';
+import { shouldQueueFileThumbnailProvider } from '../storageQueueFilters';
 
 const CACHE_REBUILD_NOTICE_DELAY_MS = 500;
 const CACHE_REBUILD_PROGRESS_POLL_INTERVAL_MS = 2_000;
@@ -40,7 +41,7 @@ const CACHE_REBUILD_MAX_NOTICE_RECREATE_ATTEMPTS = 2;
  *
  * The polling interval is intentionally coarse because scanning the cache is O(number of files).
  */
-export function useCacheRebuildNotice(params: { app: App; stoppedRef: RefObject<boolean>; onRebuildComplete?: () => void }): {
+export function useCacheRebuildNotice(params: { app: App; stoppedRef: MutableRefObject<boolean>; onRebuildComplete?: () => void }): {
     clearCacheRebuildNotice: () => void;
     startCacheRebuildNotice: (total: number, enabledTypes: FileContentType[]) => void;
 } {
@@ -96,6 +97,7 @@ export function useCacheRebuildNotice(params: { app: App; stoppedRef: RefObject<
             const trackFeatureImage = enabledTypes.includes('featureImage');
             const trackMetadata = enabledTypes.includes('metadata');
             const trackWordCount = enabledTypes.includes('wordCount');
+            const trackCharacterCount = enabledTypes.includes('characterCount');
             const trackTasks = enabledTypes.includes('tasks');
             const trackProperties = enabledTypes.includes('properties');
 
@@ -130,7 +132,7 @@ export function useCacheRebuildNotice(params: { app: App; stoppedRef: RefObject<
                 lastProgressValue = null;
                 lastProgressMax = null;
 
-                const fragment = document.createDocumentFragment();
+                const fragment = createFragment();
                 const wrapper = fragment.createDiv({ cls: 'nn-cache-rebuild-notice' });
                 wrapper.createDiv({ cls: 'nn-cache-rebuild-notice-title', text: title });
                 wrapper.createDiv({ cls: 'nn-cache-rebuild-notice-description', text: description });
@@ -176,12 +178,34 @@ export function useCacheRebuildNotice(params: { app: App; stoppedRef: RefObject<
 
                 db.forEachFile((path, data) => {
                     const isMarkdown = isMarkdownPath(path);
+                    let trackedFile: TFile | null = null;
+                    let hasTrackedFileLookup = false;
+                    const getTrackedFile = (): TFile | null => {
+                        if (!hasTrackedFileLookup) {
+                            trackedFile = getFileByPath(path);
+                            hasTrackedFileLookup = true;
+                        }
+                        return trackedFile;
+                    };
+                    const supportsFileThumbnail =
+                        !isMarkdown &&
+                        trackFeatureImage &&
+                        (() => {
+                            const file = getTrackedFile();
+                            return file !== null && shouldQueueFileThumbnailProvider(file);
+                        })();
                     const needsPreview = trackPreview && isMarkdown && data.previewStatus === 'unprocessed';
                     const needsTags = trackTags && isMarkdown && data.tags === null;
                     const needsFeatureImage =
-                        trackFeatureImage && (data.featureImageKey === null || data.featureImageStatus === 'unprocessed');
+                        trackFeatureImage &&
+                        (data.featureImageKey === null || data.featureImageStatus === 'unprocessed') &&
+                        (isMarkdown || supportsFileThumbnail);
                     const needsMetadata = trackMetadata && isMarkdown && data.metadata === null;
                     const needsWordCount = trackWordCount && isMarkdown && data.wordCount === null;
+                    const needsCharacterCount =
+                        trackCharacterCount &&
+                        isMarkdown &&
+                        (data.characterCountWithSpaces === null || data.characterCountWithoutSpaces === null);
                     const needsTasks = trackTasks && isMarkdown && (data.taskTotal === null || data.taskUnfinished === null);
                     const needsProperties = trackProperties && isMarkdown && data.properties === null;
 
@@ -191,6 +215,7 @@ export function useCacheRebuildNotice(params: { app: App; stoppedRef: RefObject<
                         !needsFeatureImage &&
                         !needsMetadata &&
                         !needsWordCount &&
+                        !needsCharacterCount &&
                         !needsTasks &&
                         !needsProperties
                     ) {
@@ -201,13 +226,13 @@ export function useCacheRebuildNotice(params: { app: App; stoppedRef: RefObject<
                     // Obsidian metadata hasn't been indexed for the file.
                     rawRemainingCount += 1;
 
-                    const readyWithoutMetadata = needsFeatureImage && !isMarkdown;
+                    const readyWithoutMetadata = needsFeatureImage && !isMarkdown && supportsFileThumbnail;
                     if (readyWithoutMetadata) {
                         readyRemainingCount += 1;
                         return;
                     }
 
-                    const file = getFileByPath(path);
+                    const file = getTrackedFile();
                     if (!file) {
                         return;
                     }
@@ -217,6 +242,7 @@ export function useCacheRebuildNotice(params: { app: App; stoppedRef: RefObject<
                         hasMetadataCache &&
                         (needsPreview ||
                             needsWordCount ||
+                            needsCharacterCount ||
                             needsTasks ||
                             needsProperties ||
                             (needsFeatureImage && isMarkdown) ||
@@ -305,7 +331,7 @@ export function useCacheRebuildNotice(params: { app: App; stoppedRef: RefObject<
                 cacheRebuildIntervalRef.current = window.setInterval(pollCacheRebuildProgress, CACHE_REBUILD_PROGRESS_POLL_INTERVAL_MS);
             }, CACHE_REBUILD_NOTICE_DELAY_MS);
         },
-        [app.metadataCache, app.vault, clearCacheRebuildNotice, onRebuildComplete, stoppedRef]
+        [app, clearCacheRebuildNotice, onRebuildComplete, stoppedRef]
     );
 
     return { clearCacheRebuildNotice, startCacheRebuildNotice };

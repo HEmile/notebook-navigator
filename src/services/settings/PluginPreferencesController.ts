@@ -20,16 +20,20 @@ import { Platform } from 'obsidian';
 
 import { MAX_RECENT_COLORS } from '../../constants/colorPalette';
 import { DEFAULT_SETTINGS } from '../../settings/defaultSettings';
-import type {
-    AlphaSortOrder,
-    CalendarLeftPlacement,
-    CalendarPlacement,
-    CalendarWeeksToShow,
-    FeatureImagePixelSizeSetting,
-    FeatureImageSizeSetting,
-    NotebookNavigatorSettings,
-    SyncModeSettingId,
-    TagSortOrder
+import {
+    NARROW_SIDEBAR_CUSTOM_WIDTH_MAX,
+    NARROW_SIDEBAR_CUSTOM_WIDTH_MIN,
+    type AlphaSortOrder,
+    type CalendarLeftPlacement,
+    type CalendarPlacement,
+    type CalendarWeeksToShow,
+    type FeatureImagePixelSizeSetting,
+    type FeatureImageSizeSetting,
+    type NotebookNavigatorSettings,
+    type NarrowSidebarLayout,
+    type NarrowSidebarTriggerMode,
+    type SyncModeSettingId,
+    type TagSortOrder
 } from '../../settings/types';
 import RecentDataManager from '../recent/RecentDataManager';
 import { localStorage } from '../../utils/localStorage';
@@ -37,15 +41,17 @@ import { sanitizeUIScale } from '../../utils/uiScale';
 import {
     MAX_PANE_TRANSITION_DURATION_MS,
     MIN_PANE_TRANSITION_DURATION_MS,
+    type CollapsedPinnedContexts,
     type DualPaneOrientation,
     type LocalStorageKeys,
+    type PinnedSectionCollapseKey,
     type UXPreferences
 } from '../../types';
-import { resetHiddenToggleIfNoSources } from '../../utils/exclusionUtils';
+import { cloneCollapsedPinnedContextsRecord } from '../../utils/recordUtils';
 import { ensureVaultProfiles, DEFAULT_VAULT_PROFILE_ID } from '../../utils/vaultProfiles';
 import { runAsyncAction } from '../../utils/async';
 import { isAlphaSortOrder, isTagSortOrder } from '../../settings/types';
-import { getDefaultUXPreferences, isUXPreferencesRecord } from './uxPreferences';
+import { getDefaultUXPreferences, isUXPreferencesRecord, normalizeUXPreferencesRecord } from './uxPreferences';
 
 interface PluginPreferencesControllerOptions {
     keys: LocalStorageKeys;
@@ -60,6 +66,15 @@ interface PluginPreferencesControllerOptions {
     refreshMatcherCachesIfNeeded: () => void;
 }
 
+function areCollapsedPinnedContextsEqual(left: CollapsedPinnedContexts, right: CollapsedPinnedContexts): boolean {
+    const leftKeys = Object.keys(left);
+    const rightKeys = Object.keys(right);
+    return (
+        leftKeys.length === rightKeys.length &&
+        leftKeys.every(key => left[key as PinnedSectionCollapseKey] === right[key as PinnedSectionCollapseKey])
+    );
+}
+
 export class PluginPreferencesController {
     private readonly options: PluginPreferencesControllerOptions;
     private dualPanePreference = true;
@@ -68,6 +83,8 @@ export class PluginPreferencesController {
     private recentDataListeners = new Map<string, () => void>();
     private uxPreferences: UXPreferences = getDefaultUXPreferences();
     private uxPreferenceListeners = new Map<string, () => void>();
+    // Pinned-section collapse state per navigation context, persisted to vault-local storage instead of synced settings
+    private collapsedPinnedContexts: CollapsedPinnedContexts = cloneCollapsedPinnedContextsRecord(undefined);
 
     constructor(options: PluginPreferencesControllerOptions) {
         this.options = options;
@@ -142,29 +159,66 @@ export class PluginPreferencesController {
     public loadUXPreferences(): void {
         const defaults = getDefaultUXPreferences();
         const stored = localStorage.get<unknown>(this.options.keys.uxPreferencesKey);
-        if (isUXPreferencesRecord(stored)) {
-            this.uxPreferences = {
-                ...defaults,
-                ...stored
-            };
-
-            const hasAllKeys = Object.keys(defaults).every(key => {
-                return typeof stored[key as keyof UXPreferences] === 'boolean';
-            });
-
-            if (!hasAllKeys) {
-                this.persistUXPreferences(false);
-            }
-            return;
+        const normalized = normalizeUXPreferencesRecord(stored, defaults);
+        this.uxPreferences = normalized.preferences;
+        if (normalized.changed || !isUXPreferencesRecord(stored)) {
+            this.persistUXPreferences(false);
         }
-
-        this.uxPreferences = defaults;
-        this.persistUXPreferences(false);
+        this.syncCollapsedPinnedContextsFromLocalStorage();
     }
 
     public resetUXPreferencesToDefaults(): void {
         this.uxPreferences = getDefaultUXPreferences();
         this.persistUXPreferences(false);
+        // First-launch reset runs after localStorage is cleared, so drop the in-memory pinned collapse state as well
+        this.collapsedPinnedContexts = cloneCollapsedPinnedContextsRecord(undefined);
+    }
+
+    public getCollapsedPinnedContexts(): CollapsedPinnedContexts {
+        return cloneCollapsedPinnedContextsRecord(this.collapsedPinnedContexts);
+    }
+
+    /**
+     * Refreshes the in-memory record after a settings migration writes vault-local storage.
+     * Without this refresh, a later mutation would persist the stale record and discard migrated keys.
+     *
+     * @returns True when the in-memory record changed
+     */
+    public syncCollapsedPinnedContextsFromLocalStorage(): boolean {
+        const next = cloneCollapsedPinnedContextsRecord(localStorage.get<unknown>(this.options.keys.collapsedPinnedContextsKey));
+        if (areCollapsedPinnedContextsEqual(this.collapsedPinnedContexts, next)) {
+            return false;
+        }
+
+        this.collapsedPinnedContexts = next;
+        return true;
+    }
+
+    /**
+     * Applies a mutation to the pinned-section collapse record. When the mutator reports a change,
+     * the record is persisted to vault-local storage and UX preference listeners are notified;
+     * otherwise no storage write or notification happens.
+     *
+     * @returns True when the mutator changed the record
+     */
+    public updateCollapsedPinnedContexts(mutator: (record: CollapsedPinnedContexts) => boolean): boolean {
+        const changed = mutator(this.collapsedPinnedContexts);
+        if (changed) {
+            localStorage.set(this.options.keys.collapsedPinnedContextsKey, this.collapsedPinnedContexts);
+            this.notifyUXPreferencesUpdate();
+        }
+        return changed;
+    }
+
+    public togglePinnedGroupCollapsed(collapseKey: PinnedSectionCollapseKey): void {
+        this.updateCollapsedPinnedContexts(record => {
+            if (record[collapseKey]) {
+                delete record[collapseKey];
+            } else {
+                record[collapseKey] = true;
+            }
+            return true;
+        });
     }
 
     public mirrorUXPreferences(update: Partial<UXPreferences>): void {
@@ -223,6 +277,47 @@ export class PluginPreferencesController {
         settings.dualPaneOrientation = normalized;
         localStorage.set(this.options.keys.dualPaneOrientationKey, normalized);
         await this.options.persistSyncModeSettingUpdateAsync('dualPaneOrientation');
+    }
+
+    public setNarrowSidebarLayout(layout: NarrowSidebarLayout): void {
+        const normalized: NarrowSidebarLayout = layout === 'vertical' || layout === 'singlePane' ? layout : 'none';
+        const settings = this.options.getSettings();
+        if (settings.narrowSidebarLayout === normalized) {
+            return;
+        }
+
+        settings.narrowSidebarLayout = normalized;
+        localStorage.set(this.options.keys.narrowSidebarLayoutKey, normalized);
+        this.options.persistSyncModeSettingUpdate('narrowSidebarLayout');
+    }
+
+    public setNarrowSidebarTriggerMode(mode: NarrowSidebarTriggerMode): void {
+        const normalized: NarrowSidebarTriggerMode = mode === 'customWidth' ? 'customWidth' : 'fitPanes';
+        const settings = this.options.getSettings();
+        if (settings.narrowSidebarTriggerMode === normalized) {
+            return;
+        }
+
+        settings.narrowSidebarTriggerMode = normalized;
+        localStorage.set(this.options.keys.narrowSidebarTriggerModeKey, normalized);
+        this.options.persistSyncModeSettingUpdate('narrowSidebarTriggerMode');
+    }
+
+    public setNarrowSidebarCustomWidth(width: number): void {
+        if (!Number.isFinite(width)) {
+            return;
+        }
+
+        const rounded = Math.round(width);
+        const normalized = Math.min(NARROW_SIDEBAR_CUSTOM_WIDTH_MAX, Math.max(NARROW_SIDEBAR_CUSTOM_WIDTH_MIN, rounded));
+        const settings = this.options.getSettings();
+        if (settings.narrowSidebarCustomWidth === normalized) {
+            return;
+        }
+
+        settings.narrowSidebarCustomWidth = normalized;
+        localStorage.set(this.options.keys.narrowSidebarCustomWidthKey, normalized);
+        this.options.persistSyncModeSettingUpdate('narrowSidebarCustomWidth');
     }
 
     public getUIScale(): number {
@@ -285,7 +380,8 @@ export class PluginPreferencesController {
 
         settings.topicSortOrder = order;
         localStorage.set(this.options.keys.topicSortOrderKey, order);
-        this.options.saveSettings();
+        // topicSortOrder is not a sync-mode setting, so persist it through a plain save.
+        runAsyncAction(() => this.options.saveSettings());
     }
 
     public setPropertySortOrder(order: TagSortOrder): void {
@@ -505,12 +601,6 @@ export class PluginPreferencesController {
         settings.vaultProfile = nextProfile.id;
         localStorage.set(this.options.keys.vaultProfileKey, nextProfile.id);
         this.initializeRecentDataManager();
-
-        resetHiddenToggleIfNoSources({
-            settings,
-            showHiddenItems: this.uxPreferences.showHiddenItems,
-            setShowHiddenItems: value => this.setShowHiddenItems(value)
-        });
 
         this.options.refreshMatcherCachesIfNeeded();
         this.options.persistSyncModeSettingUpdate('vaultProfile');

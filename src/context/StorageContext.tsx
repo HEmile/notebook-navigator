@@ -42,6 +42,7 @@
 import { createContext, useContext, useState, useRef, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import { App, TFile, debounce, EventRef } from 'obsidian';
 import { ProcessedMetadata, extractMetadata } from '../utils/metadataExtractor';
+import { extractCurrentFrontmatterMetadataFromFileData } from '../utils/frontmatterMetadataCache';
 import { ContentProviderRegistry } from '../services/content/ContentProviderRegistry';
 import { useCacheRebuildNotice } from './storage/useCacheRebuildNotice';
 import { useIndexedDBReady } from './storage/useIndexedDBReady';
@@ -50,17 +51,18 @@ import { useMetadataCacheQueue } from './storage/useMetadataCacheQueue';
 import { useStorageCacheRebuild } from './storage/useStorageCacheRebuild';
 import { useStorageContentQueue } from './storage/useStorageContentQueue';
 import { useStorageFileQueries } from './storage/useStorageFileQueries';
+import { useTreeRebuildScheduler } from './storage/useTreeRebuildScheduler';
 import { useTagTreeSync } from './storage/useTagTreeSync';
 import { usePropertyTreeSync } from './storage/usePropertyTreeSync';
-import { useStorageVaultSync } from './storage/useStorageVaultSync';
+import { useStorageVaultSync, type PendingFileFlushBuffer } from './storage/useStorageVaultSync';
+import type { PendingRenameFlushBuffer } from './storage/renameFlush';
 import { useStorageSettingsSync } from './storage/useStorageSettingsSync';
-import { IndexedDBStorage, FileData as DBFileData, METADATA_SENTINEL } from '../storage/IndexedDBStorage';
-import { getDBInstance } from '../storage/fileOperations';
+import { METADATA_SENTINEL, type FileData as DBFileData, type IndexedDBStorage } from '../storage/IndexedDBStorage';
+import { getDBInstance, getDBInstanceOrNull } from '../storage/fileOperations';
 import type { StorageFileData } from './storage/storageFileData';
 import type { PropertyTreeNode, TagTreeNode } from '../types/storage';
 import { getFileDisplayName as getDisplayName } from '../utils/fileNameUtils';
 import { findTagNode, collectAllTagPaths } from '../utils/tagTree';
-import { isPdfFile } from '../utils/fileTypeUtils';
 import { useServices, useTopicService } from './ServicesContext';
 import { buildTopicGraphFromDatabase } from '../utils/topicGraph';
 import { useSettingsState, useActiveProfile } from './SettingsContext';
@@ -68,6 +70,13 @@ import { useUXPreferences } from './UXPreferencesContext';
 import type { NotebookNavigatorAPI } from '../api/NotebookNavigatorAPI';
 import { getCacheRebuildProgressTypes } from './storage/storageContentTypes';
 import { clearCacheRebuildNoticeState, getCacheRebuildNoticeState, setCacheRebuildNoticeState } from './storage/cacheRebuildNoticeStorage';
+import { shouldQueueFileThumbnailProvider } from './storageQueueFilters';
+import {
+    hasMarkdownWordCountConsumer,
+    rescanMarkdownWordCountConsumers,
+    subscribeInitialMarkdownWordCountConsumerResolution
+} from '../utils/markdownPipelineContentTypes';
+import { runAsyncAction } from '../utils/async';
 
 /**
  * Context value providing both file data (tag tree) and the file cache
@@ -100,6 +109,38 @@ interface StorageContextValue {
 }
 
 const StorageContext = createContext<StorageContextValue | null>(null);
+
+type StorageRuntimeActiveListener = (active: boolean) => void;
+
+let activeStorageRuntimeCount = 0;
+const storageRuntimeActiveListeners = new Set<StorageRuntimeActiveListener>();
+
+function notifyStorageRuntimeActiveListeners(): void {
+    const active = activeStorageRuntimeCount > 0;
+    storageRuntimeActiveListeners.forEach(listener => {
+        listener(active);
+    });
+}
+
+function updateActiveStorageRuntimeCount(delta: 1 | -1): void {
+    const wasActive = activeStorageRuntimeCount > 0;
+    activeStorageRuntimeCount = Math.max(0, activeStorageRuntimeCount + delta);
+    if (wasActive !== activeStorageRuntimeCount > 0) {
+        notifyStorageRuntimeActiveListeners();
+    }
+}
+
+export function isStorageRuntimeActive(): boolean {
+    return activeStorageRuntimeCount > 0;
+}
+
+export function subscribeStorageRuntimeActive(listener: StorageRuntimeActiveListener): () => void {
+    storageRuntimeActiveListeners.add(listener);
+    listener(isStorageRuntimeActive());
+    return () => {
+        storageRuntimeActiveListeners.delete(listener);
+    };
+}
 
 interface StorageProviderProps {
     app: App;
@@ -152,6 +193,15 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
     // Map: file path -> pending metadata-dependent wait mask (used by `useMetadataCacheQueue`).
     const pendingMetadataWaitPathsRef = useRef<Map<string, number>>(new Map());
     const pendingRenameDataRef = useRef<Map<string, DBFileData>>(new Map());
+    // Buffered vault `modify` events awaiting a debounced flush. Owned here so buffered entries survive
+    // remounts of the vault-sync effect (it re-runs on settings changes).
+    const modifyFlushBufferRef = useRef<PendingFileFlushBuffer>({ files: new Map(), timerId: null, isProcessing: false });
+    // Buffered `metadataCache.changed` events awaiting a debounced flush. This flush is the only content
+    // trigger for markdown saves, so buffered entries must survive effect remounts.
+    const metadataChangeFlushBufferRef = useRef<PendingFileFlushBuffer>({ files: new Map(), timerId: null, isProcessing: false });
+    // Buffered vault rename events awaiting the zero-delay batched flush. Owned here so buffered
+    // entries survive remounts of the vault-sync effect.
+    const renameFlushBufferRef = useRef<PendingRenameFlushBuffer>({ moves: [], timerId: null });
     const latestSettingsRef = useRef(settings);
     latestSettingsRef.current = settings;
     const activeVaultEventRefs = useRef<EventRef[] | null>(null);
@@ -177,15 +227,30 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
     // Run rebuild notice restoration once after storage initialization completes.
     const hasRestoredCacheRebuildNoticeRef = useRef(false);
 
+    useEffect(() => {
+        updateActiveStorageRuntimeCount(1);
+        return () => {
+            updateActiveStorageRuntimeCount(-1);
+        };
+    }, []);
+
     const { getVisibleMarkdownFiles, getIndexableFiles } = useStorageFileQueries({ app, latestSettingsRef, showHiddenItems });
 
-    const { rebuildTagTree, scheduleTagTreeRebuild, cancelTagTreeRebuildDebouncer } = useTagTreeSync({
+    // Shared debounced scheduler that runs tag and property tree rebuilds from one visible-file scan.
+    const { tagTreeRebuildFnRef, propertyTreeRebuildFnRef, scheduleTreeRebuild, cancelTreeRebuildDebouncer } = useTreeRebuildScheduler({
+        isStorageReadyRef,
+        stoppedRef,
+        getVisibleMarkdownFiles
+    });
+
+    const { rebuildTagTree, scheduleTagTreeRebuild } = useTagTreeSync({
         app,
         settings,
         showHiddenItems,
         hiddenFolders,
         hiddenTags,
         hiddenFileProperties,
+        hiddenFileTags,
         fileVisibility,
         profileId: profile.id,
         isStorageReady,
@@ -194,10 +259,12 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         stoppedRef,
         setFileData,
         getVisibleMarkdownFiles,
-        tagTreeService: tagTreeService ?? null
+        tagTreeService: tagTreeService ?? null,
+        scheduleTreeRebuild,
+        tagTreeRebuildFnRef
     });
 
-    const { rebuildPropertyTree, schedulePropertyTreeRebuild, cancelPropertyTreeRebuildDebouncer } = usePropertyTreeSync({
+    const { rebuildPropertyTree, schedulePropertyTreeRebuild } = usePropertyTreeSync({
         app,
         settings,
         showHiddenItems,
@@ -213,7 +280,9 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         stoppedRef,
         setFileData,
         getVisibleMarkdownFiles,
-        propertyTreeService: propertyTreeService ?? null
+        propertyTreeService: propertyTreeService ?? null,
+        scheduleTreeRebuild,
+        propertyTreeRebuildFnRef
     });
 
     const rebuildTopicTree = useCallback(() => {
@@ -239,16 +308,55 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
     });
 
     const { queueIndexableFilesForContentGeneration, queueIndexableFilesNeedingContentGeneration } = useStorageContentQueue({
+        app,
         contentRegistryRef: contentRegistry,
         queueMetadataContentWhenReady
     });
 
+    // Coalesce activation events because a second clear could erase counts being written by the first queued pass.
+    const wordCountActivationInFlightRef = useRef(false);
+    const queueAllMarkdownForWordCountActivation = useCallback(() => {
+        if (wordCountActivationInFlightRef.current || stoppedRef.current) {
+            return;
+        }
+        wordCountActivationInFlightRef.current = true;
+
+        runAsyncAction(
+            async () => {
+                try {
+                    const liveSettings = latestSettingsRef.current;
+                    if (!hasMarkdownWordCountConsumer(liveSettings, app)) {
+                        return;
+                    }
+
+                    // Clearing only this field leaves provider mtimes current, so the markdown pipeline
+                    // processes the newly missing count without rebuilding previews, images, tasks, or properties.
+                    await getDBInstance().batchClearAllFileContent('wordCount');
+                    const nextSettings = latestSettingsRef.current;
+                    if (stoppedRef.current || !hasMarkdownWordCountConsumer(nextSettings, app)) {
+                        return;
+                    }
+
+                    const markdownFiles = getIndexableFiles().filter(file => file.extension === 'md');
+                    queueMetadataContentWhenReady(markdownFiles, ['markdownPipeline'], nextSettings);
+                } finally {
+                    wordCountActivationInFlightRef.current = false;
+                }
+            },
+            {
+                onError: error => {
+                    console.error('Failed to activate word counting for custom group headers:', error);
+                }
+            }
+        );
+    }, [app, getIndexableFiles, latestSettingsRef, queueMetadataContentWhenReady, stoppedRef]);
+
     const { rebuildCache } = useStorageCacheRebuild({
+        app,
         contentRegistryRef: contentRegistry,
         pendingSyncTimeoutIdRef: pendingSyncTimeoutId,
         rebuildFileCacheRef,
-        cancelTagTreeRebuildDebouncer,
-        cancelPropertyTreeRebuildDebouncer,
+        cancelTreeRebuildDebouncer,
         disposeMetadataWaitDisposers,
         pendingMetadataWaitPathsRef,
         setFileData,
@@ -277,7 +385,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
             return;
         }
 
-        const enabledTypes = getCacheRebuildProgressTypes(latestSettingsRef.current);
+        const enabledTypes = getCacheRebuildProgressTypes(latestSettingsRef.current, app);
         if (enabledTypes.length === 0) {
             clearCacheRebuildNoticeState();
             return;
@@ -295,27 +403,39 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         }
 
         startCacheRebuildNotice(total, enabledTypes);
-    }, [isStorageReady, startCacheRebuildNotice]);
+    }, [app, isStorageReady, startCacheRebuildNotice]);
 
-    const getFileDisplayName = useCallback(
-        (file: TFile): string => {
-            if (settings.useFrontmatterMetadata) {
-                const metadata = extractMetadata(app, file, settings);
-                if (metadata.fn) {
-                    return metadata.fn;
-                }
+    const getFrontmatterMetadata = useCallback(
+        (file: TFile): ProcessedMetadata | null => {
+            if (!settings.useFrontmatterMetadata || file.extension !== 'md') {
+                return null;
             }
-            return getDisplayName(file, undefined, settings);
+
+            const db = getDBInstanceOrNull();
+            return (
+                extractCurrentFrontmatterMetadataFromFileData(file, db?.getFile(file.path) ?? null, settings) ??
+                extractMetadata(app, file, settings)
+            );
         },
         [app, settings]
     );
 
+    const getFileDisplayName = useCallback(
+        (file: TFile): string => {
+            const metadata = getFrontmatterMetadata(file);
+            if (metadata?.fn) {
+                return metadata.fn;
+            }
+            return getDisplayName(file, undefined, settings);
+        },
+        [getFrontmatterMetadata, settings]
+    );
+
     const getFileTimestamps = useCallback(
         (file: TFile): { created: number; modified: number } => {
-            const extractedMetadata = settings.useFrontmatterMetadata ? extractMetadata(app, file, settings) : null;
-            return computeFileTimestamps(file, extractedMetadata);
+            return computeFileTimestamps(file, getFrontmatterMetadata(file));
         },
-        [app, settings]
+        [getFrontmatterMetadata]
     );
 
     const getFileCreatedTime = useCallback((file: TFile): number => getFileTimestamps(file).created, [getFileTimestamps]);
@@ -324,7 +444,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
 
     const getFileMetadata = useCallback(
         (file: TFile): { name: string; created: number; modified: number } => {
-            const extractedMetadata = settings.useFrontmatterMetadata ? extractMetadata(app, file, settings) : null;
+            const extractedMetadata = getFrontmatterMetadata(file);
             const timestamps = computeFileTimestamps(file, extractedMetadata);
 
             return {
@@ -333,7 +453,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
                 modified: timestamps.modified
             };
         },
-        [app, settings]
+        [getFrontmatterMetadata, settings]
     );
 
     const hasPreview = useCallback((path: string): boolean => getDBInstance().hasPreview(path), []);
@@ -349,7 +469,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
                 return;
             }
 
-            if (file.extension !== 'md' && !isPdfFile(file)) {
+            if (file.extension !== 'md' && !shouldQueueFileThumbnailProvider(file)) {
                 return;
             }
 
@@ -459,6 +579,7 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
     });
 
     const { resetPendingSettingsChanges } = useStorageSettingsSync({
+        app,
         settings,
         stoppedRef,
         contentRegistryRef: contentRegistry,
@@ -479,6 +600,28 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
 
     // ==================== Effects ====================
 
+    useEffect(() => {
+        const refreshConsumers = () => {
+            // The rescan also prepares the derived snapshot so child renders never resolve vault files or metadata.
+            rescanMarkdownWordCountConsumers(app, latestSettingsRef.current);
+        };
+
+        refreshConsumers();
+        // The one-shot listener catches startup metadata that was unavailable to the immediate scan. Obsidian
+        // emits `resolved` after later edits too, which must stay on the incremental metadata-change path.
+        return subscribeInitialMarkdownWordCountConsumerResolution(app, () => {
+            if (rescanMarkdownWordCountConsumers(app, latestSettingsRef.current).becameActive) {
+                queueAllMarkdownForWordCountActivation();
+            }
+        });
+    }, [
+        app,
+        latestSettingsRef,
+        queueAllMarkdownForWordCountActivation,
+        settings.manualSortGroupHeaderProperty,
+        settings.manualSortPropertyKey
+    ]);
+
     useStorageVaultSync({
         app,
         api,
@@ -493,6 +636,9 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         contentRegistryRef: contentRegistry,
         pendingSyncTimeoutIdRef: pendingSyncTimeoutId,
         pendingRenameDataRef,
+        modifyFlushBufferRef,
+        metadataChangeFlushBufferRef,
+        renameFlushBufferRef,
         buildFileCacheFnRef,
         rebuildFileCacheRef,
         activeVaultEventRefsRef: activeVaultEventRefs,
@@ -502,11 +648,12 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         rebuildTopicTree,
         scheduleTagTreeRebuild,
         schedulePropertyTreeRebuild,
-        cancelTagTreeRebuildDebouncer,
-        cancelPropertyTreeRebuildDebouncer,
+        cancelTreeRebuildDebouncer,
         startCacheRebuildNotice,
         getIndexableFiles,
+        getVisibleMarkdownFiles,
         queueMetadataContentWhenReady,
+        queueAllMarkdownForWordCountActivation,
         queueIndexableFilesForContentGeneration,
         queueIndexableFilesNeedingContentGeneration,
         disposeMetadataWaitDisposers
@@ -516,14 +663,13 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
      * Augment context with control methods
      *
      * Adds the stopAllProcessing method to the context value.
-     * This method is called when:
-     * - The view is being closed
-     * - The plugin is being disabled
-     * - A cache rebuild is starting (to stop current operations)
+     * Called during plugin shutdown (main.ts stopNavigatorContentProcessing via the view's
+     * stopContentProcessing handle). Not called on plain view close; cache rebuilds run their
+     * own stop sequence in useStorageCacheRebuild.
      *
      * It ensures clean shutdown by:
      * - Stopping all content providers
-     * - Cancelling pending operations
+     * - Cancelling pending operations and buffered flushes
      * - Detaching event listeners
      * - Preventing any new operations from starting
      */
@@ -545,6 +691,25 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
                     }
                     pendingSyncTimeoutId.current = null;
                 }
+                // Drop buffered modify/metadata flushes and their timers
+                for (const buffer of [modifyFlushBufferRef.current, metadataChangeFlushBufferRef.current]) {
+                    if (buffer.timerId !== null) {
+                        if (typeof window !== 'undefined') {
+                            window.clearTimeout(buffer.timerId);
+                        }
+                        buffer.timerId = null;
+                    }
+                    buffer.files.clear();
+                }
+                // Drop buffered renames and their flush timer; the next session's full diff reconciles them
+                const renameBuffer = renameFlushBufferRef.current;
+                if (renameBuffer.timerId !== null) {
+                    if (typeof window !== 'undefined') {
+                        window.clearTimeout(renameBuffer.timerId);
+                    }
+                    renameBuffer.timerId = null;
+                }
+                renameBuffer.moves = [];
                 // Optionally detach event subscriptions and cancel debouncers
                 try {
                     if (activeVaultEventRefs.current) {
@@ -565,22 +730,13 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
                 }
                 rebuildFileCacheRef.current = null;
                 // Clears any pending rebuild scheduled by UI or database events.
-                cancelTagTreeRebuildDebouncer({ reset: true });
-                cancelPropertyTreeRebuildDebouncer({ reset: true });
+                cancelTreeRebuildDebouncer({ reset: true });
                 // Clean up all tracked metadata wait disposers on shutdown
                 disposeMetadataWaitDisposers();
                 pendingMetadataWaitPathsRef.current.clear();
             }
         };
-    }, [
-        cancelTagTreeRebuildDebouncer,
-        cancelPropertyTreeRebuildDebouncer,
-        resetPendingSettingsChanges,
-        contextValue,
-        disposeMetadataWaitDisposers,
-        app.vault,
-        app.metadataCache
-    ]);
+    }, [cancelTreeRebuildDebouncer, resetPendingSettingsChanges, contextValue, disposeMetadataWaitDisposers, app.vault, app.metadataCache]);
 
     return <StorageContext.Provider value={contextWithControls}>{children}</StorageContext.Provider>;
 }

@@ -20,7 +20,8 @@ import { App, FileSystemAdapter, TFile, TFolder, TAbstractFile, Platform, Worksp
 import type { SelectionDispatch } from '../context/SelectionContext';
 import { strings } from '../i18n';
 import { InputModal } from '../modals/InputModal';
-import { NotebookNavigatorSettings } from '../settings';
+import { ConfirmModal } from '../modals/ConfirmModal';
+import type { NotebookNavigatorSettings } from '../settings/types';
 import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../types';
 import type { VisibilityPreferences } from '../types';
 import { ExtendedApp, TIMEOUTS, OBSIDIAN_COMMANDS } from '../types/obsidian-extended';
@@ -42,14 +43,22 @@ import {
     stripForbiddenNameCharactersWindows,
     stripLeadingPeriods
 } from '../utils/fileNameUtils';
+import { getCachedCommaSeparatedList } from '../utils/commaSeparatedListUtils';
 import { resolveFolderNoteName, shouldRenameFolderNoteWithFolderName } from '../utils/folderNoteName';
-import { getFolderNote, getFolderNoteDetectionSettings, isFolderNote, isSupportedFolderNoteExtension } from '../utils/folderNotes';
-import { executeCommand, isPluginInstalled } from '../utils/typeGuards';
+import {
+    getFolderNote,
+    getFolderNoteDetectionSettings,
+    isFolderNote,
+    isSupportedFolderNoteExtension,
+    resolveFolderNoteNameForFolder
+} from '../utils/folderNoteLookup';
+import { executeCommand, isPluginInstalled, isRecord } from '../utils/typeGuards';
 import { getErrorMessage } from '../utils/errorUtils';
 import { TagTreeService } from './TagTreeService';
 import type { PropertyTreeService } from './PropertyTreeService';
 import { CommandQueueService } from './CommandQueueService';
 import { showNotice } from '../utils/noticeUtils';
+import { isPropertyLinkMarkupValue } from '../utils/propertyUtils';
 import {
     getDirectPropertyKeyNoteCount,
     normalizePropertyNodeId,
@@ -57,16 +66,25 @@ import {
     parsePropertyNodeId
 } from '../utils/propertyTree';
 import type { ISettingsProvider } from '../interfaces/ISettingsProvider';
-import { casefold } from '../utils/recordUtils';
+import { casefold, findMatchingRecordKey } from '../utils/recordUtils';
 import type { MetadataService } from './MetadataService';
 import { ensureVaultProfiles, getActiveVaultProfile } from '../utils/vaultProfiles';
 import { EXCALIDRAW_PLUGIN_ID, TLDRAW_PLUGIN_ID } from '../constants/pluginIds';
 import { createDrawingWithPlugin, DrawingType, getDrawingFilePath, getDrawingTemplate } from '../utils/drawingFileUtils';
 import { resolveFolderDisplayName } from '../utils/folderDisplayName';
 import { normalizeTagPath } from '../utils/tagUtils';
+import type { PropertyTreeNode } from '../types/storage';
 import { FolderPathSettingsSync } from './fileSystem/FolderPathSettingsSync';
 import { FileMoveService } from './fileSystem/FileMoveService';
-import { FileDeletionService } from './fileSystem/FileDeletionService';
+import { FileDeletionService, type FileTrashResult } from './fileSystem/FileDeletionService';
+import {
+    buildManualSortInsertionRankPlan,
+    getLocalizedManualSortWriteFailureMessage,
+    normalizeManualSortPropertyKey,
+    writeManualSortAssignments,
+    type ManualSortRankPlan,
+    type ManualSortNewFilePlacementContext
+} from '../utils/manualSort';
 import type {
     MoveFilesOptions,
     MoveFilesResult,
@@ -76,6 +94,8 @@ import type {
     SelectionContext
 } from './fileSystem/types';
 export { FolderMoveError } from './fileSystem/FileMoveService';
+export type { FileTrashResult };
+export type { ManualSortNewFilePlacementContext };
 
 /**
  * Summary of property assignment results across a file batch.
@@ -88,7 +108,7 @@ interface ApplyPropertyNodeResult {
 /**
  * Serialized value shape written into frontmatter.
  */
-type PropertyNodeAssignmentValueKind = 'boolean' | 'string';
+type PropertyNodeAssignmentValueKind = 'empty' | 'boolean' | 'string';
 
 /**
  * Normalized property write request derived from a tree node id.
@@ -98,8 +118,21 @@ interface ResolvedPropertyNodeAssignment {
     nodeKind: 'key' | 'value';
     desiredValue: string | null;
     normalizedDesiredValue: string | null;
-    writeValue: boolean | string;
+    writeValue: null | boolean | string;
     writeValueKind: PropertyNodeAssignmentValueKind;
+}
+
+interface DisplayNameRenameInputOptions {
+    initialValue: string;
+    inputFilter?: (value: string) => string;
+    onInputChange?: (context: { rawValue: string; filteredValue: string }) => void;
+}
+
+interface FrontmatterDisplayNameTarget {
+    field: string;
+    fallbackValue: string;
+    initialValue: string;
+    storedValue: string | null;
 }
 
 interface ElectronShell {
@@ -123,6 +156,7 @@ export class FileSystemOperations {
     private readonly folderPathSettingsSync: FolderPathSettingsSync;
     private readonly moveService: FileMoveService;
     private readonly deletionService: FileDeletionService;
+    private manualSortNewFileContextProvider: (() => ManualSortNewFilePlacementContext | null) | null = null;
 
     /**
      * Creates a new FileSystemOperations instance
@@ -187,6 +221,129 @@ export class FileSystemOperations {
         showNotice(message, { variant: 'warning' });
     }
 
+    public setManualSortNewFileContextProvider(provider: (() => ManualSortNewFilePlacementContext | null) | null): () => void {
+        this.manualSortNewFileContextProvider = provider;
+        return () => {
+            if (this.manualSortNewFileContextProvider === provider) {
+                this.manualSortNewFileContextProvider = null;
+            }
+        };
+    }
+
+    private resolveManualSortNewFileContext(
+        context: ManualSortNewFilePlacementContext | null | undefined,
+        targetType: ManualSortNewFilePlacementContext['targetType'],
+        targetKey: string
+    ): ManualSortNewFilePlacementContext | null {
+        const resolvedContext = context !== undefined ? context : (this.manualSortNewFileContextProvider?.() ?? null);
+        if (!resolvedContext || resolvedContext.targetType !== targetType || resolvedContext.targetKey !== targetKey) {
+            return null;
+        }
+
+        return resolvedContext;
+    }
+
+    private async waitForManualSortNewFileContextProviderRefresh(): Promise<void> {
+        await new Promise<void>(resolve => {
+            window.requestAnimationFrame(() => {
+                window.setTimeout(resolve, 0);
+            });
+        });
+    }
+
+    public async getManualSortNewFileContextForTarget(
+        targetType: ManualSortNewFilePlacementContext['targetType'],
+        targetKey: string,
+        options: { waitForSelectionUpdate?: boolean } = {}
+    ): Promise<ManualSortNewFilePlacementContext | null> {
+        const currentContext = this.resolveManualSortNewFileContext(undefined, targetType, targetKey);
+        if (currentContext || !options.waitForSelectionUpdate) {
+            return currentContext;
+        }
+
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            await this.waitForManualSortNewFileContextProviderRefresh();
+            const nextContext = this.resolveManualSortNewFileContext(undefined, targetType, targetKey);
+            if (nextContext) {
+                return nextContext;
+            }
+        }
+
+        return null;
+    }
+
+    private async writeManualSortNewFilePlacement(propertyKey: string, plan: ManualSortRankPlan<TFile>): Promise<void> {
+        try {
+            const result = await writeManualSortAssignments(this.app, plan.files, propertyKey, plan.assignments);
+            if (result.failed > 0) {
+                showNotice(
+                    strings.dragDrop.errors.failedToSetProperty.replace('{error}', getLocalizedManualSortWriteFailureMessage(result)),
+                    { variant: 'warning' }
+                );
+            }
+        } catch (error) {
+            showNotice(
+                strings.dragDrop.errors.failedToSetProperty.replace('{error}', getErrorMessage(error, strings.common.unknownError)),
+                { variant: 'warning' }
+            );
+        }
+    }
+
+    private openManualSortNewFileCompactionConfirm(propertyKey: string, plan: ManualSortRankPlan<TFile>): void {
+        new ConfirmModal(
+            this.app,
+            strings.modals.manualSortConfirm.compactTitle,
+            strings.modals.manualSortConfirm.compactMessage(plan.assignments.length),
+            () => this.writeManualSortNewFilePlacement(propertyKey, plan),
+            strings.modals.manualSortConfirm.compactConfirmButton,
+            { confirmButtonClass: 'mod-cta' }
+        ).open();
+    }
+
+    private async applyManualSortNewFilePlacement(
+        file: TFile,
+        context?: ManualSortNewFilePlacementContext | null,
+        options: { deferCompactionPrompt?: boolean } = {}
+    ): Promise<(() => void) | null> {
+        if (!context || file.extension !== 'md') {
+            return null;
+        }
+
+        const propertyKey = normalizeManualSortPropertyKey(context.propertyKey);
+        if (!propertyKey) {
+            return null;
+        }
+
+        const plan = buildManualSortInsertionRankPlan({
+            files: context.files,
+            planningFiles: context.planningFiles,
+            planningInsertionIndex: context.planningInsertionIndex,
+            insertedFile: file,
+            placement: context.placement,
+            selectedPath: context.selectedFilePath,
+            rankByPath: context.rankByPath
+        });
+        if (!plan || plan.assignments.length === 0) {
+            return null;
+        }
+
+        if (plan.requiresCompaction) {
+            if (options.deferCompactionPrompt) {
+                return () => {
+                    window.setTimeout(() => {
+                        this.openManualSortNewFileCompactionConfirm(propertyKey, plan);
+                    }, TIMEOUTS.FILE_OPERATION_DELAY * 2);
+                };
+            }
+
+            this.openManualSortNewFileCompactionConfirm(propertyKey, plan);
+            return null;
+        }
+
+        await this.writeManualSortNewFilePlacement(propertyKey, plan);
+        return null;
+    }
+
     private resolveConfiguredPropertyDisplayKey(normalizedKey: string): string | null {
         const activeProfile = getActiveVaultProfile(this.settingsProvider.settings);
         const propertyKeys = Array.isArray(activeProfile.propertyKeys) ? activeProfile.propertyKeys : [];
@@ -208,6 +365,40 @@ export class FileSystemOperations {
         }
 
         return null;
+    }
+
+    private resolvePropertyNodeAssignmentText(
+        targetNode: PropertyTreeNode | null,
+        requestedValuePath: string | null,
+        normalizedValuePath: string | null
+    ): string | null {
+        if (!normalizedValuePath) {
+            return null;
+        }
+
+        const assignmentValue = targetNode?.kind === 'value' ? targetNode.assignmentValue?.trim() : undefined;
+        if (assignmentValue && normalizePropertyTreeValuePath(assignmentValue) === normalizedValuePath) {
+            return assignmentValue;
+        }
+
+        const displayValue = targetNode?.kind === 'value' ? targetNode.name.trim() : '';
+        if (displayValue && normalizePropertyTreeValuePath(displayValue) === normalizedValuePath) {
+            return displayValue;
+        }
+
+        if (requestedValuePath && normalizePropertyTreeValuePath(requestedValuePath) === normalizedValuePath) {
+            return requestedValuePath;
+        }
+
+        return normalizedValuePath;
+    }
+
+    private shouldKeepCurrentPropertyString(currentValue: string, desiredValue: string, normalizedDesiredValue: string): boolean {
+        if (normalizePropertyTreeValuePath(currentValue) !== normalizedDesiredValue) {
+            return false;
+        }
+
+        return !isPropertyLinkMarkupValue(desiredValue) || isPropertyLinkMarkupValue(currentValue);
     }
 
     /**
@@ -241,11 +432,7 @@ export class FileSystemOperations {
         const nodeKind: 'key' | 'value' = targetNode?.kind === 'value' || parsedNode.valuePath ? 'value' : 'key';
         const requestedValuePath = requestedNode.valuePath?.trim() ?? null;
         const desiredValue: string | null =
-            nodeKind === 'key'
-                ? null
-                : targetNode && targetNode.kind === 'value' && targetNode.name.trim().length > 0
-                  ? targetNode.name.trim()
-                  : requestedValuePath || parsedNode.valuePath || null;
+            nodeKind === 'key' ? null : this.resolvePropertyNodeAssignmentText(targetNode, requestedValuePath, parsedNode.valuePath);
         const normalizedDesiredValue = desiredValue ? normalizePropertyTreeValuePath(desiredValue) : null;
         if (nodeKind === 'value' && !normalizedDesiredValue) {
             return null;
@@ -257,8 +444,8 @@ export class FileSystemOperations {
                 nodeKind,
                 desiredValue,
                 normalizedDesiredValue,
-                writeValue: true,
-                writeValueKind: 'boolean'
+                writeValue: null,
+                writeValueKind: 'empty'
             };
         }
 
@@ -315,6 +502,150 @@ export class FileSystemOperations {
      */
     private filterNameInputFinal(value: string): string {
         return this.filterNameInputLive(value).trim();
+    }
+
+    getFileDisplayNameRenameInput(file: TFile): DisplayNameRenameInputOptions {
+        const target = this.resolveFrontmatterDisplayNameTarget(file, this.getFileRenameDefaultValue(file));
+        if (target) {
+            return { initialValue: target.initialValue };
+        }
+
+        return {
+            initialValue: this.getFileRenameDefaultValue(file),
+            ...this.getNameInputModalOptions()
+        };
+    }
+
+    getFolderDisplayNameRenameInput(folder: TFolder): DisplayNameRenameInputOptions {
+        const target = this.resolveFolderFrontmatterDisplayNameTarget(folder);
+        if (target) {
+            return { initialValue: target.target.initialValue };
+        }
+
+        if (folder.path === '/') {
+            return { initialValue: this.settingsProvider.settings.customVaultName || this.app.vault.getName() };
+        }
+
+        return {
+            initialValue: folder.name,
+            ...this.getNameInputModalOptions()
+        };
+    }
+
+    private getFileRenameDefaultValue(file: TFile): string {
+        return isExcalidrawFile(file) ? stripExcalidrawSuffix(file.basename) : file.basename;
+    }
+
+    private resolveConfiguredFrontmatterNameField(): string | null {
+        const settings = this.settingsProvider.settings;
+        if (!settings.useFrontmatterMetadata) {
+            return null;
+        }
+
+        const fields = getCachedCommaSeparatedList(settings.frontmatterNameField);
+        return fields[0] ?? null;
+    }
+
+    private extractFrontmatterDisplayNameValue(value: unknown): string | null {
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            return trimmed.length > 0 ? trimmed : null;
+        }
+
+        if (Array.isArray(value)) {
+            for (const entry of value) {
+                if (typeof entry !== 'string') {
+                    continue;
+                }
+                const trimmed = entry.trim();
+                if (trimmed.length > 0) {
+                    return trimmed;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private resolveFrontmatterDisplayNameTarget(file: TFile | null, fallbackInitialValue?: string): FrontmatterDisplayNameTarget | null {
+        if (!file || file.extension !== 'md') {
+            return null;
+        }
+
+        const fallbackField = this.resolveConfiguredFrontmatterNameField();
+        if (!fallbackField) {
+            return null;
+        }
+
+        const frontmatterValue: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter;
+        const frontmatter = isRecord(frontmatterValue) ? frontmatterValue : null;
+        const fields = getCachedCommaSeparatedList(this.settingsProvider.settings.frontmatterNameField);
+        let firstExistingField: string | null = null;
+
+        for (const field of fields) {
+            const matchingField = findMatchingRecordKey(frontmatter, field);
+            if (!matchingField) {
+                continue;
+            }
+
+            firstExistingField = firstExistingField ?? matchingField;
+            const displayName = this.extractFrontmatterDisplayNameValue(frontmatter?.[matchingField]);
+            if (displayName) {
+                return {
+                    field: matchingField,
+                    fallbackValue: fallbackInitialValue ?? '',
+                    initialValue: displayName,
+                    storedValue: displayName
+                };
+            }
+        }
+
+        return {
+            field: firstExistingField ?? fallbackField,
+            fallbackValue: fallbackInitialValue ?? '',
+            initialValue: fallbackInitialValue ?? '',
+            storedValue: null
+        };
+    }
+
+    private resolveFolderFrontmatterDisplayNameTarget(folder: TFolder): { file: TFile; target: FrontmatterDisplayNameTarget } | null {
+        const settings = this.settingsProvider.settings;
+        if (!settings.useFrontmatterMetadata || !settings.enableFolderNotes) {
+            return null;
+        }
+
+        const folderNote = getFolderNote(folder, getFolderNoteDetectionSettings(settings));
+        if (!folderNote || folderNote.extension !== 'md') {
+            return null;
+        }
+
+        const fallbackName = folder.path === '/' ? this.settingsProvider.settings.customVaultName || this.app.vault.getName() : folder.name;
+        const target = this.resolveFrontmatterDisplayNameTarget(folderNote, fallbackName);
+        return target ? { file: folderNote, target } : null;
+    }
+
+    private async writeFrontmatterDisplayName(file: TFile, target: FrontmatterDisplayNameTarget, value: string): Promise<void> {
+        const nextValue = value.trim();
+        await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
+            const targetField = findMatchingRecordKey(frontmatter, target.field) ?? target.field;
+            if (nextValue.length > 0 && nextValue !== target.fallbackValue.trim()) {
+                frontmatter[targetField] = nextValue;
+                return;
+            }
+
+            if (Reflect.has(frontmatter, targetField)) {
+                delete frontmatter[targetField];
+            }
+        });
+    }
+
+    private hasFrontmatterDisplayNameChange(target: FrontmatterDisplayNameTarget, value: string): boolean {
+        const nextValue = value.trim();
+        if (target.storedValue !== null) {
+            return nextValue !== target.storedValue;
+        }
+
+        return nextValue.length > 0 && nextValue !== target.fallbackValue.trim();
     }
 
     /**
@@ -426,13 +757,26 @@ export class FileSystemOperations {
      * @param openInNewTab - Whether the file should open in a new tab
      * @returns The created file or null if creation failed
      */
-    async createNewFile(parent: TFolder, openInNewTab = false): Promise<TFile | null> {
-        return createFileWithOptions(parent, this.app, {
+    async createNewFile(
+        parent: TFolder,
+        openInNewTab = false,
+        manualSortContext?: ManualSortNewFilePlacementContext | null
+    ): Promise<TFile | null> {
+        const resolvedManualSortContext = this.resolveManualSortNewFileContext(manualSortContext, 'folder', parent.path);
+        const deferredManualSortPrompt: { run: (() => void) | null } = { run: null };
+        const file = await createFileWithOptions(parent, this.app, {
             extension: 'md',
             content: '',
             openInNewTab,
+            afterCreate: async createdFile => {
+                deferredManualSortPrompt.run = await this.applyManualSortNewFilePlacement(createdFile, resolvedManualSortContext, {
+                    deferCompactionPrompt: true
+                });
+            },
             errorKey: 'createFile'
         });
+        deferredManualSortPrompt.run?.();
+        return file;
     }
 
     /**
@@ -443,7 +787,12 @@ export class FileSystemOperations {
      * @param openInNewTab - Whether the file should open in a new tab
      * @returns The created file or null when creation fails
      */
-    async createNewFileForTag(tagPath: string, sourcePath?: string, openInNewTab = false): Promise<TFile | null> {
+    async createNewFileForTag(
+        tagPath: string,
+        sourcePath?: string,
+        openInNewTab = false,
+        manualSortContext?: ManualSortNewFilePlacementContext | null
+    ): Promise<TFile | null> {
         const normalizedTag = normalizeTagPath(tagPath);
         if (!normalizedTag || normalizedTag === TAGGED_TAG_ID || normalizedTag === UNTAGGED_TAG_ID) {
             return null;
@@ -452,6 +801,7 @@ export class FileSystemOperations {
         const tagTreeService = this.getTagTreeService();
         const tagNode = tagTreeService?.findTagNode(normalizedTag);
         const resolvedTagPath = tagNode?.displayPath ?? normalizedTag;
+        const resolvedManualSortContext = this.resolveManualSortNewFileContext(manualSortContext, 'tag', normalizedTag);
 
         try {
             const activeFilePath = this.app.workspace.getActiveFile()?.path ?? '';
@@ -471,12 +821,17 @@ export class FileSystemOperations {
                 showNotice(strings.dragDrop.errors.failedToAddTag.replace('{tag}', `#${resolvedTagPath}`), { variant: 'warning' });
             }
 
+            const scheduleDeferredManualSortPrompt = await this.applyManualSortNewFilePlacement(file, resolvedManualSortContext, {
+                deferCompactionPrompt: true
+            });
+
             const leaf = this.app.workspace.getLeaf(openInNewTab);
             await leaf.openFile(file, { state: { mode: 'source' }, active: true });
 
             window.setTimeout(() => {
                 executeCommand(this.app, OBSIDIAN_COMMANDS.EDIT_FILE_TITLE);
             }, TIMEOUTS.FILE_OPERATION_DELAY);
+            scheduleDeferredManualSortPrompt?.();
 
             return file;
         } catch (error) {
@@ -493,7 +848,12 @@ export class FileSystemOperations {
      * @param openInNewTab - Whether the file should open in a new tab
      * @returns The created file or null when creation fails
      */
-    async createNewFileForProperty(propertyNodeId: string, sourcePath?: string, openInNewTab = false): Promise<TFile | null> {
+    async createNewFileForProperty(
+        propertyNodeId: string,
+        sourcePath?: string,
+        openInNewTab = false,
+        manualSortContext?: ManualSortNewFilePlacementContext | null
+    ): Promise<TFile | null> {
         if (propertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
             return null;
         }
@@ -502,6 +862,12 @@ export class FileSystemOperations {
         if (!assignment) {
             return null;
         }
+        const normalizedPropertyNodeId = normalizePropertyNodeId(propertyNodeId);
+        const resolvedManualSortContext = this.resolveManualSortNewFileContext(
+            manualSortContext,
+            'property',
+            normalizedPropertyNodeId ?? ''
+        );
 
         const propertyValue: unknown = assignment.writeValue;
 
@@ -526,12 +892,17 @@ export class FileSystemOperations {
                 );
             }
 
+            const scheduleDeferredManualSortPrompt = await this.applyManualSortNewFilePlacement(file, resolvedManualSortContext, {
+                deferCompactionPrompt: true
+            });
+
             const leaf = this.app.workspace.getLeaf(openInNewTab);
             await leaf.openFile(file, { state: { mode: 'source' }, active: true });
 
             window.setTimeout(() => {
                 executeCommand(this.app, OBSIDIAN_COMMANDS.EDIT_FILE_TITLE);
             }, TIMEOUTS.FILE_OPERATION_DELAY);
+            scheduleDeferredManualSortPrompt?.();
 
             return file;
         } catch (error) {
@@ -542,7 +913,7 @@ export class FileSystemOperations {
 
     /**
      * Applies a property key/value node to one or more markdown files.
-     * Key nodes set `key: true`.
+     * Key nodes set `key: null`, which Obsidian serializes as an empty YAML value.
      * Value nodes set `key: value`, replacing the current value. When the current value is a string array, replaces it with a single item array.
      */
     async applyPropertyNodeToFiles(propertyNodeId: string, files: readonly TFile[]): Promise<ApplyPropertyNodeResult> {
@@ -586,11 +957,13 @@ export class FileSystemOperations {
                     const currentValue = frontmatter[targetPropertyKey];
 
                     if (assignment.nodeKind === 'key') {
-                        if (currentValue === true || currentValue === null) {
+                        if (currentValue === null) {
                             return;
                         }
 
-                        frontmatter[targetPropertyKey] = true;
+                        // Boolean values have their own child nodes, so a key node must remain empty;
+                        // otherwise Obsidian flags the assigned `true` when the registered type is not checkbox.
+                        frontmatter[targetPropertyKey] = null;
                         didChange = true;
                         return;
                     }
@@ -617,7 +990,7 @@ export class FileSystemOperations {
                     }
 
                     if (typeof currentValue === 'string') {
-                        if (normalizePropertyTreeValuePath(currentValue) === normalizedDesiredValue) {
+                        if (this.shouldKeepCurrentPropertyString(currentValue, desiredValue, normalizedDesiredValue)) {
                             return;
                         }
                         frontmatter[targetPropertyKey] = desiredValue;
@@ -629,7 +1002,7 @@ export class FileSystemOperations {
                         const isSingleMatch =
                             currentValue.length === 1 &&
                             typeof currentValue[0] === 'string' &&
-                            normalizePropertyTreeValuePath(currentValue[0]) === normalizedDesiredValue;
+                            this.shouldKeepCurrentPropertyString(currentValue[0], desiredValue, normalizedDesiredValue);
                         if (isSingleMatch) {
                             return;
                         }
@@ -674,70 +1047,130 @@ export class FileSystemOperations {
     }
 
     /**
-     * Renames a folder with user-provided name
-     * Shows input modal pre-filled with current name
-     * Validates that new name is different from current
-     * Also renames associated folder note if it exists
-     * @param folder - The folder to rename
-     * @param settings - The plugin settings (optional)
+     * Renames a folder from an already-collected name.
+     * Returns false only when the rename attempted and failed.
+     */
+    async renameFolderToName(folder: TFolder, newName: string, settings?: NotebookNavigatorSettings): Promise<boolean> {
+        const filteredName = this.filterNameInputFinal(newName);
+        if (!filteredName || filteredName === folder.name) {
+            return true;
+        }
+
+        try {
+            const previousFolderPath = folder.path;
+            const folderNoteNamingSettings =
+                settings?.enableFolderNotes && shouldRenameFolderNoteWithFolderName(settings) ? settings : null;
+
+            let folderNote: TFile | null = null;
+            let renamedFolderNoteFileName: string | null = null;
+            if (folderNoteNamingSettings) {
+                folderNote = getFolderNote(folder, folderNoteNamingSettings);
+            }
+
+            if (folderNote && folderNoteNamingSettings) {
+                const newFolderNoteBaseName = resolveFolderNoteName(filteredName, folderNoteNamingSettings);
+                renamedFolderNoteFileName = this.getFolderNoteFileName(newFolderNoteBaseName, folderNote);
+                const conflictPath = buildPathInFolder(folder.path, renamedFolderNoteFileName);
+                const conflict = this.app.vault.getFileByPath(conflictPath);
+                if (conflict) {
+                    showNotice(strings.fileSystem.errors.renameFolderNoteConflict.replace('{name}', renamedFolderNoteFileName), {
+                        variant: 'warning'
+                    });
+                    return false;
+                }
+            }
+
+            const parentPath = folder.parent?.path ?? '/';
+            const newFolderPath = buildPathInFolder(parentPath, filteredName);
+
+            const performRename = async (): Promise<void> => {
+                await this.app.fileManager.renameFile(folder, newFolderPath);
+                await this.folderPathSettingsSync.syncHiddenFolderPathChange(previousFolderPath, newFolderPath);
+
+                if (folderNote && renamedFolderNoteFileName !== null) {
+                    const newNotePath = buildPathInFolder(newFolderPath, renamedFolderNoteFileName);
+                    await this.app.fileManager.renameFile(folderNote, newNotePath);
+                }
+            };
+
+            const commandQueue = this.getCommandQueue();
+            if (commandQueue) {
+                const result = await commandQueue.executeRenameFolder(previousFolderPath, performRename);
+                if (!result.success) {
+                    throw result.error ?? new Error(strings.common.unknownError);
+                }
+            } else {
+                await performRename();
+            }
+            return true;
+        } catch (error) {
+            this.notifyError(strings.fileSystem.errors.renameFolder, error);
+            return false;
+        }
+    }
+
+    /**
+     * Opens a modal that renames the vault root display name or a folder path.
      */
     async renameFolder(folder: TFolder, settings?: NotebookNavigatorSettings): Promise<void> {
-        const nameInputOptions = this.getNameInputModalOptions();
+        const isRootFolder = folder.path === '/';
+        const nameInputOptions = isRootFolder ? undefined : this.getNameInputModalOptions();
 
         const modal = new InputModal(
             this.app,
-            strings.modals.fileSystem.renameFolderTitle,
-            strings.modals.fileSystem.renamePrompt,
+            isRootFolder ? strings.modals.fileSystem.renameVaultTitle : strings.modals.fileSystem.renameFolderTitle,
+            isRootFolder ? strings.modals.fileSystem.renameVaultPrompt : strings.modals.fileSystem.renamePrompt,
             async newName => {
-                const filteredName = this.filterNameInputFinal(newName);
-                if (!filteredName || filteredName === folder.name) {
+                if (isRootFolder) {
+                    await this.renameFolderDisplayName(folder, newName, settings);
                     return;
                 }
 
-                try {
-                    const previousFolderPath = folder.path;
-                    const folderNoteNamingSettings =
-                        settings?.enableFolderNotes && shouldRenameFolderNoteWithFolderName(settings) ? settings : null;
-
-                    let folderNote: TFile | null = null;
-                    let renamedFolderNoteFileName: string | null = null;
-                    if (folderNoteNamingSettings) {
-                        folderNote = getFolderNote(folder, folderNoteNamingSettings);
-                    }
-
-                    if (folderNote && folderNoteNamingSettings) {
-                        const newFolderNoteBaseName = resolveFolderNoteName(filteredName, folderNoteNamingSettings);
-                        renamedFolderNoteFileName = this.getFolderNoteFileName(newFolderNoteBaseName, folderNote);
-                        const conflictPath = buildPathInFolder(folder.path, renamedFolderNoteFileName);
-                        const conflict = this.app.vault.getFileByPath(conflictPath);
-                        if (conflict) {
-                            showNotice(strings.fileSystem.errors.renameFolderNoteConflict.replace('{name}', renamedFolderNoteFileName), {
-                                variant: 'warning'
-                            });
-                            return;
-                        }
-                    }
-
-                    const parentPath = folder.parent?.path ?? '/';
-                    const newFolderPath = buildPathInFolder(parentPath, filteredName);
-
-                    // Rename the folder (moves contents including the folder note)
-                    await this.app.fileManager.renameFile(folder, newFolderPath);
-                    await this.folderPathSettingsSync.syncHiddenFolderPathChange(previousFolderPath, newFolderPath);
-
-                    // Rename folder note when naming is tied to the folder name.
-                    if (folderNote && renamedFolderNoteFileName !== null) {
-                        const newNotePath = buildPathInFolder(newFolderPath, renamedFolderNoteFileName);
-                        await this.app.fileManager.renameFile(folderNote, newNotePath);
-                    }
-                } catch (error) {
-                    this.notifyError(strings.fileSystem.errors.renameFolder, error);
-                }
+                await this.renameFolderToName(folder, newName, settings);
             },
-            folder.name,
+            isRootFolder ? this.settingsProvider.settings.customVaultName : folder.name,
             nameInputOptions
         );
         modal.open();
+    }
+
+    async renameFolderDisplayName(folder: TFolder, value: string, settings?: NotebookNavigatorSettings): Promise<boolean> {
+        const frontmatterTarget = this.resolveFolderFrontmatterDisplayNameTarget(folder);
+        if (frontmatterTarget) {
+            if (!this.hasFrontmatterDisplayNameChange(frontmatterTarget.target, value)) {
+                return true;
+            }
+
+            try {
+                await this.writeFrontmatterDisplayName(frontmatterTarget.file, frontmatterTarget.target, value);
+                return true;
+            } catch (error) {
+                this.notifyError(strings.fileSystem.errors.renameFolder, error);
+                return false;
+            }
+        }
+
+        if (folder.path === '/') {
+            const trimmed = value.trim();
+            const vaultName = this.app.vault.getName();
+            const isUnchanged =
+                this.settingsProvider.settings.customVaultName === trimmed ||
+                (!this.settingsProvider.settings.customVaultName && trimmed === vaultName);
+            if (!isUnchanged) {
+                const previousCustomVaultName = this.settingsProvider.settings.customVaultName;
+                try {
+                    this.settingsProvider.settings.customVaultName = trimmed;
+                    await this.settingsProvider.saveSettingsAndUpdate();
+                } catch (error) {
+                    this.settingsProvider.settings.customVaultName = previousCustomVaultName;
+                    this.notifyError(strings.fileSystem.errors.renameFolder, error);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        return this.renameFolderToName(folder, value, settings);
     }
 
     /**
@@ -747,12 +1180,7 @@ export class FileSystemOperations {
      * @param file - The file to rename
      */
     async renameFile(file: TFile): Promise<void> {
-        // Check if file is Excalidraw to handle composite extension
-        const isExcalidraw = isExcalidrawFile(file);
-        const extension = file.extension;
-        const extensionSuffix = extension ? `.${extension}` : '';
-        // Strip .excalidraw suffix from default value for Excalidraw files
-        const defaultValue = isExcalidraw ? stripExcalidrawSuffix(file.basename) : file.basename;
+        const defaultValue = this.getFileRenameDefaultValue(file);
         const nameInputOptions = this.getNameInputModalOptions();
 
         const modal = new InputModal(
@@ -760,62 +1188,88 @@ export class FileSystemOperations {
             strings.modals.fileSystem.renameFileTitle,
             strings.modals.fileSystem.renamePrompt,
             async rawInput => {
-                const trimmedInput = this.filterNameInputFinal(rawInput);
-                if (!trimmedInput) {
-                    return;
-                }
-
-                let finalFileName: string;
-
-                if (isExcalidraw) {
-                    // Process Excalidraw files to ensure .excalidraw suffix is preserved
-                    let workingName = trimmedInput;
-                    const lowerWorking = workingName.toLowerCase();
-
-                    // Remove file extension if user included it
-                    if (extensionSuffix && lowerWorking.endsWith(extensionSuffix.toLowerCase())) {
-                        workingName = workingName.slice(0, -extensionSuffix.length);
-                    }
-
-                    // Remove .excalidraw suffix if user included it
-                    workingName = stripExcalidrawSuffix(workingName);
-
-                    if (!workingName) {
-                        return;
-                    }
-
-                    // Reconstruct filename with .excalidraw suffix
-                    finalFileName = `${workingName}${EXCALIDRAW_BASENAME_SUFFIX}${extensionSuffix}`;
-                } else {
-                    // Preserve original extension for all other files
-                    let workingName = trimmedInput;
-                    if (extensionSuffix && workingName.toLowerCase().endsWith(extensionSuffix.toLowerCase())) {
-                        workingName = workingName.slice(0, -extensionSuffix.length);
-                    }
-                    workingName = workingName.replace(/\.+$/u, '');
-                    if (!workingName) {
-                        return;
-                    }
-                    finalFileName = extensionSuffix ? `${workingName}${extensionSuffix}` : workingName;
-                }
-
-                // Skip rename if name unchanged
-                if (!finalFileName || finalFileName === file.name) {
-                    return;
-                }
-
-                try {
-                    const parentPath = file.parent?.path ?? '/';
-                    const newPath = buildPathInFolder(parentPath, finalFileName);
-                    await this.app.fileManager.renameFile(file, newPath);
-                } catch (error) {
-                    this.notifyError(strings.fileSystem.errors.renameFile, error);
-                }
+                await this.renameFileToName(file, rawInput);
             },
             defaultValue,
             nameInputOptions
         );
         modal.open();
+    }
+
+    async renameFileDisplayName(file: TFile, rawInput: string): Promise<boolean> {
+        const target = this.resolveFrontmatterDisplayNameTarget(file, this.getFileRenameDefaultValue(file));
+        if (!target) {
+            return this.renameFileToName(file, rawInput);
+        }
+
+        if (!this.hasFrontmatterDisplayNameChange(target, rawInput)) {
+            return true;
+        }
+
+        try {
+            await this.writeFrontmatterDisplayName(file, target, rawInput);
+            return true;
+        } catch (error) {
+            this.notifyError(strings.fileSystem.errors.renameFile, error);
+            return false;
+        }
+    }
+
+    /**
+     * Renames a file from an already-collected name while preserving its extension.
+     * Returns false only when the rename attempted and failed.
+     */
+    async renameFileToName(file: TFile, rawInput: string): Promise<boolean> {
+        const isExcalidraw = isExcalidrawFile(file);
+        const extension = file.extension;
+        const extensionSuffix = extension ? `.${extension}` : '';
+        const trimmedInput = this.filterNameInputFinal(rawInput);
+        if (!trimmedInput) {
+            return true;
+        }
+
+        let finalFileName: string;
+
+        if (isExcalidraw) {
+            let workingName = trimmedInput;
+            const lowerWorking = workingName.toLowerCase();
+
+            if (extensionSuffix && lowerWorking.endsWith(extensionSuffix.toLowerCase())) {
+                workingName = workingName.slice(0, -extensionSuffix.length);
+            }
+
+            workingName = stripExcalidrawSuffix(workingName);
+
+            if (!workingName) {
+                return true;
+            }
+
+            finalFileName = `${workingName}${EXCALIDRAW_BASENAME_SUFFIX}${extensionSuffix}`;
+        } else {
+            let workingName = trimmedInput;
+            if (extensionSuffix && workingName.toLowerCase().endsWith(extensionSuffix.toLowerCase())) {
+                workingName = workingName.slice(0, -extensionSuffix.length);
+            }
+            workingName = workingName.replace(/\.+$/u, '');
+            if (!workingName) {
+                return true;
+            }
+            finalFileName = extensionSuffix ? `${workingName}${extensionSuffix}` : workingName;
+        }
+
+        if (!finalFileName || finalFileName === file.name) {
+            return true;
+        }
+
+        try {
+            const parentPath = file.parent?.path ?? '/';
+            const newPath = buildPathInFolder(parentPath, finalFileName);
+            await this.app.fileManager.renameFile(file, newPath);
+            return true;
+        } catch (error) {
+            this.notifyError(strings.fileSystem.errors.renameFile, error);
+            return false;
+        }
     }
 
     async deleteFolder(folder: TFolder, confirmBeforeDelete: boolean, onSuccess?: () => void): Promise<void> {
@@ -836,9 +1290,17 @@ export class FileSystemOperations {
         settings: NotebookNavigatorSettings,
         selectionContext: SelectionContext,
         selectionDispatch: SelectionDispatch,
-        confirmBeforeDelete: boolean
+        confirmBeforeDelete: boolean,
+        currentFiles?: readonly TFile[]
     ): Promise<void> {
-        await this.deletionService.deleteSelectedFile(file, settings, selectionContext, selectionDispatch, confirmBeforeDelete);
+        await this.deletionService.deleteSelectedFile(
+            file,
+            settings,
+            selectionContext,
+            selectionDispatch,
+            confirmBeforeDelete,
+            currentFiles
+        );
     }
 
     /**
@@ -889,10 +1351,6 @@ export class FileSystemOperations {
             return;
         }
 
-        if (parent.path === '/') {
-            return;
-        }
-
         const detectionSettings = getFolderNoteDetectionSettings(settings);
 
         if (isFolderNote(file, parent, detectionSettings)) {
@@ -914,7 +1372,7 @@ export class FileSystemOperations {
         }
 
         const isExcalidraw = isExcalidrawFile(file);
-        let targetBaseName = resolveFolderNoteName(parent.name, settings);
+        let targetBaseName = resolveFolderNoteNameForFolder(parent, settings);
         if (isExcalidraw) {
             // Strip .excalidraw from the base name for folder note naming.
             targetBaseName = stripExcalidrawSuffix(targetBaseName);
@@ -1198,9 +1656,13 @@ export class FileSystemOperations {
         await this.deletionService.deleteMultipleFiles(files, confirmBeforeDelete, preDeleteAction);
     }
 
+    async trashFilesWithOpenLeafCleanup(files: readonly TFile[]): Promise<FileTrashResult> {
+        return this.deletionService.trashFilesWithOpenLeafCleanup(files);
+    }
+
     async deleteFilesWithSmartSelection(
         selectedFiles: Set<string>,
-        allFiles: TFile[],
+        allFiles: readonly TFile[],
         selectionDispatch: SelectionDispatch,
         confirmBeforeDelete: boolean
     ): Promise<void> {

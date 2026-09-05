@@ -23,7 +23,7 @@
  * supporting the emoji icon provider's functionality.
  */
 
-import emojiRegex from 'emoji-regex';
+import emojiRegex from 'emoji-regex-xs';
 
 const EMOJI_SEQUENCE_PATTERN = emojiRegex();
 const EMOJI_SEQUENCE_SOURCE = EMOJI_SEQUENCE_PATTERN.source;

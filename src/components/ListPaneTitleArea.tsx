@@ -17,24 +17,25 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { useSelectionState } from '../context/SelectionContext';
+import { useSelectionDispatch, useSelectionState } from '../context/SelectionContext';
 import { useCommandQueue, useServices } from '../context/ServicesContext';
 import { useSettingsState } from '../context/SettingsContext';
 import { useSelectedFolderFileVersion } from '../hooks/useSelectedFolderFileVersion';
 import { ItemType } from '../types';
 import { runAsyncAction } from '../utils/async';
-import { getFolderNote, openFolderNoteFile } from '../utils/folderNotes';
+import { getFolderNote, openFolderNoteFile, revealFolderNoteInNavigator } from '../utils/folderNotes';
 import { resolveFolderNoteClickOpenContext } from '../utils/keyboardOpenContext';
 
 interface ListPaneTitleAreaProps {
     desktopTitle: string;
 }
 
-export function ListPaneTitleArea({ desktopTitle }: ListPaneTitleAreaProps) {
-    const { app, isMobile } = useServices();
+export const ListPaneTitleArea = React.memo(function ListPaneTitleArea({ desktopTitle }: ListPaneTitleAreaProps) {
+    const { app, plugin } = useServices();
     const commandQueue = useCommandQueue();
     const settings = useSettingsState();
     const selectionState = useSelectionState();
+    const selectionDispatch = useSelectionDispatch();
 
     // Folder note interactions only apply when a folder is selected.
     const selectedFolder = selectionState.selectionType === ItemType.FOLDER ? selectionState.selectedFolder : null;
@@ -54,14 +55,12 @@ export function ListPaneTitleArea({ desktopTitle }: ListPaneTitleAreaProps) {
 
         return getFolderNote(selectedFolder, {
             enableFolderNotes: settings.enableFolderNotes,
-            folderNoteName: settings.folderNoteName,
             folderNoteNamePattern: settings.folderNoteNamePattern
         });
     }, [
         selectedFolder,
         settings.enableFolderNotes,
         settings.enableFolderNoteLinks,
-        settings.folderNoteName,
         settings.folderNoteNamePattern,
         selectedFolderFileVersion
     ]);
@@ -75,12 +74,8 @@ export function ListPaneTitleArea({ desktopTitle }: ListPaneTitleAreaProps) {
             // Prevents parent title-area click handlers from running.
             event.stopPropagation();
 
-            const openContext = resolveFolderNoteClickOpenContext(
-                event,
-                settings.openFolderNotesInNewTab,
-                settings.multiSelectModifier,
-                isMobile
-            );
+            const openContext = resolveFolderNoteClickOpenContext(event, settings.folderNoteOpenLocation, settings.multiSelectModifier);
+            revealFolderNoteInNavigator(selectionDispatch, selectedFolderNote);
 
             runAsyncAction(() =>
                 openFolderNoteFile({
@@ -88,11 +83,21 @@ export function ListPaneTitleArea({ desktopTitle }: ListPaneTitleAreaProps) {
                     commandQueue,
                     folder: selectedFolder,
                     folderNote: selectedFolderNote,
-                    context: openContext
+                    context: openContext,
+                    openInRightSidebar: folderNote => plugin.openFolderNoteInRightSidebar(folderNote)
                 })
             );
         },
-        [selectedFolder, selectedFolderNote, settings.openFolderNotesInNewTab, settings.multiSelectModifier, isMobile, app, commandQueue]
+        [
+            selectedFolder,
+            selectedFolderNote,
+            settings.folderNoteOpenLocation,
+            settings.multiSelectModifier,
+            app,
+            commandQueue,
+            plugin,
+            selectionDispatch
+        ]
     );
 
     const handleFolderNoteMouseDown = useCallback(
@@ -104,6 +109,7 @@ export function ListPaneTitleArea({ desktopTitle }: ListPaneTitleAreaProps) {
             // Middle-click always opens folder notes in a new tab.
             event.preventDefault();
             event.stopPropagation();
+            revealFolderNoteInNavigator(selectionDispatch, selectedFolderNote);
 
             runAsyncAction(() =>
                 openFolderNoteFile({
@@ -115,7 +121,7 @@ export function ListPaneTitleArea({ desktopTitle }: ListPaneTitleAreaProps) {
                 })
             );
         },
-        [selectedFolder, selectedFolderNote, app, commandQueue]
+        [selectedFolder, selectedFolderNote, app, commandQueue, selectionDispatch]
     );
 
     return (
@@ -133,4 +139,4 @@ export function ListPaneTitleArea({ desktopTitle }: ListPaneTitleAreaProps) {
             </div>
         </div>
     );
-}
+});

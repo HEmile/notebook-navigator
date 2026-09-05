@@ -214,7 +214,7 @@ describe('TagDeleteWorkflow', () => {
             if (target.path === failingFile.path) {
                 throw new Error('read only');
             }
-            return Promise.resolve(true);
+            return true;
         });
 
         const result = await workflow.runTagDelete('project/client', [file.path, failingFile.path]);
@@ -241,9 +241,9 @@ describe('TagDeleteWorkflow', () => {
 
         deleteTagFromFile.mockImplementation((target: TFile) => {
             if (target.path === skippedFile.path) {
-                return Promise.resolve(false);
+                return false;
             }
-            return Promise.resolve(true);
+            return true;
         });
 
         const result = await workflow.runTagDelete('project/client', [file.path, skippedFile.path]);

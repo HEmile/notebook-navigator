@@ -21,9 +21,11 @@ import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, UNTAGGED_TAG_ID } fro
 import type { SearchNavFilterState } from '../../types/search';
 import { foldSearchText } from '../../utils/recordUtils';
 import { buildPropertyKeyNodeId, buildPropertyValueNodeId, parsePropertyNodeId } from '../../utils/propertyTree';
+import type { InclusionOperator } from '../../utils/filterSearch';
 
 const EMPTY_TAG_TOKENS: string[] = [];
 const MAX_FOLDED_SEARCH_CACHE_ENTRIES = 2048;
+const EMPTY_INCLUDE_OPERATORS: Readonly<Record<string, InclusionOperator>> = Object.freeze({});
 
 const buildNormalizedSearchTokenSet = (
     tokens: readonly string[] | null | undefined,
@@ -74,6 +76,8 @@ export interface NavigationSearchHighlightsResult {
     getTagSearchMatch: (tagPath: string) => 'include' | 'exclude' | undefined;
     getPropertySearchMatch: (propertyNodeId: string) => 'include' | 'exclude' | undefined;
     getTagCollectionSearchMatch: (tagCollectionId: string | null) => 'include' | 'exclude' | undefined;
+    getTagInclusionOperator: (tagPath: string) => InclusionOperator | undefined;
+    getPropertyInclusionOperator: (propertyNodeId: string) => InclusionOperator | undefined;
 }
 
 interface UseNavigationSearchHighlightsProps {
@@ -116,6 +120,11 @@ export function useNavigationSearchHighlights({ searchNavFilters }: UseNavigatio
     const propertyExcludeTokenSet = useMemo(() => {
         return buildNormalizedSearchTokenSet(searchNavFilters?.properties.exclude, normalizePropertyNodeIdForSearchMatch);
     }, [searchNavFilters]);
+    const tagIncludeOperators = useMemo(() => searchNavFilters?.tags.includeOperators ?? EMPTY_INCLUDE_OPERATORS, [searchNavFilters]);
+    const propertyIncludeOperators = useMemo(
+        () => searchNavFilters?.properties.includeOperators ?? EMPTY_INCLUDE_OPERATORS,
+        [searchNavFilters]
+    );
 
     const foldedTagPathCacheRef = useRef<Map<string, string>>(new Map());
     const foldedPropertyNodeIdCacheRef = useRef<Map<string, string>>(new Map());
@@ -220,9 +229,34 @@ export function useNavigationSearchHighlights({ searchNavFilters }: UseNavigatio
         [getFoldedPropertyNodeId, propertyExcludeTokenSet, propertyIncludeTokenSet]
     );
 
-    return {
-        getTagSearchMatch,
-        getPropertySearchMatch,
-        getTagCollectionSearchMatch
-    };
+    const getTagInclusionOperator = useCallback(
+        (tagPath: string): InclusionOperator | undefined => {
+            const normalizedTagPath = getFoldedTagPath(tagPath);
+            return tagIncludeOperators[normalizedTagPath];
+        },
+        [getFoldedTagPath, tagIncludeOperators]
+    );
+
+    const getPropertyInclusionOperator = useCallback(
+        (propertyNodeId: string): InclusionOperator | undefined => {
+            if (propertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
+                return undefined;
+            }
+
+            const normalizedPropertyNodeId = getFoldedPropertyNodeId(propertyNodeId);
+            return propertyIncludeOperators[normalizedPropertyNodeId];
+        },
+        [getFoldedPropertyNodeId, propertyIncludeOperators]
+    );
+
+    return useMemo(
+        () => ({
+            getTagSearchMatch,
+            getPropertySearchMatch,
+            getTagCollectionSearchMatch,
+            getTagInclusionOperator,
+            getPropertyInclusionOperator
+        }),
+        [getPropertyInclusionOperator, getPropertySearchMatch, getTagCollectionSearchMatch, getTagInclusionOperator, getTagSearchMatch]
+    );
 }

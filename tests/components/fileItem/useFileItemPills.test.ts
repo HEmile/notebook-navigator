@@ -23,9 +23,13 @@ import { DEFAULT_SETTINGS } from '../../../src/settings/defaultSettings';
 import { useFileItemPills, type UseFileItemPillsParams } from '../../../src/components/fileItem/useFileItemPills';
 import { buildPropertyKeyNodeId, buildPropertyValueNodeId } from '../../../src/utils/propertyTree';
 import { createHiddenTagVisibility, type HiddenTagVisibility } from '../../../src/utils/tagPrefixMatcher';
+import { formatTextCount } from '../../../src/utils/wordCountUtils';
 import type { FileItemPillDecorationModel } from '../../../src/utils/fileItemPillDecoration';
+import type { FileItemPillOrderModel } from '../../../src/utils/fileItemPillOrder';
+import type { TagTreeNode } from '../../../src/types/storage';
 import { createTestTFile } from '../../utils/createTestTFile';
 import { ItemType } from '../../../src/types';
+import type { NotebookNavigatorSettings } from '../../../src/settings/types';
 
 const mockOpenLinkText = vi.fn();
 const mockNavigateToTag = vi.fn();
@@ -59,6 +63,7 @@ vi.mock('../../../src/context/ServicesContext', () => ({
 }));
 
 vi.mock('../../../src/context/SelectionContext', () => ({
+    useNavigationSelection: () => mockSelectionState,
     useSelectionState: () => mockSelectionState
 }));
 
@@ -74,10 +79,42 @@ vi.mock('../../../src/components/ServiceIcon', () => ({
         React.createElement('span', { 'data-icon-id': iconId, className })
 }));
 
+function createTagNode(path: string, children: TagTreeNode[] = []): TagTreeNode {
+    const node: TagTreeNode = {
+        name: path.split('/').pop() ?? path,
+        path,
+        displayPath: path,
+        children: new Map(),
+        notesWithTag: new Set()
+    };
+    children.forEach(child => {
+        node.children.set(child.path, child);
+    });
+    return node;
+}
+
 function renderPillRows(
-    params: Omit<UseFileItemPillsParams, 'hiddenTagVisibility' | 'fileItemPillDecorationModel'> & {
+    params: Omit<
+        UseFileItemPillsParams,
+        | 'hiddenTagVisibility'
+        | 'fileItemPillDecorationModel'
+        | 'fileItemPillOrderModel'
+        | 'wordCountDisplayText'
+        | 'characterCount'
+        | 'characterCountDisplayText'
+        | 'showTags'
+        | 'showProperties'
+        | 'textCountDisplay'
+    > & {
         hiddenTagVisibility?: HiddenTagVisibility;
         fileItemPillDecorationModel?: FileItemPillDecorationModel;
+        fileItemPillOrderModel?: FileItemPillOrderModel;
+        wordCountDisplayText?: string | null;
+        characterCount?: number | null;
+        characterCountDisplayText?: string | null;
+        showTags?: boolean;
+        showProperties?: boolean;
+        textCountDisplay?: NotebookNavigatorSettings['textCountDisplay'];
     }
 ): string {
     const emptyDecorationModel: FileItemPillDecorationModel = {
@@ -94,19 +131,36 @@ function renderPillRows(
         },
         inheritPropertyColors: false
     };
+    const emptyOrderModel: FileItemPillOrderModel = {
+        tagTree: new Map(),
+        rootTagOrderMap: new Map(),
+        tagComparator: undefined,
+        rootPropertyNavigationOrderMap: new Map()
+    };
 
     function Host() {
         const state = useFileItemPills({
             ...params,
+            showTags: params.showTags ?? (params.settings.showTags && params.settings.showFileTags),
+            showProperties: params.showProperties ?? params.settings.showFileProperties,
+            textCountDisplay: params.textCountDisplay ?? params.settings.textCountDisplay,
+            wordCountDisplayText:
+                params.wordCountDisplayText ?? (typeof params.wordCount === 'number' ? formatTextCount(params.wordCount) : null),
+            characterCount: params.characterCount ?? null,
+            characterCountDisplayText:
+                params.characterCountDisplayText ??
+                (typeof params.characterCount === 'number' ? formatTextCount(params.characterCount) : null),
             hiddenTagVisibility: params.hiddenTagVisibility ?? createHiddenTagVisibility([], false),
-            fileItemPillDecorationModel: params.fileItemPillDecorationModel ?? emptyDecorationModel
+            fileItemPillDecorationModel: params.fileItemPillDecorationModel ?? emptyDecorationModel,
+            fileItemPillOrderModel: params.fileItemPillOrderModel ?? emptyOrderModel
         });
         return React.createElement(
             'div',
             {
                 'data-show-tags': state.shouldShowFileTags ? 'true' : 'false',
                 'data-show-properties': state.shouldShowProperty ? 'true' : 'false',
-                'data-show-word-count': state.shouldShowWordCountProperty ? 'true' : 'false'
+                'data-show-text-count': state.shouldShowTextCountProperty ? 'true' : 'false',
+                'data-property-search-evidence': JSON.stringify(state.propertySearchEvidenceGroups)
             },
             state.pillRows
         );
@@ -134,7 +188,7 @@ describe('useFileItemPills', () => {
         mockMetadataService.getPropertyIcon.mockImplementation(() => undefined);
     });
 
-    it('renders colored tags before uncolored tags when colored priority is enabled', () => {
+    it('renders custom-colored tags before uncolored tags when custom-color priority is enabled', () => {
         mockMetadataService.getTagColorData.mockImplementation(tag => {
             if (tag === 'beta') {
                 return { color: '#ff0000' };
@@ -149,7 +203,6 @@ describe('useFileItemPills', () => {
             tags: ['alpha', 'beta'],
             properties: null,
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showTags: true,
@@ -167,14 +220,89 @@ describe('useFileItemPills', () => {
         expect(markup).toContain('style="color:#ff0000"');
     });
 
+    it('does not prioritize tags that only have rainbow colors', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/RainbowPriority.md'),
+            isCompactMode: false,
+            tags: ['alpha', 'beta'],
+            properties: null,
+            wordCount: null,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showTags: true,
+                showFileTags: true,
+                colorFileTags: true,
+                prioritizeColoredFileTags: true
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>(),
+            fileItemPillDecorationModel: {
+                navRainbowMode: 'foreground',
+                tagRainbowColors: {
+                    colorsByPath: new Map([['beta', '#00ff00']]),
+                    rootColor: undefined,
+                    getInheritedColor: () => undefined
+                },
+                propertyRainbowColors: {
+                    colorsByNodeId: new Map(),
+                    rootColor: undefined,
+                    rootColorsByKey: new Map()
+                },
+                inheritPropertyColors: false
+            }
+        });
+
+        expect(markup.indexOf('>alpha<')).toBeLessThan(markup.indexOf('>beta<'));
+        expect(markup).toContain('style="color:#00ff00"');
+    });
+
+    it('orders file tags by navigation order inside color priority buckets', () => {
+        const alphaIdeaNode = createTagNode('alpha/idea');
+        const alphaTaskNode = createTagNode('alpha/task');
+        const alphaNode = createTagNode('alpha', [alphaIdeaNode, alphaTaskNode]);
+        const betaTaskNode = createTagNode('beta/task');
+        const betaNode = createTagNode('beta', [betaTaskNode]);
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/OrderedTags.md'),
+            isCompactMode: false,
+            tags: ['alpha/idea', 'alpha/task', 'beta/task'],
+            properties: null,
+            wordCount: null,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showTags: true,
+                showFileTags: true,
+                showFileTagAncestors: true,
+                tagTreeSortOverrides: { alpha: 'alpha-desc' }
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>(),
+            fileItemPillOrderModel: {
+                tagTree: new Map([
+                    ['alpha', alphaNode],
+                    ['beta', betaNode]
+                ]),
+                rootTagOrderMap: new Map([
+                    ['beta', 0],
+                    ['alpha', 1]
+                ]),
+                tagComparator: undefined,
+                rootPropertyNavigationOrderMap: new Map()
+            }
+        });
+
+        expect(markup.indexOf('>beta/task<')).toBeLessThan(markup.indexOf('>alpha/task<'));
+        expect(markup.indexOf('>alpha/task<')).toBeLessThan(markup.indexOf('>alpha/idea<'));
+    });
+
     it('applies rainbow tag colors in file list pills', () => {
         const markup = renderPillRows({
             file: createTestTFile('Notes/Rainbow.md'),
             isCompactMode: false,
-            tags: ['alpha'],
+            tags: ['Alpha'],
             properties: null,
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showTags: true,
@@ -209,17 +337,63 @@ describe('useFileItemPills', () => {
             tags: [],
             properties: null,
             wordCount: 1234,
-            notePropertyType: 'wordCount',
             settings: {
                 ...DEFAULT_SETTINGS,
-                showFileProperties: true
+                showFileProperties: true,
+                textCountDisplay: 'words',
+                textCountPlacement: 'property'
             },
             visiblePropertyKeys: new Set<string>(),
             visibleNavigationPropertyKeys: new Set<string>()
         });
 
-        expect(markup).toContain('data-show-word-count="true"');
-        expect(markup).toContain('1,234');
+        expect(markup).toContain('data-show-text-count="true"');
+        expect(markup).toContain(formatTextCount(1234));
+    });
+
+    it('renders character count pill rows for markdown notes when character count is active', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Characters.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: null,
+            wordCount: null,
+            characterCount: 2048,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                textCountDisplay: 'characters',
+                textCountPlacement: 'property'
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('data-show-text-count="true"');
+        expect(markup).toContain(formatTextCount(2048));
+        expect(markup).not.toContain('chars');
+        expect(markup).toContain('data-icon-id="type"');
+    });
+
+    it('renders configured word count target text as a property pill', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Target.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [{ fieldKey: 'word-goal', value: '5000', valueKind: 'number' }],
+            wordCount: 1250,
+            wordCountDisplayText: '25%',
+            settings: {
+                ...DEFAULT_SETTINGS,
+                textCountDisplay: 'words',
+                textCountPlacement: 'property'
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>()
+        });
+
+        expect(markup).toContain('data-show-text-count="true"');
+        expect(markup).toContain('25%');
     });
 
     it('filters hidden tags using the provided visibility helper', () => {
@@ -229,7 +403,6 @@ describe('useFileItemPills', () => {
             tags: ['visible', 'archive/private'],
             properties: null,
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showTags: true,
@@ -254,7 +427,6 @@ describe('useFileItemPills', () => {
             tags: ['ai', 'ai/openai', 'ml'],
             properties: null,
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showTags: true,
@@ -280,7 +452,6 @@ describe('useFileItemPills', () => {
             tags: ['ai', 'ai/openai'],
             properties: null,
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showTags: true,
@@ -305,7 +476,6 @@ describe('useFileItemPills', () => {
             tags: ['ai', 'ml'],
             properties: null,
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showTags: true,
@@ -333,7 +503,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -363,7 +532,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true
@@ -374,6 +542,127 @@ describe('useFileItemPills', () => {
 
         expect(markup).toContain('data-show-properties="true"');
         expect(markup).toContain('4.5');
+    });
+
+    it('highlights the matching substring in an existing visible property pill', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Search.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [{ fieldKey: 'Workflow', value: 'Waiting for review', valueKind: 'string' }],
+            wordCount: null,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['workflow']),
+            visibleNavigationPropertyKeys: new Set<string>(),
+            matchedProperties: [
+                {
+                    clause: { key: 'workflow', value: 'waiting' }
+                }
+            ]
+        });
+
+        expect(markup).toContain('<mark class="nn-search-highlight">Waiting</mark> for review');
+        expect(markup).toContain('data-property-search-evidence="[]"');
+    });
+
+    it('returns inline evidence when the matching configured pill is hidden by the current property selection', () => {
+        mockSelectionState.selectionType = ItemType.PROPERTY;
+        mockSelectionState.selectedProperty = buildPropertyValueNodeId('status', 'done');
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/SelectedSearch.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [{ fieldKey: 'status', value: 'done', valueKind: 'string' }],
+            wordCount: null,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['status']),
+            visibleNavigationPropertyKeys: new Set<string>(['status']),
+            matchedProperties: [
+                {
+                    clause: { key: 'status', value: 'done' }
+                }
+            ]
+        });
+
+        expect(markup).toContain('&quot;propertyKey&quot;:&quot;status&quot;');
+        expect(markup).toContain('&quot;displayValue&quot;:&quot;done&quot;');
+        expect(markup).not.toContain('class="nn-file-tag nn-file-property');
+    });
+
+    it('returns key evidence for a visible property matched by a key-only prefix', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/AliasSearch.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [{ fieldKey: 'Aliases', value: 'Best project', valueKind: 'string' }],
+            wordCount: null,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['aliases']),
+            visibleNavigationPropertyKeys: new Set<string>(['aliases']),
+            matchedProperties: [
+                {
+                    clause: { key: 'alias', value: null }
+                }
+            ]
+        });
+
+        expect(markup).toContain('&quot;propertyKey&quot;:&quot;Aliases&quot;');
+        expect(markup).toContain('&quot;foldedKeyTerms&quot;:[&quot;alias&quot;]');
+        expect(markup).toContain('>Best project<');
+    });
+
+    it('orders property groups by the navigation properties section order', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/OrderedProperties.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'status',
+                    value: 'todo',
+                    valueKind: 'string'
+                },
+                {
+                    fieldKey: 'priority',
+                    value: 'high',
+                    valueKind: 'string'
+                },
+                {
+                    fieldKey: 'area',
+                    value: 'work',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['status', 'priority', 'area']),
+            visibleNavigationPropertyKeys: new Set<string>(['status', 'priority']),
+            fileItemPillOrderModel: {
+                tagTree: new Map(),
+                rootTagOrderMap: new Map(),
+                tagComparator: undefined,
+                rootPropertyNavigationOrderMap: new Map([
+                    ['priority', 0],
+                    ['status', 1]
+                ])
+            }
+        });
+
+        expect(markup.indexOf('>high<')).toBeLessThan(markup.indexOf('>todo<'));
+        expect(markup.indexOf('>todo<')).toBeLessThan(markup.indexOf('>work<'));
     });
 
     it('hides only the exact selected property value pill in property value context', () => {
@@ -397,7 +686,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true
@@ -426,7 +714,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true
@@ -454,7 +741,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -465,6 +751,89 @@ describe('useFileItemPills', () => {
         });
 
         expect(markup).toContain('>done<');
+    });
+
+    it('renders custom-colored properties before uncolored properties when custom-color priority is enabled', () => {
+        const betaNodeId = buildPropertyValueNodeId('status', 'beta');
+        mockMetadataService.getPropertyColorData.mockImplementation(nodeId => (nodeId === betaNodeId ? { color: '#ff0000' } : {}));
+
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/Properties.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'status',
+                    value: 'alpha',
+                    valueKind: 'string'
+                },
+                {
+                    fieldKey: 'status',
+                    value: 'beta',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                colorFileProperties: true,
+                prioritizeColoredFileProperties: true,
+                propertyColors: { [betaNodeId]: '#ff0000' }
+            },
+            visiblePropertyKeys: new Set<string>(['status']),
+            visibleNavigationPropertyKeys: new Set<string>(['status'])
+        });
+
+        expect(markup.indexOf('>beta<')).toBeLessThan(markup.indexOf('>alpha<'));
+        expect(markup).toContain('style="color:#ff0000"');
+    });
+
+    it('does not prioritize properties that only have rainbow colors', () => {
+        const betaNodeId = buildPropertyValueNodeId('status', 'beta');
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/RainbowProperties.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                {
+                    fieldKey: 'status',
+                    value: 'alpha',
+                    valueKind: 'string'
+                },
+                {
+                    fieldKey: 'status',
+                    value: 'beta',
+                    valueKind: 'string'
+                }
+            ],
+            wordCount: null,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true,
+                colorFileProperties: true,
+                prioritizeColoredFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(['status']),
+            visibleNavigationPropertyKeys: new Set<string>(['status']),
+            fileItemPillDecorationModel: {
+                navRainbowMode: 'foreground',
+                tagRainbowColors: {
+                    colorsByPath: new Map(),
+                    rootColor: undefined,
+                    getInheritedColor: () => undefined
+                },
+                propertyRainbowColors: {
+                    colorsByNodeId: new Map([[betaNodeId, '#00aa00']]),
+                    rootColor: undefined,
+                    rootColorsByKey: new Map()
+                },
+                inheritPropertyColors: false
+            }
+        });
+
+        expect(markup.indexOf('>alpha<')).toBeLessThan(markup.indexOf('>beta<'));
+        expect(markup).toContain('style="color:#00aa00"');
     });
 
     it('applies rainbow property colors in file list pills', () => {
@@ -481,7 +850,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -521,7 +889,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -565,7 +932,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -593,7 +959,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -622,7 +987,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -651,7 +1015,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -681,7 +1044,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -709,7 +1071,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -739,7 +1100,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -768,7 +1128,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -797,7 +1156,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -826,7 +1184,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -856,7 +1213,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,
@@ -886,7 +1242,6 @@ describe('useFileItemPills', () => {
                 }
             ],
             wordCount: null,
-            notePropertyType: DEFAULT_SETTINGS.notePropertyType,
             settings: {
                 ...DEFAULT_SETTINGS,
                 showFileProperties: true,

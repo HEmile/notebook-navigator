@@ -18,10 +18,11 @@
 
 import { TFile, TFolder } from 'obsidian';
 import { ListPaneItemType, NavigationPaneItemType, VirtualFolder } from '../types';
-import type { SearchResultMeta } from './search';
+import type { AliasSearchMatch, PropertySearchMatch, SearchResultMeta } from './search';
 import { PropertyTreeNode, TagTreeNode, TopicNode } from '../types/storage';
 import type { SearchShortcut, ShortcutEntry } from '../types/shortcuts';
 import type { NoteCountInfo } from '../types/noteCounts';
+import type { ManualSortGroupHeaderData } from '../utils/manualSort';
 
 export interface VirtualItem<T> {
     type: string;
@@ -30,19 +31,49 @@ export interface VirtualItem<T> {
     level?: number; // For hierarchical items
 }
 
+export type ListPaneHeaderKind = 'date' | 'folder' | 'pinned' | 'property' | 'section' | 'manual-sort-custom';
+
+export interface ListPaneFolderPathSegment {
+    label: string;
+    path: string;
+}
+
 export interface ListPaneItem {
     type: ListPaneItemType;
-    data: TFile | string; // File or header text
+    data: TFile | string; // File, header text, or spacer payload
     parentFolder?: string | null;
     // Folder path associated with a folder-group header.
     // Present only when grouping by folder in the list pane.
     headerFolderPath?: string | null;
+    // Visible path segments for a folder-group header when folder group paths are shown.
+    headerFolderSegments?: ListPaneFolderPathSegment[];
+    // Markdown file path that owns a manual sort custom header.
+    // Present only on manual-sort-custom headers.
+    manualSortHeaderFilePath?: string | null;
+    // File paths belonging to this rendered group. Used by group-header actions even when the group is collapsed.
+    groupFilePaths?: string[];
+    // Item count for the same group before list search filtering.
+    // Present only while a non-empty search is active and group header counts are shown.
+    groupTotalItemCount?: number;
+    // Whether a manual sort custom header label depends on stored word counts.
+    manualSortHeaderShowsWordCount?: boolean;
+    // Parsed manual sort custom header display data.
+    manualSortHeader?: ManualSortGroupHeaderData;
+    // Accumulated word count for the manual sort custom header segment.
+    manualSortHeaderWordCount?: number;
+    // Resolved target word count for the manual sort custom header segment.
+    manualSortHeaderTargetWordCount?: number | null;
+    headerKind?: ListPaneHeaderKind;
+    collapseKey?: string;
+    isCollapsed?: boolean;
     key: string;
     // Pre-computed file index for stable onClick handlers
     fileIndex?: number;
     // Indicates if this file is pinned
     isPinned?: boolean;
     searchMeta?: SearchResultMeta;
+    matchedAliases?: readonly AliasSearchMatch[];
+    matchedProperties?: readonly PropertySearchMatch[];
     // Pre-computed flag indicating if file has tags (for height calculation optimization)
     hasTags?: boolean;
     // Marks files that are normally hidden (frontmatter or excluded folders) but shown via "show hidden items"

@@ -24,8 +24,10 @@ function createView() {
     return {
         navigateToFile: vi.fn<(file: TFile) => boolean>(() => true),
         navigateToFolder: vi.fn<(folder: TFolder | string, options?: { preserveNavigationFocus?: boolean }) => boolean>(() => true),
-        navigateToTag: vi.fn<(tag: string) => string | null>(() => 'work'),
-        navigateToProperty: vi.fn<(nodeId: string) => string | null>(() => 'key:status=done'),
+        navigateToTag: vi.fn<(tag: string, options?: { preserveNavigationFocus?: boolean }) => string | null>(() => 'work'),
+        navigateToProperty: vi.fn<(nodeId: string, options?: { preserveNavigationFocus?: boolean }) => string | null>(
+            () => 'key:status=done'
+        ),
         whenReady: vi.fn(async () => true)
     };
 }
@@ -136,7 +138,7 @@ describe('NavigationAPI', () => {
         const navigationAPI = new NavigationAPI(api);
         await expect(navigationAPI.navigateToTag('#work')).resolves.toBe(true);
 
-        expect(view.navigateToTag).toHaveBeenCalledWith('#work');
+        expect(view.navigateToTag).toHaveBeenCalledWith('#work', { preserveNavigationFocus: true });
     });
 
     it('returns false when tag navigation does not resolve', async () => {
@@ -161,7 +163,7 @@ describe('NavigationAPI', () => {
         const navigationAPI = new NavigationAPI(api);
         await expect(navigationAPI.navigateToTag('#work')).resolves.toBe(false);
 
-        expect(view.navigateToTag).toHaveBeenCalledWith('#work');
+        expect(view.navigateToTag).toHaveBeenCalledWith('#work', { preserveNavigationFocus: true });
     });
 
     it('returns false when property navigation does not resolve', async () => {
@@ -186,7 +188,7 @@ describe('NavigationAPI', () => {
         const navigationAPI = new NavigationAPI(api);
         await expect(navigationAPI.navigateToProperty('key:status=done')).resolves.toBe(false);
 
-        expect(view.navigateToProperty).toHaveBeenCalledWith('key:status=done');
+        expect(view.navigateToProperty).toHaveBeenCalledWith('key:status=done', { preserveNavigationFocus: true });
     });
 
     it('returns false when the navigator view cannot be opened', async () => {

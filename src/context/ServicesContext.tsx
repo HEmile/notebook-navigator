@@ -18,18 +18,18 @@
 
 // src/context/ServicesContext.tsx
 import React, { createContext, useContext, useMemo } from 'react';
-import { App, Platform } from 'obsidian';
-import NotebookNavigatorPlugin from '../main';
-import { FileSystemOperations } from '../services/FileSystemService';
-import { MetadataService } from '../services/MetadataService';
-import { PropertyOperations } from '../services/PropertyOperations';
-import { TagOperations } from '../services/TagOperations';
-import { TagTreeService } from '../services/TagTreeService';
-import { PropertyTreeService } from '../services/PropertyTreeService';
-import { TopicService } from '../services/TopicGraphService';
-import { CommandQueueService } from '../services/CommandQueueService';
-import { OmnisearchService } from '../services/OmnisearchService';
-import ReleaseCheckService from '../services/ReleaseCheckService';
+import { Platform, type App } from 'obsidian';
+import type NotebookNavigatorPlugin from '../main';
+import type { FileSystemOperations } from '../services/FileSystemService';
+import type { MetadataService } from '../services/MetadataService';
+import type { PropertyOperations } from '../services/PropertyOperations';
+import type { TagOperations } from '../services/TagOperations';
+import type { TagTreeService } from '../services/TagTreeService';
+import type { PropertyTreeService } from '../services/PropertyTreeService';
+import type { TopicService } from '../services/TopicGraphService';
+import type { CommandQueueService } from '../services/CommandQueueService';
+import type { OmnisearchService } from '../services/OmnisearchService';
+import type ReleaseCheckService from '../services/ReleaseCheckService';
 
 /**
  * Interface defining all services and stable dependencies available through the context.

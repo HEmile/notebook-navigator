@@ -17,12 +17,7 @@
  */
 
 export type ExternalIconProviderId =
-    | 'bootstrap-icons'
-    | 'fontawesome-solid'
-    | 'material-icons'
-    | 'phosphor'
-    | 'rpg-awesome'
-    | 'simple-icons';
+    'bootstrap-icons' | 'fontawesome-solid' | 'material-icons' | 'phosphor' | 'rpg-awesome' | 'simple-icons';
 
 export interface ExternalIconManifest {
     version: string;

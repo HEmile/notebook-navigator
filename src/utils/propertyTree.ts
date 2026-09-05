@@ -19,11 +19,11 @@
 import type { FileData } from '../storage/IndexedDBStorage';
 import type { PropertyTreeNode, PropertyTreeNodeId } from '../types/storage';
 import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../types';
-import type { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
 import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
 import { isPathInExcludedFolder } from './fileFilters';
 import { getCachedCommaSeparatedList } from './commaSeparatedListUtils';
-import { normalizePropertyTreeValuePath, resolvePropertyDisplayText } from './propertyUtils';
+import { isPropertyLinkMarkupValue, normalizePropertyTreeValuePath, resolvePropertyDisplayText } from './propertyUtils';
 import { casefold } from './recordUtils';
 import { naturalCompare } from './sortUtils';
 import { isRecord } from './typeGuards';
@@ -34,7 +34,7 @@ export { normalizePropertyTreeValuePath };
 export interface BuildPropertyTreeOptions {
     excludedFolderPatterns?: string[];
     includedPaths?: Set<string>;
-    includedPropertyKeys?: Set<string>;
+    includedPropertyKeys?: ReadonlySet<string>;
 }
 
 export interface PropertySelectionValue {
@@ -335,7 +335,7 @@ function normalizePropertyTreeKey(value: string): string {
     return casefold(value);
 }
 
-function normalizeIncludedPropertyKeySet(includedPropertyKeys: Set<string> | undefined): Set<string> {
+function normalizeIncludedPropertyKeySet(includedPropertyKeys: ReadonlySet<string> | undefined): Set<string> {
     const normalizedKeys = new Set<string>();
     if (!includedPropertyKeys || includedPropertyKeys.size === 0) {
         return normalizedKeys;
@@ -398,6 +398,14 @@ function sortPropertyTreeNodes(tree: Map<string, PropertyTreeNode>): Map<string,
         sortedTree.set(node.key, node);
     });
     return sortedTree;
+}
+
+function shouldReplaceAssignmentValue(currentValue: string | undefined, candidateValue: string): boolean {
+    if (!currentValue) {
+        return true;
+    }
+
+    return !isPropertyLinkMarkupValue(currentValue) && isPropertyLinkMarkupValue(candidateValue);
 }
 
 function getConfiguredPropertyKeySet(propertyFields: string): ReadonlySet<string> {
@@ -898,10 +906,13 @@ function registerPropertyTreeEntry(
             valuePath: normalizedValuePath,
             name: displayValuePath,
             displayPath: displayValuePath,
+            assignmentValue: propertyEntry.value,
             children: new Map(),
             notesWithValue: new Set()
         };
         keyNode.children.set(nodeId, valueNode);
+    } else if (shouldReplaceAssignmentValue(valueNode.assignmentValue, propertyEntry.value)) {
+        valueNode.assignmentValue = propertyEntry.value;
     }
 
     valueNode.notesWithValue.add(path);

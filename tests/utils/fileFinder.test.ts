@@ -17,23 +17,26 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { App, TFile } from 'obsidian';
+import { App, TFile, TFolder } from 'obsidian';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { NotebookNavigatorSettings, VaultProfile } from '../../src/settings/types';
 import type { VisibilityPreferences } from '../../src/types';
 import type { ITagTreeProvider } from '../../src/interfaces/ITagTreeProvider';
 import type { TagTreeNode } from '../../src/types/storage';
-import type { PropertyItem } from '../../src/storage/IndexedDBStorage';
+import type { FileData, PropertyItem } from '../../src/storage/IndexedDBStorage';
 import { FILE_VISIBILITY } from '../../src/utils/fileTypeUtils';
-import { getFilesForProperty, getFilesForTag } from '../../src/utils/fileFinder';
+import { getFilesForFolder, getFilesForProperty, getFilesForTag } from '../../src/utils/fileFinder';
+import { markFrontmatterMetadataCacheCurrent } from '../../src/utils/frontmatterMetadataCache';
 import { buildPropertyKeyNodeId } from '../../src/utils/propertyTree';
 import { setActivePropertyFields } from '../../src/utils/vaultProfiles';
 import { createTestTFile } from './createTestTFile';
 
-const fileDataByPath = new Map<string, { tags: readonly string[] | null; properties: PropertyItem[] | null }>();
+type TestFileData = Partial<FileData> & Pick<FileData, 'tags' | 'properties'>;
+
+const fileDataByPath = new Map<string, TestFileData>();
 
 const db = {
-    getFile(path: string): { tags: readonly string[] | null; properties: PropertyItem[] | null } | null {
+    getFile(path: string): TestFileData | null {
         return fileDataByPath.get(path) ?? null;
     }
 };
@@ -72,6 +75,7 @@ function createAppWithFiles(files: TFile[]): App {
     const allFiles = (): TFile[] => Array.from(filesByPath.values());
 
     Reflect.set(app.vault, 'getFileByPath', (path: string) => filesByPath.get(path) ?? null);
+    Reflect.set(app.vault, 'getAbstractFileByPath', (path: string) => filesByPath.get(path) ?? null);
     Reflect.set(app.vault, 'getFiles', () => allFiles());
     Reflect.set(app.vault, 'getMarkdownFiles', () => allFiles().filter(file => file.extension === 'md'));
 
@@ -106,7 +110,9 @@ function setFileTags(file: TFile, tags: readonly string[]): void {
     const existing = fileDataByPath.get(file.path);
     fileDataByPath.set(file.path, {
         tags: [...tags],
-        properties: existing?.properties ?? null
+        properties: existing?.properties ?? null,
+        metadataMtime: existing?.metadataMtime,
+        metadata: existing?.metadata
     });
 }
 
@@ -114,13 +120,110 @@ function setFileProperties(file: TFile, properties: PropertyItem[]): void {
     const existing = fileDataByPath.get(file.path);
     fileDataByPath.set(file.path, {
         tags: existing?.tags ?? null,
-        properties: [...properties]
+        properties: [...properties],
+        metadataMtime: existing?.metadataMtime,
+        metadata: existing?.metadata
     });
+}
+
+function setFileMetadata(file: TFile, metadata: NonNullable<FileData['metadata']>): void {
+    const existing = fileDataByPath.get(file.path);
+    fileDataByPath.set(file.path, {
+        tags: existing?.tags ?? null,
+        properties: existing?.properties ?? null,
+        metadataMtime: file.stat.mtime,
+        metadata
+    });
+}
+
+function createFolder(path: string, children: Array<TFile | TFolder>): TFolder {
+    const folder = new TFolder() as TFolder & { children: Array<TFile | TFolder> };
+    folder.path = path;
+    folder.name = path.split('/').pop() ?? path;
+    folder.children = children;
+    children.forEach(child => {
+        Reflect.set(child, 'parent', folder);
+    });
+    return folder;
 }
 
 function toSortedPaths(files: TFile[]): string[] {
     return files.map(file => file.path).sort();
 }
+
+describe('fileFinder getFilesForFolder', () => {
+    beforeEach(() => {
+        fileDataByPath.clear();
+    });
+
+    it('honors the Excalidraw rendered preview image hiding setting', () => {
+        const drawing = createTestTFile('Drawings/Sketch.excalidraw.md');
+        const companionImage = createTestTFile('Drawings/Sketch.excalidraw.png');
+        const normalImage = createTestTFile('Drawings/Cover.png');
+        const folder = createFolder('Drawings', [drawing, companionImage, normalImage]);
+        const app = createAppWithFiles([drawing, companionImage, normalImage]);
+        const visibility: VisibilityPreferences = { includeDescendantNotes: false, showHiddenItems: false };
+
+        expect(toSortedPaths(getFilesForFolder(folder, createSettings(), visibility, app))).toEqual([
+            'Drawings/Cover.png',
+            'Drawings/Sketch.excalidraw.md'
+        ]);
+
+        expect(toSortedPaths(getFilesForFolder(folder, { ...createSettings(), hideDrawingPreviewImages: false }, visibility, app))).toEqual(
+            ['Drawings/Cover.png', 'Drawings/Sketch.excalidraw.md', 'Drawings/Sketch.excalidraw.png']
+        );
+    });
+
+    it('excludes configured folders only from ancestor descendant results', () => {
+        const rootNote = createTestTFile('Root.md');
+        const dailyNote = createTestTFile('Daily/today.md');
+        const dailyYearNote = createTestTFile('Daily/2026/day.md');
+        const workNote = createTestTFile('Work/work.md');
+        const resourceNote = createTestTFile('Work/resources/asset.md');
+
+        const dailyYearFolder = createFolder('Daily/2026', [dailyYearNote]);
+        const dailyFolder = createFolder('Daily', [dailyNote, dailyYearFolder]);
+        const resourcesFolder = createFolder('Work/resources', [resourceNote]);
+        const workFolder = createFolder('Work', [workNote, resourcesFolder]);
+        const rootFolder = createFolder('', [rootNote, dailyFolder, workFolder]);
+
+        const app = createAppWithFiles([rootNote, dailyNote, dailyYearNote, workNote, resourceNote]);
+        const settings = createSettings({ descendantExcludedFolders: ['/Daily', 'resources'] });
+        const visibility: VisibilityPreferences = { includeDescendantNotes: true, showHiddenItems: false };
+
+        expect(toSortedPaths(getFilesForFolder(rootFolder, settings, visibility, app))).toEqual(['Root.md', 'Work/work.md']);
+        expect(toSortedPaths(getFilesForFolder(dailyFolder, settings, visibility, app))).toEqual(['Daily/2026/day.md', 'Daily/today.md']);
+    });
+
+    it('uses fresh mirrored frontmatter metadata when sorting folder results', () => {
+        const first = createTestTFile('Notes/first.md');
+        first.stat.mtime = 10;
+        first.stat.ctime = 200;
+        const second = createTestTFile('Notes/second.md');
+        second.stat.mtime = 20;
+        second.stat.ctime = 100;
+        const folder = createFolder('Notes', [first, second]);
+        const app = createAppWithFiles([first, second]);
+        const settings = {
+            ...createSettings(),
+            useFrontmatterMetadata: true,
+            frontmatterCreatedField: 'created',
+            defaultFolderSort: 'created-asc' as const
+        };
+        setFileMetadata(first, { created: 1000 });
+        setFileMetadata(second, { created: 500 });
+        markFrontmatterMetadataCacheCurrent(settings);
+        const getFileCache = vi.fn(() => {
+            throw new Error('live metadata should not be read when mirrored metadata is fresh');
+        });
+        app.metadataCache.getFileCache = getFileCache;
+
+        const files = getFilesForFolder(folder, settings, { includeDescendantNotes: false, showHiddenItems: false }, app);
+
+        expect(files.map(file => file.path)).toEqual([second.path, first.path]);
+        expect(getFileCache).not.toHaveBeenCalled();
+    });
+});
 
 describe('fileFinder getFilesForTag', () => {
     beforeEach(() => {

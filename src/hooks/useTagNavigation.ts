@@ -20,7 +20,7 @@ import { useCallback } from 'react';
 import { useExpansionDispatch, useExpansionState } from '../context/ExpansionContext';
 import { useSelectionDispatch } from '../context/SelectionContext';
 import { useSettingsState } from '../context/SettingsContext';
-import { useUIState, useUIDispatch } from '../context/UIStateContext';
+import { useUIDispatch, type ContentPane } from '../context/UIStateContext';
 import { useFileCache } from '../context/StorageContext';
 import { navigateToTag as navigateToTagInternal, type NavigateToTagOptions } from '../utils/tagNavigation';
 import { navigateToProperty as navigateToPropertyInternal, type NavigateToPropertyOptions } from '../utils/propertyNavigation';
@@ -37,9 +37,14 @@ export function useTagNavigation() {
     const expansionState = useExpansionState();
     const selectionDispatch = useSelectionDispatch();
     const expansionDispatch = useExpansionDispatch();
-    const uiState = useUIState();
     const uiDispatch = useUIDispatch();
     const { findTagInTree, getPropertyTree } = useFileCache();
+    const activatePane = useCallback(
+        (target: ContentPane) => {
+            uiDispatch({ type: 'ACTIVATE_PANE', target });
+        },
+        [uiDispatch]
+    );
 
     /**
      * Navigates to a tag, expanding parent tags if it's hierarchical.
@@ -54,14 +59,10 @@ export function useTagNavigation() {
                     showAllTagsFolder: settings.showAllTagsFolder,
                     expandedTags: expansionState.expandedTags,
                     expandedVirtualFolders: expansionState.expandedVirtualFolders,
+                    collapseOtherBranchesOnExpand: settings.collapseOtherBranchesOnExpand,
                     expansionDispatch,
                     selectionDispatch,
-                    uiState: {
-                        singlePane: uiState.singlePane,
-                        currentSinglePaneView: uiState.currentSinglePaneView,
-                        focusedPane: uiState.focusedPane
-                    },
-                    uiDispatch,
+                    activatePane,
                     findTagInTree
                 },
                 tagPath,
@@ -78,12 +79,10 @@ export function useTagNavigation() {
             expansionState.expandedTags,
             expansionState.expandedVirtualFolders,
             settings.showAllTagsFolder,
+            settings.collapseOtherBranchesOnExpand,
             settings.showTags,
             findTagInTree,
-            uiDispatch,
-            uiState.currentSinglePaneView,
-            uiState.focusedPane,
-            uiState.singlePane
+            activatePane
         ]
     );
 
@@ -101,14 +100,10 @@ export function useTagNavigation() {
                     propertyTree: getPropertyTree(),
                     expandedProperties: expansionState.expandedProperties,
                     expandedVirtualFolders: expansionState.expandedVirtualFolders,
+                    collapseOtherBranchesOnExpand: settings.collapseOtherBranchesOnExpand,
                     expansionDispatch,
                     selectionDispatch,
-                    uiState: {
-                        singlePane: uiState.singlePane,
-                        currentSinglePaneView: uiState.currentSinglePaneView,
-                        focusedPane: uiState.focusedPane
-                    },
-                    uiDispatch
+                    activatePane
                 },
                 propertyNodeId,
                 {
@@ -125,11 +120,9 @@ export function useTagNavigation() {
             getPropertyTree,
             selectionDispatch,
             settings.showAllPropertiesFolder,
+            settings.collapseOtherBranchesOnExpand,
             settings.showProperties,
-            uiDispatch,
-            uiState.currentSinglePaneView,
-            uiState.focusedPane,
-            uiState.singlePane
+            activatePane
         ]
     );
 

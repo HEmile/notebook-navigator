@@ -20,7 +20,7 @@ import { App, FuzzyMatch } from 'obsidian';
 import { strings } from '../i18n';
 import { TagTreeNode } from '../types/storage';
 import { BaseSuggestModal } from './BaseSuggestModal';
-import NotebookNavigatorPlugin from '../main';
+import type NotebookNavigatorPlugin from '../main';
 import { hasValidTagCharacters } from '../utils/tagUtils';
 import { normalizeTagPathValue } from '../utils/tagPrefixMatcher';
 

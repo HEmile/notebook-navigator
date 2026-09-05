@@ -23,6 +23,9 @@ import { getProviderProcessedMtimeField } from '../providerMtime';
 import { PREVIEW_STORE_NAME, STORE_NAME } from './constants';
 import {
     createDefaultFileData,
+    getChangedPropertyKeys,
+    hasMetadataDecorationChanged,
+    hasMetadataHiddenChanged,
     hasMetadataNameChanged,
     normalizeTaskCounters,
     type FileContentChange,
@@ -35,6 +38,8 @@ export interface BatchContentUpdate {
     path: string;
     tags?: string[] | null;
     wordCount?: number | null;
+    characterCountWithSpaces?: number | null;
+    characterCountWithoutSpaces?: number | null;
     taskTotal?: number | null;
     taskUnfinished?: number | null;
     preview?: string;
@@ -141,7 +146,11 @@ export async function runBatchUpdateFileContentAndProviderProcessedMtimes(
                 }
                 const newData: FileData = { ...existing };
                 const changes: FileContentChange['changes'] = {};
+                let metadataHiddenChanged = false;
                 let metadataNameChanged = false;
+                let metadataDecorationChanged = false;
+                let changedPropertyKeys: string[] | undefined;
+                let previousTaskCounters: FileContentChange['previousTaskCounters'];
                 let hasContentChanges = false;
                 const providerField = provider ? getProviderProcessedMtimeField(provider) : null;
                 const shouldApplyProviderContent =
@@ -172,17 +181,41 @@ export async function runBatchUpdateFileContentAndProviderProcessedMtimes(
                         changes.wordCount = guardedUpdate.wordCount;
                         hasContentChanges = true;
                     }
+                    if (guardedUpdate.characterCountWithSpaces !== undefined) {
+                        newData.characterCountWithSpaces = guardedUpdate.characterCountWithSpaces;
+                        changes.characterCountWithSpaces = guardedUpdate.characterCountWithSpaces;
+                        hasContentChanges = true;
+                    }
+                    if (guardedUpdate.characterCountWithoutSpaces !== undefined) {
+                        newData.characterCountWithoutSpaces = guardedUpdate.characterCountWithoutSpaces;
+                        changes.characterCountWithoutSpaces = guardedUpdate.characterCountWithoutSpaces;
+                        hasContentChanges = true;
+                    }
                     const hasTaskUpdate = guardedUpdate.taskTotal !== undefined || guardedUpdate.taskUnfinished !== undefined;
                     if (hasTaskUpdate) {
-                        // Task counters must be written together; normalization preserves pair semantics.
+                        // Counters are persisted as a pair, but notifications publish fields independently because
+                        // unfinished-task consumers would otherwise refresh on total-only changes.
                         const normalizedTaskCounters = normalizeTaskCounters(guardedUpdate.taskTotal, guardedUpdate.taskUnfinished);
                         newData.taskTotal = normalizedTaskCounters.taskTotal;
                         newData.taskUnfinished = normalizedTaskCounters.taskUnfinished;
-                        changes.taskTotal = normalizedTaskCounters.taskTotal;
-                        changes.taskUnfinished = normalizedTaskCounters.taskUnfinished;
-                        hasContentChanges = true;
+                        const taskTotalChanged = existing.taskTotal !== normalizedTaskCounters.taskTotal;
+                        const taskUnfinishedChanged = existing.taskUnfinished !== normalizedTaskCounters.taskUnfinished;
+                        if (taskTotalChanged || taskUnfinishedChanged) {
+                            previousTaskCounters = {
+                                taskTotal: existing.taskTotal,
+                                taskUnfinished: existing.taskUnfinished
+                            };
+                            if (taskTotalChanged) {
+                                changes.taskTotal = normalizedTaskCounters.taskTotal;
+                            }
+                            if (taskUnfinishedChanged) {
+                                changes.taskUnfinished = normalizedTaskCounters.taskUnfinished;
+                            }
+                            hasContentChanges = true;
+                        }
                     }
                     if (guardedUpdate.properties !== undefined) {
+                        changedPropertyKeys = getChangedPropertyKeys(existing.properties, guardedUpdate.properties);
                         newData.properties = guardedUpdate.properties;
                         changes.properties = guardedUpdate.properties;
                         hasContentChanges = true;
@@ -191,6 +224,9 @@ export async function runBatchUpdateFileContentAndProviderProcessedMtimes(
                         const previewStatus: PreviewStatus = guardedUpdate.preview.length > 0 ? 'has' : 'none';
                         newData.previewStatus = previewStatus;
                         changes.preview = guardedUpdate.preview;
+                        if (existing.previewStatus !== previewStatus) {
+                            changes.previewStatus = previewStatus;
+                        }
                         hasContentChanges = true;
                         if (previewStore && previewStatus === 'has') {
                             const previewReq = previewStore.put(guardedUpdate.preview, path);
@@ -240,7 +276,9 @@ export async function runBatchUpdateFileContentAndProviderProcessedMtimes(
                     }
 
                     if (guardedUpdate.metadata !== undefined) {
+                        metadataHiddenChanged = hasMetadataHiddenChanged(existing.metadata, guardedUpdate.metadata);
                         metadataNameChanged = hasMetadataNameChanged(existing.metadata, guardedUpdate.metadata);
+                        metadataDecorationChanged = hasMetadataDecorationChanged(existing.metadata, guardedUpdate.metadata);
                         newData.metadata = guardedUpdate.metadata;
                         changes.metadata = guardedUpdate.metadata;
                         hasContentChanges = true;
@@ -306,17 +344,28 @@ export async function runBatchUpdateFileContentAndProviderProcessedMtimes(
                     if (hasContentChanges) {
                         const hasContentUpdates =
                             changes.preview !== undefined ||
+                            changes.previewStatus !== undefined ||
                             changes.featureImageKey !== undefined ||
                             changes.featureImageStatus !== undefined ||
                             changes.wordCount !== undefined ||
+                            changes.characterCountWithSpaces !== undefined ||
+                            changes.characterCountWithoutSpaces !== undefined ||
                             changes.taskTotal !== undefined ||
                             changes.taskUnfinished !== undefined ||
                             changes.properties !== undefined;
                         const hasMetadataUpdates = changes.metadata !== undefined || changes.tags !== undefined;
                         const updateType = hasContentUpdates && hasMetadataUpdates ? 'both' : hasContentUpdates ? 'content' : 'metadata';
                         const contentChange: FileContentChange = { path, changes, changeType: updateType };
+                        if (previousTaskCounters) {
+                            contentChange.previousTaskCounters = previousTaskCounters;
+                        }
+                        if (changes.properties !== undefined) {
+                            contentChange.changedPropertyKeys = changedPropertyKeys;
+                        }
                         if (changes.metadata !== undefined) {
+                            contentChange.metadataHiddenChanged = metadataHiddenChanged;
                             contentChange.metadataNameChanged = metadataNameChanged;
+                            contentChange.metadataDecorationChanged = metadataDecorationChanged;
                         }
                         changeNotifications.push(contentChange);
                     }

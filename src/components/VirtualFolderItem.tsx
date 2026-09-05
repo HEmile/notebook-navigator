@@ -74,6 +74,7 @@ interface VirtualFolderItemProps {
     level: number; // Nesting level for indentation
     color?: string;
     backgroundColor?: string;
+    adjacentFilledClassName?: string;
     indentGuideLevels?: number[]; // Levels of expanded ancestors whose connector lines should be rendered on this row
     isExpanded: boolean; // From ExpansionContext via NavigationPane
     hasChildren: boolean; // Computed by NavigationPane from tag tree
@@ -82,6 +83,7 @@ interface VirtualFolderItemProps {
     onSelect?: (event: React.MouseEvent<HTMLDivElement>) => void; // Optional selection handler
     isSelected?: boolean; // Selection state for virtual folders that act as collections
     showFileCount?: boolean; // Whether to render note count badge
+    showCountLeader?: boolean; // Whether to render count leader marks before the trailing count area
     countInfo?: NoteCountInfo; // Pre-computed note counts
     searchMatch?: 'include' | 'exclude'; // Search highlight state
     trailingAction?: VirtualFolderTrailingAction; // Optional trailing action button
@@ -118,6 +120,7 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
     level,
     color,
     backgroundColor,
+    adjacentFilledClassName,
     indentGuideLevels,
     isExpanded,
     hasChildren,
@@ -125,6 +128,7 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
     onSelect,
     isSelected = false,
     showFileCount = false,
+    showCountLeader = true,
     countInfo,
     searchMatch,
     trailingAction,
@@ -137,9 +141,9 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
 }: VirtualFolderItemProps) {
     const settings = useSettingsState();
     const uxPreferences = useUXPreferences();
-    const folderRef = useRef<HTMLDivElement>(null);
-    const chevronRef = useRef<HTMLDivElement>(null);
-    const iconRef = useRef<HTMLSpanElement>(null);
+    const folderRef = useRef<HTMLDivElement | null>(null);
+    const chevronRef = useRef<HTMLDivElement | null>(null);
+    const iconRef = useRef<HTMLSpanElement | null>(null);
     const iconVersion = useIconServiceVersion();
     const includeDescendantNotes = uxPreferences.includeDescendantNotes;
     const applyColorToName = Boolean(color) && !settings.colorIconOnly;
@@ -188,6 +192,7 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
         }
         return trailingActionLabelMode !== 'note-count';
     }, [noteCountDisplay, shouldDisplayCount, trailingActionLabelMode]);
+    const reserveTrailingActionSpace = trailingActionLabelMode !== 'note-count' || typeof trailingActionLabel === 'string';
 
     // Build CSS class name with selection state
     const className = useMemo(() => {
@@ -207,8 +212,11 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
         if (searchMatch) {
             classes.push('nn-has-search-match');
         }
+        if (adjacentFilledClassName) {
+            classes.push(adjacentFilledClassName);
+        }
         return classes.join(' ');
-    }, [backgroundColor, isSelected, searchMatch, virtualFolder.id]);
+    }, [adjacentFilledClassName, backgroundColor, isSelected, searchMatch, virtualFolder.id]);
 
     const contentClassName = useMemo(() => buildSearchMatchContentClass(['nn-navitem-content'], searchMatch), [searchMatch]);
     const virtualFolderNameClassName = useMemo(() => {
@@ -325,7 +333,7 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
                 <span className={virtualFolderNameClassName} style={applyColorToName ? { color } : undefined}>
                     {virtualFolder.name}
                 </span>
-                <span className="nn-navitem-spacer" />
+                <span className={`nn-navitem-spacer${showCountLeader ? ' nn-navitem-spacer--leader' : ''}`} />
                 {shouldRenderCountBadge && noteCountDisplay && <span className="nn-navitem-count">{noteCountDisplay.label}</span>}
                 {trailingAction && (
                     <NavItemHoverActionSlot
@@ -333,6 +341,7 @@ export const VirtualFolderComponent = React.memo(function VirtualFolderComponent
                         actionLabel={trailingAction.actionLabel}
                         icon={trailingAction.icon}
                         onClick={trailingAction.onClick}
+                        reserveSpaceWhenHidden={reserveTrailingActionSpace}
                     />
                 )}
             </div>

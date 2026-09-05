@@ -19,7 +19,10 @@ import { describe, expect, it } from 'vitest';
 import {
     casefold,
     casefoldPreservingWhitespace,
+    cloneCollapsedPinnedContextsRecord,
     clonePinnedNotesRecord,
+    cleanupCollapsedPinnedContextKeys,
+    deleteCollapsedPinnedContextKeys,
     ensureRecord,
     findMatchingRecordKey,
     getMatchingRecordValue,
@@ -27,8 +30,10 @@ import {
     foldSearchTextFromLowercase,
     isStringRecordValue,
     normalizePinnedNoteContext,
-    sanitizeRecord
+    sanitizeRecord,
+    updateCollapsedPinnedContextKeys
 } from '../../src/utils/recordUtils';
+import { buildPropertyKeyNodeId, buildPropertyValueNodeId } from '../../src/utils/propertyTree';
 
 describe('sanitizeRecord', () => {
     it('returns a null-prototype object while preserving own entries', () => {
@@ -161,5 +166,102 @@ describe('pinned note record helpers', () => {
         expect(cloned['b.md']).toEqual({ folder: false, tag: false, property: false, topic: false });
         expect(cloned['c.md']).toEqual({ folder: false, tag: false, property: false, topic: false });
         expect(cloned['d.md']).toEqual({ folder: true, tag: true, property: true, topic: false });
+    });
+});
+
+describe('collapsed pinned context helpers', () => {
+    it('keeps only concrete collapsed navigation item keys', () => {
+        const propertyKey = buildPropertyKeyNodeId('name');
+        const cloned = cloneCollapsedPinnedContextsRecord({
+            'folder:/': true,
+            'folder:Projects': true,
+            'tag:work/client': true,
+            [`property:${propertyKey}`]: true,
+            folder: true,
+            'tag:': true,
+            'folder:Archive': false
+        });
+
+        expect(Object.getPrototypeOf(cloned)).toBeNull();
+        expect(cloned).toEqual({
+            'folder:/': true,
+            'folder:Projects': true,
+            'tag:work/client': true,
+            [`property:${propertyKey}`]: true
+        });
+    });
+
+    it('updates exact and descendant collapsed navigation keys on rename', () => {
+        const collapsed = cloneCollapsedPinnedContextsRecord({
+            'folder:Projects': true,
+            'folder:Projects/Client': true,
+            'folder:Archive': true,
+            'tag:Projects': true
+        });
+
+        const changed = updateCollapsedPinnedContextKeys(collapsed, 'folder', 'Projects', 'Work', { descendantDelimiter: '/' });
+
+        expect(changed).toBe(true);
+        expect(collapsed).toEqual({
+            'folder:Work': true,
+            'folder:Work/Client': true,
+            'folder:Archive': true,
+            'tag:Projects': true
+        });
+    });
+
+    it('preserves existing destination collapse state when requested', () => {
+        const collapsed = cloneCollapsedPinnedContextsRecord({
+            'tag:old': true,
+            'tag:old/child': true,
+            'tag:new/child': true
+        });
+
+        const changed = updateCollapsedPinnedContextKeys(collapsed, 'tag', 'old', 'new', {
+            descendantDelimiter: '/',
+            preserveExisting: true
+        });
+
+        expect(changed).toBe(true);
+        expect(collapsed).toEqual({
+            'tag:new': true,
+            'tag:new/child': true
+        });
+    });
+
+    it('deletes exact and descendant collapsed navigation keys', () => {
+        const statusKey = buildPropertyKeyNodeId('status=phase');
+        const statusTodoValue = buildPropertyValueNodeId('status=phase', 'todo');
+        const priorityKey = buildPropertyKeyNodeId('priority');
+        const collapsed = cloneCollapsedPinnedContextsRecord({
+            [`property:${statusKey}`]: true,
+            [`property:${statusTodoValue}`]: true,
+            [`property:${priorityKey}`]: true
+        });
+
+        const changed = deleteCollapsedPinnedContextKeys(collapsed, 'property', statusKey, { descendantDelimiter: '=' });
+
+        expect(changed).toBe(true);
+        expect(collapsed).toEqual({
+            [`property:${priorityKey}`]: true
+        });
+    });
+
+    it('cleans up collapsed navigation keys that fail validation', () => {
+        const collapsed = cloneCollapsedPinnedContextsRecord({
+            'folder:/': true,
+            'folder:Projects': true,
+            'folder:Missing': true,
+            'tag:Missing': true
+        });
+
+        const changed = cleanupCollapsedPinnedContextKeys(collapsed, 'folder', path => path === '/' || path === 'Projects');
+
+        expect(changed).toBe(true);
+        expect(collapsed).toEqual({
+            'folder:/': true,
+            'folder:Projects': true,
+            'tag:Missing': true
+        });
     });
 });

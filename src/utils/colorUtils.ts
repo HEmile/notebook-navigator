@@ -55,8 +55,7 @@ function ensureResolverElement(container: HTMLElement): HTMLElement {
     }
 
     // Create new hidden resolver element
-    const doc = container.ownerDocument;
-    const resolver = doc.createElement('div');
+    const resolver = container.win.createDiv();
     resolver.classList.add('nn-color-resolver');
     resolver.setAttribute('aria-hidden', 'true');
     container.appendChild(resolver);
@@ -593,7 +592,7 @@ function rgbaToHsla(color: RGBA): HSLA {
     }
 
     const s = delta / (1 - Math.abs(2 * l - 1));
-    let h = 0;
+    let h: number;
 
     if (max === r) {
         h = ((g - b) / delta) % 6;
@@ -928,4 +927,63 @@ export function compositeWithBase(
     // Step 4: Perform alpha compositing and return solid color
     const blended = compositeOntoBase(effectiveBase, overlay);
     return formatRgb(blended);
+}
+
+export type SolidBackgroundResolver = (color?: string | null) => string | undefined;
+
+/**
+ * Creates a cached background resolver for one surface generation.
+ * Callers must replace the resolver before rendering consumers after the surface or a CSS-backed
+ * color revision changes; otherwise cached opaque colors would still contain the previous surface.
+ */
+export function createSolidBackgroundResolver(surfaceColor: RGBA | null, getContainer: () => HTMLElement | null): SolidBackgroundResolver {
+    const cache = new Map<string, string | undefined>();
+
+    return color => {
+        if (!color) {
+            return undefined;
+        }
+        const trimmed = color.trim();
+        if (!trimmed) {
+            return undefined;
+        }
+        if (cache.has(trimmed)) {
+            return cache.get(trimmed);
+        }
+
+        const solidColor = compositeWithBase(surfaceColor, trimmed, { container: getContainer() });
+        cache.set(trimmed, solidColor);
+        return solidColor;
+    };
+}
+
+// ============================================================================
+// File Row Background Resolution
+// ============================================================================
+
+interface ResolveFileRowBackgroundColorParams {
+    customBackgroundColor?: string;
+    taskUnfinished?: number | null;
+    showUnfinishedTaskBackground: boolean;
+    unfinishedTaskBackgroundColor: string;
+    getSolidBackground: (color?: string | null) => string | undefined;
+}
+
+export function resolveFileRowBackgroundColor({
+    customBackgroundColor,
+    taskUnfinished,
+    showUnfinishedTaskBackground,
+    unfinishedTaskBackgroundColor,
+    getSolidBackground
+}: ResolveFileRowBackgroundColorParams): string | undefined {
+    const taskBackgroundColor =
+        showUnfinishedTaskBackground && typeof taskUnfinished === 'number' && taskUnfinished > 0
+            ? unfinishedTaskBackgroundColor
+            : undefined;
+
+    return getSolidBackground(taskBackgroundColor ?? customBackgroundColor);
+}
+
+export function hasSolidFileRowBackground(params: ResolveFileRowBackgroundColorParams): boolean {
+    return Boolean(resolveFileRowBackgroundColor(params));
 }

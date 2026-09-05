@@ -17,14 +17,26 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+    buildSearchNavFilterState,
     parseFilterSearchTokens,
     fileMatchesDateFilterTokens,
     fileMatchesFilterTokens,
-    updateFilterQueryWithTag
+    findFilterSearchNameMatch,
+    getFileFilterSearchMatch,
+    updateFilterQueryWithTag,
+    updateFilterQueryWithProperty
 } from '../../src/utils/filterSearch';
+import { buildPropertyValueNodeId } from '../../src/utils/propertyTree';
 import { foldSearchText } from '../../src/utils/recordUtils';
 
 const sortTokens = (values: string[]) => [...values].sort();
+
+const createLocalDate = (year: number, monthIndex: number, day: number): Date => {
+    const date = new Date(0);
+    date.setFullYear(year, monthIndex, day);
+    date.setHours(0, 0, 0, 0);
+    return date;
+};
 
 describe('parseFilterSearchTokens', () => {
     it('returns neutral tokens for blank queries', () => {
@@ -294,6 +306,28 @@ describe('parseFilterSearchTokens', () => {
         expect(range.endMs).toBe(new Date(2027, 0, 1).getTime());
     });
 
+    it('parses three-digit year date tokens with @ prefix', () => {
+        const tokens = parseFilterSearchTokens('@999');
+        expect(tokens.mode).toBe('filter');
+        expect(tokens.dateRanges).toHaveLength(1);
+        expect(tokens.excludeDateRanges).toEqual([]);
+
+        const range = tokens.dateRanges[0];
+        expect(range.field).toBe('default');
+        expect(range.startMs).toBe(createLocalDate(999, 0, 1).getTime());
+        expect(range.endMs).toBe(createLocalDate(1000, 0, 1).getTime());
+    });
+
+    it('parses zero-padded pre-1000 year date tokens with @ prefix', () => {
+        const tokens = parseFilterSearchTokens('@0999');
+        expect(tokens.mode).toBe('filter');
+        expect(tokens.dateRanges).toHaveLength(1);
+
+        const range = tokens.dateRanges[0];
+        expect(range.startMs).toBe(createLocalDate(999, 0, 1).getTime());
+        expect(range.endMs).toBe(createLocalDate(1000, 0, 1).getTime());
+    });
+
     it('parses year/month date tokens with @ prefix', () => {
         const tokens = parseFilterSearchTokens('@2026-02');
         expect(tokens.mode).toBe('filter');
@@ -304,6 +338,17 @@ describe('parseFilterSearchTokens', () => {
         expect(range.field).toBe('default');
         expect(range.startMs).toBe(new Date(2026, 1, 1).getTime());
         expect(range.endMs).toBe(new Date(2026, 2, 1).getTime());
+    });
+
+    it('parses pre-1000 year/month date tokens with @ prefix', () => {
+        const tokens = parseFilterSearchTokens('@999-02');
+        expect(tokens.mode).toBe('filter');
+        expect(tokens.dateRanges).toHaveLength(1);
+        expect(tokens.excludeDateRanges).toEqual([]);
+
+        const range = tokens.dateRanges[0];
+        expect(range.startMs).toBe(createLocalDate(999, 1, 1).getTime());
+        expect(range.endMs).toBe(createLocalDate(999, 2, 1).getTime());
     });
 
     it('parses year/week date tokens with @ prefix', () => {
@@ -352,6 +397,17 @@ describe('parseFilterSearchTokens', () => {
         expect(range.field).toBe('default');
         expect(range.startMs).toBe(new Date(2026, 1, 13).getTime());
         expect(range.endMs).toBe(new Date(2026, 1, 14).getTime());
+    });
+
+    it('parses pre-1000 day date tokens with separators', () => {
+        const tokens = parseFilterSearchTokens('@999-02-13');
+        expect(tokens.mode).toBe('filter');
+        expect(tokens.dateRanges).toHaveLength(1);
+        expect(tokens.excludeDateRanges).toEqual([]);
+
+        const range = tokens.dateRanges[0];
+        expect(range.startMs).toBe(createLocalDate(999, 1, 13).getTime());
+        expect(range.endMs).toBe(createLocalDate(999, 1, 14).getTime());
     });
 
     it('parses date ranges using .. with open ends', () => {
@@ -540,6 +596,29 @@ describe('parseFilterSearchTokens', () => {
     });
 });
 
+describe('buildSearchNavFilterState', () => {
+    it('tracks implicit and explicit operators for included tags', () => {
+        const state = buildSearchNavFilterState('#alpha #beta OR #gamma');
+
+        expect(state.tags.include).toEqual(['alpha', 'beta', 'gamma']);
+        expect(state.tags.includeOperators).toEqual({
+            beta: 'AND',
+            gamma: 'OR'
+        });
+        expect(state.properties.includeOperators).toEqual({});
+    });
+
+    it('tracks operators for included properties in expression mode', () => {
+        const state = buildSearchNavFilterState('#alpha AND .status=started OR .status=finished');
+
+        expect(state.tags.includeOperators).toEqual({});
+        expect(state.properties.includeOperators).toEqual({
+            [buildPropertyValueNodeId('status', 'started')]: 'AND',
+            [buildPropertyValueNodeId('status', 'finished')]: 'OR'
+        });
+    });
+});
+
 describe('updateFilterQueryWithTag', () => {
     it('adds a tag to an empty query', () => {
         const result = updateFilterQueryWithTag('', 'project/alpha', 'AND');
@@ -613,6 +692,89 @@ describe('fileMatchesFilterTokens', () => {
         const tokens = parseFilterSearchTokens('plat form');
         expect(fileMatchesFilterTokens('platform notes', [], tokens)).toBe(true);
         expect(fileMatchesFilterTokens('note list', [], tokens)).toBe(false);
+    });
+
+    it('matches name tokens against aliases', () => {
+        const tokens = parseFilterSearchTokens('nn');
+
+        expect(
+            fileMatchesFilterTokens('notebook navigator', [], tokens, {
+                hasUnfinishedTasks: false,
+                foldedAliases: ['nn']
+            })
+        ).toBe(true);
+    });
+
+    it('returns alias coverage from the file acceptance pass', () => {
+        const tokens = parseFilterSearchTokens('notebook navigator');
+
+        expect(
+            getFileFilterSearchMatch('notebook', [], tokens, {
+                hasUnfinishedTasks: false,
+                foldedAliases: ['navigator']
+            })
+        ).toEqual({ matches: true, nameMatch: { aliasIndexes: [0] } });
+    });
+
+    it('requires every name token to match across the display name and aliases', () => {
+        const tokens = parseFilterSearchTokens('notebook navigator');
+
+        expect(
+            fileMatchesFilterTokens('project note', [], tokens, {
+                hasUnfinishedTasks: false,
+                foldedAliases: ['notebook navigator']
+            })
+        ).toBe(true);
+        expect(
+            fileMatchesFilterTokens('project note', [], tokens, {
+                hasUnfinishedTasks: false,
+                foldedAliases: ['notebook', 'navigator']
+            })
+        ).toBe(true);
+        expect(
+            fileMatchesFilterTokens('notebook', [], tokens, {
+                hasUnfinishedTasks: false,
+                foldedAliases: ['navigator']
+            })
+        ).toBe(true);
+    });
+
+    it('reports only the aliases needed to cover tokens missing from the display name', () => {
+        expect(findFilterSearchNameMatch('notebook navigator', ['nn'], ['notebook'])).toEqual({ aliasIndexes: [] });
+        expect(findFilterSearchNameMatch('project note', ['nn', 'notebook navigator'], ['notebook'])).toEqual({
+            aliasIndexes: [1]
+        });
+        expect(findFilterSearchNameMatch('project note', ['notebook', 'navigator'], ['notebook', 'navigator'])).toEqual({
+            aliasIndexes: [0, 1]
+        });
+        expect(findFilterSearchNameMatch('notebook', ['navigator'], ['notebook', 'navigator'])).toEqual({
+            aliasIndexes: [0]
+        });
+        expect(findFilterSearchNameMatch('project note', ['notebook', 'notebook navigator'], ['notebook', 'navigator'])).toEqual({
+            aliasIndexes: [1]
+        });
+        expect(findFilterSearchNameMatch('project note', ['notebook'], ['notebook', 'navigator'])).toBeNull();
+    });
+
+    it('removes aliases made redundant by later coverage choices', () => {
+        expect(
+            findFilterSearchNameMatch(
+                '',
+                ['alpha beta gamma delta', 'alpha beta gamma epsilon', 'delta zeta'],
+                ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta']
+            )
+        ).toEqual({ aliasIndexes: [1, 2] });
+    });
+
+    it('applies name exclusions to aliases', () => {
+        const tokens = parseFilterSearchTokens('notebook -nn');
+
+        expect(
+            fileMatchesFilterTokens('notebook navigator', [], tokens, {
+                hasUnfinishedTasks: false,
+                foldedAliases: ['nn']
+            })
+        ).toBe(false);
     });
 
     it('matches folded name, tag, and folder values', () => {
@@ -873,6 +1035,16 @@ describe('fileMatchesDateFilterTokens', () => {
         ).toBe(false);
     });
 
+    it('matches timestamps inside three-digit year filters', () => {
+        const tokens = parseFilterSearchTokens('@999');
+        const timestamp = createLocalDate(999, 6, 1).getTime();
+
+        expect(fileMatchesDateFilterTokens({ created: 0, modified: timestamp, defaultField: 'modified' }, tokens)).toBe(true);
+        expect(
+            fileMatchesDateFilterTokens({ created: 0, modified: createLocalDate(1000, 0, 1).getTime(), defaultField: 'modified' }, tokens)
+        ).toBe(false);
+    });
+
     it('matches @c: filters against created timestamps', () => {
         const tokens = parseFilterSearchTokens('@c:2026-02-04');
         const createdTimestamp = new Date(2026, 1, 4, 9, 0, 0).getTime();
@@ -894,5 +1066,149 @@ describe('fileMatchesDateFilterTokens', () => {
                 tokens
             )
         ).toBe(true);
+    });
+});
+
+describe('quoted literal search terms', () => {
+    it('parses a quoted leading-dot term as a name token instead of a property filter', () => {
+        const tokens = parseFilterSearchTokens('".F"');
+        expect(tokens.mode).toBe('filter');
+        expect(tokens.nameTokens).toEqual(['.f']);
+        expect(tokens.propertyTokens).toEqual([]);
+        expect(tokens.requiresProperties).toBe(false);
+    });
+
+    it('parses -"..." as a literal name exclusion', () => {
+        const tokens = parseFilterSearchTokens('-".F"');
+        expect(tokens.excludeNameTokens).toEqual(['.f']);
+        expect(tokens.nameTokens).toEqual([]);
+        expect(tokens.excludePropertyTokens).toEqual([]);
+    });
+
+    it('keeps a quoted leading minus inside the literal text', () => {
+        const tokens = parseFilterSearchTokens('"-.F"');
+        expect(tokens.nameTokens).toEqual(['-.f']);
+        expect(tokens.excludeNameTokens).toEqual([]);
+        expect(tokens.excludePropertyTokens).toEqual([]);
+    });
+
+    it('treats quoted filter syntax as literal name text', () => {
+        expect(parseFilterSearchTokens('"#work"').nameTokens).toEqual(['#work']);
+        expect(parseFilterSearchTokens('"#work"').requireTagged).toBe(false);
+        expect(parseFilterSearchTokens('"@today"').dateRanges).toEqual([]);
+        expect(parseFilterSearchTokens('"@today"').nameTokens).toEqual(['@today']);
+        expect(parseFilterSearchTokens('"has:task"').requireUnfinishedTasks).toBe(false);
+        expect(parseFilterSearchTokens('"has:task"').nameTokens).toEqual(['has:task']);
+        expect(parseFilterSearchTokens('"folder:work"').folderTokens).toEqual([]);
+        expect(parseFilterSearchTokens('"folder:work"').nameTokens).toEqual(['folder:work']);
+        expect(parseFilterSearchTokens('"ext:md"').extensionTokens).toEqual([]);
+        expect(parseFilterSearchTokens('"ext:md"').nameTokens).toEqual(['ext:md']);
+    });
+
+    it('keeps property filters with quoted keys when the quote is not at the start of the term', () => {
+        const tokens = parseFilterSearchTokens('."Reading Status"');
+        expect(tokens.propertyTokens).toEqual([{ key: 'reading status', value: null }]);
+        expect(tokens.nameTokens).toEqual([]);
+    });
+
+    it('forces filter mode when a quoted connector appears between tags', () => {
+        const literalConnector = parseFilterSearchTokens('#a "AND" #b');
+        expect(literalConnector.mode).toBe('filter');
+        expect(literalConnector.nameTokens).toEqual(['and']);
+        expect(sortTokens(literalConnector.tagTokens)).toEqual(['a', 'b']);
+
+        const operatorConnector = parseFilterSearchTokens('#a AND #b');
+        expect(operatorConnector.mode).toBe('tag');
+    });
+
+    it('treats an unterminated opening quote as a literal term while typing', () => {
+        const tokens = parseFilterSearchTokens('".F');
+        expect(tokens.nameTokens).toEqual(['.f']);
+        expect(tokens.propertyTokens).toEqual([]);
+    });
+
+    it('folds diacritics in literal terms', () => {
+        expect(parseFilterSearchTokens('"É.F"').nameTokens).toEqual(['e.f']);
+    });
+
+    it('matches and excludes file names by literal terms', () => {
+        const includeTokens = parseFilterSearchTokens('".F"');
+        expect(fileMatchesFilterTokens(foldSearchText('Report.F'), [], includeTokens)).toBe(true);
+        expect(fileMatchesFilterTokens(foldSearchText('Report'), [], includeTokens)).toBe(false);
+
+        const excludeTokens = parseFilterSearchTokens('-".F"');
+        expect(fileMatchesFilterTokens(foldSearchText('Report.F'), [], excludeTokens)).toBe(false);
+        expect(fileMatchesFilterTokens(foldSearchText('Report'), [], excludeTokens)).toBe(true);
+    });
+
+    it('excludes literal terms from navigation highlight state', () => {
+        const state = buildSearchNavFilterState('"#work" ".status"');
+        expect(state.tags.include).toEqual([]);
+        expect(state.properties.include).toEqual([]);
+    });
+
+    it('adds a tag filter instead of removing a matching literal term', () => {
+        const result = updateFilterQueryWithTag('"#work"', 'work', 'AND');
+        expect(result.action).toBe('added');
+        expect(result.query).toBe('"#work" #work');
+    });
+
+    it('adds a property filter instead of removing a matching literal term', () => {
+        const result = updateFilterQueryWithProperty('".status"', 'status', null, 'AND');
+        expect(result.action).toBe('added');
+        expect(result.query).toBe('".status" .status');
+    });
+
+    it('preserves literal quotes when toggling tags in the same query', () => {
+        const added = updateFilterQueryWithTag('".F"', 'work', 'AND');
+        expect(added.query).toBe('".F" #work');
+
+        const removed = updateFilterQueryWithTag('".F" #work', 'work', 'AND');
+        expect(removed.action).toBe('removed');
+        expect(removed.query).toBe('".F"');
+    });
+
+    it('preserves negated literal quotes through query mutations', () => {
+        const result = updateFilterQueryWithTag('-".F"', 'work', 'AND');
+        expect(result.query).toBe('-".F" #work');
+    });
+
+    it('does not insert connectors when a literal term makes the query mixed', () => {
+        const result = updateFilterQueryWithTag('".F" #a', 'b', 'AND');
+        expect(result.query).toBe('".F" #a #b');
+    });
+
+    it('preserves literal quotes when removing a property filter', () => {
+        const result = updateFilterQueryWithProperty('".F" .status', 'status', null, 'AND');
+        expect(result.action).toBe('removed');
+        expect(result.query).toBe('".F"');
+    });
+
+    it('keeps the folder prefix outside the quotes when a mutation re-serializes the query', () => {
+        const result = updateFilterQueryWithTag('folder:"my folder"', 'work', 'AND');
+        expect(result.query).toBe('folder:"my folder" #work');
+
+        const tokens = parseFilterSearchTokens(result.query);
+        expect(tokens.folderTokens).toEqual([{ mode: 'segment', value: 'my folder' }]);
+        expect(tokens.nameTokens).toEqual([]);
+    });
+
+    it('keeps negated folder filters through query mutations', () => {
+        const result = updateFilterQueryWithTag('-folder:"my folder"', 'work', 'AND');
+        expect(result.query).toBe('-folder:"my folder" #work');
+
+        const tokens = parseFilterSearchTokens(result.query);
+        expect(tokens.excludeFolderTokens).toEqual([{ mode: 'segment', value: 'my folder' }]);
+        expect(tokens.excludeNameTokens).toEqual([]);
+    });
+
+    it('keeps folder filters with backslashes in the payload through query mutations', () => {
+        // Backslashes normalize to path separators, so the raw payload round-trips escaped
+        // while the parsed token keeps its exact path value.
+        const result = updateFilterQueryWithTag('folder:"/my\\\\folder"', 'work', 'AND');
+        expect(result.query).toBe('folder:"/my\\\\folder" #work');
+
+        const tokens = parseFilterSearchTokens(result.query);
+        expect(tokens.folderTokens).toEqual([{ mode: 'exact', value: 'my/folder' }]);
     });
 });

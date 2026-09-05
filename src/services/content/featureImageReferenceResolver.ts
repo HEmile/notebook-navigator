@@ -17,15 +17,13 @@
  */
 
 import { normalizePath, type App, type FrontMatterCache, TFile } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../../settings';
-import { isImageExtension, isImageFile, isPdfFile } from '../../utils/fileTypeUtils';
+import type { NotebookNavigatorSettings } from '../../settings/types';
+import { isPdfFile, isRasterImageExtension, isRasterImageFile, isSvgExtension, isSvgFile } from '../../utils/fileTypeUtils';
 import { getMatchingRecordValue } from '../../utils/recordUtils';
 import { getYoutubeVideoId } from '../../utils/youtubeUtils';
 
 export type FeatureImageReference =
-    | { kind: 'local'; file: TFile }
-    | { kind: 'external'; url: string }
-    | { kind: 'youtube'; videoId: string };
+    { kind: 'local'; file: TFile } | { kind: 'external'; url: string } | { kind: 'youtube'; videoId: string };
 
 type FrontmatterImageTarget = { kind: 'wiki' | 'md' | 'plain'; target: string };
 
@@ -47,6 +45,26 @@ function normalizeExternalUrl(url: string): string {
 
 function isHttpUrl(value: string): boolean {
     return value.trim().toLowerCase().startsWith('http://');
+}
+
+function getPathExtension(target: string): string | null {
+    const withoutSuffix = target.split(/[?#]/, 1)[0];
+    const lastDot = withoutSuffix.lastIndexOf('.');
+    if (lastDot === -1 || lastDot === withoutSuffix.length - 1) {
+        return null;
+    }
+
+    const extension = withoutSuffix.slice(lastDot + 1);
+    return extension.length > 0 ? extension : null;
+}
+
+// Checks whether an external image URL points at an SVG file by its path extension.
+export function hasSvgUrlPathExtension(url: string): boolean {
+    try {
+        return isSvgExtension(getPathExtension(new URL(url).pathname) ?? '');
+    } catch {
+        return false;
+    }
 }
 
 export function isValidHttpsUrl(value: string): boolean {
@@ -110,26 +128,27 @@ function safeDecodeLinkComponent(value: string): string {
 }
 
 function hasUnsupportedEmbedExtension(target: string): boolean {
-    const withoutSuffix = target.split(/[?#]/, 1)[0];
-    const lastDot = withoutSuffix.lastIndexOf('.');
-    if (lastDot === -1 || lastDot === withoutSuffix.length - 1) {
+    const extension = getPathExtension(target);
+    if (!extension) {
         return false;
     }
 
-    const extension = withoutSuffix.slice(lastDot + 1);
-    return extension.length > 0 && !isImageExtension(extension) && extension.toLowerCase() !== 'pdf';
+    return extension.length > 0 && !isRasterImageExtension(extension) && !isSvgExtension(extension) && extension.toLowerCase() !== 'pdf';
 }
 
 function resolveLocalFeatureFile(app: App, imagePath: string, contextFile: TFile): TFile | null {
     const trimmedPath = imagePath.trim();
     const resolvedFromCache = app.metadataCache.getFirstLinkpathDest(trimmedPath, contextFile.path);
-    if (resolvedFromCache instanceof TFile && (isImageFile(resolvedFromCache) || isPdfFile(resolvedFromCache))) {
+    if (
+        resolvedFromCache instanceof TFile &&
+        (isRasterImageFile(resolvedFromCache) || isSvgFile(resolvedFromCache) || isPdfFile(resolvedFromCache))
+    ) {
         return resolvedFromCache;
     }
 
     const normalizedPath = normalizePath(trimmedPath);
     const abstractFile = app.vault.getAbstractFileByPath(normalizedPath);
-    if (abstractFile instanceof TFile && (isImageFile(abstractFile) || isPdfFile(abstractFile))) {
+    if (abstractFile instanceof TFile && (isRasterImageFile(abstractFile) || isSvgFile(abstractFile) || isPdfFile(abstractFile))) {
         return abstractFile;
     }
 
@@ -249,14 +268,19 @@ function resolveDocumentImageMatch(
     return null;
 }
 
-export function findFeatureImageReference(params: {
+type FeatureImageReferenceParams = {
     app: App;
     file: TFile;
     content: string;
     settings: NotebookNavigatorSettings;
     frontmatter: FrontMatterCache | null;
     bodyStartIndex: number;
-}): FeatureImageReference | null {
+};
+
+/**
+ * Returns the first feature image reference in resolution order: frontmatter properties first, then document embeds.
+ */
+export function findFeatureImageReference(params: FeatureImageReferenceParams): FeatureImageReference | null {
     const frontmatter = params.frontmatter;
     if (frontmatter) {
         for (const property of params.settings.featureImageProperties) {
@@ -299,7 +323,7 @@ export function findFeatureImageReference(params: {
 
     const combinedImageRegex = createCombinedImageRegex();
     combinedImageRegex.lastIndex = Math.min(Math.max(0, params.bodyStartIndex), params.content.length);
-    let match: RegExpExecArray | null = null;
+    let match: RegExpExecArray | null;
 
     while ((match = combinedImageRegex.exec(params.content)) !== null) {
         const reference = resolveDocumentImageMatch(params.app, match, params.file, params.settings);

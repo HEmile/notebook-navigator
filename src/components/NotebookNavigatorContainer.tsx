@@ -41,7 +41,7 @@ export const NotebookNavigatorContainer = React.memo(
         const settings = useSettingsState();
         const uxPreferences = useUXPreferences();
         const { isMobile } = useServices();
-        const orientation = settings.dualPaneOrientation;
+        const orientation = uiState.effectiveDualPaneOrientation;
         // Get background mode for desktop layout
         const desktopBackground = settings.desktopBackground ?? 'separate';
         const { style: scaleWrapperStyle, dataAttr: scaleWrapperDataAttr } = useNavigatorScale({

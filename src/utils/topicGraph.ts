@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { FileData, IndexedDBStorage } from '../storage/IndexedDBStorage';
+import { IndexedDBStorage } from '../storage/IndexedDBStorage';
 import { TopicNode } from '../types/storage';
 import { isPathInExcludedFolder } from './fileFilters';
 import { HiddenTagMatcher } from './tagPrefixMatcher';
@@ -61,10 +61,10 @@ export function getTopicRelations(metadata: CachedMetadata, isTopicNote: boolean
     let topics: string[] = [];
     const relations = isTopicNote ? HAS_TOPIC_RELATIONS.filter(relation => !SUBSET_RELATIONS.includes(relation)) : HAS_TOPIC_RELATIONS;
     for (const relation of relations) {
-        const value = metadata.frontmatter?.[relation];
-        if (value && Symbol.iterator in Object(value)) {
-            for (const topic of metadata.frontmatter?.[relation] as string[]) {
-                if (typeof topic === "string" && topic.startsWith('[[') && topic.endsWith(']]')) {
+        const value: unknown = metadata.frontmatter?.[relation];
+        if (value && typeof value === 'object' && Symbol.iterator in value) {
+            for (const topic of value as Iterable<unknown>) {
+                if (typeof topic === 'string' && topic.startsWith('[[') && topic.endsWith(']]')) {
                     topics.push(topic);
                 }
             }
@@ -85,12 +85,12 @@ function traverseTopicsUp(allTopics: Map<string, TopicNode>, topicPath: string, 
         return allTopics.get(topicName) as TopicNode;
     }
 
-    const topicNode = {
+    const topicNode: TopicNode = {
         name: topicName,
         parents: new Map(),
         children: new Map(),
         notesWithTag: new Set()
-    } as TopicNode;
+    };
     allTopics.set(topicName, topicNode);
 
     const file = app.vault.getFileByPath(topicPath);

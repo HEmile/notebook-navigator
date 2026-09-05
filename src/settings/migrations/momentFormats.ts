@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../types';
 
 function normalizeFormatValue(value: string): string {
     return value.trim();

@@ -16,11 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback, type Dispatch, type RefObject, type SetStateAction } from 'react';
-import { debounce, type TFile } from 'obsidian';
+import { useCallback, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { debounce, type App, type TFile } from 'obsidian';
 import type { FileContentType } from '../../interfaces/IContentProvider';
 import type { ContentProviderRegistry } from '../../services/content/ContentProviderRegistry';
-import type { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { getDBInstance } from '../../storage/fileOperations';
 import type { PropertyTreeNode, TagTreeNode } from '../../types/storage';
 import { clearNoteCountCache } from '../../utils/tagTree';
@@ -48,33 +48,33 @@ interface PropertyTreeServiceLike {
  * then restores the previous value on completion.
  */
 export function useStorageCacheRebuild(params: {
-    contentRegistryRef: RefObject<ContentProviderRegistry | null>;
-    pendingSyncTimeoutIdRef: RefObject<number | null>;
-    rebuildFileCacheRef: RefObject<ReturnType<typeof debounce> | null>;
-    cancelTagTreeRebuildDebouncer: (options?: { reset?: boolean }) => void;
-    cancelPropertyTreeRebuildDebouncer: (options?: { reset?: boolean }) => void;
+    app: App;
+    contentRegistryRef: MutableRefObject<ContentProviderRegistry | null>;
+    pendingSyncTimeoutIdRef: MutableRefObject<number | null>;
+    rebuildFileCacheRef: MutableRefObject<ReturnType<typeof debounce> | null>;
+    cancelTreeRebuildDebouncer: (options?: { reset?: boolean }) => void;
     disposeMetadataWaitDisposers: () => void;
     // Map: file path -> pending metadata-dependent wait mask (see `useMetadataCacheQueue`).
-    pendingMetadataWaitPathsRef: RefObject<Map<string, number>>;
+    pendingMetadataWaitPathsRef: MutableRefObject<Map<string, number>>;
     setFileData: Dispatch<SetStateAction<StorageFileData>>;
     tagTreeService: TagTreeServiceLike | null;
     propertyTreeService: PropertyTreeServiceLike | null;
     setIsStorageReady: Dispatch<SetStateAction<boolean>>;
-    isStorageReadyRef: RefObject<boolean>;
-    hasBuiltInitialCacheRef: RefObject<boolean>;
-    buildFileCacheFnRef: RefObject<((isInitialLoad?: boolean) => Promise<void>) | null>;
-    latestSettingsRef: RefObject<NotebookNavigatorSettings>;
-    stoppedRef: RefObject<boolean>;
+    isStorageReadyRef: MutableRefObject<boolean>;
+    hasBuiltInitialCacheRef: MutableRefObject<boolean>;
+    buildFileCacheFnRef: MutableRefObject<((isInitialLoad?: boolean) => Promise<void>) | null>;
+    latestSettingsRef: MutableRefObject<NotebookNavigatorSettings>;
+    stoppedRef: MutableRefObject<boolean>;
     clearCacheRebuildNotice: () => void;
     startCacheRebuildNotice: (total: number, enabledTypes: FileContentType[]) => void;
     getIndexableFiles: () => TFile[];
 }): { rebuildCache: () => Promise<void> } {
     const {
+        app,
         contentRegistryRef,
         pendingSyncTimeoutIdRef,
         rebuildFileCacheRef,
-        cancelTagTreeRebuildDebouncer,
-        cancelPropertyTreeRebuildDebouncer,
+        cancelTreeRebuildDebouncer,
         disposeMetadataWaitDisposers,
         pendingMetadataWaitPathsRef,
         setFileData,
@@ -121,8 +121,7 @@ export function useStorageCacheRebuild(params: {
             }
         }
 
-        cancelTagTreeRebuildDebouncer();
-        cancelPropertyTreeRebuildDebouncer();
+        cancelTreeRebuildDebouncer();
         disposeMetadataWaitDisposers();
         pendingMetadataWaitPathsRef.current.clear();
 
@@ -162,7 +161,7 @@ export function useStorageCacheRebuild(params: {
 
         try {
             const liveSettings = latestSettingsRef.current;
-            const enabledTypes = getCacheRebuildProgressTypes(liveSettings);
+            const enabledTypes = getCacheRebuildProgressTypes(liveSettings, app);
             const total = getContentWorkTotal(getIndexableFiles(), enabledTypes);
             if (total > 0 && enabledTypes.length > 0) {
                 // Persist a rebuild marker so the progress notice can be restored if Obsidian restarts mid-rebuild.
@@ -183,9 +182,9 @@ export function useStorageCacheRebuild(params: {
 
         stoppedRef.current = previousStopped;
     }, [
+        app,
         buildFileCacheFnRef,
-        cancelPropertyTreeRebuildDebouncer,
-        cancelTagTreeRebuildDebouncer,
+        cancelTreeRebuildDebouncer,
         clearCacheRebuildNotice,
         contentRegistryRef,
         disposeMetadataWaitDisposers,

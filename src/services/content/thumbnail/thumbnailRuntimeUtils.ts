@@ -38,11 +38,11 @@ export function createOnceLogger(maxEntries = 500): (key: string, message: strin
         }
 
         if (error !== undefined) {
-            console.log(message, error);
+            console.warn(message, error);
             return;
         }
 
-        console.log(message);
+        console.warn(message);
     };
 }
 

@@ -18,9 +18,14 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { UNTAGGED_TAG_ID } from '../../src/types';
 import type { PropertyTreeNode, TagTreeNode } from '../../src/types/storage';
 import { buildRainbowPalette, parseCssColor } from '../../src/utils/colorUtils';
-import { buildFileItemPropertyRainbowColors, buildFileItemTagRainbowColors } from '../../src/utils/fileItemPillDecoration';
+import {
+    buildFileItemPropertyRainbowColors,
+    buildFileItemTagRainbowColors,
+    resolveFileItemTagDecorationColors
+} from '../../src/utils/fileItemPillDecoration';
 
 function createPalette(): string[] {
     const start = parseCssColor('#000000') ?? { r: 0, g: 0, b: 0, a: 1 };
@@ -83,6 +88,73 @@ describe('fileItemPillDecoration', () => {
 
         expect(colors.colorsByPath.has('alpha')).toBe(false);
         expect(colors.colorsByPath.get('alpha/child')).toBe(palette[0]);
+    });
+
+    it('resolves file tag rainbow colors with normalized tag paths', () => {
+        const direct = resolveFileItemTagDecorationColors({
+            model: {
+                navRainbowMode: 'foreground',
+                tagRainbowColors: {
+                    colorsByPath: new Map([['alpha', '#112233']]),
+                    rootColor: undefined,
+                    getInheritedColor: () => undefined
+                },
+                propertyRainbowColors: {
+                    colorsByNodeId: new Map(),
+                    rootColor: undefined,
+                    rootColorsByKey: new Map()
+                },
+                inheritPropertyColors: false
+            },
+            tagPath: 'Alpha',
+            color: undefined,
+            backgroundColor: undefined
+        });
+
+        const inherited = resolveFileItemTagDecorationColors({
+            model: {
+                navRainbowMode: 'foreground',
+                tagRainbowColors: {
+                    colorsByPath: new Map(),
+                    rootColor: undefined,
+                    getInheritedColor: path => (path === 'alpha/child' ? '#445566' : undefined)
+                },
+                propertyRainbowColors: {
+                    colorsByNodeId: new Map(),
+                    rootColor: undefined,
+                    rootColorsByKey: new Map()
+                },
+                inheritPropertyColors: false
+            },
+            tagPath: 'Alpha/Child',
+            color: undefined,
+            backgroundColor: undefined
+        });
+
+        expect(direct.color).toBe('#112233');
+        expect(inherited.color).toBe('#445566');
+    });
+
+    it('keeps file tag rainbow positions aligned with untagged in root order', () => {
+        const alphaNode = createTagNode('alpha');
+        const betaNode = createTagNode('beta');
+        const colors = buildFileItemTagRainbowColors({
+            visibleTagTree: new Map([
+                ['alpha', alphaNode],
+                ['beta', betaNode]
+            ]),
+            rootTagKeys: ['alpha', 'beta', UNTAGGED_TAG_ID],
+            rootTagOrderMap: new Map(),
+            tagComparator: undefined,
+            palette: ['#111111', '#222222', '#333333'],
+            scope: 'root',
+            showAllTagsFolder: false,
+            inheritColors: false
+        });
+
+        expect(colors.colorsByPath.get('alpha')).toBe('#111111');
+        expect(colors.colorsByPath.get('beta')).toBe('#222222');
+        expect(colors.colorsByPath.get(UNTAGGED_TAG_ID)).toBe('#333333');
     });
 
     it('builds property value colors without depending on expanded navigation keys', () => {

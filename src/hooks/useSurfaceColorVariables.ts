@@ -18,7 +18,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { App, EventRef } from 'obsidian';
-import { compositeWithBase, parseCssColor, releaseColorResolver, colorsEqual, type RGBA } from '../utils/colorUtils';
+import {
+    colorsEqual,
+    compositeWithBase,
+    createSolidBackgroundResolver,
+    parseCssColor,
+    releaseColorResolver,
+    type RGBA,
+    type SolidBackgroundResolver
+} from '../utils/colorUtils';
 
 // ============================================================================
 // Type Definitions
@@ -41,18 +49,15 @@ interface UseSurfaceColorVariablesOptions {
     app: App | null | undefined;
     rootContainerRef: React.RefObject<HTMLElement | null>;
     variables: SurfaceVariableMapping[];
+    /** Caller-owned color state that requires a new solid-background resolver when its identity changes. */
+    solidBackgroundRevision?: unknown;
 }
 
 type MutationUnsubscribe = () => void;
 
-/**
- * Return value from useSurfaceColorVariables hook.
- * - color: Current pane surface color as RGBA
- * - version: Increments when colors change (for cache invalidation)
- */
-export interface SurfaceColorVariablesResult {
-    color: RGBA | null;
-    version: number;
+interface SurfaceColorVariablesResult {
+    /** Resolves transparent colors against the current surface generation. */
+    getSolidBackground: SolidBackgroundResolver;
 }
 
 // ============================================================================
@@ -80,7 +85,7 @@ let sharedBodyObserver: MutationObserver | null = null;
  * @returns Unsubscribe function to remove the listener
  */
 function subscribeToBodyMutations(callback: () => void): MutationUnsubscribe {
-    if (!document?.body) {
+    if (!activeDocument?.body) {
         return () => undefined;
     }
 
@@ -90,7 +95,7 @@ function subscribeToBodyMutations(callback: () => void): MutationUnsubscribe {
             // Notify all registered listeners
             bodyMutationListeners.forEach(listener => listener());
         });
-        sharedBodyObserver.observe(document.body, BODY_ATTRIBUTE_FILTER);
+        sharedBodyObserver.observe(activeDocument.body, BODY_ATTRIBUTE_FILTER);
     }
 
     // Register this callback
@@ -125,7 +130,7 @@ function observeContainerAttributes(
 ): { observer: MutationObserver | null; rafId: number | null } {
     if (!container) {
         // Container not yet available - schedule listener for next frame
-        const rafId = requestAnimationFrame(() => listener());
+        const rafId = window.requestAnimationFrame(() => listener());
         return { observer: null, rafId };
     }
 
@@ -157,23 +162,31 @@ function observeContainerAttributes(
  *
  * @param paneRef - Reference to the pane element (NavigationPane or ListPane)
  * @param options - Configuration including app instance, root container, and variable mappings
- * @returns Object with current surface color and version number (for cache invalidation)
+ * @returns A generation-scoped solid-background resolver
  */
 export function useSurfaceColorVariables(
     paneRef: React.RefObject<HTMLElement | null>,
     options: UseSurfaceColorVariablesOptions
 ): SurfaceColorVariablesResult {
-    const { app, rootContainerRef, variables } = options;
+    const { app, rootContainerRef, solidBackgroundRevision, variables } = options;
 
     // State: Current pane background color
     const [surfaceColor, setSurfaceColor] = useState<RGBA | null>(null);
 
-    // State: Version number that increments when colors change
-    // Used by components to invalidate caches (e.g., solidBackgroundCacheRef)
+    // State: Version number that advances the resolver generation when mapped colors change
+    // without producing a different surface color.
     const [version, setVersion] = useState(0);
 
     // Memoize the variable mappings array to prevent unnecessary re-renders
     const variableMappings = useMemo(() => variables.slice(), [variables]);
+
+    // The cache belongs to the resolver created for this render generation. Replacing the resolver
+    // here clears stale composites before descendants render and gives memoized rows a new callback.
+    const getSolidBackground = useMemo(() => {
+        void solidBackgroundRevision;
+        void version;
+        return createSolidBackgroundResolver(surfaceColor, () => paneRef.current);
+    }, [paneRef, solidBackgroundRevision, surfaceColor, version]);
 
     // Main effect: Set up color monitoring and updating
     useEffect(() => {
@@ -251,7 +264,7 @@ export function useSurfaceColorVariables(
         };
 
         // Run initial update (both immediate and on next frame for timing)
-        const rafId = requestAnimationFrame(updateSurfaceColors);
+        const rafId = window.requestAnimationFrame(updateSurfaceColors);
         updateSurfaceColors();
 
         // ========================================================================
@@ -272,7 +285,7 @@ export function useSurfaceColorVariables(
             const container = rootContainerRef.current;
             if (!container) {
                 // Container not ready yet - retry on next frame
-                containerObserverRaf = requestAnimationFrame(ensureContainerObserver);
+                containerObserverRaf = window.requestAnimationFrame(ensureContainerObserver);
                 return;
             }
             // Container is ready - set up observer
@@ -324,5 +337,5 @@ export function useSurfaceColorVariables(
         };
     }, [app, paneRef, rootContainerRef, variableMappings]);
 
-    return { color: surfaceColor, version };
+    return { getSolidBackground };
 }

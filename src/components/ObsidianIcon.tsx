@@ -39,7 +39,7 @@ interface ObsidianIconProps {
  * @returns A span element that will contain the icon
  */
 export function ObsidianIcon({ name, className, 'aria-label': ariaLabel, 'aria-hidden': ariaHidden }: ObsidianIconProps) {
-    const ref = useRef<HTMLSpanElement>(null);
+    const ref = useRef<HTMLSpanElement | null>(null);
 
     useEffect(() => {
         if (ref.current) {

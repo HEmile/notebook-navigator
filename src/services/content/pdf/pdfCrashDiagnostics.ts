@@ -19,13 +19,11 @@
 import { Platform } from 'obsidian';
 
 import { STORAGE_KEYS } from '../../../types';
+import { isDebugLoggingEnabled } from '../../diagnostics/DebugLoggingService';
 import { localStorage } from '../../../utils/localStorage';
 
 // PDF_CRASH_DIAGNOSTICS: searchable marker for PDF crash diagnostics kept in support builds.
-// Internal diagnostic switch that identifies the last PDF path being processed.
-export const pdfProcessingCrashDiagnosticsConfig = {
-    enabled: false
-};
+// Identifies the last PDF path being processed when debug logging is enabled.
 
 type PdfProcessingDiagnosticRecord = {
     path: string;
@@ -37,7 +35,7 @@ type PdfProcessingDiagnosticHandle = PdfProcessingDiagnosticRecord;
 let pdfProcessingDiagnosticTokenCounter = 0;
 
 function isPdfCrashDiagnosticsEnabled(): boolean {
-    return Platform.isMobile && pdfProcessingCrashDiagnosticsConfig.enabled;
+    return Platform.isMobile && isDebugLoggingEnabled();
 }
 
 function normalizePdfDiagnosticPath(value: unknown): string | null {
@@ -83,10 +81,6 @@ export function markPdfProcessingInProgress(path: string): PdfProcessingDiagnost
 }
 
 export function clearPdfProcessingInProgress(handle: PdfProcessingDiagnosticHandle | null): void {
-    if (!isPdfCrashDiagnosticsEnabled()) {
-        return;
-    }
-
     if (handle === null) {
         return;
     }
@@ -102,6 +96,10 @@ export function clearPdfProcessingInProgress(handle: PdfProcessingDiagnosticHand
         return;
     }
 
+    localStorage.remove(STORAGE_KEYS.pdfProcessingDiagnosticKey);
+}
+
+export function clearPendingPdfProcessingDiagnostic(): void {
     localStorage.remove(STORAGE_KEYS.pdfProcessingDiagnosticKey);
 }
 

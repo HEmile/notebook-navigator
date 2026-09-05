@@ -16,13 +16,51 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { describe, expect, it } from 'vitest';
+import { App, TFile } from 'obsidian';
+import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
+import type { NotebookNavigatorSettings } from '../../src/settings/types';
+import { FILE_VISIBILITY } from '../../src/utils/fileTypeUtils';
 import {
     createFrontmatterPropertyExclusionMatcher,
     createHiddenFileNameMatcher,
+    getFilteredFiles,
+    getFilteredIndexableFiles,
     shouldExcludeFileName,
     shouldExcludeFolder
 } from '../../src/utils/fileFilters';
 import { createTestTFile } from './createTestTFile';
+
+function createSettings(): NotebookNavigatorSettings {
+    const profile = DEFAULT_SETTINGS.vaultProfiles[0];
+    return {
+        ...DEFAULT_SETTINGS,
+        vaultProfile: profile.id,
+        vaultProfiles: [
+            {
+                ...profile,
+                fileVisibility: FILE_VISIBILITY.ALL,
+                hiddenFolders: [],
+                hiddenTags: [],
+                hiddenFileNames: [],
+                hiddenFileTags: [],
+                hiddenFileProperties: []
+            }
+        ]
+    };
+}
+
+function createAppWithFiles(files: TFile[]): App {
+    const app = new App();
+    const filesByPath = new Map(files.map(file => [file.path, file]));
+    app.vault.getFiles = () => files;
+    app.vault.getAbstractFileByPath = (path: string) => filesByPath.get(path) ?? null;
+    app.metadataCache.getFileCache = () => null;
+    return app;
+}
+
+function toPaths(files: TFile[]): string[] {
+    return files.map(file => file.path);
+}
 
 describe('shouldExcludeFileName', () => {
     it('matches literal names exactly and does not match basenames', () => {
@@ -105,6 +143,79 @@ describe('shouldExcludeFolder', () => {
     it('matches NFC and NFD-equivalent folder names for literal and wildcard rules', () => {
         expect(shouldExcludeFolder('re\u0301union', ['réunion'])).toBe(true);
         expect(shouldExcludeFolder('re\u0301union-notes', ['réunion*'])).toBe(true);
+    });
+});
+
+describe('getFilteredFiles', () => {
+    it('hides Excalidraw companion PNGs unless hidden items are shown', () => {
+        const drawing = createTestTFile('Drawings/Sketch.excalidraw.md');
+        const companionImage = createTestTFile('Drawings/Sketch.excalidraw.png');
+        const normalImage = createTestTFile('Drawings/Cover.png');
+        const app = createAppWithFiles([drawing, companionImage, normalImage]);
+        const settings = createSettings();
+
+        expect(toPaths(getFilteredFiles(app, settings))).toEqual(['Drawings/Sketch.excalidraw.md', 'Drawings/Cover.png']);
+        expect(toPaths(getFilteredFiles(app, settings, { showHiddenItems: true }))).toEqual([
+            'Drawings/Sketch.excalidraw.md',
+            'Drawings/Sketch.excalidraw.png',
+            'Drawings/Cover.png'
+        ]);
+    });
+
+    it('shows Excalidraw companion PNGs when rendered preview image hiding is disabled', () => {
+        const drawing = createTestTFile('Drawings/Sketch.excalidraw.md');
+        const companionImage = createTestTFile('Drawings/Sketch.excalidraw.png');
+        const normalImage = createTestTFile('Drawings/Cover.png');
+        const app = createAppWithFiles([drawing, companionImage, normalImage]);
+        const settings = { ...createSettings(), hideDrawingPreviewImages: false };
+
+        expect(toPaths(getFilteredFiles(app, settings))).toEqual([
+            'Drawings/Sketch.excalidraw.md',
+            'Drawings/Sketch.excalidraw.png',
+            'Drawings/Cover.png'
+        ]);
+    });
+});
+
+describe('getFilteredIndexableFiles', () => {
+    it('includes markdown, PDF, SVG, and raw Tldraw files', () => {
+        const note = createTestTFile('Notes/A.md');
+        const pdf = createTestTFile('Docs/File.pdf');
+        const svg = createTestTFile('Images/Logo.svg');
+        const drawing = createTestTFile('Drawings/Sketch.tldr');
+        const image = createTestTFile('Images/Cover.png');
+        const app = createAppWithFiles([note, pdf, svg, drawing, image]);
+        const settings = createSettings();
+
+        expect(toPaths(getFilteredIndexableFiles(app, settings))).toEqual([
+            'Notes/A.md',
+            'Docs/File.pdf',
+            'Images/Logo.svg',
+            'Drawings/Sketch.tldr'
+        ]);
+    });
+
+    it('includes raw Tldraw files even when the extension is not visible in the UI', () => {
+        const note = createTestTFile('Notes/A.md');
+        const drawing = createTestTFile('Drawings/Sketch.tldr');
+        const app = createAppWithFiles([note, drawing]);
+        const settings = createSettings();
+        settings.vaultProfiles = settings.vaultProfiles.map(profile => ({
+            ...profile,
+            fileVisibility: FILE_VISIBILITY.SUPPORTED
+        }));
+
+        expect(toPaths(getFilteredIndexableFiles(app, settings))).toEqual(['Notes/A.md', 'Drawings/Sketch.tldr']);
+    });
+
+    it('excludes debug log markdown files from indexing', () => {
+        const note = createTestTFile('Notes/A.md');
+        const debugLog = createTestTFile('nn-debug-2026-05-23T21-30-12-123Z.md');
+        const app = createAppWithFiles([note, debugLog]);
+        const settings = createSettings();
+
+        expect(toPaths(getFilteredIndexableFiles(app, settings))).toEqual(['Notes/A.md']);
+        expect(toPaths(getFilteredFiles(app, settings, { showHiddenItems: true }))).toEqual(['Notes/A.md']);
     });
 });
 

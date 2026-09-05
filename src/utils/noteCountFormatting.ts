@@ -42,7 +42,7 @@ export function buildNoteCountDisplay(
 
     // Handle separate count display format (e.g., "2 • 5" for 2 current, 5 descendants)
     if (useSeparateCounts && includeDescendants) {
-        let label = '';
+        let label: string;
         if (current === 0 && descendants === 0) {
             // No notes at all - hide the count
             label = '';

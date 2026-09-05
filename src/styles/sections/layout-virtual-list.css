@@ -37,6 +37,6 @@
 /* Virtual file item wrapper - position relative for separator positioning */
 .nn-virtual-file-item {
     position: relative;
-    /* Isolate layout and style calculations per item while allowing overlays to extend beyond bounds */
-    contain: layout style;
+    height: var(--item-height);
+    contain: layout style paint;
 }

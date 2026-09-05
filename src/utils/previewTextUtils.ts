@@ -17,7 +17,7 @@
  */
 
 import type { FrontMatterCache } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
 import {
     decodeHtmlEntitiesPreservingCode,
     stripHtmlTagsPreservingCode,

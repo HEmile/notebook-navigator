@@ -47,7 +47,7 @@ import {
     buildEmptyListMenu,
     EMPTY_LIST_MENU_TYPE
 } from '../utils/contextMenu';
-import { getFolderNote } from '../utils/folderNotes';
+import { getFolderNote } from '../utils/folderNoteLookup';
 
 // Tracks the currently open navigator context menu so it can be closed before opening another
 let activeNavigatorMenu: Menu | null = null;
@@ -71,7 +71,7 @@ export function hideNavigatorContextMenu() {
  *
  * @example
  * ```tsx
- * const ref = useRef<HTMLDivElement>(null);
+ * const ref = useRef<HTMLDivElement | null>(null);
  * useContextMenu(ref, { type: 'file', item: file });
  *
  * return <div ref={ref}>Right-click me</div>;
@@ -113,7 +113,7 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
             if (!elementRef.current.contains(targetNode)) return;
 
             // Get the target element if it's an HTML element
-            const targetElement = targetNode instanceof HTMLElement ? targetNode : targetNode.parentElement;
+            const targetElement = targetNode.instanceOf(HTMLElement) ? targetNode : targetNode.parentElement;
             let menuElement: HTMLElement = elementRef.current;
 
             // Folder note override:
@@ -132,7 +132,15 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
                         return;
                     }
 
-                    menuConfig = { type: ItemType.FILE, item: file };
+                    menuConfig = {
+                        type: ItemType.FILE,
+                        item: file,
+                        options: {
+                            source: 'list-pane',
+                            orderedFiles: menuConfig.options?.orderedFiles,
+                            onStartInlineRename: menuConfig.options?.onStartInlineRename
+                        }
+                    };
                     menuElement = fileTarget;
                 }
             }
@@ -162,7 +170,7 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
 
                 // Skip menu if clicking on file items or date headers
                 const isFileTarget = targetElement.closest('.nn-file') !== null;
-                const isHeaderTarget = targetElement.closest('.nn-date-group-header') !== null;
+                const isHeaderTarget = targetElement.closest('.nn-list-group-header') !== null;
                 if (isFileTarget || isHeaderTarget) {
                     return;
                 }
@@ -228,7 +236,8 @@ export function useContextMenu(elementRef: React.RefObject<HTMLElement | null>, 
                         services,
                         settings,
                         state,
-                        dispatchers
+                        dispatchers,
+                        options: menuConfig.options
                     });
                 };
             }

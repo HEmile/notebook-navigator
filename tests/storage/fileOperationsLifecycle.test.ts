@@ -107,4 +107,12 @@ describe('fileOperations lifecycle', () => {
         expect(indexedDbInstances[0]?.appId).toBe('vault-a');
         expect(indexedDbInstances[1]?.appId).toBe('vault-b');
     });
+
+    it('does not start preview text warmup during database initialization', async () => {
+        const fileOperations = await import('../../src/storage/fileOperations');
+
+        await fileOperations.initializeDatabase('vault-a');
+
+        expect(indexedDbInstances[0]?.warmupCallCount).toBe(0);
+    });
 });

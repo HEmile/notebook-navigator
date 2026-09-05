@@ -253,7 +253,7 @@ function withSingleSelection(
     };
 }
 
-export function getFirstSelectedFile(selectedFiles: Set<string>, app: App): TFile | null {
+export function getFirstSelectedFile(selectedFiles: ReadonlySet<string>, app: App): TFile | null {
     const iterator = selectedFiles.values().next();
     if (iterator.done) {
         return null;
@@ -267,7 +267,7 @@ export function getFirstSelectedFile(selectedFiles: Set<string>, app: App): TFil
     return app.vault.getFileByPath(firstPath) ?? null;
 }
 
-export function resolvePrimarySelectedFile(app: App, selectionState: SelectionState): TFile | null {
+export function resolvePrimarySelectedFile(app: App, selectionState: Pick<SelectionState, 'selectedFile' | 'selectedFiles'>): TFile | null {
     if (selectionState.selectedFile) {
         return selectionState.selectedFile;
     }
@@ -559,6 +559,11 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
             };
 
         case 'CLEANUP_DELETED_FILE': {
+            const deletedFileWasSelected = state.selectedFiles.has(action.deletedPath) || state.selectedFile?.path === action.deletedPath;
+            if (!deletedFileWasSelected && !action.nextFileToSelect) {
+                return state;
+            }
+
             const selectedFiles = new Set(state.selectedFiles);
             selectedFiles.delete(action.deletedPath);
 
@@ -629,6 +634,30 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 selectedFile: null,
                 anchorIndex: null,
                 lastMovementDirection: null
+            };
+
+        case 'SET_FILE_SELECTION': {
+            const selectedFiles = new Set<string>();
+            action.files.forEach(file => {
+                selectedFiles.add(file.path);
+            });
+
+            return {
+                ...state,
+                selectedFiles,
+                selectedFile: action.selectedFile,
+                anchorIndex: null,
+                lastMovementDirection: null
+            };
+        }
+
+        case 'APPLY_FILE_SELECTION':
+            return {
+                ...state,
+                selectedFiles: new Set(action.selectedFiles),
+                selectedFile: action.selectedFile,
+                anchorIndex: action.anchorIndex !== undefined ? action.anchorIndex : state.anchorIndex,
+                lastMovementDirection: action.lastMovementDirection !== undefined ? action.lastMovementDirection : null
             };
 
         case 'SET_ANCHOR_INDEX':

@@ -17,7 +17,7 @@
  */
 
 import React, { useCallback } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { Menu, TFile } from 'obsidian';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { ExpansionAction } from '../../context/ExpansionContext';
@@ -36,6 +36,7 @@ import {
     type MenuServices,
     type MenuState
 } from '../../utils/contextMenu';
+import { addShortcutRenameMenuItem } from '../../utils/contextMenu/shortcutRenameMenuItem';
 import type { ShortcutContextMenuTarget } from './navigationPaneShortcutTypes';
 
 interface ExpansionStateLike {
@@ -47,24 +48,26 @@ interface ExpansionStateLike {
 interface UseNavigationPaneShortcutMenusProps {
     settings: NotebookNavigatorSettings;
     menuServices: MenuServices;
-    selectionState: SelectionState;
+    selectionStateRef: MutableRefObject<SelectionState>;
     expansionState: ExpansionStateLike;
     selectionDispatch: Dispatch<SelectionAction>;
     expansionDispatch: Dispatch<ExpansionAction>;
     uiDispatch: Dispatch<UIAction>;
     removeShortcut: (key: string) => Promise<boolean>;
+    renameShortcut: (key: string, alias: string, defaultLabel?: string) => Promise<boolean>;
     setIsShortcutContextMenuOpen: Dispatch<SetStateAction<boolean>>;
 }
 
 export function useNavigationPaneShortcutMenus({
     settings,
     menuServices,
-    selectionState,
+    selectionStateRef,
     expansionState,
     selectionDispatch,
     expansionDispatch,
     uiDispatch,
     removeShortcut,
+    renameShortcut,
     setIsShortcutContextMenuOpen
 }: UseNavigationPaneShortcutMenusProps) {
     const handleShortcutContextMenu = useCallback(
@@ -89,7 +92,31 @@ export function useNavigationPaneShortcutMenus({
             });
             setIsShortcutContextMenuOpen(true);
 
-            if (target.type === 'missing' || target.type === 'search') {
+            if (target.type === 'search') {
+                addShortcutRenameMenuItem({
+                    app: menuServices.app,
+                    menu,
+                    shortcutKey: target.key,
+                    defaultLabel: target.searchShortcut.name,
+                    existingShortcut: target.searchShortcut,
+                    title: strings.shortcuts.rename,
+                    placeholder: strings.searchInput.shortcutNamePlaceholder,
+                    renameShortcut,
+                    closeOnSubmit: false
+                });
+
+                menu.addItem(item => {
+                    item.setTitle(strings.shortcuts.remove)
+                        .setIcon(resolveUXIconForMenu(settings.interfaceIcons, 'nav-shortcuts', 'lucide-star-off'))
+                        .onClick(() => {
+                            runAsyncAction(() => removeShortcut(target.key));
+                        });
+                });
+                menu.showAtMouseEvent(event.nativeEvent);
+                return;
+            }
+
+            if (target.type === 'missing') {
                 menu.addItem(item => {
                     item.setTitle(strings.shortcuts.remove)
                         .setIcon(resolveUXIconForMenu(settings.interfaceIcons, 'nav-shortcuts', 'lucide-star-off'))
@@ -102,7 +129,7 @@ export function useNavigationPaneShortcutMenus({
             }
 
             const state: MenuState = {
-                selectionState,
+                selectionState: selectionStateRef.current,
                 expandedFolders: expansionState.expandedFolders,
                 expandedTags: expansionState.expandedTags,
                 expandedProperties: expansionState.expandedProperties
@@ -181,8 +208,9 @@ export function useNavigationPaneShortcutMenus({
             expansionState.expandedTags,
             menuServices,
             removeShortcut,
+            renameShortcut,
             selectionDispatch,
-            selectionState,
+            selectionStateRef,
             setIsShortcutContextMenuOpen,
             settings,
             uiDispatch
@@ -196,7 +224,7 @@ export function useNavigationPaneShortcutMenus({
 
             const menu = new Menu();
             const state: MenuState = {
-                selectionState,
+                selectionState: selectionStateRef.current,
                 expandedFolders: expansionState.expandedFolders,
                 expandedTags: expansionState.expandedTags,
                 expandedProperties: expansionState.expandedProperties
@@ -225,7 +253,7 @@ export function useNavigationPaneShortcutMenus({
             expansionState.expandedTags,
             menuServices,
             selectionDispatch,
-            selectionState,
+            selectionStateRef,
             settings,
             uiDispatch
         ]

@@ -23,12 +23,24 @@ Complete TypeScript type definitions for the Notebook Navigator API.
      return;
    }
    ```
+4. Call `await nn.whenReady()` before storage-backed reads or tag/property navigation that depends on the storage mirror.
+
+## Public Surface
+
+`notebook-navigator.d.ts` mirrors the runtime API exposed at
+`app.plugins.plugins['notebook-navigator']?.api`.
+
+- Core methods: `getVersion()`, `isStorageReady()`, `whenReady()`, `on(...)`, `once(...)`, `off(...)`
+- Namespaces: `metadata`, `navigation`, `selection`, `menus`, `tagCollections`, `propertyNodes`
+- Exported types: metadata records and updates, navigation and selection state, pin contexts, tag collections, property
+  nodes, menu extension contexts, event names, and event payloads
 
 **For Maintainers:**
 
 - This file must be kept in sync with the actual API implementation
-- Update the version number in the file header when making API changes
-- This is the single source of truth for external TypeScript users
+- Keep the version in the file header, this README, and `src/api/version.ts` aligned when making API changes
+- The declaration file is the TypeScript compatibility contract for external users
+- Full behavior notes live in `docs/api-reference.md`
 
 ## Version
 

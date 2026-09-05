@@ -16,12 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { App, TFile, type CachedMetadata } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import { FileMetadataService } from '../../src/services/metadata/FileMetadataService';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { NotebookNavigatorSettings } from '../../src/settings';
 import type { ISettingsProvider } from '../../src/interfaces/ISettingsProvider';
 import { extractMetadataFromCache } from '../../src/utils/metadataExtractor';
+import { ShortcutType } from '../../src/types/shortcuts';
+import type { CollapsedPinnedContexts } from '../../src/types';
 
 const updateFileMetadata = vi.fn();
 
@@ -49,6 +51,16 @@ class TestSettingsProvider implements ISettingsProvider {
     }
 
     setRecentIcons(): void {}
+
+    collapsedPinnedContexts: CollapsedPinnedContexts = {};
+
+    getCollapsedPinnedContexts(): CollapsedPinnedContexts {
+        return { ...this.collapsedPinnedContexts };
+    }
+
+    updateCollapsedPinnedContexts(mutator: (record: CollapsedPinnedContexts) => boolean): boolean {
+        return mutator(this.collapsedPinnedContexts);
+    }
 
     getRecentColors(): string[] {
         return [];
@@ -103,14 +115,14 @@ describe('FileMetadataService frontmatter integration', () => {
         service = new FileMetadataService(app, settingsProvider);
     });
 
-    it('saves phosphor icons in the short prefixed format and extracts canonical metadata', async () => {
+    it('saves phosphor icons in the short slug format and extracts canonical metadata', async () => {
         await service.setFileIcon(file.path, 'phosphor:ph-apple-logo');
 
         expect(processFrontMatter).toHaveBeenCalledTimes(1);
-        expect(frontmatter.icon).toBe('ph:apple-logo');
+        expect(frontmatter.icon).toBe('ph-apple-logo');
         expect(updateFileMetadata).toHaveBeenCalledWith(file.path, { icon: 'phosphor:apple-logo' });
 
-        const metadata = extractMetadataFromCache({ frontmatter: { icon: frontmatter.icon } } as CachedMetadata, settingsProvider.settings);
+        const metadata = extractMetadataFromCache({ frontmatter: { icon: frontmatter.icon } }, settingsProvider.settings);
         expect(metadata.icon).toBe('phosphor:apple-logo');
     });
 
@@ -123,6 +135,40 @@ describe('FileMetadataService frontmatter integration', () => {
         expect(settingsProvider.saveSettingsAndUpdate).toHaveBeenCalledTimes(1);
         expect(settingsProvider.settings.pinnedNotes?.['Vault/One.md']).toEqual({ folder: true, tag: false, property: false, topic: false });
         expect(settingsProvider.settings.pinnedNotes?.['Vault/Two.md']).toEqual({ folder: true, tag: false, property: false, topic: false });
+    });
+
+    it('renames note shortcuts that uniquely match the old path with different casing', async () => {
+        settingsProvider.settings.vaultProfiles = [
+            {
+                ...DEFAULT_SETTINGS.vaultProfiles[0],
+                shortcuts: [{ type: ShortcutType.NOTE, path: 'appLab/SKILLS-WORKFLOWS/mmgi/Note.md' }]
+            }
+        ];
+        getAbstractFileByPath.mockReturnValue(null);
+        app.vault.getAllLoadedFiles = vi.fn(() => [new TFile('applab/skills-workflows/mmgi/Renamed.md')]);
+
+        await service.handleFileRename('applab/skills-workflows/mmgi/Note.md', 'applab/skills-workflows/mmgi/Renamed.md');
+
+        expect(settingsProvider.settings.vaultProfiles[0].shortcuts).toEqual([
+            { type: ShortcutType.NOTE, path: 'applab/skills-workflows/mmgi/Renamed.md' }
+        ]);
+    });
+
+    it('does not rename ambiguous casefolded note shortcuts', async () => {
+        settingsProvider.settings.vaultProfiles = [
+            {
+                ...DEFAULT_SETTINGS.vaultProfiles[0],
+                shortcuts: [{ type: ShortcutType.NOTE, path: 'appLab/SKILLS-WORKFLOWS/mmgi/Note.md' }]
+            }
+        ];
+        getAbstractFileByPath.mockReturnValue(null);
+        app.vault.getAllLoadedFiles = vi.fn(() => [new TFile('applab/skills-workflows/mmgi/note.md')]);
+
+        await service.handleFileRename('applab/skills-workflows/mmgi/Note.md', 'applab/skills-workflows/mmgi/Renamed.md');
+
+        expect(settingsProvider.settings.vaultProfiles[0].shortcuts).toEqual([
+            { type: ShortcutType.NOTE, path: 'appLab/SKILLS-WORKFLOWS/mmgi/Note.md' }
+        ]);
     });
 
     it('counts only newly pinned notes in folder context', async () => {

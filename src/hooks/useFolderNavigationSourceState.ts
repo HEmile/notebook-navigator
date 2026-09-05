@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TFolder, type App, debounce } from 'obsidian';
 
 import type { ActiveProfileState } from '../context/SettingsContext';
@@ -33,7 +33,7 @@ import {
 } from '../utils/fileFilters';
 import { resolveFolderDisplayName } from '../utils/folderDisplayName';
 import { resolveFolderNoteName } from '../utils/folderNoteName';
-import { getFolderNote, getFolderNoteDetectionSettings } from '../utils/folderNotes';
+import { getFolderNote, getFolderNoteDetectionSettings } from '../utils/folderNoteLookup';
 import { EXCALIDRAW_BASENAME_SUFFIX } from '../utils/fileNameUtils';
 import { getParentFolderPath, getPathBaseName } from '../utils/pathUtils';
 import { getCachedFileTags } from '../utils/tagUtils';
@@ -50,9 +50,12 @@ export interface FolderNavigationSourceState {
     rootFolderOrderMap: Map<string, number>;
     missingRootFolderPaths: string[];
     fileChangeVersion: number;
-    bumpFileChangeVersion: () => void;
+    folderChangeVersion: number;
     folderDisplayVersion: number;
     metadataDecorationVersion: number;
+    metadataVisibilityVersion: number;
+    tagDataVersion: number;
+    propertyDataVersion: number;
     getFolderSortName: (folder: TFolder) => string;
     folderExclusionByFolderNote: ((folder: TFolder) => boolean) | undefined;
     isFolderExcluded: (folderPath: string) => boolean;
@@ -63,6 +66,7 @@ interface UseFolderNavigationSourceStateParams {
     settings: NotebookNavigatorSettings;
     activeProfile: ActiveProfileState;
     metadataService: MetadataService;
+    showHiddenItems: boolean;
     onFileChange?: (change: RootFileChangeEvent) => void;
 }
 
@@ -71,6 +75,7 @@ export function useFolderNavigationSourceState({
     settings,
     activeProfile,
     metadataService,
+    showHiddenItems,
     onFileChange
 }: UseFolderNavigationSourceStateParams): FolderNavigationSourceState {
     const { hiddenFolders, hiddenFileProperties, hiddenFileNames, hiddenFileTags } = activeProfile;
@@ -84,10 +89,9 @@ export function useFolderNavigationSourceState({
     const folderNoteSettings = useMemo(() => {
         return getFolderNoteDetectionSettings({
             enableFolderNotes: settings.enableFolderNotes,
-            folderNoteName: settings.folderNoteName,
             folderNoteNamePattern: settings.folderNoteNamePattern
         });
-    }, [settings.enableFolderNotes, settings.folderNoteName, settings.folderNoteNamePattern]);
+    }, [settings.enableFolderNotes, settings.folderNoteNamePattern]);
     const shouldEvaluateFolderNoteExclusions = useMemo(() => {
         return (
             settings.enableFolderNotes &&
@@ -132,23 +136,56 @@ export function useFolderNavigationSourceState({
 
     const [folderExclusionVersion, setFolderExclusionVersion] = useState(0);
     const [fileChangeVersion, setFileChangeVersion] = useState(0);
-    const bumpFileChangeVersion = useCallback(() => {
+    const [folderChangeVersion, setFolderChangeVersion] = useState(0);
+
+    // Vault file events can arrive once per file during moves, deletes, and syncs.
+    // The trailing timer collapses each burst; the max-wait timer refreshes during continuous bursts.
+    const fileChangeVersionTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+    const fileChangeVersionMaxWaitTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+    const clearScheduledFileChangeVersionBump = useCallback(() => {
+        if (fileChangeVersionTimerRef.current !== null) {
+            window.clearTimeout(fileChangeVersionTimerRef.current);
+            fileChangeVersionTimerRef.current = null;
+        }
+        if (fileChangeVersionMaxWaitTimerRef.current !== null) {
+            window.clearTimeout(fileChangeVersionMaxWaitTimerRef.current);
+            fileChangeVersionMaxWaitTimerRef.current = null;
+        }
+    }, []);
+    const flushFileChangeVersion = useCallback(() => {
+        clearScheduledFileChangeVersionBump();
         setFileChangeVersion(value => value + 1);
+    }, [clearScheduledFileChangeVersionBump]);
+    const scheduleFileChangeVersionBump = useCallback(() => {
+        if (fileChangeVersionTimerRef.current !== null) {
+            window.clearTimeout(fileChangeVersionTimerRef.current);
+        }
+
+        fileChangeVersionTimerRef.current = window.setTimeout(flushFileChangeVersion, TIMEOUTS.NAVIGATION_FILE_CHANGE_DEBOUNCE);
+        if (fileChangeVersionMaxWaitTimerRef.current === null) {
+            fileChangeVersionMaxWaitTimerRef.current = window.setTimeout(flushFileChangeVersion, TIMEOUTS.NAVIGATION_FILE_CHANGE_MAX_WAIT);
+        }
+    }, [flushFileChangeVersion]);
+    useEffect(() => clearScheduledFileChangeVersionBump, [clearScheduledFileChangeVersionBump]);
+    const handleRootFolderChange = useCallback(() => {
+        setFolderChangeVersion(value => value + 1);
     }, []);
     const handleRootFileChange = useCallback(
         (change: RootFileChangeEvent) => {
-            bumpFileChangeVersion();
+            scheduleFileChangeVersionBump();
             onFileChange?.(change);
             if (isFolderNoteRelatedPath(change.path) || (change.oldPath !== undefined && isFolderNoteRelatedPath(change.oldPath))) {
                 setFolderExclusionVersion(value => value + 1);
             }
         },
-        [bumpFileChangeVersion, isFolderNoteRelatedPath, onFileChange]
+        [isFolderNoteRelatedPath, onFileChange, scheduleFileChangeVersionBump]
     );
 
     const { rootFolders, rootLevelFolders, rootFolderOrderMap, missingRootFolderPaths } = useRootFolderOrder({
         settings,
-        onFileChange: handleRootFileChange
+        showHiddenItems,
+        onFileChange: handleRootFileChange,
+        onFolderChange: handleRootFolderChange
     });
 
     const [folderDisplayVersion, setFolderDisplayVersion] = useState(() => metadataService.getFolderDisplayVersion());
@@ -193,6 +230,9 @@ export function useFolderNavigationSourceState({
     }, [metadataService]);
 
     const [metadataDecorationVersion, setMetadataDecorationVersion] = useState(0);
+    const [metadataVisibilityVersion, setMetadataVisibilityVersion] = useState(0);
+    const [tagDataVersion, setTagDataVersion] = useState(0);
+    const [propertyDataVersion, setPropertyDataVersion] = useState(0);
 
     useEffect(() => {
         const db = getDBInstance();
@@ -204,17 +244,39 @@ export function useFolderNavigationSourceState({
             true
         );
         const unsubscribe = db.onContentChange(changes => {
-            let hasMetadataChange = false;
+            let hasMetadataDecorationChange = false;
+            let hasMetadataVisibilityChange = false;
+            let hasTagDataChange = false;
+            let hasPropertyDataChange = false;
             let shouldRefreshFolderExclusions = false;
             const folderNotePathByParentPath = new Map<string, string | null>();
 
             for (const change of changes) {
-                if (change.changeType !== 'metadata' && change.changeType !== 'both') {
+                const hasTagChange = change.changes.tags !== undefined;
+                const hasPropertyChange = change.changes.properties !== undefined;
+                const hasMetadataVisibilityChangeForFile = change.metadataHiddenChanged === true;
+
+                if (change.metadataDecorationChanged === true) {
+                    hasMetadataDecorationChange = true;
+                }
+                if (hasMetadataVisibilityChangeForFile) {
+                    hasMetadataVisibilityChange = true;
+                }
+                if (hasTagChange) {
+                    hasTagDataChange = true;
+                }
+                if (hasPropertyChange) {
+                    hasPropertyDataChange = true;
+                }
+
+                if (!shouldEvaluateFolderNoteExclusions || shouldRefreshFolderExclusions) {
                     continue;
                 }
 
-                hasMetadataChange = true;
-                if (!shouldEvaluateFolderNoteExclusions || shouldRefreshFolderExclusions) {
+                const canAffectFolderNoteExclusion =
+                    (hiddenFilePropertyMatcher.hasCriteria && hasMetadataVisibilityChangeForFile) ||
+                    (hiddenFileTags.length > 0 && hasTagChange);
+                if (!canAffectFolderNoteExclusion) {
                     continue;
                 }
 
@@ -231,18 +293,27 @@ export function useFolderNavigationSourceState({
                 }
             }
 
-            if (hasMetadataChange) {
+            if (hasMetadataDecorationChange) {
                 setMetadataDecorationVersion(version => version + 1);
-                if (shouldRefreshFolderExclusions) {
-                    bumpFolderExclusionVersion();
-                }
+            }
+            if (hasMetadataVisibilityChange) {
+                setMetadataVisibilityVersion(version => version + 1);
+            }
+            if (hasTagDataChange) {
+                setTagDataVersion(version => version + 1);
+            }
+            if (hasPropertyDataChange) {
+                setPropertyDataVersion(version => version + 1);
+            }
+            if (shouldRefreshFolderExclusions) {
+                bumpFolderExclusionVersion();
             }
         });
         return () => {
             unsubscribe();
             bumpFolderExclusionVersion.cancel();
         };
-    }, [app, folderNoteSettings, shouldEvaluateFolderNoteExclusions]);
+    }, [app, folderNoteSettings, hiddenFilePropertyMatcher.hasCriteria, hiddenFileTags.length, shouldEvaluateFolderNoteExclusions]);
 
     const getFolderSortName = useMemo(() => {
         void folderDisplayNameVersion;
@@ -387,26 +458,32 @@ export function useFolderNavigationSourceState({
             rootFolderOrderMap,
             missingRootFolderPaths,
             fileChangeVersion,
-            bumpFileChangeVersion,
+            folderChangeVersion,
             folderDisplayVersion,
             metadataDecorationVersion,
+            metadataVisibilityVersion,
+            tagDataVersion,
+            propertyDataVersion,
             getFolderSortName,
             folderExclusionByFolderNote,
             isFolderExcluded
         }),
         [
-            bumpFileChangeVersion,
             folderExclusionByFolderNote,
+            folderChangeVersion,
             folderDisplayVersion,
             fileChangeVersion,
             getFolderSortName,
             hiddenFolders,
             isFolderExcluded,
             metadataDecorationVersion,
+            metadataVisibilityVersion,
             missingRootFolderPaths,
+            propertyDataVersion,
             rootFolders,
             rootFolderOrderMap,
-            rootLevelFolders
+            rootLevelFolders,
+            tagDataVersion
         ]
     );
 }

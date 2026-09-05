@@ -17,22 +17,35 @@
  */
 
 import { App, TFile } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../settings/types';
+import { normalizeListSortOverride, type ListSortOverrideValue, type NotebookNavigatorSettings } from '../settings/types';
 import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
 import { strings } from '../i18n';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { PropertyKeyRenameModal } from '../modals/PropertyKeyRenameModal';
 import { LIMITS } from '../constants/limits';
-import { casefold, sanitizeRecord } from '../utils/recordUtils';
+import { casefold, deleteCollapsedPinnedContextKeys, sanitizeRecord, updateCollapsedPinnedContextKeys } from '../utils/recordUtils';
 import { showNotice } from '../utils/noticeUtils';
 import { runAsyncAction } from '../utils/async';
 import { removePropertyField, renamePropertyField } from '../utils/propertyUtils';
 import { isRecord } from '../utils/typeGuards';
 import { buildPropertyKeyNodeId } from '../utils/propertyTree';
+import {
+    reconcileDefaultFolderSort,
+    replacePropertySortKey,
+    SORT_OVERRIDE_RECORD_KEYS,
+    updateDefaultFolderSortPropertyKey
+} from '../utils/sortUtils';
+import {
+    reconcileDefaultNoteGrouping,
+    updateDefaultNoteGroupingKey,
+    updatePropertyGroupKeySetting,
+    updatePropertyGroupingOverrideKeys
+} from '../utils/listGrouping';
 import { buildUsageSummaryFromPaths, renderAffectedFilesPreview, yieldToEventLoop } from './operations/OperationBatchUtils';
 import { PropertyFileMutations } from './propertyOperations/PropertyFileMutations';
 import type { PropertyKeyDeleteEventPayload, PropertyKeyRenameEventPayload } from './propertyOperations/types';
 import { getActivePropertyFields, setActivePropertyFields } from '../utils/vaultProfiles';
+import { ItemType, type CollapsedPinnedContexts } from '../types';
 
 export type { PropertyKeyRenameEventPayload, PropertyKeyDeleteEventPayload } from './propertyOperations/types';
 
@@ -83,13 +96,101 @@ const PROPERTY_KEY_METADATA_ACCESSORS: readonly PropertyMetadataAccessor[] = [
         }
     }
 ];
+function updatePropertySortKeySetting(
+    settings: NotebookNavigatorSettings,
+    oldKeyNormalized: string,
+    newKeyDisplay: string | null
+): boolean {
+    if (!settings.propertySortKey.trim()) {
+        return false;
+    }
+
+    const nextValue = replacePropertySortKey(settings.propertySortKey, oldKeyNormalized, newKeyDisplay);
+    if (nextValue === settings.propertySortKey) {
+        return false;
+    }
+
+    settings.propertySortKey = nextValue;
+    return true;
+}
+
+function updateManualSortPropertyKeySetting(
+    settings: NotebookNavigatorSettings,
+    oldKeyNormalized: string,
+    newKeyDisplay: string | null
+): boolean {
+    const currentKey = settings.manualSortPropertyKey.trim();
+    if (!currentKey || casefold(currentKey) !== oldKeyNormalized) {
+        return false;
+    }
+
+    settings.manualSortPropertyKey = newKeyDisplay ?? '';
+    return true;
+}
+
+function updateManualSortGroupHeaderPropertySetting(
+    settings: NotebookNavigatorSettings,
+    oldKeyNormalized: string,
+    newKeyDisplay: string | null
+): boolean {
+    const currentKey = settings.manualSortGroupHeaderProperty.trim();
+    if (!currentKey || casefold(currentKey) !== oldKeyNormalized) {
+        return false;
+    }
+
+    settings.manualSortGroupHeaderProperty = newKeyDisplay ?? '';
+    return true;
+}
+
+function updateSortOverridePropertyKeys(
+    record: Record<string, ListSortOverrideValue> | undefined,
+    oldKeyNormalized: string,
+    newKeyDisplay: string | null
+): boolean {
+    if (!record) {
+        return false;
+    }
+
+    let changed = false;
+    for (const key of Object.keys(record)) {
+        const normalizedOverride = normalizeListSortOverride((record as Record<string, unknown>)[key]);
+        if (!normalizedOverride || typeof normalizedOverride === 'string') {
+            continue;
+        }
+
+        if (casefold(normalizedOverride.propertyKey ?? '') !== oldKeyNormalized) {
+            continue;
+        }
+
+        if (newKeyDisplay) {
+            record[key] = { ...normalizedOverride, propertyKey: newKeyDisplay };
+        } else {
+            delete record[key];
+        }
+        changed = true;
+    }
+
+    return changed;
+}
+
+function updateSortOverridePropertyKeySettings(
+    settings: NotebookNavigatorSettings,
+    oldKeyNormalized: string,
+    newKeyDisplay: string | null
+): boolean {
+    let changed = false;
+    SORT_OVERRIDE_RECORD_KEYS.forEach(recordKey => {
+        changed = updateSortOverridePropertyKeys(settings[recordKey], oldKeyNormalized, newKeyDisplay) || changed;
+    });
+    return changed;
+}
 
 /**
  * Facade for property key rename/delete operations across the vault.
  *
  * Contract:
  * - Mutates YAML frontmatter in markdown files via `processFrontMatter`.
- * - Updates active-profile property keys and `propertySortKey` when at least one note changed and no file mutation failed.
+ * - Updates active-profile property keys, sort property keys, and related overrides after successful file mutations.
  * - Emits rename/delete events only when settings updates are attempted.
  * - Relies on existing Obsidian modify/metadata listeners for reindexing.
  */
@@ -103,7 +204,8 @@ export class PropertyOperations {
         private readonly app: App,
         private readonly getSettings: () => NotebookNavigatorSettings,
         private readonly saveSettingsAndUpdate: () => Promise<void>,
-        private readonly getPropertyTreeService: () => IPropertyTreeProvider | null
+        private readonly getPropertyTreeService: () => IPropertyTreeProvider | null,
+        private readonly updateCollapsedPinnedContexts: (mutator: (record: CollapsedPinnedContexts) => boolean) => boolean
     ) {
         this.fileMutations = new PropertyFileMutations(this.app);
     }
@@ -145,40 +247,80 @@ export class PropertyOperations {
             sampleFiles: usage.sample,
             initialValue: keyNode.name,
             onSubmit: async newKey => {
-                const trimmed = newKey.trim();
-                if (!trimmed || trimmed.includes('\n') || trimmed.includes('\r')) {
-                    showNotice(strings.modals.propertyOperation.invalidKeyName, { variant: 'warning' });
-                    return false;
-                }
-
-                const newKeyNormalized = casefold(trimmed);
-                if (!newKeyNormalized) {
-                    showNotice(strings.modals.propertyOperation.invalidKeyName, { variant: 'warning' });
-                    return false;
-                }
-
-                const conflictSnapshot = await conflictSnapshotPromise;
-                const conflictPaths = this.collectRenameConflictPathsFromSnapshot(normalizedKey, newKeyNormalized, conflictSnapshot);
-                if (conflictPaths.size > 0) {
-                    const shouldContinue = await this.confirmRenameConflicts({
-                        oldKeyDisplay: keyNode.name,
-                        newKeyDisplay: trimmed,
-                        conflictPaths
-                    });
-                    if (!shouldContinue) {
-                        return false;
-                    }
-                }
-
-                return await this.runPropertyKeyRename({
-                    oldKeyNormalized: normalizedKey,
-                    oldKeyDisplay: keyNode.name,
-                    newKeyDisplay: trimmed,
-                    affectedPaths
+                return this.submitPropertyKeyRename({
+                    normalizedKey,
+                    keyNodeName: keyNode.name,
+                    newKey,
+                    affectedPaths,
+                    conflictSnapshotPromise
                 });
             }
         });
         modal.open();
+    }
+
+    async renamePropertyKey(normalizedKey: string, newKey: string): Promise<boolean> {
+        const propertyTree = this.getPropertyTreeService();
+        if (!propertyTree) {
+            showNotice(strings.fileSystem.notifications.propertyOperationsNotAvailable, { variant: 'warning' });
+            return false;
+        }
+
+        const keyNode = propertyTree.getKeyNode(normalizedKey);
+        if (!keyNode) {
+            showNotice(strings.fileSystem.notifications.propertyOperationsNotAvailable, { variant: 'warning' });
+            return false;
+        }
+
+        const affectedPaths = this.collectPropertyKeyPathsFromVault(normalizedKey);
+        const conflictSnapshotPromise = Promise.resolve().then(() => this.collectRenameConflictSnapshot(normalizedKey, affectedPaths));
+        return this.submitPropertyKeyRename({
+            normalizedKey,
+            keyNodeName: keyNode.name,
+            newKey,
+            affectedPaths,
+            conflictSnapshotPromise
+        });
+    }
+
+    private async submitPropertyKeyRename(params: {
+        normalizedKey: string;
+        keyNodeName: string;
+        newKey: string;
+        affectedPaths: Set<string>;
+        conflictSnapshotPromise: Promise<RenameConflictSnapshot>;
+    }): Promise<boolean> {
+        const trimmed = params.newKey.trim();
+        if (!trimmed || trimmed.includes('\n') || trimmed.includes('\r')) {
+            showNotice(strings.modals.propertyOperation.invalidKeyName, { variant: 'warning' });
+            return false;
+        }
+
+        const newKeyNormalized = casefold(trimmed);
+        if (!newKeyNormalized) {
+            showNotice(strings.modals.propertyOperation.invalidKeyName, { variant: 'warning' });
+            return false;
+        }
+
+        const conflictSnapshot = await params.conflictSnapshotPromise;
+        const conflictPaths = this.collectRenameConflictPathsFromSnapshot(params.normalizedKey, newKeyNormalized, conflictSnapshot);
+        if (conflictPaths.size > 0) {
+            const shouldContinue = await this.confirmRenameConflicts({
+                oldKeyDisplay: params.keyNodeName,
+                newKeyDisplay: trimmed,
+                conflictPaths
+            });
+            if (!shouldContinue) {
+                return false;
+            }
+        }
+
+        return await this.runPropertyKeyRename({
+            oldKeyNormalized: params.normalizedKey,
+            oldKeyDisplay: params.keyNodeName,
+            newKeyDisplay: trimmed,
+            affectedPaths: params.affectedPaths
+        });
     }
 
     async promptDeletePropertyKey(normalizedKey: string): Promise<void> {
@@ -543,6 +685,10 @@ export class PropertyOperations {
         const newKeyNodeId = buildPropertyKeyNodeId(newKeyNormalized);
         const nodeChanged = this.renamePropertyNodeMetadataFields(settings, oldKeyNodeId, newKeyNodeId);
         const keyChanged = this.renamePropertyKeyMetadataFields(settings, oldKeyNodeId, newKeyNodeId);
+        // Pinned-section collapse state persists to vault-local storage on its own, so it must not drive the settings save.
+        this.updateCollapsedPinnedContexts(record =>
+            updateCollapsedPinnedContextKeys(record, ItemType.PROPERTY, oldKeyNodeId, newKeyNodeId, { descendantDelimiter: '=' })
+        );
         return nodeChanged || keyChanged;
     }
 
@@ -550,6 +696,10 @@ export class PropertyOperations {
         const keyNodeId = buildPropertyKeyNodeId(normalizedKey);
         const nodeChanged = this.removePropertyNodeMetadataFields(settings, keyNodeId);
         const keyChanged = this.removePropertyKeyMetadataFields(settings, keyNodeId);
+        // Pinned-section collapse state persists to vault-local storage on its own, so it must not drive the settings save.
+        this.updateCollapsedPinnedContexts(record =>
+            deleteCollapsedPinnedContextKeys(record, ItemType.PROPERTY, keyNodeId, { descendantDelimiter: '=' })
+        );
         return nodeChanged || keyChanged;
     }
 
@@ -562,10 +712,19 @@ export class PropertyOperations {
         const nextPropertyFields = renamePropertyField(activePropertyFields, oldKeyNormalized, newKeyDisplay, false);
         changed = setActivePropertyFields(settings, nextPropertyFields) || changed;
 
-        if (casefold(settings.propertySortKey) === oldKeyNormalized && settings.propertySortKey !== newKeyDisplay) {
-            settings.propertySortKey = newKeyDisplay;
-            changed = true;
-        }
+        changed = updatePropertySortKeySetting(settings, oldKeyNormalized, newKeyDisplay) || changed;
+        changed = updatePropertyGroupKeySetting(settings, oldKeyNormalized, newKeyDisplay) || changed;
+        changed = updateManualSortPropertyKeySetting(settings, oldKeyNormalized, newKeyDisplay) || changed;
+        changed = updateManualSortGroupHeaderPropertySetting(settings, oldKeyNormalized, newKeyDisplay) || changed;
+        changed = updateSortOverridePropertyKeySettings(settings, oldKeyNormalized, newKeyDisplay) || changed;
+        changed = updatePropertyGroupingOverrideKeys(settings, oldKeyNormalized, newKeyDisplay) || changed;
+        changed = updateDefaultFolderSortPropertyKey(settings, oldKeyNormalized, newKeyDisplay) || changed;
+        changed = updateDefaultNoteGroupingKey(settings, oldKeyNormalized, newKeyDisplay) || changed;
+        // The rename can move a default onto the manual-sort key (or vice versa), which the
+        // rewrites above cannot detect; reconcile silently so the defaults never persist a key
+        // the settings dropdowns exclude.
+        changed = reconcileDefaultFolderSort(settings).changed || changed;
+        changed = reconcileDefaultNoteGrouping(settings).changed || changed;
 
         if (newKeyNormalized) {
             changed = this.migratePropertyMetadataAfterRename(settings, oldKeyNormalized, newKeyNormalized) || changed;
@@ -584,10 +743,19 @@ export class PropertyOperations {
         const nextPropertyFields = removePropertyField(activePropertyFields, normalizedKey);
         changed = setActivePropertyFields(settings, nextPropertyFields) || changed;
 
-        if (casefold(settings.propertySortKey) === normalizedKey && settings.propertySortKey.length > 0) {
-            settings.propertySortKey = '';
-            changed = true;
-        }
+        changed = updatePropertySortKeySetting(settings, normalizedKey, null) || changed;
+        changed = updatePropertyGroupKeySetting(settings, normalizedKey, null) || changed;
+        changed = updateManualSortPropertyKeySetting(settings, normalizedKey, null) || changed;
+        changed = updateManualSortGroupHeaderPropertySetting(settings, normalizedKey, null) || changed;
+        changed = updateSortOverridePropertyKeySettings(settings, normalizedKey, null) || changed;
+        changed = updatePropertyGroupingOverrideKeys(settings, normalizedKey, null) || changed;
+        changed = updateDefaultFolderSortPropertyKey(settings, normalizedKey, null) || changed;
+        changed = updateDefaultNoteGroupingKey(settings, normalizedKey, null) || changed;
+        // Deleting the manual-sort key can make previously excluded configured keys available and
+        // the delete rewrites above only match the deleted key; reconcile to keep the defaults
+        // consistent with the updated key lists.
+        changed = reconcileDefaultFolderSort(settings).changed || changed;
+        changed = reconcileDefaultNoteGrouping(settings).changed || changed;
 
         changed = this.removePropertyMetadataForDeletedKey(settings, normalizedKey) || changed;
 

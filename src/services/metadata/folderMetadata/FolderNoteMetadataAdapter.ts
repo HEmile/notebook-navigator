@@ -16,14 +16,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, TFile } from 'obsidian';
+import { App, TFile, type TFolder } from 'obsidian';
 import type { ISettingsProvider } from '../../../interfaces/ISettingsProvider';
 import { getDBInstanceOrNull } from '../../../storage/fileOperations';
 import type { FileContentChange } from '../../../storage/IndexedDBStorage';
 import { normalizeCanonicalIconId, serializeIconForFrontmatter } from '../../../utils/iconizeFormat';
 import { getParentFolderPath } from '../../../utils/pathUtils';
 import { findMatchingRecordKey } from '../../../utils/recordUtils';
-import { getFolderNote, getFolderNoteDetectionSettings } from '../../../utils/folderNotes';
+import {
+    getFolderNote,
+    getFolderNoteDetectionSettings,
+    resolveFolderNoteNameForFolder,
+    resolveRootFolderNoteSourceName
+} from '../../../utils/folderNoteLookup';
 import { resolveFolderNoteName } from '../../../utils/folderNoteName';
 import type { FolderFrontmatterFields, FolderNoteMetadata, FolderStyleUpdate, FolderStyleValues, FolderStyleWriteResult } from './types';
 
@@ -55,7 +60,7 @@ export class FolderNoteMetadataAdapter {
             return null;
         }
 
-        const folder = this.app.vault.getFolderByPath(folderPath);
+        const folder = this.getFolderByPath(folderPath);
         if (!folder) {
             return null;
         }
@@ -259,7 +264,7 @@ export class FolderNoteMetadataAdapter {
             const parentFolderPath = getParentFolderPath(change.path);
             let expectedFolderNoteName = expectedFolderNoteNameByFolderPath.get(parentFolderPath);
             if (expectedFolderNoteName === undefined) {
-                const folderName = this.getFolderNameFromPath(parentFolderPath);
+                const folderName = this.getFolderNoteSourceNameFromPath(parentFolderPath);
                 expectedFolderNoteName = resolveFolderNoteName(folderName, folderNoteSettings);
                 expectedFolderNoteNameByFolderPath.set(parentFolderPath, expectedFolderNoteName);
             }
@@ -273,12 +278,12 @@ export class FolderNoteMetadataAdapter {
     }
 
     isFolderNotePathForFolder(path: string, folderPath: string): boolean {
-        const folder = this.app.vault.getFolderByPath(folderPath);
+        const folder = this.getFolderByPath(folderPath);
         if (!folder) {
             return false;
         }
 
-        const expectedName = resolveFolderNoteName(folder.name, getFolderNoteDetectionSettings(this.settingsProvider.settings));
+        const expectedName = resolveFolderNoteNameForFolder(folder, getFolderNoteDetectionSettings(this.settingsProvider.settings));
         return this.isFolderNotePathForExpectedName(path, expectedName);
     }
 
@@ -296,9 +301,13 @@ export class FolderNoteMetadataAdapter {
         }
     }
 
-    private getFolderNameFromPath(folderPath: string): string {
+    private getFolderByPath(folderPath: string): TFolder | null {
+        return folderPath === '/' ? this.app.vault.getRoot() : this.app.vault.getFolderByPath(folderPath);
+    }
+
+    private getFolderNoteSourceNameFromPath(folderPath: string): string {
         if (folderPath === '/') {
-            return this.app.vault.getRoot().name;
+            return resolveRootFolderNoteSourceName(this.app.vault.getRoot(), this.app.vault);
         }
 
         const separatorIndex = folderPath.lastIndexOf('/');

@@ -52,7 +52,7 @@ export function addAsyncEventListener<TEvent extends Event = Event>(
     const wrappedHandler = (event: Event) => {
         runAsyncAction(() => handler(event as TEvent));
     };
-    target.addEventListener(type, wrappedHandler as EventListener, options);
+    target.addEventListener(type, wrappedHandler, options);
     // Return disposer function to remove the listener
-    return () => target.removeEventListener(type, wrappedHandler as EventListener, options);
+    return () => target.removeEventListener(type, wrappedHandler, options);
 }

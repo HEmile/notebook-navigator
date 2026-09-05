@@ -16,10 +16,8 @@
     --nn-file-title-line-height: var(--nn-file-title-line-height-mobile);
     --nn-file-single-text-line-height: var(--nn-file-single-text-line-height-mobile);
     --nn-file-multiline-text-line-height: var(--nn-file-multiline-text-line-height-mobile);
-    --nn-date-header-height-mobile: calc(var(--nn-date-header-height) + 8px);
-    --nn-date-header-height-subsequent-mobile: calc(var(--nn-date-header-height-subsequent) + 8px);
-    --nn-date-header-padding-top-mobile: calc(var(--nn-date-header-padding-top) + 4px);
-    --nn-date-header-padding-bottom-mobile: calc(var(--nn-date-header-padding-bottom) + 2px);
+    --nn-list-group-header-height-mobile: calc(var(--nn-list-group-header-height) + 8px);
+    --nn-list-group-goal-header-height-mobile: calc(var(--nn-list-group-header-height-mobile) + var(--nn-list-group-progress-gap-after));
 }
 
 /* Folder text size on mobile */

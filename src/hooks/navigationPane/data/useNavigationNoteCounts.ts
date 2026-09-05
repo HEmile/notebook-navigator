@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react';
-import { TFile, TFolder, type App, debounce } from 'obsidian';
+import { TFolder, type App } from 'obsidian';
 import { NavigationPaneItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, UNTAGGED_TAG_ID } from '../../../types';
 import type { CombinedNavigationItem } from '../../../types/virtualization';
 import type { NoteCountInfo } from '../../../types/noteCounts';
@@ -27,11 +27,10 @@ import { createTagNoteCountInfo } from '../../../utils/tagTree';
 import { createFrontmatterPropertyExclusionMatcher, type HiddenFileNameMatcher } from '../../../utils/fileFilters';
 import { createHiddenTagVisibility } from '../../../utils/tagPrefixMatcher';
 import { getDBInstanceOrNull } from '../../../storage/fileOperations';
-import { getFolderNoteDetectionSettings } from '../../../utils/folderNotes';
+import { getFolderNoteDetectionSettings } from '../../../utils/folderNoteLookup';
 import { calculateFolderNoteCounts } from '../../../utils/noteCountUtils';
 import type { PropertyTreeNode } from '../../../types/storage';
 import { getDirectPropertyKeyNoteCount, getTotalPropertyNoteCount } from '../../../utils/propertyTree';
-import { TIMEOUTS } from '../../../types/obsidian-extended';
 
 export interface NavigationNoteCounts {
     tagCounts: Map<string, NoteCountInfo>;
@@ -52,12 +51,16 @@ export interface UseNavigationNoteCountsParams {
     propertyCollectionCount: NoteCountInfo | undefined;
     effectiveFrontmatterExclusions: string[];
     hiddenFolders: string[];
+    descendantExcludedFolders: string[];
     hiddenFileTags: string[];
     showHiddenItems: boolean;
     folderCountFileNameMatcher: HiddenFileNameMatcher | null;
     fileVisibility: FileVisibility;
+    /** Bumps on folder create/delete/rename, which do not bump vaultChangeVersion */
+    folderChangeVersion: number;
     vaultChangeVersion: number;
-    bumpVaultChangeVersion: () => void;
+    metadataVisibilityVersion: number;
+    tagDataVersion: number;
 }
 
 export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): NavigationNoteCounts {
@@ -74,17 +77,23 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
         propertyCollectionCount,
         effectiveFrontmatterExclusions,
         hiddenFolders,
+        descendantExcludedFolders,
         hiddenFileTags,
         showHiddenItems,
         folderCountFileNameMatcher,
         fileVisibility,
+        folderChangeVersion,
         vaultChangeVersion,
-        bumpVaultChangeVersion
+        metadataVisibilityVersion,
+        tagDataVersion
     } = params;
 
     const lastTagCountsRef = useRef<Map<string, NoteCountInfo>>(new Map());
     const lastPropertyCountsRef = useRef<Map<string, NoteCountInfo>>(new Map());
     const lastFolderCountsRef = useRef<Map<string, NoteCountInfo>>(new Map());
+    const folderCountCacheRef = useRef<{ key: object; counts: Map<string, NoteCountInfo> } | null>(null);
+    const hiddenFileTagDataVersion = !showHiddenItems && hiddenFileTags.length > 0 ? tagDataVersion : 0;
+    const hiddenFilePropertyVersion = effectiveFrontmatterExclusions.length > 0 ? metadataVisibilityVersion : 0;
 
     const computedTagCounts = useMemo((): Map<string, NoteCountInfo> | null => {
         if (!isVisible || !settings.showTags || !settings.showNoteCount) {
@@ -230,13 +239,56 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
         }
     }, [computedPropertyCounts, propertiesSectionActive, settings.showNoteCount]);
 
-    const computedFolderCounts = useMemo((): Map<string, NoteCountInfo> | null => {
+    // Cache key for computed folder counts. A new object identity marks every cached count as stale.
+    // itemsWithMetadata is not an input: passes triggered by expand/collapse or decoration changes
+    // reuse cached counts. folderChangeVersion covers folder create/delete/rename, which do not bump
+    // vaultChangeVersion.
+    const folderCountCacheKey = useMemo((): object => {
+        void descendantExcludedFolders;
+        void effectiveFrontmatterExclusions;
+        void fileVisibility;
+        void folderChangeVersion;
+        void folderCountFileNameMatcher;
+        void hiddenFilePropertyVersion;
+        void hiddenFileTagDataVersion;
+        void hiddenFileTags;
+        void hiddenFolders;
+        void includeDescendantNotes;
+        void settings.enableFolderNotes;
+        void settings.folderNoteNamePattern;
+        void settings.hideFolderNoteInList;
+        void showHiddenItems;
         void vaultChangeVersion;
+        return {};
+    }, [
+        descendantExcludedFolders,
+        effectiveFrontmatterExclusions,
+        fileVisibility,
+        folderChangeVersion,
+        folderCountFileNameMatcher,
+        hiddenFilePropertyVersion,
+        hiddenFileTagDataVersion,
+        hiddenFileTags,
+        hiddenFolders,
+        includeDescendantNotes,
+        settings.enableFolderNotes,
+        settings.folderNoteNamePattern,
+        settings.hideFolderNoteInList,
+        showHiddenItems,
+        vaultChangeVersion
+    ]);
+
+    const computedFolderCounts = useMemo((): Map<string, NoteCountInfo> | null => {
         if (!isVisible || !settings.showNoteCount) {
             return null;
         }
 
-        const counts = new Map<string, NoteCountInfo>();
+        // Counts persist across passes while folderCountCacheKey is unchanged; folders already in
+        // the cache return from calculateFolderNoteCounts without walking their subtrees.
+        const previousCache = folderCountCacheRef.current;
+        const counts =
+            previousCache !== null && previousCache.key === folderCountCacheKey ? previousCache.counts : new Map<string, NoteCountInfo>();
+        folderCountCacheRef.current = { key: folderCountCacheKey, counts };
 
         const excludedProperties = effectiveFrontmatterExclusions;
         const excludedFileMatcher = createFrontmatterPropertyExclusionMatcher(excludedProperties);
@@ -245,7 +297,6 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
         const db = hiddenFileTagVisibility && hiddenFileTagVisibility.hasHiddenRules ? getDBInstanceOrNull() : null;
         const folderNoteSettings = getFolderNoteDetectionSettings({
             enableFolderNotes: settings.enableFolderNotes,
-            folderNoteName: settings.folderNoteName,
             folderNoteNamePattern: settings.folderNoteNamePattern
         });
         const includeDescendants = includeDescendantNotes;
@@ -257,6 +308,7 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
             excludedFiles: excludedProperties,
             excludedFileMatcher,
             excludedFolders: excludedFolderPatterns,
+            descendantExcludedFolders,
             fileNameMatcher: folderCountFileNameMatcher,
             hiddenFileTagVisibility,
             includeDescendants,
@@ -272,11 +324,14 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
             }
         });
 
-        return counts;
+        // Copied so a pass that adds entries yields a new map identity for downstream consumers
+        return new Map(counts);
     }, [
         app,
         effectiveFrontmatterExclusions,
+        descendantExcludedFolders,
         fileVisibility,
+        folderCountCacheKey,
         folderCountFileNameMatcher,
         hiddenFileTags,
         hiddenFolders,
@@ -284,12 +339,10 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
         isVisible,
         itemsWithMetadata,
         settings.enableFolderNotes,
-        settings.folderNoteName,
         settings.folderNoteNamePattern,
         settings.hideFolderNoteInList,
         settings.showNoteCount,
-        showHiddenItems,
-        vaultChangeVersion
+        showHiddenItems
     ]);
 
     const folderCounts = useMemo(() => {
@@ -301,6 +354,7 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
 
     useEffect(() => {
         if (!settings.showNoteCount) {
+            folderCountCacheRef.current = null;
             lastFolderCountsRef.current = new Map();
             return;
         }
@@ -308,27 +362,6 @@ export function useNavigationNoteCounts(params: UseNavigationNoteCountsParams): 
             lastFolderCountsRef.current = computedFolderCounts;
         }
     }, [computedFolderCounts, settings.showNoteCount]);
-
-    useEffect(() => {
-        const bumpCounts = debounce(
-            () => {
-                bumpVaultChangeVersion();
-            },
-            TIMEOUTS.FILE_OPERATION_DELAY,
-            true
-        );
-
-        const metaRef = app.metadataCache.on('changed', file => {
-            if (file instanceof TFile) {
-                bumpCounts();
-            }
-        });
-
-        return () => {
-            app.metadataCache.offref(metaRef);
-            bumpCounts.cancel();
-        };
-    }, [app, bumpVaultChangeVersion]);
 
     return { tagCounts, propertyCounts, folderCounts };
 }

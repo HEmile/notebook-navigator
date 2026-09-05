@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { CollapsedPinnedContexts, NavigatorContext, PinnedSectionCollapseKey } from '../types';
+
 /**
  * Rebuilds a record into a null-prototype object, optionally validating entries.
  * Prevents keys like "constructor" from resolving to Object.prototype.
@@ -148,6 +150,42 @@ export interface PinnedNoteContextValue {
     topic: boolean;
 }
 
+const PINNED_SECTION_COLLAPSE_KEY_PREFIXES: readonly `${NavigatorContext}:`[] = ['folder:', 'tag:', 'property:'];
+
+function isPinnedSectionCollapseKey(value: string): value is PinnedSectionCollapseKey {
+    return PINNED_SECTION_COLLAPSE_KEY_PREFIXES.some(prefix => value.startsWith(prefix) && value.length > prefix.length);
+}
+
+function getPinnedSectionCollapseKeyPrefix(context: NavigatorContext): `${NavigatorContext}:` {
+    return `${context}:`;
+}
+
+export function getCollapsedPinnedContextTarget(key: string, context: NavigatorContext): string | null {
+    const prefix = getPinnedSectionCollapseKeyPrefix(context);
+    if (!key.startsWith(prefix) || key.length <= prefix.length) {
+        return null;
+    }
+
+    return key.slice(prefix.length);
+}
+
+function buildCollapsedPinnedContextKey(context: NavigatorContext, target: string): PinnedSectionCollapseKey {
+    return `${getPinnedSectionCollapseKeyPrefix(context)}${target}`;
+}
+
+interface CollapsedPinnedContextKeyMutationOptions {
+    descendantDelimiter?: string;
+    preserveExisting?: boolean;
+}
+
+function matchesCollapsedPinnedContextTarget(target: string, candidate: string, descendantDelimiter?: string): boolean {
+    if (target === candidate) {
+        return true;
+    }
+
+    return descendantDelimiter !== undefined && target.startsWith(`${candidate}${descendantDelimiter}`);
+}
+
 /**
  * Normalizes a pinned note context value into strict boolean fields.
  */
@@ -183,6 +221,154 @@ export function clonePinnedNotesRecord(value: unknown): Record<string, PinnedNot
     });
 
     return cloned;
+}
+
+/**
+ * Rebuilds the pinned section collapse state as a set-like record of collapsed navigation items.
+ */
+export function cloneCollapsedPinnedContextsRecord(value: unknown): CollapsedPinnedContexts {
+    const cloned = sanitizeRecord<boolean>(undefined) as CollapsedPinnedContexts;
+    if (!isPlainObjectRecordValue(value)) {
+        return cloned;
+    }
+
+    Object.entries(value).forEach(([key, collapsed]) => {
+        if (isPinnedSectionCollapseKey(key) && collapsed === true) {
+            cloned[key] = true;
+        }
+    });
+
+    return cloned;
+}
+
+/**
+ * Updates collapsed pinned section keys when a navigation item path or node id is renamed.
+ */
+export function updateCollapsedPinnedContextKeys(
+    record: CollapsedPinnedContexts | undefined,
+    context: NavigatorContext,
+    oldTarget: string,
+    newTarget: string,
+    options: CollapsedPinnedContextKeyMutationOptions = {}
+): boolean {
+    if (!record || oldTarget === newTarget) {
+        return false;
+    }
+
+    const descendantPrefix = options.descendantDelimiter !== undefined ? `${oldTarget}${options.descendantDelimiter}` : null;
+    const updates: { oldKey: PinnedSectionCollapseKey; newKey: PinnedSectionCollapseKey }[] = [];
+
+    Object.keys(record).forEach(key => {
+        const target = getCollapsedPinnedContextTarget(key, context);
+        if (target === null || !matchesCollapsedPinnedContextTarget(target, oldTarget, options.descendantDelimiter)) {
+            return;
+        }
+
+        if (target === oldTarget) {
+            updates.push({
+                oldKey: key as PinnedSectionCollapseKey,
+                newKey: buildCollapsedPinnedContextKey(context, newTarget)
+            });
+            return;
+        }
+
+        if (descendantPrefix) {
+            updates.push({
+                oldKey: key as PinnedSectionCollapseKey,
+                newKey: buildCollapsedPinnedContextKey(context, `${newTarget}${target.slice(oldTarget.length)}`)
+            });
+        }
+    });
+
+    let changed = false;
+    updates.forEach(({ oldKey, newKey }) => {
+        if (oldKey === newKey) {
+            return;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(record, newKey) && options.preserveExisting) {
+            delete record[oldKey];
+            changed = true;
+            return;
+        }
+
+        if (record[oldKey] === true) {
+            record[newKey] = true;
+        }
+        delete record[oldKey];
+        changed = true;
+    });
+
+    return changed;
+}
+
+/**
+ * Removes collapsed pinned section keys when a navigation item is deleted.
+ */
+export function deleteCollapsedPinnedContextKeys(
+    record: CollapsedPinnedContexts | undefined,
+    context: NavigatorContext,
+    targetToDelete: string,
+    options: Pick<CollapsedPinnedContextKeyMutationOptions, 'descendantDelimiter'> = {}
+): boolean {
+    if (!record) {
+        return false;
+    }
+
+    let changed = false;
+
+    Object.keys(record).forEach(key => {
+        const target = getCollapsedPinnedContextTarget(key, context);
+        if (target === null || !matchesCollapsedPinnedContextTarget(target, targetToDelete, options.descendantDelimiter)) {
+            return;
+        }
+
+        delete record[key as PinnedSectionCollapseKey];
+        changed = true;
+    });
+
+    return changed;
+}
+
+/**
+ * Removes collapsed pinned section keys whose navigation target no longer exists.
+ */
+export function cleanupCollapsedPinnedContextKeys(
+    record: CollapsedPinnedContexts | undefined,
+    context: NavigatorContext,
+    validator: (target: string) => boolean
+): boolean {
+    if (!record) {
+        return false;
+    }
+
+    let changed = false;
+    Object.keys(record).forEach(key => {
+        const target = getCollapsedPinnedContextTarget(key, context);
+        if (target === null || validator(target)) {
+            return;
+        }
+
+        delete record[key as PinnedSectionCollapseKey];
+        changed = true;
+    });
+
+    return changed;
+}
+
+/** Returns whether a record has at least one own enumerable entry. */
+export function hasOwnRecordEntries(record: Record<string, string> | undefined): boolean {
+    if (!record) {
+        return false;
+    }
+
+    for (const key in record) {
+        if (Object.prototype.hasOwnProperty.call(record, key)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 export function casefold(value: string): string {

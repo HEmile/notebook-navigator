@@ -26,6 +26,7 @@ export interface CalendarDayButtonProps {
     isMobile: boolean;
     showUnfinishedTaskIndicator: boolean;
     onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+    onMouseDown: (event: React.MouseEvent<HTMLButtonElement>) => void;
     onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => void;
     style: React.CSSProperties | undefined;
     tooltipEnabled: boolean;
@@ -42,6 +43,7 @@ export const CalendarDayButton = React.memo(function CalendarDayButton({
     isMobile,
     showUnfinishedTaskIndicator,
     onClick,
+    onMouseDown,
     onContextMenu,
     style,
     tooltipEnabled,
@@ -97,6 +99,20 @@ export const CalendarDayButton = React.memo(function CalendarDayButton({
         [onClick, onHideTooltip]
     );
 
+    const handleMouseDown = useCallback(
+        (event: React.MouseEvent<HTMLButtonElement>) => {
+            if (event.button === 1) {
+                const element = buttonRef.current;
+                if (element) {
+                    onHideTooltip(element);
+                }
+            }
+
+            onMouseDown(event);
+        },
+        [onMouseDown, onHideTooltip]
+    );
+
     useEffect(() => {
         const element = buttonRef.current;
         if (!element) {
@@ -108,6 +124,8 @@ export const CalendarDayButton = React.memo(function CalendarDayButton({
         }
 
         if (!tooltipEnabled) {
+            // The anchor can stay hovered while profile visibility changes, so clear tooltip content that is no longer visible.
+            onHideTooltip(element);
             return;
         }
 
@@ -116,7 +134,7 @@ export const CalendarDayButton = React.memo(function CalendarDayButton({
         }
 
         onShowTooltip(element, tooltipDataMemo);
-    }, [isMobile, onShowTooltip, tooltipDataMemo, tooltipEnabled]);
+    }, [isMobile, onHideTooltip, onShowTooltip, tooltipDataMemo, tooltipEnabled]);
 
     return (
         <button
@@ -126,9 +144,11 @@ export const CalendarDayButton = React.memo(function CalendarDayButton({
             style={style}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
+            onMouseDown={handleMouseDown}
             onClick={handleClick}
             onContextMenu={onContextMenu}
         >
+            <span className="nn-navigation-calendar-active-outline" aria-hidden="true" />
             <span className="nn-navigation-calendar-day-number" aria-hidden="true">
                 {dayNumber}
             </span>

@@ -20,9 +20,10 @@ import { App, loadPdfJs, Platform, TFile } from 'obsidian';
 import { LIMITS } from '../../../constants/limits';
 import { isPromiseLike } from '../../../utils/async';
 import { isRecord } from '../../../utils/typeGuards';
-import { createOnceLogger, createRenderLimiter } from '../thumbnail/thumbnailRuntimeUtils';
+import { createRenderLimiter } from '../thumbnail/thumbnailRuntimeUtils';
 import { clearPdfProcessingInProgress, markPdfProcessingInProgress } from './pdfCrashDiagnostics';
 import { preflightPdfCoverThumbnailStageA, preflightPdfCoverThumbnailStageB, type PdfByteScanMetrics } from './pdfPreflight';
+import { isDebugLoggingEnabled, recordDebugReport } from '../../diagnostics/DebugLoggingService';
 
 // Options for rendering a PDF cover page thumbnail
 export interface PdfCoverThumbnailOptions {
@@ -75,23 +76,56 @@ let sharedWorkerVerbosityLevel: number | null = null;
 let workerIdleTimerId: number | null = null;
 
 const renderLimiter = createRenderLimiter(Platform.isMobile ? MOBILE_MAX_PARALLEL_PDF_RENDERS : MAX_PARALLEL_PDF_RENDERS);
-const logOnce = createOnceLogger();
 
 const MOBILE_PDF_PREFLIGHT_BUDGET_BYTES = LIMITS.thumbnails.pdf.preflight.mobileBudgetBytes;
 const MOBILE_PDF_OPERATOR_LIST_TIMEOUT_MS = LIMITS.thumbnails.pdf.preflight.operatorListTimeoutMs;
 const MOBILE_PDF_PREFLIGHT_MULTIPLIERS = LIMITS.thumbnails.pdf.preflight.multipliers;
 const MOBILE_PDF_MAX_DECODED_IMAGE_PIXELS = LIMITS.thumbnails.featureImage.maxFallbackPixels.mobile;
 
-function logPdfPreflightSkip(path: string, params: { scan: PdfByteScanMetrics; reason: string; metrics?: Record<string, unknown> }): void {
-    const { scan, reason, metrics } = params;
-    logOnce(`pdf-preflight-skip:${path}:${reason}`, '[PDF preflight] pdf.preflightSkip', {
+interface PdfThumbnailTrace {
+    path: string;
+    startedMs: number;
+    lastStageMs: number;
+    stageTimings: Record<string, number>;
+    emitted: boolean;
+}
+
+function createPdfThumbnailTrace(path: string): PdfThumbnailTrace | null {
+    if (!isDebugLoggingEnabled()) {
+        return null;
+    }
+
+    const startedMs = performance.now();
+    return {
         path,
-        reason,
-        sumImagePixels: scan.sumImagePixels,
-        maxImagePixels: scan.maxImagePixels,
-        hasSoftMask: scan.hasSoftMask,
-        hasTransparencyGroup: scan.hasTransparencyGroup,
-        ...(metrics ?? {})
+        startedMs,
+        lastStageMs: startedMs,
+        stageTimings: {},
+        emitted: false
+    };
+}
+
+function markPdfTraceStage(trace: PdfThumbnailTrace | null, stage: string): void {
+    if (!trace) {
+        return;
+    }
+
+    const currentMs = performance.now();
+    trace.stageTimings[stage] = Math.round(currentMs - trace.lastStageMs);
+    trace.lastStageMs = currentMs;
+}
+
+function finishPdfTrace(trace: PdfThumbnailTrace | null, details: Record<string, unknown>): void {
+    if (!trace || trace.emitted) {
+        return;
+    }
+
+    trace.emitted = true;
+    recordDebugReport('PDF thumbnail trace', {
+        path: trace.path,
+        elapsedMs: Math.round(performance.now() - trace.startedMs),
+        stageTimings: trace.stageTimings,
+        ...details
     });
 }
 
@@ -302,19 +336,23 @@ export async function renderPdfCoverThumbnail(app: App, pdfFile: TFile, options:
         return null;
     }
 
+    const trace = createPdfThumbnailTrace(pdfFile.path);
     clearWorkerIdleTimer();
     const release = await renderLimiter.acquire();
+    markPdfTraceStage(trace, 'renderSlotWait');
     const pdfProcessingDiagnosticHandle = markPdfProcessingInProgress(pdfFile.path);
 
     let doc: PdfDocument | null = null;
     let page: PdfPage | null = null;
     let preflightScan: PdfByteScanMetrics | null = null;
+    let tracePreflight: Record<string, unknown> | null = null;
 
     try {
         if (Platform.isMobile) {
             let buffer: ArrayBuffer;
             try {
                 buffer = await app.vault.adapter.readBinary(pdfFile.path);
+                markPdfTraceStage(trace, 'readBinary');
             } catch (error) {
                 const scan: PdfByteScanMetrics = {
                     sumImagePixels: 0,
@@ -325,12 +363,16 @@ export async function renderPdfCoverThumbnail(app: App, pdfFile: TFile, options:
                     hasTransparencyGroup: false,
                     uncertain: true
                 };
-                logPdfPreflightSkip(pdfFile.path, {
+                tracePreflight = {
                     scan,
-                    reason: 'stageA.readBinaryFailed',
-                    metrics: { budgetBytes: MOBILE_PDF_PREFLIGHT_BUDGET_BYTES }
+                    budgetBytes: MOBILE_PDF_PREFLIGHT_BUDGET_BYTES
+                };
+                finishPdfTrace(trace, {
+                    result: 'skipped',
+                    skipReason: 'stageA.readBinaryFailed',
+                    preflight: tracePreflight,
+                    error
                 });
-                logOnce(`pdf-preflight-read-failed:${pdfFile.path}`, `[PDF preflight] Failed to read PDF bytes: ${pdfFile.path}`, error);
                 return null;
             }
 
@@ -339,27 +381,34 @@ export async function renderPdfCoverThumbnail(app: App, pdfFile: TFile, options:
                 budgetBytes: MOBILE_PDF_PREFLIGHT_BUDGET_BYTES,
                 maxDecodedImagePixels: MOBILE_PDF_MAX_DECODED_IMAGE_PIXELS
             });
+            markPdfTraceStage(trace, 'preflightStageA');
 
             preflightScan = stageA.metrics.scan;
+            tracePreflight = {
+                stage: 'A',
+                scan: stageA.metrics.scan,
+                budgetBytes: stageA.metrics.budgetBytes,
+                estimatedBytes: stageA.metrics.stageAEstimatedBytes ?? null
+            };
 
             if (stageA.decision === 'skip') {
-                logPdfPreflightSkip(pdfFile.path, {
-                    scan: stageA.metrics.scan,
-                    reason: stageA.reason,
-                    metrics: {
-                        budgetBytes: stageA.metrics.budgetBytes,
-                        estimatedBytes: stageA.metrics.stageAEstimatedBytes ?? null
-                    }
+                finishPdfTrace(trace, {
+                    result: 'skipped',
+                    skipReason: stageA.reason,
+                    preflight: tracePreflight
                 });
                 return null;
             }
         }
 
         const pdfjs: unknown = await loadPdfJs();
+        markPdfTraceStage(trace, 'loadPdfJs');
         const errorsVerbosityLevel = getPdfJsErrorsVerbosityLevel(pdfjs);
         const worker = await getSharedWorkerInstance(pdfjs, errorsVerbosityLevel);
+        markPdfTraceStage(trace, 'worker');
 
         if (!isPdfJsLibrary(pdfjs)) {
+            finishPdfTrace(trace, { result: 'failed', stage: 'pdfjs.invalidLibrary' });
             return null;
         }
 
@@ -381,20 +430,26 @@ export async function renderPdfCoverThumbnail(app: App, pdfFile: TFile, options:
                 ...documentParams
             });
             if (!isPdfDocumentLoadingTask(task)) {
+                finishPdfTrace(trace, { result: 'failed', stage: 'pdfjs.invalidLoadingTask' });
                 return null;
             }
 
             const loadedDoc = await task.promise;
+            markPdfTraceStage(trace, 'loadDocument');
             if (!isPdfDocument(loadedDoc)) {
+                finishPdfTrace(trace, { result: 'failed', stage: 'pdfjs.invalidDocument' });
                 return null;
             }
             doc = loadedDoc;
-        } catch {
+        } catch (error) {
+            finishPdfTrace(trace, { result: 'failed', stage: 'pdfjs.loadDocument', error });
             return null;
         }
 
         const firstPage = await doc.getPage(1);
+        markPdfTraceStage(trace, 'getPage');
         if (!isPdfPage(firstPage)) {
+            finishPdfTrace(trace, { result: 'failed', stage: 'pdfjs.invalidPage' });
             return null;
         }
         page = firstPage;
@@ -418,79 +473,84 @@ export async function renderPdfCoverThumbnail(app: App, pdfFile: TFile, options:
                 maxDecodedImagePixels: MOBILE_PDF_MAX_DECODED_IMAGE_PIXELS,
                 multipliers: MOBILE_PDF_PREFLIGHT_MULTIPLIERS
             });
+            markPdfTraceStage(trace, 'preflightStageB');
+            tracePreflight = {
+                stage: 'B',
+                scan: stageB.metrics.scan,
+                budgetBytes: stageB.metrics.budgetBytes,
+                paintOps: stageB.metrics.operators?.paintOps ?? null,
+                xObjectPaintOps: stageB.metrics.operators?.xObjectPaintOps ?? null,
+                inlinePaintOps: stageB.metrics.operators?.inlinePaintOps ?? null,
+                maskPaintOps: stageB.metrics.operators?.maskPaintOps ?? null,
+                transparencyGroupOps: stageB.metrics.operators?.transparencyGroupOps ?? null,
+                uniqueXObjectIds: stageB.metrics.operators?.uniqueXObjectIds ?? null,
+                maxInlineImagePixels: stageB.metrics.operators?.maxInlineImagePixels ?? null,
+                operatorListLength: stageB.metrics.operators?.operatorListLength ?? null,
+                operatorListTimedOut: stageB.metrics.operators?.timedOut ?? null,
+                pagePixels: stageB.metrics.pagePixels ?? null,
+                estimatedBytes: stageB.metrics.estimatedBytes ?? null
+            };
 
             if (stageB.decision === 'skip') {
-                logPdfPreflightSkip(pdfFile.path, {
-                    scan: stageB.metrics.scan,
-                    reason: stageB.reason,
-                    metrics: {
-                        budgetBytes: stageB.metrics.budgetBytes,
-                        paintOps: stageB.metrics.operators?.paintOps ?? null,
-                        xObjectPaintOps: stageB.metrics.operators?.xObjectPaintOps ?? null,
-                        inlinePaintOps: stageB.metrics.operators?.inlinePaintOps ?? null,
-                        maskPaintOps: stageB.metrics.operators?.maskPaintOps ?? null,
-                        transparencyGroupOps: stageB.metrics.operators?.transparencyGroupOps ?? null,
-                        uniqueXObjectIds: stageB.metrics.operators?.uniqueXObjectIds ?? null,
-                        maxInlineImagePixels: stageB.metrics.operators?.maxInlineImagePixels ?? null,
-                        operatorListLength: stageB.metrics.operators?.operatorListLength ?? null,
-                        operatorListTimedOut: stageB.metrics.operators?.timedOut ?? null,
-                        pagePixels: stageB.metrics.pagePixels ?? null,
-                        estimatedBytes: stageB.metrics.estimatedBytes ?? null
-                    }
+                finishPdfTrace(trace, {
+                    result: 'skipped',
+                    skipReason: stageB.reason,
+                    preflight: tracePreflight
                 });
                 return null;
-            }
-
-            const estimatedBytes = stageB.metrics.estimatedBytes ?? 0;
-            const budgetBytes = stageB.metrics.budgetBytes;
-            if (budgetBytes > 0 && estimatedBytes >= budgetBytes * 0.8) {
-                logOnce(`pdf-preflight-allow:${pdfFile.path}`, '[PDF preflight] pdf.preflightAllow', {
-                    path: pdfFile.path,
-                    estimatedBytes,
-                    budgetBytes,
-                    paintOps: stageB.metrics.operators?.paintOps ?? null,
-                    xObjectPaintOps: stageB.metrics.operators?.xObjectPaintOps ?? null,
-                    inlinePaintOps: stageB.metrics.operators?.inlinePaintOps ?? null,
-                    maskPaintOps: stageB.metrics.operators?.maskPaintOps ?? null,
-                    transparencyGroupOps: stageB.metrics.operators?.transparencyGroupOps ?? null,
-                    uniqueXObjectIds: stageB.metrics.operators?.uniqueXObjectIds ?? null,
-                    maxInlineImagePixels: stageB.metrics.operators?.maxInlineImagePixels ?? null,
-                    operatorListLength: stageB.metrics.operators?.operatorListLength ?? null,
-                    operatorListTimedOut: stageB.metrics.operators?.timedOut ?? null,
-                    pagePixels: stageB.metrics.pagePixels ?? null,
-                    maxImagePixels: stageB.metrics.scan.maxImagePixels,
-                    sumImagePixels: stageB.metrics.scan.sumImagePixels,
-                    hasSoftMask: stageB.metrics.scan.hasSoftMask,
-                    hasTransparencyGroup: stageB.metrics.scan.hasTransparencyGroup,
-                    reason: stageB.reason
-                });
             }
         }
 
         const viewport = firstPage.getViewport({ scale });
 
-        const canvas = document.createElement('canvas');
+        const canvas = createEl('canvas');
         canvas.width = Math.max(1, Math.ceil(viewport.width));
         canvas.height = Math.max(1, Math.ceil(viewport.height));
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
+            finishPdfTrace(trace, { result: 'failed', stage: 'canvas.context' });
             return null;
         }
 
         const renderTask = firstPage.render({ canvasContext: ctx, canvas, viewport });
 
         await renderTask.promise;
+        markPdfTraceStage(trace, 'renderPage');
 
         const blob = await canvasToBlob(canvas, options.mimeType, options.quality);
+        markPdfTraceStage(trace, 'canvasToBlob');
         if (blob) {
+            finishPdfTrace(trace, {
+                result: 'rendered',
+                mimeType: blob.type,
+                size: blob.size,
+                width: canvas.width,
+                height: canvas.height,
+                ...(tracePreflight ? { preflight: tracePreflight } : {})
+            });
             return blob;
         }
 
-        return await canvasToBlob(canvas, 'image/png');
-    } catch {
+        const fallbackBlob = await canvasToBlob(canvas, 'image/png');
+        markPdfTraceStage(trace, 'canvasToPngBlob');
+        finishPdfTrace(
+            trace,
+            fallbackBlob
+                ? {
+                      result: 'rendered',
+                      mimeType: fallbackBlob.type,
+                      size: fallbackBlob.size,
+                      ...(tracePreflight ? { preflight: tracePreflight } : {})
+                  }
+                : { result: 'failed', stage: 'canvasToBlob' }
+        );
+        return fallbackBlob;
+    } catch (error) {
+        finishPdfTrace(trace, { result: 'failed', stage: 'exception', error });
         return null;
     } finally {
+        finishPdfTrace(trace, { result: 'finishedWithoutResult' });
         // PDF_CRASH_DIAGNOSTICS: normal exits clear the active PDF marker.
         clearPdfProcessingInProgress(pdfProcessingDiagnosticHandle);
 

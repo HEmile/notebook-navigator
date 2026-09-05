@@ -28,6 +28,7 @@ interface InputModalCheckboxOptions {
 interface InputModalOptions {
     closeOnSubmit?: boolean;
     checkbox?: InputModalCheckboxOptions;
+    description?: string;
     inputFilter?: (value: string) => string;
     onInputChange?: (context: { rawValue: string; filteredValue: string }) => void;
     submitButtonText?: string;
@@ -76,6 +77,10 @@ export class InputModal extends Modal {
         const inputFilter = options?.inputFilter;
         const initialValue = inputFilter ? inputFilter(defaultValue) : defaultValue;
 
+        if (options?.description) {
+            this.contentEl.createDiv({ cls: 'nn-input-description', text: options.description });
+        }
+
         this.inputEl = this.contentEl.createEl('input', {
             type: 'text',
             placeholder: placeholder,
@@ -109,7 +114,7 @@ export class InputModal extends Modal {
 
         // Use Obsidian scope for keyboard handling
         this.scope.register([], 'Enter', evt => {
-            const activeElement = document.activeElement;
+            const activeElement = activeDocument.activeElement;
             if (!(activeElement instanceof HTMLElement)) {
                 return;
             }

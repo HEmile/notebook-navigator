@@ -16,115 +16,177 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ButtonComponent, Platform } from 'obsidian';
+import { ButtonComponent } from 'obsidian';
+import type { Setting, SettingDefinitionGroup, SettingDefinitionItem } from 'obsidian';
 import { strings } from '../../i18n';
 import { ConfirmModal } from '../../modals/ConfirmModal';
 import { SettingsExportModal, SettingsImportModal } from '../../modals/SettingsTransferModal';
 import type { MetadataCleanupSummary } from '../../services/MetadataService';
 import type { SettingsTabContext } from './SettingsTabContext';
 import { getNavigationPaneSizing } from '../../utils/paneSizing';
+import { isDualPaneSupported } from '../../utils/paneLayout';
 import { localStorage } from '../../utils/localStorage';
 import { runAsyncAction } from '../../utils/async';
 import { showNotice } from '../../utils/noticeUtils';
-import { createSettingGroupFactory } from '../settingGroups';
+import { createGroupDefinition, createRenderDefinition, createToggleDefinition } from '../nativeSettingControls';
+import { getNotSyncedSettingName } from '../syncModeToggle';
 
-/** Renders the advanced settings tab */
-export function renderAdvancedTab(context: SettingsTabContext): void {
-    const { containerEl, plugin, addInfoSetting } = context;
+/** Builds native 1.13 setting definitions for advanced settings. */
+export function createAdvancedSettingDefinitions(context: SettingsTabContext): SettingDefinitionItem[] {
+    const generalItems: NonNullable<SettingDefinitionGroup['items']> = [
+        createToggleDefinition('checkForUpdatesOnStart', {
+            name: strings.settings.items.checkForNewVersionOnStart.name,
+            desc: strings.settings.items.checkForNewVersionOnStart.desc
+        }),
+        createRenderDefinition({
+            name: getNotSyncedSettingName(strings.settings.items.startupDebugLogging.name),
+            desc: strings.settings.items.startupDebugLogging.desc,
+            aliases: [strings.settings.items.startupDebugLogging.name],
+            render: setting => renderDebugLoggingSetting(setting, context)
+        }),
+        createRenderDefinition({
+            name: strings.settings.items.importAndExportSettings.name,
+            desc: strings.settings.items.importAndExportSettings.desc,
+            aliases: [
+                strings.settings.items.importAndExportSettings.importButtonText,
+                strings.settings.items.importAndExportSettings.exportButtonText
+            ],
+            render: setting => {
+                const { plugin } = context;
+                setting
+                    .setName(strings.settings.items.importAndExportSettings.name)
+                    .setDesc(strings.settings.items.importAndExportSettings.desc)
+                    .addButton(button =>
+                        button.setButtonText(strings.settings.items.importAndExportSettings.importButtonText).onClick(() => {
+                            new SettingsImportModal(context.app, plugin).open();
+                        })
+                    )
+                    .addButton(button =>
+                        button.setButtonText(strings.settings.items.importAndExportSettings.exportButtonText).onClick(() => {
+                            new SettingsExportModal(context.app, plugin).open();
+                        })
+                    );
+            }
+        })
+    ];
 
-    const createGroup = createSettingGroupFactory(containerEl);
-    const advancedGroup = createGroup(undefined);
+    const maintenanceItems: NonNullable<SettingDefinitionGroup['items']> = [];
 
-    advancedGroup.addSetting(setting => {
-        setting
-            .setName(strings.settings.items.updateCheckOnStart.name)
-            .setDesc(strings.settings.items.updateCheckOnStart.desc)
-            .addToggle(toggle =>
-                toggle.setValue(plugin.settings.checkForUpdatesOnStart).onChange(async value => {
-                    plugin.settings.checkForUpdatesOnStart = value;
-                    if (!value) {
-                        plugin.dismissPendingUpdateNotice();
-                    }
-                    await plugin.saveSettingsAndUpdate();
-                    if (value) {
-                        await plugin.runReleaseUpdateCheck(true);
-                    }
-                })
-            );
-    });
-
-    if (!Platform.isMobile) {
-        advancedGroup.addSetting(setting => {
-            setting
-                .setName(strings.settings.items.resetPaneSeparator.name)
-                .setDesc(strings.settings.items.resetPaneSeparator.desc)
-                .addButton(button =>
-                    button.setButtonText(strings.settings.items.resetPaneSeparator.buttonText).onClick(() => {
-                        const orientation = plugin.getDualPaneOrientation();
-                        const { storageKey } = getNavigationPaneSizing(orientation);
-                        localStorage.remove(storageKey);
-                        showNotice(strings.settings.items.resetPaneSeparator.notice);
-                    })
-                );
-        });
+    // The pane separator only exists where dual pane is available (desktop and tablets)
+    if (isDualPaneSupported()) {
+        maintenanceItems.push(
+            createRenderDefinition({
+                name: strings.settings.items.resetPaneSeparator.name,
+                desc: strings.settings.items.resetPaneSeparator.desc,
+                aliases: [strings.settings.items.resetPaneSeparator.buttonText],
+                render: setting => {
+                    const { plugin } = context;
+                    setting
+                        .setName(strings.settings.items.resetPaneSeparator.name)
+                        .setDesc(strings.settings.items.resetPaneSeparator.desc)
+                        .addButton(button =>
+                            button.setButtonText(strings.settings.items.resetPaneSeparator.buttonText).onClick(() => {
+                                const orientation = plugin.getDualPaneOrientation();
+                                const { storageKey } = getNavigationPaneSizing(orientation);
+                                localStorage.remove(storageKey);
+                                showNotice(strings.settings.items.resetPaneSeparator.notice);
+                            })
+                        );
+                }
+            })
+        );
     }
 
-    advancedGroup.addSetting(setting => {
-        setting
-            .setName(strings.settings.items.settingsTransfer.name)
-            .setDesc(strings.settings.items.settingsTransfer.desc)
-            .addButton(button =>
-                button.setButtonText(strings.settings.items.settingsTransfer.importButtonText).onClick(() => {
-                    new SettingsImportModal(context.app, plugin).open();
-                })
-            )
-            .addButton(button =>
-                button.setButtonText(strings.settings.items.settingsTransfer.exportButtonText).onClick(() => {
-                    new SettingsExportModal(context.app, plugin).open();
-                })
-            );
-    });
+    maintenanceItems.push(
+        createRenderDefinition({
+            name: strings.settings.items.metadataCleanup.name,
+            desc: strings.settings.items.metadataCleanup.desc,
+            aliases: [strings.settings.items.metadataCleanup.buttonText],
+            render: setting => renderMetadataCleanupSetting(setting, context)
+        }),
+        createRenderDefinition({
+            name: strings.settings.items.rebuildCache.name,
+            desc: strings.settings.items.rebuildCache.desc,
+            aliases: [strings.settings.items.rebuildCache.buttonText],
+            render: setting => renderRebuildCacheSetting(setting, context)
+        }),
+        createRenderDefinition({
+            name: strings.settings.items.cacheStatistics.localCache,
+            render: setting => renderCacheStatsSetting(setting, context)
+        })
+    );
 
-    advancedGroup.addSetting(setting => {
-        setting
-            .setName(strings.settings.items.resetAllSettings.name)
-            .setDesc(strings.settings.items.resetAllSettings.desc)
-            .addButton(button => {
-                button.setButtonText(strings.settings.items.resetAllSettings.buttonText);
-                button.buttonEl.addClass('mod-warning');
-                button.onClick(() => {
-                    new ConfirmModal(
-                        context.app,
-                        strings.settings.items.resetAllSettings.confirmTitle,
-                        strings.settings.items.resetAllSettings.confirmMessage,
-                        async () => {
-                            button.setDisabled(true);
-                            try {
-                                await plugin.resetAllSettings();
-                                showNotice(strings.settings.items.resetAllSettings.notice);
-                            } catch (error) {
-                                console.error('Failed to reset all settings', error);
-                                showNotice(strings.settings.items.resetAllSettings.error, { variant: 'warning' });
-                            } finally {
-                                button.setDisabled(false);
-                            }
-                        },
-                        strings.settings.items.resetAllSettings.confirmButtonText
-                    ).open();
-                });
+    const resetItems: NonNullable<SettingDefinitionGroup['items']> = [
+        createRenderDefinition({
+            name: strings.settings.items.resetAllSettings.name,
+            desc: strings.settings.items.resetAllSettings.desc,
+            aliases: [strings.settings.items.resetAllSettings.buttonText],
+            render: setting => renderResetAllSettingsSetting(setting, context)
+        })
+    ];
+
+    return [
+        createGroupDefinition(undefined, generalItems),
+        createGroupDefinition(strings.settings.pages.advanced.groups.maintenance, maintenanceItems),
+        createGroupDefinition(strings.settings.pages.advanced.groups.resetSettings, resetItems)
+    ];
+}
+
+function renderDebugLoggingSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+
+    setting
+        .setName(getNotSyncedSettingName(strings.settings.items.startupDebugLogging.name))
+        .setDesc(strings.settings.items.startupDebugLogging.desc)
+        .addToggle(toggle =>
+            toggle.setValue(plugin.isDebugLoggingEnabled()).onChange(value => {
+                plugin.setDebugLoggingEnabled(value);
+            })
+        );
+}
+
+function renderResetAllSettingsSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+
+    setting
+        .setName(strings.settings.items.resetAllSettings.name)
+        .setDesc(strings.settings.items.resetAllSettings.desc)
+        .addButton(button => {
+            button.setButtonText(strings.settings.items.resetAllSettings.buttonText);
+            button.buttonEl.addClass('mod-warning');
+            button.onClick(() => {
+                new ConfirmModal(
+                    context.app,
+                    strings.settings.items.resetAllSettings.confirmTitle,
+                    strings.settings.items.resetAllSettings.confirmMessage,
+                    async () => {
+                        button.setDisabled(true);
+                        try {
+                            await plugin.resetAllSettings();
+                            showNotice(strings.settings.items.resetAllSettings.notice);
+                        } catch (error) {
+                            console.error('Failed to reset all settings', error);
+                            showNotice(strings.settings.items.resetAllSettings.error, { variant: 'warning' });
+                        } finally {
+                            button.setDisabled(false);
+                        }
+                    },
+                    strings.settings.items.resetAllSettings.confirmButtonText
+                ).open();
             });
-    });
+        });
+}
 
+function renderMetadataCleanupSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
     let metadataCleanupButton: ButtonComponent | null = null;
     let metadataCleanupInfoText: HTMLDivElement | null = null;
 
-    /** Sets the metadata cleanup UI to loading state */
     const setMetadataCleanupLoadingState = () => {
         metadataCleanupInfoText?.setText(strings.settings.items.metadataCleanup.loading);
         metadataCleanupButton?.setDisabled(true);
     };
 
-    /** Updates the metadata cleanup information display based on cleanup summary */
     const updateMetadataCleanupInfo = ({ folders, tags, properties, files, pinnedNotes, separators, total }: MetadataCleanupSummary) => {
         if (!metadataCleanupInfoText) {
             return;
@@ -159,15 +221,11 @@ export function renderAdvancedTab(context: SettingsTabContext): void {
         }
     };
 
-    const metadataCleanupSetting = advancedGroup.addSetting(setting => {
-        setting.setName(strings.settings.items.metadataCleanup.name).setDesc(strings.settings.items.metadataCleanup.desc);
-    });
-
-    metadataCleanupSetting.addButton(button => {
+    setting.setName(strings.settings.items.metadataCleanup.name).setDesc(strings.settings.items.metadataCleanup.desc);
+    setting.addButton(button => {
         metadataCleanupButton = button;
         button.setButtonText(strings.settings.items.metadataCleanup.buttonText);
         button.setDisabled(true);
-        // Run metadata cleanup without blocking the UI
         button.onClick(() => {
             runAsyncAction(async () => {
                 setMetadataCleanupLoadingState();
@@ -183,45 +241,43 @@ export function renderAdvancedTab(context: SettingsTabContext): void {
         });
     });
 
-    metadataCleanupInfoText = metadataCleanupSetting.descEl.createDiv({
+    metadataCleanupInfoText = setting.descEl.createDiv({
         cls: 'setting-item-description',
         text: strings.settings.items.metadataCleanup.loading
     });
 
-    // Load initial metadata cleanup summary without blocking
     runAsyncAction(() => refreshMetadataCleanupSummary());
+}
 
-    advancedGroup.addSetting(setting => {
-        setting
-            .setName(strings.settings.items.rebuildCache.name)
-            .setDesc(strings.settings.items.rebuildCache.desc)
-            .addButton(button =>
-                button.setButtonText(strings.settings.items.rebuildCache.buttonText).onClick(() => {
-                    // Rebuild cache without blocking the UI
-                    runAsyncAction(async () => {
-                        button.setDisabled(true);
-                        try {
-                            await plugin.rebuildCache();
-                        } catch (error) {
-                            console.error('Failed to rebuild cache from settings:', error);
-                            showNotice(strings.settings.items.rebuildCache.error, { variant: 'warning' });
-                        } finally {
-                            button.setDisabled(false);
-                        }
-                    });
-                })
-            );
-    });
+function renderRebuildCacheSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
 
-    const cacheStatsSetting = addInfoSetting(
-        advancedGroup.addSetting,
-        ['nn-database-stats', 'nn-stats-section', 'nn-local-cache-stats-setting'],
-        () => {}
-    );
+    setting
+        .setName(strings.settings.items.rebuildCache.name)
+        .setDesc(strings.settings.items.rebuildCache.desc)
+        .addButton(button =>
+            button.setButtonText(strings.settings.items.rebuildCache.buttonText).onClick(() => {
+                runAsyncAction(async () => {
+                    button.setDisabled(true);
+                    try {
+                        await plugin.rebuildCache();
+                    } catch (error) {
+                        console.error('Failed to rebuild cache from settings:', error);
+                        showNotice(strings.settings.items.rebuildCache.error, { variant: 'warning' });
+                    } finally {
+                        button.setDisabled(false);
+                    }
+                });
+            })
+        );
+}
 
-    const statsTextEl = cacheStatsSetting.descEl.createDiv({ cls: 'nn-stats-text' });
+function renderCacheStatsSetting(setting: Setting, context: SettingsTabContext): void {
+    setting.setName('').setDesc('');
+    setting.settingEl.addClass('nn-database-stats');
+    setting.settingEl.addClass('nn-stats-section');
 
-    // Use context directly to satisfy eslint exhaustive-deps requirements
+    const statsTextEl = setting.descEl.createDiv({ cls: 'nn-stats-text' });
     context.registerStatsTextElement(statsTextEl);
     context.requestStatisticsRefresh();
     context.ensureStatisticsInterval();

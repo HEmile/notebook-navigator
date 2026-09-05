@@ -16,25 +16,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback } from 'react';
-import { App, Menu, TFile } from 'obsidian';
+import React, { useCallback, useRef } from 'react';
+import { App, Menu, TFile, type PaneType } from 'obsidian';
 import { strings } from '../../i18n';
 import { ConfirmModal } from '../../modals/ConfirmModal';
 import type { CommandQueueService } from '../../services/CommandQueueService';
 import type { FileSystemOperations } from '../../services/FileSystemService';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import { runAsyncAction } from '../../utils/async';
-import { createDailyNote, getDailyNoteFilename, type DailyNoteSettings } from '../../utils/dailyNotes';
+import { createDailyNote, getDailyNoteFilename, getDailyNotePath, type DailyNoteSettings } from '../../utils/dailyNotes';
 import { setAsyncOnClick } from '../../utils/contextMenu/menuAsyncHelpers';
 import { showNotice } from '../../utils/noticeUtils';
 import { openFileInContext } from '../../utils/openFileInContext';
 import { createCalendarMarkdownFile, getCalendarTemplatePath } from '../../utils/calendarNotes';
 import type { MomentApi, MomentInstance } from '../../utils/moment';
 import { resolveUXIconForMenu } from '../../utils/uxIcons';
-import type { CalendarNoteContextMenuTarget, CustomCalendarNoteKind } from './types';
+import type { CalendarNoteContextMenuTarget, CalendarNoteTarget, CustomCalendarNoteKind } from './types';
 import {
     createCalendarNotePathResolverContext,
-    getExistingCalendarNoteFile,
     resolveCalendarNotePath,
     type CalendarNoteRootFolderSettings
 } from './calendarNoteResolution';
@@ -47,6 +46,7 @@ interface UseCalendarNoteActionsOptions {
     settings: NotebookNavigatorSettings;
     dailyNoteSettings: DailyNoteSettings | null;
     momentApi: MomentApi | null;
+    dailyNoteLocale: string;
     calendarLocale: string;
     weekLocale: string;
     customCalendarRootFolderSettings: CalendarNoteRootFolderSettings;
@@ -56,12 +56,16 @@ interface UseCalendarNoteActionsOptions {
     showMonthHighlightActions: boolean;
     setCalendarMonthHighlight: (monthKey: string, dayIso: string) => Promise<void>;
     removeCalendarMonthHighlight: (monthKey: string) => Promise<void>;
+    resolveNoteTarget: (targetPath: string | null, existingFile: TFile | null) => CalendarNoteTarget;
+}
+
+interface CalendarNoteOpenOptions {
+    context?: PaneType;
 }
 
 interface UseCalendarNoteActionsResult {
-    getExistingCustomCalendarNoteFile: (kind: CustomCalendarNoteKind, date: MomentInstance) => TFile | null;
-    openOrCreateCustomCalendarNote: (kind: CustomCalendarNoteKind, date: MomentInstance, existingFile: TFile | null) => void;
-    openOrCreateDailyNote: (date: MomentInstance, existingFile: TFile | null) => void;
+    openOrCreateCustomCalendarNote: (kind: CustomCalendarNoteKind, date: MomentInstance, options?: CalendarNoteOpenOptions) => void;
+    openOrCreateDailyNote: (date: MomentInstance, options?: CalendarNoteOpenOptions) => void;
     showCalendarNoteContextMenu: (event: React.MouseEvent<HTMLElement>, target: CalendarNoteContextMenuTarget) => void;
 }
 
@@ -73,6 +77,7 @@ export function useCalendarNoteActions({
     settings,
     dailyNoteSettings,
     momentApi,
+    dailyNoteLocale,
     calendarLocale,
     weekLocale,
     customCalendarRootFolderSettings,
@@ -81,14 +86,22 @@ export function useCalendarNoteActions({
     onVaultChange,
     showMonthHighlightActions,
     setCalendarMonthHighlight,
-    removeCalendarMonthHighlight
+    removeCalendarMonthHighlight,
+    resolveNoteTarget
 }: UseCalendarNoteActionsOptions): UseCalendarNoteActionsResult {
+    // Confirmation callbacks can outlive the render that opened the modal, so they must read the current profile resolver.
+    const resolveNoteTargetRef = useRef(resolveNoteTarget);
+    resolveNoteTargetRef.current = resolveNoteTarget;
+
     const collapseNavigationIfMobile = useCallback(() => {
         if (!isMobile || !app.workspace.leftSplit) {
             return;
         }
 
         // On mobile, opening a daily note should feel like navigating away from the sidebar.
+        // Safe with dual pane on tablets: Obsidian no-ops WorkspaceMobileDrawer.collapse()
+        // while the sidebar is pinned (see src/utils/paneLayout.ts), so only the overlay
+        // drawer closes.
         app.workspace.leftSplit.collapse();
     }, [app, isMobile]);
 
@@ -97,30 +110,28 @@ export function useCalendarNoteActions({
         [settings]
     );
 
-    const getExistingCustomCalendarNoteFile = useCallback(
-        (kind: CustomCalendarNoteKind, date: MomentInstance): TFile | null => {
-            return getExistingCalendarNoteFile({
-                app,
-                kind,
-                date,
-                resolverContext: getCustomCalendarResolverContext(kind),
-                calendarLocale,
-                weekLocale,
-                customCalendarRootFolderSettings,
-                momentApi
-            });
-        },
-        [app, calendarLocale, customCalendarRootFolderSettings, getCustomCalendarResolverContext, momentApi, weekLocale]
-    );
-
-    const openOrCreateCustomCalendarNote = useCallback(
-        (kind: CustomCalendarNoteKind, date: MomentInstance, existingFile: TFile | null) => {
-            if (existingFile) {
-                openFile(existingFile, { active: true });
-                collapseNavigationIfMobile();
+    const openCalendarNoteFile = useCallback(
+        async (file: TFile, options?: CalendarNoteOpenOptions) => {
+            if (options?.context) {
+                await openFileInContext({ app, commandQueue, file, context: options.context });
                 return;
             }
 
+            openFile(file, { active: true });
+        },
+        [app, commandQueue, openFile]
+    );
+
+    const resolveLatestNoteTarget = useCallback(
+        (targetPath: string): CalendarNoteTarget => {
+            const existing = app.vault.getAbstractFileByPath(targetPath);
+            return resolveNoteTargetRef.current(targetPath, existing instanceof TFile ? existing : null);
+        },
+        [app.vault]
+    );
+
+    const openOrCreateCustomCalendarNote = useCallback(
+        (kind: CustomCalendarNoteKind, date: MomentInstance, options?: CalendarNoteOpenOptions) => {
             const resolverContext = getCustomCalendarResolverContext(kind);
             const resolvedPath = resolveCalendarNotePath({
                 kind,
@@ -138,14 +149,30 @@ export function useCalendarNoteActions({
 
             clearHoverTooltip();
 
-            const existing = app.vault.getAbstractFileByPath(resolvedPath.filePath);
-            if (existing instanceof TFile) {
-                openFile(existing, { active: true });
+            const target = resolveLatestNoteTarget(resolvedPath.filePath);
+            if (target.isHidden) {
+                showNotice(strings.navigationCalendar.noteHiddenByProfile);
+                return;
+            }
+            const visibleFile = target.visibleFile;
+            if (visibleFile) {
+                runAsyncAction(() => openCalendarNoteFile(visibleFile, options));
                 collapseNavigationIfMobile();
                 return;
             }
 
             const createCustomNote = async () => {
+                const latestTarget = resolveLatestNoteTarget(resolvedPath.filePath);
+                if (latestTarget.isHidden) {
+                    showNotice(strings.navigationCalendar.noteHiddenByProfile);
+                    return;
+                }
+                if (latestTarget.visibleFile) {
+                    await openCalendarNoteFile(latestTarget.visibleFile, options);
+                    collapseNavigationIfMobile();
+                    return;
+                }
+
                 let created: TFile;
                 try {
                     const templatePath = getCalendarTemplatePath(kind, settings);
@@ -157,7 +184,7 @@ export function useCalendarNoteActions({
                 }
 
                 onVaultChange();
-                openFile(created, { active: true });
+                await openCalendarNoteFile(created, options);
                 collapseNavigationIfMobile();
             };
 
@@ -186,20 +213,15 @@ export function useCalendarNoteActions({
             getCustomCalendarResolverContext,
             momentApi,
             onVaultChange,
-            openFile,
+            openCalendarNoteFile,
+            resolveLatestNoteTarget,
             settings,
             weekLocale
         ]
     );
 
     const openOrCreateDailyNote = useCallback(
-        (date: MomentInstance, existingFile: TFile | null) => {
-            if (existingFile) {
-                openFile(existingFile, { active: true });
-                collapseNavigationIfMobile();
-                return;
-            }
-
+        (date: MomentInstance, options?: CalendarNoteOpenOptions) => {
             if (settings.calendarIntegrationMode === 'daily-notes') {
                 const resolvedDailySettings = dailyNoteSettings;
                 if (!resolvedDailySettings) {
@@ -207,17 +229,40 @@ export function useCalendarNoteActions({
                     return;
                 }
 
-                const localizedDate = date.clone().locale(calendarLocale);
+                const localizedDate = date.clone().locale(dailyNoteLocale);
                 const filename = getDailyNoteFilename(localizedDate, resolvedDailySettings);
+                const targetPath = getDailyNotePath(localizedDate, resolvedDailySettings);
+                const target = resolveLatestNoteTarget(targetPath);
+                if (target.isHidden) {
+                    showNotice(strings.navigationCalendar.noteHiddenByProfile);
+                    return;
+                }
+                const visibleFile = target.visibleFile;
+                if (visibleFile) {
+                    runAsyncAction(() => openCalendarNoteFile(visibleFile, options));
+                    collapseNavigationIfMobile();
+                    return;
+                }
 
                 const createFile = async () => {
+                    const latestTarget = resolveLatestNoteTarget(targetPath);
+                    if (latestTarget.isHidden) {
+                        showNotice(strings.navigationCalendar.noteHiddenByProfile);
+                        return;
+                    }
+                    if (latestTarget.visibleFile) {
+                        await openCalendarNoteFile(latestTarget.visibleFile, options);
+                        collapseNavigationIfMobile();
+                        return;
+                    }
+
                     const created = await createDailyNote(app, localizedDate, resolvedDailySettings);
                     if (!created) {
                         return;
                     }
 
                     onVaultChange();
-                    openFile(created, { active: true });
+                    await openCalendarNoteFile(created, options);
                     collapseNavigationIfMobile();
                 };
 
@@ -239,16 +284,17 @@ export function useCalendarNoteActions({
                 return;
             }
 
-            openOrCreateCustomCalendarNote('day', date, null);
+            openOrCreateCustomCalendarNote('day', date, options);
         },
         [
             app,
-            calendarLocale,
             collapseNavigationIfMobile,
+            dailyNoteLocale,
             dailyNoteSettings,
             onVaultChange,
-            openFile,
+            openCalendarNoteFile,
             openOrCreateCustomCalendarNote,
+            resolveLatestNoteTarget,
             settings
         ]
     );
@@ -285,9 +331,14 @@ export function useCalendarNoteActions({
 
             clearHoverTooltip();
 
+            if (target.note.isHidden) {
+                showNotice(strings.navigationCalendar.noteHiddenByProfile);
+                return;
+            }
+
             const menu = new Menu();
             const isCurrentMonthHighlight = target.currentMonthHighlightDayIso === target.dayIso;
-            const existingFile = target.existingFile;
+            const existingFile = target.note.visibleFile;
 
             if (existingFile) {
                 addCalendarNoteOpenOptions(menu, existingFile);
@@ -328,6 +379,7 @@ export function useCalendarNoteActions({
                 menu.addItem(item => {
                     item.setTitle(strings.contextMenu.file.deleteNote)
                         .setIcon('lucide-trash')
+                        .setWarning(true)
                         .onClick(() => {
                             runAsyncAction(() =>
                                 fileSystemOps.deleteFile(existingFile, settings.confirmBeforeDelete, () => {
@@ -348,11 +400,11 @@ export function useCalendarNoteActions({
                             }
 
                             if (target.kind === 'day') {
-                                runAsyncAction(() => openOrCreateDailyNote(target.date, null));
+                                runAsyncAction(() => openOrCreateDailyNote(target.date));
                                 return;
                             }
 
-                            runAsyncAction(() => openOrCreateCustomCalendarNote(target.kind, target.date, null));
+                            runAsyncAction(() => openOrCreateCustomCalendarNote(target.kind, target.date));
                         });
                 });
             }
@@ -376,7 +428,6 @@ export function useCalendarNoteActions({
     );
 
     return {
-        getExistingCustomCalendarNoteFile,
         openOrCreateCustomCalendarNote,
         openOrCreateDailyNote,
         showCalendarNoteContextMenu

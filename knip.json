@@ -2,8 +2,11 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": ["src/main.ts"],
   "project": ["src/**/*.{ts,tsx}"],
-  "ignore": ["src/i18n/locales/**", "scripts/release.js", "codemods/**"],
-  "ignoreDependencies": ["jscodeshift", "@types/jscodeshift", "recast", "obsidian"],
+  "ignoreDependencies": ["tsx"],
+  "ignoreIssues": {
+    "src/i18n/locales/{ar,de,es,fa,fr,id,it,ja,ko,nl,pl,pt,pt_br,ru,th,tr,uk,vi,zh_cn,zh_tw}.ts": ["exports"],
+    "src/view/FolderNoteSidebarPlaceholderView.ts": ["exports"]
+  },
   "ignoreExportsUsedInFile": {
     "interface": true,
     "type": true,

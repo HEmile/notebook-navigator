@@ -17,7 +17,7 @@
  */
 
 import { App, TFolder } from 'obsidian';
-import { SortOption, type AlphaSortOrder, type NotebookNavigatorSettings } from '../settings';
+import type { AlphaSortOrder, ListSortOverrideValue, NotebookNavigatorSettings } from '../settings/types';
 import { ISettingsProvider } from '../interfaces/ISettingsProvider';
 import { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
 import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
@@ -30,15 +30,17 @@ import {
     type FolderDisplayData,
     type TagColorData,
     type PropertyColorData,
-    type FileMetadataMigrationResult
+    type FileMetadataMigrationResult,
+    type MetadataCleanupResult
 } from './metadata';
 import { TagTreeNode } from '../types/storage';
 import type { FileData } from '../storage/IndexedDBStorage';
 import { getDBInstance } from '../storage/fileOperations';
-import { NavigatorContext } from '../types';
+import { NavigatorContext, type CollapsedPinnedContexts } from '../types';
 import type { NavigationSeparatorTarget } from '../utils/navigationSeparators';
 import { buildPropertyKeyNodeId } from '../utils/propertyTree';
-import { casefold } from '../utils/recordUtils';
+import { casefold, getCollapsedPinnedContextTarget } from '../utils/recordUtils';
+import { buildTagTreeFromDatabase } from '../utils/tagTree';
 
 /**
  * Validators object containing all data needed for cleanup operations
@@ -81,7 +83,7 @@ export class MetadataService {
      * @param getPropertyTreeProvider - Function to get the property tree provider
      */
     constructor(
-        app: App,
+        private readonly app: App,
         settingsProvider: ISettingsProvider,
         getTagTreeProvider: () => ITagTreeProvider | null,
         getPropertyTreeProvider?: () => IPropertyTreeProvider | null
@@ -198,15 +200,15 @@ export class MetadataService {
         return this.folderService.subscribeToFolderDisplayNameChanges(listener);
     }
 
-    async setFolderSortOverride(folderPath: string, sortOption: SortOption): Promise<void> {
-        return this.folderService.setFolderSortOverride(folderPath, sortOption);
+    async setFolderSortOverride(folderPath: string, sortOverride: ListSortOverrideValue): Promise<void> {
+        return this.folderService.setFolderSortOverride(folderPath, sortOverride);
     }
 
     async removeFolderSortOverride(folderPath: string): Promise<void> {
         return this.folderService.removeFolderSortOverride(folderPath);
     }
 
-    getFolderSortOverride(folderPath: string): SortOption | undefined {
+    getFolderSortOverride(folderPath: string): ListSortOverrideValue | undefined {
         return this.folderService.getFolderSortOverride(folderPath);
     }
 
@@ -293,15 +295,15 @@ export class MetadataService {
         await this.tagService.handleTagDelete(tagPath, settings => this.navigationSeparatorService.applyTagDelete(settings, tagPath));
     }
 
-    async setTagSortOverride(tagPath: string, sortOption: SortOption): Promise<void> {
-        return this.tagService.setTagSortOverride(tagPath, sortOption);
+    async setTagSortOverride(tagPath: string, sortOverride: ListSortOverrideValue): Promise<void> {
+        return this.tagService.setTagSortOverride(tagPath, sortOverride);
     }
 
     async removeTagSortOverride(tagPath: string): Promise<void> {
         return this.tagService.removeTagSortOverride(tagPath);
     }
 
-    getTagSortOverride(tagPath: string): SortOption | undefined {
+    getTagSortOverride(tagPath: string): ListSortOverrideValue | undefined {
         return this.tagService.getTagSortOverride(tagPath);
     }
 
@@ -359,15 +361,15 @@ export class MetadataService {
         return this.propertyService.getPropertyIcon(nodeId);
     }
 
-    async setPropertySortOverride(nodeId: string, sortOption: SortOption): Promise<void> {
-        return this.propertyService.setPropertySortOverride(nodeId, sortOption);
+    async setPropertySortOverride(nodeId: string, sortOverride: ListSortOverrideValue): Promise<void> {
+        return this.propertyService.setPropertySortOverride(nodeId, sortOverride);
     }
 
     async removePropertySortOverride(nodeId: string): Promise<void> {
         return this.propertyService.removePropertySortOverride(nodeId);
     }
 
-    getPropertySortOverride(nodeId: string): SortOption | undefined {
+    getPropertySortOverride(nodeId: string): ListSortOverrideValue | undefined {
         return this.propertyService.getPropertySortOverride(nodeId);
     }
 
@@ -527,18 +529,14 @@ export class MetadataService {
     /**
      * Cleanup metadata for folders, tags, and files
      * Called on plugin startup to remove references to deleted items
-     * @returns True if any changes were made
+     * @returns Separate settings and local-storage change flags
      */
-    async cleanupAllMetadata(targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings): Promise<boolean> {
-        const [folderChanges, tagChanges, propertyChanges, fileChanges, separatorChanges] = await Promise.all([
-            this.folderService.cleanupFolderMetadata(targetSettings),
-            this.tagService.cleanupTagMetadata(targetSettings),
-            this.propertyService.cleanupPropertyMetadata(targetSettings),
-            this.fileService.cleanupPinnedNotes(targetSettings),
-            this.navigationSeparatorService.cleanupSeparators(targetSettings)
-        ]);
-
-        return folderChanges || tagChanges || propertyChanges || fileChanges || separatorChanges;
+    async cleanupAllMetadata(
+        targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings,
+        collapsedPinnedContextsOverride?: CollapsedPinnedContexts
+    ): Promise<MetadataCleanupResult> {
+        const validators = MetadataService.prepareCleanupValidators(this.app);
+        return this.runUnifiedCleanup(validators, targetSettings, collapsedPinnedContextsOverride);
     }
 
     /**
@@ -556,28 +554,42 @@ export class MetadataService {
      * This avoids multiple file iterations during startup
      *
      * @param validators - Object containing database files, tag tree, and vault files
-     * @returns true if any changes were made
+     * @param targetSettings - Settings object to clean; defaults to live settings
+     * @param collapsedPinnedContextsOverride - Dry-run record for pinned-section collapse keys.
+     *   When provided, stale keys are removed from this record only; otherwise the vault-local store is mutated and persisted.
+     * @returns Separate flags so local-only cleanup does not trigger a data.json save
      */
     async runUnifiedCleanup(
         validators: CleanupValidators,
-        targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings
-    ): Promise<boolean> {
+        targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings,
+        collapsedPinnedContextsOverride?: CollapsedPinnedContexts
+    ): Promise<MetadataCleanupResult> {
         const [folderChanges, tagChanges, propertyChanges, fileChanges, separatorChanges] = await Promise.all([
-            this.folderService.cleanupWithValidators(validators, targetSettings),
-            this.tagService.cleanupWithValidators(validators, targetSettings),
-            this.propertyService.cleanupWithValidators(validators, targetSettings),
+            this.folderService.cleanupWithValidators(validators, targetSettings, collapsedPinnedContextsOverride),
+            this.tagService.cleanupWithValidators(validators, targetSettings, collapsedPinnedContextsOverride),
+            this.propertyService.cleanupWithValidators(validators, targetSettings, collapsedPinnedContextsOverride),
             this.fileService.cleanupWithValidators(validators, targetSettings),
             this.navigationSeparatorService.cleanupWithValidators(validators, targetSettings)
         ]);
 
-        return folderChanges || tagChanges || propertyChanges || fileChanges || separatorChanges;
+        return {
+            settingsChanged:
+                folderChanges.settingsChanged ||
+                tagChanges.settingsChanged ||
+                propertyChanges.settingsChanged ||
+                fileChanges ||
+                separatorChanges,
+            localChanged: folderChanges.localChanged || tagChanges.localChanged || propertyChanges.localChanged
+        };
     }
 
     async getCleanupSummary(): Promise<MetadataCleanupSummary> {
         const clonedSettings = MetadataService.cloneSettings(this.settingsProvider.settings);
-        const before = MetadataService.computeMetadataCounts(clonedSettings);
-        await this.cleanupAllMetadata(clonedSettings);
-        const after = MetadataService.computeMetadataCounts(clonedSettings);
+        // Clone the vault-local record so the dry run never mutates persisted pinned-section collapse state
+        const clonedCollapsedPinnedContexts = this.settingsProvider.getCollapsedPinnedContexts();
+        const before = MetadataService.computeMetadataCounts(clonedSettings, clonedCollapsedPinnedContexts);
+        await this.cleanupAllMetadata(clonedSettings, clonedCollapsedPinnedContexts);
+        const after = MetadataService.computeMetadataCounts(clonedSettings, clonedCollapsedPinnedContexts);
 
         const folders = Math.max(0, before.folders - after.folders);
         const tags = Math.max(0, before.tags - after.tags);
@@ -594,7 +606,7 @@ export class MetadataService {
         return JSON.parse(JSON.stringify(settings)) as NotebookNavigatorSettings;
     }
 
-    private static computeMetadataCounts(settings: NotebookNavigatorSettings) {
+    private static computeMetadataCounts(settings: NotebookNavigatorSettings, collapsedPinnedContexts: CollapsedPinnedContexts) {
         const folderKeys = MetadataService.collectUniqueKeys([
             settings.folderColors,
             settings.folderBackgroundColors,
@@ -635,6 +647,25 @@ export class MetadataService {
             });
         });
 
+        Object.keys(collapsedPinnedContexts).forEach(key => {
+            const folderTarget = getCollapsedPinnedContextTarget(key, 'folder');
+            if (folderTarget !== null) {
+                folderKeys.add(folderTarget);
+                return;
+            }
+
+            const tagTarget = getCollapsedPinnedContextTarget(key, 'tag');
+            if (tagTarget !== null) {
+                tagKeys.add(tagTarget);
+                return;
+            }
+
+            const propertyTarget = getCollapsedPinnedContextTarget(key, 'property');
+            if (propertyTarget !== null) {
+                propertyKeys.add(propertyTarget);
+            }
+        });
+
         const pinnedNotes = settings.pinnedNotes ? Object.keys(settings.pinnedNotes).length : 0;
 
         const separators = settings.navigationSeparators ? Object.keys(settings.navigationSeparators).length : 0;
@@ -665,11 +696,12 @@ export class MetadataService {
     /**
      * Prepares validators for metadata cleanup by collecting current vault state
      * @param app - Obsidian app instance
-     * @param tagTree - Tag tree for tag metadata validation (empty Map if tags disabled)
+     * @param tagTree - Tag tree for tag metadata validation. When omitted, a vault-wide tree is built from cache data.
      * @returns Validators object for cleanup
      */
-    static prepareCleanupValidators(app: App, tagTree: Map<string, TagTreeNode> = new Map()): CleanupValidators {
+    static prepareCleanupValidators(app: App, tagTree?: Map<string, TagTreeNode>): CleanupValidators {
         const db = getDBInstance();
+        const cleanupTagTree = tagTree ?? buildTagTreeFromDatabase(db, undefined, undefined, [], true, false).tagTree;
 
         // Collect all files in vault
         const vaultFiles = new Set(app.vault.getFiles().map(f => f.path));
@@ -688,7 +720,7 @@ export class MetadataService {
 
         return {
             dbFiles: db.getAllFiles(),
-            tagTree,
+            tagTree: cleanupTagTree,
             vaultFiles,
             vaultFolders
         };

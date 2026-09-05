@@ -8,6 +8,7 @@
 
 /* Navigation item - container for each folder/tag in the tree */
 .nn-navitem {
+    --nn-navitem-background-bottom-overdraw: 0px;
     -webkit-user-select: none;
     user-select: none;
     background: transparent;
@@ -46,8 +47,7 @@
     top: 0px;
     inset-inline-start: 0;
     inset-inline-end: 0;
-    /* Extend slightly beyond bottom item bounds (height rounding issue) to prevent hairline gaps when zoomed */
-    bottom: -0.2px;
+    bottom: var(--nn-navitem-background-bottom-overdraw);
     background-color: var(--nn-navitem-custom-bg-color);
     border-top-left-radius: var(--nn-navitem-top-left-radius, min(14px, var(--nn-theme-navitem-border-radius)));
     border-top-right-radius: var(--nn-navitem-top-right-radius, min(14px, var(--nn-theme-navitem-border-radius)));
@@ -63,31 +63,16 @@
     z-index: 2;
 }
 
-/* Zero shared corners when consecutive background overlays touch */
-.nn-navitem:is(.nn-has-custom-background, .nn-has-search-match) + .nn-navitem:is(.nn-has-custom-background, .nn-has-search-match) {
-    --nn-navitem-top-left-radius: 0;
-    --nn-navitem-top-right-radius: 0;
-}
-
-.nn-navitem:is(.nn-has-custom-background, .nn-has-search-match):has(+ .nn-navitem:is(.nn-has-custom-background, .nn-has-search-match)) {
+/* Overdraw and zero shared corners only between adjacent filled backgrounds */
+.nn-navitem.nn-navitem-has-filled-next {
+    --nn-navitem-background-bottom-overdraw: -0.5px;
     --nn-navitem-bottom-left-radius: 0;
     --nn-navitem-bottom-right-radius: 0;
 }
 
-/* Apply the same corner trimming within the virtualized row wrapper */
-.nn-virtual-nav-item:has(> .nn-navitem:is(.nn-has-custom-background, .nn-has-search-match))
-    + .nn-virtual-nav-item:has(> .nn-navitem:is(.nn-has-custom-background, .nn-has-search-match))
-    > .nn-navitem:is(.nn-has-custom-background, .nn-has-search-match) {
+.nn-navitem.nn-navitem-has-filled-previous {
     --nn-navitem-top-left-radius: 0;
     --nn-navitem-top-right-radius: 0;
-}
-
-.nn-virtual-nav-item:has(> .nn-navitem:is(.nn-has-custom-background, .nn-has-search-match)):has(
-        + .nn-virtual-nav-item > .nn-navitem:is(.nn-has-custom-background, .nn-has-search-match)
-    )
-    > .nn-navitem:is(.nn-has-custom-background, .nn-has-search-match) {
-    --nn-navitem-bottom-left-radius: 0;
-    --nn-navitem-bottom-right-radius: 0;
 }
 
 /* Folder content - contains folder UI elements */
@@ -121,7 +106,7 @@
     );
     width: var(--nn-indent-guide-line-width);
     transform: translateX(-50%);
-    background-color: var(--nn-theme-foreground-faint);
+    background-color: var(--nn-theme-nav-indent-guide-color);
     pointer-events: none;
     z-index: 0;
 }
@@ -144,8 +129,7 @@
     content: '';
     position: absolute;
     top: 0px;
-    /* Extend slightly beyond bottom item bounds (height rounding issue) to prevent hairline gaps when zoomed */
-    bottom: -0.2px;
+    bottom: var(--nn-navitem-background-bottom-overdraw);
     inset-inline-end: 0;
     inset-inline-start: calc(var(--level, 0) * var(--nn-setting-nav-indent) * -1);
     border-top-left-radius: var(--nn-navitem-top-left-radius, min(14px, var(--nn-theme-navitem-border-radius)));
@@ -174,12 +158,15 @@
 .nn-desktop .nn-navitem:not([data-search-match]):hover::after {
     content: '';
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: 0px;
+    bottom: var(--nn-navitem-background-bottom-overdraw);
     inset-inline-start: 0;
     inset-inline-end: 0;
     background-color: var(--nn-theme-navitem-hover-bg);
-    border-radius: min(14px, var(--nn-theme-navitem-border-radius));
+    border-top-left-radius: var(--nn-navitem-top-left-radius, min(14px, var(--nn-theme-navitem-border-radius)));
+    border-top-right-radius: var(--nn-navitem-top-right-radius, min(14px, var(--nn-theme-navitem-border-radius)));
+    border-bottom-left-radius: var(--nn-navitem-bottom-left-radius, min(14px, var(--nn-theme-navitem-border-radius)));
+    border-bottom-right-radius: var(--nn-navitem-bottom-right-radius, min(14px, var(--nn-theme-navitem-border-radius)));
     box-shadow: inset 0 0 0 var(--nn-theme-navitem-border-width) var(--nn-theme-navitem-hover-border-color);
     z-index: 1;
     pointer-events: none;
@@ -249,14 +236,10 @@
     line-height: var(--nn-nav-icon-size);
 }
 
-.nn-navitem-icon[data-has-color='true'] svg {
-    stroke-width: 2.4;
-}
-
 /* Folder name text - truncates with ellipsis on overflow */
 .nn-navitem-name {
     font-size: var(--nn-setting-nav-font-size);
-    font-weight: var(--nn-theme-navitem-name-font-weight) !important;
+    font-weight: var(--nn-theme-navitem-name-font-weight);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -270,30 +253,73 @@
 
 /* Custom colored folder names */
 .nn-navitem-name.nn-has-custom-color {
-    font-weight: var(--nn-theme-navitem-custom-color-name-font-weight) !important;
+    font-weight: var(--nn-theme-navitem-custom-color-name-font-weight);
 }
 
 /* Folder with folder note */
 .nn-navitem-name.nn-has-folder-note {
-    font-weight: var(--nn-theme-navitem-folder-note-name-font-weight) !important;
-    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration) !important;
-}
-
-/* Folder with folder note and custom color uses custom color weight */
-.nn-navitem-name.nn-has-folder-note.nn-has-custom-color {
-    font-weight: var(--nn-theme-navitem-custom-color-name-font-weight) !important;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration);
 }
 
 /* Folder with folder note - show pointer cursor on hover */
 .nn-navitem-name.nn-has-folder-note:hover {
     cursor: pointer;
-    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration) !important;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration);
 }
 
 /* Spacer element to push count to the end */
 .nn-navitem-spacer {
+    --nn-nav-leader-color: var(--nn-theme-nav-leader-color);
+    --nn-nav-count-leader-bottom-offset: calc((var(--nn-setting-nav-item-height) - var(--nn-nav-line-height)) / 2 + 4px);
     flex: 1;
     min-width: 8px; /* Minimum space between name and count */
+}
+
+.notebook-navigator-mobile .nn-navitem-spacer {
+    --nn-nav-count-leader-bottom-offset: calc((var(--nn-setting-nav-item-height-mobile) - var(--nn-nav-line-height)) / 2 + 5px);
+}
+
+[data-nav-count-leader-style='dots'] .nn-navitem-spacer--leader,
+[data-nav-count-leader-style='dashes'] .nn-navitem-spacer--leader,
+[data-nav-count-leader-style='line'] .nn-navitem-spacer--leader {
+    position: relative;
+    align-self: stretch;
+    margin-inline: 8px;
+    min-width: 16px;
+}
+
+[data-nav-count-leader-style='dots'] .nn-navitem-spacer--leader::after,
+[data-nav-count-leader-style='dashes'] .nn-navitem-spacer--leader::after,
+[data-nav-count-leader-style='line'] .nn-navitem-spacer--leader::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: var(--nn-nav-count-leader-bottom-offset);
+    pointer-events: none;
+}
+
+[data-nav-count-leader-style='dots'] .nn-navitem-spacer--leader::after {
+    height: 2px;
+    background-image: radial-gradient(circle, var(--nn-nav-leader-color) 0, var(--nn-nav-leader-color) 1px, transparent 1px);
+    background-repeat: repeat-x;
+    background-position: center;
+    background-size: 6px 2px;
+}
+
+[data-nav-count-leader-style='dashes'] .nn-navitem-spacer--leader::after {
+    height: 1px;
+    background-image: repeating-linear-gradient(
+        to right,
+        var(--nn-nav-leader-color) 0,
+        var(--nn-nav-leader-color) 6px,
+        transparent 6px,
+        transparent 10px
+    );
+}
+
+[data-nav-count-leader-style='line'] .nn-navitem-spacer--leader::after {
+    height: 1px;
+    background-color: var(--nn-nav-leader-color);
 }
 
 /* Folder file count - shows number of files in folder */
@@ -319,6 +345,22 @@
     box-shadow: inset 0 0 0 var(--nn-theme-navitem-count-border-width) var(--nn-theme-navitem-count-border-color);
 }
 
+.nn-navitem-operator-indicator {
+    padding-inline: 4px;
+}
+
+.nn-navitem-operator-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+
+.nn-navitem-operator-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
 /* Hover action button - replaces badge/count on hover */
 .nn-navitem-hover-action-slot {
     position: relative;
@@ -331,7 +373,7 @@
     overflow: visible;
 }
 
-.nn-navitem-hover-action-button {
+button.nn-icon-button.nn-navitem-hover-action-button {
     position: absolute;
     top: 50%;
     inset-inline-end: 0;
@@ -339,12 +381,12 @@
     visibility: hidden;
     pointer-events: none;
     cursor: pointer;
-    height: 18px !important;
-    width: 18px !important;
-    min-height: 0 !important;
-    min-width: 0 !important;
-    padding: 0 !important;
-    border-radius: 50% !important;
+    height: 18px;
+    width: 18px;
+    min-height: 0;
+    min-width: 0;
+    padding: 0;
+    border-radius: 50%;
     z-index: 1;
 }
 
@@ -377,10 +419,6 @@
 }
 
 /* Shortcut section styling */
-.nn-shortcut-header-item .nn-navitem-name {
-    font-weight: 400;
-}
-
 .nn-shortcut-header-item .nn-navitem-count {
     font-size: var(--nn-navitem-count-font-size);
 }
@@ -403,33 +441,19 @@
     white-space: nowrap;
 }
 
-.nn-shortcut-item .nn-shortcut-label {
-    font-weight: var(--nn-theme-navitem-file-name-font-weight);
-}
-
-.nn-shortcut-item .nn-shortcut-label[data-has-color='true'] {
-    font-weight: var(--nn-theme-navitem-custom-color-file-name-font-weight) !important;
-}
-
 .nn-shortcut-item--missing .nn-shortcut-label {
     text-decoration: line-through;
 }
 
-/* Styles for shortcut labels that have an associated folder note */
+/* Underline only the label, not the trailing description, for shortcuts with folder notes. */
 .nn-shortcut-item .nn-navitem-name.nn-has-folder-note .nn-shortcut-label {
-    font-weight: var(--nn-theme-navitem-folder-note-name-font-weight) !important;
-    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration) !important;
-}
-
-/* Folder note shortcuts with custom color use custom color weight */
-.nn-shortcut-item .nn-navitem-name.nn-has-folder-note.nn-has-custom-color .nn-shortcut-label {
-    font-weight: var(--nn-theme-navitem-custom-color-file-name-font-weight) !important;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-decoration);
 }
 
 /* Pointer cursor on hover for clickable folder note shortcuts */
 .nn-shortcut-item .nn-navitem-name.nn-has-folder-note:hover .nn-shortcut-label {
     cursor: pointer;
-    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration) !important;
+    text-decoration: var(--nn-theme-navitem-folder-note-name-hover-decoration);
 }
 
 .nn-drag-item .nn-shortcut-description {
@@ -545,7 +569,7 @@
 }
 
 .nn-root-reorder-item .nn-shortcut-label[data-has-color='true'] {
-    font-weight: var(--nn-theme-navitem-custom-color-name-font-weight) !important;
+    font-weight: var(--nn-theme-navitem-custom-color-name-font-weight);
 }
 
 .nn-root-reorder-item--missing .nn-shortcut-label {

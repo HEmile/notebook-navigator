@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MarkdownPipelineContentProvider } from '../../src/services/content/MarkdownPipelineContentProvider';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
@@ -40,7 +40,6 @@ function createSettings(overrides: Partial<NotebookNavigatorSettings> & { proper
     const settings = structuredClone(DEFAULT_SETTINGS);
     settings.showFilePreview = false;
     settings.showFeatureImage = false;
-    settings.notePropertyType = 'none';
     Object.assign(settings, restOverrides);
 
     if (typeof rawPropertyFields === 'string') {
@@ -56,15 +55,28 @@ describe('MarkdownPipelineContentProvider clearContent', () => {
         batchClearFeatureImageContentMock.mockReset();
     });
 
-    it('clears persisted properties when property fields are disabled', async () => {
+    it('declares every list sort setting used by word count consumers', () => {
+        const provider = new MarkdownPipelineContentProvider(new App());
+
+        expect(provider.getRelevantSettings()).toEqual(
+            expect.arrayContaining([
+                'defaultFolderSort',
+                'propertySortKey',
+                'folderSortOverrides',
+                'tagSortOverrides',
+                'propertySortOverrides'
+            ])
+        );
+    });
+
+    it('keeps persisted properties when every display property is disabled', async () => {
         const provider = new MarkdownPipelineContentProvider(new App());
         const oldSettings = createSettings({ propertyFields: 'status' });
         const newSettings = createSettings({ propertyFields: '' });
 
         await provider.clearContent({ oldSettings, newSettings });
 
-        expect(batchClearAllFileContentMock).toHaveBeenCalledTimes(1);
-        expect(batchClearAllFileContentMock).toHaveBeenCalledWith('properties');
+        expect(batchClearAllFileContentMock).not.toHaveBeenCalled();
     });
 
     it('clears previews when preview is enabled', async () => {
@@ -78,24 +90,81 @@ describe('MarkdownPipelineContentProvider clearContent', () => {
         expect(batchClearAllFileContentMock).toHaveBeenCalledWith('preview');
     });
 
-    it('keeps previews when preview is disabled', async () => {
+    it('clears previews when preview is disabled', async () => {
         const provider = new MarkdownPipelineContentProvider(new App());
         const oldSettings = createSettings({ showFilePreview: true });
         const newSettings = createSettings({ showFilePreview: false });
 
         await provider.clearContent({ oldSettings, newSettings });
 
-        expect(batchClearAllFileContentMock).not.toHaveBeenCalled();
+        expect(batchClearAllFileContentMock).toHaveBeenCalledTimes(1);
+        expect(batchClearAllFileContentMock).toHaveBeenCalledWith('preview');
     });
 
-    it('clears persisted properties when property fields change while remaining enabled', async () => {
+    it('keeps persisted properties when display property fields change', async () => {
         const provider = new MarkdownPipelineContentProvider(new App());
         const oldSettings = createSettings({ propertyFields: 'status' });
         const newSettings = createSettings({ propertyFields: 'status, type' });
 
         await provider.clearContent({ oldSettings, newSettings });
 
+        expect(batchClearAllFileContentMock).not.toHaveBeenCalled();
+    });
+
+    it('clears character counts when character count display is enabled', async () => {
+        const provider = new MarkdownPipelineContentProvider(new App());
+        const oldSettings = createSettings({ textCountDisplay: 'none' });
+        const newSettings = createSettings({ textCountDisplay: 'characters' });
+
+        await provider.clearContent({ oldSettings, newSettings });
+
+        expect(provider.shouldRegenerate(oldSettings, newSettings)).toBe(true);
         expect(batchClearAllFileContentMock).toHaveBeenCalledTimes(1);
-        expect(batchClearAllFileContentMock).toHaveBeenCalledWith('properties');
+        expect(batchClearAllFileContentMock).toHaveBeenCalledWith('characterCount');
+        expect(batchClearFeatureImageContentMock).not.toHaveBeenCalled();
+    });
+
+    it('does not regenerate word counts when only tooltip word count changes', async () => {
+        const provider = new MarkdownPipelineContentProvider(new App());
+        const oldSettings = createSettings({ showTooltips: false, showTooltipWordCount: false });
+        const newSettings = createSettings({ showTooltips: true, showTooltipWordCount: true });
+
+        await provider.clearContent({ oldSettings, newSettings });
+
+        expect(provider.shouldRegenerate(oldSettings, newSettings)).toBe(false);
+        expect(batchClearAllFileContentMock).not.toHaveBeenCalled();
+        expect(batchClearFeatureImageContentMock).not.toHaveBeenCalled();
+    });
+
+    it('clears word counts when grouping activates a consuming custom group header', async () => {
+        const app = new App();
+        const headerFile = new TFile('Projects/Header.md');
+        app.vault.getMarkdownFiles = () => [headerFile];
+        app.vault.getFileByPath = path => (path === headerFile.path ? headerFile : null);
+        app.metadataCache.getFileCache = file =>
+            file.path === headerFile.path
+                ? {
+                      frontmatter: {
+                          group_header: { title: 'Projects', show_word_count: true }
+                      }
+                  }
+                : null;
+        const provider = new MarkdownPipelineContentProvider(app);
+        const oldSettings = createSettings({
+            textCountDisplay: 'none',
+            noteGrouping: 'none',
+            defaultFolderSort: 'title-asc'
+        });
+        const newSettings = createSettings({
+            textCountDisplay: 'none',
+            noteGrouping: 'custom',
+            defaultFolderSort: 'title-asc'
+        });
+
+        await provider.clearContent({ oldSettings, newSettings });
+
+        expect(provider.shouldRegenerate(oldSettings, newSettings)).toBe(true);
+        expect(batchClearAllFileContentMock).toHaveBeenCalledWith('wordCount');
+        expect(batchClearFeatureImageContentMock).not.toHaveBeenCalled();
     });
 });

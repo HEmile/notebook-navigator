@@ -17,9 +17,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import type { MutableRefObject } from 'react';
 import { TFile, type App } from 'obsidian';
 import type { NotebookNavigatorSettings } from '../../settings/types';
-import type { SelectionState } from '../../context/SelectionContext';
+import type { NavigationSelectionState, SelectionState } from '../../context/SelectionContext';
 import { STORAGE_KEYS } from '../../types';
 import { localStorage } from '../../utils/localStorage';
 import type { ShortcutEntry } from '../../types/shortcuts';
@@ -37,7 +38,9 @@ interface UseNavigationPaneShortcutStateProps {
     settings: NotebookNavigatorSettings;
     hydratedShortcuts: HydratedShortcutStateItem[];
     shortcutMap: Map<string, ShortcutEntry>;
-    selectionState: SelectionState;
+    selectionState: NavigationSelectionState;
+    selectionStateRef: MutableRefObject<SelectionState>;
+    subscribeSelectionState: (listener: (state: SelectionState) => void) => () => void;
 }
 
 export function useNavigationPaneShortcutState({
@@ -45,7 +48,9 @@ export function useNavigationPaneShortcutState({
     settings,
     hydratedShortcuts,
     shortcutMap,
-    selectionState
+    selectionState,
+    selectionStateRef,
+    subscribeSelectionState
 }: UseNavigationPaneShortcutStateProps) {
     const effectiveShortcutBadgeDisplay = settings.shortcutBadgeDisplay;
     const shouldShowShortcutCounts = effectiveShortcutBadgeDisplay === 'count';
@@ -139,7 +144,7 @@ export function useNavigationPaneShortcutState({
         }
 
         if (shortcut.type === ShortcutType.NOTE) {
-            const selectedPath = selectionState.selectedFile?.path;
+            const selectedPath = selectionStateRef.current.selectedFile?.path;
             if (!selectedPath || selectedPath !== shortcut.path) {
                 setActiveShortcut(null);
             }
@@ -163,12 +168,30 @@ export function useNavigationPaneShortcutState({
         }
     }, [
         activeShortcutKey,
-        selectionState.selectedFile,
         selectionState.selectedFolder,
         selectionState.selectedProperty,
         selectionState.selectedTag,
+        selectionStateRef,
         shortcutMap
     ]);
+
+    useEffect(() => {
+        if (!activeShortcutKey) {
+            return;
+        }
+
+        const shortcut = shortcutMap.get(activeShortcutKey);
+        if (!shortcut || shortcut.type !== ShortcutType.NOTE) {
+            return;
+        }
+
+        return subscribeSelectionState(state => {
+            const selectedPath = state.selectedFile?.path;
+            if (!selectedPath || selectedPath !== shortcut.path) {
+                setActiveShortcut(null);
+            }
+        });
+    }, [activeShortcutKey, shortcutMap, subscribeSelectionState]);
 
     return {
         activeShortcutKey,

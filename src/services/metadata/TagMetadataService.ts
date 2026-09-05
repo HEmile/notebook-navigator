@@ -17,14 +17,15 @@
  */
 
 import { App } from 'obsidian';
-import { SortOption, type AlphaSortOrder, type NotebookNavigatorSettings } from '../../settings';
-import { ItemType } from '../../types';
+import type { AlphaSortOrder, ListSortOverrideValue, NotebookNavigatorSettings } from '../../settings/types';
+import { ItemType, TAGGED_TAG_ID, UNTAGGED_TAG_ID, type CollapsedPinnedContexts } from '../../types';
 import { ISettingsProvider } from '../../interfaces/ISettingsProvider';
 import { ITagTreeProvider } from '../../interfaces/ITagTreeProvider';
-import { BaseMetadataService } from './BaseMetadataService';
+import { BaseMetadataService, type MetadataCleanupResult } from './BaseMetadataService';
 import type { CleanupValidators } from '../MetadataService';
 import { TagTreeNode } from '../../types/storage';
 import { normalizeTagPath } from '../../utils/tagUtils';
+import { deleteCollapsedPinnedContextKeys, updateCollapsedPinnedContextKeys } from '../../utils/recordUtils';
 import {
     hasHiddenFileTagMatch,
     hasHiddenTagMatch,
@@ -35,6 +36,10 @@ import {
 } from '../../utils/vaultProfiles';
 
 type SettingsMutation = (settings: NotebookNavigatorSettings) => boolean;
+
+function isValidCollapsedPinnedTagContext(path: string, realTagValidator: (path: string) => boolean): boolean {
+    return path === TAGGED_TAG_ID || path === UNTAGGED_TAG_ID || realTagValidator(path);
+}
 
 export interface TagColorData {
     color?: string;
@@ -230,14 +235,14 @@ export class TagMetadataService extends BaseMetadataService {
     /**
      * Sets a custom sort order for a tag
      * @param tagPath - Path of the tag
-     * @param sortOption - Sort option to apply
+     * @param sortOverride - Sort override to apply
      */
-    async setTagSortOverride(tagPath: string, sortOption: SortOption): Promise<void> {
+    async setTagSortOverride(tagPath: string, sortOverride: ListSortOverrideValue): Promise<void> {
         const normalized = normalizeTagPath(tagPath);
         if (!normalized) {
             return Promise.resolve();
         }
-        return this.setEntitySortOverride(ItemType.TAG, normalized, sortOption);
+        return this.setEntitySortOverride(ItemType.TAG, normalized, sortOverride);
     }
 
     /**
@@ -255,9 +260,9 @@ export class TagMetadataService extends BaseMetadataService {
     /**
      * Gets the sort override for a tag
      * @param tagPath - Path of the tag
-     * @returns The sort option or undefined
+     * @returns The sort override or undefined
      */
-    getTagSortOverride(tagPath: string): SortOption | undefined {
+    getTagSortOverride(tagPath: string): ListSortOverrideValue | undefined {
         const normalized = normalizeTagPath(tagPath);
         if (!normalized) {
             return undefined;
@@ -384,6 +389,14 @@ export class TagMetadataService extends BaseMetadataService {
         const hasHiddenTags = hasHiddenTagMatch(settingsSnapshot, normalizedOld);
         const hasHiddenFileTags = hasHiddenFileTagMatch(settingsSnapshot, normalizedOld);
 
+        // Pinned-section collapse state persists to vault-local storage on its own, outside the settings transaction.
+        this.settingsProvider.updateCollapsedPinnedContexts(record =>
+            updateCollapsedPinnedContextKeys(record, ItemType.TAG, normalizedOld, normalizedNew, {
+                descendantDelimiter: '/',
+                preserveExisting
+            })
+        );
+
         const requiresUpdate = hasMetadata
             ? this.willUpdateNestedPaths(settingsSnapshot.tagColors, normalizedOld, normalizedNew, preserveExisting) ||
               this.willUpdateNestedPaths(settingsSnapshot.tagBackgroundColors, normalizedOld, normalizedNew, preserveExisting) ||
@@ -432,6 +445,11 @@ export class TagMetadataService extends BaseMetadataService {
             return;
         }
 
+        // Pinned-section collapse state persists to vault-local storage on its own, outside the settings transaction.
+        this.settingsProvider.updateCollapsedPinnedContexts(record =>
+            deleteCollapsedPinnedContextKeys(record, ItemType.TAG, normalized, { descendantDelimiter: '/' })
+        );
+
         const settingsSnapshot = this.settingsProvider.settings;
         const hasMetadata =
             this.hasTagMetadataForPath(settingsSnapshot, normalized) ||
@@ -454,7 +472,6 @@ export class TagMetadataService extends BaseMetadataService {
                 changed = this.removeTagMetadataForPath(settings.tagTreeSortOverrides, normalized, prefix) || changed;
                 changed = this.removeTagMetadataForPath(settings.tagAppearances, normalized, prefix) || changed;
             }
-
             changed = removeHiddenTagPrefixMatches(settings, normalized) || changed;
             changed = removeHiddenFileTagPrefixMatches(settings, normalized) || changed;
 
@@ -470,7 +487,10 @@ export class TagMetadataService extends BaseMetadataService {
      * Clean up tag metadata for non-existent tags
      * @returns True if any changes were made
      */
-    async cleanupTagMetadata(targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings): Promise<boolean> {
+    async cleanupTagMetadata(
+        targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings,
+        collapsedPinnedContextsOverride?: CollapsedPinnedContexts
+    ): Promise<boolean> {
         // Get valid tags from TagTreeService
         const tagTreeProvider = this.getTagTreeProvider();
         const validTagPaths = tagTreeProvider?.getAllTagPaths() || [];
@@ -480,6 +500,12 @@ export class TagMetadataService extends BaseMetadataService {
             const normalized = normalizeTagPath(path);
             return normalized ? validTags.has(normalized) : false;
         };
+        const collapsedPinnedContextValidator = (path: string) => isValidCollapsedPinnedTagContext(path, validator);
+        const collapsedPinnedContextChanges = this.cleanupCollapsedPinnedContexts(
+            ItemType.TAG,
+            collapsedPinnedContextValidator,
+            collapsedPinnedContextsOverride
+        );
 
         const results = await Promise.all([
             this.cleanupMetadata(targetSettings, 'tagColors', validator),
@@ -490,7 +516,7 @@ export class TagMetadataService extends BaseMetadataService {
             this.cleanupMetadata(targetSettings, 'tagAppearances', validator)
         ]);
 
-        return results.some(changed => changed);
+        return collapsedPinnedContextChanges || results.some(changed => changed);
     }
 
     /**
@@ -506,15 +532,18 @@ export class TagMetadataService extends BaseMetadataService {
      * 4. Removes metadata (colors, icons, sort overrides) for any tags not in the tree
      *
      * @param validators - Pre-loaded data including the complete tag tree
-     * @returns True if any tag metadata was removed
+     * @returns Separate settings and local-storage change flags
      */
     async cleanupWithValidators(
         validators: CleanupValidators,
-        targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings
-    ): Promise<boolean> {
-        // Only run if tags are enabled (tagTree is provided)
-        if (!validators.tagTree || validators.tagTree.size === 0) {
-            return false;
+        targetSettings: NotebookNavigatorSettings = this.settingsProvider.settings,
+        collapsedPinnedContextsOverride?: CollapsedPinnedContexts
+    ): Promise<MetadataCleanupResult> {
+        const hasProcessedTagData = validators.dbFiles.some(({ data }) => data.tags !== null);
+
+        // Skip destructive tag cleanup until cached tag data has been processed.
+        if (validators.tagTree.size === 0 && !hasProcessedTagData) {
+            return { settingsChanged: false, localChanged: false };
         }
 
         // Collect all valid tag paths from the passed tag tree
@@ -536,6 +565,12 @@ export class TagMetadataService extends BaseMetadataService {
             const normalized = normalizeTagPath(path);
             return normalized ? validTags.has(normalized) : false;
         };
+        const collapsedPinnedContextValidator = (path: string) => isValidCollapsedPinnedTagContext(path, validator);
+        const collapsedPinnedContextChanges = this.cleanupCollapsedPinnedContexts(
+            ItemType.TAG,
+            collapsedPinnedContextValidator,
+            collapsedPinnedContextsOverride
+        );
 
         // Clean up all tag metadata types in parallel
         const results = await Promise.all([
@@ -547,6 +582,9 @@ export class TagMetadataService extends BaseMetadataService {
             this.cleanupMetadata(targetSettings, 'tagAppearances', validator)
         ]);
 
-        return results.some(changed => changed);
+        return {
+            settingsChanged: results.some(changed => changed),
+            localChanged: collapsedPinnedContextChanges
+        };
     }
 }

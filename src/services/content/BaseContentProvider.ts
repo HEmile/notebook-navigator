@@ -18,11 +18,12 @@
 
 import { App, TFile } from 'obsidian';
 import { IContentProvider, type ContentProviderType } from '../../interfaces/IContentProvider';
-import { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { FileData } from '../../storage/IndexedDBStorage';
 import { getDBInstance, isShutdownInProgress } from '../../storage/fileOperations';
 import { getProviderProcessedMtimeField } from '../../storage/providerMtime';
 import { runAsyncAction } from '../../utils/async';
+import { recordContentProviderBatch } from '../diagnostics/DebugLoggingService';
 import { ContentReadCache } from './ContentReadCache';
 import { LIMITS } from '../../constants/limits';
 
@@ -35,6 +36,8 @@ export type ContentProviderUpdate = {
     path: string;
     tags?: string[] | null;
     wordCount?: number | null;
+    characterCountWithSpaces?: number | null;
+    characterCountWithoutSpaces?: number | null;
     taskTotal?: number | null;
     taskUnfinished?: number | null;
     preview?: string;
@@ -83,7 +86,8 @@ export abstract class BaseContentProvider implements IContentProvider {
     private processingSession = 0;
     private activeBatchPromise: Promise<void> | null = null;
 
-    private retryTimer: ReturnType<typeof setTimeout> | null = null;
+    private retryTimer: ReturnType<typeof window.setTimeout> | null = null;
+    private retryTimerWindow: Window | null = null;
     private retryState = new Map<string, { attempts: number; nextRetryAt: number }>();
 
     constructor(
@@ -95,7 +99,7 @@ export abstract class BaseContentProvider implements IContentProvider {
      * Yields to the task queue to keep long provider runs responsive without frame-rate throttling.
      */
     protected async yieldToEventLoop(): Promise<void> {
-        await new Promise<void>(resolve => globalThis.setTimeout(resolve, 0));
+        await new Promise<void>(resolve => window.setTimeout(resolve, 0));
     }
 
     protected readFileContent(file: TFile): Promise<string> {
@@ -119,8 +123,9 @@ export abstract class BaseContentProvider implements IContentProvider {
 
     private clearRetryTimer(): void {
         if (this.retryTimer !== null) {
-            globalThis.clearTimeout(this.retryTimer);
+            (this.retryTimerWindow ?? activeWindow).clearTimeout(this.retryTimer);
             this.retryTimer = null;
+            this.retryTimerWindow = null;
         }
     }
 
@@ -195,8 +200,11 @@ export abstract class BaseContentProvider implements IContentProvider {
 
         this.clearRetryTimer();
         const delay = Math.max(0, nextRetryAt - Date.now());
-        this.retryTimer = globalThis.setTimeout(() => {
+        const timerWindow = activeWindow;
+        this.retryTimerWindow = timerWindow;
+        this.retryTimer = timerWindow.setTimeout(() => {
             this.retryTimer = null;
+            this.retryTimerWindow = null;
             this.flushRetries(session);
         }, delay);
     }
@@ -322,7 +330,7 @@ export abstract class BaseContentProvider implements IContentProvider {
                 }
             } else if (this.retryTimer !== null || this.hasScheduledRetryWork()) {
                 // Retry work advances on timers; poll until retries are flushed or cleared.
-                await new Promise<void>(resolve => globalThis.setTimeout(resolve, BaseContentProvider.WAIT_FOR_IDLE_RETRY_POLL_MS));
+                await new Promise<void>(resolve => window.setTimeout(resolve, BaseContentProvider.WAIT_FOR_IDLE_RETRY_POLL_MS));
             } else {
                 await this.yieldToEventLoop();
             }
@@ -456,6 +464,13 @@ export abstract class BaseContentProvider implements IContentProvider {
                     });
                 }
             }
+            recordContentProviderBatch({
+                provider: type,
+                queued: batch.length,
+                active: activeJobs.length,
+                contentUpdates: updates.length,
+                processedMtimeUpdates: processedMtimeUpdates.length
+            });
         } catch (error: unknown) {
             // Check if error is an abort operation (user-initiated cancellation)
             const isAbortError = error instanceof DOMException && error.name === 'AbortError';

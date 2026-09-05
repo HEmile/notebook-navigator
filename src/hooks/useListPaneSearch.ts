@@ -17,11 +17,12 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
+import type { App } from 'obsidian';
 import { useSelectionState } from '../context/SelectionContext';
 import { useServices } from '../context/ServicesContext';
 import { useSettingsState } from '../context/SettingsContext';
 import { useShortcuts } from '../context/ShortcutsContext';
-import { useUIDispatch, useUIState } from '../context/UIStateContext';
+import { useUIDispatch } from '../context/UIStateContext';
 import { useUXPreferenceActions, useUXPreferences } from '../context/UXPreferencesContext';
 import { strings } from '../i18n';
 import { InputModal } from '../modals/InputModal';
@@ -38,6 +39,7 @@ import {
 import { EMPTY_SEARCH_NAV_FILTER_STATE, type SearchNavFilterState, type SearchProvider } from '../types/search';
 import { focusElementPreventScroll } from '../utils/domUtils';
 import {
+    buildSearchNavFilterState,
     parseFilterSearchTokens,
     updateFilterQueryWithDateToken,
     updateFilterQueryWithProperty,
@@ -45,8 +47,10 @@ import {
     type InclusionOperator
 } from '../utils/filterSearch';
 import { showNotice } from '../utils/noticeUtils';
+import { supportsKeyboardInteractions } from '../utils/paneLayout';
 import { normalizeOptionalVaultFolderPath } from '../utils/pathUtils';
-import { buildPropertyKeyNodeId, buildPropertyValueNodeId, parsePropertyNodeId } from '../utils/propertyTree';
+import { parsePropertyNodeId } from '../utils/propertyTree';
+import { resolveFolderShortcutTarget } from '../utils/shortcutPathResolver';
 import { normalizeTagPath } from '../utils/tagUtils';
 import type { FilterSearchTokens } from '../utils/filterSearch';
 import type { NavigateToFolderOptions, RevealPropertyOptions, RevealTagOptions } from './useNavigatorReveal';
@@ -57,13 +61,7 @@ interface ExecuteSearchShortcutParams {
 }
 
 export interface SearchQueryUpdateOptions {
-    preserveSinglePaneView?: boolean;
     focusSearch?: boolean;
-}
-
-interface ActivateSearchOptions {
-    focusPane?: 'search' | 'files' | null;
-    preserveSinglePaneView?: boolean;
 }
 
 interface UseListPaneSearchParams {
@@ -81,11 +79,11 @@ export interface UseListPaneSearchResult {
     searchQuery: string;
     debouncedSearchQuery: string;
     debouncedSearchTokens: FilterSearchTokens;
-    searchHighlightQuery: string | undefined;
+    searchHighlightTerms: readonly string[] | undefined;
     shouldFocusSearch: boolean;
     activeSearchShortcut: SearchShortcut | null;
     isSavingSearchShortcut: boolean;
-    suppressSearchTopScrollRef: RefObject<boolean>;
+    suppressSearchTopScrollRef: { current: boolean };
     setSearchQuery: Dispatch<SetStateAction<string>>;
     setShouldFocusSearch: Dispatch<SetStateAction<boolean>>;
     handleSearchToggle: () => void;
@@ -152,6 +150,19 @@ function formatSearchShortcutStartTargetPath(startTarget: ShortcutStartTarget): 
     }
 }
 
+export function resolveSearchShortcutStartFolderPath(app: App, startTarget: ShortcutStartTarget): string | null {
+    if (!isShortcutStartFolder(startTarget)) {
+        return null;
+    }
+
+    const normalizedStartFolder = normalizeOptionalVaultFolderPath(startTarget.path);
+    if (!normalizedStartFolder) {
+        return null;
+    }
+
+    return resolveFolderShortcutTarget(app, normalizedStartFolder)?.path ?? null;
+}
+
 export function useListPaneSearch({
     rootContainerRef,
     onSearchTokensChange,
@@ -160,11 +171,10 @@ export function useListPaneSearch({
     onRevealProperty,
     ensureSelectionForCurrentFilterRef
 }: UseListPaneSearchParams): UseListPaneSearchResult {
-    const { app, isMobile, plugin } = useServices();
+    const { app, plugin } = useServices();
     const settings = useSettingsState();
     const selectionState = useSelectionState();
     const shortcuts = useShortcuts();
-    const uiState = useUIState();
     const uiDispatch = useUIDispatch();
     const uxPreferences = useUXPreferences();
     const { setSearchActive } = useUXPreferenceActions();
@@ -183,14 +193,22 @@ export function useListPaneSearch({
         () => parseFilterSearchTokens(isSearchActive ? debouncedSearchQuery : ''),
         [debouncedSearchQuery, isSearchActive]
     );
-    const debouncedSearchMode = debouncedSearchTokens.mode;
-    const searchHighlightQuery = useMemo(() => {
-        if (!isSearchActive || debouncedSearchMode === 'tag') {
+    // Name highlighting uses parsed folded name tokens instead of the raw query so quoted literal
+    // terms (for example `".F"`) highlight without their quotes and filter tokens such as
+    // `folder:...` never leak into name highlights. Tokens are parsed from the immediate query,
+    // not the debounced one, so highlights keep tracking while the user types.
+    const searchHighlightTerms = useMemo(() => {
+        if (!isSearchActive) {
             return undefined;
         }
 
-        return searchQuery;
-    }, [debouncedSearchMode, isSearchActive, searchQuery]);
+        const tokens = parseFilterSearchTokens(searchQuery);
+        if (tokens.mode === 'tag' || tokens.nameTokens.length === 0) {
+            return undefined;
+        }
+
+        return tokens.nameTokens;
+    }, [isSearchActive, searchQuery]);
 
     const activeSearchShortcut = useMemo(() => {
         const normalizedQuery = searchQuery.trim();
@@ -251,62 +269,8 @@ export function useListPaneSearch({
             return;
         }
 
-        const trimmed = searchQuery.trim();
-        if (!trimmed) {
-            onSearchTokensChange(EMPTY_SEARCH_NAV_FILTER_STATE);
-            return;
-        }
-
-        const tokens = parseFilterSearchTokens(trimmed);
-        const includeSet = new Set<string>();
-        tokens.includedTagTokens.forEach(token => {
-            const normalized = normalizeTagPath(token);
-            if (normalized) {
-                includeSet.add(normalized);
-            }
-        });
-
-        const excludeSet = new Set<string>();
-        tokens.excludeTagTokens.forEach(token => {
-            const normalized = normalizeTagPath(token);
-            if (normalized) {
-                excludeSet.add(normalized);
-            }
-        });
-
-        const propertyIncludeSet = new Set<string>();
-        tokens.propertyTokens.forEach(token => {
-            if (token.value) {
-                propertyIncludeSet.add(buildPropertyValueNodeId(token.key, token.value));
-                return;
-            }
-
-            propertyIncludeSet.add(buildPropertyKeyNodeId(token.key));
-        });
-
-        const propertyExcludeSet = new Set<string>();
-        tokens.excludePropertyTokens.forEach(token => {
-            if (token.value) {
-                propertyExcludeSet.add(buildPropertyValueNodeId(token.key, token.value));
-                return;
-            }
-
-            propertyExcludeSet.add(buildPropertyKeyNodeId(token.key));
-        });
-
-        onSearchTokensChange({
-            tags: {
-                include: Array.from(includeSet),
-                exclude: Array.from(excludeSet),
-                excludeTagged: tokens.excludeTagged,
-                includeUntagged: tokens.includeUntagged,
-                requireTagged: tokens.requireTagged
-            },
-            properties: {
-                include: Array.from(propertyIncludeSet),
-                exclude: Array.from(propertyExcludeSet)
-            }
-        });
+        const nextState = searchQuery.trim() ? buildSearchNavFilterState(searchQuery) : EMPTY_SEARCH_NAV_FILTER_STATE;
+        onSearchTokensChange(nextState);
     }, [onSearchTokensChange, searchQuery]);
 
     const activeSearchShortcutStartTarget = useMemo<ShortcutStartTarget | undefined>(() => {
@@ -343,25 +307,21 @@ export function useListPaneSearch({
     }, [activeSearchShortcutStartTarget]);
 
     const activateSearch = useCallback(
-        (options?: ActivateSearchOptions) => {
-            const focusPane = options?.focusPane ?? 'search';
+        (target: 'search' | 'files' | null = 'search') => {
             if (!isSearchActive) {
                 setSearchActive(true);
-                if (uiState.singlePane && options?.preserveSinglePaneView !== true) {
-                    uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'files' });
-                }
             }
 
-            if (focusPane) {
-                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: focusPane });
+            if (target) {
+                uiDispatch({ type: 'ACTIVATE_PANE', target });
             }
         },
-        [isSearchActive, setSearchActive, uiDispatch, uiState.singlePane]
+        [isSearchActive, setSearchActive, uiDispatch]
     );
 
     const closeSearch = useCallback(() => {
         setSearchActive(false);
-        uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
+        uiDispatch({ type: 'ACTIVATE_PANE', target: 'files' });
     }, [setSearchActive, uiDispatch]);
 
     const handleSearchToggle = useCallback(() => {
@@ -453,10 +413,7 @@ export function useListPaneSearch({
             if (shouldFocusSearch) {
                 setShouldFocusSearch(true);
             }
-            activateSearch({
-                focusPane: shouldFocusSearch ? 'search' : null,
-                preserveSinglePaneView: options?.preserveSinglePaneView
-            });
+            activateSearch(shouldFocusSearch ? 'search' : null);
 
             let nextQueryValue: string | null = null;
             setSearchQuery(previousQuery => {
@@ -514,17 +471,19 @@ export function useListPaneSearch({
 
     const waitForNextFrame = useCallback(() => {
         return new Promise<void>(resolve => {
-            requestAnimationFrame(() => resolve());
+            window.requestAnimationFrame(() => resolve());
         });
     }, []);
 
-    const waitForMobilePaneTransition = useCallback(async () => {
-        if (!isMobile) {
+    const waitForSinglePaneTransition = useCallback(async () => {
+        const container = rootContainerRef.current;
+        if (!container) {
             return;
         }
 
-        const container = rootContainerRef.current;
-        if (!container) {
+        // Dual pane switches views without a sliding transition and never gets the
+        // show-files class, so waiting would always run until the full deadline.
+        if (!container.classList.contains('nn-single-pane')) {
             return;
         }
 
@@ -533,10 +492,10 @@ export function useListPaneSearch({
         while (performance.now() < deadline && container.isConnected && !container.classList.contains('show-files')) {
             await new Promise(requestAnimationFrame);
         }
-    }, [isMobile, rootContainerRef, settings.paneTransitionDuration]);
+    }, [rootContainerRef, settings.paneTransitionDuration]);
 
     const focusListScroller = useCallback(() => {
-        const scope = rootContainerRef.current ?? document;
+        const scope = rootContainerRef.current ?? activeDocument;
         const listPaneScroller = scope.querySelector('.nn-list-pane-scroller');
         if (listPaneScroller instanceof HTMLElement) {
             focusElementPreventScroll(listPaneScroller);
@@ -545,11 +504,11 @@ export function useListPaneSearch({
 
     const focusSearchInput = useCallback(() => {
         window.setTimeout(() => {
-            const scope = rootContainerRef.current ?? document;
+            const scope = rootContainerRef.current ?? activeDocument;
             const searchInput = scope.querySelector('.nn-search-input');
             if (searchInput instanceof HTMLInputElement) {
                 searchInput.focus();
-                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'search' });
+                uiDispatch({ type: 'ACTIVATE_PANE', target: 'search' });
             }
         }, 0);
     }, [rootContainerRef, uiDispatch]);
@@ -574,9 +533,9 @@ export function useListPaneSearch({
 
             if (startTarget) {
                 if (isShortcutStartFolder(startTarget)) {
-                    const normalizedStartFolder = normalizeOptionalVaultFolderPath(startTarget.path);
-                    if (normalizedStartFolder) {
-                        onNavigateToFolder(normalizedStartFolder, {
+                    const startFolderPath = resolveSearchShortcutStartFolderPath(app, startTarget);
+                    if (startFolderPath) {
+                        onNavigateToFolder(startFolderPath, {
                             source: 'shortcut',
                             suppressAutoSelect: true,
                             skipScroll: settings.skipAutoScroll
@@ -589,15 +548,14 @@ export function useListPaneSearch({
                 }
             }
 
-            if (uiState.singlePane) {
-                uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'files' });
-            }
+            uiDispatch({ type: 'ACTIVATE_PANE', target: 'files' });
 
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
-
-            if (isMobile) {
+            // The sliding view transition only exists in single pane. Dual pane switches
+            // instantly, so suppressing the post-search scroll there would swallow the
+            // first legitimate scroll to top after filtering.
+            if (rootContainerRef.current?.classList.contains('nn-single-pane')) {
                 suppressSearchTopScrollRef.current = true;
-                await waitForMobilePaneTransition();
+                await waitForSinglePaneTransition();
             }
 
             if (!isSearchActive) {
@@ -611,26 +569,26 @@ export function useListPaneSearch({
             await waitForNextFrame();
             await waitForNextFrame();
 
-            if (!isMobile) {
+            if (supportsKeyboardInteractions()) {
                 ensureSelectionForCurrentFilterRef.current?.({ openInEditor: false, clearIfEmpty: true, selectFallback: true });
             }
 
             focusListScroller();
         },
         [
+            app,
             ensureSelectionForCurrentFilterRef,
             focusListScroller,
-            isMobile,
             isSearchActive,
             onNavigateToFolder,
             onRevealProperty,
             onRevealTag,
             plugin,
+            rootContainerRef,
             setSearchActive,
             settings.skipAutoScroll,
             uiDispatch,
-            uiState.singlePane,
-            waitForMobilePaneTransition,
+            waitForSinglePaneTransition,
             waitForNextFrame
         ]
     );
@@ -641,7 +599,7 @@ export function useListPaneSearch({
         searchQuery,
         debouncedSearchQuery,
         debouncedSearchTokens,
-        searchHighlightQuery,
+        searchHighlightTerms,
         shouldFocusSearch,
         activeSearchShortcut,
         isSavingSearchShortcut,

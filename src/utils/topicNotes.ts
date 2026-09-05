@@ -67,8 +67,8 @@ export function findFirstTopicPathInHierarchy(file: TFile, app: App, topicGraph:
             }
             visitedNodes.add(node.name);
             pathParts.unshift(node.name);
-            if (node.parents.size > 0) {
-                const firstParent = node.parents.values().next().value;
+            const firstParent = node.parents.values().next().value;
+            if (firstParent) {
                 traverseUp(firstParent);
             }
         }

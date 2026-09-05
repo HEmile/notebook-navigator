@@ -28,8 +28,7 @@ import {
     RECENT_NOTES_VIRTUAL_FOLDER_ID,
     SHORTCUTS_VIRTUAL_FOLDER_ID,
     TAGGED_TAG_ID,
-    TAGS_ROOT_VIRTUAL_FOLDER_ID,
-    ItemType
+    TAGS_ROOT_VIRTUAL_FOLDER_ID
 } from '../../types';
 import { executeCommand } from '../../utils/typeGuards';
 import { ensureRecord, isStringRecordValue, sanitizeRecord } from '../../utils/recordUtils';
@@ -247,25 +246,43 @@ export function showNavigationSectionContextMenu({
             await settingsProvider.saveSettingsAndUpdate();
         };
 
+        const openAppearanceModal = async (initialTab: 'icon' | 'color' | 'background'): Promise<void> => {
+            const { AppearanceModal } = await import('../../modals/AppearanceModal');
+            const modal = new AppearanceModal(app, {
+                title: titleOverride,
+                metadataService,
+                initialTab,
+                defaultIcon: virtualRootMenuConfig ? resolveUXIcon(undefined, virtualRootMenuConfig.uxIconId) : null,
+                icon: virtualRootMenuConfig
+                    ? {
+                          initial: resolveUXIcon(settingsProvider.settings.interfaceIcons, virtualRootMenuConfig.uxIconId),
+                          apply: async iconId => {
+                              await setVirtualRootIcon(virtualRootMenuConfig.uxIconId, iconId);
+                          }
+                      }
+                    : undefined,
+                color: {
+                    initial: virtualFolderColor ?? null,
+                    apply: async color => {
+                        await setVirtualFolderStyle(virtualFolderId, { color });
+                    }
+                },
+                background: {
+                    initial: virtualFolderBackgroundColor ?? null,
+                    apply: async color => {
+                        await setVirtualFolderStyle(virtualFolderId, { background: color });
+                    }
+                }
+            });
+            modal.open();
+        };
+
         if (virtualRootMenuConfig) {
             menu.addItem(item => {
                 item.setTitle(strings.contextMenu.folder.changeIcon)
                     .setIcon('lucide-image')
                     .onClick(() => {
-                        runAsyncAction(async () => {
-                            const { IconPickerModal } = await import('../../modals/IconPickerModal');
-                            const modal = new IconPickerModal(app, metadataService, virtualFolderId, ItemType.FILE, {
-                                titleOverride,
-                                currentIconId: resolveUXIcon(settingsProvider.settings.interfaceIcons, virtualRootMenuConfig.uxIconId),
-                                showRemoveButton: true,
-                                disableMetadataUpdates: true
-                            });
-                            modal.onChooseIcon = async iconId => {
-                                await setVirtualRootIcon(virtualRootMenuConfig.uxIconId, iconId);
-                                return { handled: true };
-                            };
-                            modal.open();
-                        });
+                        runAsyncAction(() => openAppearanceModal('icon'));
                     });
             });
         }
@@ -274,18 +291,7 @@ export function showNavigationSectionContextMenu({
             item.setTitle(strings.contextMenu.folder.changeColor)
                 .setIcon('lucide-palette')
                 .onClick(() => {
-                    runAsyncAction(async () => {
-                        const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-                        const modal = new ColorPickerModal(app, {
-                            title: titleOverride,
-                            initialColor: virtualFolderColor ?? null,
-                            settingsProvider,
-                            onChooseColor: async color => {
-                                await setVirtualFolderStyle(virtualFolderId, { color });
-                            }
-                        });
-                        modal.open();
-                    });
+                    runAsyncAction(() => openAppearanceModal('color'));
                 });
         });
 
@@ -293,18 +299,7 @@ export function showNavigationSectionContextMenu({
             item.setTitle(strings.contextMenu.folder.changeBackground)
                 .setIcon('lucide-paint-bucket')
                 .onClick(() => {
-                    runAsyncAction(async () => {
-                        const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-                        const modal = new ColorPickerModal(app, {
-                            title: titleOverride,
-                            initialColor: virtualFolderBackgroundColor ?? null,
-                            settingsProvider,
-                            onChooseColor: async color => {
-                                await setVirtualFolderStyle(virtualFolderId, { background: color });
-                            }
-                        });
-                        modal.open();
-                    });
+                    runAsyncAction(() => openAppearanceModal('background'));
                 });
         });
 
@@ -410,6 +405,7 @@ export function showNavigationSectionContextMenu({
             menu.addItem(item => {
                 item.setTitle(strings.shortcuts.removeAll)
                     .setIcon('lucide-trash-2')
+                    .setWarning(true)
                     .onClick(() => {
                         const confirmModal = new ConfirmModal(
                             app,
@@ -449,8 +445,8 @@ export function showNavigationSectionContextMenu({
 
         menu.addItem(item => {
             const title = isTagSection
-                ? strings.settings.items.scopeTagsToCurrentContext.name
-                : strings.settings.items.scopePropertiesToCurrentContext.name;
+                ? strings.settings.items.filterTagsBySelection.name
+                : strings.settings.items.filterPropertiesBySelection.name;
             const checked = isTagSection ? plugin.settings.scopeTagsToCurrentContext : plugin.settings.scopePropertiesToCurrentContext;
 
             item.setTitle(title)

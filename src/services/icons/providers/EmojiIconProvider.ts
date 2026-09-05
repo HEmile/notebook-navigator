@@ -17,17 +17,9 @@
  */
 
 import { IconProvider, IconDefinition, IconRenderResult } from '../types';
-import { extractFirstEmoji } from '../../../utils/emojiUtils';
-import * as emojilib from 'emojilib';
 import { resetIconContainer } from './providerUtils';
-
-/**
- * Type guard to check if a value is an array of strings.
- * Used to validate emoji keyword data from the emojilib library.
- */
-function isKeywordList(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every(entry => typeof entry === 'string');
-}
+import { getEmojiCatalogEntries } from '../emojiCatalog';
+import { extractFirstEmoji } from '../../../utils/emojiUtils';
 
 /**
  * Icon provider for emoji icons.
@@ -115,9 +107,8 @@ export class EmojiIconProvider implements IconProvider {
         const searchLower = query.toLowerCase();
 
         // Search through emojilib
-        for (const [emoji, keywords] of Object.entries(emojilib)) {
-            // Skip non-emoji entries and entries without keywords
-            if (!isKeywordList(keywords) || keywords.length === 0) {
+        for (const [emoji, keywords] of getEmojiCatalogEntries()) {
+            if (keywords.length === 0) {
                 continue;
             }
 

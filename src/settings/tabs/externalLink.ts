@@ -32,15 +32,13 @@ type InlineExternalLinkTextParams = Readonly<{
     suffix: string;
 }>;
 
-type InlineActionLinkTextParams = Readonly<{
-    prefix: string;
-    linkText: string;
-    suffix: string;
-    onClick: () => void;
+type ExternalLinkTextParams = Readonly<{
+    text: string;
+    link: ExternalLinkConfig;
 }>;
 
 function createExternalLinkElement({ href, text }: ExternalLinkConfig): HTMLAnchorElement {
-    const linkEl = document.createElement('a');
+    const linkEl = createEl('a');
     linkEl.textContent = text;
     linkEl.href = href;
     linkEl.rel = 'noopener noreferrer';
@@ -49,27 +47,29 @@ function createExternalLinkElement({ href, text }: ExternalLinkConfig): HTMLAnch
 }
 
 export function createSettingDescriptionWithExternalLink(params: ExternalLinkSettingDescriptionParams): DocumentFragment {
-    const fragment = document.createDocumentFragment();
-    fragment.append(params.text, document.createElement('br'), createExternalLinkElement(params.link));
+    const fragment = createFragment();
+    fragment.append(params.text, createEl('br'), createExternalLinkElement(params.link));
 
     return fragment;
 }
 
 export function createInlineExternalLinkText(params: InlineExternalLinkTextParams): DocumentFragment {
-    const fragment = document.createDocumentFragment();
+    const fragment = createFragment();
     fragment.append(params.prefix, createExternalLinkElement(params.link), params.suffix);
     return fragment;
 }
 
-export function createInlineActionLinkText(params: InlineActionLinkTextParams): DocumentFragment {
-    const fragment = document.createDocumentFragment();
-    const linkEl = document.createElement('a');
-    linkEl.textContent = params.linkText;
-    linkEl.href = '#';
-    linkEl.addEventListener('click', event => {
-        event.preventDefault();
-        params.onClick();
-    });
-    fragment.append(params.prefix, linkEl, params.suffix);
+export function createExternalLinkText(params: ExternalLinkTextParams): DocumentFragment {
+    const fragment = createFragment();
+    const linkIndex = params.text.indexOf(params.link.text);
+
+    if (linkIndex === -1) {
+        fragment.append(params.text);
+        return fragment;
+    }
+
+    const prefix = params.text.slice(0, linkIndex);
+    const suffix = params.text.slice(linkIndex + params.link.text.length);
+    fragment.append(prefix, createExternalLinkElement(params.link), suffix);
     return fragment;
 }

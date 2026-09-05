@@ -21,7 +21,15 @@ import { NavigationPaneShortcutRow } from './NavigationPaneShortcutRow';
 import { NavigationPaneTreeRow } from './NavigationPaneTreeRow';
 import type { NavigationPaneRowProps } from './NavigationPaneItemRenderer.types';
 
-export function NavigationPaneItemRenderer({ item, context }: NavigationPaneRowProps) {
+export function NavigationPaneItemRenderer({
+    item,
+    context,
+    adjacentFilledClassName,
+    isSelected,
+    isExpanded,
+    renameTarget,
+    isDragSource
+}: NavigationPaneRowProps) {
     switch (item.type) {
         case NavigationPaneItemType.SHORTCUT_FOLDER:
         case NavigationPaneItemType.SHORTCUT_NOTE:
@@ -30,9 +38,29 @@ export function NavigationPaneItemRenderer({ item, context }: NavigationPaneRowP
         case NavigationPaneItemType.SHORTCUT_PROPERTY:
         case NavigationPaneItemType.SHORTCUT_TOPIC:
         case NavigationPaneItemType.RECENT_NOTE:
-            return <NavigationPaneShortcutRow item={item} context={context} />;
+            return (
+                <NavigationPaneShortcutRow
+                    item={item}
+                    context={context}
+                    adjacentFilledClassName={adjacentFilledClassName}
+                    isSelected={isSelected}
+                    isExpanded={isExpanded}
+                    renameTarget={renameTarget}
+                    isDragSource={isDragSource}
+                />
+            );
 
         default:
-            return <NavigationPaneTreeRow item={item} context={context} />;
+            return (
+                <NavigationPaneTreeRow
+                    item={item}
+                    context={context}
+                    adjacentFilledClassName={adjacentFilledClassName}
+                    isSelected={isSelected}
+                    isExpanded={isExpanded}
+                    renameTarget={renameTarget}
+                    isDragSource={isDragSource}
+                />
+            );
     }
 }

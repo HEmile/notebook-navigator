@@ -73,7 +73,20 @@ else
     echo "✅ ESLint passed"
 fi
 
-# Step 2: Run TypeScript type checking
+# Step 2: Run Stylelint
+echo -e "\nRunning Stylelint..."
+STYLELINT_OUTPUT=$(npm run lint:styles 2>&1)
+STYLELINT_STATUS=$?
+echo "$STYLELINT_OUTPUT"
+
+if [ $STYLELINT_STATUS -ne 0 ]; then
+    echo "❌ Stylelint failed"
+    BUILD_ERRORS=$((BUILD_ERRORS + 1))
+else
+    echo "✅ Stylelint passed"
+fi
+
+# Step 3: Run TypeScript type checking
 echo -e "\nChecking TypeScript types..."
 npx tsc --noEmit --skipLibCheck
 TSC_STATUS=$?
@@ -95,7 +108,7 @@ else
     fi
 fi
 
-# Step 3: Check for dead code with Knip (warning only)
+# Step 4: Check for dead code with Knip (warning only)
 echo -e "\nChecking for dead code..."
 KNIP_OUTPUT=$(npx knip --no-progress 2>/dev/null)
 DEAD_FILES=$(echo "$KNIP_OUTPUT" | grep -c "^src/.*\.(ts|tsx)" || true)
@@ -109,7 +122,7 @@ else
     echo "✅ No dead code found"
 fi
 
-# Step 4: Fix formatting with Prettier
+# Step 5: Fix formatting with Prettier
 echo -e "\nChecking code formatting..."
 # Run prettier and capture output
 PRETTIER_OUTPUT=$(npm run format 2>&1)
@@ -137,7 +150,7 @@ else
     fi
 fi
 
-# Step 5: Run unit tests
+# Step 6: Run unit tests
 echo -e "\nRunning unit tests..."
 TEST_OUTPUT=$(npm run test 2>&1)
 TEST_STATUS=$?

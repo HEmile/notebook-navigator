@@ -16,21 +16,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { TFile } from 'obsidian';
-import { NotebookNavigatorSettings } from '../../settings';
+import type { App, TFile } from 'obsidian';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { ContentProviderType, FileContentType } from '../../interfaces/IContentProvider';
-import { hasPropertyFrontmatterFields } from '../../utils/propertyUtils';
 import { isMarkdownPath } from '../../utils/fileTypeUtils';
 import { getActiveHiddenFileProperties } from '../../utils/vaultProfiles';
+import { getMarkdownPipelineContentTypes, hasMarkdownPipelineContent } from '../../utils/markdownPipelineContentTypes';
 
 /**
  * Returns provider types that require Obsidian's metadata cache to be ready.
  */
-export function getMetadataDependentTypes(settings: NotebookNavigatorSettings): ContentProviderType[] {
+export function getMetadataDependentTypes(settings: NotebookNavigatorSettings, app?: App): ContentProviderType[] {
     const types: ContentProviderType[] = [];
 
-    // Always include markdownPipeline so word count, task counters, and properties can be persisted for future per-folder overrides.
-    types.push('markdownPipeline');
+    if (hasMarkdownPipelineContent(settings, app)) {
+        types.push('markdownPipeline');
+    }
     if (settings.showTags) {
         types.push('tags');
     }
@@ -46,24 +47,12 @@ export function getMetadataDependentTypes(settings: NotebookNavigatorSettings): 
 /**
  * Returns content types expected to be rebuilt during a full cache rebuild.
  */
-export function getCacheRebuildProgressTypes(settings: NotebookNavigatorSettings): FileContentType[] {
+export function getCacheRebuildProgressTypes(settings: NotebookNavigatorSettings, app?: App): FileContentType[] {
     const types = new Set<FileContentType>();
 
-    types.add('wordCount');
-    types.add('tasks');
+    getMarkdownPipelineContentTypes(settings, app).forEach(type => types.add(type));
 
-    if (settings.showFilePreview) {
-        types.add('preview');
-    }
-    if (settings.showFeatureImage) {
-        types.add('featureImage');
-    }
-
-    if (hasPropertyFrontmatterFields(settings)) {
-        types.add('properties');
-    }
-
-    for (const providerType of getMetadataDependentTypes(settings)) {
+    for (const providerType of getMetadataDependentTypes(settings, app)) {
         if (providerType === 'tags' || providerType === 'metadata') {
             types.add(providerType);
         }
@@ -104,13 +93,14 @@ export function getContentWorkTotal(files: TFile[], types: FileContentType[]): n
  */
 export function resolveMetadataDependentTypes(
     settings: NotebookNavigatorSettings,
-    requested?: ContentProviderType[]
+    requested?: ContentProviderType[],
+    app?: App
 ): ContentProviderType[] {
-    const baseTypes = requested ?? getMetadataDependentTypes(settings);
+    const baseTypes = requested ?? getMetadataDependentTypes(settings, app);
 
     return baseTypes.filter(type => {
         if (type === 'markdownPipeline') {
-            return true;
+            return hasMarkdownPipelineContent(settings, app);
         }
         if (type === 'tags') {
             return settings.showTags;

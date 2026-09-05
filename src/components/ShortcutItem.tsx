@@ -21,7 +21,7 @@ import type { DraggableSyntheticListeners } from '@dnd-kit/core';
 import { useSettingsState } from '../context/SettingsContext';
 import { useUXPreferences } from '../context/UXPreferencesContext';
 import type { ListReorderHandlers } from '../types/listReorder';
-import { NavigationListRow, type DragHandleConfig } from './NavigationListRow';
+import { NavigationListRow, type DragHandleConfig, type NativeDragData } from './NavigationListRow';
 import type { NoteCountInfo } from '../types/noteCounts';
 import { buildNoteCountDisplay } from '../utils/noteCountFormatting';
 import { strings } from '../i18n';
@@ -34,6 +34,7 @@ interface ShortcutItemProps {
     icon: string;
     color?: string;
     backgroundColor?: string;
+    adjacentFilledClassName?: string;
     label: string;
     description?: string;
     level: number;
@@ -43,6 +44,8 @@ interface ShortcutItemProps {
     countInfo?: NoteCountInfo;
     badge?: string;
     forceShowCount?: boolean;
+    /** Folder shortcuts whose notes are omitted from parent folder lists render the count in parentheses */
+    isHiddenFromParents?: boolean;
     isExcluded?: boolean;
     onClick: (event: React.MouseEvent<HTMLDivElement>) => void;
     onRemove?: () => void;
@@ -52,6 +55,7 @@ interface ShortcutItemProps {
     isDragSource?: boolean;
     dragHandleConfig?: DragHandleConfig;
     hasFolderNote?: boolean;
+    tooltip?: React.ReactNode;
     onLabelClick?: (event: React.MouseEvent<HTMLSpanElement>) => void;
     onLabelMouseDown?: (event: React.MouseEvent<HTMLSpanElement>) => void;
     dragRef?: (node: HTMLDivElement | null) => void;
@@ -60,6 +64,7 @@ interface ShortcutItemProps {
     dragListeners?: DraggableSyntheticListeners;
     dragStyle?: React.CSSProperties;
     isSorting?: boolean;
+    nativeDragData?: NativeDragData;
 }
 
 /**
@@ -70,6 +75,7 @@ export const ShortcutItem = React.memo(function ShortcutItem({
     icon,
     color,
     backgroundColor,
+    adjacentFilledClassName,
     label,
     description,
     level,
@@ -79,6 +85,7 @@ export const ShortcutItem = React.memo(function ShortcutItem({
     countInfo,
     badge,
     forceShowCount,
+    isHiddenFromParents,
     isExcluded,
     onClick,
     onRemove,
@@ -88,6 +95,7 @@ export const ShortcutItem = React.memo(function ShortcutItem({
     isDragSource,
     dragHandleConfig,
     hasFolderNote,
+    tooltip,
     onLabelClick,
     onLabelMouseDown,
     dragRef,
@@ -95,13 +103,24 @@ export const ShortcutItem = React.memo(function ShortcutItem({
     dragAttributes,
     dragListeners,
     dragStyle,
-    isSorting
+    isSorting,
+    nativeDragData
 }: ShortcutItemProps) {
     const settings = useSettingsState();
     const uxPreferences = useUXPreferences();
     const includeDescendantNotes = uxPreferences.includeDescendantNotes;
     // Build formatted display object with label based on note count settings
-    const countDisplay = buildNoteCountDisplay(countInfo, includeDescendantNotes, includeDescendantNotes && settings.separateNoteCounts);
+    const baseCountDisplay = buildNoteCountDisplay(
+        countInfo,
+        includeDescendantNotes,
+        includeDescendantNotes && settings.separateNoteCounts
+    );
+    // Parentheses around the count mark folders whose notes are omitted from parent folder lists,
+    // matching the indicator FolderItem renders. Applies only while descendant notes are shown.
+    const countDisplay =
+        Boolean(isHiddenFromParents) && includeDescendantNotes && baseCountDisplay.shouldDisplay
+            ? { shouldDisplay: true, label: `(${baseCountDisplay.label})` }
+            : baseCountDisplay;
     // Check if this item type supports displaying note counts
     const supportsCount = type === 'folder' || type === 'tag' || type === 'property';
     const hasBadge = typeof badge === 'string' && badge.length > 0;
@@ -122,8 +141,11 @@ export const ShortcutItem = React.memo(function ShortcutItem({
         if (hasRemove) {
             classes.push('nn-shortcut-item--removable');
         }
+        if (adjacentFilledClassName) {
+            classes.push(adjacentFilledClassName);
+        }
         return classes.join(' ');
-    }, [hasRemove, isMissing]);
+    }, [adjacentFilledClassName, hasRemove, isMissing]);
 
     // Conditionally enables label click handler based on row state
     const labelClickHandler = useMemo(() => {
@@ -198,6 +220,7 @@ export const ShortcutItem = React.memo(function ShortcutItem({
             dragHandlers={dragHandlers}
             isDragSource={isDragSource}
             showCount={shouldShowCount || hasRemove}
+            showCountLeader={hasBadge}
             count={countLabel}
             countSlot={countSlot}
             className={classNames}
@@ -205,6 +228,7 @@ export const ShortcutItem = React.memo(function ShortcutItem({
             ariaDisabled={shouldDisableRow || isMissing}
             dragHandleConfig={dragHandleConfig}
             labelClassName={hasFolderNote ? 'nn-has-folder-note' : undefined}
+            tooltip={tooltip}
             onLabelClick={labelClickHandler}
             onLabelMouseDown={labelMouseDownHandler}
             showIcon={shouldShowIcon}
@@ -214,6 +238,7 @@ export const ShortcutItem = React.memo(function ShortcutItem({
             dragListeners={dragListeners}
             dragStyle={dragStyle}
             isSorting={isSorting}
+            nativeDragData={nativeDragData}
         />
     );
 });

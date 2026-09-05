@@ -17,11 +17,13 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { App, TFile } from 'obsidian';
+import { App, TFile, TFolder } from 'obsidian';
 import { FolderMetadataService } from '../../src/services/metadata/FolderMetadataService';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { NotebookNavigatorSettings } from '../../src/settings';
 import type { ISettingsProvider } from '../../src/interfaces/ISettingsProvider';
+import { ShortcutType } from '../../src/types/shortcuts';
+import type { CollapsedPinnedContexts } from '../../src/types';
 
 type MetadataChangeEvent = {
     path: string;
@@ -41,6 +43,8 @@ const {
     updateFileMetadataMock,
     getFolderNoteMock,
     getFolderNoteDetectionSettingsMock,
+    resolveFolderNoteNameForFolderMock,
+    resolveRootFolderNoteSourceNameMock,
     onContentChangeMock,
     getDBInstanceOrNullMock
 } = vi.hoisted(() => ({
@@ -51,9 +55,21 @@ const {
     getDBInstanceOrNullMock: vi.fn(),
     getFolderNoteDetectionSettingsMock: vi.fn((settings: NotebookNavigatorSettings) => ({
         enableFolderNotes: settings.enableFolderNotes,
-        folderNoteName: settings.folderNoteName,
         folderNoteNamePattern: settings.folderNoteNamePattern
-    }))
+    })),
+    resolveFolderNoteNameForFolderMock: vi.fn((folder: TFolder, settings: NotebookNavigatorSettings) =>
+        settings.folderNoteNamePattern.length === 0
+            ? folder.name
+            : settings.folderNoteNamePattern.replace(/\{\{\s*folder\s*\}\}/giu, folder.name)
+    ),
+    resolveRootFolderNoteSourceNameMock: vi.fn((folder: TFolder, vault?: { getName?: () => string }) => {
+        const vaultName = typeof vault?.getName === 'function' ? vault.getName() : '';
+        if (typeof vaultName === 'string' && vaultName.trim().length > 0) {
+            return vaultName;
+        }
+
+        return folder.name && folder.name !== '/' ? folder.name : 'Vault';
+    })
 }));
 
 vi.mock('../../src/storage/fileOperations', () => ({
@@ -65,9 +81,11 @@ vi.mock('../../src/storage/fileOperations', () => ({
     getDBInstanceOrNull: getDBInstanceOrNullMock
 }));
 
-vi.mock('../../src/utils/folderNotes', () => ({
+vi.mock('../../src/utils/folderNoteLookup', () => ({
     getFolderNote: getFolderNoteMock,
-    getFolderNoteDetectionSettings: getFolderNoteDetectionSettingsMock
+    getFolderNoteDetectionSettings: getFolderNoteDetectionSettingsMock,
+    resolveFolderNoteNameForFolder: resolveFolderNoteNameForFolderMock,
+    resolveRootFolderNoteSourceName: resolveRootFolderNoteSourceNameMock
 }));
 
 class TestSettingsProvider implements ISettingsProvider {
@@ -100,6 +118,16 @@ class TestSettingsProvider implements ISettingsProvider {
     }
 
     setRecentColors(): void {}
+
+    collapsedPinnedContexts: CollapsedPinnedContexts = {};
+
+    getCollapsedPinnedContexts(): CollapsedPinnedContexts {
+        return { ...this.collapsedPinnedContexts };
+    }
+
+    updateCollapsedPinnedContexts(mutator: (record: CollapsedPinnedContexts) => boolean): boolean {
+        return mutator(this.collapsedPinnedContexts);
+    }
 
     registerSettingsUpdateListener(id: string, callback: () => void): void {
         this.settingsUpdateListeners.set(id, callback);
@@ -146,6 +174,7 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         }));
         getFolderNoteMock.mockReset();
         getFolderNoteDetectionSettingsMock.mockClear();
+        resolveRootFolderNoteSourceNameMock.mockClear();
         processFrontMatter.mockReset();
         getFolderByPath.mockReset();
 
@@ -224,7 +253,7 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         });
 
         expect(processFrontMatter).toHaveBeenCalledTimes(1);
-        expect(frontmatter.icon).toBe('ph:apple-logo');
+        expect(frontmatter.icon).toBe('ph-apple-logo');
         expect(frontmatter.color).toBe('#112233');
         expect(frontmatter.background).toBe('#223344');
         expect(updateFileMetadataMock).toHaveBeenCalledWith(folderNoteFile.path, {
@@ -241,7 +270,7 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         await service.setFolderColor('Projects', '#112233');
 
         expect(processFrontMatter).toHaveBeenCalledTimes(1);
-        expect(frontmatter.icon).toBe('ph:apple-logo');
+        expect(frontmatter.icon).toBe('ph-apple-logo');
         expect(frontmatter.color).toBe('#112233');
         expect(frontmatter.background).toBe('#223344');
         expect(updateFileMetadataMock).toHaveBeenCalledWith(folderNoteFile.path, {
@@ -249,6 +278,52 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
             color: '#112233',
             background: '#223344'
         });
+    });
+
+    it('renames folder shortcuts that uniquely match the old path with different casing', async () => {
+        settingsProvider.settings.vaultProfiles = [
+            {
+                ...DEFAULT_SETTINGS.vaultProfiles[0],
+                shortcuts: [{ type: ShortcutType.FOLDER, path: 'appLab/SKILLS-WORKFLOWS/mmgi' }]
+            }
+        ];
+        app.vault.getAllLoadedFiles = vi.fn(() => [new TFolder('applab/skills-workflows/mmgi-renamed')]);
+
+        await service.handleFolderRename('applab/skills-workflows/mmgi', 'applab/skills-workflows/mmgi-renamed');
+
+        expect(settingsProvider.settings.vaultProfiles[0].shortcuts).toEqual([
+            { type: ShortcutType.FOLDER, path: 'applab/skills-workflows/mmgi-renamed' }
+        ]);
+    });
+
+    it('removes folder shortcuts that uniquely match the deleted path with different casing', async () => {
+        settingsProvider.settings.vaultProfiles = [
+            {
+                ...DEFAULT_SETTINGS.vaultProfiles[0],
+                shortcuts: [{ type: ShortcutType.FOLDER, path: 'appLab/SKILLS-WORKFLOWS/mmgi' }]
+            }
+        ];
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+
+        await service.handleFolderDelete('applab/skills-workflows/mmgi');
+
+        expect(settingsProvider.settings.vaultProfiles[0].shortcuts).toEqual([]);
+    });
+
+    it('does not remove ambiguous casefolded folder shortcuts', async () => {
+        settingsProvider.settings.vaultProfiles = [
+            {
+                ...DEFAULT_SETTINGS.vaultProfiles[0],
+                shortcuts: [{ type: ShortcutType.FOLDER, path: 'appLab/SKILLS-WORKFLOWS/mmgi' }]
+            }
+        ];
+        app.vault.getAllLoadedFiles = vi.fn(() => [new TFolder('applab/skills-workflows/MMGI')]);
+
+        await service.handleFolderDelete('applab/skills-workflows/mmgi');
+
+        expect(settingsProvider.settings.vaultProfiles[0].shortcuts).toEqual([
+            { type: ShortcutType.FOLDER, path: 'appLab/SKILLS-WORKFLOWS/mmgi' }
+        ]);
     });
 
     it('prefers folder note icon/color/background when frontmatter metadata is enabled', () => {
@@ -270,6 +345,67 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         expect(result.backgroundColor).toBe('#223344');
     });
 
+    it('prefers root folder note metadata at the vault root', () => {
+        folderNoteFile.path = 'Shared Scratch.md';
+        getFileMock.mockImplementation((path: string) => {
+            if (path !== folderNoteFile.path) {
+                return null;
+            }
+
+            return {
+                metadata: {
+                    name: 'Vault home',
+                    icon: 'phosphor:apple-logo'
+                }
+            };
+        });
+
+        const result = service.getFolderDisplayData('/', {
+            includeDisplayName: true,
+            includeColor: false,
+            includeBackgroundColor: false,
+            includeIcon: true
+        });
+
+        expect(result.displayName).toBe('Vault home');
+        expect(result.icon).toBe('phosphor:apple-logo');
+        expect(getFolderByPath).not.toHaveBeenCalledWith('/');
+        expect(getFolderNoteMock.mock.calls.some(([folder]) => folder instanceof TFolder && folder.path === '/')).toBe(true);
+    });
+
+    it('writes root folder style to the root folder note', async () => {
+        folderNoteFile.path = 'Shared Scratch.md';
+
+        await service.setFolderColor('/', '#112233');
+
+        expect(processFrontMatter).toHaveBeenCalledTimes(1);
+        expect(frontmatter.color).toBe('#112233');
+        expect(updateFileMetadataMock).toHaveBeenCalledWith(folderNoteFile.path, {
+            color: '#112233'
+        });
+        expect(getFolderByPath).not.toHaveBeenCalledWith('/');
+    });
+
+    it('keeps root folder metadata during direct cleanup', async () => {
+        settingsProvider.settings.folderColors = {
+            '/': '#112233',
+            Missing: '#445566'
+        };
+        settingsProvider.settings.folderIcons = {
+            '/': 'lucide-vault',
+            Missing: 'lucide-folder'
+        };
+
+        const changed = await service.cleanupFolderMetadata();
+
+        expect(changed).toBe(true);
+        expect(settingsProvider.settings.folderColors['/']).toBe('#112233');
+        expect(settingsProvider.settings.folderIcons['/']).toBe('lucide-vault');
+        expect(settingsProvider.settings.folderColors.Missing).toBeUndefined();
+        expect(settingsProvider.settings.folderIcons.Missing).toBeUndefined();
+        expect(getFolderByPath).not.toHaveBeenCalledWith('/');
+    });
+
     it('ignores invalid style color updates while applying valid icon updates', async () => {
         await service.setFolderStyle('Projects', {
             icon: 'phosphor:ph-apple-logo',
@@ -277,7 +413,7 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         });
 
         expect(processFrontMatter).toHaveBeenCalledTimes(1);
-        expect(frontmatter.icon).toBe('ph:apple-logo');
+        expect(frontmatter.icon).toBe('ph-apple-logo');
         expect(Reflect.has(frontmatter, 'color')).toBe(false);
         expect(updateFileMetadataMock).toHaveBeenCalledWith(folderNoteFile.path, {
             icon: 'phosphor:apple-logo'
@@ -1109,12 +1245,29 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         expect(getFolderByPath).not.toHaveBeenCalled();
     });
 
-    it('detects root folder display-name metadata changes using the root folder name', () => {
+    it('detects root folder display-name metadata changes using the vault name', () => {
+        Object.defineProperty(app.vault, 'getName', {
+            configurable: true,
+            value: () => 'Shared Scratch'
+        });
+        settingsProvider.settings.folderNoteNamePattern = '';
+
+        const rootFolderNoteChanges: MetadataChangeEvent[] = [
+            {
+                path: 'Shared Scratch.md',
+                changes: { metadata: { name: 'Vault home' } },
+                metadataNameChanged: true
+            }
+        ];
+
+        expect(service.hasFolderDisplayNameMetadataChanges(rootFolderNoteChanges)).toBe(true);
+    });
+
+    it('falls back to the root folder name when the vault name is unavailable', () => {
         Object.defineProperty(app.vault, 'getRoot', {
             configurable: true,
             value: () => ({ name: 'VaultRoot' })
         });
-        settingsProvider.settings.folderNoteName = '';
         settingsProvider.settings.folderNoteNamePattern = '';
 
         const rootFolderNoteChanges: MetadataChangeEvent[] = [
@@ -1221,7 +1374,7 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         const listener = vi.fn();
         const unsubscribe = service.subscribeToFolderDisplayNameChanges(listener);
 
-        settingsProvider.settings.folderNoteName = 'index';
+        settingsProvider.settings.folderNoteNamePattern = 'index';
         settingsProvider.notifySettingsUpdate();
 
         expect(service.getFolderDisplayNameVersion()).toBe(initialVersion + 1);

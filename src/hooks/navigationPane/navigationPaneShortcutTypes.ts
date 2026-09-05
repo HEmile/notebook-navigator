@@ -30,11 +30,10 @@ export type ShortcutContextMenuTarget =
     | { type: 'tag'; key: string; tagPath: string }
     | { type: 'property'; key: string; propertyNodeId: string }
     | { type: 'topic'; key: string; topicName: string }
-    | { type: 'search'; key: string }
+    | { type: 'search'; key: string; searchShortcut: SearchShortcut }
     | { type: 'missing'; key: string; kind: 'folder' | 'note' | 'tag' | 'property' | 'topic' };
 
 export interface NavigationPaneShortcutRenderState {
-    activeShortcutId: string | null;
     shouldUseShortcutDnd: boolean;
     allowEmptyShortcutDrop: boolean;
     shortcutDragHandleConfig: { visible: true; only: true } | undefined;
@@ -46,9 +45,9 @@ export interface NavigationPaneShortcutRenderState {
     handleShortcutFolderActivate: (folder: TFolder, shortcutKey: string) => void;
     handleShortcutFolderNoteClick: (folder: TFolder, shortcutKey: string, event: React.MouseEvent<HTMLSpanElement>) => void;
     handleShortcutFolderNoteMouseDown: (folder: TFolder, event: React.MouseEvent<HTMLSpanElement>) => void;
-    handleShortcutNoteActivate: (note: TFile, shortcutKey: string) => void;
+    handleShortcutNoteActivate: (note: TFile, shortcutKey: string, event?: React.MouseEvent<HTMLDivElement>) => void;
     handleShortcutNoteMouseDown: (event: React.MouseEvent<HTMLDivElement>, note: TFile) => void;
-    handleRecentNoteActivate: (note: TFile) => void;
+    handleRecentNoteActivate: (note: TFile, event?: React.MouseEvent<HTMLDivElement>) => void;
     handleShortcutSearchActivate: (shortcutKey: string, searchShortcut: SearchShortcut) => void;
     handleShortcutTagActivate: (tagPath: string, shortcutKey: string) => void;
     handleShortcutPropertyActivate: (propertyNodeId: string, shortcutKey: string) => boolean;
@@ -64,7 +63,23 @@ export interface NavigationPaneShortcutRenderState {
     getMissingNoteLabel: (path: string) => string;
 }
 
+/** Shortcut state read during row render; row context includes it as a reactive member so rows re-render on change */
+export type NavigationPaneShortcutUiState = Pick<
+    NavigationPaneShortcutRenderState,
+    | 'shouldUseShortcutDnd'
+    | 'allowEmptyShortcutDrop'
+    | 'shortcutDragHandleConfig'
+    | 'shortcutHeaderTrailingAction'
+    | 'propertiesHeaderTrailingAction'
+    | 'shortcutNumberBadgesByKey'
+    | 'shouldShowShortcutCounts'
+>;
+
+/** Shortcut handlers and lookups exposed to rows through an identity-stable facade */
+export type NavigationPaneShortcutRowHandlers = Omit<NavigationPaneShortcutRenderState, keyof NavigationPaneShortcutUiState>;
+
 export interface NavigationPaneShortcutsResult extends NavigationPaneShortcutRenderState {
+    activeShortcutId: string | null;
     shortcutsExpanded: boolean;
     setShortcutsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
     recentNotesExpanded: boolean;

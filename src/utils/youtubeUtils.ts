@@ -19,17 +19,15 @@
 export function getYoutubeVideoId(url: string): string | null {
     try {
         const parsedUrl = new URL(url);
-        const hostname = parsedUrl.hostname.toLowerCase();
+        const hostname = parsedUrl.hostname.toLowerCase().replace(/\.+$/u, '');
         const pathname = parsedUrl.pathname;
         const searchParams = parsedUrl.searchParams;
 
-        const normalizedHostname = hostname.replace('m.youtube.com', 'youtube.com');
-
-        if (hostname.includes('youtu.be')) {
+        if (hostname === 'youtu.be') {
             return pathname.slice(1);
         }
 
-        if (normalizedHostname.includes('youtube.com')) {
+        if (hostname === 'youtube.com' || hostname.endsWith('.youtube.com')) {
             if (pathname === '/watch') {
                 return searchParams.get('v');
             }

@@ -1,7 +1,7 @@
 /* Source: src/styles/sections/list-compact-mode.css */
 
 /* ========================================================================
-   Compact Mode Styles - When date, preview, and image are all disabled
+   Compact Mode Styles
    ======================================================================== */
 
 /* Compact file item - more compact list appearance */
@@ -13,12 +13,22 @@
     padding: var(--nn-file-padding-vertical-compact) var(--nn-file-item-padding-horizontal); /* Reduced vertical padding */
 }
 
+/* Mobile compact file items use larger touch targets. */
+.notebook-navigator-mobile .nn-file.nn-compact .nn-file-content {
+    padding: var(--nn-file-padding-vertical-compact-mobile) var(--nn-file-item-padding-horizontal);
+}
+
 /* Compact file name - no bold, smaller font like folder items */
 .nn-file.nn-compact .nn-file-name {
     font-size: var(--nn-compact-font-size, var(--nn-file-small-size-mobile, var(--nn-file-small-size)));
     font-weight: var(--nn-theme-file-compact-name-font-weight);
     margin-bottom: 0;
     line-height: var(--nn-file-title-line-height);
+}
+
+/* Mobile compact mode file names use the mobile compact font variable. */
+.notebook-navigator-mobile .nn-file.nn-compact .nn-file-name {
+    font-size: var(--nn-compact-font-size-mobile, var(--nn-compact-font-size, 15px));
 }
 
 /* Apply standard font weight to colored file names in compact mode */

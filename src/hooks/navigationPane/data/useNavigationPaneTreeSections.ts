@@ -17,7 +17,7 @@
  */
 
 import { useMemo } from 'react';
-import type { App } from 'obsidian';
+import type { App, TFolder } from 'obsidian';
 import type { IPropertyTreeProvider } from '../../../interfaces/IPropertyTreeProvider';
 import type { ITagTreeProvider } from '../../../interfaces/ITagTreeProvider';
 import { strings } from '../../../i18n';
@@ -84,6 +84,7 @@ export interface NavigationPaneTreeSectionsResult {
     folderItems: CombinedNavigationItem[];
     tagItems: CombinedNavigationItem[];
     renderTagTree: Map<string, TagTreeNode>;
+    renderedRootTagKeys: string[];
     rootOrderingTagTree: Map<string, TagTreeNode>;
     resolvedRootTagKeys: string[];
     tagsVirtualFolderHasChildren: boolean;
@@ -226,17 +227,30 @@ export function useNavigationPaneTreeSections({
     topicService
 }: UseNavigationPaneTreeSectionsParams): NavigationPaneTreeSectionsResult {
     const folderItems = useMemo(() => {
-        return flattenFolderTree(sourceState.rootFolders, expansionState.expandedFolders, sourceState.hiddenFolders, 0, new Set(), {
+        // A root folder present while the setting is off is only visible through the show hidden items
+        // toggle. It renders as excluded and always expanded: it has no persisted expansion entry, and a
+        // collapsed root would hide the entire folder tree. Deriving this from the root folder list instead
+        // of the toggle keeps the frame where the list has not caught up with a toggle change consistent.
+        const rootRevealedAsHiddenItem = !settings.showRootFolder && sourceState.rootFolders.some(folder => folder.path === '/');
+        const expandedFolders = rootRevealedAsHiddenItem
+            ? new Set(expansionState.expandedFolders).add('/')
+            : expansionState.expandedFolders;
+        const baseFolderExclusion = sourceState.folderExclusionByFolderNote;
+        const isFolderExcluded = rootRevealedAsHiddenItem
+            ? (folder: TFolder) => (folder.path === '/' ? true : (baseFolderExclusion?.(folder) ?? false))
+            : baseFolderExclusion;
+        return flattenFolderTree(sourceState.rootFolders, expandedFolders, sourceState.hiddenFolders, 0, new Set(), {
             rootOrderMap: sourceState.rootFolderOrderMap,
             defaultSortOrder: settings.folderSortOrder,
             childSortOrderOverrides: settings.folderTreeSortOverrides,
             getFolderSortName: sourceState.getFolderSortName,
-            isFolderExcluded: sourceState.folderExclusionByFolderNote
+            isFolderExcluded
         });
     }, [
         expansionState.expandedFolders,
         settings.folderSortOrder,
         settings.folderTreeSortOverrides,
+        settings.showRootFolder,
         sourceState.folderExclusionByFolderNote,
         sourceState.getFolderSortName,
         sourceState.hiddenFolders,
@@ -265,10 +279,15 @@ export function useNavigationPaneTreeSections({
         settings.scopeTagsToCurrentContext,
         settings.showTags
     ]);
+    const scopedTagPropertySelectionVersion = selectionScope.selectionType === ItemType.PROPERTY ? sourceState.propertyDataVersion : 0;
+    const scopedTagPropertyTree = selectionScope.selectionType === ItemType.PROPERTY ? sourceState.propertyTree : null;
 
     const scopedTagSectionSource = useMemo((): ScopedTagSectionSource | null => {
         void sourceState.fileChangeVersion;
-        void sourceState.metadataDecorationVersion;
+        void sourceState.tagDataVersion;
+        void scopedTagPropertySelectionVersion;
+        void scopedTagPropertyTree;
+        void sourceState.metadataVisibilityVersion;
 
         if (!isScopedTagContextActive) {
             return null;
@@ -316,7 +335,10 @@ export function useNavigationPaneTreeSections({
         sourceState.hiddenMatcherHasRules,
         sourceState.hiddenTagMatcher,
         sourceState.hiddenTags,
-        sourceState.metadataDecorationVersion,
+        sourceState.metadataVisibilityVersion,
+        sourceState.tagDataVersion,
+        scopedTagPropertySelectionVersion,
+        scopedTagPropertyTree,
         tagTreeService
     ]);
 
@@ -386,6 +408,41 @@ export function useNavigationPaneTreeSections({
     const rootOrderingTagTree = useMemo(() => globalRootTagOrdering.rootNodeMap, [globalRootTagOrdering.rootNodeMap]);
     const resolvedRootTagKeys = useMemo(() => globalRootTagOrdering.resolvedRootTagKeys, [globalRootTagOrdering.resolvedRootTagKeys]);
 
+    const isScopedTagSectionSource = scopedTagSectionSource !== null;
+    const scopedUntaggedCount = scopedTagSectionSource?.untaggedCount;
+    const renderedRootUntaggedCount = scopedUntaggedCount ?? sourceState.untaggedCount;
+    const renderedRootHiddenTagNodes = isScopedTagSectionSource ? undefined : sourceState.hiddenRootTagNodes;
+    const renderedRootNodeMap = renderRootTagOrdering.rootNodeMap;
+    const renderedResolvedRootTagKeys = renderRootTagOrdering.resolvedRootTagKeys;
+
+    const renderedRootTagKeys = useMemo((): string[] => {
+        if (!settings.showTags) {
+            return [];
+        }
+
+        const shouldIncludeUntagged = settings.showUntagged && renderedRootUntaggedCount > 0;
+
+        return renderedResolvedRootTagKeys.filter(key => {
+            if (renderedRootHiddenTagNodes?.has(key) && !showHiddenItems) {
+                return false;
+            }
+
+            if (key === UNTAGGED_TAG_ID) {
+                return shouldIncludeUntagged;
+            }
+
+            return renderedRootNodeMap.has(key);
+        });
+    }, [
+        renderedRootHiddenTagNodes,
+        renderedRootNodeMap,
+        renderedRootUntaggedCount,
+        renderedResolvedRootTagKeys,
+        settings.showTags,
+        settings.showUntagged,
+        showHiddenItems
+    ]);
+
     const { tagItems, tagsVirtualFolderHasChildren } = useMemo((): {
         tagItems: CombinedNavigationItem[];
         tagsVirtualFolderHasChildren: boolean;
@@ -408,6 +465,7 @@ export function useNavigationPaneTreeSections({
         const activeResolvedRootTagKeys = renderRootTagOrdering.resolvedRootTagKeys;
         const shouldIncludeUntagged = settings.showUntagged && activeUntaggedCount > 0;
         const matcherForMarking = !shouldHideTags && hasHiddenPatterns ? sourceState.hiddenTagMatcher : undefined;
+        const { rootNodeMap, hasVisibleTags } = renderRootTagOrdering;
         const taggedCollectionCount: NoteCountInfo = (() => {
             if (!includeDescendantNotes) {
                 return { current: 0, descendants: 0, total: 0 };
@@ -500,7 +558,6 @@ export function useNavigationPaneTreeSections({
             return { tagItems: items, tagsVirtualFolderHasChildren: false };
         }
 
-        const { rootNodeMap, hasVisibleTags } = renderRootTagOrdering;
         const hasTagCollectionContent = activeTaggedCount > 0;
         const hasContent = hasVisibleTags || shouldIncludeUntagged || hasTagCollectionContent;
         const tagsFolderHasChildren = hasVisibleTags || shouldIncludeUntagged;
@@ -617,10 +674,19 @@ export function useNavigationPaneTreeSections({
         settings.scopePropertiesToCurrentContext,
         settings.showProperties
     ]);
+    const scopedPropertyTagSelectionVersion =
+        selectionScope.selectionType === ItemType.TAG ||
+        (selectionScope.selectionType === ItemType.FOLDER && !showHiddenItems && sourceState.hiddenFileTags.length > 0)
+            ? sourceState.tagDataVersion
+            : 0;
+    const scopedPropertyTagTree = selectionScope.selectionType === ItemType.TAG ? sourceState.tagTree : null;
 
     const scopedPropertySectionSource = useMemo((): ScopedPropertySectionSource | null => {
         void sourceState.fileChangeVersion;
-        void sourceState.metadataDecorationVersion;
+        void sourceState.propertyDataVersion;
+        void scopedPropertyTagSelectionVersion;
+        void scopedPropertyTagTree;
+        void sourceState.metadataVisibilityVersion;
 
         if (!isScopedPropertyContextActive) {
             return null;
@@ -662,8 +728,11 @@ export function useNavigationPaneTreeSections({
         settings,
         showHiddenItems,
         sourceState.fileChangeVersion,
-        sourceState.metadataDecorationVersion,
+        sourceState.metadataVisibilityVersion,
+        sourceState.propertyDataVersion,
         sourceState.visiblePropertyNavigationKeySet,
+        scopedPropertyTagSelectionVersion,
+        scopedPropertyTagTree,
         tagTreeService
     ]);
 
@@ -958,6 +1027,7 @@ export function useNavigationPaneTreeSections({
         folderItems,
         tagItems,
         renderTagTree,
+        renderedRootTagKeys,
         rootOrderingTagTree,
         resolvedRootTagKeys,
         tagsVirtualFolderHasChildren,

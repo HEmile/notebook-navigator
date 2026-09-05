@@ -17,7 +17,7 @@
  */
 
 import type { AlphaSortOrder, NavRainbowColorMode, NavRainbowScope, TagSortOrder } from '../settings/types';
-import { NavigationPaneItemType } from '../types';
+import { NavigationPaneItemType, UNTAGGED_TAG_ID } from '../types';
 import type { PropertyTreeNode, TagTreeNode } from '../types/storage';
 import type { CombinedNavigationItem } from '../types/virtualization';
 import {
@@ -29,6 +29,7 @@ import {
 } from './navigationRainbow';
 import { getPropertyKeyNodeIdFromNodeId, getTotalPropertyNoteCount, parsePropertyNodeId } from './propertyTree';
 import { naturalCompare, compareByAlphaSortOrder } from './sortUtils';
+import { normalizeTagPathValue } from './tagPrefixMatcher';
 import { collectAllTagPaths } from './tagTree';
 import { comparePropertyOrderWithFallback, compareTagOrderWithFallback, flattenTagTree } from './treeFlattener';
 
@@ -138,6 +139,7 @@ function resolveAlphaSortComparator<T extends { name: string } & ({ path: string
 
 export function buildFileItemTagRainbowColors(params: {
     visibleTagTree: Map<string, TagTreeNode>;
+    rootTagKeys?: readonly string[];
     rootTagOrderMap: Map<string, number>;
     tagComparator?: (a: TagTreeNode, b: TagTreeNode) => number;
     palette: readonly string[];
@@ -146,8 +148,17 @@ export function buildFileItemTagRainbowColors(params: {
     inheritColors: boolean;
     childSortOrderOverrides?: Record<string, AlphaSortOrder>;
 }): TagRainbowColors {
-    const { visibleTagTree, rootTagOrderMap, tagComparator, palette, scope, showAllTagsFolder, inheritColors, childSortOrderOverrides } =
-        params;
+    const {
+        visibleTagTree,
+        rootTagKeys,
+        rootTagOrderMap,
+        tagComparator,
+        palette,
+        scope,
+        showAllTagsFolder,
+        inheritColors,
+        childSortOrderOverrides
+    } = params;
 
     if (palette.length === 0 || visibleTagTree.size === 0) {
         return createEmptyTagRainbowColors();
@@ -165,10 +176,61 @@ export function buildFileItemTagRainbowColors(params: {
     });
 
     const rootLevel = showAllTagsFolder ? 1 : 0;
-    const items = flattenTagTree(rootNodes, expandedTags, rootLevel, {
-        comparator: effectiveComparator,
-        childSortOrderOverrides
-    });
+    let items: CombinedNavigationItem[];
+
+    if (rootTagKeys && rootTagKeys.length > 0) {
+        const addedRoots = new Set<string>();
+        items = [];
+
+        rootTagKeys.forEach(key => {
+            if (key === UNTAGGED_TAG_ID) {
+                const untaggedNode: TagTreeNode = {
+                    name: UNTAGGED_TAG_ID,
+                    path: UNTAGGED_TAG_ID,
+                    displayPath: UNTAGGED_TAG_ID,
+                    children: new Map(),
+                    notesWithTag: new Set()
+                };
+                items.push({
+                    type: NavigationPaneItemType.UNTAGGED,
+                    data: untaggedNode,
+                    level: rootLevel,
+                    key: UNTAGGED_TAG_ID
+                });
+                return;
+            }
+
+            const node = visibleTagTree.get(key);
+            if (!node || addedRoots.has(node.path)) {
+                return;
+            }
+
+            addedRoots.add(node.path);
+            items.push(
+                ...flattenTagTree([node], expandedTags, rootLevel, {
+                    comparator: baseComparator,
+                    childSortOrderOverrides
+                })
+            );
+        });
+
+        rootNodes
+            .filter(node => !addedRoots.has(node.path))
+            .sort(effectiveComparator)
+            .forEach(node => {
+                items.push(
+                    ...flattenTagTree([node], expandedTags, rootLevel, {
+                        comparator: baseComparator,
+                        childSortOrderOverrides
+                    })
+                );
+            });
+    } else {
+        items = flattenTagTree(rootNodes, expandedTags, rootLevel, {
+            comparator: effectiveComparator,
+            childSortOrderOverrides
+        });
+    }
 
     return buildTagRainbowColors({
         items,
@@ -271,8 +333,10 @@ export function resolveFileItemTagDecorationColors(params: {
     backgroundColor: string | null | undefined;
 }): FileItemPillDecorationColors {
     const { model, tagPath, color, backgroundColor } = params;
-    const ownRainbowColor = model.tagRainbowColors.colorsByPath.get(tagPath);
-    const inheritedRainbowColor = ownRainbowColor ? undefined : model.tagRainbowColors.getInheritedColor(tagPath);
+    const normalizedTagPath = normalizeTagPathValue(tagPath);
+    const rainbowTagPath = normalizedTagPath.length > 0 ? normalizedTagPath : tagPath;
+    const ownRainbowColor = model.tagRainbowColors.colorsByPath.get(rainbowTagPath);
+    const inheritedRainbowColor = ownRainbowColor ? undefined : model.tagRainbowColors.getInheritedColor(rainbowTagPath);
 
     const resolved = applyRainbowOverlay({
         mode: model.navRainbowMode,

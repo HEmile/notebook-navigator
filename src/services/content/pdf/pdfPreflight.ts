@@ -510,10 +510,11 @@ function requestPageCleanup(page: unknown): void {
 // Wraps a promise and returns timeout metadata.
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<{ value: T | null; timedOut: boolean; rejected: boolean }> {
     const timeoutMsSafe = Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.floor(timeoutMs) : 1;
+    const timerWindow = activeWindow;
 
     return await new Promise(resolve => {
         let settled = false;
-        const timeoutId = globalThis.setTimeout(() => {
+        const timeoutId = timerWindow.setTimeout(() => {
             if (settled) {
                 return;
             }
@@ -527,7 +528,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<{
                     return;
                 }
                 settled = true;
-                globalThis.clearTimeout(timeoutId);
+                timerWindow.clearTimeout(timeoutId);
                 resolve({ value, timedOut: false, rejected: false });
             },
             () => {
@@ -535,7 +536,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<{
                     return;
                 }
                 settled = true;
-                globalThis.clearTimeout(timeoutId);
+                timerWindow.clearTimeout(timeoutId);
                 resolve({ value: null, timedOut: false, rejected: true });
             }
         );

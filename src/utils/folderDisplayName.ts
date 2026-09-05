@@ -18,11 +18,11 @@
 
 import type { App } from 'obsidian';
 import type { MetadataService } from '../services/MetadataService';
-import type { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
 
 interface ResolveFolderDisplayNameParams {
     app: App;
-    metadataService: MetadataService;
+    metadataService: Pick<MetadataService, 'getFolderDisplayData'>;
     settings: Pick<NotebookNavigatorSettings, 'customVaultName'>;
     folderPath: string;
     fallbackName: string;
@@ -34,10 +34,6 @@ interface ResolveFolderDisplayNameParams {
 export function resolveFolderDisplayName(params: ResolveFolderDisplayNameParams): string {
     const { app, metadataService, settings, folderPath, fallbackName } = params;
 
-    if (folderPath === '/') {
-        return settings.customVaultName || app.vault.getName();
-    }
-
     const metadataDisplayName = metadataService.getFolderDisplayData(folderPath, {
         includeDisplayName: true,
         includeColor: false,
@@ -48,5 +44,67 @@ export function resolveFolderDisplayName(params: ResolveFolderDisplayNameParams)
         return metadataDisplayName;
     }
 
+    if (folderPath === '/') {
+        return settings.customVaultName || app.vault.getName();
+    }
+
     return fallbackName;
+}
+
+interface ResolveFolderDisplayPathParams {
+    metadataService: Pick<MetadataService, 'getFolderDisplayData'>;
+    folderPath: string;
+    baseFolderPath?: string | null;
+}
+
+export interface FolderDisplayPathSegment {
+    path: string;
+    label: string;
+}
+
+/**
+ * Resolves folder path segments using folder display names where available.
+ * baseFolderPath must be the vault root or an ancestor of folderPath; its segments are omitted before metadata is
+ * resolved for the visible path.
+ */
+export function resolveFolderDisplayPathSegments({
+    metadataService,
+    folderPath,
+    baseFolderPath
+}: ResolveFolderDisplayPathParams): FolderDisplayPathSegment[] {
+    const segments = folderPath.split('/').filter(Boolean);
+    const baseDepth = baseFolderPath?.split('/').filter(Boolean).length ?? 0;
+    const displaySegments: FolderDisplayPathSegment[] = [];
+    let currentPath = '';
+
+    segments.forEach((segment, index) => {
+        currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+        if (index < baseDepth) {
+            return;
+        }
+
+        const metadataDisplayName = metadataService.getFolderDisplayData(currentPath, {
+            includeDisplayName: true,
+            includeColor: false,
+            includeBackgroundColor: false,
+            includeIcon: false
+        }).displayName;
+
+        displaySegments.push({
+            path: currentPath,
+            label: metadataDisplayName && metadataDisplayName.length > 0 ? metadataDisplayName : segment
+        });
+    });
+
+    return displaySegments;
+}
+
+/**
+ * Resolves a folder path using folder display names where available.
+ * baseFolderPath follows the ancestor contract documented by resolveFolderDisplayPathSegments.
+ */
+export function resolveFolderDisplayPath(params: ResolveFolderDisplayPathParams): string {
+    return resolveFolderDisplayPathSegments(params)
+        .map(segment => segment.label)
+        .join('/');
 }

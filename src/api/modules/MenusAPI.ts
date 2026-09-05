@@ -104,8 +104,8 @@ export class MenusAPI {
         };
     }
 
-    private applyExtensions<TContext extends MenuExtensionContextBase, TExtension extends (context: TContext) => void>(
-        extensions: ReadonlySet<TExtension>,
+    private applyExtensions<TContext extends MenuExtensionContextBase>(
+        extensions: ReadonlySet<(context: TContext) => void>,
         menu: Menu,
         errorPrefix: string,
         buildContext: (addItem: (cb: (item: MenuItem) => void) => void) => TContext
@@ -170,7 +170,7 @@ export class MenusAPI {
             files: Object.freeze([...selection.files])
         });
 
-        return this.applyExtensions(this.fileMenuExtensions, menu, 'file', addItem => ({
+        return this.applyExtensions<FileMenuExtensionContext>(this.fileMenuExtensions, menu, 'file', addItem => ({
             addItem,
             file,
             selection: frozenSelection
@@ -183,7 +183,7 @@ export class MenusAPI {
      */
     applyFolderMenuExtensions(context: FolderMenuExtensionApplyContext): number {
         const { menu, folder } = context;
-        return this.applyExtensions(this.folderMenuExtensions, menu, 'folder', addItem => ({
+        return this.applyExtensions<FolderMenuExtensionContext>(this.folderMenuExtensions, menu, 'folder', addItem => ({
             addItem,
             folder
         }));
@@ -195,7 +195,7 @@ export class MenusAPI {
      */
     applyTagMenuExtensions(context: TagMenuExtensionApplyContext): number {
         const { menu, tag } = context;
-        return this.applyExtensions(this.tagMenuExtensions, menu, 'tag', addItem => ({
+        return this.applyExtensions<TagMenuExtensionContext>(this.tagMenuExtensions, menu, 'tag', addItem => ({
             addItem,
             tag
         }));
@@ -207,7 +207,7 @@ export class MenusAPI {
      */
     applyPropertyMenuExtensions(context: PropertyMenuExtensionApplyContext): number {
         const { menu, nodeId } = context;
-        return this.applyExtensions(this.propertyMenuExtensions, menu, 'property', addItem => ({
+        return this.applyExtensions<PropertyMenuExtensionContext>(this.propertyMenuExtensions, menu, 'property', addItem => ({
             addItem,
             nodeId
         }));

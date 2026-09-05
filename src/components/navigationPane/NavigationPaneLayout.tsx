@@ -20,11 +20,19 @@ import React from 'react';
 import type { Virtualizer } from '@tanstack/react-virtual';
 import type { CombinedNavigationItem } from '../../types/virtualization';
 import type { CSSPropertiesWithVars } from '../../types';
+import { getNavigationItemRenderKey } from '../../utils/navigationIndex';
 import { NavigationPaneHeader } from '../NavigationPaneHeader';
 import { VaultTitleArea } from '../VaultTitleArea';
+import type { NavigationInlineRenameTarget, NavigationPaneRowHotState } from './NavigationPaneItemRenderer.types';
+
+type RenderNavigationItemFn = (
+    item: CombinedNavigationItem,
+    adjacentFilledClassName: string | undefined,
+    hotState: NavigationPaneRowHotState
+) => React.ReactNode;
 
 interface NavigationPaneLayoutProps {
-    navigationPaneRef: React.RefObject<HTMLDivElement | null>;
+    navigationPaneRef: React.MutableRefObject<HTMLDivElement | null>;
     navigationPaneStyle: CSSPropertiesWithVars;
     shouldRenderCalendarOverlay: boolean;
     isShortcutSorting: boolean;
@@ -41,7 +49,7 @@ interface NavigationPaneLayoutProps {
     pinNavigationBanner: boolean;
     navigationBannerContent: React.ReactNode;
     shouldRenderPinnedShortcuts: boolean;
-    pinnedShortcutsContainerRef: React.RefObject<HTMLDivElement | null>;
+    pinnedShortcutsContainerRef: React.MutableRefObject<HTMLDivElement | null>;
     pinnedShortcutsHasOverflow: boolean;
     pinnedShortcutsMaxHeight: number | null;
     allowEmptyShortcutDrop: boolean;
@@ -49,11 +57,13 @@ interface NavigationPaneLayoutProps {
     onShortcutRootDrop: (event: React.DragEvent<HTMLElement>) => void;
     pinnedShortcutsScrollRefCallback: (node: HTMLDivElement | null) => void;
     pinnedNavigationItems: CombinedNavigationItem[];
-    renderNavigationItem: (item: CombinedNavigationItem) => React.ReactNode;
+    renderNavigationItem: RenderNavigationItemFn;
+    getRowHotState: (item: CombinedNavigationItem) => NavigationPaneRowHotState;
+    isNavigationItemFilled: (item: CombinedNavigationItem) => boolean;
     onPinnedShortcutsResizePointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
     scrollContainerRefCallback: (node: HTMLDivElement | null) => void;
     hasNavigationBannerConfigured: boolean;
-    navigationBannerRef: React.RefObject<HTMLDivElement | null>;
+    navigationBannerRef: React.MutableRefObject<HTMLDivElement | null>;
     rootReorderContent: React.ReactNode;
     isRootReorderMode: boolean;
     items: CombinedNavigationItem[];
@@ -62,6 +72,70 @@ interface NavigationPaneLayoutProps {
     shouldRenderBottomToolbarInsidePanel: boolean;
     shouldRenderBottomToolbarOutsidePanel: boolean;
     calendarOverlay: React.ReactNode;
+}
+
+interface NavigationPaneRowProps {
+    item: CombinedNavigationItem;
+    /** Virtual list position; omitted for pinned shortcut rows, which render in plain flow without a positioning wrapper */
+    index?: number;
+    top?: number;
+    adjacentFilledClassName: string | undefined;
+    isSelected: boolean;
+    isExpanded: boolean;
+    renameTarget: NavigationInlineRenameTarget | null;
+    isDragSource: boolean;
+    renderNavigationItem: RenderNavigationItemFn;
+}
+
+/**
+ * One navigation row. Memoized so commits that do not change a row's inputs
+ * (scroll range updates, selection or expansion changes on other rows) skip
+ * the row subtree entirely.
+ */
+const NavigationPaneRow = React.memo(function NavigationPaneRow({
+    item,
+    index,
+    top,
+    adjacentFilledClassName,
+    isSelected,
+    isExpanded,
+    renameTarget,
+    isDragSource,
+    renderNavigationItem
+}: NavigationPaneRowProps) {
+    const content = renderNavigationItem(item, adjacentFilledClassName, { isSelected, isExpanded, renameTarget, isDragSource });
+    if (index === undefined || top === undefined) {
+        return <>{content}</>;
+    }
+    return (
+        <div data-index={index} className="nn-virtual-nav-item" style={{ transform: `translateY(${top}px)` }}>
+            {content}
+        </div>
+    );
+});
+
+function getAdjacentFilledClassName(
+    item: CombinedNavigationItem,
+    index: number,
+    items: readonly CombinedNavigationItem[],
+    isNavigationItemFilled: (item: CombinedNavigationItem) => boolean
+): string | undefined {
+    if (!isNavigationItemFilled(item)) {
+        return undefined;
+    }
+
+    const classes: string[] = [];
+    const previousItem = index > 0 ? items[index - 1] : undefined;
+    const nextItem = index < items.length - 1 ? items[index + 1] : undefined;
+
+    if (previousItem && isNavigationItemFilled(previousItem)) {
+        classes.push('nn-navitem-has-filled-previous');
+    }
+    if (nextItem && isNavigationItemFilled(nextItem)) {
+        classes.push('nn-navitem-has-filled-next');
+    }
+
+    return classes.length > 0 ? classes.join(' ') : undefined;
 }
 
 export function NavigationPaneLayout({
@@ -91,6 +165,8 @@ export function NavigationPaneLayout({
     pinnedShortcutsScrollRefCallback,
     pinnedNavigationItems,
     renderNavigationItem,
+    getRowHotState,
+    isNavigationItemFilled,
     onPinnedShortcutsResizePointerDown,
     scrollContainerRefCallback,
     hasNavigationBannerConfigured,
@@ -136,9 +212,26 @@ export function NavigationPaneLayout({
                     >
                         <div className="nn-shortcut-pinned-scroll" ref={pinnedShortcutsScrollRefCallback}>
                             <div className="nn-shortcut-pinned-inner">
-                                {pinnedNavigationItems.map(pinnedItem => (
-                                    <React.Fragment key={pinnedItem.key}>{renderNavigationItem(pinnedItem)}</React.Fragment>
-                                ))}
+                                {pinnedNavigationItems.map((pinnedItem, index) => {
+                                    const hotState = getRowHotState(pinnedItem);
+                                    return (
+                                        <NavigationPaneRow
+                                            key={getNavigationItemRenderKey(pinnedItem)}
+                                            item={pinnedItem}
+                                            adjacentFilledClassName={getAdjacentFilledClassName(
+                                                pinnedItem,
+                                                index,
+                                                pinnedNavigationItems,
+                                                isNavigationItemFilled
+                                            )}
+                                            isSelected={hotState.isSelected}
+                                            isExpanded={hotState.isExpanded}
+                                            renameTarget={hotState.renameTarget}
+                                            isDragSource={hotState.isDragSource}
+                                            renderNavigationItem={renderNavigationItem}
+                                        />
+                                    );
+                                })}
                             </div>
                         </div>
                         <div
@@ -184,17 +277,25 @@ export function NavigationPaneLayout({
                                                   return null;
                                               }
 
+                                              const hotState = getRowHotState(item);
                                               return (
-                                                  <div
+                                                  <NavigationPaneRow
                                                       key={virtualItem.key}
-                                                      data-index={virtualItem.index}
-                                                      className="nn-virtual-nav-item"
-                                                      style={{
-                                                          transform: `translateY(${Math.max(0, virtualItem.start - navigationScrollMargin)}px)`
-                                                      }}
-                                                  >
-                                                      {renderNavigationItem(item)}
-                                                  </div>
+                                                      item={item}
+                                                      index={virtualItem.index}
+                                                      top={Math.max(0, virtualItem.start - navigationScrollMargin)}
+                                                      adjacentFilledClassName={getAdjacentFilledClassName(
+                                                          item,
+                                                          virtualItem.index,
+                                                          items,
+                                                          isNavigationItemFilled
+                                                      )}
+                                                      isSelected={hotState.isSelected}
+                                                      isExpanded={hotState.isExpanded}
+                                                      renameTarget={hotState.renameTarget}
+                                                      isDragSource={hotState.isDragSource}
+                                                      renderNavigationItem={renderNavigationItem}
+                                                  />
                                               );
                                           })}
                                       </div>

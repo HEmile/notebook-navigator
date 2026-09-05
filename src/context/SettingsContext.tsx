@@ -17,10 +17,9 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
-import NotebookNavigatorPlugin from '../main';
-import { NotebookNavigatorSettings } from '../settings';
+import type NotebookNavigatorPlugin from '../main';
 import type { DualPaneOrientation } from '../types';
-import type { VaultProfile } from '../settings/types';
+import type { NotebookNavigatorSettings, VaultProfile } from '../settings/types';
 import type { FileVisibility } from '../utils/fileTypeUtils';
 import type { ShortcutEntry } from '../types/shortcuts';
 import {
@@ -38,9 +37,9 @@ import {
     cloneShortcuts,
     getActiveVaultProfile
 } from '../utils/vaultProfiles';
-import { clonePinnedNotesRecord, isStringRecordValue, sanitizeRecord } from '../utils/recordUtils';
+import { clonePinnedNotesRecord, isStringRecordValue, sanitizeRecord, type PinnedNoteContextValue } from '../utils/recordUtils';
 import { areStringArraysEqual } from '../utils/arrayUtils';
-import type { FolderAppearance } from '../hooks/useListPaneAppearance';
+import { snapshotListPaneAppearanceMap, type ListPaneAppearance } from '../settings/listPaneAppearance';
 import { buildFileNameIconNeedles, type FileNameIconNeedle } from '../utils/fileIconUtils';
 
 // Separate contexts for state and update function
@@ -48,11 +47,13 @@ type SettingsStateValue = NotebookNavigatorSettings & { dualPaneOrientation: Dua
 export interface ActiveProfileState {
     profile: VaultProfile;
     hiddenFolders: string[];
+    descendantExcludedFolders: string[];
     hiddenFileProperties: string[];
     hiddenFileNames: string[];
     hiddenTags: string[];
     hiddenFileTags: string[];
     fileVisibility: FileVisibility;
+    propertyKeys: VaultProfile['propertyKeys'];
     navigationBanner: string | null;
 }
 
@@ -178,15 +179,34 @@ const areShortcutsEqual = (prev?: ShortcutEntry[] | null, next?: ShortcutEntry[]
     return true;
 };
 
-const cloneAppearanceMap = <T extends FolderAppearance>(map?: Record<string, T>): Record<string, T> => {
-    if (!map) {
-        return Object.create(null) as Record<string, T>;
+const arePinnedNotesEqual = (
+    previous: Record<string, PinnedNoteContextValue> | null,
+    next: Record<string, PinnedNoteContextValue>
+): boolean => {
+    if (!previous) {
+        return false;
     }
-    const cloned = Object.create(null) as Record<string, T>;
-    Object.entries(map).forEach(([key, value]) => {
-        cloned[key] = { ...value };
-    });
-    return cloned;
+
+    const previousKeys = Object.keys(previous);
+    const nextKeys = Object.keys(next);
+    if (previousKeys.length !== nextKeys.length) {
+        return false;
+    }
+
+    for (const path of nextKeys) {
+        const previousContext = previous[path];
+        const nextContext = next[path];
+        if (
+            !previousContext ||
+            previousContext.folder !== nextContext.folder ||
+            previousContext.tag !== nextContext.tag ||
+            previousContext.property !== nextContext.property
+        ) {
+            return false;
+        }
+    }
+
+    return true;
 };
 
 interface SettingsProviderProps {
@@ -201,6 +221,12 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
     const previousInterfaceIconsRef = useRef<{
         raw: NotebookNavigatorSettings['interfaceIcons'] | undefined;
         sanitized: Record<string, string>;
+    } | null>(null);
+    const previousPinnedNotesRef = useRef<Record<string, PinnedNoteContextValue> | null>(null);
+    const previousAppearanceMapsRef = useRef<{
+        folders: Record<string, ListPaneAppearance>;
+        tags: Record<string, ListPaneAppearance>;
+        properties: Record<string, ListPaneAppearance>;
     } | null>(null);
 
     const updateSettings = useCallback(
@@ -240,6 +266,20 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
         if (!interfaceIconsCache || interfaceIconsCache.raw !== rawInterfaceIcons) {
             previousInterfaceIconsRef.current = { raw: rawInterfaceIcons, sanitized: interfaceIcons };
         }
+        const clonedPinnedNotes = clonePinnedNotesRecord(plugin.settings.pinnedNotes);
+        const previousPinnedNotes = previousPinnedNotesRef.current;
+        const pinnedNotes =
+            previousPinnedNotes && arePinnedNotesEqual(previousPinnedNotes, clonedPinnedNotes) ? previousPinnedNotes : clonedPinnedNotes;
+        previousPinnedNotesRef.current = pinnedNotes;
+        const previousAppearanceMaps = previousAppearanceMapsRef.current;
+        const folderAppearances = snapshotListPaneAppearanceMap(plugin.settings.folderAppearances, previousAppearanceMaps?.folders);
+        const tagAppearances = snapshotListPaneAppearanceMap(plugin.settings.tagAppearances, previousAppearanceMaps?.tags);
+        const propertyAppearances = snapshotListPaneAppearanceMap(plugin.settings.propertyAppearances, previousAppearanceMaps?.properties);
+        previousAppearanceMapsRef.current = {
+            folders: folderAppearances,
+            tags: tagAppearances,
+            properties: propertyAppearances
+        };
         const nextSettings: SettingsStateValue = {
             ...plugin.settings,
             dualPaneOrientation: plugin.getDualPaneOrientation(),
@@ -253,10 +293,10 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
             propertyIcons,
             calendarMonthHighlights,
             interfaceIcons,
-            folderAppearances: cloneAppearanceMap(plugin.settings.folderAppearances),
-            tagAppearances: cloneAppearanceMap(plugin.settings.tagAppearances),
-            propertyAppearances: cloneAppearanceMap(plugin.settings.propertyAppearances),
-            pinnedNotes: clonePinnedNotesRecord(plugin.settings.pinnedNotes)
+            folderAppearances,
+            tagAppearances,
+            propertyAppearances,
+            pinnedNotes
         };
         // Deep copy vault profiles to prevent mutations from affecting the original settings
         if (Array.isArray(plugin.settings.vaultProfiles)) {
@@ -264,6 +304,7 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
             nextSettings.vaultProfiles = plugin.settings.vaultProfiles.map(profile => ({
                 ...profile,
                 hiddenFolders: Array.isArray(profile.hiddenFolders) ? [...profile.hiddenFolders] : [],
+                descendantExcludedFolders: Array.isArray(profile.descendantExcludedFolders) ? [...profile.descendantExcludedFolders] : [],
                 hiddenFileProperties: Array.isArray(profile.hiddenFileProperties) ? [...profile.hiddenFileProperties] : [],
                 hiddenFileNames: Array.isArray(profile.hiddenFileNames) ? [...profile.hiddenFileNames] : [],
                 hiddenTags: Array.isArray(profile.hiddenTags) ? [...profile.hiddenTags] : [],
@@ -305,6 +346,10 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
         const isSameProfile = previous?.profile.id === profile.id;
 
         const hiddenFoldersEqual = areStringArraysEqual(previous?.profile.hiddenFolders ?? [], profile.hiddenFolders);
+        const descendantExcludedFoldersEqual = areStringArraysEqual(
+            previous?.profile.descendantExcludedFolders ?? [],
+            profile.descendantExcludedFolders
+        );
         const hiddenFilePropertiesEqual = areStringArraysEqual(previous?.profile.hiddenFileProperties ?? [], profile.hiddenFileProperties);
         const hiddenFileNamesEqual = areStringArraysEqual(previous?.profile.hiddenFileNames ?? [], profile.hiddenFileNames);
         const hiddenTagsEqual = areStringArraysEqual(previous?.profile.hiddenTags ?? [], profile.hiddenTags);
@@ -321,6 +366,7 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
         if (
             isSameProfile &&
             hiddenFoldersEqual &&
+            descendantExcludedFoldersEqual &&
             hiddenFilePropertiesEqual &&
             hiddenFileNamesEqual &&
             hiddenTagsEqual &&
@@ -340,11 +386,13 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
         const nextActiveProfile: ActiveProfileState = {
             profile,
             hiddenFolders: profile.hiddenFolders,
+            descendantExcludedFolders: profile.descendantExcludedFolders,
             hiddenFileProperties: profile.hiddenFileProperties,
             hiddenFileNames: profile.hiddenFileNames,
             hiddenTags: profile.hiddenTags,
             hiddenFileTags: profile.hiddenFileTags,
             fileVisibility: profile.fileVisibility,
+            propertyKeys: propertyKeysEqual && previous ? previous.propertyKeys : profile.propertyKeys,
             navigationBanner
         };
 

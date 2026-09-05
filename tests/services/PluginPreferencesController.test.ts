@@ -45,7 +45,7 @@ vi.mock('../../src/utils/localStorage', () => {
     };
 });
 
-vi.stubGlobal('window', globalThis);
+vi.stubGlobal('window', activeWindow);
 
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import { PluginPreferencesController } from '../../src/services/settings/PluginPreferencesController';
@@ -106,6 +106,23 @@ describe('PluginPreferencesController', () => {
         expect(listener).not.toHaveBeenCalled();
         expect(localStorageSet).toHaveBeenCalledWith(STORAGE_KEYS.recentNotesKey, {
             [DEFAULT_SETTINGS.vaultProfile]: ['note-a.md']
+        });
+    });
+
+    it('refreshes migrated pinned collapse keys before the next local mutation persists the record', () => {
+        mockLocalStorageStore.set(STORAGE_KEYS.collapsedPinnedContextsKey, { 'folder:/': true });
+        controller.loadUXPreferences();
+
+        mockLocalStorageStore.set(STORAGE_KEYS.collapsedPinnedContextsKey, {
+            'folder:/': true,
+            'tag:work': true
+        });
+
+        expect(controller.syncCollapsedPinnedContextsFromLocalStorage()).toBe(true);
+        controller.togglePinnedGroupCollapsed('folder:/');
+
+        expect(mockLocalStorageStore.get(STORAGE_KEYS.collapsedPinnedContextsKey)).toEqual({
+            'tag:work': true
         });
     });
 

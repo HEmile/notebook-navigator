@@ -45,17 +45,17 @@
  * - Settings changes (line height, indentation)
  */
 
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { useVirtualizer, Virtualizer } from '@tanstack/react-virtual';
 import { useServices } from '../context/ServicesContext';
-import { useSelectionState } from '../context/SelectionContext';
+import { useNavigationSelection, useSelectionReveal } from '../context/SelectionContext';
 import { useUIState } from '../context/UIStateContext';
 import { useSettingsState } from '../context/SettingsContext';
 import { useUXPreferences } from '../context/UXPreferencesContext';
 import { NavigationPaneItemType, ItemType, NAVPANE_MEASUREMENTS, OVERSCAN } from '../types';
 import { Align, NavScrollIntent, getNavAlign } from '../types/scroll';
 import type { CombinedNavigationItem } from '../types/virtualization';
-import { getNavigationIndex, normalizeNavigationPath } from '../utils/navigationIndex';
+import { getNavigationIndex, getNavigationItemRenderKey, normalizeNavigationPath } from '../utils/navigationIndex';
 
 /**
  * Parameters for the useNavigationPaneScroll hook
@@ -107,6 +107,35 @@ interface UseNavigationPaneScrollResult {
     pendingScrollVersion: number;
 }
 
+function areNavigationPathIndexMapsEqual(previous: ReadonlyMap<string, number>, next: ReadonlyMap<string, number>): boolean {
+    if (previous === next) {
+        return true;
+    }
+    if (previous.size !== next.size) {
+        return false;
+    }
+
+    for (const [path, index] of next) {
+        if (previous.get(path) !== index) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function getNavigationMeasurementSignature(items: readonly CombinedNavigationItem[]): string {
+    return items
+        .map(item => {
+            if (item.type === NavigationPaneItemType.ROOT_SPACER) {
+                return `${item.type}:${item.spacing}`;
+            }
+
+            return item.type;
+        })
+        .join('\u0001');
+}
+
 /**
  * Hook that manages scrolling behavior for the NavigationPane component.
  * Handles virtualization, scroll position, and various scroll scenarios.
@@ -123,14 +152,15 @@ export function useNavigationPaneScroll({
     scrollPaddingEnd
 }: UseNavigationPaneScrollParams): UseNavigationPaneScrollResult {
     const { isMobile } = useServices();
-    const selectionState = useSelectionState();
+    const selectionState = useNavigationSelection();
+    const selectionReveal = useSelectionReveal();
     const uiState = useUIState();
     const settings = useSettingsState();
     const uxPreferences = useUXPreferences();
     const showHiddenItems = uxPreferences.showHiddenItems;
 
     // Reference to the scroll container DOM element
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const [scrollContainerEl, setScrollContainerEl] = useState<HTMLDivElement | null>(null);
     const [containerVisible, setContainerVisible] = useState<boolean>(false);
 
@@ -247,12 +277,20 @@ export function useNavigationPaneScroll({
     const prevNavSettingsKeyRef = useRef<string>('');
     const prevShowHiddenItemsRef = useRef<boolean>(showHiddenItems);
     const prevPathToIndexSizeRef = useRef<number>(pathToIndex.size);
+    const prevMeasurementSignatureRef = useRef<string>('');
 
     /**
      * Initialize TanStack Virtual virtualizer with dynamic heights for navigation items
      */
     const effectiveScrollMargin = Number.isFinite(scrollMargin) && scrollMargin > 0 ? scrollMargin : 0;
     const effectiveScrollPaddingEnd = Number.isFinite(scrollPaddingEnd) && scrollPaddingEnd > 0 ? scrollPaddingEnd : 0;
+    const getVirtualItemKey = useCallback(
+        (index: number) => {
+            const item = items[index];
+            return item ? getNavigationItemRenderKey(item) : index;
+        },
+        [items]
+    );
 
     const ensureIndexNotCovered = useCallback(
         (index: number) => {
@@ -265,8 +303,8 @@ export function useNavigationPaneScroll({
                 return;
             }
 
-            // Navigation rows set `data-index` in `src/components/NavigationPane.tsx`; use it to find the rendered row
-            // TanStack Virtual scrolled to so we can keep it within the safe viewport (scrollPaddingEnd).
+            // Navigation rows set `data-index` in `src/components/navigationPane/NavigationPaneLayout.tsx`; use it to find the
+            // rendered row TanStack Virtual scrolled to so we can keep it within the safe viewport (scrollPaddingEnd).
             const row = scrollElement.querySelector(`[data-index="${index}"]`);
             if (!(row instanceof HTMLElement)) {
                 return;
@@ -285,6 +323,7 @@ export function useNavigationPaneScroll({
 
     const rowVirtualizer = useVirtualizer({
         count: items.length,
+        getItemKey: getVirtualItemKey,
         getScrollElement: () => scrollContainerRef.current,
         // Align virtualizer scroll math with the start of the tree rows (excluding non-virtualized scroll content).
         scrollMargin: effectiveScrollMargin,
@@ -316,24 +355,38 @@ export function useNavigationPaneScroll({
         },
         overscan: OVERSCAN
     });
+    const measurementSignature = useMemo(() => getNavigationMeasurementSignature(items), [items]);
 
     /**
-     * Increment indexVersion and invalidate cached row measurements when tree structure changes.
+     * Increment indexVersion and invalidate cached row measurements when tree structure or measured row layout changes.
      * This is critical for version gating and for selection-scoped nav rebuilds where the row
      * types or spacer layout can change without a height-setting change.
      */
     useEffect(() => {
-        const sizeChanged = prevPathToIndexSizeRef.current !== pathToIndex.size;
-        const identityChanged = prevPathToIndexObjRef.current !== pathToIndex;
+        const previousMap = prevPathToIndexObjRef.current;
+        const mappingChanged = previousMap === null || !areNavigationPathIndexMapsEqual(previousMap, pathToIndex);
+        const measurementChanged = prevMeasurementSignatureRef.current !== measurementSignature;
 
-        if (sizeChanged || identityChanged) {
+        if (mappingChanged) {
             const prevVersion = indexVersionRef.current;
             indexVersionRef.current = prevVersion + 1;
             prevPathToIndexSizeRef.current = pathToIndex.size;
             prevPathToIndexObjRef.current = pathToIndex;
+            prevMeasurementSignatureRef.current = measurementSignature;
+            rowVirtualizer.measure();
+            return;
+        }
+
+        if (measurementChanged) {
+            prevMeasurementSignatureRef.current = measurementSignature;
             rowVirtualizer.measure();
         }
-    }, [pathToIndex, pathToIndex.size, rowVirtualizer]);
+
+        if (prevPathToIndexSizeRef.current !== pathToIndex.size || prevPathToIndexObjRef.current !== pathToIndex) {
+            prevPathToIndexSizeRef.current = pathToIndex.size;
+            prevPathToIndexObjRef.current = pathToIndex;
+        }
+    }, [measurementSignature, pathToIndex, pathToIndex.size, rowVirtualizer]);
 
     const scrollToIndexSafely = useCallback(
         (index: number, align: Align) => {
@@ -346,10 +399,10 @@ export function useNavigationPaneScroll({
                 attempts += 1;
                 ensureIndexNotCovered(index);
                 if (attempts < 3) {
-                    requestAnimationFrame(adjust);
+                    window.requestAnimationFrame(adjust);
                 }
             };
-            requestAnimationFrame(adjust);
+            window.requestAnimationFrame(adjust);
         },
         [ensureIndexNotCovered, rowVirtualizer]
     );
@@ -409,7 +462,7 @@ export function useNavigationPaneScroll({
     useEffect(() => {
         if (!selectedPath || !rowVirtualizer || !isScrollContainerReady) return;
 
-        if (selectionState.isRevealOperation) {
+        if (selectionReveal.isRevealOperation) {
             // Reveal operations issue explicit `requestScroll(...)` calls. Keep the previous-state refs in sync but
             // skip selection-driven auto-scroll while the reveal flag is set.
             prevSelectedPathRef.current = selectedPath;
@@ -419,7 +472,7 @@ export function useNavigationPaneScroll({
         }
 
         const currentSelectionType = selectedItemType ?? ItemType.FOLDER;
-        const suppressShortcutScroll = settings.skipAutoScroll && selectionState.revealSource === 'shortcut';
+        const suppressShortcutScroll = settings.skipAutoScroll && selectionReveal.revealSource === 'shortcut';
 
         // Check if this is an actual selection change vs just a tree structure update
         const isSelectionChange = prevSelectedPathRef.current !== selectedPath;
@@ -469,11 +522,11 @@ export function useNavigationPaneScroll({
         selectedPath,
         rowVirtualizer,
         isScrollContainerReady,
-        selectionState.isRevealOperation,
+        selectionReveal.isRevealOperation,
         uiState.focusedPane,
         showHiddenItems,
         selectedItemType,
-        selectionState.revealSource,
+        selectionReveal.revealSource,
         resolveIndex,
         activeShortcutKey,
         settings.skipAutoScroll,
@@ -490,7 +543,7 @@ export function useNavigationPaneScroll({
             return;
         }
 
-        if (selectionState.isRevealOperation) {
+        if (selectionReveal.isRevealOperation) {
             // Tag/property reveals request scroll explicitly. This deferred-scroll effect is for restored selections
             // where the navigation rows may not exist yet.
             prevSelectedDeferredPathRef.current = selectedPath;
@@ -506,7 +559,7 @@ export function useNavigationPaneScroll({
             return;
         }
 
-        const suppressShortcutScroll = settings.skipAutoScroll && selectionState.revealSource === 'shortcut';
+        const suppressShortcutScroll = settings.skipAutoScroll && selectionReveal.revealSource === 'shortcut';
         if (suppressShortcutScroll) {
             prevSelectedDeferredPathRef.current = selectedPath;
             return;
@@ -541,11 +594,11 @@ export function useNavigationPaneScroll({
         selectedPath,
         rowVirtualizer,
         isScrollContainerReady,
-        selectionState.isRevealOperation,
+        selectionReveal.isRevealOperation,
         showHiddenItems,
         resolveIndex,
         activeShortcutKey,
-        selectionState.revealSource,
+        selectionReveal.revealSource,
         settings.skipAutoScroll,
         scrollToIndexSafely
     ]);
@@ -590,7 +643,7 @@ export function useNavigationPaneScroll({
             if (intent === 'visibilityToggle') {
                 const usedIndex = index;
                 const usedPath = path;
-                requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
                     const newIndex = resolveIndex(usedPath, itemType);
                     if (newIndex !== undefined && newIndex !== usedIndex) {
                         pendingScrollRef.current = {
@@ -660,7 +713,7 @@ export function useNavigationPaneScroll({
     ]);
 
     /**
-     * Re-measure all items when line height settings change
+     * Re-measure all items when vertical navigation metrics change
      * This ensures the virtualizer immediately updates when settings are adjusted
      */
     useEffect(() => {
@@ -668,14 +721,14 @@ export function useNavigationPaneScroll({
 
         // Re-measure all items with new heights
         rowVirtualizer.measure();
-    }, [settings.navItemHeight, settings.navIndent, settings.rootLevelSpacing, rowVirtualizer]);
+    }, [settings.navItemHeight, settings.rootLevelSpacing, rowVirtualizer]);
 
     /**
      * Scroll to maintain position only when settings actually change
      * Uses a settings key to detect real changes
      */
     useEffect(() => {
-        const settingsKey = `${settings.navItemHeight}-${settings.navIndent}-${settings.rootLevelSpacing}`;
+        const settingsKey = `${settings.navItemHeight}-${settings.rootLevelSpacing}`;
         const settingsChanged = prevNavSettingsKeyRef.current && prevNavSettingsKeyRef.current !== settingsKey;
 
         // Skip settings-triggered scroll when a shortcut is active
@@ -689,7 +742,7 @@ export function useNavigationPaneScroll({
                 const index = resolveIndex(selectedPath, selectedItemType ?? ItemType.FOLDER);
                 if (index !== undefined && index >= 0) {
                     // Use requestAnimationFrame to ensure measurements are complete
-                    requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
                         scrollToIndexSafely(index, 'auto');
                     });
                 }
@@ -699,7 +752,6 @@ export function useNavigationPaneScroll({
         prevNavSettingsKeyRef.current = settingsKey;
     }, [
         settings.navItemHeight,
-        settings.navIndent,
         settings.rootLevelSpacing,
         selectedPath,
         isScrollContainerReady,
@@ -742,7 +794,7 @@ export function useNavigationPaneScroll({
             return;
         }
 
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
             scrollToIndexSafely(index, 'auto');
         });
     }, [
@@ -765,7 +817,7 @@ export function useNavigationPaneScroll({
             // When showHiddenItems changes and we have a selected tag/property item, defer scrolling until the tree rebuilds
             if (
                 selectedPath &&
-                (selectionState.selectionType === ItemType.TAG || selectionState.selectionType === ItemType.PROPERTY) &&
+                (selectedItemType === ItemType.TAG || selectedItemType === ItemType.PROPERTY) &&
                 isScrollContainerReady &&
                 rowVirtualizer
             ) {
@@ -782,15 +834,7 @@ export function useNavigationPaneScroll({
 
             prevShowHiddenItemsRef.current = showHiddenItems;
         }
-    }, [
-        selectedItemType,
-        showHiddenItems,
-        selectedPath,
-        isScrollContainerReady,
-        rowVirtualizer,
-        selectionState.selectionType,
-        selectionState.selectedTag
-    ]);
+    }, [selectedItemType, showHiddenItems, selectedPath, isScrollContainerReady, rowVirtualizer]);
 
     return {
         rowVirtualizer,

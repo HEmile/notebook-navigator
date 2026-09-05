@@ -17,9 +17,10 @@
  */
 
 import { Modal } from 'obsidian';
-import { getWelcomeVideoUrl, WELCOME_VIDEO_THUMBNAIL_URL } from '../constants/urls';
+import { WELCOME_VIDEO_URL } from '../constants/urls';
 import { strings } from '../i18n';
 import { addAsyncEventListener } from '../utils/domEventListeners';
+import { getYoutubeThumbnailUrl, getYoutubeVideoId } from '../utils/youtubeUtils';
 
 export class WelcomeModal extends Modal {
     private domDisposers: (() => void)[] = [];
@@ -27,7 +28,6 @@ export class WelcomeModal extends Modal {
 
     onOpen(): void {
         const pluginName = strings.plugin.viewName;
-        const videoUrl = getWelcomeVideoUrl();
 
         this.modalEl.addClass('nn-welcome-modal');
         this.titleEl.setText(strings.modals.welcome.title.replace('{pluginName}', pluginName));
@@ -48,7 +48,7 @@ export class WelcomeModal extends Modal {
         const thumbnailLink = body.createEl('a', {
             cls: 'nn-welcome-thumbnail-link',
             attr: {
-                href: videoUrl,
+                href: WELCOME_VIDEO_URL,
                 target: '_blank',
                 rel: 'noopener noreferrer'
             }
@@ -56,15 +56,43 @@ export class WelcomeModal extends Modal {
 
         const thumbnailFrame = thumbnailLink.createDiv({ cls: 'nn-welcome-thumbnail-frame' });
 
-        thumbnailFrame.createEl('img', {
-            cls: 'nn-welcome-thumbnail',
-            attr: {
-                src: WELCOME_VIDEO_THUMBNAIL_URL,
-                alt: strings.modals.welcome.videoAlt,
-                width: '1920',
-                height: '1080'
-            }
-        });
+        const videoId = getYoutubeVideoId(WELCOME_VIDEO_URL);
+        if (videoId) {
+            const image = thumbnailFrame.createEl('img', {
+                cls: 'nn-welcome-thumbnail',
+                attr: {
+                    alt: strings.modals.welcome.videoAlt,
+                    width: '1920',
+                    height: '1080'
+                }
+            });
+
+            const primaryUrl = getYoutubeThumbnailUrl(videoId, 'maxresdefault.jpg');
+            const fallbackUrl = getYoutubeThumbnailUrl(videoId, 'hqdefault.jpg');
+
+            const playButton = thumbnailFrame.createDiv({
+                cls: ['nn-youtube-play', 'nn-welcome-youtube-play']
+            });
+            playButton.setAttr('aria-hidden', 'true');
+
+            // Keep the overlay hidden until the thumbnail is painted; otherwise it appears over the empty frame during loading.
+            playButton.hidden = true;
+            image.addEventListener('load', () => {
+                playButton.hidden = false;
+            });
+
+            // YouTube does not generate a max-resolution image for every video, so retry once with its standard thumbnail.
+            let usedFallback = false;
+            image.addEventListener('error', () => {
+                if (usedFallback) {
+                    return;
+                }
+                usedFallback = true;
+                image.src = fallbackUrl;
+            });
+
+            image.src = primaryUrl;
+        }
 
         const buttonContainer = this.contentEl.createDiv({ cls: 'nn-welcome-buttons' });
 
@@ -75,7 +103,7 @@ export class WelcomeModal extends Modal {
         openVideoButton.setAttr('type', 'button');
         this.domDisposers.push(
             addAsyncEventListener(openVideoButton, 'click', () => {
-                window.open(videoUrl);
+                window.open(WELCOME_VIDEO_URL);
                 this.close();
             })
         );
@@ -94,7 +122,7 @@ export class WelcomeModal extends Modal {
 
     open(): void {
         super.open();
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
             this.openVideoButton?.focus();
         });
     }

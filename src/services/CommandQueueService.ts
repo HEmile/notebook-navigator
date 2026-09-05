@@ -17,19 +17,21 @@
  */
 
 import { TFile, TFolder } from 'obsidian';
-import type { PaneType } from 'obsidian';
+import type { PaneType, WorkspaceLeaf } from 'obsidian';
 
-const RECENT_BACKGROUND_OPEN_MARKER_TTL_MS = 250;
+const BACKGROUND_OPEN_MARKER_TTL_MS = 250;
 
 /**
  * Types of operations that can be tracked by the command queue
  */
 export enum OperationType {
     MOVE_FILE = 'move-file',
+    RENAME_FOLDER = 'rename-folder',
     DELETE_FILES = 'delete-files',
     OPEN_FOLDER_NOTE = 'open-folder-note',
     OPEN_VERSION_HISTORY = 'open-version-history',
     OPEN_IN_NEW_CONTEXT = 'open-in-new-context',
+    OPEN_BACKGROUND_FILE = 'open-background-file',
     OPEN_ACTIVE_FILE = 'open-active-file',
     OPEN_HOMEPAGE = 'open-homepage'
 }
@@ -50,6 +52,14 @@ interface MoveFileOperation extends BaseOperation {
     type: OperationType.MOVE_FILE;
     files: TFile[];
     targetFolder: TFolder;
+}
+
+/**
+ * Operation for tracking folder renames
+ */
+interface RenameFolderOperation extends BaseOperation {
+    type: OperationType.RENAME_FOLDER;
+    folderPath: string;
 }
 
 /**
@@ -86,6 +96,14 @@ interface OpenInNewContextOperation extends BaseOperation {
 }
 
 /**
+ * Operation for opening a file without changing the active editor context.
+ */
+interface OpenBackgroundFileOperation extends BaseOperation {
+    type: OperationType.OPEN_BACKGROUND_FILE;
+    file: TFile;
+}
+
+/**
  * Operation for opening the active file in the current context
  */
 interface OpenActiveFileOperation extends BaseOperation {
@@ -101,12 +119,34 @@ interface OpenHomepageOperation extends BaseOperation {
     type: OperationType.OPEN_HOMEPAGE;
     file: TFile;
 }
+
+interface BackgroundOpenMarker {
+    operationId: string;
+    filePath: string;
+    leaf: WorkspaceLeaf | null;
+    leafId?: string;
+    completedAt?: number;
+    fileOpenSeen: boolean;
+    activeLeafChangeSeen: boolean;
+}
+
+interface OpenActiveFileOptions {
+    active?: boolean;
+    getLeaf?: () => WorkspaceLeaf | null;
+}
+
+interface BackgroundFileOpenOptions {
+    getLeaf?: () => WorkspaceLeaf | null;
+}
+
 type Operation =
     | MoveFileOperation
+    | RenameFolderOperation
     | DeleteFilesOperation
     | OpenFolderNoteOperation
     | OpenVersionHistoryOperation
     | OpenInNewContextOperation
+    | OpenBackgroundFileOperation
     | OpenActiveFileOperation
     | OpenHomepageOperation;
 
@@ -140,16 +180,73 @@ export class CommandQueueService {
     private activeCounts = new Map<OperationType, number>();
     private openActiveFileQueue: Promise<void> = Promise.resolve();
     private latestOpenActiveFileOperationId: string | null = null;
-    private recentBackgroundOpenByPath = new Map<string, number>();
+    private backgroundOpenMarkers = new Map<string, BackgroundOpenMarker>();
 
     constructor() {}
 
-    private cleanupRecentBackgroundOpens(now: number): void {
-        for (const [path, openedAt] of this.recentBackgroundOpenByPath) {
-            if (now - openedAt > RECENT_BACKGROUND_OPEN_MARKER_TTL_MS) {
-                this.recentBackgroundOpenByPath.delete(path);
+    private cleanupBackgroundOpenMarkers(now: number): void {
+        for (const [operationId, marker] of this.backgroundOpenMarkers) {
+            if (marker.completedAt !== undefined && now - marker.completedAt > BACKGROUND_OPEN_MARKER_TTL_MS) {
+                this.backgroundOpenMarkers.delete(operationId);
             }
         }
+    }
+
+    private getWorkspaceLeafId(leaf: WorkspaceLeaf | null): string | undefined {
+        const candidate = (leaf as { id?: unknown } | null)?.id;
+        return typeof candidate === 'string' ? candidate : undefined;
+    }
+
+    private createBackgroundOpenMarker(operationId: string, filePath: string, leaf: WorkspaceLeaf | null): void {
+        const leafId = this.getWorkspaceLeafId(leaf);
+
+        this.cleanupBackgroundOpenMarkers(Date.now());
+        this.backgroundOpenMarkers.set(operationId, {
+            operationId,
+            filePath,
+            leaf,
+            leafId,
+            fileOpenSeen: false,
+            activeLeafChangeSeen: false
+        });
+    }
+
+    private completeBackgroundOpenMarker(operationId: string): void {
+        const marker = this.backgroundOpenMarkers.get(operationId);
+        if (!marker) {
+            return;
+        }
+
+        marker.completedAt = Date.now();
+        this.deleteBackgroundOpenMarkerIfConsumed(marker);
+        this.cleanupBackgroundOpenMarkers(Date.now());
+    }
+
+    private hasExpectedBackgroundOpenEvents(marker: BackgroundOpenMarker): boolean {
+        return marker.fileOpenSeen && (marker.leafId === undefined || marker.activeLeafChangeSeen);
+    }
+
+    private deleteBackgroundOpenMarkerIfConsumed(marker: BackgroundOpenMarker): void {
+        if (this.hasExpectedBackgroundOpenEvents(marker)) {
+            this.backgroundOpenMarkers.delete(marker.operationId);
+        }
+    }
+
+    private leafMatchesBackgroundOpenMarker(marker: BackgroundOpenMarker, leaf: WorkspaceLeaf | null): boolean {
+        if (!leaf) {
+            return false;
+        }
+
+        if (marker.leaf === leaf) {
+            return true;
+        }
+
+        if (marker.leafId === undefined) {
+            return false;
+        }
+
+        const leafId = this.getWorkspaceLeafId(leaf);
+        return marker.leafId === leafId;
     }
 
     /**
@@ -164,19 +261,28 @@ export class CommandQueueService {
      */
     onOperationChange(listener: (type: OperationType, active: boolean) => void): () => void {
         this.listeners.add(listener);
+        this.activeCounts.forEach((count, type) => {
+            if (count > 0) {
+                this.notifyListener(listener, type, true);
+            }
+        });
         return () => {
             this.listeners.delete(listener);
         };
     }
 
+    private notifyListener(listener: (type: OperationType, active: boolean) => void, type: OperationType, active: boolean) {
+        try {
+            listener(type, active);
+        } catch (e) {
+            // Swallow listener errors to avoid breaking queue
+            console.error('CommandQueueService listener error:', e);
+        }
+    }
+
     private notify(type: OperationType, active: boolean) {
         this.listeners.forEach(l => {
-            try {
-                l(type, active);
-            } catch (e) {
-                // Swallow listener errors to avoid breaking queue
-                console.error('CommandQueueService listener error:', e);
-            }
+            this.notifyListener(l, type, active);
         });
     }
 
@@ -221,6 +327,20 @@ export class CommandQueueService {
      */
     isMovingFile(): boolean {
         return this.hasActiveOperation(OperationType.MOVE_FILE);
+    }
+
+    /**
+     * Check if a folder rename operation is active
+     */
+    isRenamingFolder(): boolean {
+        return this.hasActiveOperation(OperationType.RENAME_FOLDER);
+    }
+
+    /**
+     * Check if Navigator is performing a path-changing operation that should not trigger active-file auto-reveal
+     */
+    isChangingFilePaths(): boolean {
+        return this.isMovingFile() || this.isRenamingFolder();
     }
 
     /**
@@ -269,29 +389,91 @@ export class CommandQueueService {
     }
 
     /**
-     * Check if opening a file in the active leaf as a preview (active: false)
+     * Check if any background file open is currently in progress.
      */
-    isOpeningActiveFileInBackground(filePath: string): boolean {
+    isBackgroundFileOpenInProgress(): boolean {
         for (const operation of this.activeOperations.values()) {
-            if (operation.type === OperationType.OPEN_ACTIVE_FILE) {
-                if (operation.file.path !== filePath) {
-                    continue;
-                }
-
-                return operation.active === false;
-            }
-        }
-
-        const now = Date.now();
-        const openedAt = this.recentBackgroundOpenByPath.get(filePath);
-        if (openedAt !== undefined) {
-            if (now - openedAt <= RECENT_BACKGROUND_OPEN_MARKER_TTL_MS) {
+            if (operation.type === OperationType.OPEN_BACKGROUND_FILE) {
                 return true;
             }
-            this.recentBackgroundOpenByPath.delete(filePath);
+
+            if (operation.type === OperationType.OPEN_ACTIVE_FILE && operation.active === false) {
+                return true;
+            }
         }
 
         return false;
+    }
+
+    /**
+     * Consume a file-open event emitted by a known background open.
+     */
+    consumeBackgroundFileOpen(filePath: string, leaf: WorkspaceLeaf | null): boolean {
+        this.cleanupBackgroundOpenMarkers(Date.now());
+
+        const candidates = Array.from(this.backgroundOpenMarkers.values()).filter(marker => {
+            return marker.filePath === filePath && !marker.fileOpenSeen;
+        });
+        const marker = candidates.find(candidate => this.leafMatchesBackgroundOpenMarker(candidate, leaf)) ?? candidates[0];
+        if (!marker) {
+            return false;
+        }
+
+        marker.fileOpenSeen = true;
+        this.deleteBackgroundOpenMarkerIfConsumed(marker);
+        return true;
+    }
+
+    /**
+     * Consume an active-leaf-change event emitted by a known background open.
+     */
+    consumeBackgroundActiveLeafChange(leaf: WorkspaceLeaf | null): boolean {
+        this.cleanupBackgroundOpenMarkers(Date.now());
+
+        const marker = Array.from(this.backgroundOpenMarkers.values()).find(candidate => {
+            return !candidate.activeLeafChangeSeen && this.leafMatchesBackgroundOpenMarker(candidate, leaf);
+        });
+        if (!marker) {
+            return false;
+        }
+
+        marker.activeLeafChangeSeen = true;
+        this.deleteBackgroundOpenMarkerIfConsumed(marker);
+        return true;
+    }
+
+    /**
+     * Execute a background file open without affecting active-file open ordering.
+     */
+    async executeBackgroundFileOpen(
+        file: TFile,
+        openFile: (targetLeaf: WorkspaceLeaf | null) => Promise<void>,
+        options?: BackgroundFileOpenOptions
+    ): Promise<CommandResult> {
+        const operationId = this.generateOperationId();
+        const operation: OpenBackgroundFileOperation = {
+            id: operationId,
+            type: OperationType.OPEN_BACKGROUND_FILE,
+            timestamp: Date.now(),
+            file
+        };
+
+        this.activeOperations.set(operationId, operation);
+
+        try {
+            const targetLeaf = options?.getLeaf?.() ?? null;
+            this.createBackgroundOpenMarker(operationId, file.path, targetLeaf);
+            await openFile(targetLeaf);
+            return { success: true };
+        } catch (error) {
+            return {
+                success: false,
+                error: error as Error
+            };
+        } finally {
+            this.activeOperations.delete(operationId);
+            this.completeBackgroundOpenMarker(operationId);
+        }
     }
 
     /**
@@ -326,6 +508,35 @@ export class CommandQueueService {
             // Always clean up the operation
             this.activeOperations.delete(operationId);
             this.markInactive(OperationType.MOVE_FILE);
+        }
+    }
+
+    /**
+     * Execute a folder rename operation with proper context tracking
+     */
+    async executeRenameFolder(folderPath: string, performRename: () => Promise<void>): Promise<CommandResult<void>> {
+        const operationId = this.generateOperationId();
+        const operation: RenameFolderOperation = {
+            id: operationId,
+            type: OperationType.RENAME_FOLDER,
+            timestamp: Date.now(),
+            folderPath
+        };
+
+        this.activeOperations.set(operationId, operation);
+        this.markActive(OperationType.RENAME_FOLDER);
+
+        try {
+            await performRename();
+            return { success: true };
+        } catch (error) {
+            return {
+                success: false,
+                error: error as Error
+            };
+        } finally {
+            this.activeOperations.delete(operationId);
+            this.markInactive(OperationType.RENAME_FOLDER);
         }
     }
 
@@ -449,8 +660,8 @@ export class CommandQueueService {
      */
     async executeOpenActiveFile(
         file: TFile,
-        openFile: () => Promise<void>,
-        options?: { active?: boolean }
+        openFile: (targetLeaf: WorkspaceLeaf | null) => Promise<void>,
+        options?: OpenActiveFileOptions
     ): Promise<CommandResult<{ skipped: boolean }>> {
         const active = options?.active ?? true;
         const operationId = this.generateOperationId();
@@ -474,12 +685,11 @@ export class CommandQueueService {
             this.markActive(OperationType.OPEN_ACTIVE_FILE);
 
             try {
-                await openFile();
+                const targetLeaf = options?.getLeaf?.() ?? null;
                 if (active === false) {
-                    const now = Date.now();
-                    this.recentBackgroundOpenByPath.set(file.path, now);
-                    this.cleanupRecentBackgroundOpens(now);
+                    this.createBackgroundOpenMarker(operationId, file.path, targetLeaf);
                 }
+                await openFile(targetLeaf);
                 // Clear tracking if this is still the latest
                 if (this.latestOpenActiveFileOperationId === operationId) {
                     this.latestOpenActiveFileOperationId = null;
@@ -497,6 +707,9 @@ export class CommandQueueService {
             } finally {
                 this.activeOperations.delete(operationId);
                 this.markInactive(OperationType.OPEN_ACTIVE_FILE);
+                if (active === false) {
+                    this.completeBackgroundOpenMarker(operationId);
+                }
             }
         };
 
@@ -551,5 +764,7 @@ export class CommandQueueService {
      */
     clearAllOperations(): void {
         this.activeOperations.clear();
+        this.activeCounts.clear();
+        this.backgroundOpenMarkers.clear();
     }
 }

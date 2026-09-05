@@ -17,17 +17,17 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { TFile, TFolder } from 'obsidian';
-import type { App } from 'obsidian';
-import type { NotebookNavigatorSettings, SortOption } from '../../settings';
+import { parseFrontMatterAliases, TFile, TFolder } from 'obsidian';
+import type { App, FrontMatterCache } from 'obsidian';
+import type { NotebookNavigatorSettings, SortOption } from '../../settings/types';
 import type { FilterSearchMatchOptions, FilterSearchTokens } from '../../utils/filterSearch';
 import {
     fileMatchesDateFilterTokens,
-    fileMatchesFilterTokens,
     filterSearchHasActiveCriteria,
     filterSearchNeedsPropertyLookup,
     filterSearchNeedsTagLookup,
     filterSearchRequiresTagsForEveryMatch,
+    getFileFilterSearchMatch,
     parseFilterSearchTokens
 } from '../../utils/filterSearch';
 import { resolveDefaultDateField } from '../../utils/sortUtils';
@@ -35,7 +35,8 @@ import { PreviewTextUtils } from '../../utils/previewTextUtils';
 import { getCachedFileTags } from '../../utils/tagUtils';
 import { createOmnisearchHighlightQueryTokenContext, sanitizeOmnisearchHighlightTokens } from '../../utils/omnisearchHighlight';
 import { foldSearchText } from '../../utils/recordUtils';
-import { normalizePropertyTreeValuePath } from '../../utils/propertyTree';
+import { resolvePropertyDisplayText } from '../../utils/propertyUtils';
+import { propertyTokenMatches } from '../../utils/filterSearchExpression';
 import {
     createFrontmatterPropertyExclusionMatcher,
     createHiddenFileNameMatcher,
@@ -44,18 +45,19 @@ import {
 } from '../../utils/fileFilters';
 import { createHiddenTagVisibility, normalizeTagPathValue } from '../../utils/tagPrefixMatcher';
 import { runAsyncAction } from '../../utils/async';
-import type { SearchResultMeta } from '../../types/search';
+import type { AliasSearchMatch, PropertySearchMatch, SearchResultMeta } from '../../types/search';
 import type { OmnisearchService } from '../../services/OmnisearchService';
 import type { IndexedDBStorage, FileData } from '../../storage/IndexedDBStorage';
 import type { TopicService } from '../../services/TopicGraphService';
 import { findTopicNode, collectTopicFilePaths } from '../../utils/topicGraph';
+import { shouldHideDrawingCompanionImageFile } from '../../utils/drawingFeatureImages';
 
-const EMPTY_FILTER_SEARCH_PROPERTIES = new Map<string, string[]>();
 const TAG_PRESENCE_SENTINEL = ['__nn_tag_present__'];
 const EMPTY_HIDDEN_STATE = new Map<string, boolean>();
+const EMPTY_MATCHED_ALIASES = new Map<string, readonly AliasSearchMatch[]>();
+const EMPTY_MATCHED_PROPERTIES = new Map<string, readonly PropertySearchMatch[]>();
 
 export interface OmnisearchListResult {
-    query: string;
     files: TFile[];
     meta: Map<string, SearchResultMeta>;
 }
@@ -74,6 +76,21 @@ interface UseSearchableNamesArgs {
     getFileDisplayName: (file: TFile) => string;
 }
 
+export interface SearchableNameData {
+    foldedDisplayName: string;
+    /** Original and folded aliases share frontmatter order so a match index resolves to the displayed alias. */
+    aliases: readonly string[];
+    foldedAliases: readonly string[];
+}
+
+export interface FilterListPaneFilesResult {
+    files: TFile[];
+    /** Contains the aliases that were required to satisfy each included file's internal-search name tokens. */
+    matchedAliases: ReadonlyMap<string, readonly AliasSearchMatch[]>;
+    /** Contains positive property clauses satisfied by each result; concrete values are resolved only for rendered rows. */
+    matchedProperties: ReadonlyMap<string, readonly PropertySearchMatch[]>;
+}
+
 interface FilterListPaneFilesArgs {
     app: App;
     baseFiles: TFile[];
@@ -81,8 +98,8 @@ interface FilterListPaneFilesArgs {
     getFileTimestamps: (file: TFile) => { created: number; modified: number };
     omnisearchResult: OmnisearchListResult | null;
     searchTokens?: FilterSearchTokens;
-    searchableNames: ReadonlyMap<string, string>;
-    settings: NotebookNavigatorSettings;
+    searchableNames: ReadonlyMap<string, SearchableNameData>;
+    settings: Pick<NotebookNavigatorSettings, 'alphabeticalDateMode'>;
     sortOption: SortOption;
     trimmedQuery: string;
     useOmnisearch: boolean;
@@ -97,6 +114,7 @@ interface BuildHiddenFileStateArgs {
     hiddenFilePropertyMatcher: ReturnType<typeof createFrontmatterPropertyExclusionMatcher>;
     hiddenFileTags: string[];
     hiddenFolders: string[];
+    hideDrawingPreviewImages: boolean;
     showHiddenItems: boolean;
 }
 
@@ -104,15 +122,53 @@ function normalizeTagsForFilterSearch(rawTags: readonly string[]): string[] {
     return rawTags.map(tag => foldSearchText(normalizeTagPathValue(tag))).filter((value): value is string => value.length > 0);
 }
 
-function normalizePropertiesForFilterSearch(properties: FileData['properties'] | null): Map<string, string[]> {
+interface FilterSearchPropertyCriteria {
+    keyPrefixes: readonly string[];
+    exactKeys: ReadonlySet<string>;
+}
+
+const EMPTY_FILTER_SEARCH_PROPERTIES = new Map<string, string[]>();
+const EMPTY_FILTER_SEARCH_PROPERTY_CRITERIA: FilterSearchPropertyCriteria = {
+    keyPrefixes: [],
+    exactKeys: new Set()
+};
+
+function buildFilterSearchPropertyCriteria(tokens: FilterSearchTokens): FilterSearchPropertyCriteria {
+    const allClauses = [...tokens.propertyTokens, ...tokens.excludePropertyTokens];
+    if (allClauses.length === 0) {
+        return EMPTY_FILTER_SEARCH_PROPERTY_CRITERIA;
+    }
+
+    return {
+        keyPrefixes: allClauses.filter(clause => clause.value === null).map(clause => clause.key),
+        exactKeys: new Set(allClauses.filter(clause => clause.value !== null).map(clause => clause.key))
+    };
+}
+
+/**
+ * Builds the property projection required by the active clauses. Values for unrelated keys are not
+ * normalized because a vault record now contains every supported frontmatter property.
+ */
+function buildPropertiesForFilterSearch(
+    properties: FileData['properties'] | null,
+    criteria: FilterSearchPropertyCriteria
+): Map<string, string[]> {
     if (!properties || properties.length === 0) {
         return EMPTY_FILTER_SEARCH_PROPERTIES;
     }
 
+    if (criteria.keyPrefixes.length === 0 && criteria.exactKeys.size === 0) {
+        return EMPTY_FILTER_SEARCH_PROPERTIES;
+    }
+
     const normalizedValues = new Map<string, Set<string>>();
+
     properties.forEach(entry => {
         const normalizedKey = foldSearchText(entry.fieldKey.trim());
-        if (!normalizedKey) {
+        if (
+            !normalizedKey ||
+            (!criteria.exactKeys.has(normalizedKey) && !criteria.keyPrefixes.some(prefix => normalizedKey.startsWith(prefix)))
+        ) {
             return;
         }
 
@@ -122,20 +178,35 @@ function normalizePropertiesForFilterSearch(properties: FileData['properties'] |
             normalizedValues.set(normalizedKey, values);
         }
 
-        const normalizedValue = normalizePropertyTreeValuePath(entry.value);
-        if (!normalizedValue) {
+        if (!criteria.exactKeys.has(normalizedKey)) {
+            // Key-only clauses need presence but do not inspect values. Concrete evidence is resolved
+            // only when a virtualized row renders, so result-wide searches retain no value copies.
             return;
         }
 
-        values.add(foldSearchText(normalizedValue));
+        // Search follows the text users see in property pills, so link targets and serialized markup do not
+        // create matches that cannot be represented in result evidence.
+        const displayValue = resolvePropertyDisplayText(entry.value);
+        const foldedDisplayValue = foldSearchText(displayValue);
+        if (foldedDisplayValue) {
+            values.add(foldedDisplayValue);
+        }
     });
 
-    const normalized = new Map<string, string[]>();
+    const valuesByKey = new Map<string, string[]>();
     normalizedValues.forEach((values, key) => {
-        normalized.set(key, Array.from(values));
+        valuesByKey.set(key, Array.from(values));
     });
 
-    return normalized;
+    return valuesByKey;
+}
+
+function collectMatchedProperties(propertiesByKey: Map<string, string[]>, tokens: FilterSearchTokens): readonly PropertySearchMatch[] {
+    if (propertiesByKey.size === 0 || tokens.propertyTokens.length === 0) {
+        return [];
+    }
+
+    return tokens.propertyTokens.filter(clause => propertyTokenMatches(propertiesByKey, clause)).map(clause => ({ clause }));
 }
 
 export function useOmnisearchListResult({
@@ -197,10 +268,10 @@ export function useOmnisearchListResult({
                     });
                 });
 
-                setOmnisearchResult({ query: trimmedQuery, files, meta });
+                setOmnisearchResult({ files, meta });
             } catch {
                 if (searchTokenRef.current === token) {
-                    setOmnisearchResult({ query: trimmedQuery, files: [], meta: new Map() });
+                    setOmnisearchResult({ files: [], meta: new Map() });
                 }
             }
         });
@@ -213,27 +284,62 @@ export function useOmnisearchListResult({
     return omnisearchResult;
 }
 
-export function useSearchableNames({ app, baseFiles, getFileDisplayName }: UseSearchableNamesArgs): ReadonlyMap<string, string> {
-    const [searchableNames, setSearchableNames] = useState<Map<string, string>>(new Map());
+export function buildSearchableNameData(displayName: string, frontmatter: FrontMatterCache | null): SearchableNameData {
+    const aliases: string[] = [];
+    const foldedAliases: string[] = [];
+
+    for (const alias of parseFrontMatterAliases(frontmatter) ?? []) {
+        const foldedAlias = foldSearchText(alias);
+        if (!foldedAlias) {
+            continue;
+        }
+
+        aliases.push(alias);
+        foldedAliases.push(foldedAlias);
+    }
+
+    return {
+        foldedDisplayName: foldSearchText(displayName),
+        aliases,
+        foldedAliases
+    };
+}
+
+function searchableNameDataEqual(left: SearchableNameData | undefined, right: SearchableNameData): boolean {
+    if (!left || left.foldedDisplayName !== right.foldedDisplayName || left.aliases.length !== right.aliases.length) {
+        return false;
+    }
+
+    return left.aliases.every((alias, index) => alias === right.aliases[index] && left.foldedAliases[index] === right.foldedAliases[index]);
+}
+
+export function useSearchableNames({
+    app,
+    baseFiles,
+    getFileDisplayName
+}: UseSearchableNamesArgs): ReadonlyMap<string, SearchableNameData> {
+    const [searchableNames, setSearchableNames] = useState<Map<string, SearchableNameData>>(new Map());
 
     useEffect(() => {
-        const next = new Map<string, string>();
+        const next = new Map<string, SearchableNameData>();
         baseFiles.forEach(file => {
-            next.set(file.path, foldSearchText(getFileDisplayName(file)));
+            const frontmatter = file.extension === 'md' ? (app.metadataCache.getFileCache(file)?.frontmatter ?? null) : null;
+            next.set(file.path, buildSearchableNameData(getFileDisplayName(file), frontmatter));
         });
         setSearchableNames(next);
-    }, [baseFiles, getFileDisplayName]);
+    }, [app.metadataCache, baseFiles, getFileDisplayName]);
 
     useEffect(() => {
         const basePaths = new Set(baseFiles.map(file => file.path));
-        const offref = app.metadataCache.on('changed', changedFile => {
+        const offref = app.metadataCache.on('changed', (changedFile, _data, cache) => {
             if (!changedFile || !basePaths.has(changedFile.path)) {
                 return;
             }
 
-            const nextName = foldSearchText(getFileDisplayName(changedFile));
+            const frontmatter = changedFile.extension === 'md' ? (cache.frontmatter ?? null) : null;
+            const nextName = buildSearchableNameData(getFileDisplayName(changedFile), frontmatter);
             setSearchableNames(previous => {
-                if (previous.get(changedFile.path) === nextName) {
+                if (searchableNameDataEqual(previous.get(changedFile.path), nextName)) {
                     return previous;
                 }
 
@@ -264,9 +370,9 @@ export function filterListPaneFiles({
     trimmedQuery,
     useOmnisearch,
     topicService
-}: FilterListPaneFilesArgs): TFile[] {
+}: FilterListPaneFilesArgs): FilterListPaneFilesResult {
     if (!trimmedQuery) {
-        return baseFiles;
+        return { files: baseFiles, matchedAliases: EMPTY_MATCHED_ALIASES, matchedProperties: EMPTY_MATCHED_PROPERTIES };
     }
 
     const tokens = searchTokens ?? parseFilterSearchTokens(trimmedQuery);
@@ -278,41 +384,52 @@ export function filterListPaneFiles({
         const topicGraph = topicService?.getTopicGraph();
         if (topicGraph) {
             if (tokens.topicTokens.length > 0) {
-                topicIncludePaths = new Set<string>();
+                const includePaths = new Set<string>();
                 for (const topicName of tokens.topicTokens) {
                     const node = findTopicNode(topicGraph, topicName);
-                    if (node) collectTopicFilePaths(node).forEach(p => topicIncludePaths!.add(p));
+                    if (node) collectTopicFilePaths(node).forEach(path => includePaths.add(path));
                 }
+                topicIncludePaths = includePaths;
             }
             if (tokens.excludeTopicTokens.length > 0) {
-                topicExcludePaths = new Set<string>();
+                const excludePaths = new Set<string>();
                 for (const topicName of tokens.excludeTopicTokens) {
                     const node = findTopicNode(topicGraph, topicName);
-                    if (node) collectTopicFilePaths(node).forEach(p => topicExcludePaths!.add(p));
+                    if (node) collectTopicFilePaths(node).forEach(path => excludePaths.add(path));
                 }
+                topicExcludePaths = excludePaths;
             }
         }
     }
 
     if (useOmnisearch) {
-        if (!omnisearchResult || omnisearchResult.query !== trimmedQuery) {
-            return [];
+        // Omnisearch responses arrive asynchronously. While the response for the current
+        // query is in flight, the previous response keeps filtering the list, because
+        // returning an empty list here would flash the "No notes" empty state on every
+        // keystroke. Before the first response there is no previous result, so the
+        // unfiltered list stays visible, matching what the empty query already showed.
+        if (!omnisearchResult) {
+            return { files: baseFiles, matchedAliases: EMPTY_MATCHED_ALIASES, matchedProperties: EMPTY_MATCHED_PROPERTIES };
         }
 
         const omnisearchPaths = new Set(omnisearchResult.files.map(file => file.path));
         if (omnisearchPaths.size === 0) {
-            return [];
+            return { files: [], matchedAliases: EMPTY_MATCHED_ALIASES, matchedProperties: EMPTY_MATCHED_PROPERTIES };
         }
 
-        return baseFiles.filter(file => {
-            if (!omnisearchPaths.has(file.path)) return false;
-            if (topicIncludePaths && !topicIncludePaths.has(file.path)) return false;
-            if (topicExcludePaths && topicExcludePaths.has(file.path)) return false;
-            return true;
-        });
+        return {
+            files: baseFiles.filter(file => {
+                if (!omnisearchPaths.has(file.path)) return false;
+                if (topicIncludePaths && !topicIncludePaths.has(file.path)) return false;
+                if (topicExcludePaths && topicExcludePaths.has(file.path)) return false;
+                return true;
+            }),
+            matchedAliases: EMPTY_MATCHED_ALIASES,
+            matchedProperties: EMPTY_MATCHED_PROPERTIES
+        };
     }
     if (!filterSearchHasActiveCriteria(tokens)) {
-        return baseFiles;
+        return { files: baseFiles, matchedAliases: EMPTY_MATCHED_ALIASES, matchedProperties: EMPTY_MATCHED_PROPERTIES };
     }
 
     const hasDateFilters = tokens.dateRanges.length > 0 || tokens.excludeDateRanges.length > 0;
@@ -326,83 +443,94 @@ export function filterListPaneFiles({
     const requiresNormalizedTagValues = tokens.mode === 'tag' || tokens.tagTokens.length > 0 || tokens.excludeTagTokens.length > 0;
     const db = getDB();
     const emptyTags: string[] = [];
+    const matchedAliases = new Map<string, readonly AliasSearchMatch[]>();
+    const matchedProperties = new Map<string, readonly PropertySearchMatch[]>();
+    const propertyCriteria = needsPropertyLookup ? buildFilterSearchPropertyCriteria(tokens) : EMPTY_FILTER_SEARCH_PROPERTY_CRITERIA;
 
-    return baseFiles.filter(file => {
+    const files = baseFiles.filter(file => {
         if (topicIncludePaths && !topicIncludePaths.has(file.path)) return false;
         if (topicExcludePaths && topicExcludePaths.has(file.path)) return false;
 
-        const foldedName = searchableNames.get(file.path) ?? '';
+        const searchableName = searchableNames.get(file.path);
+        const foldedName = searchableName?.foldedDisplayName ?? '';
+        const foldedAliases = searchableName?.foldedAliases ?? emptyTags;
         const fileData = hasTaskFilters || needsTagLookup || needsPropertyLookup ? db.getFile(file.path) : null;
         const hasUnfinishedTasks = hasTaskFilters && typeof fileData?.taskUnfinished === 'number' && fileData.taskUnfinished > 0;
-        const needsMatchOptions = hasTaskFilters || hasFolderFilters || hasExtensionFilters;
-        let matchOptions: FilterSearchMatchOptions | undefined;
+        const matchOptions: FilterSearchMatchOptions = { hasUnfinishedTasks, foldedAliases };
 
-        if (needsMatchOptions) {
-            matchOptions = { hasUnfinishedTasks };
-
-            if (hasFolderFilters) {
-                matchOptions.foldedFolderPath = foldSearchText(file.parent?.path ?? '');
-            }
-
-            if (hasExtensionFilters) {
-                matchOptions.foldedExtension = foldSearchText(file.extension);
-            }
+        if (hasFolderFilters) {
+            matchOptions.foldedFolderPath = foldSearchText(file.parent?.path ?? '');
         }
 
+        if (hasExtensionFilters) {
+            matchOptions.foldedExtension = foldSearchText(file.extension);
+        }
+
+        const propertyProjection = needsPropertyLookup
+            ? buildPropertiesForFilterSearch(fileData?.properties ?? null, propertyCriteria)
+            : EMPTY_FILTER_SEARCH_PROPERTIES;
         if (needsPropertyLookup) {
-            const propertyValuesByKey = normalizePropertiesForFilterSearch(fileData?.properties ?? null);
-            if (matchOptions) {
-                matchOptions = { ...matchOptions, propertyValuesByKey };
-            } else {
-                matchOptions = { hasUnfinishedTasks, propertyValuesByKey };
-            }
+            matchOptions.propertyValuesByKey = propertyProjection;
         }
 
-        if (!needsTagLookup) {
-            if (!fileMatchesFilterTokens(foldedName, emptyTags, tokens, matchOptions)) {
+        let foldedTags = emptyTags;
+        if (needsTagLookup) {
+            const rawTags = getCachedFileTags({ app, file, db, fileData });
+            const hasTags = rawTags.length > 0;
+            if (requireTaggedMatches && !hasTags) {
                 return false;
             }
 
-            if (!hasDateFilters) {
-                return true;
+            if (hasTags) {
+                foldedTags = requiresNormalizedTagValues ? normalizeTagsForFilterSearch(rawTags) : TAG_PRESENCE_SENTINEL;
             }
+        }
 
+        const filterMatch = getFileFilterSearchMatch(foldedName, foldedTags, tokens, matchOptions);
+        if (!filterMatch.matches) {
+            return false;
+        }
+
+        if (hasDateFilters) {
             const timestamps = getFileTimestamps(file);
-            return fileMatchesDateFilterTokens(
-                { created: timestamps.created, modified: timestamps.modified, defaultField: defaultDateField },
-                tokens
-            );
+            if (
+                !fileMatchesDateFilterTokens(
+                    { created: timestamps.created, modified: timestamps.modified, defaultField: defaultDateField },
+                    tokens
+                )
+            ) {
+                return false;
+            }
         }
 
-        const rawTags = getCachedFileTags({ app, file, db, fileData });
-        const hasTags = rawTags.length > 0;
-        if (requireTaggedMatches && !hasTags) {
-            return false;
+        if (searchableName && filterMatch.nameMatch && filterMatch.nameMatch.aliasIndexes.length > 0) {
+            const aliasMatches = filterMatch.nameMatch.aliasIndexes.flatMap(aliasIndex => {
+                const alias = searchableName.aliases[aliasIndex];
+                return alias === undefined
+                    ? []
+                    : [
+                          {
+                              value: alias,
+                              foldedTerms: tokens.nameTokens
+                          }
+                      ];
+            });
+            if (aliasMatches.length > 0) {
+                matchedAliases.set(file.path, aliasMatches);
+            }
         }
 
-        let foldedTags: string[];
-        if (!hasTags) {
-            foldedTags = emptyTags;
-        } else if (requiresNormalizedTagValues) {
-            foldedTags = normalizeTagsForFilterSearch(rawTags);
-        } else {
-            foldedTags = TAG_PRESENCE_SENTINEL;
+        if (fileData && tokens.propertyTokens.length > 0) {
+            const propertyMatches = collectMatchedProperties(propertyProjection, tokens);
+            if (propertyMatches.length > 0) {
+                matchedProperties.set(file.path, propertyMatches);
+            }
         }
 
-        if (!fileMatchesFilterTokens(foldedName, foldedTags, tokens, matchOptions)) {
-            return false;
-        }
-
-        if (!hasDateFilters) {
-            return true;
-        }
-
-        const timestamps = getFileTimestamps(file);
-        return fileMatchesDateFilterTokens(
-            { created: timestamps.created, modified: timestamps.modified, defaultField: defaultDateField },
-            tokens
-        );
+        return true;
     });
+
+    return { files, matchedAliases, matchedProperties };
 }
 
 export function buildHiddenFileState({
@@ -413,6 +541,7 @@ export function buildHiddenFileState({
     hiddenFilePropertyMatcher,
     hiddenFileTags,
     hiddenFolders,
+    hideDrawingPreviewImages,
     showHiddenItems
 }: BuildHiddenFileStateArgs): ReadonlyMap<string, boolean> {
     if (!showHiddenItems || files.length === 0) {
@@ -455,6 +584,7 @@ export function buildHiddenFileState({
 
         const hiddenByFileName = fileNameMatcher ? fileNameMatcher.matches(file) : false;
         const hiddenByFolder = shouldCheckFolders ? resolveFolderHidden(file.parent ?? null) : false;
+        const hiddenByDrawingCompanion = shouldHideDrawingCompanionImageFile(app, file, { hideDrawingPreviewImages });
         const hiddenByTags =
             hiddenFileTagVisibility !== null &&
             hiddenFileTagVisibility.hasHiddenRules &&
@@ -463,7 +593,7 @@ export function buildHiddenFileState({
                 tagValue => !hiddenFileTagVisibility.isTagVisible(tagValue)
             );
 
-        if (hiddenByFrontmatter || hiddenByFileName || hiddenByFolder || hiddenByTags) {
+        if (hiddenByFrontmatter || hiddenByFileName || hiddenByFolder || hiddenByDrawingCompanion || hiddenByTags) {
             result.set(file.path, true);
         }
     });

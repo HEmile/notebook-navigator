@@ -19,6 +19,12 @@
 import { useEffect, useState } from 'react';
 import { TAbstractFile, TFile, TFolder, Vault } from 'obsidian';
 
+interface UseSelectedFolderFileVersionOptions {
+    includeAncestors?: boolean;
+}
+
+const WATCH_PATH_SEPARATOR = '\u0000';
+
 function getParentPath(path: string): string {
     // Returns "/" for root-level files and the folder path for nested files.
     const separatorIndex = path.lastIndexOf('/');
@@ -29,18 +35,50 @@ function getParentPath(path: string): string {
     return path.slice(0, separatorIndex);
 }
 
-function isDirectChildPath(path: string, parentPath: string): boolean {
-    // Only direct children should invalidate folder note lookup for a folder.
-    return getParentPath(path) === parentPath;
+export function getSelectedFolderFileWatchPaths(selectedFolder: TFolder, includeAncestors = false): Set<string> {
+    const paths = new Set<string>();
+    let folder: TFolder | null = selectedFolder;
+
+    while (folder) {
+        paths.add(folder.path);
+
+        if (!includeAncestors) {
+            break;
+        }
+
+        folder = folder.parent instanceof TFolder ? folder.parent : null;
+    }
+
+    return paths;
 }
 
-function isRelevantFileChange(file: TAbstractFile, folderPath: string, oldPath?: string): boolean {
-    // Folder notes are files; folder create/delete events are ignored here.
+export function getSelectedFolderFileWatchPathSignature(selectedFolder: TFolder | null, includeAncestors: boolean): string | null {
+    if (!selectedFolder) {
+        return null;
+    }
+
+    return Array.from(getSelectedFolderFileWatchPaths(selectedFolder, includeAncestors)).join(WATCH_PATH_SEPARATOR);
+}
+
+function getWatchPathsFromSignature(signature: string): Set<string> {
+    return new Set(signature.split(WATCH_PATH_SEPARATOR));
+}
+
+export function isWatchedFolderFileChange(file: TAbstractFile, watchedFolderPaths: ReadonlySet<string>, oldPath?: string): boolean {
+    if (file instanceof TFolder) {
+        if (typeof oldPath !== 'string') {
+            return false;
+        }
+
+        return watchedFolderPaths.has(oldPath) || watchedFolderPaths.has(file.path);
+    }
+
+    // Folder notes are files; other folder create/delete events are ignored here.
     if (!(file instanceof TFile)) {
         return false;
     }
 
-    if (isDirectChildPath(file.path, folderPath)) {
+    if (watchedFolderPaths.has(getParentPath(file.path))) {
         return true;
     }
 
@@ -48,23 +86,31 @@ function isRelevantFileChange(file: TAbstractFile, folderPath: string, oldPath?:
         return false;
     }
 
-    return isDirectChildPath(oldPath, folderPath);
+    return watchedFolderPaths.has(getParentPath(oldPath));
 }
 
-export function useSelectedFolderFileVersion(vault: Vault, selectedFolder: TFolder | null, enabled: boolean): number {
+export function useSelectedFolderFileVersion(
+    vault: Vault,
+    selectedFolder: TFolder | null,
+    enabled: boolean,
+    options?: UseSelectedFolderFileVersionOptions
+): number {
     // Monotonic counter used by memo dependencies in header/title components.
     const [version, setVersion] = useState(0);
-    const selectedFolderPath = selectedFolder?.path ?? null;
+    const includeAncestors = options?.includeAncestors === true;
+    const watchedFolderPathSignature = getSelectedFolderFileWatchPathSignature(selectedFolder, includeAncestors);
 
     useEffect(() => {
-        if (!enabled || !selectedFolderPath) {
+        if (!enabled || !watchedFolderPathSignature) {
             return;
         }
 
+        const watchedFolderPaths = getWatchPathsFromSignature(watchedFolderPathSignature);
+
         // Increments when direct child files are created, deleted, or renamed
-        // inside the selected folder.
+        // inside watched folders, or when a watched folder is renamed.
         const handleFileChange = (file: TAbstractFile, oldPath?: string) => {
-            if (!isRelevantFileChange(file, selectedFolderPath, oldPath)) {
+            if (!isWatchedFolderFileChange(file, watchedFolderPaths, oldPath)) {
                 return;
             }
 
@@ -86,7 +132,7 @@ export function useSelectedFolderFileVersion(vault: Vault, selectedFolder: TFold
             vault.offref(deleteRef);
             vault.offref(renameRef);
         };
-    }, [enabled, selectedFolderPath, vault]);
+    }, [enabled, vault, watchedFolderPathSignature]);
 
     return version;
 }

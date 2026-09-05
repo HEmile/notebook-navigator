@@ -18,10 +18,12 @@
 
 import React from 'react';
 import { Root, createRoot } from 'react-dom/client';
-import { ItemView, WorkspaceLeaf, TFile, Platform, TFolder, requireApiVersion } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, Platform, TFolder } from 'obsidian';
 import { NotebookNavigatorContainer } from '../components/NotebookNavigatorContainer';
 import type { NotebookNavigatorHandle } from '../components/NotebookNavigatorComponent';
 import type { RevealFileOptions, NavigateToFolderOptions } from '../hooks/useNavigatorReveal';
+import type { NavigateToPropertyOptions } from '../utils/propertyNavigation';
+import type { NavigateToTagOptions } from '../utils/tagNavigation';
 import { ExpansionProvider } from '../context/ExpansionContext';
 import { SelectionProvider } from '../context/SelectionContext';
 import { ServicesProvider } from '../context/ServicesContext';
@@ -30,8 +32,10 @@ import { StorageProvider } from '../context/StorageContext';
 import { UIStateProvider } from '../context/UIStateContext';
 import { ShortcutsProvider } from '../context/ShortcutsContext';
 import { RecentDataProvider } from '../context/RecentDataContext';
+import { InternalDragSessionProvider } from '../context/InternalDragContext';
+import { TooltipProvider } from '../context/TooltipContext';
 import { strings } from '../i18n';
-import NotebookNavigatorPlugin from '../main';
+import type NotebookNavigatorPlugin from '../main';
 import { NOTEBOOK_NAVIGATOR_ICON_ID } from '../constants/notebookNavigatorIcon';
 import { NOTEBOOK_NAVIGATOR_VIEW } from '../types';
 import { UXPreferencesProvider } from '../context/UXPreferencesContext';
@@ -46,37 +50,26 @@ export const IOS_FLOATING_TOOLBARS_CLASS = 'notebook-navigator-ios-floating-tool
 
 let viewInstanceCounter = 0;
 
-export function setupNotebookNavigatorViewContainer(
-    container: HTMLElement,
-    options?: { useFloatingToolbars?: boolean }
-): { isMobile: boolean } {
+export function setupNotebookNavigatorViewContainer(container: HTMLElement, options?: { useFloatingToolbars?: boolean }): void {
     container.empty();
     container.classList.add('notebook-navigator');
 
-    const isMobile = Platform.isMobile;
-    if (isMobile) {
+    if (Platform.isMobile) {
         container.classList.add('notebook-navigator-mobile');
 
         if (Platform.isAndroidApp) {
             container.classList.add('notebook-navigator-android');
-            if (requireApiVersion('1.11.0')) {
-                container.classList.add('notebook-navigator-obsidian-1-11-plus-android');
-            }
             applyAndroidFontCompensation(container);
         } else if (Platform.isIosApp) {
             container.classList.add('notebook-navigator-ios');
 
-            if (requireApiVersion('1.11.0')) {
-                container.classList.add('notebook-navigator-obsidian-1-11-plus-ios');
-                if (options?.useFloatingToolbars ?? true) {
-                    container.classList.add(IOS_FLOATING_TOOLBARS_CLASS);
-                }
+            if (options?.useFloatingToolbars ?? true) {
+                container.classList.add(IOS_FLOATING_TOOLBARS_CLASS);
             }
         }
     }
 
     ensureNotebookNavigatorSvgFilters();
-    return { isMobile };
 }
 
 export function teardownNotebookNavigatorViewContainer(container: HTMLElement): void {
@@ -84,9 +77,7 @@ export function teardownNotebookNavigatorViewContainer(container: HTMLElement): 
     container.classList.remove('notebook-navigator');
     container.classList.remove('notebook-navigator-mobile');
     container.classList.remove('notebook-navigator-android');
-    container.classList.remove('notebook-navigator-obsidian-1-11-plus-android');
     container.classList.remove('notebook-navigator-ios');
-    container.classList.remove('notebook-navigator-obsidian-1-11-plus-ios');
     container.classList.remove(IOS_FLOATING_TOOLBARS_CLASS);
     container.empty();
 }
@@ -103,6 +94,7 @@ export class NotebookNavigatorView extends ItemView {
     private readonly settingsUpdateListenerId: string;
     private viewContainer: HTMLElement | null = null;
     private readonly readyWaiters = new Set<(ready: boolean) => void>();
+    private wasMobileContainerVisible = false;
 
     /**
      * Creates a new NotebookNavigatorView instance
@@ -140,7 +132,7 @@ export class NotebookNavigatorView extends ItemView {
             return;
         }
 
-        const shouldUseFloatingToolbars = Platform.isIosApp && requireApiVersion('1.11.0') && this.plugin.settings.useFloatingToolbars;
+        const shouldUseFloatingToolbars = Platform.isIosApp && this.plugin.settings.useFloatingToolbars;
         container.classList.toggle(IOS_FLOATING_TOOLBARS_CLASS, shouldUseFloatingToolbars);
     }
 
@@ -175,12 +167,13 @@ export class NotebookNavigatorView extends ItemView {
      */
     async onOpen() {
         const container = this.containerEl.children[1];
-        if (!(container instanceof HTMLElement)) {
+        if (!container.instanceOf(HTMLElement)) {
             return;
         }
         this.componentHandle = null;
         this.viewContainer = container;
-        const { isMobile } = setupNotebookNavigatorViewContainer(container, {
+        this.wasMobileContainerVisible = false;
+        setupNotebookNavigatorViewContainer(container, {
             useFloatingToolbars: this.plugin.settings.useFloatingToolbars
         });
 
@@ -209,10 +202,13 @@ export class NotebookNavigatorView extends ItemView {
                                                     this.plugin.registerFileRenameListener(listenerId, callback)
                                                 }
                                                 onFileRenameUnsubscribe={listenerId => this.plugin.unregisterFileRenameListener(listenerId)}
-                                                isMobile={isMobile}
                                             >
-                                                <UIStateProvider isMobile={isMobile}>
-                                                    <NotebookNavigatorContainer ref={this.setComponentHandle} />
+                                                <UIStateProvider>
+                                                    <InternalDragSessionProvider>
+                                                        <TooltipProvider>
+                                                            <NotebookNavigatorContainer ref={this.setComponentHandle} />
+                                                        </TooltipProvider>
+                                                    </InternalDragSessionProvider>
                                                 </UIStateProvider>
                                             </SelectionProvider>
                                         </ExpansionProvider>
@@ -291,11 +287,12 @@ export class NotebookNavigatorView extends ItemView {
     async onClose() {
         // Unmount the React app when the view is closed to prevent memory leaks
         const container = this.containerEl.children[1];
-        if (!(container instanceof HTMLElement)) {
+        if (!container.instanceOf(HTMLElement)) {
             return;
         }
         this.plugin.unregisterSettingsUpdateListener(this.settingsUpdateListenerId);
         this.viewContainer = null;
+        this.wasMobileContainerVisible = false;
         this.root?.unmount();
         teardownNotebookNavigatorViewContainer(container);
         this.componentHandle = null;
@@ -356,15 +353,15 @@ export class NotebookNavigatorView extends ItemView {
     /**
      * Navigates directly to the provided tag path
      */
-    navigateToTag(tagPath: string) {
-        return this.componentHandle?.navigateToTag(tagPath) ?? null;
+    navigateToTag(tagPath: string, options?: NavigateToTagOptions) {
+        return this.componentHandle?.navigateToTag(tagPath, options) ?? null;
     }
 
     /**
      * Navigates directly to the provided property node id
      */
-    navigateToProperty(propertyNodeId: string) {
-        return this.componentHandle?.navigateToProperty(propertyNodeId) ?? null;
+    navigateToProperty(propertyNodeId: string, options?: NavigateToPropertyOptions) {
+        return this.componentHandle?.navigateToProperty(propertyNodeId, options) ?? null;
     }
 
     /**
@@ -396,11 +393,22 @@ export class NotebookNavigatorView extends ItemView {
         this.componentHandle?.focusNavigationPane();
     }
 
+    isDualPaneAutoFallbackActive(): boolean {
+        return this.componentHandle?.isDualPaneAutoFallbackActive() ?? false;
+    }
+
     /**
-     * Refreshes the UI by triggering a settings version update
+     * Deletes selected files.
      */
-    deleteActiveFile() {
-        this.componentHandle?.deleteActiveFile();
+    deleteSelectedFiles() {
+        this.componentHandle?.deleteSelectedFiles();
+    }
+
+    /**
+     * Merges selected Markdown notes.
+     */
+    async mergeSelectedFiles(): Promise<void> {
+        await this.componentHandle?.mergeSelectedFiles();
     }
 
     /**
@@ -530,10 +538,31 @@ export class NotebookNavigatorView extends ItemView {
     }
 
     /**
+     * Open or focus search with descendant files included for the current scope.
+     */
+    searchWithDescendants(): void {
+        this.componentHandle?.searchWithDescendants();
+    }
+
+    /**
      * Trigger collapse/expand all
      */
     triggerCollapse(): void {
         this.componentHandle?.triggerCollapse();
+    }
+
+    /**
+     * Trigger list-pane group header collapse/expand
+     */
+    triggerListGroupCollapse(): boolean {
+        return this.componentHandle?.triggerListGroupCollapse() ?? false;
+    }
+
+    /**
+     * Trigger collapse/expand for the selected navigation item
+     */
+    triggerSelectedItemCollapse(): boolean {
+        return this.componentHandle?.triggerSelectedItemCollapse() ?? false;
     }
 
     /**
@@ -562,8 +591,15 @@ export class NotebookNavigatorView extends ItemView {
         if (!Platform.isMobile) return;
 
         const rect = this.containerEl.getBoundingClientRect();
+        const isVisible = rect.width > 0 && rect.height > 0;
 
-        if (rect.width > 0 && rect.height > 0) {
+        if (!isVisible) {
+            this.wasMobileContainerVisible = false;
+            return;
+        }
+
+        if (!this.wasMobileContainerVisible) {
+            this.wasMobileContainerVisible = true;
             window.dispatchEvent(new CustomEvent('notebook-navigator-visible'));
         }
     }

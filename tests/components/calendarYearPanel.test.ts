@@ -51,6 +51,7 @@ describe('CalendarYearPanel', () => {
                 highlightedMonthImageUrls: {},
                 onNavigateYear: () => {},
                 onYearPeriodClick: () => {},
+                onYearPeriodMouseDown: () => {},
                 onYearPeriodContextMenu: () => {},
                 onSelectYearMonth: () => {}
             })
@@ -78,6 +79,7 @@ describe('CalendarYearPanel', () => {
                 highlightedMonthImageUrls: { '2026-01': 'blob:month-image' },
                 onNavigateYear: () => {},
                 onYearPeriodClick: () => {},
+                onYearPeriodMouseDown: () => {},
                 onYearPeriodContextMenu: () => {},
                 onSelectYearMonth: () => {}
             })
@@ -103,6 +105,7 @@ describe('CalendarYearPanel', () => {
                 highlightedMonthImageUrls: {},
                 onNavigateYear: () => {},
                 onYearPeriodClick: () => {},
+                onYearPeriodMouseDown: () => {},
                 onYearPeriodContextMenu: () => {},
                 onSelectYearMonth: () => {}
             })

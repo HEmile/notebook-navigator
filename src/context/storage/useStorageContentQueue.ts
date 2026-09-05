@@ -16,16 +16,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback, type RefObject } from 'react';
-import { TFile } from 'obsidian';
+import { useCallback, type MutableRefObject } from 'react';
+import { App, TFile } from 'obsidian';
 import type { ContentProviderType, FileContentType } from '../../interfaces/IContentProvider';
 import type { ContentProviderRegistry } from '../../services/content/ContentProviderRegistry';
-import type { NotebookNavigatorSettings } from '../../settings';
+import type { NotebookNavigatorSettings } from '../../settings/types';
 import { getDBInstance } from '../../storage/fileOperations';
-import { hasPropertyFrontmatterFields } from '../../utils/propertyUtils';
-import { isPdfFile } from '../../utils/fileTypeUtils';
-import { filterFilesRequiringMetadataSources, filterPdfFilesRequiringThumbnails } from '../storageQueueFilters';
+import {
+    filterFilesRequiringFileThumbnails,
+    filterFilesRequiringMetadataSources,
+    shouldQueueFileThumbnailProvider
+} from '../storageQueueFilters';
 import { getMetadataDependentTypes } from './storageContentTypes';
+import { getMarkdownPipelineContentTypes } from '../../utils/markdownPipelineContentTypes';
 
 /**
  * Queues files for derived-content generation.
@@ -33,10 +36,11 @@ import { getMetadataDependentTypes } from './storageContentTypes';
  * This hook is responsible for deciding which files should be handed to the `ContentProviderRegistry`.
  * It separates:
  * - Markdown files, which are often gated by Obsidian metadata cache readiness.
- * - PDF files, which only need the thumbnail provider when feature images are enabled.
+ * - Non-markdown feature-image files, which only need the thumbnail provider when feature images are enabled.
  */
 export function useStorageContentQueue(params: {
-    contentRegistryRef: RefObject<ContentProviderRegistry | null>;
+    app: App;
+    contentRegistryRef: MutableRefObject<ContentProviderRegistry | null>;
     queueMetadataContentWhenReady: (
         files: TFile[],
         includeTypes?: ContentProviderType[],
@@ -46,7 +50,7 @@ export function useStorageContentQueue(params: {
     queueIndexableFilesForContentGeneration: (files: TFile[], settings: NotebookNavigatorSettings) => { markdownFiles: TFile[] };
     queueIndexableFilesNeedingContentGeneration: (filesToCheck: TFile[], allFiles: TFile[], settings: NotebookNavigatorSettings) => void;
 } {
-    const { contentRegistryRef, queueMetadataContentWhenReady } = params;
+    const { app, contentRegistryRef, queueMetadataContentWhenReady } = params;
 
     const queueIndexableFilesForContentGeneration = useCallback(
         (files: TFile[], settings: NotebookNavigatorSettings): { markdownFiles: TFile[] } => {
@@ -56,23 +60,22 @@ export function useStorageContentQueue(params: {
             }
 
             const markdownFiles: TFile[] = [];
-            const pdfFiles: TFile[] = [];
+            const fileThumbnailFiles: TFile[] = [];
 
             for (const file of files) {
                 if (file.extension === 'md') {
                     markdownFiles.push(file);
                     continue;
                 }
-                if (isPdfFile(file)) {
-                    pdfFiles.push(file);
+                if (shouldQueueFileThumbnailProvider(file)) {
+                    fileThumbnailFiles.push(file);
                 }
             }
 
             // Markdown processing is metadata-gated via queueMetadataContentWhenReady().
 
-            if (settings.showFeatureImage && pdfFiles.length > 0) {
-                // PDF feature images are generated from thumbnails, not from Obsidian metadata.
-                registry.queueFilesForAllProviders(pdfFiles, settings, { include: ['fileThumbnails'] });
+            if (settings.showFeatureImage && fileThumbnailFiles.length > 0) {
+                registry.queueFilesForAllProviders(fileThumbnailFiles, settings, { include: ['fileThumbnails'] });
             }
 
             return { markdownFiles };
@@ -86,15 +89,7 @@ export function useStorageContentQueue(params: {
                 return;
             }
 
-            const metadataDependentTypes = getMetadataDependentTypes(settings);
-            const hasCustomProperties = hasPropertyFrontmatterFields(settings);
-            const contentEnabled =
-                settings.showFilePreview || settings.showFeatureImage || hasCustomProperties || metadataDependentTypes.length > 0;
-
-            // If nothing in settings requires derived content, avoid any work.
-            if (!contentEnabled) {
-                return;
-            }
+            const metadataDependentTypes = getMetadataDependentTypes(settings, app);
 
             let filesToProcess: TFile[] = [];
 
@@ -105,14 +100,15 @@ export function useStorageContentQueue(params: {
                         ? filterFilesRequiringMetadataSources(markdownFiles, metadataDependentTypes, settings, {
                               // Treat missing metadata cache entries as "needs work". This prevents a file from
                               // being skipped just because its metadata hasn't been indexed yet.
-                              conservativeMetadata: true
+                              conservativeMetadata: true,
+                              app
                           })
                         : [];
 
-                const pdfFilesNeedingThumbnails = filterPdfFilesRequiringThumbnails(filesToCheck, settings);
+                const filesNeedingThumbnails = filterFilesRequiringFileThumbnails(filesToCheck, settings);
 
                 const uniqueByPath = new Map<string, TFile>();
-                for (const file of [...markdownFilesNeedingContent, ...pdfFilesNeedingThumbnails]) {
+                for (const file of [...markdownFilesNeedingContent, ...filesNeedingThumbnails]) {
                     uniqueByPath.set(file.path, file);
                 }
                 filesToProcess = Array.from(uniqueByPath.values());
@@ -122,21 +118,12 @@ export function useStorageContentQueue(params: {
                     // no "changed files" but still pending derived content in the database. Fall back to checking
                     // the database for any missing content types.
                     const db = getDBInstance();
-                    const contentTypesToCheck: FileContentType[] = ['wordCount', 'tasks'];
+                    const contentTypesToCheck: FileContentType[] = getMarkdownPipelineContentTypes(settings, app);
                     if (metadataDependentTypes.includes('tags')) {
                         contentTypesToCheck.push('tags');
                     }
-                    if (settings.showFilePreview) {
-                        contentTypesToCheck.push('preview');
-                    }
-                    if (settings.showFeatureImage) {
-                        contentTypesToCheck.push('featureImage');
-                    }
                     if (metadataDependentTypes.includes('metadata')) {
                         contentTypesToCheck.push('metadata');
-                    }
-                    if (hasCustomProperties) {
-                        contentTypesToCheck.push('properties');
                     }
 
                     const pathsNeedingContent = db.getFilesNeedingAnyContent(contentTypesToCheck);
@@ -158,7 +145,7 @@ export function useStorageContentQueue(params: {
                 queueMetadataContentWhenReady(markdownFiles, metadataDependentTypes, settings);
             }
         },
-        [contentRegistryRef, queueIndexableFilesForContentGeneration, queueMetadataContentWhenReady]
+        [app, contentRegistryRef, queueIndexableFilesForContentGeneration, queueMetadataContentWhenReady]
     );
 
     return { queueIndexableFilesForContentGeneration, queueIndexableFilesNeedingContentGeneration };

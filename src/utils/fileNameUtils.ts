@@ -17,7 +17,7 @@
  */
 
 import { TFile } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
 
 export const EXCALIDRAW_BASENAME_SUFFIX = '.excalidraw';
 const EXCALIDRAW_FRONTMATTER_KEY = 'excalidraw-plugin';
@@ -80,9 +80,9 @@ export function isExcalidrawFile(file: TFile): boolean {
 }
 
 /**
- * Checks if a frontmatter value indicates the file is an Excalidraw drawing.
+ * Checks if a frontmatter flag value is truthy.
  */
-function isTruthyExcalidrawFrontmatterFlag(value: ExcalidrawFrontmatterFlagValue): boolean {
+export function isTruthyFrontmatterFlagValue(value: unknown): boolean {
     if (typeof value === 'boolean') {
         return value;
     }
@@ -111,7 +111,7 @@ export function hasExcalidrawFrontmatterFlagValue(frontmatter: unknown): boolean
         return false;
     }
 
-    return isTruthyExcalidrawFrontmatterFlag((frontmatter as Record<string, ExcalidrawFrontmatterFlagValue>)[EXCALIDRAW_FRONTMATTER_KEY]);
+    return isTruthyFrontmatterFlagValue((frontmatter as Record<string, unknown>)[EXCALIDRAW_FRONTMATTER_KEY]);
 }
 
 /**

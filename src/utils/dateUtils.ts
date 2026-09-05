@@ -18,12 +18,18 @@
 
 import { TFile } from 'obsidian';
 
+import { LIMITS } from '../constants/limits';
 import { strings, getCurrentLanguage } from '../i18n';
-import { NotebookNavigatorSettings } from '../settings';
+import type { NotebookNavigatorSettings } from '../settings/types';
 import { getMomentApi, resolveMomentLocale, type MomentApi } from './moment';
 
 // Example ISO 8601 moment format string used as a settings placeholder
 export const ISO_DATE_FORMAT = 'YYYY-MM-DD[T]HH:mm:ssZ';
+
+export interface DateGroupInfo {
+    label: string;
+    key: string;
+}
 
 export class DateUtils {
     /**
@@ -78,7 +84,30 @@ export class DateUtils {
         return resolveMomentLocale(requested, momentApi, fallback);
     }
 
+    /** Memoizes formatted timestamps; moment parses the format string on every call otherwise. */
+    private static formatCache = new Map<string, string>();
+
     private static formatWithFallback(date: Date, formatString: string, formatType: 'date' | 'time'): string {
+        const cacheKey = `${DateUtils.getObsidianLanguage()}|${date.getTimezoneOffset()}|${formatType}|${formatString}|${date.getTime()}`;
+        const cached = DateUtils.formatCache.get(cacheKey);
+        if (cached !== undefined) {
+            DateUtils.formatCache.delete(cacheKey);
+            DateUtils.formatCache.set(cacheKey, cached);
+            return cached;
+        }
+
+        const formatted = DateUtils.formatWithFallbackUncached(date, formatString, formatType);
+        if (DateUtils.formatCache.size >= LIMITS.storage.dateFormatCacheMaxEntries) {
+            const oldestKey = DateUtils.formatCache.keys().next().value;
+            if (oldestKey !== undefined) {
+                DateUtils.formatCache.delete(oldestKey);
+            }
+        }
+        DateUtils.formatCache.set(cacheKey, formatted);
+        return formatted;
+    }
+
+    private static formatWithFallbackUncached(date: Date, formatString: string, formatType: 'date' | 'time'): string {
         const momentApi = getMomentApi();
         if (!momentApi) {
             return formatType === 'time' ? date.toLocaleTimeString() : date.toLocaleDateString();
@@ -148,6 +177,106 @@ export class DateUtils {
         return Number.isFinite(reference.getTime()) ? reference : null;
     }
 
+    /** Day-boundary timestamps reused across grouping passes; keyed by local day and timezone offset. */
+    private static dateGroupBoundaryCache: {
+        cacheKey: string;
+        todayTime: number;
+        yesterdayTime: number;
+        weekAgoTime: number;
+        monthAgoTime: number;
+        nowYear: number;
+    } | null = null;
+
+    private static getDateGroupBoundaries(now: Date): NonNullable<typeof DateUtils.dateGroupBoundaryCache> {
+        const nowYear = now.getFullYear();
+        const nowMonth = now.getMonth();
+        const nowDate = now.getDate();
+        const cacheKey = `${nowYear}|${nowMonth}|${nowDate}|${now.getTimezoneOffset()}`;
+        const cached = DateUtils.dateGroupBoundaryCache;
+        if (cached && cached.cacheKey === cacheKey) {
+            return cached;
+        }
+
+        // Reset times to start of day for comparison
+        const today = new Date(nowYear, nowMonth, nowDate);
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const monthAgo = new Date(today);
+        monthAgo.setDate(monthAgo.getDate() - 30);
+        const boundaries = {
+            cacheKey,
+            todayTime: today.getTime(),
+            yesterdayTime: yesterday.getTime(),
+            weekAgoTime: weekAgo.getTime(),
+            monthAgoTime: monthAgo.getTime(),
+            nowYear
+        };
+        DateUtils.dateGroupBoundaryCache = boundaries;
+        return boundaries;
+    }
+
+    /** Localized month labels keyed by language and month index. */
+    private static monthLabelCache = new Map<string, string>();
+
+    private static getMonthLabel(date: Date): string {
+        const normalizedLanguage = DateUtils.getNormalizedLanguage();
+        const cacheKey = `${normalizedLanguage}|${date.getMonth()}`;
+        const cached = DateUtils.monthLabelCache.get(cacheKey);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const momentApi = getMomentApi();
+        let monthName: string;
+        if (momentApi) {
+            const locale = DateUtils.getMomentLocale(momentApi);
+            monthName = momentApi(date).locale(locale).format('MMMM');
+        } else {
+            monthName = date.toLocaleString(undefined, { month: 'long' });
+        }
+
+        // Capitalize month name for languages that use lowercase
+        if (DateUtils.lowercaseMonthLanguages.has(normalizedLanguage)) {
+            monthName = DateUtils.capitalizeFirst(monthName);
+        }
+
+        DateUtils.monthLabelCache.set(cacheKey, monthName);
+        return monthName;
+    }
+
+    static getDateGroupInfo(timestamp: number, nowOverride?: Date): DateGroupInfo {
+        const now = nowOverride && Number.isFinite(nowOverride.getTime()) ? nowOverride : new Date();
+        const boundaries = DateUtils.getDateGroupBoundaries(now);
+        const date = new Date(timestamp);
+        const dateOnlyTime = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+        if (dateOnlyTime > boundaries.todayTime) {
+            // Future dates get one dedicated group so classification stays monotonic with
+            // date-sorted file order. Without this branch a future date falls into "Previous
+            // 7 days", the walk over sorted files emits that header twice, and the duplicate
+            // list item keys leave orphaned header rows in the list DOM.
+            return { label: strings.dateGroups.future, key: 'relative:future' };
+        } else if (dateOnlyTime === boundaries.todayTime) {
+            return { label: strings.dateGroups.today, key: 'relative:today' };
+        } else if (dateOnlyTime === boundaries.yesterdayTime) {
+            return { label: strings.dateGroups.yesterday, key: 'relative:yesterday' };
+        } else if (dateOnlyTime > boundaries.weekAgoTime) {
+            return { label: strings.dateGroups.previous7Days, key: 'relative:previous-7-days' };
+        } else if (dateOnlyTime > boundaries.monthAgoTime) {
+            return { label: strings.dateGroups.previous30Days, key: 'relative:previous-30-days' };
+        } else if (date.getFullYear() === boundaries.nowYear) {
+            // Same year - show month name
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return { label: DateUtils.getMonthLabel(date), key: `month:${date.getFullYear()}-${month}` };
+        }
+
+        // Previous years - show year
+        const year = date.getFullYear().toString();
+        return { label: year, key: `year:${year}` };
+    }
+
     /**
      * Get a date group label for grouping files by date
      * @param timestamp - Unix timestamp in milliseconds
@@ -155,49 +284,7 @@ export class DateUtils {
      * @returns Date group label (e.g. "Today", "Yesterday", "Previous 7 Days", etc.)
      */
     static getDateGroup(timestamp: number, nowOverride?: Date): string {
-        const now = nowOverride && Number.isFinite(nowOverride.getTime()) ? nowOverride : new Date();
-        const date = new Date(timestamp);
-
-        // Reset times to start of day for comparison
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const monthAgo = new Date(today);
-        monthAgo.setDate(monthAgo.getDate() - 30);
-
-        const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-        if (dateOnly.getTime() === today.getTime()) {
-            return strings.dateGroups.today;
-        } else if (dateOnly.getTime() === yesterday.getTime()) {
-            return strings.dateGroups.yesterday;
-        } else if (dateOnly > weekAgo) {
-            return strings.dateGroups.previous7Days;
-        } else if (dateOnly > monthAgo) {
-            return strings.dateGroups.previous30Days;
-        } else if (date.getFullYear() === now.getFullYear()) {
-            // Same year - show month name
-            const normalizedLanguage = DateUtils.getNormalizedLanguage();
-            const momentApi = getMomentApi();
-            let monthName = '';
-            if (momentApi) {
-                const locale = DateUtils.getMomentLocale(momentApi);
-                monthName = momentApi(date).locale(locale).format('MMMM');
-            } else {
-                monthName = date.toLocaleString(undefined, { month: 'long' });
-            }
-
-            // Capitalize month name for languages that use lowercase
-            if (DateUtils.lowercaseMonthLanguages.has(normalizedLanguage)) {
-                monthName = DateUtils.capitalizeFirst(monthName);
-            }
-
-            return monthName;
-        }
-        // Previous years - show year
-        return date.getFullYear().toString();
+        return DateUtils.getDateGroupInfo(timestamp, nowOverride).label;
     }
 
     /**

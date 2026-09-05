@@ -17,7 +17,7 @@
  */
 
 import { DEFAULT_SETTINGS } from '../../settings/defaultSettings';
-import { migrateRecentColors, migrateReleaseCheckState } from '../../settings/migrations/localPreferences';
+import { migrateCollapsedPinnedContexts, migrateRecentColors, migrateReleaseCheckState } from '../../settings/migrations/localPreferences';
 import { migrateMomentDateFormats } from '../../settings/migrations/momentFormats';
 import {
     applyExistingUserDefaults,
@@ -29,7 +29,7 @@ import {
     extractLegacyPeriodicNotesFolder,
     extractLegacyShortcuts,
     extractLegacyVisibilitySettings,
-    migrateFolderNoteTemplateSetting,
+    migrateFolderNoteSettings,
     migrateLegacySyncedSettings,
     migrateSearchShortcutNegationSyntax
 } from '../../settings/migrations/syncedSettings';
@@ -39,31 +39,42 @@ import {
     type CalendarPlacement,
     type CalendarWeeksToShow,
     type HomepageSetting,
+    type ListSortOverrideValue,
+    NARROW_SIDEBAR_CUSTOM_WIDTH_MAX,
+    NARROW_SIDEBAR_CUSTOM_WIDTH_MIN,
     SYNC_MODE_SETTING_IDS,
     type SettingSyncMode,
-    type SortOption,
     type SyncModeSettingId,
     type TagSortOrder,
     type VaultProfile,
     isAlphaSortOrder,
     isCalendarMonthHeadingFormat,
     isCalendarLeftPlacement,
+    isCalendarPeriodicNotesLocaleSource,
     isCalendarPlacement,
     isCalendarWeekendDays,
+    isEnterKeyAction,
     isFeatureImagePixelSizeSetting,
     isFeatureImageSizeSetting,
+    isFolderNoteOpenLocation,
     isHomepageSource,
     isMouseBackForwardAction,
+    isManualSortNewNotePlacement,
+    isUnfinishedTaskIconMode,
     isPropertySortSecondaryOption,
+    isNarrowSidebarTriggerMode,
+    normalizeNarrowSidebarLayout,
     isRecentNotesHideMode,
     isSettingSyncMode,
     isSortOption,
     isTagSortOrder,
+    normalizeAppearanceGroupBy,
+    normalizeListSortOverride,
     resolveDeleteAttachmentsSetting,
+    type NotebookNavigatorSettings,
     resolveMoveFileConflictsSetting
 } from '../../settings/types';
-import type { NotebookNavigatorSettings } from '../../settings/types';
-import { LOCALSTORAGE_VERSION, localStorage } from '../../utils/localStorage';
+import { LEGACY_STORAGE_KEYS, LOCALSTORAGE_VERSION, localStorage } from '../../utils/localStorage';
 import { clearHiddenFileNameMatcherCache } from '../../utils/fileFilters';
 import {
     normalizeCanonicalIconId,
@@ -86,8 +97,12 @@ import { normalizePropertyKeyNodeId, normalizePropertyNodeId } from '../../utils
 import { normalizeNavigationSeparatorKey } from '../../utils/navigationSeparators';
 import { normalizeUXIconMapRecord } from '../../utils/uxIcons';
 import { sanitizeKeyboardShortcuts } from '../../utils/keyboardShortcuts';
+import { pruneUnavailablePropertySortOverrides, reconcileDefaultFolderSort } from '../../utils/sortUtils';
+import { pruneUnavailablePropertyGroupingOverrides, reconcileDefaultNoteGrouping } from '../../utils/listGrouping';
 import { isRecord } from '../../utils/typeGuards';
 import { normalizeOptionalVaultFilePath } from '../../utils/pathUtils';
+import { isFileTypeIconPreset } from '../../utils/fileTypeIconPresets';
+import { compareVersions } from '../../utils/versionUtils';
 import {
     MAX_PANE_TRANSITION_DURATION_MS,
     MIN_PANE_TRANSITION_DURATION_MS,
@@ -96,7 +111,11 @@ import {
     type LocalStorageKeys,
     type UXPreferences
 } from '../../types';
-import type { FolderAppearance } from '../../hooks/useListPaneAppearance';
+import {
+    getStoredListPaneAppearanceFields,
+    mergeListPaneAppearanceAndGrouping,
+    type ListPaneAppearance
+} from '../../settings/listPaneAppearance';
 import { createSyncModeRegistry, type SyncModeRegistry } from './syncModeRegistry';
 import { getDefaultUXPreferences, isUXPreferencesRecord } from './uxPreferences';
 
@@ -105,6 +124,50 @@ interface PluginSettingsControllerOptions {
     loadData: () => Promise<unknown>;
     saveData: (data: unknown) => Promise<void>;
     mirrorUXPreferences: (update: Partial<UXPreferences>) => void;
+}
+
+/**
+ * Result of loading persisted settings.
+ * - 'loaded': a stored settings record was read and applied
+ * - 'missing': no settings file exists; current settings are kept
+ * - 'unavailable': the settings file exists but could not be read or parsed; current settings are kept
+ */
+export type SettingsLoadResult = 'loaded' | 'missing' | 'unavailable';
+
+/**
+ * Result of the startup settings load.
+ * - 'first-launch': the settings file stayed missing on a device without prior plugin state; defaults were applied
+ * - 'loaded': a stored settings record was read and applied
+ * - 'missing': the settings file stayed missing on a device with prior plugin state; nothing was applied. The caller
+ *   decides whether this is a reinstall (data.json was deleted with the plugin folder) or a sync provider that has
+ *   not delivered the file yet, because the two are indistinguishable from disk state alone.
+ * - 'unavailable': the settings file exists but could not be read on at least one attempt; startup must abort
+ *   without writing
+ * - 'cancelled': plugin shutdown cancelled the retry before settings were established
+ */
+export type StartupSettingsLoadResult = 'first-launch' | 'loaded' | 'missing' | 'unavailable' | 'cancelled';
+
+// Keep the startup grace period below Obsidian's slow-plugin warning while polling for a settings file from sync.
+const STARTUP_SETTINGS_RETRY_ATTEMPTS = 4;
+const STARTUP_SETTINGS_RETRY_DELAY_MS = 500;
+const NUMERIC_VERSION_MARKER_PATTERN = /^\d+(?:\.\d+)*$/;
+
+function normalizeVersionMarker(value: unknown): string {
+    if (typeof value !== 'string') {
+        return '';
+    }
+
+    const trimmed = value.trim();
+    if (!NUMERIC_VERSION_MARKER_PATTERN.test(trimmed)) {
+        return '';
+    }
+
+    const hasInvalidSegment = trimmed.split('.').some(segment => !Number.isSafeInteger(Number(segment)));
+    return hasInvalidSegment ? '' : trimmed;
+}
+
+function selectNewerVersion(first: string, second: string): string {
+    return compareVersions(first, second) >= 0 ? first : second;
 }
 
 function resolveTaskBackgroundColor(value: unknown, fallback: string): string {
@@ -138,7 +201,7 @@ const LEGACY_LOCAL_SYNC_MODE_SETTING_IDS = new Set<SyncModeSettingId>([
 ]);
 
 export class PluginSettingsController {
-    private currentSettings: NotebookNavigatorSettings = { ...DEFAULT_SETTINGS };
+    private currentSettings: NotebookNavigatorSettings = structuredClone(DEFAULT_SETTINGS);
     private syncModeRegistry: SyncModeRegistry | null = null;
     private shouldPersistDesktopScale = false;
     private shouldPersistMobileScale = false;
@@ -157,6 +220,65 @@ export class PluginSettingsController {
 
     public set settings(settings: NotebookNavigatorSettings) {
         this.currentSettings = settings;
+    }
+
+    /**
+     * Returns the greatest version observed in synced settings or on this device. The synced
+     * marker suppresses the dialog on other devices after synchronization, while the local marker
+     * prevents a stale whole-file settings write from making this device show the release again.
+     */
+    public getLastShownVersion(): string {
+        const resolution = this.resolveLastShownVersion(this.currentSettings.lastShownVersion);
+        this.currentSettings.lastShownVersion = resolution.version;
+        return resolution.version;
+    }
+
+    /**
+     * Advances both markers without allowing either to regress. The local marker is written first
+     * because it must still prevent a repeated dialog when the following data.json save fails or is
+     * later overwritten by a stale device.
+     *
+     * @returns `true` when the version advanced and synced settings need to be saved; otherwise
+     * existing local and synced state is retained without a settings write.
+     */
+    public advanceLastShownVersion(version: string): boolean {
+        const candidate = normalizeVersionMarker(version);
+        const currentVersion = this.getLastShownVersion();
+        if (!candidate || compareVersions(candidate, currentVersion) <= 0) {
+            return false;
+        }
+
+        localStorage.set(this.options.keys.lastShownVersionKey, candidate);
+        this.currentSettings.lastShownVersion = candidate;
+        return true;
+    }
+
+    /**
+     * Reconciles the two markers and promotes a newer synced value into local storage.
+     *
+     * @returns `version` as the marker to apply in memory. `needsSyncedRepair` is `true` when
+     * data.json contained an invalid or older value that must be replaced; otherwise the synced
+     * value already represents the effective marker and is left untouched.
+     */
+    private resolveLastShownVersion(syncedValue: unknown): { version: string; needsSyncedRepair: boolean } {
+        const syncedVersion = normalizeVersionMarker(syncedValue);
+        const localValue = localStorage.get<unknown>(this.options.keys.lastShownVersionKey);
+        const localVersion = normalizeVersionMarker(localValue);
+        const version = selectNewerVersion(syncedVersion, localVersion);
+
+        if (version && localValue !== version) {
+            localStorage.set(this.options.keys.lastShownVersionKey, version);
+        } else if (!version && localValue !== null && localValue !== undefined) {
+            // Invalid local markers must be removed because leaving one in place would make the
+            // next startup repeat the same failed reconciliation.
+            localStorage.remove(this.options.keys.lastShownVersionKey);
+        }
+
+        const syncedValueWasInvalid = syncedValue !== undefined && syncedValue !== syncedVersion;
+        return {
+            version,
+            needsSyncedRepair: syncedValueWasInvalid || compareVersions(version, syncedVersion) > 0
+        };
     }
 
     public getSyncMode(settingId: SyncModeSettingId): SettingSyncMode {
@@ -207,33 +329,221 @@ export class PluginSettingsController {
     public clearAllLocalStorage(): void {
         const storageKeyNames = Object.keys(STORAGE_KEYS) as (keyof LocalStorageKeys)[];
         storageKeyNames.forEach(storageKey => {
-            if (storageKey === 'databaseSchemaVersionKey' || storageKey === 'databaseContentVersionKey') {
+            if (
+                storageKey === 'databaseSchemaVersionKey' ||
+                storageKey === 'databaseContentVersionKey' ||
+                storageKey === 'debugLoggingEnabledKey'
+            ) {
                 return;
             }
 
             const key = STORAGE_KEYS[storageKey];
             localStorage.remove(key);
         });
+
+        // Legacy keys are absent from STORAGE_KEYS, so reinstall cleanup must remove them explicitly
+        LEGACY_STORAGE_KEYS.forEach(key => {
+            localStorage.remove(key);
+        });
     }
 
-    public async loadSettings(): Promise<boolean> {
+    public async loadSettings(): Promise<SettingsLoadResult>;
+    public async loadSettings(signal: AbortSignal): Promise<SettingsLoadResult | 'cancelled'>;
+    public async loadSettings(signal?: AbortSignal): Promise<SettingsLoadResult | 'cancelled'> {
+        if (signal?.aborted) {
+            return 'cancelled';
+        }
         const rawData: unknown = await this.options.loadData();
-        const storedData: Record<string, unknown> | null = isRecord(rawData) ? rawData : null;
+        if (signal?.aborted) {
+            return 'cancelled';
+        }
+        // Obsidian returns null when data.json does not exist (or contains the literal JSON text `null`) and undefined
+        // when it exists but cannot be read or parsed. Neither result applies anything, so a transient sync failure
+        // cannot reset current settings; loadSettingsAtStartup decides whether a missing file counts as a first launch.
+        if (!isRecord(rawData)) {
+            return rawData === null ? 'missing' : 'unavailable';
+        }
+
+        const needsPersistedCleanup = this.applySettingsRecord(rawData, { isFirstLaunch: false });
+        if (needsPersistedCleanup) {
+            if (signal?.aborted) {
+                return 'cancelled';
+            }
+            await this.options.saveData(this.getPersistableSettings());
+        }
+        return signal?.aborted ? 'cancelled' : 'loaded';
+    }
+
+    /**
+     * Runs the startup settings load with a bounded retry window.
+     * A missing data.json is confirmed as a first launch only when this device has no persisted localStorage version
+     * marker, no attempt observed an unreadable file, and the file stays missing through the retry window. Runtime
+     * enablement uses the same grace period because sync can install the plugin before delivering data.json.
+     * On 'first-launch' the default settings are applied through the settings pipeline without persisting; on
+     * 'missing' and 'unavailable' nothing is applied or written. A device with a persisted marker reports 'missing'
+     * instead of 'first-launch' because writing defaults there would overwrite settings a sync provider has not
+     * delivered yet.
+     */
+    public async loadSettingsAtStartup(options: {
+        maxAttempts?: number;
+        retryDelayMs?: number;
+        signal?: AbortSignal;
+    }): Promise<StartupSettingsLoadResult> {
+        const maxAttempts = Math.max(1, options.maxAttempts ?? STARTUP_SETTINGS_RETRY_ATTEMPTS);
+        const retryDelayMs = options.retryDelayMs ?? STARTUP_SETTINGS_RETRY_DELAY_MS;
+        const storedVersion = this.getStoredLocalStorageVersion();
+        const hasRunOnDevice = storedVersion !== null && storedVersion !== undefined;
+        let sawUnavailable = false;
+        let lastResult: SettingsLoadResult = 'missing';
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            if (options.signal?.aborted) {
+                return 'cancelled';
+            }
+            if (attempt > 0) {
+                const completedDelay = await this.waitForRetry(retryDelayMs, options.signal);
+                if (!completedDelay) {
+                    return 'cancelled';
+                }
+            }
+
+            const attemptResult = options.signal ? await this.loadSettings(options.signal) : await this.loadSettings();
+            if (attemptResult === 'cancelled') {
+                return 'cancelled';
+            }
+            lastResult = attemptResult;
+            if (lastResult === 'loaded') {
+                return 'loaded';
+            }
+            if (lastResult === 'unavailable') {
+                sawUnavailable = true;
+                continue;
+            }
+        }
+
+        if (lastResult === 'missing' && !sawUnavailable) {
+            if (!hasRunOnDevice) {
+                this.applySettingsRecord(null, { isFirstLaunch: true });
+                return 'first-launch';
+            }
+            return 'missing';
+        }
+
+        return 'unavailable';
+    }
+
+    private async waitForRetry(delayMs: number, signal?: AbortSignal): Promise<boolean> {
+        if (signal?.aborted) {
+            return false;
+        }
+        if (typeof window === 'undefined' || delayMs <= 0) {
+            return true;
+        }
+        return await new Promise<boolean>(resolve => {
+            const complete = (completedDelay: boolean) => {
+                signal?.removeEventListener('abort', onAbort);
+                resolve(completedDelay);
+            };
+            const timeoutId = window.setTimeout(() => complete(true), delayMs);
+            const onAbort = () => {
+                window.clearTimeout(timeoutId);
+                complete(false);
+            };
+            signal?.addEventListener('abort', onAbort, { once: true });
+        });
+    }
+
+    /**
+     * Applies a raw settings record through the full normalization and migration pipeline without persisting.
+     * Pass null with isFirstLaunch to build default settings for a fresh installation. Returns whether legacy
+     * migrations require the cleaned-up settings to be written back to data.json.
+     */
+    public applySettingsRecord(
+        storedData: Record<string, unknown> | null,
+        options: { isFirstLaunch: boolean; preferRecordLocalValues?: boolean }
+    ): boolean {
+        const { isFirstLaunch } = options;
+        const preferRecordValue = options.preferRecordLocalValues ?? false;
         const hadLegacyPropertyFieldsInStoredData = Boolean(
             storedData && Object.prototype.hasOwnProperty.call(storedData, 'propertyFields')
         );
         const hadLegacyHomepageSettingsInStoredData = Boolean(
             storedData &&
-                (typeof storedData['homepage'] === 'string' ||
-                    Object.prototype.hasOwnProperty.call(storedData, 'mobileHomepage') ||
-                    Object.prototype.hasOwnProperty.call(storedData, 'useMobileHomepage'))
+            (typeof storedData['homepage'] === 'string' ||
+                Object.prototype.hasOwnProperty.call(storedData, 'mobileHomepage') ||
+                Object.prototype.hasOwnProperty.call(storedData, 'useMobileHomepage'))
+        );
+        const hadLegacyFolderColorTitleSettingInStoredData = Boolean(
+            storedData && Object.prototype.hasOwnProperty.call(storedData, 'useFolderColorForFileTitles')
+        );
+        const hadShowPinnedIconInStoredData = Boolean(storedData && Object.prototype.hasOwnProperty.call(storedData, 'showPinnedIcon'));
+        const hadShowPinnedGroupHeaderInStoredData = Boolean(
+            storedData && Object.prototype.hasOwnProperty.call(storedData, 'showPinnedGroupHeader')
+        );
+        const hadLegacyUnfinishedTaskIconInStoredData = Boolean(
+            storedData && Object.prototype.hasOwnProperty.call(storedData, 'showFileIconUnfinishedTask')
+        );
+        const storedInterfaceIcons = storedData?.['interfaceIcons'];
+        const hadPinnedSectionIconInStoredData = Boolean(
+            isRecord(storedInterfaceIcons) && Object.prototype.hasOwnProperty.call(storedInterfaceIcons, 'pinned-section')
+        );
+        const hadInvalidPropertySortKeyInStoredData = Boolean(
+            storedData &&
+            Object.prototype.hasOwnProperty.call(storedData, 'propertySortKey') &&
+            typeof storedData['propertySortKey'] !== 'string'
+        );
+        const hadInvalidManualSortPropertyKeyInStoredData = Boolean(
+            storedData &&
+            Object.prototype.hasOwnProperty.call(storedData, 'manualSortPropertyKey') &&
+            typeof storedData['manualSortPropertyKey'] !== 'string'
+        );
+        const hadInvalidDefaultFolderSortInStoredData = Boolean(
+            storedData &&
+            Object.prototype.hasOwnProperty.call(storedData, 'defaultFolderSort') &&
+            !isSortOption(storedData['defaultFolderSort'])
+        );
+        const hadInvalidDefaultFolderSortPropertyKeyInStoredData = Boolean(
+            storedData &&
+            Object.prototype.hasOwnProperty.call(storedData, 'defaultFolderSortPropertyKey') &&
+            typeof storedData['defaultFolderSortPropertyKey'] !== 'string'
+        );
+        const hadInvalidPropertyGroupKeyInStoredData = Boolean(
+            storedData &&
+            Object.prototype.hasOwnProperty.call(storedData, 'propertyGroupKey') &&
+            typeof storedData['propertyGroupKey'] !== 'string'
+        );
+        // Pre-split configurations stored one combined sort-and-grouping property list. Seeding the
+        // grouping list from it keeps existing grouping choices and overrides working after upgrade.
+        const hadMissingPropertyGroupKeyInStoredData = Boolean(
+            storedData && !Object.prototype.hasOwnProperty.call(storedData, 'propertyGroupKey')
+        );
+        const hadLegacyOpenFolderNotesInNewTabInStoredData = Boolean(
+            storedData && Object.prototype.hasOwnProperty.call(storedData, 'openFolderNotesInNewTab')
+        );
+        const hadInvalidShiftEnterOpenContextInStoredData = Boolean(
+            storedData &&
+            Object.prototype.hasOwnProperty.call(storedData, 'shiftEnterOpenContext') &&
+            !isEnterKeyAction(storedData['shiftEnterOpenContext'])
+        );
+        const hadInvalidCmdCtrlEnterOpenContextInStoredData = Boolean(
+            storedData &&
+            Object.prototype.hasOwnProperty.call(storedData, 'cmdCtrlEnterOpenContext') &&
+            !isEnterKeyAction(storedData['cmdCtrlEnterOpenContext'])
+        );
+        const hadMissingDarkTaskBackgroundColorInStoredData = Boolean(
+            storedData && !Object.prototype.hasOwnProperty.call(storedData, 'unfinishedTaskBackgroundColorDark')
         );
         const storedSettings = storedData as Partial<NotebookNavigatorSettings> | null;
-        const isFirstLaunch = storedData === null;
         this.shouldPersistDesktopScale = Boolean(storedData && 'desktopScale' in storedData);
         this.shouldPersistMobileScale = Boolean(storedData && 'mobileScale' in storedData);
 
-        this.currentSettings = { ...DEFAULT_SETTINGS, ...(storedSettings ?? {}) };
+        // Deep-clone the defaults so later in-place normalization (e.g. ensureVaultProfiles) cannot mutate DEFAULT_SETTINGS
+        // through nested references when stored data omits a key.
+        this.currentSettings = { ...structuredClone(DEFAULT_SETTINGS), ...(storedSettings ?? {}) };
+        const lastShownVersionResolution = isFirstLaunch
+            ? { version: normalizeVersionMarker(this.currentSettings.lastShownVersion), needsSyncedRepair: false }
+            : this.resolveLastShownVersion(this.currentSettings.lastShownVersion);
+        this.currentSettings.lastShownVersion = lastShownVersionResolution.version;
         const hadLegacySearchProviderInSettings = Boolean(storedData && 'searchProvider' in storedData);
         const hadLegacyLastAnnouncedReleaseInSettings = Boolean(storedData && 'lastAnnouncedRelease' in storedData);
         const storedSearchProvider = localStorage.get<unknown>(this.options.keys.searchProviderKey);
@@ -249,8 +559,51 @@ export class PluginSettingsController {
         delete settingsRecord['calendarCustomPromptForTitle'];
         delete settingsRecord['saveMetadataToFrontmatter'];
         delete settingsRecord['lastAnnouncedRelease'];
+        delete settingsRecord['optimizeNoteHeight'];
+
+        if (!isFolderNoteOpenLocation(storedData?.['folderNoteOpenLocation'])) {
+            this.currentSettings.folderNoteOpenLocation =
+                storedData?.['openFolderNotesInNewTab'] === true ? 'new-tab' : DEFAULT_SETTINGS.folderNoteOpenLocation;
+        }
+        delete settingsRecord['openFolderNotesInNewTab'];
+
+        if (typeof this.currentSettings.propertySortKey !== 'string') {
+            this.currentSettings.propertySortKey = DEFAULT_SETTINGS.propertySortKey;
+        }
+
+        if (typeof this.currentSettings.propertyGroupKey !== 'string') {
+            this.currentSettings.propertyGroupKey = DEFAULT_SETTINGS.propertyGroupKey;
+        }
+
+        // The seed must run before grouping overrides are pruned, otherwise every property
+        // grouping override would be removed against the empty post-upgrade grouping list.
+        if (hadMissingPropertyGroupKeyInStoredData) {
+            this.currentSettings.propertyGroupKey = this.currentSettings.propertySortKey;
+        }
+
+        if (typeof this.currentSettings.manualSortPropertyKey !== 'string') {
+            this.currentSettings.manualSortPropertyKey = DEFAULT_SETTINGS.manualSortPropertyKey;
+        }
+
+        if (!isSortOption(this.currentSettings.defaultFolderSort)) {
+            this.currentSettings.defaultFolderSort = DEFAULT_SETTINGS.defaultFolderSort;
+        }
+
+        if (typeof this.currentSettings.defaultFolderSortPropertyKey !== 'string') {
+            this.currentSettings.defaultFolderSortPropertyKey = DEFAULT_SETTINGS.defaultFolderSortPropertyKey;
+        }
+
+        if (typeof this.currentSettings.manualSortGroupHeaderProperty !== 'string') {
+            this.currentSettings.manualSortGroupHeaderProperty = DEFAULT_SETTINGS.manualSortGroupHeaderProperty;
+        }
 
         this.currentSettings.keyboardShortcuts = sanitizeKeyboardShortcuts(this.currentSettings.keyboardShortcuts);
+        if (!isEnterKeyAction(this.currentSettings.shiftEnterOpenContext)) {
+            this.currentSettings.shiftEnterOpenContext = DEFAULT_SETTINGS.shiftEnterOpenContext;
+        }
+        if (!isEnterKeyAction(this.currentSettings.cmdCtrlEnterOpenContext)) {
+            this.currentSettings.cmdCtrlEnterOpenContext = DEFAULT_SETTINGS.cmdCtrlEnterOpenContext;
+        }
         this.normalizeSyncModes({ storedData, isFirstLaunch });
         const syncModeRegistry = this.getSyncModeRegistry();
 
@@ -262,6 +615,13 @@ export class PluginSettingsController {
         });
 
         this.sanitizeSettingsRecords();
+        this.pruneInheritedAppearanceValues();
+        const prunedUnavailablePropertySortOverrides = pruneUnavailablePropertySortOverrides(this.currentSettings);
+        const prunedUnavailablePropertyGroupingOverrides = pruneUnavailablePropertyGroupingOverrides(this.currentSettings);
+        // Load and external sync reconcile the global defaults silently; only direct settings-tab
+        // edits announce a reset, so sync-driven cleanups never surface a notice.
+        const reconciledDefaultFolderSort = reconcileDefaultFolderSort(this.currentSettings);
+        const reconciledDefaultNoteGrouping = reconcileDefaultNoteGrouping(this.currentSettings);
 
         const migratedMomentFormats = migrateMomentDateFormats({
             settings: this.currentSettings,
@@ -294,12 +654,20 @@ export class PluginSettingsController {
             this.currentSettings.propertySortSecondary = DEFAULT_SETTINGS.propertySortSecondary;
         }
 
+        if (!isManualSortNewNotePlacement(this.currentSettings.manualSortNewNotePlacement)) {
+            this.currentSettings.manualSortNewNotePlacement = DEFAULT_SETTINGS.manualSortNewNotePlacement;
+        }
+
         if (!isCalendarWeekendDays(this.currentSettings.calendarWeekendDays)) {
             this.currentSettings.calendarWeekendDays = DEFAULT_SETTINGS.calendarWeekendDays;
         }
 
         if (!isCalendarMonthHeadingFormat(this.currentSettings.calendarMonthHeadingFormat)) {
             this.currentSettings.calendarMonthHeadingFormat = DEFAULT_SETTINGS.calendarMonthHeadingFormat;
+        }
+
+        if (!isCalendarPeriodicNotesLocaleSource(this.currentSettings.calendarPeriodicNotesLocaleSource)) {
+            this.currentSettings.calendarPeriodicNotesLocaleSource = DEFAULT_SETTINGS.calendarPeriodicNotesLocaleSource;
         }
 
         if (!isFeatureImageSizeSetting(this.currentSettings.featureImageSize)) {
@@ -335,7 +703,7 @@ export class PluginSettingsController {
                 return;
             }
 
-            const result = entry.resolveOnLoad({ storedData });
+            const result = entry.resolveOnLoad({ storedData, preferRecordValue });
             if (settingId === 'uiScale') {
                 uiScaleMigrated = result.migrated;
             }
@@ -359,21 +727,30 @@ export class PluginSettingsController {
             keys: this.options.keys
         });
         const migratedRecentColors = migrateRecentColors({ settings: this.currentSettings, storedData, keys: this.options.keys });
+        const migratedCollapsedPinnedContexts = migrateCollapsedPinnedContexts({
+            settings: this.currentSettings,
+            storedData,
+            keys: this.options.keys
+        });
         const hadLocalValuesInSettings = Boolean(
             storedData &&
-                SYNC_MODE_SETTING_IDS.some(settingId => {
-                    const entry = syncModeRegistry[settingId];
-                    if (!entry.cleanupOnLoad) {
-                        return false;
-                    }
-                    if (!this.isLocal(settingId)) {
-                        return false;
-                    }
-                    return entry.hasPersistedValue(storedData);
-                })
+            SYNC_MODE_SETTING_IDS.some(settingId => {
+                const entry = syncModeRegistry[settingId];
+                if (!entry.cleanupOnLoad) {
+                    return false;
+                }
+                if (!this.isLocal(settingId)) {
+                    return false;
+                }
+                return entry.hasPersistedValue(storedData);
+            })
         );
 
-        migrateFolderNoteTemplateSetting({ settings: this.currentSettings, defaultSettings: DEFAULT_SETTINGS });
+        const migratedFolderNoteSettings = migrateFolderNoteSettings({
+            settings: this.currentSettings,
+            storedData,
+            defaultSettings: DEFAULT_SETTINGS
+        });
         applyExistingUserDefaults({ settings: this.currentSettings });
 
         const legacyVisibility = extractLegacyVisibilitySettings({ settings: this.currentSettings, storedData });
@@ -388,29 +765,60 @@ export class PluginSettingsController {
         applyLegacyShortcutsMigration({ settings: this.currentSettings, legacyShortcuts });
         const migratedShortcutNegationSyntax = migrateSearchShortcutNegationSyntax({ settings: this.currentSettings });
         this.normalizeIconSettings();
+        // Stored data from before the dark task background setting existed lacks the key, and the
+        // defaults merge above already filled it with the default color. Seed it from the light color
+        // before normalization so upgraded vaults keep the same background in both themes; a malformed
+        // light value is cleaned up by normalizeTaskSettings afterwards.
+        if (hadMissingDarkTaskBackgroundColorInStoredData) {
+            this.currentSettings.unfinishedTaskBackgroundColorDark = this.currentSettings.unfinishedTaskBackgroundColor;
+        }
         this.normalizeTaskSettings();
         this.normalizeFileIconMapSettings();
         this.normalizeInterfaceIconsSettings();
-        syncModeRegistry.vaultProfile.resolveOnLoad({ storedData });
+        syncModeRegistry.vaultProfile.resolveOnLoad({ storedData, preferRecordValue });
+        this.normalizeTagSettings();
+        this.normalizePropertySettings();
+        this.normalizeNavigationSeparatorSettings();
         this.refreshMatcherCachesIfNeeded();
 
         const needsPersistedCleanup =
             migratedReleaseState ||
             migratedRecentColors ||
+            migratedCollapsedPinnedContexts ||
             hadLocalValuesInSettings ||
             hadLegacySearchProviderInSettings ||
             hadLegacyLastAnnouncedReleaseInSettings ||
             hadLegacyPropertyFieldsInStoredData ||
             hadLegacyHomepageSettingsInStoredData ||
+            hadLegacyFolderColorTitleSettingInStoredData ||
+            hadShowPinnedIconInStoredData ||
+            hadShowPinnedGroupHeaderInStoredData ||
+            hadLegacyUnfinishedTaskIconInStoredData ||
+            hadPinnedSectionIconInStoredData ||
+            hadInvalidPropertySortKeyInStoredData ||
+            hadInvalidManualSortPropertyKeyInStoredData ||
+            hadInvalidDefaultFolderSortInStoredData ||
+            hadInvalidDefaultFolderSortPropertyKeyInStoredData ||
+            hadInvalidPropertyGroupKeyInStoredData ||
+            hadMissingPropertyGroupKeyInStoredData ||
+            reconciledDefaultFolderSort.changed ||
+            reconciledDefaultNoteGrouping.changed ||
+            hadLegacyOpenFolderNotesInNewTabInStoredData ||
+            hadInvalidShiftEnterOpenContextInStoredData ||
+            hadInvalidCmdCtrlEnterOpenContextInStoredData ||
+            hadMissingDarkTaskBackgroundColorInStoredData ||
+            prunedUnavailablePropertySortOverrides ||
+            prunedUnavailablePropertyGroupingOverrides ||
             uiScaleMigrated ||
             migratedMomentFormats ||
+            migratedFolderNoteSettings ||
             migratedShortcutNegationSyntax;
 
-        if (needsPersistedCleanup) {
-            await this.options.saveData(this.getPersistableSettings());
-        }
+        // A local marker newer than data.json repairs the shared high-water mark so other devices
+        // normally skip the dialog too. The local marker remains authoritative if sync regresses it again.
+        const needsLastShownVersionRepair = lastShownVersionResolution.needsSyncedRepair;
 
-        return isFirstLaunch;
+        return needsPersistedCleanup || needsLastShownVersionRepair;
     }
 
     public normalizeTagSettings(): void {
@@ -549,6 +957,7 @@ export class PluginSettingsController {
     }
 
     public async saveSettings(): Promise<void> {
+        this.pruneInheritedAppearanceValues();
         ensureVaultProfiles(this.currentSettings);
         this.refreshMatcherCachesIfNeeded();
         localStorage.set(this.options.keys.homepageKey, this.currentSettings.homepage);
@@ -556,17 +965,11 @@ export class PluginSettingsController {
     }
 
     public getPersistableSettings(): NotebookNavigatorSettings {
+        // Every whole-file settings write carries at least this device's marker. Without this merge,
+        // an unrelated setting change could serialize an older in-memory value back into data.json.
+        this.currentSettings.lastShownVersion = this.getLastShownVersion();
         const rest = { ...this.currentSettings } as Record<string, unknown>;
-        delete rest.hiddenTags;
-        delete rest.fileVisibility;
-        delete rest.recentColors;
-        delete rest.lastReleaseCheckAt;
-        delete rest.latestKnownRelease;
-        delete rest.searchProvider;
-        delete rest.showCalendar;
-        delete rest.calendarCustomPromptForTitle;
-        delete rest.saveMetadataToFrontmatter;
-        delete rest.propertyFields;
+        this.removeNonPersistableSettings(rest);
 
         const syncModeRegistry = this.getSyncModeRegistry();
         SYNC_MODE_SETTING_IDS.forEach(settingId => {
@@ -580,8 +983,41 @@ export class PluginSettingsController {
         return rest as unknown as NotebookNavigatorSettings;
     }
 
+    /** Returns the first-launch defaults in their data.json representation without mutating settings or localStorage. */
+    public getPersistableDefaultSettings(): NotebookNavigatorSettings {
+        const defaults = structuredClone(DEFAULT_SETTINGS);
+        // Normalize the cloned defaults the same way the first-launch pipeline does before persisting.
+        ensureVaultProfiles(defaults);
+        const rest = defaults as unknown as Record<string, unknown>;
+        this.removeNonPersistableSettings(rest);
+        return rest as unknown as NotebookNavigatorSettings;
+    }
+
+    private removeNonPersistableSettings(rest: Record<string, unknown>): void {
+        delete rest.hiddenTags;
+        delete rest.fileVisibility;
+        delete rest.recentColors;
+        delete rest.lastReleaseCheckAt;
+        delete rest.latestKnownRelease;
+        delete rest.searchProvider;
+        delete rest.showCalendar;
+        delete rest.calendarCustomPromptForTitle;
+        delete rest.saveMetadataToFrontmatter;
+        delete rest.propertyFields;
+        delete rest.notePropertyType;
+        delete rest.optimizeNoteHeight;
+        delete rest.showPinnedIcon;
+        delete rest.showPinnedGroupHeader;
+        delete rest.showWordCount;
+        delete rest.wordCountPlacement;
+        delete rest.wordCharacterCountDisplay;
+        delete rest.characterCountMode;
+    }
+
     public refreshMatcherCachesIfNeeded(): void {
-        const folderKey = this.buildPatternCacheKey(profile => profile.hiddenFolders);
+        const folderKey = `${this.buildPatternCacheKey(profile => profile.hiddenFolders)}\u0003${this.buildPatternCacheKey(
+            profile => profile.descendantExcludedFolders
+        )}`;
         const hiddenTagKey = this.buildPatternCacheKey(profile => profile.hiddenTags);
         const hiddenFileTagKey = this.buildPatternCacheKey(profile => profile.hiddenFileTags);
         const tagKey = `${hiddenTagKey}\u0003${hiddenFileTagKey}`;
@@ -653,16 +1089,37 @@ export class PluginSettingsController {
         const record = value as Record<string, unknown>;
         const source = isHomepageSource(record.source) ? record.source : DEFAULT_SETTINGS.homepage.source;
         const file = normalizeOptionalVaultFilePath(typeof record.file === 'string' ? record.file : null);
+        const createMissingPeriodicNote =
+            typeof record.createMissingPeriodicNote === 'boolean'
+                ? record.createMissingPeriodicNote
+                : DEFAULT_SETTINGS.homepage.createMissingPeriodicNote;
 
         return {
             source,
-            file
+            file,
+            createMissingPeriodicNote
         };
     }
 
     private sanitizeDualPaneOrientationSetting(value: unknown) {
         const parsed = this.parseDualPaneOrientation(value);
         return parsed ?? DEFAULT_SETTINGS.dualPaneOrientation;
+    }
+
+    private sanitizeNarrowSidebarLayoutSetting(value: unknown) {
+        return normalizeNarrowSidebarLayout(value) ?? DEFAULT_SETTINGS.narrowSidebarLayout;
+    }
+
+    private sanitizeNarrowSidebarTriggerModeSetting(value: unknown) {
+        return isNarrowSidebarTriggerMode(value) ? value : DEFAULT_SETTINGS.narrowSidebarTriggerMode;
+    }
+
+    private sanitizeNarrowSidebarCustomWidthSetting(value: unknown): number {
+        return this.sanitizeBoundedIntegerSetting(value, {
+            min: NARROW_SIDEBAR_CUSTOM_WIDTH_MIN,
+            max: NARROW_SIDEBAR_CUSTOM_WIDTH_MAX,
+            fallback: DEFAULT_SETTINGS.narrowSidebarCustomWidth
+        });
     }
 
     private sanitizePaneTransitionDurationSetting(value: unknown): number {
@@ -833,6 +1290,9 @@ export class PluginSettingsController {
             sanitizeBooleanSetting: (value, fallback) => this.sanitizeBooleanSetting(value, fallback),
             sanitizeHomepageSetting: value => this.sanitizeHomepageSetting(value),
             sanitizeDualPaneOrientationSetting: value => this.sanitizeDualPaneOrientationSetting(value),
+            sanitizeNarrowSidebarLayoutSetting: value => this.sanitizeNarrowSidebarLayoutSetting(value),
+            sanitizeNarrowSidebarTriggerModeSetting: value => this.sanitizeNarrowSidebarTriggerModeSetting(value),
+            sanitizeNarrowSidebarCustomWidthSetting: value => this.sanitizeNarrowSidebarCustomWidthSetting(value),
             sanitizeTagSortOrderSetting: value => this.sanitizeTagSortOrderSetting(value),
             sanitizeFolderSortOrderSetting: value => this.sanitizeFolderSortOrderSetting(value),
             sanitizePaneTransitionDurationSetting: value => this.sanitizePaneTransitionDurationSetting(value),
@@ -869,13 +1329,42 @@ export class PluginSettingsController {
 
     private sanitizeSettingsRecords(): void {
         const sanitizeStringMap = (record?: Record<string, string>): Record<string, string> => sanitizeRecord(record, isStringRecordValue);
-        const sanitizeSortMap = (record?: Record<string, SortOption>): Record<string, SortOption> => sanitizeRecord(record, isSortOption);
+        const sanitizeSortMap = (record?: Record<string, ListSortOverrideValue>): Record<string, ListSortOverrideValue> => {
+            const sanitized = Object.create(null) as Record<string, ListSortOverrideValue>;
+            if (!record) {
+                return sanitized;
+            }
+
+            for (const key of Object.keys(record)) {
+                const normalized = normalizeListSortOverride((record as Record<string, unknown>)[key]);
+                if (normalized) {
+                    sanitized[key] = normalized;
+                }
+            }
+
+            return sanitized;
+        };
         const sanitizeAlphaSortOrderMap = (
             record?: Record<string, 'alpha-asc' | 'alpha-desc'>
         ): Record<string, 'alpha-asc' | 'alpha-desc'> => sanitizeRecord(record, isAlphaSortOrder);
-        const isAppearanceValue = (value: unknown): value is FolderAppearance => isPlainObjectRecordValue(value);
-        const sanitizeAppearanceMap = (record?: Record<string, FolderAppearance>): Record<string, FolderAppearance> =>
-            sanitizeRecord(record, isAppearanceValue);
+        const isAppearanceValue = (value: unknown): value is ListPaneAppearance => isPlainObjectRecordValue(value);
+        const sanitizeAppearanceMap = (record?: Record<string, ListPaneAppearance>): Record<string, ListPaneAppearance> => {
+            const sanitized = sanitizeRecord(record, isAppearanceValue);
+            Object.entries(sanitized).forEach(([key, appearance]) => {
+                delete (appearance as Record<string, unknown>)['notePropertyType'];
+                normalizeAppearanceGroupBy(appearance);
+                const normalizedAppearance = mergeListPaneAppearanceAndGrouping(
+                    getStoredListPaneAppearanceFields(appearance),
+                    appearance.groupBy
+                );
+                if (normalizedAppearance) {
+                    sanitized[key] = normalizedAppearance;
+                } else {
+                    delete sanitized[key];
+                }
+            });
+            return sanitized;
+        };
         const sanitizeBooleanMap = (record?: Record<string, boolean>): Record<string, boolean> =>
             sanitizeRecord(record, isBooleanRecordValue);
         const sanitizeSettingsSyncMap = (record?: Record<string, SettingSyncMode>): Record<string, SettingSyncMode> =>
@@ -907,9 +1396,51 @@ export class PluginSettingsController {
         this.currentSettings.pinnedNotes = clonePinnedNotesRecord(this.currentSettings.pinnedNotes);
     }
 
+    private pruneInheritedAppearanceValues(): void {
+        // Choices equal to their global settings are inheritance. Remove matching stored values so
+        // default-marked entries do not remain overrides after a global setting changes.
+        const appearanceMaps = [
+            this.currentSettings.folderAppearances,
+            this.currentSettings.tagAppearances,
+            this.currentSettings.propertyAppearances
+        ];
+        appearanceMaps.forEach(appearances => {
+            Object.entries(appearances).forEach(([key, appearance]) => {
+                if (appearance.titleRows === this.currentSettings.fileNameRows) {
+                    delete appearance.titleRows;
+                }
+                if (appearance.previewRows === this.currentSettings.previewRows) {
+                    delete appearance.previewRows;
+                }
+                if (appearance.textCount === this.currentSettings.textCountDisplay) {
+                    delete appearance.textCount;
+                }
+                if (Object.keys(appearance).length === 0) {
+                    delete appearances[key];
+                }
+            });
+        });
+    }
+
     private normalizeTaskSettings(): void {
-        if (typeof this.currentSettings.showFileIconUnfinishedTask !== 'boolean') {
-            this.currentSettings.showFileIconUnfinishedTask = DEFAULT_SETTINGS.showFileIconUnfinishedTask;
+        if (!isUnfinishedTaskIconMode(this.currentSettings.unfinishedTaskIcon)) {
+            this.currentSettings.unfinishedTaskIcon = DEFAULT_SETTINGS.unfinishedTaskIcon;
+        }
+
+        if (typeof this.currentSettings.showFileTaskProgress !== 'boolean') {
+            this.currentSettings.showFileTaskProgress = DEFAULT_SETTINGS.showFileTaskProgress;
+        }
+
+        if (typeof this.currentSettings.showFileTaskProgressBar !== 'boolean') {
+            this.currentSettings.showFileTaskProgressBar = DEFAULT_SETTINGS.showFileTaskProgressBar;
+        }
+
+        if (typeof this.currentSettings.showFileTaskProgressCount !== 'boolean') {
+            this.currentSettings.showFileTaskProgressCount = DEFAULT_SETTINGS.showFileTaskProgressCount;
+        }
+
+        if (typeof this.currentSettings.hideFileTaskProgressWhenComplete !== 'boolean') {
+            this.currentSettings.hideFileTaskProgressWhenComplete = DEFAULT_SETTINGS.hideFileTaskProgressWhenComplete;
         }
 
         if (typeof this.currentSettings.showFileBackgroundUnfinishedTask !== 'boolean') {
@@ -919,6 +1450,15 @@ export class PluginSettingsController {
         this.currentSettings.unfinishedTaskBackgroundColor = resolveTaskBackgroundColor(
             this.currentSettings.unfinishedTaskBackgroundColor,
             DEFAULT_SETTINGS.unfinishedTaskBackgroundColor
+        );
+
+        // A malformed or empty dark color falls back to the light color rather than the default
+        // so both themes stay consistent. Vaults from before the dark setting existed are handled
+        // in applySettingsRecord, which seeds the missing key from the light color before this runs,
+        // because the defaults merge has already replaced the missing value by this point.
+        this.currentSettings.unfinishedTaskBackgroundColorDark = resolveTaskBackgroundColor(
+            this.currentSettings.unfinishedTaskBackgroundColorDark,
+            this.currentSettings.unfinishedTaskBackgroundColor
         );
     }
 
@@ -967,6 +1507,10 @@ export class PluginSettingsController {
 
         if (typeof this.currentSettings.showFilenameMatchIcons !== 'boolean') {
             this.currentSettings.showFilenameMatchIcons = DEFAULT_SETTINGS.showFilenameMatchIcons;
+        }
+
+        if (!isFileTypeIconPreset(this.currentSettings.fileTypeIconPreset)) {
+            this.currentSettings.fileTypeIconPreset = DEFAULT_SETTINGS.fileTypeIconPreset;
         }
 
         this.currentSettings.fileTypeIconMap = normalizeIconMap(

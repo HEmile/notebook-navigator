@@ -1,6 +1,6 @@
 # Notebook Navigator Service Architecture
 
-Updated: March 16, 2026
+Updated: July 9, 2026
 
 ## Table of Contents
 
@@ -49,14 +49,17 @@ startup and must be guarded. `IconService` is a global singleton accessed throug
 - Each mounted `NotebookNavigatorView` owns the primary React provider tree. `ServicesContext` provides references to
   plugin singletons, while `StorageProvider` owns view-scoped storage state and background queues.
 - Each mounted `NotebookNavigatorCalendarView` owns a calendar sidebar tree (`SettingsProvider` →
-  `ServicesProvider` → `CalendarRightSidebar`) without storage, selection, or expansion providers.
-- `ContentProviderRegistry` is created by `StorageProvider` inside navigator view trees (via
+  `UXPreferencesProvider` → `ServicesProvider` → `CalendarRightSidebar`) without `StorageProvider`, selection, or
+  expansion providers. When no navigator storage runtime is active, `CalendarRightSidebar` owns a markdown-only
+  `ContentProviderRegistry` for visible calendar notes.
+- The main `ContentProviderRegistry` is created by `StorageProvider` inside navigator view trees (via
   `useInitializeContentProviderRegistry`) and is stopped during teardown.
 - `IndexedDBStorage` is initialized once per vault via `initializeDatabase()` and is accessed through `getDBInstance()`.
 
-`StorageContext` owns the IndexedDB sync lifecycle and the background content pipeline through `ContentProviderRegistry`.
-The registry is created when a navigator view mounts and is stopped during teardown; it is not exposed through
-`ServicesContext`.
+`StorageContext` owns the IndexedDB sync lifecycle and the main background content pipeline through
+`ContentProviderRegistry`. The registry is created when a navigator view mounts and is stopped during teardown; it is not
+exposed through `ServicesContext`. The calendar sidebar fallback registry stops itself when a navigator storage runtime
+is active.
 
 See `docs/metadata-pipeline.md` (cache rebuild flow, content provider processing pipeline).
 
@@ -119,7 +122,9 @@ graph TB
         PreferencesController["PluginPreferencesController<br/>UX prefs + recent data"]
         WorkspaceCoordinator["WorkspaceCoordinator<br/>Navigator + calendar leaves"]
         HomepageController["HomepageController<br/>Homepage opening"]
+        FolderNoteSidebar["FolderNoteSidebarService<br/>Right-sidebar folder notes"]
         ExternalIcons["ExternalIconProviderController<br/>External icon packs"]
+        DebugLogging["DebugLoggingService<br/>Startup + processing diagnostics"]
         API["NotebookNavigatorAPI<br/>Public surface"]
     end
 
@@ -139,7 +144,9 @@ graph TB
     Plugin --> PreferencesController
     Plugin --> WorkspaceCoordinator
     Plugin --> HomepageController
+    Plugin --> FolderNoteSidebar
     Plugin --> ExternalIcons
+    Plugin --> DebugLogging
     Plugin --> API
 ```
 
@@ -171,7 +178,7 @@ graph TB
     ContentRegistry["ContentProviderRegistry<br/>Provider coordinator"]
 
     subgraph "Content Providers"
-        MarkdownPipelineProvider["MarkdownPipelineContentProvider<br/>Preview + word count + task counters + property pills + markdown feature images"]
+        MarkdownPipelineProvider["MarkdownPipelineContentProvider<br/>Preview + word/character counts + task counters + property pills + markdown feature images"]
         FileThumbnailsProvider["FeatureImageContentProvider<br/>PDF thumbnails + non-markdown processed markers"]
         MetadataProvider["MetadataContentProvider<br/>Frontmatter fields + hidden state"]
         TagProvider["TagContentProvider<br/>Tag extraction"]
@@ -183,9 +190,10 @@ graph TB
     ContentRegistry --> TagProvider
 ```
 
-`ContentProviderRegistry` is owned by `StorageContext`. The registry and its providers are created by
-`useInitializeContentProviderRegistry` when a navigator view mounts and are stopped during teardown. The registry is not
-exposed through `ServicesContext`.
+The main `ContentProviderRegistry` is owned by `StorageContext`. The registry and its providers are created by
+`useInitializeContentProviderRegistry` when a navigator view mounts and are stopped during teardown. The calendar
+right-sidebar fallback registry registers only `MarkdownPipelineContentProvider` and is owned by `CalendarRightSidebar`.
+Registries are not exposed through `ServicesContext`.
 
 ## Core Services
 
@@ -201,7 +209,7 @@ when `useFrontmatterMetadata` is enabled.
 
 - Folder metadata: colors, background colors, icons, sort overrides, custom appearances, folder note metadata detection, and folder-note frontmatter writes.
 - Tag metadata: colors, background colors, icons, sort overrides, custom appearances.
-- Property metadata: key/value node colors, backgrounds, icons, and child sort overrides.
+- Property metadata: key/value node colors, backgrounds, icons, list sort overrides, and child sort overrides.
 - File metadata: pinned notes, icons, colors, frontmatter writes/migration helpers, iconize conversion support.
 - Navigation separators: section, folder, tag, and property separator entries.
 - Metadata cleanup and summary reporting based on vault state.
@@ -221,7 +229,7 @@ when `useFrontmatterMetadata` is enabled.
   - Uses tag tree snapshots for cleanup.
 
 - **PropertyMetadataService** (`src/services/metadata/PropertyMetadataService.ts`)
-  - Tracks property key/value colors, backgrounds, icons, and child sort overrides.
+  - Tracks property key/value colors, backgrounds, icons, list sort overrides, and child sort overrides.
   - Normalizes property node ids and supports key/value-level metadata.
   - Validates settings-backed property metadata against configured property fields.
 
@@ -248,13 +256,17 @@ getFolderBackgroundColor(folderPath: string): string | undefined
 setFolderIcon(folderPath: string, iconId: string): Promise<void>
 removeFolderIcon(folderPath: string): Promise<void>
 getFolderIcon(folderPath: string): string | undefined
+setFolderStyle(folderPath: string, style: { icon?: string | null; color?: string | null; backgroundColor?: string | null }): Promise<void>
 setFolderStyleChangeListener(listener: ((folderPath: string) => void) | null): void
 getFolderDisplayData(folderPath: string): FolderDisplayData
 getFolderDisplayVersion(): number
 getFolderDisplayNameVersion(): number
-setFolderSortOverride(folderPath: string, sortOption: SortOption): Promise<void>
+setFolderSortOverride(folderPath: string, sortOverride: ListSortOverrideValue): Promise<void>
 removeFolderSortOverride(folderPath: string): Promise<void>
-getFolderSortOverride(folderPath: string): SortOption | undefined
+getFolderSortOverride(folderPath: string): ListSortOverrideValue | undefined
+setFolderChildSortOrderOverride(folderPath: string, sortOrder: AlphaSortOrder): Promise<void>
+removeFolderChildSortOrderOverride(folderPath: string): Promise<void>
+getFolderChildSortOrderOverride(folderPath: string): AlphaSortOrder | undefined
 handleFolderRename(oldPath: string, newPath: string): Promise<void>
 handleFolderDelete(folderPath: string): Promise<void>
 
@@ -271,10 +283,12 @@ removeTagIcon(tagPath: string): Promise<void>
 getTagIcon(tagPath: string): string | undefined
 handleTagRename(oldPath: string, newPath: string, preserveExisting?: boolean): Promise<void>
 handleTagDelete(tagPath: string): Promise<void>
-setTagSortOverride(tagPath: string, sortOption: SortOption): Promise<void>
+setTagSortOverride(tagPath: string, sortOverride: ListSortOverrideValue): Promise<void>
 removeTagSortOverride(tagPath: string): Promise<void>
-getTagSortOverride(tagPath: string): SortOption | undefined
+getTagSortOverride(tagPath: string): ListSortOverrideValue | undefined
 setTagChildSortOrderOverride(tagPath: string, sortOrder: AlphaSortOrder): Promise<void>
+removeTagChildSortOrderOverride(tagPath: string): Promise<void>
+getTagChildSortOrderOverride(tagPath: string): AlphaSortOrder | undefined
 
 // Property metadata
 setPropertyColor(nodeId: string, color: string): Promise<void>
@@ -287,6 +301,9 @@ getPropertyColorData(nodeId: string): PropertyColorData
 setPropertyIcon(nodeId: string, iconId: string): Promise<void>
 removePropertyIcon(nodeId: string): Promise<void>
 getPropertyIcon(nodeId: string): string | undefined
+setPropertySortOverride(nodeId: string, sortOverride: ListSortOverrideValue): Promise<void>
+removePropertySortOverride(nodeId: string): Promise<void>
+getPropertySortOverride(nodeId: string): ListSortOverrideValue | undefined
 setPropertyChildSortOrderOverride(nodeId: string, sortOrder: AlphaSortOrder): Promise<void>
 removePropertyChildSortOrderOverride(nodeId: string): Promise<void>
 getPropertyChildSortOrderOverride(nodeId: string): AlphaSortOrder | undefined
@@ -337,20 +354,34 @@ queue integration.
 - File and folder creation, rename, deletion, duplication.
 - Folder note conversion with conflict handling.
 - Tag/property-driven note creation and property assignment.
+- Manual sort placement for newly created notes in folder, tag, and property contexts.
 - Batch file moves with modal workflows and selection updates.
 - Canvas/base drawing creation and reveal helpers.
-- Command queue tracking for deletes and moves.
-- System actions such as reveal in explorer and version history.
+- Command queue tracking for deletes, moves, and folder renames.
+- System actions such as reveal in explorer, open in default app, and version history.
 
 **Key Methods:**
 
 ```typescript
 createNewFolder(parent: TFolder, onSuccess?: (path: string) => void): Promise<void>
-createNewFile(parent: TFolder): Promise<TFile | null>
-createNewFileForTag(tagPath: string, sourcePath?: string, openInNewTab?: boolean): Promise<TFile | null>
-createNewFileForProperty(propertyNodeId: string, sourcePath?: string, openInNewTab?: boolean): Promise<TFile | null>
-renameFolder(folder: TFolder, settings?: NotebookNavigatorSettings): Promise<void>
+createNewFile(parent: TFolder, openInNewTab?: boolean, manualSortContext?: ManualSortNewFilePlacementContext | null): Promise<TFile | null>
+createNewFileForTag(
+  tagPath: string,
+  sourcePath?: string,
+  openInNewTab?: boolean,
+  manualSortContext?: ManualSortNewFilePlacementContext | null
+): Promise<TFile | null>
+createNewFileForProperty(
+  propertyNodeId: string,
+  sourcePath?: string,
+  openInNewTab?: boolean,
+  manualSortContext?: ManualSortNewFilePlacementContext | null
+): Promise<TFile | null>
+renameFolderToName(folder: TFolder, newName: string, settings?: NotebookNavigatorSettings): Promise<boolean>
+renameFolderDisplayName(folder: TFolder, value: string, settings?: NotebookNavigatorSettings): Promise<boolean>
 renameFile(file: TFile): Promise<void>
+renameFileDisplayName(file: TFile, rawInput: string): Promise<boolean>
+renameFileToName(file: TFile, rawInput: string): Promise<boolean>
 deleteFolder(folder: TFolder, confirmBeforeDelete: boolean, onSuccess?: () => void): Promise<void>
 deleteFile(file: TFile, confirmBeforeDelete: boolean, onSuccess?: () => void, preDeleteAction?: () => Promise<void>): Promise<void>
 deleteSelectedFile(
@@ -380,17 +411,20 @@ moveFolderWithModal(
   | { status: 'cancelled' }
   | { status: 'error'; error: unknown }
 >
+moveFolderToTarget(folder: TFolder, targetFolder: TFolder): Promise<MoveFolderResult>
 
 convertFileToFolderNote(file: TFile, settings: NotebookNavigatorSettings): Promise<void>
+setFileAsFolderNote(file: TFile, settings: NotebookNavigatorSettings): Promise<void>
 
 deleteMultipleFiles(
   files: TFile[],
   confirmBeforeDelete: boolean,
   preDeleteAction?: () => void | Promise<void>
 ): Promise<void>
+trashFilesWithOpenLeafCleanup(files: readonly TFile[]): Promise<FileTrashResult>
 deleteFilesWithSmartSelection(
   selectedFiles: Set<string>,
-  allFiles: TFile[],
+  allFiles: readonly TFile[],
   selectionDispatch: SelectionDispatch,
   confirmBeforeDelete: boolean
 ): Promise<void>
@@ -399,23 +433,35 @@ createCanvas(parent: TFolder): Promise<TFile | null>
 createBase(parent: TFolder): Promise<TFile | null>
 createNewDrawing(parent: TFolder, type?: 'excalidraw' | 'tldraw'): Promise<TFile | null>
 applyPropertyNodeToFiles(propertyNodeId: string, files: readonly TFile[]): Promise<ApplyPropertyNodeResult>
+setManualSortNewFileContextProvider(provider: (() => ManualSortNewFilePlacementContext | null) | null): () => void
+getManualSortNewFileContextForTarget(
+  targetType: ManualSortNewFilePlacementContext['targetType'],
+  targetKey: string,
+  options?: { waitForSelectionUpdate?: boolean }
+): Promise<ManualSortNewFilePlacementContext | null>
 
 openVersionHistory(file: TFile): Promise<void>
 getRevealInSystemExplorerText(): string
 revealInSystemExplorer(file: TFile | TFolder): Promise<void>
+openInDefaultApp(file: TFile | TFolder): Promise<void>
 ```
 
 ### ContentProviderRegistry
 
-Coordinates background content providers that populate IndexedDB mirrors used by the UI. Owned by `StorageContext`.
+Coordinates background content providers that populate IndexedDB mirrors used by the UI. The main registry is owned by
+`StorageContext`; the calendar right-sidebar fallback owns a markdown-only registry while no navigator storage runtime is
+active.
 
 **Location:** `src/services/content/ContentProviderRegistry.ts`
 
-`StorageContext` creates the registry in `useInitializeContentProviderRegistry` (`src/context/storage/useInitializeContentProviderRegistry.ts`).
-That hook wires shared helpers used across providers:
+`StorageContext` creates the main registry in `useInitializeContentProviderRegistry`
+(`src/context/storage/useInitializeContentProviderRegistry.ts`). That hook wires shared helpers used across providers:
 
 - `ContentReadCache` (shared `vault.cachedRead()` cache)
 - `FeatureImageThumbnailRuntime` (shared thumbnail/external-request runtime for feature images)
+
+`CalendarRightSidebar` (`src/components/CalendarRightSidebar.tsx`) creates a fallback registry with only
+`MarkdownPipelineContentProvider` for visible calendar markdown files when `StorageProvider` is not mounted.
 
 **Responsibilities:**
 
@@ -443,7 +489,7 @@ stopAllProcessing(): void
 **Content Providers:**
 
 - **MarkdownPipelineContentProvider** (`src/services/content/MarkdownPipelineContentProvider.ts`)
-  - Generates markdown-derived content in a single pass (preview text, word count, task counters, property pills, markdown feature images).
+  - Generates markdown-derived content in a single pass (preview text, word/character counts, task counters, property pills, markdown feature images).
   - Extends `FeatureImageContentProvider`; uses its thumbnail helpers with local files and external references.
   - Uses Obsidian's metadata cache for frontmatter and frontmatter position offsets.
 
@@ -460,8 +506,8 @@ stopAllProcessing(): void
 
 ## Plugin-Managed Services
 
-These services live on the plugin instance and are surfaced to React code through specialized contexts or helper
-methods.
+These services live on the plugin instance and are surfaced to React code through specialized contexts, helper methods,
+or module-level helpers.
 
 ### RecentNotesService
 
@@ -523,6 +569,9 @@ plugin instance directly.
 
 **Location:** `src/services/icons/external/ExternalIconProviderController.ts`
 
+Lazily created when external icon providers are enabled or managed. If no external providers are enabled, startup only
+initializes `IconService` and registers `VaultIconProvider`.
+
 **Responsibilities:**
 
 - Manages install/update/removal flow for external icon packs.
@@ -569,6 +618,28 @@ revealFileInNearestFolder(file: TFile, options?: RevealFileOptions): void
 
 `revealFileInActualFolder(...)` is strict reveal behavior. Hidden files are not revealable while hidden items are off. In that case the view keeps its current folder, tag, or property context and may update selected file as fallback.
 
+### FolderNoteSidebarService
+
+**Location:** `src/services/workspace/FolderNoteSidebarService.ts`
+
+**Responsibilities:**
+
+- Maintains the right-sidebar companion leaf used by folder notes when `folderNoteOpenLocation` is `right-sidebar`.
+- Follows the selected folder when `showNearestFolderNoteInSidebar` is enabled.
+- Reuses restored companion leaves, prunes duplicate placeholder/folder-note leaves, and preserves the previous active leaf.
+- Suppresses recent-note tracking for background folder-note sidebar opens.
+
+**Key Methods:**
+
+```typescript
+start(): void
+dispose(): void
+handleWorkspaceReady(): void | Promise<void>
+isSuppressingSidebarOpen(path: string): boolean
+openFolderNote(folderNote: TFile): Promise<void>
+syncToSelectedFolder(folder: TFolder | null): Promise<void>
+```
+
 ### HomepageController
 
 **Location:** `src/services/workspace/HomepageController.ts`
@@ -583,6 +654,7 @@ revealFileInNearestFolder(file: TFile, options?: RevealFileOptions): void
 
 ```typescript
 resolveHomepageFile(): TFile | null
+canOpenHomepage(): boolean
 handleWorkspaceReady(options: { shouldActivateOnStartup: boolean }): Promise<void>
 open(trigger: 'startup' | 'command'): Promise<boolean>
 ```
@@ -593,7 +665,8 @@ open(trigger: 'startup' | 'command'): Promise<boolean>
 
 Provides the typed public API surface for external integrations and internal cross-context events.
 
-- Sub-APIs: `navigation`, `metadata`, `selection`, `menus` (`src/api/modules/*`)
+- Sub-APIs/helpers: `navigation`, `metadata`, `selection`, `menus`, `propertyNodes`, and `tagCollections`
+  (`src/api/modules/*`, `src/utils/virtualTagCollections.ts`)
 - Event bus: `on(...)`, `once(...)`, `off(...)` (`src/api/NotebookNavigatorAPI.ts`)
 - Storage readiness: `isStorageReady()` and `whenReady()` are public; internal readiness updates use the internal API bridge
 
@@ -663,8 +736,8 @@ Tracks in-flight operations so React code can batch updates and adjust behavior 
 
 **Responsibilities:**
 
-- Records move/delete operations, folder note opens, version history opens, new context opens, active file opens, and
-  homepage loads.
+- Records move/delete operations, folder renames, folder note opens, version history opens, new context opens,
+  background file opens, active file opens, and homepage loads.
 - Provides `onOperationChange` subscription for UI hooks.
 - Serializes open-active-file requests and tracks active operation state.
 
@@ -673,10 +746,12 @@ Tracks in-flight operations so React code can batch updates and adjust behavior 
 ```typescript
 enum OperationType {
   MOVE_FILE = 'move-file',
+  RENAME_FOLDER = 'rename-folder',
   DELETE_FILES = 'delete-files',
   OPEN_FOLDER_NOTE = 'open-folder-note',
   OPEN_VERSION_HISTORY = 'open-version-history',
   OPEN_IN_NEW_CONTEXT = 'open-in-new-context',
+  OPEN_BACKGROUND_FILE = 'open-background-file',
   OPEN_ACTIVE_FILE = 'open-active-file',
   OPEN_HOMEPAGE = 'open-homepage'
 }
@@ -691,21 +766,37 @@ getActiveOperations(): Operation[]
 clearAllOperations(): void
 
 isMovingFile(): boolean
+isRenamingFolder(): boolean
+isChangingFilePaths(): boolean
 isDeletingFiles(): boolean
 isOpeningFolderNote(): boolean
 isOpeningHomepage(): boolean
 isOpeningVersionHistory(): boolean
 isOpeningInNewContext(): boolean
+isBackgroundFileOpenInProgress(): boolean
+consumeBackgroundFileOpen(filePath: string, leaf: WorkspaceLeaf | null): boolean
+consumeBackgroundActiveLeafChange(leaf: WorkspaceLeaf | null): boolean
 
 executeMoveFiles(
   files: TFile[],
-  targetFolder: TFolder
-): Promise<CommandResult<{ movedCount: number; skippedCount: number; errors: { filePath: string; error: unknown }[] }>>
+  targetFolder: TFolder,
+  performMove: () => Promise<MoveFilesCommandData>
+): Promise<CommandResult<MoveFilesCommandData>>
+executeRenameFolder(folderPath: string, performRename: () => Promise<void>): Promise<CommandResult<void>>
 executeDeleteFiles(files: TFile[], performDelete: () => Promise<void>): Promise<CommandResult>
 executeOpenFolderNote(folderPath: string, openFile: () => Promise<void>): Promise<CommandResult>
 executeOpenVersionHistory(file: TFile, openHistory: () => Promise<void>): Promise<CommandResult>
 executeOpenInNewContext(file: TFile, context: PaneType, openFile: () => Promise<void>): Promise<CommandResult>
-executeOpenActiveFile(file: TFile, openFile: () => Promise<void>): Promise<CommandResult<{ skipped: boolean }>>
+executeBackgroundFileOpen(
+  file: TFile,
+  openFile: (targetLeaf: WorkspaceLeaf | null) => Promise<void>,
+  options?: { getLeaf?: () => WorkspaceLeaf | null }
+): Promise<CommandResult>
+executeOpenActiveFile(
+  file: TFile,
+  openFile: (targetLeaf: WorkspaceLeaf | null) => Promise<void>,
+  options?: { active?: boolean; getLeaf?: () => WorkspaceLeaf | null }
+): Promise<CommandResult<{ skipped: boolean }>>
 executeHomepageOpen(file: TFile, openFile: () => Promise<void>): Promise<CommandResult>
 ```
 
@@ -733,6 +824,7 @@ removeTagFromFiles(tag: string, files: TFile[]): Promise<number>
 clearAllTagsFromFiles(files: TFile[]): Promise<number>
 getTagsFromFiles(files: TFile[]): string[]
 promptRenameTag(tagPath: string): Promise<void>
+renameTag(tagPath: string, newTagPath: string): Promise<boolean>
 promoteTagToRoot(sourceTagPath: string): Promise<void>
 renameTagByDrag(sourceTagPath: string, targetTagPath: string): Promise<void>
 promptDeleteTag(tagPath: string): Promise<void>
@@ -756,6 +848,7 @@ Facade for property key rename/delete workflows across the vault.
 addPropertyKeyRenameListener(listener: (payload: PropertyKeyRenameEventPayload) => void): () => void
 addPropertyKeyDeleteListener(listener: (payload: PropertyKeyDeleteEventPayload) => void): () => void
 promptRenamePropertyKey(normalizedKey: string): Promise<void>
+renamePropertyKey(normalizedKey: string, newKey: string): Promise<boolean>
 promptDeletePropertyKey(normalizedKey: string): Promise<void>
 ```
 
@@ -833,6 +926,42 @@ getPendingNotice(): ReleaseUpdateNotice | null
 clearPendingNotice(): void
 ```
 
+### DebugLoggingService
+
+**Location:** `src/services/diagnostics/DebugLoggingService.ts`
+
+**Responsibilities:**
+
+- Tracks startup timing, storage readiness, and first user-visible UI timing when debug logging is enabled.
+- Records content-provider batch summaries and explicit diagnostic reports.
+- Writes debounced `nn-debug-*.md` files in the vault root and exposes module helpers used by startup/storage/content code.
+
+**Key Methods and Helpers:**
+
+```typescript
+// Instance methods
+initialize(): void
+dispose(): void
+isEnabled(): boolean
+isActive(): boolean
+getLogPath(): string
+setEnabled(enabled: boolean): void
+recordStartupEvent(event: string, details?: Record<string, unknown>): void
+recordStorageReady(details: Record<string, unknown>): void
+recordUserVisible(details?: Record<string, unknown>): void
+finishStartupReport(reason: string, details?: Record<string, unknown>): void
+logReport(title: string, details: Record<string, unknown>): void
+recordContentProviderBatch(summary: ContentProviderBatchSummary): void
+flush(): Promise<void>
+
+// Module helpers
+recordStartupDiagnostic(event: string, details?: Record<string, unknown>): void
+finishStartupDiagnostics(details: Record<string, unknown>): void
+recordStartupUserVisible(details?: Record<string, unknown>): void
+recordDebugReport(title: string, details: Record<string, unknown>): void
+recordContentProviderBatch(summary: ContentProviderBatchSummary): void
+```
+
 ## Dependency Injection
 
 Many storage and metadata helpers depend on small provider interfaces (`ISettingsProvider`, `ITagTreeProvider`,
@@ -852,6 +981,8 @@ interface ISettingsProvider {
   setRecentNotes(recentNotes: string[]): void;
   getRecentIcons(): Record<string, string[]>;
   setRecentIcons(recentIcons: Record<string, string[]>): void;
+  getCollapsedPinnedContexts(): CollapsedPinnedContexts;
+  updateCollapsedPinnedContexts(mutator: (record: CollapsedPinnedContexts) => boolean): boolean;
   getRecentColors(): string[];
   setRecentColors(recentColors: string[]): void;
 }
@@ -941,9 +1072,12 @@ this.propertyOperations = new PropertyOperations(
   this.app,
   () => this.settings,
   () => this.saveSettingsAndUpdate(),
-  () => this.propertyTreeService
+  () => this.propertyTreeService,
+  mutator => this.preferencesController.updateCollapsedPinnedContexts(mutator)
 );
 this.commandQueue = new CommandQueueService();
+this.folderNoteSidebarService = new FolderNoteSidebarService(this);
+this.folderNoteSidebarService.start();
 this.fileSystemOps = new FileSystemOperations(
   this.app,
   () => this.tagTreeService,
@@ -957,37 +1091,33 @@ this.fileSystemOps = new FileSystemOperations(
   this
 );
 this.omnisearchService = new OmnisearchService(this.app);
-if (this.settings.searchProvider === 'omnisearch' && !this.omnisearchService.isAvailable()) {
-  this.setSearchProvider('internal');
-}
 this.api = new NotebookNavigatorAPI(this, this.app);
 this.metadataService.setFolderStyleChangeListener(folderPath => {
-  if (!this.api) {
+  if (this.isUnloading || !this.api) {
     return;
   }
 
   this.api[INTERNAL_NOTEBOOK_NAVIGATOR_API].metadata.emitFolderChangedForPath(folderPath);
 });
 this.releaseCheckService = new ReleaseCheckService(this);
+recordStartupDiagnostic('services.initialized');
 
 const iconService = getIconService();
 iconService.registerProvider(new VaultIconProvider(this.app));
-this.externalIconController = new ExternalIconProviderController(this.app, iconService, this);
-const iconController = this.externalIconController;
-if (iconController) {
-  runAsyncAction(
-    async () => {
-      await iconController.initialize();
-      await iconController.syncWithSettings();
-    },
-    {
-      onError: (error: unknown) => {
-        console.error('External icon controller init failed:', error);
-      }
-    }
-  );
+if (this.hasEnabledExternalIconProviders()) {
+  this.syncExternalIconController();
 }
+
+this.registerSettingsUpdateListener('external-icon-controller', () => {
+  if (this.externalIconController || this.hasEnabledExternalIconProviders()) {
+    this.syncExternalIconController();
+  }
+});
 ```
+
+View registration, `registerNavigatorCommands(this)`, settings tab setup, and workspace events are registered after this
+block. `registerNavigatorCommands` registers command metadata at startup and lazy-loads
+`navigatorCommandHandlers.ts` when a command is checked or run.
 
 React mounts the navigator with dependency injection:
 
@@ -1013,10 +1143,11 @@ React mounts the navigator with dependency injection:
 </SettingsProvider>
 ```
 
-`StorageProvider` creates the `ContentProviderRegistry` during mount and registers all providers. View-scoped contexts
-(`ExpansionProvider`, `SelectionProvider`, `UIStateProvider`) own React state and are not service singletons. Processing
-starts when `StorageContext` queues files through `ContentProviderRegistry.queueFilesForAllProviders(...)` (which calls
-`startProcessing()` for each provider).
+`StorageProvider` creates the main `ContentProviderRegistry` during mount and registers all providers. View-scoped
+contexts (`ExpansionProvider`, `SelectionProvider`, `UIStateProvider`) own React state and are not service singletons.
+Processing starts when `StorageContext` queues files through `ContentProviderRegistry.queueFilesForAllProviders(...)`
+(which calls `startProcessing()` for each provider). The right-sidebar calendar creates its own markdown-only registry
+only while no navigator `StorageProvider` is mounted.
 
 ## Data Flow
 
@@ -1029,7 +1160,7 @@ starts when `StorageContext` queues files through `ContentProviderRegistry.queue
    with debounce timers, abort signals, and retry scheduling.
 3. **Processing**: Providers read vault data and produce updates:
    - Tags and metadata via `app.metadataCache.getFileCache()` (retries when cache data is missing)
-   - Preview text via `ContentReadCache` / `app.vault.cachedRead()` (skips oversized markdown reads via `LIMITS.markdown.maxReadBytes`)
+   - Preview text and word/character counts via `ContentReadCache` / `app.vault.cachedRead()` (skips oversized markdown reads via `LIMITS.markdown.maxReadBytes`)
    - Feature images via frontmatter properties, markdown body references, and attachment thumbnails (local + optional external URLs)
    - Metadata via `extractMetadataFromCache` and hidden-state checks against active vault profile hidden frontmatter properties
 4. **Database Updates**: Providers persist updates via `IndexedDBStorage.batchUpdateFileContentAndProviderProcessedMtimes(...)`
@@ -1052,8 +1183,8 @@ Triggered manually from **Settings → Notebook Navigator → Advanced → Clean
 
 1. User initiates an operation (create, rename, move, delete, duplicate).
 2. `FileSystemOperations` gathers input through modals when required.
-3. `CommandQueueService` wraps operations that coordinate workspace state (moves, deletes, folder note opens, version
-   history opens, new-context opens, active file opens, homepage opens).
+3. `CommandQueueService` wraps operations that coordinate workspace state (moves, folder renames, deletes, folder note
+   opens, version history opens, new-context opens, background file opens, active file opens, homepage opens).
 4. Vault mutations execute through `app.fileManager` (rename/move/trash/frontmatter) and `app.vault` (creates/reads).
 5. Selection state updates via helpers from `selectionUtils`.
 6. `StorageContext` observes vault events, records changes into IndexedDB, and rebuilds tag and property trees.
@@ -1065,14 +1196,17 @@ Triggered manually from **Settings → Notebook Navigator → Advanced → Clean
 2. `NotebookNavigatorPlugin` notifies settings listeners (`registerSettingsUpdateListener`) and open React views.
 3. `StorageContext` receives new settings and calls `ContentProviderRegistry.handleSettingsChange(old, new)` to stop
    providers, wait for idle batches, clear content when required, and re-queue work.
-4. Controllers that mirror settings state (for example `ExternalIconProviderController`) resync based on updated settings.
+4. Controllers that mirror settings state (for example the lazily-created `ExternalIconProviderController`) resync based
+   on updated settings.
 
 ### External Icon Pack Flow
 
-1. `NotebookNavigatorPlugin` initializes `IconService` via `getIconService()` and creates `ExternalIconProviderController`.
-2. `ExternalIconProviderController.initialize()` loads persisted provider state and prepares the icon asset database.
-3. `ExternalIconProviderController.syncWithSettings()` installs/removes providers based on settings and updates enablement.
-4. `IconService` publishes version changes; React code can subscribe via `useIconServiceVersion()`.
+1. `NotebookNavigatorPlugin` initializes `IconService` via `getIconService()` and registers `VaultIconProvider`.
+2. `syncExternalIconController()` lazily creates `ExternalIconProviderController` when external icon providers are
+   enabled or managed.
+3. `ExternalIconProviderController.initialize()` loads persisted provider state and prepares the icon asset database.
+4. `ExternalIconProviderController.syncWithSettings()` installs/removes providers based on settings and updates enablement.
+5. `IconService` publishes version changes; React code can subscribe via `useIconServiceVersion()`.
 
 ### Workspace and Vault Event Flow
 
@@ -1080,14 +1214,15 @@ Triggered manually from **Settings → Notebook Navigator → Advanced → Clean
 2. File opens update recent notes via `RecentNotesService.recordFileOpen`.
 3. Vault renames/deletes update metadata (`MetadataService.handle*`), recent note paths, hidden folder exact-match
    settings, and selection context file path tracking.
-4. Active-file auto-reveal after a rename skips moves initiated by the navigator (`CommandQueueService.isMovingFile()`).
+4. Active-file auto-reveal after a rename skips moves and folder renames initiated by the navigator
+   (`CommandQueueService.isChangingFilePaths()`).
 
 ## Service Patterns
 
-- **Singleton**: `IconService` and plugin-managed services are singleton instances; each mounted `StorageProvider` owns a `ContentProviderRegistry`.
+- **Singleton**: `IconService` and plugin-managed services are singleton instances; each mounted `StorageProvider` owns the main `ContentProviderRegistry`.
 - **Provider**: `ContentProviderRegistry` and `IconService` manage lists of registered providers.
 - **Delegation**: `MetadataService` delegates specialized work to folder/tag/property/file/separator sub-services.
 - **Bridge**: `TagTreeService` and `PropertyTreeService` bridge StorageContext data to non-React consumers.
 - **Observer**: `CommandQueueService`, `IconService`, recent data listeners, and `subscribeToNavigationSeparatorChanges()` publish state changes to the UI.
 - **Facade**: `TagOperations` and `PropertyOperations` wrap vault-wide rename/delete workflows.
-- **Controller**: `WorkspaceCoordinator`, `HomepageController`, and `ExternalIconProviderController` coordinate multi-step plugin flows.
+- **Controller**: `WorkspaceCoordinator`, `HomepageController`, `FolderNoteSidebarService`, and `ExternalIconProviderController` coordinate multi-step plugin flows.

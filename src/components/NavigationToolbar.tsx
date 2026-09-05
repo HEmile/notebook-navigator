@@ -22,7 +22,6 @@ import { useUXPreferenceActions, useUXPreferences } from '../context/UXPreferenc
 import { strings } from '../i18n';
 import { ServiceIcon } from './ServiceIcon';
 import { useNavigationActions } from '../hooks/useNavigationActions';
-import { hasHiddenItemSources } from '../utils/exclusionUtils';
 import { runAsyncAction } from '../utils/async';
 import { resolveUXIcon } from '../utils/uxIcons';
 
@@ -31,13 +30,15 @@ interface NavigationToolbarProps {
     onToggleRootFolderReorder?: () => void;
     rootReorderActive?: boolean;
     rootReorderDisabled?: boolean;
+    useFloatingLayout?: boolean;
 }
 
 export function NavigationToolbar({
     onTreeUpdateComplete,
     onToggleRootFolderReorder,
     rootReorderActive,
-    rootReorderDisabled
+    rootReorderDisabled,
+    useFloatingLayout = false
 }: NavigationToolbarProps) {
     const settings = useSettingsState();
     const uxPreferences = useUXPreferences();
@@ -49,12 +50,9 @@ export function NavigationToolbar({
 
     // Hook providing shared navigation actions (expand/collapse, folder creation, toggle visibility)
     const { shouldCollapseItems, handleExpandCollapseAll, handleNewFolder, handleToggleShowExcludedFolders } = useNavigationActions();
-    // Detects if any hidden folders, tags, or files are configured to determine if toggle should be shown
-    const hasHiddenItems = hasHiddenItemSources(settings);
-
     const showExpandCollapseButton = navigationVisibility.expandCollapse;
     const showCalendarButton = navigationVisibility.calendar && settings.calendarEnabled && settings.calendarPlacement !== 'right-sidebar';
-    const showHiddenItemsButton = navigationVisibility.hiddenItems && hasHiddenItems;
+    const showHiddenItemsButton = navigationVisibility.hiddenItems;
     const showRootReorderButton = navigationVisibility.rootReorder;
     const showNewFolderButton = navigationVisibility.newFolder;
 
@@ -70,95 +68,102 @@ export function NavigationToolbar({
         return null;
     }
 
+    const leftButtons = [
+        showExpandCollapseButton ? (
+            <button
+                key="expand-collapse"
+                className={leftButtonBaseClassName}
+                aria-label={shouldCollapseItems() ? strings.paneHeader.collapseAllFolders : strings.paneHeader.expandAllFolders}
+                onClick={() => {
+                    handleExpandCollapseAll();
+                    if (onTreeUpdateComplete) {
+                        window.requestAnimationFrame(() => {
+                            onTreeUpdateComplete();
+                        });
+                    }
+                }}
+                tabIndex={-1}
+            >
+                <ServiceIcon
+                    iconId={resolveUXIcon(settings.interfaceIcons, shouldCollapseItems() ? 'nav-collapse-all' : 'nav-expand-all')}
+                />
+            </button>
+        ) : null,
+        showHiddenItemsButton ? (
+            <button
+                key="hidden-items"
+                className={`${leftButtonBaseClassName}${showHiddenItems ? ' nn-mobile-toolbar-button-active' : ''}`}
+                aria-label={showHiddenItems ? strings.paneHeader.hideExcludedItems : strings.paneHeader.showExcludedItems}
+                onClick={() => {
+                    handleToggleShowExcludedFolders();
+                    if (onTreeUpdateComplete) {
+                        window.requestAnimationFrame(() => {
+                            onTreeUpdateComplete();
+                        });
+                    }
+                }}
+                tabIndex={-1}
+            >
+                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'nav-hidden-items')} />
+            </button>
+        ) : null,
+        showCalendarButton ? (
+            <button
+                key="calendar"
+                className={`${leftButtonBaseClassName}${isCalendarVisible ? ' nn-mobile-toolbar-button-active' : ''}`}
+                aria-label={isCalendarVisible ? strings.paneHeader.hideCalendar : strings.paneHeader.showCalendar}
+                onClick={toggleShowCalendar}
+                tabIndex={-1}
+            >
+                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'nav-calendar')} />
+            </button>
+        ) : null,
+        showRootReorderButton ? (
+            <button
+                key="root-reorder"
+                className={`${leftButtonBaseClassName}${rootReorderActive ? ' nn-mobile-toolbar-button-active' : ''}`}
+                aria-label={rootReorderActive ? strings.paneHeader.finishRootFolderReorder : strings.paneHeader.reorderRootFolders}
+                onClick={onToggleRootFolderReorder}
+                disabled={rootReorderDisabled}
+                tabIndex={-1}
+            >
+                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'nav-root-reorder')} />
+            </button>
+        ) : null
+    ].filter(Boolean);
+    const newFolderButton = showNewFolderButton ? (
+        <button
+            key="new-folder"
+            className="nn-mobile-toolbar-button nn-mobile-toolbar-button-circle"
+            aria-label={strings.paneHeader.newFolder}
+            onClick={() => {
+                runAsyncAction(() => handleNewFolder());
+            }}
+            disabled={!selectionState.selectedFolder}
+            tabIndex={-1}
+        >
+            <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'nav-new-folder')} />
+        </button>
+    ) : null;
+
+    if (!useFloatingLayout) {
+        return (
+            <div className="nn-mobile-toolbar">
+                {leftButtons}
+                {newFolderButton}
+            </div>
+        );
+    }
+
     return (
         <div className="nn-mobile-toolbar">
             <div className="nn-mobile-toolbar-left">
-                {leftButtonCount > 0 ? (
-                    <div className={leftGroupClassName}>
-                        {showExpandCollapseButton ? (
-                            <button
-                                className={leftButtonBaseClassName}
-                                aria-label={
-                                    shouldCollapseItems() ? strings.paneHeader.collapseAllFolders : strings.paneHeader.expandAllFolders
-                                }
-                                onClick={() => {
-                                    handleExpandCollapseAll();
-                                    if (onTreeUpdateComplete) {
-                                        requestAnimationFrame(() => {
-                                            onTreeUpdateComplete();
-                                        });
-                                    }
-                                }}
-                                tabIndex={-1}
-                            >
-                                <ServiceIcon
-                                    iconId={resolveUXIcon(
-                                        settings.interfaceIcons,
-                                        shouldCollapseItems() ? 'nav-collapse-all' : 'nav-expand-all'
-                                    )}
-                                />
-                            </button>
-                        ) : null}
-                        {showHiddenItemsButton ? (
-                            <button
-                                className={`${leftButtonBaseClassName}${showHiddenItems ? ' nn-mobile-toolbar-button-active' : ''}`}
-                                aria-label={showHiddenItems ? strings.paneHeader.hideExcludedItems : strings.paneHeader.showExcludedItems}
-                                onClick={() => {
-                                    handleToggleShowExcludedFolders();
-                                    if (onTreeUpdateComplete) {
-                                        requestAnimationFrame(() => {
-                                            onTreeUpdateComplete();
-                                        });
-                                    }
-                                }}
-                                disabled={!hasHiddenItems}
-                                tabIndex={-1}
-                            >
-                                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'nav-hidden-items')} />
-                            </button>
-                        ) : null}
-                        {showCalendarButton ? (
-                            <button
-                                className={`${leftButtonBaseClassName}${isCalendarVisible ? ' nn-mobile-toolbar-button-active' : ''}`}
-                                aria-label={isCalendarVisible ? strings.paneHeader.hideCalendar : strings.paneHeader.showCalendar}
-                                onClick={toggleShowCalendar}
-                                tabIndex={-1}
-                            >
-                                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'nav-calendar')} />
-                            </button>
-                        ) : null}
-                        {showRootReorderButton ? (
-                            <button
-                                className={`${leftButtonBaseClassName}${rootReorderActive ? ' nn-mobile-toolbar-button-active' : ''}`}
-                                aria-label={
-                                    rootReorderActive ? strings.paneHeader.finishRootFolderReorder : strings.paneHeader.reorderRootFolders
-                                }
-                                onClick={onToggleRootFolderReorder}
-                                disabled={rootReorderDisabled}
-                                tabIndex={-1}
-                            >
-                                <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'nav-root-reorder')} />
-                            </button>
-                        ) : null}
-                    </div>
-                ) : null}
+                {leftButtonCount > 0 ? <div className={leftGroupClassName}>{leftButtons}</div> : null}
             </div>
 
             {showNewFolderButton ? (
                 <div className="nn-mobile-toolbar-right">
-                    <div className="nn-mobile-toolbar-circle">
-                        <button
-                            className="nn-mobile-toolbar-button nn-mobile-toolbar-button-circle"
-                            aria-label={strings.paneHeader.newFolder}
-                            onClick={() => {
-                                runAsyncAction(() => handleNewFolder());
-                            }}
-                            disabled={!selectionState.selectedFolder}
-                            tabIndex={-1}
-                        >
-                            <ServiceIcon iconId={resolveUXIcon(settings.interfaceIcons, 'nav-new-folder')} />
-                        </button>
-                    </div>
+                    <div className="nn-mobile-toolbar-circle">{newFolderButton}</div>
                 </div>
             ) : null}
         </div>

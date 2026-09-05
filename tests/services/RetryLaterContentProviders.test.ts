@@ -24,6 +24,7 @@ import { TagContentProvider } from '../../src/services/content/TagContentProvide
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { NotebookNavigatorSettings } from '../../src/settings/types';
 import type { FileData } from '../../src/storage/IndexedDBStorage';
+import { getDrawingDirectFeatureImageKey } from '../../src/utils/drawingFeatureImages';
 import { setActivePropertyFields } from '../../src/utils/vaultProfiles';
 
 class TestTagContentProvider extends TagContentProvider {
@@ -35,12 +36,6 @@ class TestTagContentProvider extends TagContentProvider {
 class TestMarkdownPipelineContentProvider extends MarkdownPipelineContentProvider {
     async runProcessFile(file: TFile, fileData: FileData | null, settings: NotebookNavigatorSettings) {
         return await this.processFile({ file, path: file.path }, fileData, settings);
-    }
-}
-
-class TestExcalidrawMarkdownPipelineContentProvider extends TestMarkdownPipelineContentProvider {
-    protected async createExcalidrawThumbnail(_file: TFile): Promise<Blob | null> {
-        return new Blob(['excalidraw']);
     }
 }
 
@@ -388,7 +383,7 @@ describe('Content provider retry-later semantics', () => {
         const app = new App();
         app.metadataCache.getFileCache = () => ({});
 
-        const provider = new TestExcalidrawMarkdownPipelineContentProvider(app);
+        const provider = new TestMarkdownPipelineContentProvider(app);
         const file = new TFile();
         file.path = 'notes/sketch.md';
         file.extension = 'md';
@@ -399,7 +394,8 @@ describe('Content provider retry-later semantics', () => {
         const settings: NotebookNavigatorSettings = {
             ...DEFAULT_SETTINGS,
             showFilePreview: true,
-            showFeatureImage: true
+            showFeatureImage: true,
+            textCountDisplay: 'words'
         };
 
         const fileData: FileData = {
@@ -428,7 +424,7 @@ describe('Content provider retry-later semantics', () => {
         expect(result.update?.wordCount).toBe(0);
         expect(result.update?.taskTotal).toBe(0);
         expect(result.update?.taskUnfinished).toBe(0);
-        expect(result.update?.featureImageKey).toBe(`x:${file.path}@${file.stat.mtime}`);
+        expect(result.update?.featureImageKey).toBe(getDrawingDirectFeatureImageKey(file, 'excalidraw'));
         expect(result.update?.featureImage).toBeInstanceOf(Blob);
     });
 

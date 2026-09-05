@@ -17,13 +17,14 @@
  */
 
 import { TFile, TFolder, App } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../settings';
-import { isPdfFile, isPrimaryDocumentFile, shouldDisplayFile } from './fileTypeUtils';
+import type { NotebookNavigatorSettings } from '../settings/types';
+import { isGeneratedThumbnailFile, isPrimaryDocumentFile, shouldDisplayFile } from './fileTypeUtils';
 import {
     getActiveFileVisibility,
     getActiveHiddenFileNames,
     getActiveHiddenFileTags,
     getActiveHiddenFileProperties,
+    getHiddenFolderBoundaryMatcher,
     getActiveHiddenFolders,
     getHiddenFolderMatcher
 } from './vaultProfiles';
@@ -32,6 +33,8 @@ import { createHiddenTagVisibility } from './tagPrefixMatcher';
 import { type CachedFileTagsDB, getCachedFileTags } from './tagUtils';
 import { casefold, casefoldPreservingWhitespace, sortAndDedupeByComparator } from './recordUtils';
 import { normalizePropertyTreeValuePath } from './propertyUtils';
+import { isNonMarkdownDrawingFeatureImageFile, shouldHideDrawingCompanionImageFile } from './drawingFeatureImages';
+import { isDebugLogPath } from '../services/diagnostics/DebugLoggingService';
 
 interface FileFilterOptions {
     showHiddenItems?: boolean;
@@ -503,8 +506,12 @@ function matchesFolderPattern(folderName: string, pattern: string): boolean {
  * @param folderPath - The full folder path for path-based patterns (e.g., "root/archive")
  * @returns true if the folder should be excluded
  */
-export function shouldExcludeFolder(folderName: string, patterns: string[], folderPath?: string): boolean {
-    const pathMatcher = getHiddenFolderMatcher(patterns).matches;
+function matchesFolderExclusionPatterns(
+    folderName: string,
+    patterns: string[],
+    folderPath: string | undefined,
+    pathMatcher: (path: string) => boolean
+): boolean {
     const hasNamePattern = patterns.some(pattern => !pattern.startsWith('/') && matchesFolderPattern(folderName, pattern));
 
     if (hasNamePattern) {
@@ -517,6 +524,19 @@ export function shouldExcludeFolder(folderName: string, patterns: string[], fold
 
     const normalizedPath = folderPath.startsWith('/') ? folderPath : `/${folderPath}`;
     return pathMatcher(normalizedPath);
+}
+
+export function shouldExcludeFolder(folderName: string, patterns: string[], folderPath?: string): boolean {
+    return matchesFolderExclusionPatterns(folderName, patterns, folderPath, getHiddenFolderMatcher(patterns).matches);
+}
+
+/**
+ * Checks if a folder's notes should be omitted from parent folder aggregation.
+ * Uses the same name and path pattern syntax as shouldExcludeFolder, but path
+ * patterns match only the folder itself, not its descendants.
+ */
+export function shouldExcludeFolderFromDescendants(folderName: string, patterns: string[], folderPath?: string): boolean {
+    return matchesFolderExclusionPatterns(folderName, patterns, folderPath, getHiddenFolderBoundaryMatcher(patterns).matches);
 }
 
 /**
@@ -610,11 +630,12 @@ export function isPathInExcludedFolder(filePath: string, excludedFolderPatterns:
     if (!filePath || excludedFolderPatterns.length === 0) return false;
 
     const pathParts = filePath.split('/');
+    let folderPath = '';
     // Check each folder in the path (excluding the file name itself)
     for (let i = 0; i < pathParts.length - 1; i++) {
         const folderName = pathParts[i];
         // Build the folder path up to this point
-        const folderPath = pathParts.slice(0, i + 1).join('/');
+        folderPath = i === 0 ? folderName : `${folderPath}/${folderName}`;
         if (shouldExcludeFolder(folderName, excludedFolderPatterns, folderPath)) {
             return true;
         }
@@ -673,6 +694,7 @@ interface ExclusionFilterState {
     excludedPropertyMatcher: FrontmatterPropertyExclusionMatcher;
     excludedFolderPatterns: string[];
     includeHiddenItems: boolean;
+    hideDrawingPreviewImages: boolean;
     fileNameMatcher: HiddenFileNameMatcher | null;
     hiddenFileTagVisibility: ReturnType<typeof createHiddenTagVisibility> | null;
     db: CachedFileTagsDB | null;
@@ -692,6 +714,7 @@ function createExclusionFilterState(settings: NotebookNavigatorSettings, options
         excludedPropertyMatcher,
         excludedFolderPatterns: getActiveHiddenFolders(settings),
         includeHiddenItems,
+        hideDrawingPreviewImages: settings.hideDrawingPreviewImages,
         fileNameMatcher,
         hiddenFileTagVisibility,
         db
@@ -699,7 +722,23 @@ function createExclusionFilterState(settings: NotebookNavigatorSettings, options
 }
 
 function passesExclusionFilters(file: TFile, state: ExclusionFilterState, app: App): boolean {
-    const { excludedPropertyMatcher, excludedFolderPatterns, includeHiddenItems, fileNameMatcher, hiddenFileTagVisibility, db } = state;
+    const {
+        excludedPropertyMatcher,
+        excludedFolderPatterns,
+        includeHiddenItems,
+        hideDrawingPreviewImages,
+        fileNameMatcher,
+        hiddenFileTagVisibility,
+        db
+    } = state;
+
+    if (isDebugLogPath(file.path)) {
+        return false;
+    }
+
+    if (!includeHiddenItems && shouldHideDrawingCompanionImageFile(app, file, { hideDrawingPreviewImages })) {
+        return false;
+    }
 
     // Frontmatter based exclusion (markdown only)
     if (!includeHiddenItems && file.extension === 'md' && excludedPropertyMatcher.hasCriteria) {
@@ -741,9 +780,22 @@ export function getFilteredMarkdownFiles(app: App, settings: NotebookNavigatorSe
 }
 
 /**
- * Gets filtered indexable files from the vault (markdown + PDF).
+ * Creates a predicate that applies the same exclusion filters as `getFilteredMarkdownFiles`, used to
+ * test individual files without scanning the vault.
  */
-export function getFilteredMarkdownAndPdfFiles(app: App, settings: NotebookNavigatorSettings, options?: FileFilterOptions): TFile[] {
+export function createFileVisibilityChecker(
+    app: App,
+    settings: NotebookNavigatorSettings,
+    options?: FileFilterOptions
+): (file: TFile) => boolean {
+    const filterState = createExclusionFilterState(settings, options);
+    return (file: TFile) => passesExclusionFilters(file, filterState, app);
+}
+
+/**
+ * Gets filtered files that should be present in the storage cache.
+ */
+export function getFilteredIndexableFiles(app: App, settings: NotebookNavigatorSettings, options?: FileFilterOptions): TFile[] {
     if (!app || !settings) return [];
 
     const fileVisibility = getActiveFileVisibility(settings);
@@ -758,11 +810,12 @@ export function getFilteredMarkdownAndPdfFiles(app: App, settings: NotebookNavig
             continue;
         }
 
-        if (!isPdfFile(file)) {
+        const isNonMarkdownDrawingFile = isNonMarkdownDrawingFeatureImageFile(file);
+        if (!isGeneratedThumbnailFile(file) && !isNonMarkdownDrawingFile) {
             continue;
         }
 
-        if (!shouldDisplayFile(file, fileVisibility, app)) {
+        if (!isNonMarkdownDrawingFile && !shouldDisplayFile(file, fileVisibility, app)) {
             continue;
         }
 

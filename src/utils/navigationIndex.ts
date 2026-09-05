@@ -22,6 +22,15 @@ import { normalizeTagPath } from './tagUtils';
 
 export type NavigationIndexKey = string;
 
+interface NavigationRenderKeyItem {
+    key: string;
+    type: NavigationPaneItemType;
+}
+
+export function getNavigationItemRenderKey(item: NavigationRenderKeyItem): string {
+    return `${item.type}:${item.key}`;
+}
+
 /**
  * Normalizes a navigation path for index lookups.
  * Tags use lowercase paths. Folders pass through unchanged.
@@ -76,13 +85,11 @@ export function buildNavigationPathIndexMap(items: readonly CombinedNavigationIt
     return indexMap;
 }
 
-export interface IndentGuideItem {
-    key: string;
-    type: NavigationPaneItemType;
+export interface IndentGuideItem extends NavigationRenderKeyItem {
     level?: number;
 }
 
-function isIndentGuideTreeItem(item: IndentGuideItem): item is IndentGuideItem & { level: number } {
+function isIndentGuideTreeItem<TItem extends IndentGuideItem>(item: TItem): item is TItem & { level: number } {
     if (typeof item.level !== 'number') {
         return false;
     }
@@ -97,7 +104,10 @@ function isIndentGuideTreeItem(item: IndentGuideItem): item is IndentGuideItem &
     );
 }
 
-export function buildIndentGuideLevelsMap(sourceItems: readonly IndentGuideItem[]): Map<string, number[]> {
+export function buildIndentGuideLevelsMap<TItem extends IndentGuideItem>(
+    sourceItems: readonly TItem[],
+    getItemKey: (item: TItem) => string = item => item.key
+): Map<string, number[]> {
     const connectorMap = new Map<string, number[]>();
     const outlineItems = sourceItems.filter(isIndentGuideTreeItem);
     const activeAncestorLevels: number[] = [];
@@ -105,6 +115,8 @@ export function buildIndentGuideLevelsMap(sourceItems: readonly IndentGuideItem[
     const connectorLevelsCache = new Map<string, number[]>();
 
     outlineItems.forEach((item, index) => {
+        const itemKey = getItemKey(item);
+
         while (activeAncestorLevels.length > 0 && activeAncestorLevels[activeAncestorLevels.length - 1] >= item.level) {
             activeAncestorLevels.pop();
             activeConnectorKeys.pop();
@@ -114,11 +126,11 @@ export function buildIndentGuideLevelsMap(sourceItems: readonly IndentGuideItem[
             const chainKey = activeConnectorKeys[activeConnectorKeys.length - 1];
             const cachedLevels = connectorLevelsCache.get(chainKey);
             if (cachedLevels) {
-                connectorMap.set(item.key, cachedLevels);
+                connectorMap.set(itemKey, cachedLevels);
             } else {
                 const levels = [...activeAncestorLevels];
                 connectorLevelsCache.set(chainKey, levels);
-                connectorMap.set(item.key, levels);
+                connectorMap.set(itemKey, levels);
             }
         }
 

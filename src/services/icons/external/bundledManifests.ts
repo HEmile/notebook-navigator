@@ -66,7 +66,7 @@ export const BUNDLED_ICON_MANIFESTS: Record<ExternalIconProviderId, ExternalIcon
     },
 
     'simple-icons': {
-        version: '16.11.0',
+        version: '16.22.0',
         font: 'https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/simple-icons/SimpleIcons.woff2',
         metadata: 'https://raw.githubusercontent.com/johansan/notebook-navigator/main/icon-assets/simple-icons/simple-icons.json',
         fontMimeType: 'font/woff2',

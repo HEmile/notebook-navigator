@@ -18,12 +18,13 @@
 
 import { STORAGE_KEYS } from '../types';
 import { localStorage } from '../utils/localStorage';
+import { recordStartupDiagnostic } from '../services/diagnostics/DebugLoggingService';
 import type { ContentProviderType, FileContentType } from '../interfaces/IContentProvider';
 import { isMarkdownPath } from '../utils/fileTypeUtils';
 import { DEFAULT_FEATURE_IMAGE_CACHE_MAX, FEATURE_IMAGE_STORE_NAME, FeatureImageBlobStore } from './FeatureImageBlobStore';
 import { MemoryFileCache } from './MemoryFileCache';
 import { FeatureImageCoordinator } from './indexeddb/featureImageOps';
-import { PreviewTextCoordinator } from './indexeddb/previewTextOps';
+import { PreviewTextCoordinator, type PreviewTextBatchOp } from './indexeddb/previewTextOps';
 import { hydrateCacheFromMainStore } from './indexeddb/cacheHydration';
 import {
     DB_CONTENT_VERSION,
@@ -56,7 +57,7 @@ import {
 } from './indexeddb/contentMutationOperations';
 
 export { createDefaultFileData, METADATA_SENTINEL };
-export type { PropertyItem, PropertyValueKind, FeatureImageStatus, FileContentChange, FileData, PreviewStatus };
+export type { PropertyItem, PropertyValueKind, FeatureImageStatus, FileContentChange, FileData, PreviewStatus, PreviewTextBatchOp };
 
 interface IndexedDBStorageOptions {
     featureImageCacheMaxEntries?: number;
@@ -227,11 +228,14 @@ export class IndexedDBStorage {
         if (this.isClosing) {
             return;
         }
-        if (this.db) {
-            return;
-        }
+        // Check the init promise before the connection handle: `openDatabase()` assigns `this.db` when the
+        // connection opens, before cache hydration finishes. Returning on `this.db` alone lets concurrent
+        // callers proceed against a not-yet-hydrated memory cache.
         if (this.initPromise) {
             return this.initPromise;
+        }
+        if (this.db) {
+            return;
         }
 
         this.initPromise = this.checkSchemaAndInit().catch(error => {
@@ -276,25 +280,45 @@ export class IndexedDBStorage {
         const schemaChanged = storedSchemaVersion !== null && storedSchemaVersion !== currentSchemaVersion;
         const contentChanged = storedContentVersion !== null && storedContentVersion !== currentContentVersion;
         const schemaDowngrade = schemaChanged && storedSchemaVersion !== null && storedSchemaVersion > currentSchemaVersion;
+        const rebuildReasons: string[] = [];
+        if (schemaDowngrade) {
+            rebuildReasons.push('schemaDowngrade');
+        }
+        if (contentChanged) {
+            rebuildReasons.push('contentChanged');
+        }
+        if (schemaVersionUnknown) {
+            rebuildReasons.push('schemaVersionMissing');
+        }
+        if (contentVersionUnknown) {
+            rebuildReasons.push('contentVersionMissing');
+        }
+        recordStartupDiagnostic('indexedDb.versionCheck', {
+            storedSchemaVersion,
+            storedContentVersion,
+            currentSchemaVersion,
+            currentContentVersion,
+            rebuildReasons
+        });
 
         // Only downgrade schema changes require database recreation; upgrades are handled via onupgradeneeded.
         if (schemaChanged) {
             if (schemaDowngrade) {
-                console.log(
+                console.warn(
                     `Database schema version downgraded from ${storedSchemaVersion} to ${currentSchemaVersion}. Recreating database.`
                 );
                 await this.deleteDatabase();
             } else {
-                console.log(`Database schema version upgraded from ${storedSchemaVersion} to ${currentSchemaVersion}.`);
+                console.warn(`Database schema version upgraded from ${storedSchemaVersion} to ${currentSchemaVersion}.`);
             }
         } else if (schemaVersionUnknown) {
-            console.log(`Database schema version is missing. Rebuilding database.`);
+            console.warn(`Database schema version is missing. Rebuilding database.`);
         }
 
         if (contentChanged) {
-            console.log(`Content version changed from ${storedContentVersion} to ${currentContentVersion}. Rebuilding content.`);
+            console.warn(`Content version changed from ${storedContentVersion} to ${currentContentVersion}. Rebuilding content.`);
         } else if (contentVersionUnknown) {
-            console.log('Content version is missing. Rebuilding content.');
+            console.warn('Content version is missing. Rebuilding content.');
         }
 
         const needsRebuild = schemaDowngrade || contentChanged || schemaVersionUnknown || contentVersionUnknown;
@@ -305,19 +329,22 @@ export class IndexedDBStorage {
             await this.openDatabase(needsRebuild);
         } catch (error: unknown) {
             if (this.isVersionError(error)) {
-                console.log('Database version mismatch detected. Recreating database.');
+                console.warn('Database version mismatch detected. Recreating database.');
             } else {
                 console.error('Database open failed. Recreating database.', error);
             }
             this.pendingRebuildNotice = true;
+            recordStartupDiagnostic('indexedDb.open.recreate', { error });
             await this.deleteDatabase();
             await this.openDatabase(true);
         }
 
         // Clear and rebuild content if either version changed
         if (needsRebuild) {
+            if (!this.db) throw new Error('Database not initialized');
             // Clear all data to force rebuild
-            await this.clear();
+            await this.clearStores(this.db);
+            recordStartupDiagnostic('indexedDb.rebuildContent', { reasons: rebuildReasons });
         }
 
         localStorage.set(STORAGE_KEYS.databaseSchemaVersionKey, currentSchemaVersion.toString());
@@ -372,6 +399,7 @@ export class IndexedDBStorage {
     }
 
     private async openDatabase(skipCacheLoad: boolean = false): Promise<void> {
+        const openStartMs = performance.now();
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, DB_SCHEMA_VERSION);
 
@@ -418,6 +446,9 @@ export class IndexedDBStorage {
                 // Initialize the cache with all data from IndexedDB
                 if (skipCacheLoad) {
                     this.cache.resetToEmpty();
+                    recordStartupDiagnostic('indexedDb.cacheHydration.skipped', {
+                        elapsedMs: Math.round(performance.now() - openStartMs)
+                    });
                 } else {
                     try {
                         const db = this.db;
@@ -426,8 +457,14 @@ export class IndexedDBStorage {
                             resolve();
                             return;
                         }
+                        const hydrationStartMs = performance.now();
                         await hydrateCacheFromMainStore({ db, cache: this.cache });
+                        recordStartupDiagnostic('indexedDb.cacheHydration.complete', {
+                            elapsedMs: Math.round(performance.now() - hydrationStartMs),
+                            fileCount: this.cache.getFileCount()
+                        });
                     } catch (error: unknown) {
+                        recordStartupDiagnostic('indexedDb.cacheHydration.failed', { error });
                         console.error('[DB Cache] Failed to initialize cache:', error);
                         console.error(
                             '[DB Cache] IndexedDB cache hydration failed. Run Notebook Navigator: Rebuild cache to reset the database.'
@@ -450,9 +487,16 @@ export class IndexedDBStorage {
     async clear(): Promise<void> {
         await this.init();
         if (!this.db) throw new Error('Database not initialized');
+        return this.clearStores(this.db);
+    }
 
+    /**
+     * Clear all object stores on an already-open connection.
+     * Called directly during `checkSchemaAndInit()` where awaiting `init()` would deadlock on the pending init promise.
+     */
+    private async clearStores(db: IDBDatabase): Promise<void> {
         // Clear stores in one transaction to keep the cache consistent.
-        const transaction = this.db.transaction([STORE_NAME, FEATURE_IMAGE_STORE_NAME, PREVIEW_STORE_NAME], 'readwrite');
+        const transaction = db.transaction([STORE_NAME, FEATURE_IMAGE_STORE_NAME, PREVIEW_STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
         const blobStore = transaction.objectStore(FEATURE_IMAGE_STORE_NAME);
         const previewStore = transaction.objectStore(PREVIEW_STORE_NAME);
@@ -549,61 +593,6 @@ export class IndexedDBStorage {
     }
 
     /**
-     * Store or update a single file in the database.
-     *
-     * @param path - File path (key)
-     * @param data - File data to store
-     */
-    async setFile(path: string, data: FileData): Promise<void> {
-        await this.init();
-        if (!this.db) throw new Error('Database not initialized');
-
-        const transaction = this.db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-
-        return new Promise((resolve, reject) => {
-            const op = 'put';
-            let lastRequestError: DOMException | Error | null = null;
-            // Persist the main record without feature image blob data.
-            const sanitized = this.normalizeFileData({ ...data, featureImage: null });
-            const request = store.put(sanitized, path);
-            request.onerror = () => {
-                lastRequestError = request.error || null;
-                console.error('[IndexedDB] put failed', {
-                    store: STORE_NAME,
-                    path,
-                    name: request.error?.name,
-                    message: request.error?.message
-                });
-            };
-            transaction.oncomplete = () => {
-                this.cache.updateFile(path, sanitized);
-                resolve();
-            };
-            transaction.onabort = () => {
-                console.error('[IndexedDB] transaction aborted', {
-                    store: STORE_NAME,
-                    op,
-                    path,
-                    txError: transaction.error?.message,
-                    reqError: lastRequestError?.message
-                });
-                this.rejectWithTransactionError(reject, transaction, lastRequestError, 'Transaction aborted');
-            };
-            transaction.onerror = () => {
-                console.error('[IndexedDB] transaction error', {
-                    store: STORE_NAME,
-                    op,
-                    path,
-                    txError: transaction.error?.message,
-                    reqError: lastRequestError?.message
-                });
-                this.rejectWithTransactionError(reject, transaction, lastRequestError, 'Transaction error');
-            };
-        });
-    }
-
-    /**
      * Delete a single file from the database by path.
      *
      * @param path - File path to delete
@@ -694,8 +683,12 @@ export class IndexedDBStorage {
     }
 
     /**
-     * Store or update multiple files in the database.
-     * More efficient than multiple setFile calls.
+     * Store or update multiple files in the database in one transaction.
+     *
+     * Does not update the memory cache: callers (the rename flush) seed the memory mirror before
+     * persisting. A completion-time re-stamp could otherwise run after, and overwrite, a cache
+     * reconciliation performed by another store's completion callback (for example the preview
+     * mover's status downgrade for a missing record).
      *
      * @param files - Array of file data with paths to store
      */
@@ -733,7 +726,6 @@ export class IndexedDBStorage {
             });
 
             transaction.oncomplete = () => {
-                this.cache.batchUpdate(sanitizedFiles);
                 resolve();
             };
             transaction.onabort = () => {
@@ -1018,6 +1010,9 @@ export class IndexedDBStorage {
                 (type === 'featureImage' && (data.featureImageKey === null || data.featureImageStatus === 'unprocessed')) ||
                 (type === 'metadata' && isMarkdownPath(path) && data.metadata === null) ||
                 (type === 'wordCount' && isMarkdownPath(path) && data.wordCount === null) ||
+                (type === 'characterCount' &&
+                    isMarkdownPath(path) &&
+                    (data.characterCountWithSpaces === null || data.characterCountWithoutSpaces === null)) ||
                 (type === 'tasks' && isMarkdownPath(path) && (data.taskTotal === null || data.taskUnfinished === null)) ||
                 (type === 'properties' && isMarkdownPath(path) && data.properties === null)
             ) {
@@ -1037,6 +1032,7 @@ export class IndexedDBStorage {
         const needsFeatureImage = types.includes('featureImage');
         const needsMetadata = types.includes('metadata');
         const needsWordCount = types.includes('wordCount');
+        const needsCharacterCount = types.includes('characterCount');
         const needsTasks = types.includes('tasks');
         const needsProperties = types.includes('properties');
 
@@ -1049,6 +1045,9 @@ export class IndexedDBStorage {
                 (needsFeatureImage && (data.featureImageKey === null || data.featureImageStatus === 'unprocessed')) ||
                 (needsMetadata && isMarkdown && data.metadata === null) ||
                 (needsWordCount && isMarkdown && data.wordCount === null) ||
+                (needsCharacterCount &&
+                    isMarkdown &&
+                    (data.characterCountWithSpaces === null || data.characterCountWithoutSpaces === null)) ||
                 (needsTasks && isMarkdown && (data.taskTotal === null || data.taskUnfinished === null)) ||
                 (needsProperties && isMarkdown && data.properties === null)
             ) {
@@ -1210,7 +1209,9 @@ export class IndexedDBStorage {
      *
      * @param type - Type of content to clear or 'all'
      */
-    async batchClearAllFileContent(type: 'preview' | 'featureImage' | 'metadata' | 'tags' | 'properties' | 'all'): Promise<void> {
+    async batchClearAllFileContent(
+        type: 'preview' | 'featureImage' | 'metadata' | 'tags' | 'wordCount' | 'characterCount' | 'properties' | 'all'
+    ): Promise<void> {
         await this.init();
         if (!this.db) throw new Error('Database not initialized');
         await runBatchClearAllFileContent(
@@ -1323,17 +1324,6 @@ export class IndexedDBStorage {
     }
 
     /**
-     * Batch update or add multiple files in the database.
-     * More efficient than multiple setFile calls.
-     * Updates cache after successful database writes.
-     *
-     * @param files - Array of file data with paths to store
-     */
-    async batchUpdate(files: { path: string; data: FileData }[]): Promise<void> {
-        await this.setFiles(files);
-    }
-
-    /**
      * Clear database and reinitialize.
      * Used when vault structure changes significantly.
      */
@@ -1387,18 +1377,6 @@ export class IndexedDBStorage {
     }
 
     /**
-     * Starts warming the preview text LRU cache in the background.
-     * Safe to call multiple times; warmup only runs once per session.
-     */
-    startPreviewTextWarmup(): void {
-        this.previewTexts.startPreviewTextWarmup();
-    }
-
-    async deletePreviewText(path: string): Promise<void> {
-        await this.previewTexts.deletePreviewText(path);
-    }
-
-    /**
      * Get tags from memory cache, returning empty array if none.
      * Helper method for UI components that need tag data.
      *
@@ -1437,17 +1415,17 @@ export class IndexedDBStorage {
     }
 
     /**
-     * Move a feature image blob between paths.
+     * Move a rename burst's feature image blobs in one transaction, replayed in vault event order.
      */
-    async moveFeatureImageBlob(oldPath: string, newPath: string): Promise<void> {
-        await this.featureImages.moveBlob(oldPath, newPath);
+    async moveFeatureImageBlobs(moves: { oldPath: string; newPath: string }[]): Promise<boolean> {
+        return this.featureImages.moveBlobs(moves);
     }
 
     /**
-     * Move preview text between paths.
+     * Apply a rename burst's preview store moves and deletes in one transaction, replayed in vault event order.
      */
-    async movePreviewText(oldPath: string, newPath: string): Promise<void> {
-        await this.previewTexts.movePreviewText(oldPath, newPath);
+    async movePreviewTexts(ops: PreviewTextBatchOp[]): Promise<void> {
+        await this.previewTexts.movePreviewTexts(ops);
     }
 
     /**

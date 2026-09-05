@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useCallback, type RefObject } from 'react';
+import { useCallback, type MutableRefObject } from 'react';
 import type { App, TFile } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../../settings';
-import { getFilteredMarkdownAndPdfFiles, getFilteredMarkdownFiles } from '../../utils/fileFilters';
+import type { NotebookNavigatorSettings } from '../../settings/types';
+import { getFilteredIndexableFiles, getFilteredMarkdownFiles } from '../../utils/fileFilters';
 
 /**
  * Provides file lists used by the storage layer.
@@ -31,7 +31,7 @@ import { getFilteredMarkdownAndPdfFiles, getFilteredMarkdownFiles } from '../../
  */
 export function useStorageFileQueries(params: {
     app: App;
-    latestSettingsRef: RefObject<NotebookNavigatorSettings>;
+    latestSettingsRef: MutableRefObject<NotebookNavigatorSettings>;
     showHiddenItems: boolean;
 }): { getVisibleMarkdownFiles: () => TFile[]; getIndexableFiles: () => TFile[] } {
     const { app, latestSettingsRef, showHiddenItems } = params;
@@ -41,10 +41,10 @@ export function useStorageFileQueries(params: {
         return getFilteredMarkdownFiles(app, latestSettingsRef.current, { showHiddenItems });
     }, [app, latestSettingsRef, showHiddenItems]);
 
-    // Indexes markdown + PDF regardless of the current UI visibility toggle. Hidden items can still contribute
+    // Indexes storage-backed file types regardless of the current UI visibility toggle. Hidden items can still contribute
     // to background content generation and are available immediately if the user enables "show hidden items".
     const getIndexableFiles = useCallback((): TFile[] => {
-        return getFilteredMarkdownAndPdfFiles(app, latestSettingsRef.current, { showHiddenItems: true });
+        return getFilteredIndexableFiles(app, latestSettingsRef.current, { showHiddenItems: true });
     }, [app, latestSettingsRef]);
 
     return { getVisibleMarkdownFiles, getIndexableFiles };

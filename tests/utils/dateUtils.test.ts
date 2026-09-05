@@ -168,18 +168,42 @@ describe('DateUtils.formatLocalizedMonthDay', () => {
     });
 });
 
+describe('DateUtils.getDateGroupInfo', () => {
+    it('returns the label and stable key from one grouping pass', () => {
+        const referenceDate = new Date(2026, 2, 7, 12, 0, 0, 0);
+        const timestamp = new Date(2026, 2, 7, 8, 30, 0, 0).getTime();
+
+        const group = DateUtils.getDateGroupInfo(timestamp, referenceDate);
+
+        expect(group).toEqual({
+            label: 'Today',
+            key: 'relative:today'
+        });
+        expect(DateUtils.getDateGroup(timestamp, referenceDate)).toBe(group.label);
+    });
+
+    it.each([
+        ['tomorrow', new Date(2026, 2, 8, 8, 30, 0, 0)],
+        ['a later month in the current year', new Date(2026, 7, 15, 8, 30, 0, 0)],
+        ['a later year', new Date(2027, 0, 1, 8, 30, 0, 0)]
+    ])('groups %s under the future group', (_description, date) => {
+        const referenceDate = new Date(2026, 2, 7, 12, 0, 0, 0);
+
+        expect(DateUtils.getDateGroupInfo(date.getTime(), referenceDate)).toEqual({
+            label: 'Future',
+            key: 'relative:future'
+        });
+    });
+});
+
 describe('DateUtils.parseFrontmatterDate', () => {
     beforeEach(() => {
-        Object.defineProperty(globalThis, 'window', {
-            value: createMomentStub(),
-            writable: true,
-            configurable: true
-        });
+        vi.stubGlobal('window', createMomentStub());
         getLanguageMock.mockReturnValue('en');
     });
 
     afterEach(() => {
-        delete (globalThis as { window?: unknown }).window;
+        vi.unstubAllGlobals();
         resetMomentApiCacheForTests();
         getLanguageMock.mockReturnValue('en');
         getLanguageMock.mockClear();

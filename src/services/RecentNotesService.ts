@@ -18,8 +18,8 @@
 
 import { TFile, TFolder } from 'obsidian';
 import type { ISettingsProvider } from '../interfaces/ISettingsProvider';
-import { DEFAULT_SETTINGS } from '../settings';
-import { isFolderNote } from '../utils/folderNotes';
+import { DEFAULT_SETTINGS } from '../settings/defaultSettings';
+import { isFolderNote } from '../utils/folderNoteLookup';
 
 /**
  * Manages the recent notes list stored in vault-local storage
@@ -67,7 +67,6 @@ export class RecentNotesService {
 
         return isFolderNote(file, parent, {
             enableFolderNotes: true,
-            folderNoteName: this.settingsProvider.settings.folderNoteName,
             folderNoteNamePattern: this.settingsProvider.settings.folderNoteNamePattern
         });
     }

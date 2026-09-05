@@ -35,7 +35,7 @@
  * - **Stabilization**: Handles rapid consecutive rebuilds gracefully
  *
  * ## Handles:
- * - Virtual list initialization with dynamic heights
+ * - Virtual list initialization with estimated item heights
  * - Folder/tag navigation with file preservation
  * - Configuration changes (descendants, appearance)
  * - Mobile drawer visibility
@@ -44,40 +44,48 @@
  * - Sticky header tracking for date groups
  */
 
-import { useRef, useCallback, useEffect, useState, useMemo } from 'react';
-import { TFile, TFolder } from 'obsidian';
+import { useRef, useCallback, useEffect, useLayoutEffect, useState, useMemo } from 'react';
+import { TFile, TFolder, type App } from 'obsidian';
 import { useVirtualizer, Virtualizer } from '@tanstack/react-virtual';
 import { useServices } from '../context/ServicesContext';
 import { useFileCache } from '../context/StorageContext';
 import { ListPaneItemType, OVERSCAN } from '../types';
 import { Align, ListScrollIntent, getListAlign, rankListPending } from '../types/scroll';
 import type { ListPaneItem } from '../types/virtualization';
-import type { NotebookNavigatorSettings } from '../settings';
-import type { NotePropertyType } from '../settings/types';
-import type { SelectionState } from '../context/SelectionContext';
-import { getEffectiveSortOption } from '../utils/sortUtils';
+import { showsCharacterCount, showsWordCount, type NotebookNavigatorSettings, type SortOption } from '../settings/types';
+import type { FileContentChange, FileData, IndexedDBStorage } from '../storage/IndexedDBStorage';
+import type { SelectionDispatch, SelectionState } from '../context/SelectionContext';
 import { calculateCompactListMetrics } from '../utils/listPaneMetrics';
-import { getExtensionSuffix } from '../utils/fileTypeUtils';
 import {
-    estimateRenderedTextRows,
-    getFileItemLayoutState,
+    estimateFileRowHeight,
+    type FileRowHeightConfig,
+    type FileRowHeightInputs,
     getSelectedPropertyValuePillToHide,
     getSelectedTagPillToHide,
     hasVisibleTagPills,
+    getListPaneHeaderHeight,
     getListPaneMeasurements,
     getPropertyRowCount,
-    isListPaneCompactMode,
+    shouldShowExtensionBadgeThumbnail,
     shouldShowFeatureImageArea,
-    shouldShowFileItemParentFolderLine
+    shouldShowFileItemParentFolderLine,
+    shouldShowFileItemTaskProgress
 } from '../utils/listPaneMeasurements';
 import type { PropertySelectionNodeId } from '../utils/propertyTree';
 import { getCachedFileTags } from '../utils/tagUtils';
 import type { HiddenTagVisibility } from '../utils/tagPrefixMatcher';
+import { getDrawingFeatureImageSource, resolveDrawingFeatureImageFileForProvider } from '../utils/drawingFeatureImages';
+import { useThemeMode } from './useThemeMode';
+import type { ThemeMode } from '../utils/themeMode';
+import { getListSortOverrideForSelection, resolveListSort } from '../utils/sortUtils';
+import type { ListPaneAppearanceSettings } from '../settings/listPaneAppearance';
 
 /**
  * Parameters for the useListPaneScroll hook
  */
 interface UseListPaneScrollParams {
+    /** Whether scroll orchestration and the virtualizer are active */
+    enabled?: boolean;
     /** List items to be rendered in the virtual list */
     listItems: ListPaneItem[];
     /** Map from file paths to their index in listItems */
@@ -95,20 +103,13 @@ interface UseListPaneScrollParams {
     /** Plugin settings */
     settings: NotebookNavigatorSettings;
     /** Effective settings for the current folder */
-    folderSettings: {
-        titleRows: number;
-        previewRows: number;
-        notePropertyType: NotePropertyType;
-        showDate: boolean;
-        showPreview: boolean;
-        showImage: boolean;
-    };
+    folderSettings: ListPaneAppearanceSettings;
     /** Whether the list pane is currently visible */
     isVisible: boolean;
     /** Current selection state */
     selectionState: SelectionState;
     /** Selection state dispatcher */
-    selectionDispatch: (action: { type: string; [key: string]: unknown }) => void;
+    selectionDispatch: SelectionDispatch;
     /** Current search query (undefined if search is not active) */
     searchQuery?: string;
     /** Suppress scroll-to-top behavior after search filtering (used for mobile shortcuts) */
@@ -117,6 +118,8 @@ interface UseListPaneScrollParams {
     topSpacerHeight: number;
     /** Whether descendant notes should be shown */
     includeDescendantNotes: boolean;
+    /** Signature that changes when any list group collapse state changes */
+    groupCollapseStateSignature: string;
     /** Visible frontmatter property keys for file list rows (normalized keys) */
     visiblePropertyKeys: ReadonlySet<string>;
     /** Stable key signature for visible frontmatter property keys */
@@ -134,6 +137,88 @@ interface UseListPaneScrollParams {
     scrollPaddingEnd?: number;
     /** Called when the virtualizer scrolling state changes */
     onVirtualizerScrollingChange?: (isScrolling: boolean, scrollElement: HTMLDivElement | null) => void;
+    /** Called when the physical scroll container is hidden or shown */
+    onScrollContainerVisibilityChange?: (isVisible: boolean, scrollElement: HTMLDivElement | null) => void;
+}
+
+type ListPaneAppearanceLayoutSettings = UseListPaneScrollParams['folderSettings'];
+type PendingScroll =
+    | {
+          type: 'file';
+          filePath: string;
+          reason?: ListScrollIntent;
+          minIndexVersion?: number;
+      }
+    | {
+          type: 'top';
+          reason?: ListScrollIntent;
+          minIndexVersion?: number;
+      };
+
+/**
+ * A file request becomes stale when selection moves to another file or is cleared. A current
+ * selection can remain absent from the index while an asynchronous search finishes or a collapsed group expands.
+ */
+export function isPendingFileScrollStale(pending: PendingScroll, selectedFilePath: string | null): boolean {
+    return pending.type === 'file' && pending.filePath !== selectedFilePath;
+}
+
+type ListLayoutSignatureSettings = Pick<
+    NotebookNavigatorSettings,
+    | 'compactItemHeight'
+    | 'compactItemHeightScaleText'
+    | 'showFilePropertiesInCompactMode'
+    | 'showPropertiesOnSeparateRows'
+    | 'textCountPlacement'
+    | 'characterCountSpaces'
+    | 'hideFileTaskProgressWhenComplete'
+    | 'showSelectedNavigationPills'
+>;
+
+export interface ListFileRowSizingConfig extends FileRowHeightConfig {
+    isCompactMode: boolean;
+    tagsBaseEnabled: boolean;
+    frontmatterPropertyRowsPossible: boolean;
+    propertyRowsPossible: boolean;
+    showTextCountProperty: boolean;
+    showWordCountProperty: boolean;
+    showCharacterCountProperty: boolean;
+    showFileProperties: boolean;
+    showPropertiesOnSeparateRows: boolean;
+    showFilePropertiesInCompactMode: boolean;
+    characterCountSpaces: NotebookNavigatorSettings['characterCountSpaces'];
+    showParentFolder: boolean;
+    showTaskProgress: boolean;
+    hideTaskProgressWhenComplete: boolean;
+    selectionType: SelectionState['selectionType'];
+    includeDescendantNotes: boolean;
+    selectedTagToHide: string | null;
+    selectedPropertyValueNodeIdToHide: string | null;
+    hiddenTagVisibility: HiddenTagVisibility;
+    visiblePropertyKeys: ReadonlySet<string>;
+    themeMode: ThemeMode;
+}
+
+export type ListRowHeightAffectingContentChangeConfig = Pick<
+    ListFileRowSizingConfig,
+    | 'showPreview'
+    | 'showImage'
+    | 'tagsBaseEnabled'
+    | 'frontmatterPropertyRowsPossible'
+    | 'showWordCountProperty'
+    | 'showCharacterCountProperty'
+    | 'characterCountSpaces'
+    | 'showTaskProgress'
+    | 'hideTaskProgressWhenComplete'
+>;
+
+interface ResolveListFileRowHeightInputsParams {
+    app: App;
+    db: IndexedDBStorage;
+    hasPreview: (path: string) => boolean;
+    item: ListPaneItem;
+    file: TFile;
+    config: ListFileRowSizingConfig;
 }
 
 /**
@@ -148,6 +233,379 @@ interface UseListPaneScrollResult {
     scrollContainerRefCallback: (element: HTMLDivElement | null) => void;
     /** Handler to scroll to top (mobile header tap) */
     handleScrollToTop: () => void;
+    /** Scrolls a list index into view while accounting for overlay chrome */
+    scrollToIndexSafely: (index: number, align: Align) => void;
+}
+
+// Path-index maps can be recreated with the same contents. Keep indexVersion tied to effective mapping changes.
+function areFilePathIndexMapsEqual(previous: ReadonlyMap<string, number>, next: ReadonlyMap<string, number>): boolean {
+    if (previous === next) {
+        return true;
+    }
+    if (previous.size !== next.size) {
+        return false;
+    }
+    for (const [path, index] of next) {
+        if (previous.get(path) !== index) {
+            return false;
+        }
+    }
+    return true;
+}
+
+interface ListLayoutSignatureParams {
+    topSpacerHeight: number;
+    folderSettings: ListPaneAppearanceLayoutSettings;
+    settings: ListLayoutSignatureSettings;
+    themeMode: ThemeMode;
+    selectionType: SelectionState['selectionType'];
+    selectedTagToHide: string | null;
+    selectedPropertyValueNodeIdToHide: string | null;
+    includeDescendantNotes: boolean;
+    hiddenTagVisibilitySignature: string;
+    visiblePropertyKeySignature: string;
+    listMeasurements: ReturnType<typeof getListPaneMeasurements>;
+}
+
+interface ScrollPreservationSignatureParams {
+    includeDescendantNotes: boolean;
+    listLayoutSignature: string;
+    groupBy: ListPaneAppearanceLayoutSettings['groupBy'];
+    noteGrouping: NotebookNavigatorSettings['noteGrouping'];
+    stickyGroupHeaders: NotebookNavigatorSettings['stickyGroupHeaders'];
+    effectiveSort: SortOption;
+    propertySortKey: string;
+    propertySortSecondary: NotebookNavigatorSettings['propertySortSecondary'];
+}
+
+interface PreviousScrollPreservationConfig {
+    signature: string;
+    includeDescendantNotes: boolean;
+}
+
+function getHiddenTagVisibilitySignature(hiddenTagVisibility: HiddenTagVisibility): string {
+    const { matcher } = hiddenTagVisibility;
+    return JSON.stringify({
+        shouldFilterHiddenTags: hiddenTagVisibility.shouldFilterHiddenTags,
+        matcher: {
+            prefixes: matcher.prefixes,
+            startsWithNames: matcher.startsWithNames,
+            endsWithNames: matcher.endsWithNames,
+            pathPatterns: matcher.pathPatterns
+        }
+    });
+}
+
+function getListLayoutSignature({
+    topSpacerHeight,
+    folderSettings,
+    settings,
+    themeMode,
+    selectionType,
+    selectedTagToHide,
+    selectedPropertyValueNodeIdToHide,
+    includeDescendantNotes,
+    hiddenTagVisibilitySignature,
+    visiblePropertyKeySignature,
+    listMeasurements
+}: ListLayoutSignatureParams): string {
+    return JSON.stringify({
+        spacers: {
+            topSpacerHeight
+        },
+        environment: {
+            themeMode
+        },
+        appearance: {
+            mode: folderSettings.mode,
+            titleRows: folderSettings.titleRows,
+            previewRows: folderSettings.previewRows,
+            groupBy: folderSettings.groupBy,
+            showDate: folderSettings.showDate,
+            showParentFolder: folderSettings.showParentFolder,
+            showPreview: folderSettings.showPreview,
+            showImage: folderSettings.showImage,
+            showTags: folderSettings.showTags,
+            showProperties: folderSettings.showProperties,
+            showTaskProgress: folderSettings.showTaskProgress,
+            textCountDisplay: folderSettings.textCountDisplay
+        },
+        rowContent: {
+            showFilePropertiesInCompactMode: settings.showFilePropertiesInCompactMode,
+            showPropertiesOnSeparateRows: settings.showPropertiesOnSeparateRows,
+            textCountPlacement: settings.textCountPlacement,
+            characterCountSpaces: settings.characterCountSpaces,
+            showSelectedNavigationPills: settings.showSelectedNavigationPills,
+            visiblePropertyKeySignature,
+            hideFileTaskProgressWhenComplete: settings.hideFileTaskProgressWhenComplete,
+            selectionType: selectionType ?? null,
+            selectedTagToHide,
+            selectedPropertyValueNodeIdToHide,
+            includeDescendantNotes,
+            hiddenTagVisibilitySignature
+        },
+        rowSizing: {
+            compactItemHeight: settings.compactItemHeight,
+            compactItemHeightScaleText: settings.compactItemHeightScaleText
+        },
+        measurements: listMeasurements
+    });
+}
+
+function getScrollPreservationSignature({
+    includeDescendantNotes,
+    listLayoutSignature,
+    groupBy,
+    noteGrouping,
+    stickyGroupHeaders,
+    effectiveSort,
+    propertySortKey,
+    propertySortSecondary
+}: ScrollPreservationSignatureParams): string {
+    return JSON.stringify({
+        includeDescendantNotes,
+        listLayoutSignature,
+        groupBy,
+        noteGrouping,
+        stickyGroupHeaders,
+        effectiveSort,
+        propertySortKey: propertySortKey ?? null,
+        propertySortSecondary
+    });
+}
+
+export function isListRowHeightAffectingContentChange(
+    change: FileContentChange,
+    config: ListRowHeightAffectingContentChangeConfig
+): boolean {
+    const { changes } = change;
+
+    if (changes.previewStatus !== undefined && config.showPreview) {
+        return true;
+    }
+
+    if ((changes.featureImageKey !== undefined || changes.featureImageStatus !== undefined) && config.showImage) {
+        return true;
+    }
+
+    if (changes.tags !== undefined && config.tagsBaseEnabled) {
+        return true;
+    }
+
+    if (changes.properties !== undefined && config.frontmatterPropertyRowsPossible) {
+        return true;
+    }
+
+    if (changes.wordCount !== undefined && config.showWordCountProperty) {
+        return true;
+    }
+
+    if (changes.characterCountWithSpaces !== undefined && config.showCharacterCountProperty && config.characterCountSpaces === 'include') {
+        return true;
+    }
+
+    if (
+        changes.characterCountWithoutSpaces !== undefined &&
+        config.showCharacterCountProperty &&
+        config.characterCountSpaces === 'exclude'
+    ) {
+        return true;
+    }
+
+    if (config.showTaskProgress && change.previousTaskCounters) {
+        const previousTaskCounters = change.previousTaskCounters;
+        // Notifications publish only changed counters, so retain the previous value when a field is absent. Null is
+        // an explicit pending state and must not be treated as an absent field.
+        const nextTaskTotal = changes.taskTotal !== undefined ? changes.taskTotal : previousTaskCounters.taskTotal;
+        const nextTaskUnfinished = changes.taskUnfinished !== undefined ? changes.taskUnfinished : previousTaskCounters.taskUnfinished;
+        const wasTaskProgressVisible = shouldShowFileItemTaskProgress({
+            showTaskProgress: true,
+            hideWhenComplete: config.hideTaskProgressWhenComplete,
+            taskTotal: previousTaskCounters.taskTotal,
+            taskUnfinished: previousTaskCounters.taskUnfinished
+        });
+        const isTaskProgressVisible = shouldShowFileItemTaskProgress({
+            showTaskProgress: true,
+            hideWhenComplete: config.hideTaskProgressWhenComplete,
+            taskTotal: nextTaskTotal,
+            taskUnfinished: nextTaskUnfinished
+        });
+        return wasTaskProgressVisible !== isTaskProgressVisible;
+    }
+
+    return false;
+}
+
+export function createRemeasureScheduler(measure: () => void): { schedule: () => void; cancel: () => void } {
+    let frameId: number | null = null;
+
+    return {
+        schedule() {
+            if (frameId !== null) {
+                return;
+            }
+
+            frameId = window.requestAnimationFrame(() => {
+                frameId = null;
+                measure();
+            });
+        },
+        cancel() {
+            if (frameId === null) {
+                return;
+            }
+
+            window.cancelAnimationFrame(frameId);
+            frameId = null;
+        }
+    };
+}
+
+function getStickyHeaderHeightBeforeIndex(
+    listItems: ListPaneItem[],
+    index: number,
+    measurements: ReturnType<typeof getListPaneMeasurements>
+): number {
+    const item = listItems[index];
+    if (item?.type !== ListPaneItemType.FILE || !(item.data instanceof TFile)) {
+        return 0;
+    }
+
+    for (let listIndex = index - 1; listIndex >= 0; listIndex -= 1) {
+        const candidate = listItems[listIndex];
+        if (candidate?.type === ListPaneItemType.HEADER) {
+            return getListPaneHeaderHeight(candidate, measurements);
+        }
+    }
+
+    return 0;
+}
+
+function shouldReadFileRecordForRowEstimate(item: ListPaneItem, config: ListFileRowSizingConfig): boolean {
+    if (config.showImage) {
+        return true;
+    }
+
+    if (config.propertyRowsPossible) {
+        return true;
+    }
+
+    if (config.showTaskProgress) {
+        return true;
+    }
+
+    return config.tagsBaseEnabled && Boolean(item.hasTags) && config.selectedTagToHide !== null;
+}
+
+export function resolveListFileRowHeightInputs({
+    app,
+    db,
+    hasPreview,
+    item,
+    file,
+    config
+}: ResolveListFileRowHeightInputsParams): FileRowHeightInputs {
+    let fileRecord: FileData | null = null;
+    if (shouldReadFileRecordForRowEstimate(item, config)) {
+        fileRecord = db.getFile(file.path);
+    }
+
+    let hasPreviewText = false;
+    let hasOmnisearchExcerpt = false;
+    if (config.showPreview) {
+        if (file.extension === 'md') {
+            hasPreviewText = hasPreview(file.path);
+        }
+        const excerpt = item.searchMeta?.excerpt;
+        hasOmnisearchExcerpt = typeof excerpt === 'string' && excerpt.length > 0;
+    }
+    const hasPreviewContent = hasPreviewText || hasOmnisearchExcerpt;
+
+    let showDrawingFeatureImage = false;
+    let showDrawingMissingFeatureImage = false;
+    if (config.showImage) {
+        const drawingFeatureImageSource = getDrawingFeatureImageSource(app, file);
+        showDrawingFeatureImage = drawingFeatureImageSource?.showsFeatureImageBox ?? false;
+        showDrawingMissingFeatureImage =
+            showDrawingFeatureImage && !drawingFeatureImageSource?.supportsCompanionImages
+                ? true
+                : showDrawingFeatureImage && drawingFeatureImageSource
+                  ? resolveDrawingFeatureImageFileForProvider(app, file, drawingFeatureImageSource.providerId, config.themeMode) === null
+                  : false;
+    }
+
+    const showFeatureImageArea = shouldShowFeatureImageArea({
+        showImage: config.showImage,
+        file,
+        featureImageStatus: fileRecord?.featureImageStatus ?? null,
+        showDrawingFeatureImage
+    });
+    const showExtensionBadgeThumbnail = shouldShowExtensionBadgeThumbnail({
+        showFeatureImageArea,
+        file,
+        showDrawingMissingFeatureImage
+    });
+
+    let hasTagRow = false;
+    if (!showDrawingMissingFeatureImage && config.tagsBaseEnabled && item.hasTags) {
+        if (!config.selectedTagToHide) {
+            hasTagRow = true;
+        } else {
+            hasTagRow = hasVisibleTagPills({
+                tags: getCachedFileTags({ app, file, db, fileData: fileRecord }),
+                hiddenTagVisibility: config.hiddenTagVisibility,
+                selectedTagToHide: config.selectedTagToHide
+            });
+        }
+    }
+
+    const showParentFolderLine = shouldShowFileItemParentFolderLine({
+        showParentFolder: config.showParentFolder,
+        isPinned: Boolean(item.isPinned),
+        selectionType: config.selectionType,
+        includeDescendantNotes: config.includeDescendantNotes,
+        parentFolder: item.parentFolder,
+        fileParentPath: file.parent?.path ?? null
+    });
+
+    // Task counts are only produced for markdown files; other extensions never show the progress element.
+    const showTaskProgressLine = shouldShowFileItemTaskProgress({
+        showTaskProgress: config.showTaskProgress,
+        hideWhenComplete: config.hideTaskProgressWhenComplete,
+        taskTotal: file.extension === 'md' ? (fileRecord?.taskTotal ?? null) : null,
+        taskUnfinished: file.extension === 'md' ? (fileRecord?.taskUnfinished ?? null) : null
+    });
+
+    const propertyRowCount =
+        !showDrawingMissingFeatureImage && config.propertyRowsPossible
+            ? getPropertyRowCount({
+                  showTextCountProperty: config.showTextCountProperty,
+                  showFileProperties: config.showFileProperties,
+                  showPropertiesOnSeparateRows: config.showPropertiesOnSeparateRows,
+                  showFilePropertiesInCompactMode: config.showFilePropertiesInCompactMode,
+                  isCompactMode: config.isCompactMode,
+                  file,
+                  wordCount: config.showWordCountProperty ? (fileRecord?.wordCount ?? undefined) : undefined,
+                  characterCount: config.showCharacterCountProperty
+                      ? config.characterCountSpaces === 'include'
+                          ? (fileRecord?.characterCountWithSpaces ?? undefined)
+                          : (fileRecord?.characterCountWithoutSpaces ?? undefined)
+                      : undefined,
+                  properties: fileRecord?.properties ?? undefined,
+                  visiblePropertyKeys: config.visiblePropertyKeys,
+                  hiddenPropertyValueNodeId: config.selectedPropertyValueNodeIdToHide
+              })
+            : 0;
+
+    return {
+        isPinned: Boolean(item.isPinned),
+        hasPreviewContent,
+        showFeatureImageArea,
+        showExtensionBadgeThumbnail,
+        showParentFolderLine,
+        showTaskProgressLine,
+        visiblePillRowCount: (hasTagRow ? 1 : 0) + propertyRowCount
+    };
 }
 
 /**
@@ -158,6 +616,7 @@ interface UseListPaneScrollResult {
  * @returns Virtualizer instance and scroll management utilities
  */
 export function useListPaneScroll({
+    enabled = true,
     listItems,
     filePathToIndex,
     selectedFile,
@@ -174,16 +633,19 @@ export function useListPaneScroll({
     suppressSearchTopScrollRef,
     topSpacerHeight,
     includeDescendantNotes,
+    groupCollapseStateSignature,
     visiblePropertyKeys,
     visiblePropertyKeySignature,
     hiddenTagVisibility,
     scrollMargin = 0,
     scrollPaddingEnd = 0,
-    onVirtualizerScrollingChange
+    onVirtualizerScrollingChange,
+    onScrollContainerVisibilityChange
 }: UseListPaneScrollParams): UseListPaneScrollResult {
     const { app, isMobile } = useServices();
     const listMeasurements = getListPaneMeasurements(isMobile);
-    const { hasPreview, getDB, getFileDisplayName, isStorageReady } = useFileCache();
+    const { hasPreview, getDB, isStorageReady } = useFileCache();
+    const themeMode = useThemeMode(app);
     // The list pane only renders after StorageContext marks storage ready.
     const db = getDB();
 
@@ -197,34 +659,28 @@ export function useListPaneScroll({
             }),
         [listMeasurements.titleLineHeight, settings.compactItemHeight, settings.compactItemHeightScaleText]
     );
-    const estimatedTitleCharsPerRow = isMobile ? 22 : 28;
-    const estimatedPreviewCharsPerRow = isMobile ? 44 : 60;
 
     // Reference to the scroll container DOM element
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const [scrollContainerEl, setScrollContainerEl] = useState<HTMLDivElement | null>(null);
     const [containerVisible, setContainerVisible] = useState<boolean>(false);
+    const containerVisibleRef = useRef(false);
+    const onVirtualizerScrollingChangeRef = useRef(onVirtualizerScrollingChange);
+    const onScrollContainerVisibilityChangeRef = useRef(onScrollContainerVisibilityChange);
 
     // Track list state changes and pending scroll operations
     const prevListKeyRef = useRef<string>(''); // Previous folder/tag context to detect navigation
-    const prevConfigKeyRef = useRef<string>(''); // Track config changes for scroll preservation
+    const prevScrollPreservationConfigRef = useRef<PreviousScrollPreservationConfig | null>(null);
     const prevSearchQueryRef = useRef<string | undefined>(undefined); // Track search query changes
+    const prevGroupCollapseStateSignatureRef = useRef<string>(groupCollapseStateSignature);
 
     // ========== Scroll Orchestration ==========
-    // Scroll reasons determine priority and alignment behavior
-    type ScrollReason = ListScrollIntent;
-
-    // Pending scroll stores requests until list is ready
-    type PendingScroll = {
-        type: 'file' | 'top'; // Scroll to specific file or top of list
-        filePath?: string; // Target file path (for type='file')
-        reason?: ScrollReason; // Why this scroll was requested
-        minIndexVersion?: number; // Don't execute until indexVersion >= this
-    };
     const pendingScrollRef = useRef<PendingScroll | null>(null);
     const [pendingScrollVersion, setPendingScrollVersion] = useState(0); // Triggers effect re-run
     // Tracks the currently selected file path to detect stale pending scrolls
-    const selectedFilePathRef = useRef<string | null>(selectedFile ? selectedFile.path : null);
+    const selectedFilePath = selectedFile?.path ?? null;
+    const selectedFilePathRef = useRef<string | null>(selectedFilePath);
+    selectedFilePathRef.current = selectedFilePath;
 
     // ========== Index Version Tracking ==========
     // Increments when list rebuilds to ensure scrolls execute with correct indices
@@ -236,12 +692,30 @@ export function useListPaneScroll({
     const contextIndexVersionRef = useRef<{ key: string; version: number } | null>(null);
     const lastReportedVirtualizerScrollingRef = useRef(false);
 
-    // Check if we're in compact mode
-    const isCompactMode = isListPaneCompactMode({
-        showDate: folderSettings.showDate,
-        showPreview: folderSettings.showPreview,
-        showImage: folderSettings.showImage
-    });
+    useEffect(() => {
+        onVirtualizerScrollingChangeRef.current = onVirtualizerScrollingChange;
+    }, [onVirtualizerScrollingChange]);
+
+    useEffect(() => {
+        onScrollContainerVisibilityChangeRef.current = onScrollContainerVisibilityChange;
+    }, [onScrollContainerVisibilityChange]);
+
+    const reportContainerVisibility = useCallback((nextVisible: boolean, scrollElement: HTMLDivElement | null) => {
+        setContainerVisible(previous => (previous === nextVisible ? previous : nextVisible));
+
+        if (containerVisibleRef.current === nextVisible) {
+            return;
+        }
+
+        containerVisibleRef.current = nextVisible;
+        if (!nextVisible && lastReportedVirtualizerScrollingRef.current) {
+            lastReportedVirtualizerScrollingRef.current = false;
+            onVirtualizerScrollingChangeRef.current?.(false, scrollElement);
+        }
+        onScrollContainerVisibilityChangeRef.current?.(nextVisible, scrollElement);
+    }, []);
+
+    const isCompactMode = folderSettings.mode === 'compact';
     const revealFileOnListChanges = settings.revealFileOnListChanges;
     const hasSelectedFile = Boolean(selectedFile);
     const selectedTagToHide = useMemo(
@@ -262,280 +736,197 @@ export function useListPaneScroll({
             }),
         [selectionState.selectedProperty, selectionState.selectionType, settings.showSelectedNavigationPills]
     );
+    const rowSizingConfig = useMemo<ListFileRowSizingConfig>(() => {
+        const showTextCountProperty = folderSettings.textCountDisplay !== 'none' && settings.textCountPlacement === 'property';
+        const showWordCountProperty = showTextCountProperty && showsWordCount(folderSettings.textCountDisplay);
+        const showCharacterCountProperty = showTextCountProperty && showsCharacterCount(folderSettings.textCountDisplay);
+        const canShowPropertiesInCurrentMode = !isCompactMode || settings.showFilePropertiesInCompactMode;
+        const showFrontmatterPropertyRows = folderSettings.showProperties && visiblePropertyKeys.size > 0;
+        const frontmatterPropertyRowsPossible = canShowPropertiesInCurrentMode && showFrontmatterPropertyRows;
+
+        return {
+            heights: listMeasurements,
+            titleRows: folderSettings.titleRows || 1,
+            previewRows: folderSettings.previewRows,
+            showDate: folderSettings.showDate,
+            showPreview: folderSettings.showPreview,
+            showImage: folderSettings.showImage,
+            compactPaddingTotal: isMobile ? compactListMetrics.mobilePaddingTotal : compactListMetrics.desktopPaddingTotal,
+            isCompactMode,
+            tagsBaseEnabled: folderSettings.showTags,
+            frontmatterPropertyRowsPossible,
+            propertyRowsPossible: canShowPropertiesInCurrentMode && (showFrontmatterPropertyRows || showTextCountProperty),
+            showTextCountProperty,
+            showWordCountProperty,
+            showCharacterCountProperty,
+            showFileProperties: folderSettings.showProperties,
+            showPropertiesOnSeparateRows: settings.showPropertiesOnSeparateRows,
+            showFilePropertiesInCompactMode: settings.showFilePropertiesInCompactMode,
+            characterCountSpaces: settings.characterCountSpaces,
+            showParentFolder: folderSettings.showParentFolder,
+            // Compact mode never renders the metadata line, so disabling the flag there skips
+            // per-row record reads during height estimation and task-driven remeasurements.
+            showTaskProgress: folderSettings.showTaskProgress,
+            hideTaskProgressWhenComplete: settings.hideFileTaskProgressWhenComplete,
+            selectionType: selectionState.selectionType,
+            includeDescendantNotes,
+            selectedTagToHide,
+            selectedPropertyValueNodeIdToHide,
+            hiddenTagVisibility,
+            visiblePropertyKeys,
+            themeMode
+        };
+    }, [
+        compactListMetrics.desktopPaddingTotal,
+        compactListMetrics.mobilePaddingTotal,
+        folderSettings.previewRows,
+        folderSettings.showDate,
+        folderSettings.showImage,
+        folderSettings.showParentFolder,
+        folderSettings.showPreview,
+        folderSettings.showProperties,
+        folderSettings.showTags,
+        folderSettings.showTaskProgress,
+        folderSettings.textCountDisplay,
+        folderSettings.titleRows,
+        hiddenTagVisibility,
+        includeDescendantNotes,
+        isCompactMode,
+        isMobile,
+        listMeasurements,
+        selectedPropertyValueNodeIdToHide,
+        selectedTagToHide,
+        selectionState.selectionType,
+        settings.characterCountSpaces,
+        settings.showFilePropertiesInCompactMode,
+        settings.hideFileTaskProgressWhenComplete,
+        settings.showPropertiesOnSeparateRows,
+        settings.textCountPlacement,
+        themeMode,
+        visiblePropertyKeys
+    ]);
+    const getListItemKey = useCallback((index: number) => listItems[index]?.key ?? index, [listItems]);
 
     /**
-     * Initialize TanStack Virtual virtualizer with dynamic height calculation.
+     * Initialize TanStack Virtual virtualizer with per-item height estimates.
      * Handles different item types (headers, files, spacers) with appropriate heights.
      */
     const effectiveScrollMargin = Number.isFinite(scrollMargin) && scrollMargin > 0 ? scrollMargin : 0;
     const effectiveScrollPaddingEnd = Number.isFinite(scrollPaddingEnd) && scrollPaddingEnd > 0 ? scrollPaddingEnd : 0;
     const rowVirtualizer = useVirtualizer({
-        count: listItems.length,
-        getItemKey: index => listItems[index]?.key ?? index,
+        count: enabled ? listItems.length : 0,
+        getItemKey: getListItemKey,
         getScrollElement: () => {
+            if (!enabled) {
+                return null;
+            }
             const element = scrollContainerRef.current;
             if (!element) {
                 // No element available yet
             }
             return element;
         },
+        enabled,
         // Align virtualizer scroll math with the start of the file rows (excluding overlay chrome).
         scrollMargin: effectiveScrollMargin,
         // Ensure scrollToIndex aligns items below the overlay chrome instead of under it.
         scrollPaddingStart: effectiveScrollMargin,
         estimateSize: index => {
             const item = listItems[index];
-            const heights = listMeasurements;
+            const heights = rowSizingConfig.heights;
 
             if (item.type === ListPaneItemType.HEADER) {
-                // Date group headers have fixed heights from CSS
-                // Index 1 because TOP_SPACER is at index 0
-                const isFirstHeader = index === 1;
-                if (isFirstHeader) {
-                    return heights.firstHeader;
-                }
-                return heights.subsequentHeader;
+                return getListPaneHeaderHeight(item, heights);
+            }
+            if (item.type === ListPaneItemType.HEADER_SPACER) {
+                return heights.groupHeaderSpacerBefore;
             }
 
             if (item.type === ListPaneItemType.TOP_SPACER) {
                 return topSpacerHeight;
             }
             if (item.type === ListPaneItemType.BOTTOM_SPACER) {
-                return listMeasurements.bottomSpacer;
+                return heights.bottomSpacer;
             }
 
-            // For file items - calculate height including all components
-            const file = item.type === ListPaneItemType.FILE && item.data instanceof TFile ? item.data : null;
-            const fileRecord = file ? db.getFile(file.path) : null;
-
-            // Visibility for tags row
-            const shouldShowFileTags = settings.showTags && settings.showFileTags && (!isCompactMode || settings.showFileTagsInCompactMode);
-            const hasTagRow = (() => {
-                if (!shouldShowFileTags || item.type !== ListPaneItemType.FILE || !item.hasTags) {
-                    return false;
-                }
-
-                if (!selectedTagToHide || !file) {
-                    return true;
-                }
-
-                return hasVisibleTagPills({
-                    tags: getCachedFileTags({ app, file, db, fileData: fileRecord }),
-                    hiddenTagVisibility,
-                    selectedTagToHide
-                });
-            })();
-
-            // Get actual preview status for accurate height calculation
-            let hasPreviewText = false;
-            let hasOmnisearchExcerpt = false;
-            let effectivePreviewText = '';
-            if (file && folderSettings.showPreview) {
-                if (file.extension === 'md') {
-                    // Use synchronous check from cache for markdown preview text
-                    hasPreviewText = hasPreview(file.path);
-                }
-                const excerpt = item.searchMeta?.excerpt;
-                hasOmnisearchExcerpt = typeof excerpt === 'string' && excerpt.length > 0;
-                effectivePreviewText = hasOmnisearchExcerpt && typeof excerpt === 'string' ? excerpt : db.getCachedPreviewText(file.path);
-            }
-            const hasPreviewContent = hasPreviewText || hasOmnisearchExcerpt;
-
-            // Keep height estimation aligned with FileItem feature image rendering.
-            // getFile reads from the in-memory cache; no IndexedDB reads occur during sizing.
-            const featureImageStatus = fileRecord?.featureImageStatus ?? null;
-            const showFeatureImageArea = shouldShowFeatureImageArea({
-                showImage: folderSettings.showImage,
-                file,
-                featureImageStatus
-            });
-
-            // Keep the height estimator aligned with FileItem property rendering.
-            // `getPropertyRowCount` applies the same trimming rules and separate-row behavior.
-            const propertyRowCount = getPropertyRowCount({
-                notePropertyType: folderSettings.notePropertyType,
-                showFileProperties: settings.showFileProperties,
-                showPropertiesOnSeparateRows: settings.showPropertiesOnSeparateRows,
-                showFilePropertiesInCompactMode: settings.showFilePropertiesInCompactMode,
-                isCompactMode,
-                file,
-                wordCount: fileRecord?.wordCount ?? undefined,
-                properties: fileRecord?.properties ?? undefined,
-                visiblePropertyKeys,
-                hiddenPropertyValueNodeId: selectedPropertyValueNodeIdToHide
-            });
-
-            const hasVisiblePillRows = hasTagRow || propertyRowCount > 0;
-            const layoutState = getFileItemLayoutState({
-                showDate: folderSettings.showDate,
-                showPreview: folderSettings.showPreview,
-                showImage: folderSettings.showImage,
-                previewRows: folderSettings.previewRows,
-                optimizeNoteHeight: settings.optimizeNoteHeight,
-                isPinned: Boolean(item.isPinned),
-                hasPreviewContent,
-                showFeatureImageArea,
-                hasVisiblePillRows
-            });
-            const showParentFolderLine = shouldShowFileItemParentFolderLine({
-                showParentFolder: settings.showParentFolder,
-                pinnedItemShouldUseCompactLayout: layoutState.pinnedItemShouldUseCompactLayout,
-                selectionType: selectionState.selectionType,
-                includeDescendantNotes,
-                parentFolder: item.parentFolder,
-                fileParentPath: file?.parent?.path ?? null
-            });
-
-            // Start with base padding
-            let textContentHeight = 0;
-            const estimatedTitleText = file ? `${getFileDisplayName(file)}${getExtensionSuffix(file)}` : '';
-            const estimatedTitleRows = estimateRenderedTextRows({
-                text: estimatedTitleText,
-                maxRows: folderSettings.titleRows || 1,
-                charsPerRow: estimatedTitleCharsPerRow
-            });
-
-            if (layoutState.isCompactMode) {
-                // Compact mode: only shows file name
-                textContentHeight = heights.titleLineHeight * Math.max(1, estimatedTitleRows);
-            } else {
-                // Normal mode
-                textContentHeight += heights.titleLineHeight * Math.max(1, estimatedTitleRows); // File name
-
-                // Single row mode - show date+preview, tags, and parent folder
-                if (layoutState.shouldUseSingleLineForDateAndPreview) {
-                    // Date and preview share one line
-                    if (layoutState.shouldShowSingleLineSecondLine) {
-                        textContentHeight += heights.singleTextLineHeight;
-                    }
-
-                    if (showParentFolderLine) {
-                        textContentHeight += heights.singleTextLineHeight;
-                    }
-                } else if (layoutState.shouldUseMultiLinePreviewLayout) {
-                    if (layoutState.shouldCollapseEmptyPreviewSpace) {
-                        if (layoutState.shouldShowDateForItem || showParentFolderLine) {
-                            textContentHeight += heights.singleTextLineHeight;
-                        }
-                    } else if (layoutState.shouldUseExpandedMultiLineLayout) {
-                        const estimatedPreviewRows = estimateRenderedTextRows({
-                            text: effectivePreviewText,
-                            maxRows: layoutState.multilinePreviewRowCount,
-                            charsPerRow: estimatedPreviewCharsPerRow
-                        });
-                        if (estimatedPreviewRows > 0) {
-                            textContentHeight += heights.multilineTextLineHeight * estimatedPreviewRows;
-                        }
-
-                        if (layoutState.shouldShowDateForItem || showParentFolderLine) {
-                            textContentHeight += heights.singleTextLineHeight;
-                        }
-                    }
-                }
+            if (item.type === ListPaneItemType.FILE && item.data instanceof TFile) {
+                return estimateFileRowHeight(
+                    resolveListFileRowHeightInputs({
+                        app,
+                        db,
+                        hasPreview,
+                        item,
+                        file: item.data,
+                        config: rowSizingConfig
+                    }),
+                    rowSizingConfig
+                );
             }
 
-            // Add space for tags if file has tags and they are visible in this mode
-            if (hasTagRow) {
-                textContentHeight += heights.tagRowHeight;
-            }
-
-            if (propertyRowCount > 0) {
-                // `tagRowHeight` mirrors the combined CSS row height + margin-top gap for pill rows.
-                textContentHeight += heights.tagRowHeight * propertyRowCount;
-            }
-
-            // Keep the estimated text area at least as tall as the feature image area in normal mode.
-            // This mirrors the rendered row floor when thumbnails are shown beside short text blocks.
-            if (!isCompactMode && textContentHeight < heights.featureImageHeight) {
-                textContentHeight = heights.featureImageHeight;
-            }
-
-            // Use reduced padding for compact mode (with mobile-specific padding)
-            const padding = isCompactMode
-                ? isMobile
-                    ? compactListMetrics.mobilePaddingTotal
-                    : compactListMetrics.desktopPaddingTotal
-                : heights.basePadding;
-            return padding + textContentHeight;
+            return heights.titleLineHeight;
         },
         overscan: OVERSCAN,
         scrollPaddingEnd: effectiveScrollPaddingEnd,
         useScrollendEvent: true,
         onChange: instance => {
+            if (!enabled) {
+                return;
+            }
             const nextIsScrolling = instance.isScrolling;
+            if (nextIsScrolling && !containerVisibleRef.current) {
+                return;
+            }
             if (lastReportedVirtualizerScrollingRef.current === nextIsScrolling) {
                 return;
             }
 
             lastReportedVirtualizerScrollingRef.current = nextIsScrolling;
-            onVirtualizerScrollingChange?.(nextIsScrolling, instance.scrollElement);
+            onVirtualizerScrollingChangeRef.current?.(nextIsScrolling, instance.scrollElement);
         }
     });
-    const remeasureRafRef = useRef<number | null>(null);
-    const remeasureVisibleRows = useCallback(() => {
-        if (!rowVirtualizer) {
-            return;
-        }
-        if (remeasureRafRef.current !== null) {
-            return;
-        }
-
-        remeasureRafRef.current = requestAnimationFrame(() => {
-            remeasureRafRef.current = null;
-
-            const scrollEl = scrollContainerRef.current;
-            if (!scrollEl) {
-                return;
-            }
-
-            const visibleFileRows = scrollEl.querySelectorAll<HTMLElement>('.nn-virtual-file-item[data-index]');
-            visibleFileRows.forEach(node => {
-                if (node.isConnected) {
-                    rowVirtualizer.measureElement(node);
-                }
-            });
-        });
-    }, [rowVirtualizer]);
-    const resetAndRemeasureVisibleRows = useCallback(() => {
-        if (!rowVirtualizer) {
-            return;
-        }
-
-        // TanStack Virtual clears the item size cache on `measure()`.
-        // Re-measure the mounted rows on the next frame so visible items settle
-        // to their exact post-commit heights instead of waiting for remount/resize.
-        rowVirtualizer.measure();
-        remeasureVisibleRows();
-    }, [rowVirtualizer, remeasureVisibleRows]);
+    const measureCurrentVirtualizerRef = useRef<() => void>(() => undefined);
+    measureCurrentVirtualizerRef.current = () => rowVirtualizer.measure();
+    const remeasureSchedulerRef = useRef<ReturnType<typeof createRemeasureScheduler> | null>(null);
+    if (remeasureSchedulerRef.current === null) {
+        remeasureSchedulerRef.current = createRemeasureScheduler(() => measureCurrentVirtualizerRef.current());
+    }
 
     /**
      * Callback for when scroll container ref is set.
      * Used as a ref callback to capture the DOM element.
      */
-    const scrollContainerRefCallback = useCallback((element: HTMLDivElement | null) => {
-        scrollContainerRef.current = element as HTMLDivElement;
-        setScrollContainerEl(element);
-        if (!element) {
-            setContainerVisible(false);
-        }
-    }, []);
+    const scrollContainerRefCallback = useCallback(
+        (element: HTMLDivElement | null) => {
+            scrollContainerRef.current = element;
+            setScrollContainerEl(element);
+            if (!element) {
+                reportContainerVisibility(false, null);
+            }
+        },
+        [reportContainerVisibility]
+    );
 
     /**
      * Track the rendered visibility of the list scroll container.
      * TanStack Virtual scroll calls should not execute while the container (or parent)
      * is hidden because they will fail internally and emit retry errors.
      */
-    useEffect(() => {
+    useLayoutEffect(() => {
         const element = scrollContainerEl;
+        if (!enabled) {
+            reportContainerVisibility(false, element);
+            return;
+        }
+
         if (!element) {
-            setContainerVisible(false);
+            reportContainerVisibility(false, null);
             return;
         }
 
         const updateVisibility = () => {
             const rect = element.getBoundingClientRect();
             const isContainerVisible = rect.width > 0 && rect.height > 0;
-            setContainerVisible(prev => (prev === isContainerVisible ? prev : isContainerVisible));
+            reportContainerVisibility(isContainerVisible, element);
         };
 
         updateVisibility();
@@ -555,34 +946,126 @@ export function useListPaneScroll({
             }
             const { width, height } = entry.contentRect;
             const isContainerVisible = width > 0 && height > 0;
-            setContainerVisible(prev => (prev === isContainerVisible ? prev : isContainerVisible));
+            reportContainerVisibility(isContainerVisible, element);
         });
 
         observer.observe(element);
 
         return () => observer.disconnect();
-    }, [scrollContainerEl]);
-
-    useEffect(() => {
-        return () => {
-            if (remeasureRafRef.current !== null) {
-                cancelAnimationFrame(remeasureRafRef.current);
-                remeasureRafRef.current = null;
-            }
-        };
-    }, []);
+    }, [enabled, reportContainerVisibility, scrollContainerEl]);
 
     // Container is ready when both the list pane and the physical container are visible
-    const isScrollContainerReady = isVisible && containerVisible;
+    const isScrollContainerReady = enabled && isVisible && containerVisible;
+
+    // Tracks inputs that affect estimated row heights.
+    const hiddenTagVisibilitySignature = useMemo(() => getHiddenTagVisibilitySignature(hiddenTagVisibility), [hiddenTagVisibility]);
+    const listLayoutSettings = useMemo<ListLayoutSignatureSettings>(
+        () => ({
+            compactItemHeight: settings.compactItemHeight,
+            compactItemHeightScaleText: settings.compactItemHeightScaleText,
+            showFilePropertiesInCompactMode: settings.showFilePropertiesInCompactMode,
+            showPropertiesOnSeparateRows: settings.showPropertiesOnSeparateRows,
+            textCountPlacement: settings.textCountPlacement,
+            characterCountSpaces: settings.characterCountSpaces,
+            hideFileTaskProgressWhenComplete: settings.hideFileTaskProgressWhenComplete,
+            showSelectedNavigationPills: settings.showSelectedNavigationPills
+        }),
+        [
+            settings.compactItemHeight,
+            settings.compactItemHeightScaleText,
+            settings.showFilePropertiesInCompactMode,
+            settings.showPropertiesOnSeparateRows,
+            settings.textCountPlacement,
+            settings.characterCountSpaces,
+            settings.hideFileTaskProgressWhenComplete,
+            settings.showSelectedNavigationPills
+        ]
+    );
+    const listLayoutSignature = useMemo(
+        () =>
+            getListLayoutSignature({
+                topSpacerHeight,
+                folderSettings,
+                settings: listLayoutSettings,
+                themeMode,
+                selectionType: selectionState.selectionType,
+                selectedTagToHide,
+                selectedPropertyValueNodeIdToHide,
+                includeDescendantNotes,
+                hiddenTagVisibilitySignature,
+                visiblePropertyKeySignature,
+                listMeasurements
+            }),
+        [
+            topSpacerHeight,
+            folderSettings,
+            listLayoutSettings,
+            themeMode,
+            selectionState.selectionType,
+            selectedTagToHide,
+            selectedPropertyValueNodeIdToHide,
+            includeDescendantNotes,
+            hiddenTagVisibilitySignature,
+            visiblePropertyKeySignature,
+            listMeasurements
+        ]
+    );
 
     /**
      * Scroll to top handler for mobile header tap.
      */
     const handleScrollToTop = useCallback(() => {
-        if (isMobile && scrollContainerRef.current) {
+        if (enabled && isMobile && scrollContainerRef.current) {
             scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    }, [isMobile]);
+    }, [enabled, isMobile]);
+
+    const ensureIndexNotCovered = useCallback(
+        (index: number) => {
+            const scrollElement = scrollContainerRef.current;
+            if (!scrollElement) {
+                return;
+            }
+
+            const row = scrollElement.querySelector(`[data-index="${index}"]`);
+            if (!(row instanceof HTMLElement)) {
+                return;
+            }
+
+            const containerRect = scrollElement.getBoundingClientRect();
+            const rowRect = row.getBoundingClientRect();
+            const topInset = settings.stickyGroupHeaders ? getStickyHeaderHeightBeforeIndex(listItems, index, listMeasurements) : 0;
+            const safeTop = containerRect.top + topInset;
+            const safeBottom = containerRect.bottom - effectiveScrollPaddingEnd;
+
+            if (topInset > 0 && rowRect.top < safeTop) {
+                scrollElement.scrollTop -= Math.round(safeTop - rowRect.top);
+                return;
+            }
+
+            if (effectiveScrollPaddingEnd > 0 && rowRect.bottom > safeBottom) {
+                scrollElement.scrollTop += Math.round(rowRect.bottom - safeBottom);
+            }
+        },
+        [effectiveScrollPaddingEnd, listItems, listMeasurements, settings.stickyGroupHeaders]
+    );
+
+    const scrollToIndexSafely = useCallback(
+        (index: number, align: Align) => {
+            rowVirtualizer.scrollToIndex(index, { align });
+
+            let attempts = 0;
+            const adjust = () => {
+                attempts += 1;
+                ensureIndexNotCovered(index);
+                if (attempts < 3) {
+                    window.requestAnimationFrame(adjust);
+                }
+            };
+            window.requestAnimationFrame(adjust);
+        },
+        [ensureIndexNotCovered, rowVirtualizer]
+    );
 
     // Get scroll index for a file, adjusting to show top group header when navigating folders
     // This ensures the top group header (pinned or date) is visible when changing folders/tags
@@ -595,17 +1078,27 @@ export function useListPaneScroll({
                 return -1;
             }
 
-            // Check if there's a header immediately before this file
-            const hasHeaderBefore = fileIndex > 0 && listItems[fileIndex - 1]?.type === ListPaneItemType.HEADER;
-            if (!hasHeaderBefore) {
+            let headerIndexBefore = -1;
+            for (let listIndex = fileIndex - 1; listIndex >= 0; listIndex -= 1) {
+                const item = listItems[listIndex];
+                if (item?.type === ListPaneItemType.HEADER_SPACER) {
+                    continue;
+                }
+                if (item?.type === ListPaneItemType.HEADER) {
+                    headerIndexBefore = listIndex;
+                }
+                break;
+            }
+
+            if (headerIndexBefore === -1) {
                 return fileIndex;
             }
 
             // Special case: scroll to header for the very first file to show context
-            // Index 0 is TOP_SPACER, Index 1 is first header (if exists), Index 2 is first file
-            const isFirstFile = fileIndex <= 2;
+            // Index 0 is TOP_SPACER, Index 1 is first header.
+            const isFirstFile = headerIndexBefore === 1;
             if (isFirstFile) {
-                return fileIndex - 1; // Show the header above
+                return headerIndexBefore;
             }
 
             // For all other files with headers, scroll directly to the file
@@ -618,13 +1111,20 @@ export function useListPaneScroll({
      * Increment indexVersion when list structure changes.
      * Critical for ensuring scrolls execute after list rebuilds.
      */
-    useEffect(() => {
-        const sizeChanged = prevIndexMapSizeRef.current !== filePathToIndex.size;
-        const identityChanged = prevIndexMapObjRef.current !== filePathToIndex;
-        if (sizeChanged || identityChanged) {
+    useLayoutEffect(() => {
+        const previousMap = prevIndexMapObjRef.current;
+        const mappingChanged = previousMap === null || !areFilePathIndexMapsEqual(previousMap, filePathToIndex);
+
+        if (mappingChanged) {
             prevIndexMapSizeRef.current = filePathToIndex.size;
             prevIndexMapObjRef.current = filePathToIndex;
             indexVersionRef.current = indexVersionRef.current + 1;
+            return;
+        }
+
+        if (prevIndexMapSizeRef.current !== filePathToIndex.size || prevIndexMapObjRef.current !== filePathToIndex) {
+            prevIndexMapSizeRef.current = filePathToIndex.size;
+            prevIndexMapObjRef.current = filePathToIndex;
         }
     }, [filePathToIndex, filePathToIndex.size]);
 
@@ -664,13 +1164,96 @@ export function useListPaneScroll({
         }
     }, []);
 
-    /**
-     * Keep selectedFilePathRef in sync with the current selected file.
-     * Used to detect and skip stale pending scrolls to previous selections.
-     */
-    useEffect(() => {
-        selectedFilePathRef.current = selectedFile?.path ?? null;
-    }, [selectedFile?.path]);
+    const executePendingScroll = useCallback(
+        (pending: PendingScroll): boolean => {
+            if (!rowVirtualizer || !isScrollContainerReady) {
+                return false;
+            }
+
+            // Version gate: Wait for list rebuild if required
+            const effectiveMin = pending.minIndexVersion ?? indexVersionRef.current;
+            if (indexVersionRef.current < effectiveMin) {
+                return false;
+            }
+
+            if (pending.type === 'file') {
+                const isStructuralChange = pending.reason === 'list-structure-change';
+
+                if (!revealFileOnListChanges && isStructuralChange) {
+                    return true;
+                }
+
+                if (isPendingFileScrollStale(pending, selectedFilePathRef.current)) {
+                    return true;
+                }
+
+                const index = getSelectionIndex(pending.filePath);
+                if (index < 0) {
+                    // Keep pending until file appears in index
+                    return false;
+                }
+
+                let alignment: Align = getListAlign(pending.reason);
+                if (pending.reason === 'reveal' && selectionState.revealSource === 'startup') {
+                    alignment = 'center';
+                }
+                scrollToIndexSafely(index, alignment);
+
+                if (isStructuralChange) {
+                    // Stabilization mechanism: Handle rapid consecutive rebuilds
+                    const usedIndex = index;
+                    const usedPath = pending.filePath;
+                    window.requestAnimationFrame(() => {
+                        const newIndex = usedPath ? getSelectionIndex(usedPath) : -1;
+                        if (usedPath && newIndex >= 0 && newIndex !== usedIndex && revealFileOnListChanges) {
+                            setPending({
+                                type: 'file',
+                                filePath: usedPath,
+                                reason: 'list-structure-change',
+                                minIndexVersion: indexVersionRef.current
+                            });
+                        }
+                    });
+                }
+
+                return true;
+            }
+
+            rowVirtualizer.scrollToOffset(0, { align: 'start', behavior: 'auto' });
+            return true;
+        },
+        [
+            getSelectionIndex,
+            isScrollContainerReady,
+            revealFileOnListChanges,
+            rowVirtualizer,
+            scrollToIndexSafely,
+            selectionState.revealSource,
+            setPending
+        ]
+    );
+
+    const requestPendingScroll = useCallback(
+        (pending: PendingScroll) => {
+            const queued = pendingScrollRef.current;
+            if (queued && rankListPending(queued) > rankListPending(pending)) {
+                if (executePendingScroll(queued)) {
+                    pendingScrollRef.current = null;
+                }
+                return;
+            }
+
+            if (executePendingScroll(pending)) {
+                if (queued) {
+                    pendingScrollRef.current = null;
+                }
+                return;
+            }
+
+            setPending(pending);
+        },
+        [executePendingScroll, setPending]
+    );
 
     /**
      * Process pending scrolls when conditions are met.
@@ -688,134 +1271,41 @@ export function useListPaneScroll({
      * - list-structure-change: auto (maintain position)
      * - list-reorder: auto (maintain selection visibility)
      */
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!rowVirtualizer || !pendingScrollRef.current || !isScrollContainerReady) {
             return;
         }
 
         const pending = pendingScrollRef.current;
-        let shouldClearPending = false;
-
-        // Version gate: Wait for list rebuild if required
-        const effectiveMin = pending.minIndexVersion ?? indexVersionRef.current;
-        if (indexVersionRef.current < effectiveMin) {
-            return;
-        }
-
-        if (pending.type === 'file') {
-            const isStructuralChange = pending.reason === 'list-structure-change';
-
-            if (!revealFileOnListChanges && isStructuralChange) {
-                shouldClearPending = true;
-            } else if (
-                isStructuralChange &&
-                pending.filePath &&
-                selectedFilePathRef.current &&
-                pending.filePath !== selectedFilePathRef.current
-            ) {
-                shouldClearPending = true;
-            } else if (pending.filePath) {
-                const index = getSelectionIndex(pending.filePath);
-                if (index >= 0) {
-                    let alignment: Align = getListAlign(pending.reason);
-                    if (pending.reason === 'reveal' && selectionState.revealSource === 'startup') {
-                        alignment = 'center';
-                    }
-                    rowVirtualizer.scrollToIndex(index, { align: alignment });
-
-                    if (isStructuralChange) {
-                        // Stabilization mechanism: Handle rapid consecutive rebuilds
-                        const usedIndex = index;
-                        const usedPath = pending.filePath;
-                        requestAnimationFrame(() => {
-                            const newIndex = usedPath ? getSelectionIndex(usedPath) : -1;
-                            if (usedPath && newIndex >= 0 && newIndex !== usedIndex && revealFileOnListChanges) {
-                                setPending({
-                                    type: 'file',
-                                    filePath: usedPath,
-                                    reason: 'list-structure-change',
-                                    minIndexVersion: indexVersionRef.current + 1
-                                });
-                            }
-                        });
-                    }
-
-                    shouldClearPending = true;
-                } else {
-                    // Keep pending until file appears in index
-                    shouldClearPending = false;
-                }
-            }
-        } else if (pending.type === 'top') {
-            rowVirtualizer.scrollToOffset(0, { align: 'start', behavior: 'auto' });
-            shouldClearPending = true;
-        }
-
-        if (shouldClearPending) {
+        if (executePendingScroll(pending)) {
             pendingScrollRef.current = null;
         }
-    }, [
-        rowVirtualizer,
-        filePathToIndex,
-        isScrollContainerReady,
-        pendingScrollVersion,
-        getSelectionIndex,
-        isMobile,
-        setPending,
-        revealFileOnListChanges,
-        selectionState.revealSource
-    ]);
+    }, [executePendingScroll, rowVirtualizer, isScrollContainerReady, pendingScrollVersion, selectedFilePath]);
 
     /**
-     * Subscribe to database content changes and re-measure virtualizer when needed.
-     * Handles preview text, feature images, tags, and metadata changes.
+     * Subscribe to database content changes and refresh virtualizer size estimates when needed.
+     * Handles preview text, feature images, tags, properties, and word count changes.
      */
     useEffect(() => {
-        if (!rowVirtualizer) return;
+        if (!enabled || !rowVirtualizer) return;
 
         const db = getDB();
+        const remeasureScheduler = remeasureSchedulerRef.current;
         const unsubscribe = db.onContentChange(changes => {
-            const heightAffectingChanges = changes.filter(change => {
-                if (!filePathToIndex.has(change.path)) {
-                    return false;
-                }
-
-                return (
-                    change.changes.preview !== undefined ||
-                    change.changes.featureImageKey !== undefined ||
-                    change.changes.featureImageStatus !== undefined ||
-                    change.changes.metadata !== undefined ||
-                    change.changes.properties !== undefined ||
-                    change.changes.tags !== undefined ||
-                    change.changes.wordCount !== undefined
-                );
+            const needsRemeasure = changes.some(change => {
+                return filePathToIndex.has(change.path) && isListRowHeightAffectingContentChange(change, rowSizingConfig);
             });
-            if (heightAffectingChanges.length === 0) {
-                return;
-            }
 
-            const visibleFilePaths = new Set<string>();
-            rowVirtualizer.getVirtualItems().forEach(virtualItem => {
-                const item = listItems[virtualItem.index];
-                if (item?.type === ListPaneItemType.FILE && item.data instanceof TFile) {
-                    visibleFilePaths.add(item.data.path);
-                }
-            });
-            const hasOffscreenHeightChanges = heightAffectingChanges.some(change => !visibleFilePaths.has(change.path));
-
-            // Visible rows can be re-measured in place.
-            // Offscreen row changes need a cache reset so stale measured heights do not persist until remount.
-            if (hasOffscreenHeightChanges) {
-                resetAndRemeasureVisibleRows();
-            } else {
-                remeasureVisibleRows();
+            if (needsRemeasure) {
+                remeasureScheduler?.schedule();
             }
         });
 
         return () => {
             unsubscribe();
+            remeasureScheduler?.cancel();
         };
-    }, [filePathToIndex, getDB, listItems, remeasureVisibleRows, resetAndRemeasureVisibleRows, rowVirtualizer]);
+    }, [enabled, filePathToIndex, getDB, rowSizingConfig, rowVirtualizer]);
 
     /**
      * Listen for mobile drawer visibility events.
@@ -823,7 +1313,7 @@ export function useListPaneScroll({
      * SCROLL_MOBILE_VISIBILITY: Sets pending scroll with 'visibility-change' reason
      */
     useEffect(() => {
-        if (!isMobile) return;
+        if (!enabled || !isMobile) return;
 
         const handleVisible = () => {
             // If we have a selected file, set a pending scroll
@@ -840,102 +1330,110 @@ export function useListPaneScroll({
 
         window.addEventListener('notebook-navigator-visible', handleVisible);
         return () => window.removeEventListener('notebook-navigator-visible', handleVisible);
-    }, [isMobile, selectedFile, rowVirtualizer, filePathToIndex, setPending]);
+    }, [enabled, isMobile, selectedFile, rowVirtualizer, filePathToIndex, setPending]);
 
     /**
-     * Re-measure all items when height-affecting settings change.
+     * Refresh all item size estimates when height-affecting settings change.
      * Includes date display, preview settings, feature images, etc.
      */
     useEffect(() => {
-        if (!rowVirtualizer) return;
+        if (!enabled || !rowVirtualizer) return;
 
-        resetAndRemeasureVisibleRows();
-    }, [
-        topSpacerHeight,
-        settings.showFileDate,
-        settings.showFilePreview,
-        settings.showFeatureImage,
-        settings.fileNameRows,
-        settings.previewRows,
-        settings.showFileProperties,
-        settings.showPropertiesOnSeparateRows,
-        settings.showFilePropertiesInCompactMode,
-        settings.showSelectedNavigationPills,
-        visiblePropertyKeySignature,
-        settings.showParentFolder,
-        settings.showTags,
-        settings.showFileTags,
-        settings.showFileTagsInCompactMode,
-        selectionState.selectionType,
-        selectedTagToHide,
-        selectedPropertyValueNodeIdToHide,
-        settings.optimizeNoteHeight,
-        settings.compactItemHeight,
-        settings.compactItemHeightScaleText,
-        folderSettings,
-        estimatedPreviewCharsPerRow,
-        estimatedTitleCharsPerRow,
-        listMeasurements,
-        rowVirtualizer,
-        resetAndRemeasureVisibleRows
-    ]);
+        rowVirtualizer.measure();
+    }, [enabled, listLayoutSignature, rowVirtualizer]);
 
     /**
-     * Re-measure when storage becomes ready after cold boot.
-     * Ensures heights are correct once preview data is available.
+     * Refresh size estimates when storage becomes ready after cold boot.
+     * Ensures estimated heights are correct once preview data is available.
      */
-    useEffect(() => {
-        if (isStorageReady && rowVirtualizer) {
-            resetAndRemeasureVisibleRows();
+    useLayoutEffect(() => {
+        if (enabled && isStorageReady && rowVirtualizer) {
+            rowVirtualizer.measure();
         }
-    }, [isStorageReady, rowVirtualizer, resetAndRemeasureVisibleRows]);
+    }, [enabled, isStorageReady, rowVirtualizer]);
 
     /**
      * Handle scrolling when list configuration changes (descendants toggle, appearance, grouping, or sort).
      * Maintains scroll position on the selected file.
      * Effect includes all dependencies but only scrolls when config actually changes.
      */
-    // Calculate effective sort order based on current selection and custom overrides
-    const effectiveSort = useMemo(() => {
-        const topicName = selectedTopicPath ? selectedTopicPath.split('/').pop() ?? selectedTopicPath : null;
-        return getEffectiveSortOption(settings, selectionState.selectionType, selectedFolder, selectedTag, selectedProperty, topicName);
-    }, [settings, selectionState.selectionType, selectedFolder, selectedTag, selectedProperty, selectedTopicPath]);
-    useEffect(() => {
+    // Calculate effective sort order based on current selection and custom overrides.
+    const selectedSortOverride = getListSortOverrideForSelection(
+        settings,
+        selectionState.selectionType,
+        selectedFolder,
+        selectedTag,
+        selectedProperty,
+        selectedTopicPath ? (selectedTopicPath.split('/').pop() ?? selectedTopicPath) : null
+    );
+    const effectiveSortSpec = useMemo(() => resolveListSort(settings, selectedSortOverride), [settings, selectedSortOverride]);
+    const effectiveSort = effectiveSortSpec.option;
+    const scrollPreservationSignature = useMemo(
+        () =>
+            getScrollPreservationSignature({
+                includeDescendantNotes,
+                listLayoutSignature,
+                groupBy: folderSettings.groupBy,
+                noteGrouping: settings.noteGrouping,
+                stickyGroupHeaders: settings.stickyGroupHeaders,
+                effectiveSort,
+                propertySortKey: effectiveSortSpec.propertyKey,
+                propertySortSecondary: effectiveSortSpec.propertySortSecondary
+            }),
+        [
+            includeDescendantNotes,
+            listLayoutSignature,
+            folderSettings.groupBy,
+            settings.noteGrouping,
+            settings.stickyGroupHeaders,
+            effectiveSort,
+            effectiveSortSpec.propertyKey,
+            effectiveSortSpec.propertySortSecondary
+        ]
+    );
+    useLayoutEffect(() => {
         if (!rowVirtualizer || !isScrollContainerReady) {
             return;
         }
 
-        // Build a key from the config values that should trigger scroll preservation
-        const configKey = `${includeDescendantNotes}-${settings.optimizeNoteHeight}-${settings.noteGrouping}-${effectiveSort}-${settings.propertySortKey}-${settings.propertySortSecondary}-${JSON.stringify(
-            folderSettings
-        )}`;
+        const previousConfig = prevScrollPreservationConfigRef.current;
+        if (previousConfig === null) {
+            prevScrollPreservationConfigRef.current = {
+                signature: scrollPreservationSignature,
+                includeDescendantNotes
+            };
+            return;
+        }
 
         // Check if config actually changed
-        if (prevConfigKeyRef.current === configKey) {
+        if (previousConfig.signature === scrollPreservationSignature) {
             return; // No config change, don't scroll
         }
 
         // Detect descendants toggle for special handling
-        const wasShowingDescendants = prevConfigKeyRef.current && prevConfigKeyRef.current.startsWith('true');
+        const wasShowingDescendants = previousConfig.includeDescendantNotes;
         const nowShowingDescendants = includeDescendantNotes;
 
         // Update the ref
-        prevConfigKeyRef.current = configKey;
+        prevScrollPreservationConfigRef.current = {
+            signature: scrollPreservationSignature,
+            includeDescendantNotes
+        };
 
-        // Set a pending scroll to maintain position on selected file when config changes
+        // Layout-only changes can keep the same path/index map, so scroll against the current version.
         if (revealFileOnListChanges && selectedFile) {
-            setPending({
+            requestPendingScroll({
                 type: 'file',
                 filePath: selectedFile.path,
                 reason: 'list-structure-change',
-                minIndexVersion: indexVersionRef.current + 1
+                minIndexVersion: indexVersionRef.current
             });
         } else if (wasShowingDescendants && !nowShowingDescendants) {
             // Special case: When disabling descendants and no file selected, scroll to top
-            setPending({
+            requestPendingScroll({
                 type: 'top',
                 reason: 'list-structure-change',
-                minIndexVersion: indexVersionRef.current + 1
+                minIndexVersion: indexVersionRef.current
             });
         }
     }, [
@@ -944,25 +1442,22 @@ export function useListPaneScroll({
         selectedFile,
         includeDescendantNotes,
         revealFileOnListChanges,
-        settings.optimizeNoteHeight,
-        settings.noteGrouping,
-        settings.propertySortKey,
-        settings.propertySortSecondary,
-        folderSettings,
-        effectiveSort,
-        setPending
+        scrollPreservationSignature,
+        requestPendingScroll
     ]);
 
     /**
      * Preserve scroll when the list index changes within the same context (implicit reorders like pin/unpin).
      * Uses indexVersion changes keyed by current folder/tag context. Avoids duplicate triggers on navigation.
      */
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!rowVirtualizer || !isScrollContainerReady) return;
 
         const propertySelectionKey = selectedProperty ?? '';
         const contextKey = `${selectedFolder?.path || ''}_${selectedTag || ''}_${propertySelectionKey}`;
         const prev = contextIndexVersionRef.current;
+        const groupCollapseStateChanged = prevGroupCollapseStateSignatureRef.current !== groupCollapseStateSignature;
+        prevGroupCollapseStateSignatureRef.current = groupCollapseStateSignature;
 
         // Initialize on first run or when context changes
         if (!prev || prev.key !== contextKey) {
@@ -973,11 +1468,14 @@ export function useListPaneScroll({
         // Same context: if index version advanced, maintain position on selected file
         if (indexVersionRef.current > prev.version) {
             contextIndexVersionRef.current = { key: contextKey, version: indexVersionRef.current };
+            if (groupCollapseStateChanged) {
+                return;
+            }
 
-            // Only queue a file scroll if the selected file exists in the current index
+            // Only request a file scroll if the selected file exists in the current index.
             const inList = !!(selectedFile && filePathToIndex.has(selectedFile.path));
             if (revealFileOnListChanges && inList && selectedFile) {
-                setPending({
+                requestPendingScroll({
                     type: 'file',
                     filePath: selectedFile.path,
                     reason: 'list-structure-change',
@@ -991,10 +1489,11 @@ export function useListPaneScroll({
         selectedFolder?.path,
         selectedTag,
         selectedProperty,
+        groupCollapseStateSignature,
         filePathToIndex,
         filePathToIndex.size,
         selectedFile,
-        setPending,
+        requestPendingScroll,
         revealFileOnListChanges
     ]);
 
@@ -1004,8 +1503,8 @@ export function useListPaneScroll({
      * Manages folder navigation flags and list context changes.
      * SCROLL_FOLDER_NAVIGATION: Sets pending scroll with 'folder-navigation' reason
      */
-    useEffect(() => {
-        if (!rowVirtualizer) {
+    useLayoutEffect(() => {
+        if (!enabled || !rowVirtualizer) {
             return;
         }
 
@@ -1040,6 +1539,15 @@ export function useListPaneScroll({
             return;
         }
 
+        const pendingScroll: PendingScroll = selectedFile
+            ? {
+                  type: 'file',
+                  filePath: selectedFile.path,
+                  reason: 'folder-navigation',
+                  minIndexVersion: indexVersionRef.current
+              }
+            : { type: 'top', reason: 'folder-navigation', minIndexVersion: indexVersionRef.current };
+
         // For single-pane mode, always set pending scroll even if not visible
         // It will be processed when the pane becomes visible
         if (!isScrollContainerReady && (isFolderNavigation || listChanged)) {
@@ -1053,16 +1561,7 @@ export function useListPaneScroll({
                 selectionDispatch({ type: 'SET_FOLDER_NAVIGATION', isFolderNavigation: false });
             }
 
-            setPending(
-                selectedFile
-                    ? {
-                          type: 'file',
-                          filePath: selectedFile.path,
-                          reason: 'folder-navigation',
-                          minIndexVersion: indexVersionRef.current
-                      }
-                    : { type: 'top', reason: 'folder-navigation', minIndexVersion: indexVersionRef.current }
-            );
+            requestPendingScroll(pendingScroll);
             return;
         }
 
@@ -1077,38 +1576,19 @@ export function useListPaneScroll({
             // Clear the folder navigation flag
             selectionDispatch({ type: 'SET_FOLDER_NAVIGATION', isFolderNavigation: false });
 
-            const pendingScroll = selectedFile
-                ? {
-                      type: 'file' as const,
-                      filePath: selectedFile.path,
-                      reason: 'folder-navigation' as const,
-                      minIndexVersion: indexVersionRef.current
-                  }
-                : ({ type: 'top', reason: 'folder-navigation', minIndexVersion: indexVersionRef.current } as const);
-
-            setPending(pendingScroll);
+            requestPendingScroll(pendingScroll);
         } else {
-            // For other cases (initial load), use pending scroll for consistency
-            // RAF was getting canceled due to rapid re-renders
-
-            // Update the ref
+            // For other visible context changes, try the same pre-paint scroll path.
+            // If the target index is not ready yet, leave it queued for a later pass.
             if (listChanged) {
                 prevListKeyRef.current = currentListKey;
             }
 
-            setPending(
-                selectedFile
-                    ? {
-                          type: 'file',
-                          filePath: selectedFile.path,
-                          reason: 'folder-navigation',
-                          minIndexVersion: indexVersionRef.current
-                      }
-                    : { type: 'top', reason: 'folder-navigation', minIndexVersion: indexVersionRef.current }
-            );
+            requestPendingScroll(pendingScroll);
         }
     }, [
         isScrollContainerReady,
+        enabled,
         rowVirtualizer,
         selectedFolder?.path,
         selectedTag,
@@ -1116,38 +1596,38 @@ export function useListPaneScroll({
         selectedFile,
         selectionState.isFolderNavigation,
         selectionDispatch,
+        filePathToIndex.size,
         listItems.length,
-        setPending,
         clearPending,
+        requestPendingScroll,
         hasSelectedFile
     ]);
 
     /**
      * Handle reveal operations (e.g., reveal active file command).
-     * Uses pending scroll for proper timing and measurement.
+     * Uses pending scroll for proper timing and size estimates.
      * SCROLL_REVEAL_OPERATION: Sets pending scroll with 'reveal' reason
      */
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (selectionState.isRevealOperation && selectedFile && isScrollContainerReady) {
-            // Always use pending scroll for reveal operations
-            // This ensures proper timing and measurement before scrolling
-            setPending({
+            // Reveal scrolls run immediately when the list is ready, otherwise they stay queued.
+            requestPendingScroll({
                 type: 'file',
                 filePath: selectedFile.path,
                 reason: 'reveal',
                 minIndexVersion: indexVersionRef.current
             });
-            // Reveal behaves like a one-shot event; clear the flag once the list pane has queued the scroll.
+            // Reveal behaves like a one-shot event; clear the flag once the list pane has accepted the scroll.
             selectionDispatch({ type: 'CLEAR_REVEAL_OPERATION' });
         }
-    }, [selectionState.isRevealOperation, selectedFile, isScrollContainerReady, selectionDispatch, filePathToIndex, setPending]);
+    }, [selectionState.isRevealOperation, selectedFile, isScrollContainerReady, selectionDispatch, filePathToIndex, requestPendingScroll]);
 
     /**
      * Handle search query changes.
      * Scrolls to top when search filters change and selected file is not in results.
      * SCROLL_SEARCH: Sets pending scroll to top when appropriate
      */
-    useEffect(() => {
+    useLayoutEffect(() => {
         // Only handle when search is active (searchQuery is defined)
         if (searchQuery === undefined) {
             prevSearchQueryRef.current = searchQuery;
@@ -1181,7 +1661,7 @@ export function useListPaneScroll({
                 suppressSearchTopScrollRef.current = false;
                 return;
             }
-            setPending({ type: 'top', reason: 'list-structure-change', minIndexVersion: indexVersionRef.current });
+            requestPendingScroll({ type: 'top', reason: 'list-structure-change', minIndexVersion: indexVersionRef.current });
             return;
         }
 
@@ -1202,7 +1682,7 @@ export function useListPaneScroll({
         isScrollContainerReady,
         rowVirtualizer,
         listItems.length,
-        setPending,
+        requestPendingScroll,
         suppressSearchTopScrollRef
     ]);
 
@@ -1210,6 +1690,7 @@ export function useListPaneScroll({
         rowVirtualizer,
         scrollContainerRef,
         scrollContainerRefCallback,
-        handleScrollToTop
+        handleScrollToTop,
+        scrollToIndexSafely
     };
 }

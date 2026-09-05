@@ -25,7 +25,8 @@ import { ConfirmModal } from '../../modals/ConfirmModal';
 import { getSupportedLeaves, type VisibilityPreferences } from '../../types';
 import { TIMEOUTS } from '../../types/obsidian-extended';
 import { getErrorMessage } from '../../utils/errorUtils';
-import { getFolderNoteDetectionSettings, isFolderNote } from '../../utils/folderNotes';
+import { getDrawingCompanionImagePaths, getDrawingFeatureImageSource } from '../../utils/drawingFeatureImages';
+import { getFolderNoteDetectionSettings, isFolderNote } from '../../utils/folderNoteLookup';
 import { isPrimaryDocumentFile } from '../../utils/fileTypeUtils';
 import { showNotice } from '../../utils/noticeUtils';
 import { findNextFileAfterRemoval, getFilesForNavigationSelection, updateSelectionAfterFileOperation } from '../../utils/selectionUtils';
@@ -47,6 +48,13 @@ interface FileDeletionServiceOptions {
     resolveFolderDisplayLabel: (folder: TFolder) => string;
     notifyError: (template: string, error: unknown, fallback?: string) => void;
     folderPathSettingsSync: FolderPathSettingsSync;
+}
+
+export interface FileTrashResult {
+    trashedCount: number;
+    failedCount: number;
+    trashedSourcePaths: string[];
+    errors: { file: TFile; error: unknown }[];
 }
 
 export class FileDeletionService {
@@ -165,22 +173,25 @@ export class FileDeletionService {
         settings: ISettingsProvider['settings'],
         selectionContext: SelectionContext,
         selectionDispatch: SelectionDispatch,
-        confirmBeforeDelete: boolean
+        confirmBeforeDelete: boolean,
+        currentFilesOverride?: readonly TFile[]
     ): Promise<void> {
-        const visibility = this.getVisibilityPreferences();
-        const currentFiles = getFilesForNavigationSelection(
-            {
-                selectionType: selectionContext.selectionType,
-                selectedFolder: selectionContext.selectedFolder ?? null,
-                selectedTag: selectionContext.selectedTag ?? null,
-                selectedProperty: selectionContext.selectedProperty ?? null
-            },
-            settings,
-            visibility,
-            this.app,
-            this.getTagTreeService(),
-            this.getPropertyTreeService()
-        );
+        const currentFiles =
+            currentFilesOverride?.some(currentFile => currentFile.path === file.path) === true
+                ? currentFilesOverride
+                : getFilesForNavigationSelection(
+                      {
+                          selectionType: selectionContext.selectionType,
+                          selectedFolder: selectionContext.selectedFolder ?? null,
+                          selectedTag: selectionContext.selectedTag ?? null,
+                          selectedProperty: selectionContext.selectedProperty ?? null
+                      },
+                      settings,
+                      this.getVisibilityPreferences(),
+                      this.app,
+                      this.getTagTreeService(),
+                      this.getPropertyTreeService()
+                  );
 
         let nextFileToSelect: TFile | null = null;
         const currentIndex = currentFiles.findIndex(currentFile => currentFile.path === file.path);
@@ -206,7 +217,7 @@ export class FileDeletionService {
             }
 
             window.setTimeout(() => {
-                const fileListEl = document.querySelector('.nn-list-pane-scroller');
+                const fileListEl = activeDocument.querySelector('.nn-list-pane-scroller');
                 if (fileListEl instanceof HTMLElement) {
                     fileListEl.focus();
                 }
@@ -224,7 +235,6 @@ export class FileDeletionService {
         }
 
         const performDeleteCore = async () => {
-            const sourcePaths = files.map(file => file.path);
             const attachmentDeletion = this.prepareAttachmentDeletionState(files);
 
             if (preDeleteAction) {
@@ -235,67 +245,10 @@ export class FileDeletionService {
                 }
             }
 
-            const errors: { file: TFile; error: unknown }[] = [];
-            let deletedCount = 0;
-            const deletedSourcePaths = new Set<string>();
-
-            const targetPathSet = new Set(sourcePaths);
-            let hasOpenLeaf = false;
-
-            try {
-                hasOpenLeaf = getSupportedLeaves(this.app).some(leaf => {
-                    const { view } = leaf;
-                    if (!(view instanceof FileView)) {
-                        return false;
-                    }
-
-                    const currentFile = view.file;
-                    if (!currentFile) {
-                        return false;
-                    }
-
-                    return targetPathSet.has(currentFile.path);
-                });
-            } catch {
-                hasOpenLeaf = false;
-            }
-
-            if (hasOpenLeaf) {
-                for (let index = 0; index < files.length; index += 1) {
-                    const file = files[index];
-                    const sourcePath = sourcePaths[index] ?? file.path;
-
-                    try {
-                        await this.clearOpenLeavesForFileDelete(file);
-                        await this.app.fileManager.trashFile(file);
-                        deletedCount += 1;
-                        deletedSourcePaths.add(sourcePath);
-
-                        if (index < files.length - 1) {
-                            await new Promise<void>(resolve => setTimeout(resolve, 0));
-                        }
-                    } catch (error) {
-                        errors.push({ file, error });
-                        console.error('Error deleting file:', sourcePath, error);
-                    }
-                }
-            } else {
-                const results = await Promise.allSettled(files.map(file => this.app.fileManager.trashFile(file)));
-
-                results.forEach((result, index) => {
-                    const file = files[index];
-                    const sourcePath = sourcePaths[index] ?? file.path;
-
-                    if (result.status === 'fulfilled') {
-                        deletedCount += 1;
-                        deletedSourcePaths.add(sourcePath);
-                        return;
-                    }
-
-                    errors.push({ file, error: result.reason });
-                    console.error('Error deleting file:', sourcePath, result.reason);
-                });
-            }
+            const trashResult = await this.trashFilesWithOpenLeafCleanupCore(files);
+            const deletedSourcePaths = new Set(trashResult.trashedSourcePaths);
+            const deletedCount = trashResult.trashedCount;
+            const { errors } = trashResult;
 
             await this.maybeDeleteAttachmentsAfterFileDelete(
                 attachmentDeletion.candidatesBySourcePath,
@@ -346,9 +299,52 @@ export class FileDeletionService {
         }
     }
 
+    public async trashFilesWithOpenLeafCleanup(files: readonly TFile[]): Promise<FileTrashResult> {
+        const filesToTrash = [...files];
+        if (filesToTrash.length === 0) {
+            return {
+                trashedCount: 0,
+                failedCount: 0,
+                trashedSourcePaths: [],
+                errors: []
+            };
+        }
+
+        const commandQueue = this.getCommandQueue();
+        if (!commandQueue) {
+            return this.trashFilesWithOpenLeafCleanupCore(filesToTrash);
+        }
+
+        let trashResult: FileTrashResult = {
+            trashedCount: 0,
+            failedCount: 0,
+            trashedSourcePaths: [],
+            errors: []
+        };
+        let hasTrashResult = false;
+        const commandResult = await commandQueue.executeDeleteFiles(filesToTrash, async () => {
+            trashResult = await this.trashFilesWithOpenLeafCleanupCore(filesToTrash);
+            hasTrashResult = true;
+        });
+
+        if (commandResult.success && hasTrashResult) {
+            return trashResult;
+        }
+
+        const error = commandResult.error ?? new Error('Failed to move files to trash.');
+        console.error('Error moving files to trash:', error);
+        const trashedSourcePathSet = new Set(trashResult.trashedSourcePaths);
+        return {
+            trashedCount: trashResult.trashedCount,
+            failedCount: filesToTrash.length - trashResult.trashedCount,
+            trashedSourcePaths: trashResult.trashedSourcePaths,
+            errors: filesToTrash.filter(file => !trashedSourcePathSet.has(file.path)).map(file => ({ file, error }))
+        };
+    }
+
     public async deleteFilesWithSmartSelection(
         selectedFiles: Set<string>,
-        allFiles: TFile[],
+        allFiles: readonly TFile[],
         selectionDispatch: SelectionDispatch,
         confirmBeforeDelete: boolean
     ): Promise<void> {
@@ -376,12 +372,82 @@ export class FileDeletionService {
             }
 
             window.setTimeout(() => {
-                const fileListEl = document.querySelector('.nn-list-pane-scroller');
+                const fileListEl = activeDocument.querySelector('.nn-list-pane-scroller');
                 if (fileListEl instanceof HTMLElement) {
                     fileListEl.focus();
                 }
             }, TIMEOUTS.FILE_OPERATION_DELAY);
         });
+    }
+
+    private hasOpenLeafForFiles(files: readonly TFile[]): boolean {
+        const targetPathSet = new Set(files.map(file => file.path));
+
+        try {
+            return getSupportedLeaves(this.app).some(leaf => {
+                const { view } = leaf;
+                if (!(view instanceof FileView)) {
+                    return false;
+                }
+
+                const currentFile = view.file;
+                if (!currentFile) {
+                    return false;
+                }
+
+                return targetPathSet.has(currentFile.path);
+            });
+        } catch {
+            return false;
+        }
+    }
+
+    private async trashFilesWithOpenLeafCleanupCore(files: readonly TFile[]): Promise<FileTrashResult> {
+        const sourcePaths = files.map(file => file.path);
+        const errors: { file: TFile; error: unknown }[] = [];
+        const trashedSourcePaths: string[] = [];
+
+        if (this.hasOpenLeafForFiles(files)) {
+            for (let index = 0; index < files.length; index += 1) {
+                const file = files[index];
+                const sourcePath = sourcePaths[index] ?? file.path;
+
+                try {
+                    await this.clearOpenLeavesForFileDelete(file);
+                    await this.app.fileManager.trashFile(file);
+                    trashedSourcePaths.push(sourcePath);
+
+                    if (index < files.length - 1) {
+                        await new Promise<void>(resolve => window.setTimeout(resolve, 0));
+                    }
+                } catch (error) {
+                    errors.push({ file, error });
+                    console.error('Error deleting file:', sourcePath, error);
+                }
+            }
+        } else {
+            const results = await Promise.allSettled(files.map(file => this.app.fileManager.trashFile(file)));
+
+            results.forEach((result, index) => {
+                const file = files[index];
+                const sourcePath = sourcePaths[index] ?? file.path;
+
+                if (result.status === 'fulfilled') {
+                    trashedSourcePaths.push(sourcePath);
+                    return;
+                }
+
+                errors.push({ file, error: result.reason });
+                console.error('Error deleting file:', sourcePath, result.reason);
+            });
+        }
+
+        return {
+            trashedCount: trashedSourcePaths.length,
+            failedCount: errors.length,
+            trashedSourcePaths,
+            errors
+        };
     }
 
     private isAttachmentFile(file: TFile): boolean {
@@ -438,7 +504,38 @@ export class FileDeletionService {
         return Array.from(resolved.values()).sort((left, right) => left.path.localeCompare(right.path));
     }
 
-    private getOrphanLinkedAttachments(attachmentCandidates: readonly TFile[], deletedSourcePaths: Set<string>): TFile[] {
+    private getDrawingCompanionAttachmentCandidates(sourceFile: TFile): TFile[] {
+        const source = getDrawingFeatureImageSource(this.app, sourceFile);
+        if (!source?.supportsCompanionImages) {
+            return [];
+        }
+
+        const resolved = new Map<string, TFile>();
+        for (const path of getDrawingCompanionImagePaths(sourceFile, source.providerId)) {
+            const file = this.app.vault.getFileByPath(path);
+            if (!file || !this.isAttachmentFile(file)) {
+                continue;
+            }
+
+            resolved.set(file.path, file);
+        }
+
+        return Array.from(resolved.values()).sort((left, right) => left.path.localeCompare(right.path));
+    }
+
+    private getAttachmentCandidates(sourceFile: TFile): TFile[] {
+        const resolved = new Map<string, TFile>();
+        for (const file of [
+            ...this.getLinkedAttachmentCandidates(sourceFile),
+            ...this.getDrawingCompanionAttachmentCandidates(sourceFile)
+        ]) {
+            resolved.set(file.path, file);
+        }
+
+        return Array.from(resolved.values()).sort((left, right) => left.path.localeCompare(right.path));
+    }
+
+    private getOrphanAttachments(attachmentCandidates: readonly TFile[], deletedSourcePaths: Set<string>): TFile[] {
         if (attachmentCandidates.length === 0) {
             return [];
         }
@@ -492,7 +589,7 @@ export class FileDeletionService {
         }
 
         sourceFiles.forEach(file => {
-            candidatesBySourcePath.set(file.path, this.getLinkedAttachmentCandidates(file));
+            candidatesBySourcePath.set(file.path, this.getAttachmentCandidates(file));
         });
         return candidatesBySourcePath;
     }
@@ -548,13 +645,13 @@ export class FileDeletionService {
         }
 
         try {
-            await this.maybeDeleteOrphanedLinkedAttachments(attachmentCandidates, deletedSourcePaths, setting);
+            await this.maybeDeleteOrphanedAttachments(attachmentCandidates, deletedSourcePaths, setting);
         } catch (error) {
             this.notifyError(strings.fileSystem.errors.deleteAttachments, error);
         }
     }
 
-    private async maybeDeleteOrphanedLinkedAttachments(
+    private async maybeDeleteOrphanedAttachments(
         attachmentCandidates: readonly TFile[],
         deletedSourcePaths: Set<string>,
         setting: DeleteAttachmentsSetting
@@ -563,7 +660,7 @@ export class FileDeletionService {
             return;
         }
 
-        const orphaned = this.getOrphanLinkedAttachments(attachmentCandidates, deletedSourcePaths);
+        const orphaned = this.getOrphanAttachments(attachmentCandidates, deletedSourcePaths);
         if (orphaned.length === 0) {
             return;
         }

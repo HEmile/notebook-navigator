@@ -18,7 +18,7 @@
 
 import type { ExpansionAction } from '../context/ExpansionContext';
 import type { SelectionAction, SelectionRevealSource } from '../context/SelectionContext';
-import type { UIAction } from '../context/UIStateContext';
+import type { ContentPane } from '../context/UIStateContext';
 import { ItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID } from '../types';
 import {
     getPropertyKeyNodeIdFromNodeId,
@@ -27,12 +27,9 @@ import {
     type PropertySelectionNodeId
 } from './propertyTree';
 import type { PropertyTreeNode } from '../types/storage';
+import { expandNavigationTreeItems } from './navigationExpansion';
 
 type Dispatch<T> = (action: T) => void;
-
-interface FocusPaneOptions {
-    updateSinglePaneView?: boolean;
-}
 
 export interface NavigateToPropertyOptions {
     skipScroll?: boolean;
@@ -49,37 +46,12 @@ export interface PropertyNavigationEnvironment {
     propertyTree: ReadonlyMap<string, PropertyTreeNode>;
     expandedProperties: Set<string>;
     expandedVirtualFolders: Set<string>;
+    collapseOtherBranchesOnExpand?: boolean;
     expansionDispatch: Dispatch<ExpansionAction>;
     selectionDispatch: Dispatch<SelectionAction>;
-    uiState: {
-        singlePane: boolean;
-        currentSinglePaneView: 'navigation' | 'files';
-        focusedPane: 'navigation' | 'files' | 'search';
-    };
-    uiDispatch: Dispatch<UIAction>;
+    activatePane: (target: ContentPane) => void;
     resolveSelectionNodeId?: (nodeId: PropertySelectionNodeId) => PropertySelectionNodeId;
-    focusNavigationPane?: (options?: FocusPaneOptions) => void;
-    focusFilesPane?: (options?: FocusPaneOptions) => void;
     requestScroll?: (nodeId: PropertySelectionNodeId, options: { align: 'auto'; itemType: typeof ItemType.PROPERTY }) => void;
-}
-
-function focusPane(env: PropertyNavigationEnvironment, pane: 'navigation' | 'files', options?: FocusPaneOptions): void {
-    if (pane === 'navigation') {
-        if (env.focusNavigationPane) {
-            env.focusNavigationPane(options);
-            return;
-        }
-    } else if (env.focusFilesPane) {
-        env.focusFilesPane(options);
-        return;
-    }
-
-    if (env.uiState.singlePane && options?.updateSinglePaneView && env.uiState.currentSinglePaneView !== pane) {
-        env.uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: pane });
-    }
-    if (env.uiState.focusedPane !== pane) {
-        env.uiDispatch({ type: 'SET_FOCUSED_PANE', pane });
-    }
 }
 
 function resolveTargetNodeId(
@@ -124,11 +96,7 @@ function selectPropertyAndFocus(
     }
 
     const preserveNavigationFocus = options?.preserveNavigationFocus ?? true;
-    if (env.uiState.singlePane) {
-        focusPane(env, preserveNavigationFocus ? 'navigation' : 'files', { updateSinglePaneView: true });
-    } else {
-        focusPane(env, preserveNavigationFocus ? 'navigation' : 'files');
-    }
+    env.activatePane(preserveNavigationFocus ? 'navigation' : 'files');
 }
 
 /**
@@ -168,7 +136,12 @@ export function navigateToProperty(
         keyNodeId !== resolvedNodeId &&
         !env.expandedProperties.has(keyNodeId);
     if (keyNeedsExpansion) {
-        env.expansionDispatch({ type: 'EXPAND_PROPERTIES', propertyNodeIds: [keyNodeId] });
+        expandNavigationTreeItems({
+            type: 'property',
+            ids: [keyNodeId],
+            collapseOtherBranches: Boolean(env.collapseOtherBranchesOnExpand),
+            dispatch: env.expansionDispatch
+        });
     }
 
     selectPropertyAndFocus(env, resolvedNodeId, options);

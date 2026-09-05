@@ -17,7 +17,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import NotebookNavigatorPlugin from '../main';
+import type NotebookNavigatorPlugin from '../main';
 
 interface RecentDataState {
     recentNotes: string[];

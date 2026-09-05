@@ -56,6 +56,4 @@ export interface MoveFolderResult {
 }
 
 export type MoveFolderModalResult =
-    | { status: 'success'; data: MoveFolderResult }
-    | { status: 'cancelled' }
-    | { status: 'error'; error: unknown };
+    { status: 'success'; data: MoveFolderResult } | { status: 'cancelled' } | { status: 'error'; error: unknown };

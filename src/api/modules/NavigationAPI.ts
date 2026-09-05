@@ -22,8 +22,8 @@ import { NOTEBOOK_NAVIGATOR_VIEW } from '../../types';
 type NavigatorView = {
     navigateToFile: (file: TFile) => boolean;
     navigateToFolder: (folder: TFolder | string, options?: { preserveNavigationFocus?: boolean }) => boolean;
-    navigateToTag: (tag: string) => string | null;
-    navigateToProperty: (propertyNodeId: string) => string | null;
+    navigateToTag: (tag: string, options?: { preserveNavigationFocus?: boolean }) => string | null;
+    navigateToProperty: (propertyNodeId: string, options?: { preserveNavigationFocus?: boolean }) => string | null;
     whenReady?: () => Promise<boolean>;
 };
 
@@ -92,7 +92,7 @@ export class NavigationAPI {
             return false;
         }
 
-        return view.navigateToTag(tag) !== null;
+        return view.navigateToTag(tag, { preserveNavigationFocus: true }) !== null;
     }
 
     /**
@@ -105,7 +105,7 @@ export class NavigationAPI {
             return false;
         }
 
-        return view.navigateToProperty(nodeId) !== null;
+        return view.navigateToProperty(nodeId, { preserveNavigationFocus: true }) !== null;
     }
 
     private resolveFile(file: TFile | string): TFile | null {

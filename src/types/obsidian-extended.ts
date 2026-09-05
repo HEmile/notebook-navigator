@@ -79,17 +79,7 @@ export interface ExtendedApp extends App {
  * Defines all possible value types that can be stored in the drag payload.
  */
 type DragManagerPayloadValue =
-    | string
-    | number
-    | boolean
-    | null
-    | undefined
-    | TFile
-    | TFile[]
-    | DragManagerPayload
-    | DragManagerPayload[]
-    | HTMLElement
-    | (() => void);
+    string | number | boolean | null | undefined | TFile | TFile[] | DragManagerPayload | DragManagerPayload[] | HTMLElement | (() => void);
 
 export interface DragManagerPayload {
     type?: 'file' | 'files' | 'link' | 'tag'; // Type of drag operation
@@ -183,6 +173,10 @@ export const TIMEOUTS = {
     DEBOUNCE_KEYBOARD_FILE_OPEN: 500,
     /** Debounce for content processing and tree updates */
     DEBOUNCE_CONTENT: 300,
+    /** Debounce applied after vault file events before refreshing navigation */
+    NAVIGATION_FILE_CHANGE_DEBOUNCE: 100,
+    /** Maximum wait between navigation refreshes during continuous vault file-event bursts */
+    NAVIGATION_FILE_CHANGE_MAX_WAIT: 500,
     /** Debounce for tag tree rebuild requests */
     DEBOUNCE_TAG_TREE: 500,
     /** Debounce for settings text input */
@@ -232,5 +226,13 @@ declare global {
     interface Window {
         notebookNavigatorOpeningVersionHistory?: boolean;
         notebookNavigatorOpeningFolderNote?: boolean;
+        createEl<K extends keyof HTMLElementTagNameMap>(
+            tag: K,
+            o?: DomElementInfo | string,
+            callback?: (el: HTMLElementTagNameMap[K]) => void
+        ): HTMLElementTagNameMap[K];
+        createDiv(o?: DomElementInfo | string, callback?: (el: HTMLDivElement) => void): HTMLDivElement;
+        createSpan(o?: DomElementInfo | string, callback?: (el: HTMLSpanElement) => void): HTMLSpanElement;
+        createFragment(callback?: (el: DocumentFragment) => void): DocumentFragment;
     }
 }

@@ -40,6 +40,8 @@ Keep this list ordered: later files override earlier ones.
 @import './sections/ui-search.css';
 /* ui-buttons.css: header icon buttons (`.nn-icon-button`), active/disabled states, SVG sizing. */
 @import './sections/ui-buttons.css';
+/* ui-tooltip.css: custom item hover tooltip (`.nn-tooltip`) mirroring the built-in Obsidian tooltip. */
+@import './sections/ui-tooltip.css';
 /* layout-spacers.css: navigation/list spacer rows and separators (`.nn-nav-*-spacer`, `.nn-list-*-spacer`). */
 @import './sections/layout-spacers.css';
 
@@ -60,8 +62,10 @@ Keep this list ordered: later files override earlier ones.
 @import './sections/list-compact-mode.css';
 /* list-file-thumbnails.css: file thumbnails (`.nn-file-thumbnail*`) and extension badge rendering for non-markdown files. */
 @import './sections/list-file-thumbnails.css';
-/* list-date-headers.css: date group headers (`.nn-date-group-header*`) plus skeleton view layout during load. */
-@import './sections/list-date-headers.css';
+/* list-group-headers.css: list group headers (`.nn-list-group-header*`) plus skeleton view layout during load. */
+@import './sections/list-group-headers.css';
+/* inline-rename.css: inline rename input sizing in navigation and list rows. */
+@import './sections/inline-rename.css';
 /* ui-empty-state.css: empty state layout for the list pane (`.nn-empty-state`, `.nn-empty-message`). */
 @import './sections/ui-empty-state.css';
 
@@ -72,7 +76,7 @@ Keep this list ordered: later files override earlier ones.
 @import './sections/state-focus.css';
 /* state-hover.css: desktop hover rules for file rows. */
 @import './sections/state-hover.css';
-/* state-drag-and-drop.css: drag ghost + drop target styling, plus resize user-select suppression and header action layout variants. */
+/* state-drag-and-drop.css: native drag preview and drop target styling, plus resize user-select suppression and header action layout variants. */
 @import './sections/state-drag-and-drop.css';
 /* state-context-menu.css: context menu outlines for active file/nav items. */
 @import './sections/state-context-menu.css';
@@ -100,6 +104,8 @@ Keep this list ordered: later files override earlier ones.
 @import './sections/modal-icon-picker.css';
 /* modal-property-keys.css: property key visibility modal layout (navigation/list toggles). */
 @import './sections/modal-property-keys.css';
+/* modal-manual-sort-group-header.css: manual sort group header icon and color controls. */
+@import './sections/modal-manual-sort-group-header.css';
 /* modal-settings-transfer.css: settings import/export modal sizing and JSON editor layout. */
 @import './sections/modal-settings-transfer.css';
 
@@ -108,7 +114,7 @@ Keep this list ordered: later files override earlier ones.
 @import './sections/layout-virtual-list.css';
 
 /* Settings */
-/* settings-page.css: settings tab layout, sub-setting indentation, toolbar visibility controls, and settings helpers. */
+/* settings-page.css: settings tab layout, toolbar visibility controls, and settings helpers. */
 @import './sections/settings-page.css';
 /* settings-sponsor-button.css: hover styling for the settings support button. */
 @import './sections/settings-sponsor-button.css';
@@ -120,18 +126,22 @@ Keep this list ordered: later files override earlier ones.
 /* Additional modals */
 /* modal-color-picker.css: color picker modal layout, palette grid, recent colors, and input rows. */
 @import './sections/modal-color-picker.css';
+/* modal-appearance.css: combined appearance modal with staged icon/color/background tabs. */
+@import './sections/modal-appearance.css';
 
 /* Theme + platform */
 /* theme-folder-colors.css: placeholder section for folder color rules (currently empty). */
 @import './sections/theme-folder-colors.css';
 /* mobile-variables.css: mobile typography and spacing variables, mobile nav row padding adjustments. */
 @import './sections/mobile-variables.css';
+/* mobile-panes.css: shared mobile pane/scroller layout and overscroll behavior. */
+@import './sections/mobile-panes.css';
 /* mobile-tab-bars.css: mobile bottom navigation tabs, safe-area handling, and toolbar positioning rules. */
 @import './sections/mobile-tab-bars.css';
-/* platform-ios-obsidian-1-11.css: iOS safe areas + Obsidian 1.11+ iOS glass toolbar/overlays. */
-@import './sections/platform-ios-obsidian-1-11.css';
-/* platform-android-obsidian-1-11.css: Android tweaks for Obsidian 1.11+ view chrome. */
-@import './sections/platform-android-obsidian-1-11.css';
+/* platform-ios.css: iOS safe areas, glass toolbar, and overlay behavior. */
+@import './sections/platform-ios.css';
+/* platform-android.css: Android view chrome and pane surface behavior. */
+@import './sections/platform-android.css';
 /* android-toolbar.css: Android toolbar positioning overrides. */
 @import './sections/android-toolbar.css';
 /* android-textzoom.css: Android `textZoom` compensation variables and overrides. */
@@ -140,7 +150,7 @@ Keep this list ordered: later files override earlier ones.
 @import './sections/rtl-support.css';
 /* icons-system.css: emoji/icon font rendering, icon provider tabs, and shared icon UI primitives. */
 @import './sections/icons-system.css';
-/* settings-metadata-info.css: metadata info row styles and menu item trash coloring. */
+/* settings-metadata-info.css: metadata info row styles. */
 @import './sections/settings-metadata-info.css';
 
 /* Style settings */

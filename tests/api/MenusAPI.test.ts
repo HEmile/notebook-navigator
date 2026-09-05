@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { MenusAPI } from '../../src/api/modules/MenusAPI';
+import { MenusAPI, type FileMenuExtension } from '../../src/api/modules/MenusAPI';
 import { TFolder } from 'obsidian';
 import type { Menu, MenuItem } from 'obsidian';
 import { createTestTFile } from '../utils/createTestTFile';
@@ -161,7 +161,8 @@ describe('MenusAPI', () => {
 
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-        menusAPI.registerFileMenu((async () => undefined) as unknown as Parameters<typeof menusAPI.registerFileMenu>[0]);
+        const promiseReturningExtension = (() => Promise.resolve()) as unknown as FileMenuExtension;
+        menusAPI.registerFileMenu(promiseReturningExtension);
 
         const added = menusAPI.applyFileMenuExtensions({
             menu: menu as unknown as Menu,

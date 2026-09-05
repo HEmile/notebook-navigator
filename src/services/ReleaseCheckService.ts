@@ -18,8 +18,8 @@
 
 import { requestUrl } from 'obsidian';
 import { NOTEBOOK_NAVIGATOR_RELEASE_CHECK_URL } from '../constants/urls';
-import { compareVersions } from '../releaseNotes';
-import NotebookNavigatorPlugin from '../main';
+import { compareVersions } from '../utils/versionUtils';
+import type NotebookNavigatorPlugin from '../main';
 
 /** Represents a newer release that should be announced to the user */
 export interface ReleaseUpdateNotice {

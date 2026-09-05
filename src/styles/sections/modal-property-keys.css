@@ -45,21 +45,21 @@
     position: relative;
 }
 
-.modal.nn-property-keys-modal .nn-property-keys-search {
+.modal.nn-property-keys-modal input.nn-property-keys-search {
     margin: 0;
     height: 32px;
-    padding: 4px 36px 4px 12px !important;
-    border-radius: 999px !important;
-    border: 1px solid var(--nn-theme-list-search-border-color) !important;
+    padding: 4px 36px 4px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--nn-theme-list-search-border-color);
 }
 
-.modal.nn-property-keys-modal .nn-property-keys-search.is-active {
-    background: var(--nn-theme-list-search-active-bg) !important;
+.modal.nn-property-keys-modal input.nn-property-keys-search.is-active {
+    background: var(--nn-theme-list-search-active-bg);
 }
 
-.modal.nn-property-keys-modal .nn-property-keys-search:focus {
-    border-color: var(--nn-theme-list-search-border-color) !important;
-    box-shadow: 0 0 0 2px var(--nn-theme-list-search-border-color) !important;
+.modal.nn-property-keys-modal input.nn-property-keys-search:focus {
+    border-color: var(--nn-theme-list-search-border-color);
+    box-shadow: 0 0 0 2px var(--nn-theme-list-search-border-color);
 }
 
 .modal.nn-property-keys-modal .nn-property-keys-search-clear {

@@ -16,14 +16,30 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { TFile } from 'obsidian';
+import { App, TFile } from 'obsidian';
+import type { CachedMetadata } from 'obsidian';
 import type { ContentProviderType } from '../interfaces/IContentProvider';
 import type { NotebookNavigatorSettings } from '../settings/types';
 import { getDBInstance } from '../storage/fileOperations';
-import { isPdfFile } from '../utils/fileTypeUtils';
-import { hasPropertyFrontmatterFields } from '../utils/propertyUtils';
+import { createFrontmatterPropertyExclusionMatcher } from '../utils/fileFilters';
+import { isGeneratedThumbnailFile } from '../utils/fileTypeUtils';
 import { getActiveHiddenFileProperties } from '../utils/vaultProfiles';
 import { getLocalFeatureImageKey } from '../services/content/FeatureImageContentProvider';
+import { createCaseInsensitiveKeyMatcher } from '../utils/recordUtils';
+import {
+    getDrawingDirectFeatureImageKey,
+    getDrawingSourceProviderIdWithFrontmatter,
+    getNonMarkdownDrawingFeatureImageProviderId
+} from '../utils/drawingFeatureImages';
+import {
+    hasMarkdownCharacterCountConsumer,
+    hasMarkdownFeatureImageConsumer,
+    hasMarkdownPipelineContent,
+    hasMarkdownPreviewConsumer,
+    hasMarkdownTaskConsumer,
+    hasMarkdownWordCountConsumer
+} from '../utils/markdownPipelineContentTypes';
+import { areMarkdownTaskCountsEqual, countMarkdownTasksFromMetadata, hasMarkdownTaskMetadata } from '../utils/markdownTaskCounts';
 
 type MetadataSourceFilterOptions = {
     /**
@@ -31,6 +47,12 @@ type MetadataSourceFilterOptions = {
      * This avoids false negatives when the provider's hidden-state logic can change without a stat.mtime update.
      */
     conservativeMetadata?: boolean;
+    /**
+     * When true, task metadata is compared even if the markdown pipeline mtime is current.
+     * Used by metadata-change events before provider mtimes are reset.
+     */
+    compareCurrentTaskMetadata?: boolean;
+    app?: App;
 };
 
 /**
@@ -52,10 +74,19 @@ export function filterFilesRequiringMetadataSources(
     const hiddenFileProperties = getActiveHiddenFileProperties(settings);
     const requiresHiddenState = hiddenFileProperties.length > 0;
     const conservativeMetadata = options?.conservativeMetadata ?? false;
-    const propertiesEnabled = hasPropertyFrontmatterFields(settings);
+    const compareCurrentTaskMetadata = options?.compareCurrentTaskMetadata ?? false;
     const needsMarkdownPipeline = types.includes('markdownPipeline');
     const needsTags = types.includes('tags');
     const needsMetadata = types.includes('metadata');
+    const app = options?.app;
+    const featureImageExcludeMatcher = createCaseInsensitiveKeyMatcher(settings.featureImageExcludeProperties);
+    const hiddenFilePropertyMatcher = requiresHiddenState ? createFrontmatterPropertyExclusionMatcher(hiddenFileProperties) : null;
+    const markdownPipelineEnabled = hasMarkdownPipelineContent(settings, app);
+    const previewEnabled = hasMarkdownPreviewConsumer(settings);
+    const featureImageEnabled = hasMarkdownFeatureImageConsumer(settings);
+    const wordCountEnabled = hasMarkdownWordCountConsumer(settings, app);
+    const characterCountEnabled = hasMarkdownCharacterCountConsumer(settings);
+    const tasksEnabled = hasMarkdownTaskConsumer(settings);
 
     return files.filter(file => {
         const record = records.get(file.path);
@@ -69,15 +100,56 @@ export function filterFilesRequiringMetadataSources(
             return true;
         }
 
-        if (needsMarkdownPipeline && file.extension === 'md') {
-            const needsPreview = settings.showFilePreview && record.previewStatus === 'unprocessed';
-            const needsFeatureImage =
-                settings.showFeatureImage && (record.featureImageKey === null || record.featureImageStatus === 'unprocessed');
-            const needsProperties = propertiesEnabled && record.properties === null;
-            const needsWordCount = record.wordCount === null;
-            const needsTasks = record.taskTotal === null || record.taskUnfinished === null;
+        if (needsMarkdownPipeline && markdownPipelineEnabled && file.extension === 'md') {
+            let cachedMetadata: CachedMetadata | null | undefined;
+            const getCachedMetadata = (): CachedMetadata | null => {
+                if (cachedMetadata === undefined) {
+                    cachedMetadata = app?.metadataCache.getFileCache(file) ?? null;
+                }
+                return cachedMetadata;
+            };
             const needsRefresh = record.markdownPipelineMtime !== file.stat.mtime;
-            if (needsRefresh || needsPreview || needsFeatureImage || needsProperties || needsWordCount || needsTasks) {
+            if (needsRefresh) {
+                // Every markdown change can alter the complete frontmatter property cache.
+                return true;
+            }
+
+            const needsPreview = previewEnabled && record.previewStatus === 'unprocessed';
+            let needsFeatureImage = featureImageEnabled && (record.featureImageKey === null || record.featureImageStatus === 'unprocessed');
+            if (featureImageEnabled && !needsFeatureImage && app) {
+                const frontmatter = getCachedMetadata()?.frontmatter;
+                const featureImageExcluded = featureImageExcludeMatcher.matches(frontmatter);
+                if (!featureImageExcluded) {
+                    const drawingProviderId = getDrawingSourceProviderIdWithFrontmatter(file, frontmatter);
+                    const expectedDrawingFeatureImageKey = drawingProviderId
+                        ? getDrawingDirectFeatureImageKey(file, drawingProviderId)
+                        : null;
+                    needsFeatureImage =
+                        expectedDrawingFeatureImageKey !== null && record.featureImageKey !== expectedDrawingFeatureImageKey;
+                }
+            }
+            const needsProperties = record.properties === null;
+            const needsWordCount = wordCountEnabled && record.wordCount === null;
+            const needsCharacterCount =
+                characterCountEnabled && (record.characterCountWithSpaces === null || record.characterCountWithoutSpaces === null);
+            const needsTasks = tasksEnabled && (record.taskTotal === null || record.taskUnfinished === null);
+            let hasTaskCountChanges = false;
+            if (tasksEnabled && (needsTasks || compareCurrentTaskMetadata)) {
+                const metadata = getCachedMetadata();
+                const taskCountsFromMetadata = metadata === null ? null : countMarkdownTasksFromMetadata(metadata);
+                const hasTaskMetadata = metadata !== null && hasMarkdownTaskMetadata(metadata);
+                hasTaskCountChanges =
+                    taskCountsFromMetadata !== null ? !areMarkdownTaskCountsEqual(record, taskCountsFromMetadata) : hasTaskMetadata;
+            }
+            if (
+                needsPreview ||
+                needsFeatureImage ||
+                needsProperties ||
+                needsWordCount ||
+                needsCharacterCount ||
+                needsTasks ||
+                hasTaskCountChanges
+            ) {
                 return true;
             }
         }
@@ -86,7 +158,17 @@ export function filterFilesRequiringMetadataSources(
         if (needsMetadata && file.extension === 'md') {
             const metadata = record.metadata;
             if (requiresHiddenState && conservativeMetadata) {
-                return true;
+                if (!app) {
+                    return true;
+                }
+                const cachedMetadata = app.metadataCache.getFileCache(file);
+                if (cachedMetadata === null) {
+                    return true;
+                }
+                const hidden = hiddenFilePropertyMatcher?.matches(cachedMetadata.frontmatter) ?? false;
+                if (metadata?.hidden !== hidden) {
+                    return true;
+                }
             }
             if (record.metadataMtime !== file.stat.mtime) {
                 return true;
@@ -103,40 +185,60 @@ export function filterFilesRequiringMetadataSources(
     });
 }
 
+function getFileThumbnailFeatureImageKey(file: TFile): string | null {
+    if (isGeneratedThumbnailFile(file)) {
+        return getLocalFeatureImageKey(file);
+    }
+
+    const drawingProviderId = getNonMarkdownDrawingFeatureImageProviderId(file);
+    if (!drawingProviderId) {
+        return null;
+    }
+
+    return getDrawingDirectFeatureImageKey(file, drawingProviderId);
+}
+
+export function shouldQueueFileThumbnailProvider(file: TFile): boolean {
+    return getFileThumbnailFeatureImageKey(file) !== null;
+}
+
 /**
- * Returns PDF files that need the file thumbnails provider to run.
+ * Returns non-markdown files that need the file thumbnails provider to run.
  *
  * This resumes forced regeneration across restarts when `fileThumbnailsMtime` was reset without changing FileData.mtime.
  */
-export function filterPdfFilesRequiringThumbnails(files: TFile[], settings: NotebookNavigatorSettings): TFile[] {
+export function filterFilesRequiringFileThumbnails(files: TFile[], settings: NotebookNavigatorSettings): TFile[] {
     if (!settings.showFeatureImage || files.length === 0) {
         return [];
     }
 
-    const pdfFiles = files.filter(file => isPdfFile(file));
-    if (pdfFiles.length === 0) {
+    const candidates = files
+        .map(file => ({ file, expectedKey: getFileThumbnailFeatureImageKey(file) }))
+        .filter((candidate): candidate is { file: TFile; expectedKey: string } => candidate.expectedKey !== null);
+    if (candidates.length === 0) {
         return [];
     }
 
     const db = getDBInstance();
-    const records = db.getFiles(pdfFiles.map(file => file.path));
+    const records = db.getFiles(candidates.map(({ file }) => file.path));
 
-    return pdfFiles.filter(file => {
-        const record = records.get(file.path);
-        if (!record) {
-            return true;
-        }
+    return candidates
+        .filter(({ file, expectedKey }) => {
+            const record = records.get(file.path);
+            if (!record) {
+                return true;
+            }
 
-        const fileMtime = file.stat.mtime;
-        if (record.fileThumbnailsMtime !== fileMtime) {
-            return true;
-        }
+            const fileMtime = file.stat.mtime;
+            if (record.fileThumbnailsMtime !== fileMtime) {
+                return true;
+            }
 
-        if (record.featureImageStatus === 'unprocessed') {
-            return true;
-        }
+            if (record.featureImageStatus === 'unprocessed') {
+                return true;
+            }
 
-        const expectedKey = getLocalFeatureImageKey(file);
-        return record.featureImageKey === null || record.featureImageKey !== expectedKey;
-    });
+            return record.featureImageKey === null || record.featureImageKey !== expectedKey;
+        })
+        .map(({ file }) => file);
 }

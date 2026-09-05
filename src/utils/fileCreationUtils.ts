@@ -22,6 +22,7 @@ import { TIMEOUTS, OBSIDIAN_COMMANDS } from '../types/obsidian-extended';
 import { executeCommand } from './typeGuards';
 import { showNotice } from './noticeUtils';
 import { normalizeOptionalVaultFilePath } from './pathUtils';
+import { getTemplaterCreateNoteFromTemplate } from './templaterIntegration';
 
 /**
  * Options for creating a new file
@@ -37,6 +38,8 @@ export interface CreateFileOptions {
     openInNewTab?: boolean;
     /** Whether to trigger rename mode after opening */
     triggerRename?: boolean;
+    /** Hook run after creating the file and before opening it */
+    afterCreate?: (file: TFile) => Promise<void>;
     /** Custom error message key */
     errorKey?: string;
 }
@@ -56,6 +59,7 @@ interface CreateMarkdownFileFromTemplateOptions {
     baseName: string;
     templatePath?: string | null;
     templateErrorContext: string;
+    templaterCreationErrorContext?: string;
 }
 
 /**
@@ -124,7 +128,15 @@ export function generateUniqueFilename(
  * @returns The created file or null if creation failed
  */
 export async function createFileWithOptions(parent: TFolder, app: App, options: CreateFileOptions): Promise<TFile | null> {
-    const { extension, content = '', openFile = true, openInNewTab = false, triggerRename = true, errorKey = 'createFile' } = options;
+    const {
+        extension,
+        content = '',
+        openFile = true,
+        openInNewTab = false,
+        triggerRename = true,
+        afterCreate,
+        errorKey = 'createFile'
+    } = options;
 
     try {
         // Generate unique file path
@@ -137,6 +149,10 @@ export async function createFileWithOptions(parent: TFolder, app: App, options: 
         } else {
             const path = buildFilePathInFolder(parent.path, fileName, extension);
             file = await app.vault.create(path, content);
+        }
+
+        if (afterCreate) {
+            await afterCreate(file);
         }
 
         // Open the file if requested
@@ -169,7 +185,7 @@ export async function createFileWithOptions(parent: TFolder, app: App, options: 
     }
 }
 
-export async function createMarkdownFileFromTemplate({
+async function createMarkdownFileFromTemplate({
     app,
     folder,
     baseName,
@@ -202,6 +218,46 @@ export async function createMarkdownFileFromTemplate({
     }
 
     return created;
+}
+
+function getMarkdownTemplateFile(app: App, templatePath: string | null | undefined): TFile | null {
+    const normalizedTemplatePath = normalizeOptionalVaultFilePath(templatePath);
+    if (!normalizedTemplatePath) {
+        return null;
+    }
+
+    const entry = app.vault.getAbstractFileByPath(normalizedTemplatePath);
+    return entry instanceof TFile && entry.extension === 'md' ? entry : null;
+}
+
+export async function createMarkdownFileFromTemplatePreferTemplater({
+    app,
+    folder,
+    baseName,
+    templatePath,
+    templateErrorContext,
+    templaterCreationErrorContext = templateErrorContext
+}: CreateMarkdownFileFromTemplateOptions): Promise<TFile> {
+    if (templatePath) {
+        const createFromTemplater = getTemplaterCreateNoteFromTemplate(app);
+        const templateFile = createFromTemplater ? getMarkdownTemplateFile(app, templatePath) : null;
+        if (createFromTemplater && templateFile) {
+            const created = await createFromTemplater(templateFile, folder, baseName, false);
+            if (created instanceof TFile) {
+                return created;
+            }
+
+            throw new Error(`Templater did not create the ${templaterCreationErrorContext}`);
+        }
+    }
+
+    return createMarkdownFileFromTemplate({
+        app,
+        folder,
+        baseName,
+        templatePath,
+        templateErrorContext
+    });
 }
 
 /**

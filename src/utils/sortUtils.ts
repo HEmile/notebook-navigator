@@ -17,10 +17,20 @@
  */
 
 import { TFile, TFolder } from 'obsidian';
-import type { AlphabeticalDateMode, AlphaSortOrder, SortOption, NotebookNavigatorSettings, PropertySortSecondaryOption } from '../settings';
-import { NavigationItemType, ItemType } from '../types';
-
-export { SORT_OPTIONS } from '../settings/types';
+import {
+    normalizeListSortOverride,
+    type AlphabeticalDateMode,
+    type AlphaSortOrder,
+    type ListSortOverrideValue,
+    type SortOption,
+    type NotebookNavigatorSettings,
+    type PropertySortSecondaryOption
+} from '../settings/types';
+import { NavigationItemType, ItemType, type ItemType as ItemTypeValue } from '../types';
+import { DEFAULT_SETTINGS } from '../settings/defaultSettings';
+import { casefold, getMatchingRecordValue } from './recordUtils';
+import { isRecord } from './typeGuards';
+import type { UXIconId } from './uxIcons';
 
 export function isDateSortOption(sortOption: SortOption): boolean {
     return sortOption.startsWith('modified') || sortOption.startsWith('created');
@@ -32,6 +42,390 @@ function isAlphabeticalSortOption(sortOption: SortOption): boolean {
 
 export function isPropertySortOption(sortOption: SortOption): sortOption is 'property-asc' | 'property-desc' {
     return sortOption === 'property-asc' || sortOption === 'property-desc';
+}
+
+export type SortDirection = 'asc' | 'desc';
+export type SortField = 'modified' | 'created' | 'title' | 'filename' | 'property';
+
+export interface EffectiveListSort {
+    option: SortOption;
+    propertyKey: string;
+    propertySortSecondary: PropertySortSecondaryOption;
+}
+
+export type SortOverrideRecordKey = 'folderSortOverrides' | 'tagSortOverrides' | 'propertySortOverrides';
+type PropertySortKeyMapper = (key: string, normalizedKey: string) => string | null;
+
+export const SORT_OVERRIDE_RECORD_KEYS: readonly SortOverrideRecordKey[] = [
+    'folderSortOverrides',
+    'tagSortOverrides',
+    'propertySortOverrides'
+];
+
+const SORT_FIELD_TOOLBAR_ICON_IDS: Record<SortField, UXIconId> = {
+    modified: 'list-sort-modified',
+    created: 'list-sort-created',
+    title: 'list-sort-title',
+    filename: 'list-sort-filename',
+    property: 'list-sort-property'
+};
+
+function normalizePropertySortKeyList(value: unknown, mapper?: PropertySortKeyMapper): string[] {
+    if (typeof value !== 'string') {
+        return [];
+    }
+
+    const keys: string[] = [];
+    const seen = new Set<string>();
+
+    value.split(',').forEach(rawKey => {
+        const key = rawKey.trim();
+        const normalizedKey = casefold(key);
+        if (!normalizedKey) {
+            return;
+        }
+
+        const nextKey = mapper ? mapper(key, normalizedKey) : key;
+        if (!nextKey) {
+            return;
+        }
+
+        const normalizedNextKey = casefold(nextKey);
+        if (!normalizedNextKey || seen.has(normalizedNextKey)) {
+            return;
+        }
+
+        seen.add(normalizedNextKey);
+        keys.push(nextKey);
+    });
+
+    return keys;
+}
+
+export function parsePropertySortKeys(value: unknown): string[] {
+    return normalizePropertySortKeyList(value);
+}
+
+export function getMatchingPropertySortKey(value: unknown, propertyKey: string): string {
+    const normalizedPropertyKey = casefold(propertyKey);
+    if (!normalizedPropertyKey) {
+        return '';
+    }
+
+    return parsePropertySortKeys(value).find(configuredKey => casefold(configuredKey) === normalizedPropertyKey) ?? '';
+}
+
+export function appendPropertySortKey(value: unknown, propertyKey: string): string {
+    const key = propertyKey.trim();
+    const normalizedKey = casefold(key);
+    const keys = parsePropertySortKeys(value);
+
+    if (!normalizedKey) {
+        return keys.join(', ');
+    }
+
+    if (keys.some(configuredKey => casefold(configuredKey) === normalizedKey)) {
+        return keys.join(', ');
+    }
+
+    return [...keys, key].join(', ');
+}
+
+/**
+ * Returns the configured sorting property keys available as sort choices.
+ * The manual-sort property is excluded because manual sort has its own menu entry and is never
+ * offered as a regular property sort choice.
+ */
+export function getAvailablePropertySortKeys(
+    settings: Pick<NotebookNavigatorSettings, 'propertySortKey' | 'manualSortPropertyKey'>
+): string[] {
+    return parsePropertySortKeys(settings.propertySortKey).filter(propertyKey => !isManualSortPropertyKey(settings, propertyKey));
+}
+
+export function getManualSortPropertyKey(settings: Pick<NotebookNavigatorSettings, 'manualSortPropertyKey'>): string {
+    return typeof settings.manualSortPropertyKey === 'string' ? settings.manualSortPropertyKey.trim() : '';
+}
+
+export function isManualSortPropertyKey(settings: Pick<NotebookNavigatorSettings, 'manualSortPropertyKey'>, propertyKey: string): boolean {
+    const normalizedManualSortPropertyKey = casefold(getManualSortPropertyKey(settings));
+    return normalizedManualSortPropertyKey.length > 0 && casefold(propertyKey.trim()) === normalizedManualSortPropertyKey;
+}
+
+function extractPropertySortParts(value: unknown): string[] {
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? [trimmed] : [];
+    }
+
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? [value.toString()] : [];
+    }
+
+    if (typeof value === 'boolean') {
+        return [value ? 'true' : 'false'];
+    }
+
+    if (Array.isArray(value)) {
+        const parts: string[] = [];
+        for (const entry of value) {
+            parts.push(...extractPropertySortParts(entry));
+        }
+        return parts;
+    }
+
+    return [];
+}
+
+export function getPropertySortValueFromRecord(frontmatter: unknown, propertyKey: string): string | null {
+    if (!isRecord(frontmatter)) {
+        return null;
+    }
+
+    const parts = extractPropertySortParts(getMatchingRecordValue(frontmatter, propertyKey));
+    if (parts.length === 0) {
+        return null;
+    }
+
+    const joined = parts.join(' ').trim();
+    return joined.length > 0 ? joined : null;
+}
+
+export interface PropertyGroupingValue {
+    parts: string[];
+    /**
+     * Set when the raw frontmatter value is a finite scalar number. Number-keyed groups compare
+     * numerically, matching how Obsidian Bases compares number-keyed groups, and order before
+     * text groups; quoted numeric strings and lists stay null and use natural string comparison.
+     */
+    numericValue: number | null;
+}
+
+/**
+ * Extracts the frontmatter value used for property grouping.
+ * Returns null when the property is missing or empty. A single-element list produces the
+ * same parts as its scalar value, so `[value]` and `value` land in the same group,
+ * matching how Obsidian Bases compares list values against scalars.
+ */
+export function getPropertyGroupingValueFromRecord(frontmatter: unknown, propertyKey: string): PropertyGroupingValue | null {
+    if (!isRecord(frontmatter)) {
+        return null;
+    }
+
+    const rawValue = getMatchingRecordValue(frontmatter, propertyKey);
+    const parts = extractPropertySortParts(rawValue);
+    if (parts.length === 0) {
+        return null;
+    }
+
+    return {
+        parts,
+        numericValue: typeof rawValue === 'number' && Number.isFinite(rawValue) ? rawValue : null
+    };
+}
+
+export function replacePropertySortKey(value: string, oldKeyNormalized: string, newKeyDisplay: string | null): string {
+    return normalizePropertySortKeyList(value, (key, normalizedKey) => (normalizedKey === oldKeyNormalized ? newKeyDisplay : key)).join(
+        ', '
+    );
+}
+
+export function getSortDirection(sortOption: SortOption): SortDirection {
+    return sortOption.endsWith('-desc') ? 'desc' : 'asc';
+}
+
+export function getSortField(sortOption: SortOption): SortField {
+    if (sortOption.startsWith('modified')) {
+        return 'modified';
+    }
+    if (sortOption.startsWith('created')) {
+        return 'created';
+    }
+    if (sortOption.startsWith('title')) {
+        return 'title';
+    }
+    if (sortOption.startsWith('filename')) {
+        return 'filename';
+    }
+    return 'property';
+}
+
+/**
+ * Returns the direction selected when the sort field changes. Date fields start with the newest
+ * notes first, while title, file name, and property fields start in ascending order.
+ */
+export function getSortDirectionForFieldChange(field: SortField): SortDirection {
+    return field === 'modified' || field === 'created' ? 'desc' : 'asc';
+}
+
+export function buildSortOption(field: SortField, direction: SortDirection): SortOption {
+    return `${field}-${direction}`;
+}
+
+export function createListSortOverride(option: SortOption, propertyKey?: string | null): ListSortOverrideValue {
+    const normalizedPropertyKey = propertyKey?.trim() ?? '';
+    if (isPropertySortOption(option) && normalizedPropertyKey.length > 0) {
+        return { option, propertyKey: normalizedPropertyKey };
+    }
+
+    return option;
+}
+
+export function cloneListSortOverride(sortOverride: ListSortOverrideValue): ListSortOverrideValue {
+    return typeof sortOverride === 'string' ? sortOverride : { ...sortOverride };
+}
+
+export function pruneUnavailablePropertySortOverrides(settings: NotebookNavigatorSettings): boolean {
+    const configuredPropertyKeys = parsePropertySortKeys(settings.propertySortKey);
+    const configuredPropertyKeySet = new Set(configuredPropertyKeys.map(key => casefold(key)));
+    const manualSortPropertyKey = getManualSortPropertyKey(settings);
+    const availablePropertyKeys = new Set(configuredPropertyKeySet);
+    const normalizedManualSortPropertyKey = casefold(manualSortPropertyKey);
+    if (normalizedManualSortPropertyKey) {
+        availablePropertyKeys.add(normalizedManualSortPropertyKey);
+    }
+    let changed = false;
+
+    SORT_OVERRIDE_RECORD_KEYS.forEach(recordKey => {
+        const record = settings[recordKey] as Record<string, ListSortOverrideValue> | undefined;
+        if (!record) {
+            return;
+        }
+
+        Object.keys(record).forEach(key => {
+            const normalizedOverride = normalizeListSortOverride((record as Record<string, unknown>)[key]);
+            if (!normalizedOverride) {
+                return;
+            }
+
+            if (typeof normalizedOverride === 'string') {
+                if (configuredPropertyKeySet.size === 0 && isPropertySortOption(normalizedOverride)) {
+                    delete record[key];
+                    changed = true;
+                }
+                return;
+            }
+
+            const normalizedPropertyKey = casefold(normalizedOverride.propertyKey ?? '');
+            if (!normalizedPropertyKey || availablePropertyKeys.has(normalizedPropertyKey)) {
+                return;
+            }
+
+            delete record[key];
+            changed = true;
+        });
+    });
+
+    return changed;
+}
+
+export interface DefaultReconcileResult {
+    /** True when any settings field was mutated; callers persist the settings on change. */
+    changed: boolean;
+    /** True when the default was reset to its stock value because its property key is unavailable. */
+    reset: boolean;
+}
+
+/**
+ * Validates the default folder sort against the configured sorting properties.
+ * A property-based default whose key is missing from the configured list (or points at the
+ * manual-sort property) resets both fields to the stock default rather than retargeting another
+ * property, so removing a property never silently changes which property sorts the vault.
+ * A stale companion key left behind by a built-in default is cleared without counting as a reset.
+ */
+export function reconcileDefaultFolderSort(settings: NotebookNavigatorSettings): DefaultReconcileResult {
+    if (!isPropertySortOption(settings.defaultFolderSort)) {
+        if (settings.defaultFolderSortPropertyKey !== '') {
+            settings.defaultFolderSortPropertyKey = '';
+            return { changed: true, reset: false };
+        }
+        return { changed: false, reset: false };
+    }
+
+    const availablePropertyKeys = getAvailablePropertySortKeys(settings);
+    const matchedKey = getMatchingConfiguredPropertySortKey(availablePropertyKeys, settings.defaultFolderSortPropertyKey);
+    if (!matchedKey) {
+        settings.defaultFolderSort = DEFAULT_SETTINGS.defaultFolderSort;
+        settings.defaultFolderSortPropertyKey = DEFAULT_SETTINGS.defaultFolderSortPropertyKey;
+        return { changed: true, reset: true };
+    }
+
+    return { changed: false, reset: false };
+}
+
+/**
+ * Rewrites the default folder sort after a frontmatter key rename, or resets it to the stock
+ * default when the key is deleted (newKeyDisplay is null). Returns true when settings changed.
+ */
+export function updateDefaultFolderSortPropertyKey(
+    settings: NotebookNavigatorSettings,
+    oldKeyNormalized: string,
+    newKeyDisplay: string | null
+): boolean {
+    if (!isPropertySortOption(settings.defaultFolderSort)) {
+        return false;
+    }
+
+    if (casefold(settings.defaultFolderSortPropertyKey.trim()) !== oldKeyNormalized) {
+        return false;
+    }
+
+    if (newKeyDisplay) {
+        settings.defaultFolderSortPropertyKey = newKeyDisplay;
+    } else {
+        settings.defaultFolderSort = DEFAULT_SETTINGS.defaultFolderSort;
+        settings.defaultFolderSortPropertyKey = DEFAULT_SETTINGS.defaultFolderSortPropertyKey;
+    }
+    return true;
+}
+
+function getMatchingConfiguredPropertySortKey(configuredPropertyKeys: readonly string[], propertyKey: string): string {
+    const normalizedPropertyKey = casefold(propertyKey);
+    if (!normalizedPropertyKey) {
+        return '';
+    }
+
+    return configuredPropertyKeys.find(configuredKey => casefold(configuredKey) === normalizedPropertyKey) ?? '';
+}
+
+function getMatchingAvailablePropertySortKey(
+    configuredPropertyKeys: readonly string[],
+    manualSortPropertyKey: string,
+    propertyKey: string
+): string {
+    if (manualSortPropertyKey && casefold(propertyKey) === casefold(manualSortPropertyKey)) {
+        return manualSortPropertyKey;
+    }
+
+    return getMatchingConfiguredPropertySortKey(configuredPropertyKeys, propertyKey);
+}
+
+function getListSortOverrideSignature(sortOverride: ListSortOverrideValue | undefined): string {
+    const normalized = normalizeListSortOverride(sortOverride);
+    if (!normalized) {
+        return '';
+    }
+
+    if (typeof normalized === 'string') {
+        return normalized;
+    }
+
+    return `${normalized.option}\u0000${casefold(normalized.propertyKey ?? '')}`;
+}
+
+export function areListSortOverridesEqual(a: ListSortOverrideValue | undefined, b: ListSortOverrideValue | undefined): boolean {
+    return getListSortOverrideSignature(a) === getListSortOverrideSignature(b);
+}
+
+/**
+ * Returns undefined when the complete selected sort matches the complete default, signaling that
+ * the existing override should be removed. A match requires the field, direction, and property key
+ * to agree; sharing only one component retains the selected sort as an override.
+ */
+export function resolveListSortOverrideForDefault(
+    selectedSort: ListSortOverrideValue,
+    defaultSort: ListSortOverrideValue
+): ListSortOverrideValue | undefined {
+    return areListSortOverridesEqual(selectedSort, defaultSort) ? undefined : selectedSort;
 }
 
 export function shouldRefreshOnFileModifyForSort(sortOption: SortOption, propertySortSecondary: PropertySortSecondaryOption): boolean {
@@ -189,19 +583,109 @@ export function getEffectiveSortOption(
     selectedProperty?: string | null,
     selectedTopic?: string | null
 ): SortOption {
-    if (selectionType === ItemType.FOLDER && selectedFolder && settings.folderSortOverrides?.[selectedFolder.path]) {
-        return settings.folderSortOverrides[selectedFolder.path];
+    return getEffectiveListSort(settings, selectionType, selectedFolder, selectedTag, selectedProperty).option;
+}
+
+export function resolveListSort(settings: NotebookNavigatorSettings, sortOverride?: ListSortOverrideValue): EffectiveListSort {
+    const normalizedOverride = normalizeListSortOverride(sortOverride);
+    const rawOption =
+        typeof normalizedOverride === 'string' ? normalizedOverride : (normalizedOverride?.option ?? settings.defaultFolderSort);
+    const configuredPropertyKeys = parsePropertySortKeys(settings.propertySortKey);
+    const configuredPropertyKey = configuredPropertyKeys[0] ?? '';
+    const manualSortPropertyKey = getManualSortPropertyKey(settings);
+    const overridePropertyKey =
+        typeof normalizedOverride === 'object'
+            ? getMatchingAvailablePropertySortKey(configuredPropertyKeys, manualSortPropertyKey, normalizedOverride.propertyKey ?? '')
+            : '';
+    // A property default resolves through its companion key. Legacy bare-string property overrides
+    // keep the historical first-configured-property behavior, and the first configured property
+    // remains the last-resort fallback for transient states (e.g. sync applied a property list
+    // change before reconciliation ran).
+    const defaultPropertyKey =
+        normalizedOverride === undefined
+            ? getMatchingConfiguredPropertySortKey(configuredPropertyKeys, settings.defaultFolderSortPropertyKey)
+            : '';
+    const propertyKey = isPropertySortOption(rawOption) ? overridePropertyKey || defaultPropertyKey || configuredPropertyKey : '';
+    const option = rawOption === 'property-desc' && isManualSortPropertyKey(settings, propertyKey) ? 'property-asc' : rawOption;
+
+    return {
+        option,
+        propertyKey,
+        propertySortSecondary: settings.propertySortSecondary
+    };
+}
+
+export function getListSortOverrideForSelection(
+    settings: NotebookNavigatorSettings,
+    selectionType: ItemTypeValue | null,
+    selectedFolder: TFolder | null,
+    selectedTag?: string | null,
+    selectedProperty?: string | null,
+    selectedTopic?: string | null
+): ListSortOverrideValue | undefined {
+    if (selectionType === ItemType.FOLDER && selectedFolder) {
+        return settings.folderSortOverrides?.[selectedFolder.path];
     }
-    if (selectionType === ItemType.TAG && selectedTag && settings.tagSortOverrides?.[selectedTag]) {
-        return settings.tagSortOverrides[selectedTag];
+    if (selectionType === ItemType.TAG && selectedTag) {
+        return settings.tagSortOverrides?.[selectedTag];
     }
-    if (selectionType === ItemType.PROPERTY && selectedProperty && settings.propertySortOverrides?.[selectedProperty]) {
-        return settings.propertySortOverrides[selectedProperty];
+    if (selectionType === ItemType.PROPERTY && selectedProperty) {
+        return settings.propertySortOverrides?.[selectedProperty];
     }
-    if (selectionType === ItemType.TOPIC && selectedTopic && settings.topicSortOverrides?.[selectedTopic]) {
-        return settings.topicSortOverrides[selectedTopic];
+    if (selectionType === ItemType.TOPIC && selectedTopic) {
+        return settings.topicSortOverrides?.[selectedTopic];
     }
-    return settings.defaultFolderSort;
+    return undefined;
+}
+
+export function getEffectiveListSort(
+    settings: NotebookNavigatorSettings,
+    selectionType: NavigationItemType,
+    selectedFolder: TFolder | null,
+    selectedTag?: string | null,
+    selectedProperty?: string | null,
+    selectedTopic?: string | null
+): EffectiveListSort {
+    return resolveListSort(
+        settings,
+        getListSortOverrideForSelection(settings, selectionType, selectedFolder, selectedTag, selectedProperty, selectedTopic)
+    );
+}
+
+export function getListSortFieldIconId(field: SortField): UXIconId {
+    return SORT_FIELD_TOOLBAR_ICON_IDS[field];
+}
+
+function getSortDirectionToolbarIconId(sortOption: SortOption): UXIconId {
+    return sortOption.endsWith('-desc') ? 'list-sort-descending' : 'list-sort-ascending';
+}
+
+function haveSameSortField(left: EffectiveListSort, right: EffectiveListSort): boolean {
+    const leftField = getSortField(left.option);
+    const rightField = getSortField(right.option);
+    if (leftField !== rightField) {
+        return false;
+    }
+
+    if (leftField !== 'property') {
+        return true;
+    }
+
+    return casefold(left.propertyKey) === casefold(right.propertyKey);
+}
+
+export function getListSortToolbarIconId(settings: NotebookNavigatorSettings, sortOverride?: ListSortOverrideValue): UXIconId {
+    const currentSort = resolveListSort(settings, sortOverride);
+    if (sortOverride === undefined) {
+        return getSortDirectionToolbarIconId(currentSort.option);
+    }
+
+    const defaultSort = resolveListSort(settings);
+    if (haveSameSortField(currentSort, defaultSort) && getSortDirection(currentSort.option) !== getSortDirection(defaultSort.option)) {
+        return getSortDirectionToolbarIconId(currentSort.option);
+    }
+
+    return getListSortFieldIconId(getSortField(currentSort.option));
 }
 
 /**
@@ -286,7 +770,7 @@ export function sortFiles(
                     }
                 }
 
-                let secondaryCmp = 0;
+                let secondaryCmp: number;
                 if (propertySortSecondary === 'created') {
                     secondaryCmp = compareDates(a, b, getCreatedTime, descending);
                 } else if (propertySortSecondary === 'modified') {

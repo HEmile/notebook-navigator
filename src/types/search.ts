@@ -16,6 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { InclusionOperator, PropertySearchToken } from '../utils/filterSearchTypes';
+import type { PropertyValueKind } from '../storage/IndexedDBStorage';
+
 /**
  * Search providers supported by Notebook Navigator.
  */
@@ -40,14 +43,39 @@ export interface SearchResultMeta {
     excerpt?: string;
 }
 
+export interface AliasSearchMatch {
+    value: string;
+    /** Folded internal-search name terms used to calculate highlights when the virtualized row renders. */
+    foldedTerms: readonly string[];
+}
+
+/** Positive property clause satisfied by one internal-search result. */
+export interface PropertySearchMatch {
+    clause: PropertySearchToken;
+}
+
+/**
+ * Identifies one cached property value represented by a matching positive clause. Concrete values
+ * are resolved only for rendered rows so the search result map stays bounded by query complexity.
+ */
+export interface PropertySearchValueMatch extends PropertySearchMatch {
+    propertyKey: string;
+    rawValue: string;
+    valueKind?: PropertyValueKind;
+    displayValue: string;
+}
+
 /**
  * Captures navigation-related filters derived from the search query.
  * Used to highlight matching tags and properties inside the navigation tree.
  */
+export type SearchNavInclusionOperatorMap = Record<string, InclusionOperator>;
+
 export interface SearchNavFilterState {
     tags: {
         include: string[];
         exclude: string[];
+        includeOperators: SearchNavInclusionOperatorMap;
         excludeTagged: boolean;
         includeUntagged: boolean;
         requireTagged: boolean;
@@ -55,6 +83,7 @@ export interface SearchNavFilterState {
     properties: {
         include: string[];
         exclude: string[];
+        includeOperators: SearchNavInclusionOperatorMap;
     };
 }
 
@@ -62,12 +91,14 @@ export const EMPTY_SEARCH_NAV_FILTER_STATE: SearchNavFilterState = {
     tags: {
         include: [],
         exclude: [],
+        includeOperators: {},
         excludeTagged: false,
         includeUntagged: false,
         requireTagged: false
     },
     properties: {
         include: [],
-        exclude: []
+        exclude: [],
+        includeOperators: {}
     }
 };

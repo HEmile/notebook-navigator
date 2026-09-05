@@ -18,11 +18,12 @@
 
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ServiceIcon } from './ServiceIcon';
-import { useUIDispatch, useUIState } from '../context/UIStateContext';
+import { useUIDispatch } from '../context/UIStateContext';
 import { useSettingsState } from '../context/SettingsContext';
 import { useServices } from '../context/ServicesContext';
 import { strings } from '../i18n';
 import { matchesShortcut, KeyboardShortcutAction } from '../utils/keyboardShortcuts';
+import { supportsKeyboardInteractions } from '../utils/paneLayout';
 import { runAsyncAction, type MaybePromise } from '../utils/async';
 import { SearchDateInputSuggest } from '../suggest/SearchDateInputSuggest';
 import { SearchTagInputSuggest } from '../suggest/SearchTagInputSuggest';
@@ -38,6 +39,8 @@ interface SearchInputProps {
     onSearchQueryChange: (query: string) => void;
     onClose: () => void;
     onFocusFiles?: () => void;
+    onEmptySearchExit?: () => void;
+    isWholeVaultSearch?: boolean;
     shouldFocus?: boolean;
     onFocusComplete?: () => void;
     /** Root container to scope DOM queries within this navigator instance */
@@ -54,6 +57,8 @@ export function SearchInput({
     onSearchQueryChange,
     onClose,
     onFocusFiles,
+    onEmptySearchExit,
+    isWholeVaultSearch = false,
     shouldFocus,
     onFocusComplete,
     containerRef,
@@ -63,28 +68,43 @@ export function SearchInput({
     isShortcutDisabled,
     searchProvider
 }: SearchInputProps) {
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
     const tagSuggestRef = useRef<SearchTagInputSuggest | null>(null);
     const topicSuggestRef = useRef<SearchTopicInputSuggest | null>(null);
     const dateSuggestRef = useRef<SearchDateInputSuggest | null>(null);
     const { isMobile, omnisearchService, app, tagTreeService, topicService, plugin } = useServices();
     const settings = useSettingsState();
-    const uiState = useUIState();
     const uiDispatch = useUIDispatch();
 
     const activeProvider = searchProvider ?? settings.searchProvider ?? 'internal';
     const isOmnisearchAvailable = omnisearchService?.isAvailable() ?? false;
     const isOmnisearchActive = activeProvider === 'omnisearch' && isOmnisearchAvailable;
+    const showWholeVaultSearchIcon = isWholeVaultSearch && !isOmnisearchActive;
     const shortcutIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'nav-shortcuts'), [settings.interfaceIcons]);
     const searchIconId = useMemo(
-        () => (isOmnisearchActive ? 'text-search' : resolveUXIcon(settings.interfaceIcons, 'list-search')),
-        [isOmnisearchActive, settings.interfaceIcons]
+        () =>
+            isOmnisearchActive
+                ? 'text-search'
+                : showWholeVaultSearchIcon
+                  ? 'folder-search'
+                  : resolveUXIcon(settings.interfaceIcons, 'list-search'),
+        [isOmnisearchActive, settings.interfaceIcons, showWholeVaultSearchIcon]
     );
-    const placeholderText = isOmnisearchActive ? strings.searchInput.placeholderOmnisearch : strings.searchInput.placeholder;
+    const placeholderText = isOmnisearchActive
+        ? strings.searchInput.placeholderOmnisearch
+        : showWholeVaultSearchIcon
+          ? strings.searchInput.placeholderVault
+          : strings.searchInput.placeholder;
     const hasQuery = searchQuery.trim().length > 0;
     const showShortcutButton = hasQuery && Boolean(onSaveShortcut || (isShortcutSaved && onRemoveShortcut));
     const shortcutButtonDisabled = isShortcutDisabled || (!isShortcutSaved && !onSaveShortcut) || (isShortcutSaved && !onRemoveShortcut);
     const searchContainerClassName = `nn-search-input-container${showShortcutButton ? ' nn-search-input-container--has-shortcut' : ''}`;
+
+    const notifyEmptySearchExit = useCallback(() => {
+        if (!hasQuery) {
+            onEmptySearchExit?.();
+        }
+    }, [hasQuery, onEmptySearchExit]);
 
     const restoreSearchInputFocus = useCallback((selection?: { start: number | null; end: number | null }) => {
         const input = inputRef.current;
@@ -112,7 +132,7 @@ export function SearchInput({
             plugin.setSearchProvider(isOmnisearchActive ? 'internal' : 'omnisearch');
 
             if (options?.restoreFocus) {
-                requestAnimationFrame(() => restoreSearchInputFocus(selection));
+                window.requestAnimationFrame(() => restoreSearchInputFocus(selection));
             }
         },
         [isOmnisearchAvailable, isOmnisearchActive, plugin, restoreSearchInputFocus]
@@ -132,7 +152,7 @@ export function SearchInput({
     const applyTagSuggestion = useCallback(
         (value: string, cursor: number) => {
             onSearchQueryChange(value);
-            requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
                 const input = inputRef.current;
                 if (!input) {
                     return;
@@ -232,8 +252,8 @@ export function SearchInput({
      * Used after closing search or switching focus away from search input.
      */
     const focusListPane = () => {
-        setTimeout(() => {
-            const scope = containerRef?.current ?? document;
+        window.setTimeout(() => {
+            const scope = containerRef?.current ?? activeDocument;
             const listPaneScroller = scope.querySelector('.nn-list-pane-scroller');
             if (listPaneScroller instanceof HTMLElement) {
                 focusElementPreventScroll(listPaneScroller);
@@ -244,8 +264,9 @@ export function SearchInput({
     const handleKeyDown = (e: React.KeyboardEvent) => {
         const nativeEvent = e.nativeEvent;
         const shortcuts = settings.keyboardShortcuts;
-        // eslint-disable-next-line @typescript-eslint/no-deprecated -- keyCode=229 is still needed for legacy IME detection
-        const isImeComposing = nativeEvent.isComposing || nativeEvent.keyCode === 229;
+        // Read the legacy IME key code without typed deprecated member access.
+        const nativeKeyCode: unknown = Reflect.get(nativeEvent, 'keyCode');
+        const isImeComposing = nativeEvent.isComposing || nativeKeyCode === 229;
 
         if (isImeComposing) {
             return;
@@ -274,25 +295,25 @@ export function SearchInput({
         if (matchesShortcut(nativeEvent, shortcuts, KeyboardShortcutAction.SEARCH_CLOSE)) {
             e.preventDefault();
             onClose();
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
             focusListPane();
             return;
         }
 
         if (matchesShortcut(nativeEvent, shortcuts, KeyboardShortcutAction.SEARCH_FOCUS_NAVIGATION)) {
-            if (!uiState.singlePane && !isMobile) {
-                e.preventDefault();
-                uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'navigation' });
-            }
+            e.preventDefault();
+            notifyEmptySearchExit();
+            uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
             return;
         }
 
         if (matchesShortcut(nativeEvent, shortcuts, KeyboardShortcutAction.SEARCH_FOCUS_LIST)) {
             e.preventDefault();
-            uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'files' });
+            notifyEmptySearchExit();
+            uiDispatch({ type: 'ACTIVATE_PANE', target: 'files' });
 
-            if (isMobile) {
-                uiDispatch({ type: 'SET_SINGLE_PANE_VIEW', view: 'files' });
+            // Phones focus the list without forcing a selection; desktop and tablets
+            // ensure a selection exists so arrow keys have an anchor
+            if (!supportsKeyboardInteractions()) {
                 focusListPane();
                 return;
             }
@@ -307,28 +328,40 @@ export function SearchInput({
 
     // Set focus state to search when clicking on search field
     const handleSearchClick = () => {
-        uiDispatch({ type: 'SET_FOCUSED_PANE', pane: 'search' });
+        uiDispatch({ type: 'ACTIVATE_PANE', target: 'search' });
     };
 
-    // Opens the search syntax help modal, closing any active suggest popups first
+    // Opens the search help modal for the active provider, closing any active suggest popups first
     const openSearchHelp = useCallback(() => {
         tagSuggestRef.current?.close();
         topicSuggestRef.current?.close();
         dateSuggestRef.current?.close();
-        const { fileNames, tags, properties, tasks, connectors, dates, omnisearch } = strings.searchInput.searchHelpModal.sections;
-        const propertiesSection = Object.prototype.hasOwnProperty.call(strings.searchInput.searchHelpModal.sections, 'properties')
-            ? properties
+        const helpStrings = strings.searchInput.searchHelpModal;
+        // Bold banner naming the active provider plus how to toggle. Shown only when
+        // both providers exist; with Omnisearch missing there is no mode to switch to.
+        const providerBanner = isOmnisearchAvailable
+            ? `${isOmnisearchActive ? helpStrings.activeOmnisearch : helpStrings.activeFilterSearch} ${helpStrings.introSwitching}`
             : undefined;
-        const sections = [fileNames, propertiesSection, tags, dates, tasks, connectors, omnisearch].filter(
-            (section): section is InfoModalSection => Boolean(section)
-        );
+
+        if (isOmnisearchActive) {
+            new InfoModal(app, {
+                title: strings.searchInput.searchHelpTitle,
+                intro: helpStrings.omnisearchIntro,
+                emphasizedIntro: providerBanner,
+                sections: [helpStrings.sections.omnisearch]
+            }).open();
+            return;
+        }
+
+        const { fileNames, tags, properties, tasks, connectors, dates } = helpStrings.sections;
+        const sections: InfoModalSection[] = [fileNames, properties, tags, dates, tasks, connectors];
         new InfoModal(app, {
             title: strings.searchInput.searchHelpTitle,
-            intro: strings.searchInput.searchHelpModal.intro,
-            emphasizedIntro: strings.searchInput.searchHelpModal.introSwitching,
+            intro: isOmnisearchAvailable ? helpStrings.intro : `${helpStrings.intro} ${helpStrings.introInstallOmnisearch}`,
+            emphasizedIntro: providerBanner,
             sections
         }).open();
-    }, [app]);
+    }, [app, isOmnisearchActive, isOmnisearchAvailable]);
 
     return (
         <div className="nn-search-input-wrapper">
@@ -371,6 +404,7 @@ export function SearchInput({
                     onChange={e => onSearchQueryChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onClick={handleSearchClick}
+                    onBlur={notifyEmptySearchExit}
                 />
                 {!hasQuery && settings.showInfoButtons && (
                     <div

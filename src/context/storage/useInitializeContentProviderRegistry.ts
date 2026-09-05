@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useEffect, type RefObject } from 'react';
+import { useEffect, type MutableRefObject } from 'react';
 import type { App } from 'obsidian';
 import { ContentProviderRegistry } from '../../services/content/ContentProviderRegistry';
 import { ContentReadCache } from '../../services/content/ContentReadCache';
@@ -37,8 +37,8 @@ import { TagContentProvider } from '../../services/content/TagContentProvider';
  */
 export function useInitializeContentProviderRegistry(params: {
     app: App;
-    contentRegistryRef: RefObject<ContentProviderRegistry | null>;
-    pendingSyncTimeoutIdRef: RefObject<number | null>;
+    contentRegistryRef: MutableRefObject<ContentProviderRegistry | null>;
+    pendingSyncTimeoutIdRef: MutableRefObject<number | null>;
     clearCacheRebuildNotice: () => void;
 }): void {
     const { app, contentRegistryRef, pendingSyncTimeoutIdRef, clearCacheRebuildNotice } = params;

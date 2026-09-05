@@ -65,7 +65,7 @@ export function isKeyboardEventContextBlocked(e: KeyboardEvent): boolean {
         return false;
     }
 
-    const activeElement = document.activeElement;
+    const activeElement = activeDocument.activeElement;
     // Obsidian modals should receive keyboard input without pane interception.
     return activeElement instanceof HTMLElement && activeElement.closest('.modal-container') !== null;
 }
@@ -84,8 +84,8 @@ export function focusElementPreventScroll(element: HTMLElement): void {
 }
 
 export function getTooltipPlacement(): 'left' | 'right' {
-    if (typeof document === 'undefined' || !document.body) {
+    if (typeof document === 'undefined' || !activeDocument.body) {
         return 'right';
     }
-    return document.body.classList.contains('mod-rtl') ? 'left' : 'right';
+    return activeDocument.body.classList.contains('mod-rtl') ? 'left' : 'right';
 }

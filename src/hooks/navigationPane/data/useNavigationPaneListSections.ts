@@ -49,7 +49,6 @@ export interface UseNavigationPaneListSectionsParams {
     shortcutsExpanded: boolean;
     recentNotesExpanded: boolean;
     pinShortcuts: boolean;
-    showHiddenItems: boolean;
     propertiesSectionActive: boolean;
 }
 
@@ -68,7 +67,6 @@ export function useNavigationPaneListSections({
     shortcutsExpanded,
     recentNotesExpanded,
     pinShortcuts,
-    showHiddenItems,
     propertiesSectionActive
 }: UseNavigationPaneListSectionsParams): NavigationPaneListSectionsResult {
     const {
@@ -78,13 +76,17 @@ export function useNavigationPaneListSections({
         hiddenFolders,
         hiddenMatcherHasRules,
         hiddenTagMatcher,
+        metadataVisibilityVersion,
         propertyTree,
         recentNotesHiddenFileMatcher,
-        tagTreeForOrdering,
-        visibleTagTree
+        tagDataVersion,
+        tagTreeForOrdering
     } = sourceState;
 
     const shortcutItems = useMemo((): CombinedNavigationItem[] => {
+        void metadataVisibilityVersion;
+        void tagDataVersion;
+
         if (!settings.showShortcuts) {
             return [];
         }
@@ -167,12 +169,6 @@ export function useNavigationPaneListSections({
             if (isVirtualTagCollectionId(tagPath)) {
                 tagVisibilityCache.set(tagPath, true);
                 return true;
-            }
-
-            if (!showHiddenItems) {
-                const visible = Boolean(findTagNode(visibleTagTree, tagPath));
-                tagVisibilityCache.set(tagPath, visible);
-                return visible;
             }
 
             const rootNode = findTagNode(tagTreeForOrdering, tagPath);
@@ -429,17 +425,20 @@ export function useNavigationPaneListSections({
         hiddenMatcherHasRules,
         hiddenTagMatcher,
         hydratedShortcuts,
+        metadataVisibilityVersion,
         propertyTree,
         propertiesSectionActive,
         settings.interfaceIcons,
         settings.showShortcuts,
         shortcutsExpanded,
-        showHiddenItems,
-        tagTreeForOrdering,
-        visibleTagTree
+        tagDataVersion,
+        tagTreeForOrdering
     ]);
 
     const recentNotesItems = useMemo((): CombinedNavigationItem[] => {
+        void metadataVisibilityVersion;
+        void tagDataVersion;
+
         if (!settings.showRecentNotes) {
             return [];
         }
@@ -517,12 +516,14 @@ export function useNavigationPaneListSections({
         return items;
     }, [
         app,
+        metadataVisibilityVersion,
         recentNotes,
         recentNotesExpanded,
         recentNotesHiddenFileMatcher,
         settings.interfaceIcons,
         settings.recentNotesCount,
-        settings.showRecentNotes
+        settings.showRecentNotes,
+        tagDataVersion
     ]);
 
     const shouldPinRecentNotes = pinShortcuts && settings.pinRecentNotesWithShortcuts && settings.showRecentNotes;

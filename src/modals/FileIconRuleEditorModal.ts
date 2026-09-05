@@ -26,9 +26,10 @@ import { runAsyncAction } from '../utils/async';
 import { addAsyncEventListener } from '../utils/domEventListeners';
 import {
     deserializeIconFromFrontmatter,
+    normalizeCanonicalIconId,
     normalizeIconMapEntry,
     normalizeIconMapRecord,
-    normalizeCanonicalIconId
+    serializeIconForFrontmatter
 } from '../utils/iconizeFormat';
 import { sanitizeRecord } from '../utils/recordUtils';
 
@@ -186,7 +187,7 @@ export class FileIconRuleEditorModal extends Modal {
                 cls: 'nn-input nn-file-icon-rule-key',
                 attr: {
                     type: 'text',
-                    placeholder: this.options.mode === 'fileType' ? '.pdf' : 'meeting'
+                    placeholder: this.options.mode === 'fileType' ? 'pdf' : 'meeting'
                 }
             });
             inputEl.value = row.keyInput;
@@ -345,8 +346,8 @@ export class FileIconRuleEditorModal extends Modal {
         const normalizedKeyToRowIds = new Map<string, string[]>();
 
         this.rows.forEach(row => {
-            const normalizedKey = this.options.normalizeKey(row.keyInput);
-            const entry = normalizeIconMapEntry(normalizedKey, row.iconId, this.options.normalizeKey);
+            const serializedIconId = this.serializeRowIcon(row.iconId);
+            const entry = serializedIconId ? normalizeIconMapEntry(row.keyInput, serializedIconId, this.options.normalizeKey) : null;
             if (!entry) {
                 invalidRowIds.add(row.id);
                 return;
@@ -367,6 +368,11 @@ export class FileIconRuleEditorModal extends Modal {
         return { isValid: invalidRowIds.size === 0, invalidRowIds };
     }
 
+    /** Serializes picker-selected canonical IDs into the stored icon map format */
+    private serializeRowIcon(iconId: IconId): string | null {
+        return serializeIconForFrontmatter(iconId);
+    }
+
     /** Normalizes and persists the current rules, then closes the modal */
     private applyChanges(): void {
         const state = this.computeValidationState();
@@ -376,7 +382,10 @@ export class FileIconRuleEditorModal extends Modal {
 
         const draft = sanitizeRecord<string>(undefined);
         this.rows.forEach(row => {
-            draft[row.keyInput] = row.iconId;
+            const serializedIconId = this.serializeRowIcon(row.iconId);
+            if (serializedIconId) {
+                draft[row.keyInput] = serializedIconId;
+            }
         });
 
         const normalized: Record<string, string> = normalizeIconMapRecord(draft, this.options.normalizeKey);

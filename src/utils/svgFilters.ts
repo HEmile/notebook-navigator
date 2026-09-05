@@ -22,17 +22,17 @@ const NOTEBOOK_NAVIGATOR_SVG_FILTERS_ID = 'notebook-navigator-svg-filters';
 const NOTEBOOK_NAVIGATOR_FROSTED_FILTER_ID = 'notebook-navigator-frosted';
 
 function createSvgElement(tagName: string) {
-    return document.createElementNS(SVG_NAMESPACE, tagName);
+    return activeDocument.createElementNS(SVG_NAMESPACE, tagName);
 }
 
 function ensureFilterDefs(svg: SVGSVGElement) {
     const defsElement = createSvgElement('defs');
-    if (!(defsElement instanceof SVGDefsElement)) {
+    if (!defsElement.instanceOf(SVGDefsElement)) {
         return;
     }
 
     const filterElement = createSvgElement('filter');
-    if (!(filterElement instanceof SVGFilterElement)) {
+    if (!filterElement.instanceOf(SVGFilterElement)) {
         return;
     }
     const filter = filterElement;
@@ -44,7 +44,7 @@ function ensureFilterDefs(svg: SVGSVGElement) {
     filter.setAttribute('color-interpolation-filters', 'sRGB');
 
     const blurElement = createSvgElement('feGaussianBlur');
-    if (!(blurElement instanceof SVGFEGaussianBlurElement)) {
+    if (!blurElement.instanceOf(SVGFEGaussianBlurElement)) {
         return;
     }
     const blur = blurElement;
@@ -53,7 +53,7 @@ function ensureFilterDefs(svg: SVGSVGElement) {
     blur.setAttribute('result', 'blurred');
 
     const turbulenceElement = createSvgElement('feTurbulence');
-    if (!(turbulenceElement instanceof SVGFETurbulenceElement)) {
+    if (!turbulenceElement.instanceOf(SVGFETurbulenceElement)) {
         return;
     }
     const turbulence = turbulenceElement;
@@ -64,7 +64,7 @@ function ensureFilterDefs(svg: SVGSVGElement) {
     turbulence.setAttribute('result', 'noise');
 
     const displacementElement = createSvgElement('feDisplacementMap');
-    if (!(displacementElement instanceof SVGFEDisplacementMapElement)) {
+    if (!displacementElement.instanceOf(SVGFEDisplacementMapElement)) {
         return;
     }
     const displacement = displacementElement;
@@ -76,7 +76,7 @@ function ensureFilterDefs(svg: SVGSVGElement) {
     displacement.setAttribute('result', 'displaced');
 
     const finishBlurElement = createSvgElement('feGaussianBlur');
-    if (!(finishBlurElement instanceof SVGFEGaussianBlurElement)) {
+    if (!finishBlurElement.instanceOf(SVGFEGaussianBlurElement)) {
         return;
     }
     const finishBlur = finishBlurElement;
@@ -89,12 +89,12 @@ function ensureFilterDefs(svg: SVGSVGElement) {
 }
 
 export function ensureNotebookNavigatorSvgFilters() {
-    if (document.getElementById(NOTEBOOK_NAVIGATOR_SVG_FILTERS_ID)) {
+    if (activeDocument.getElementById(NOTEBOOK_NAVIGATOR_SVG_FILTERS_ID)) {
         return;
     }
 
     const svgElement = createSvgElement('svg');
-    if (!(svgElement instanceof SVGSVGElement)) {
+    if (!svgElement.instanceOf(SVGSVGElement)) {
         return;
     }
     const svg = svgElement;
@@ -104,5 +104,5 @@ export function ensureNotebookNavigatorSvgFilters() {
     svg.classList.add('nn-svg-filters');
 
     ensureFilterDefs(svg);
-    document.body.append(svg);
+    activeDocument.body.append(svg);
 }
