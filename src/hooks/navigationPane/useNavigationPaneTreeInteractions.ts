@@ -54,11 +54,15 @@ import {
     toggleNavigationExpansionTarget
 } from '../../utils/navigationExpansion';
 import { useStableHandlerFacade } from '../useStableHandlerFacade';
+import type { TopicService } from '../../services/TopicGraphService';
+import { getTopicNameFromPath } from '../../utils/topicGraph';
+import { getTopicNote } from '../../utils/topicNotes';
 
 interface ExpansionStateLike {
     expandedFolders: Set<string>;
     expandedTags: Set<string>;
     expandedProperties: Set<string>;
+    expandedTopics: Set<string>;
     expandedVirtualFolders: Set<string>;
 }
 
@@ -79,6 +83,7 @@ interface UseNavigationPaneTreeInteractionsProps {
     propertyTreeService: IPropertyTreeProvider | null;
     tagTree: Map<string, TagTreeNode>;
     propertyTree: Map<string, PropertyTreeNode>;
+    topicService: TopicService | null;
     tagsVirtualFolderHasChildren: boolean;
     setShortcutsExpanded: Dispatch<SetStateAction<boolean>>;
     setRecentNotesExpanded: Dispatch<SetStateAction<boolean>>;
@@ -104,6 +109,7 @@ export interface NavigationPaneTreeInteractionsResult {
     handleTagCollectionClick: (tagCollectionId: string, event: React.MouseEvent<HTMLDivElement>) => void;
     handlePropertyCollectionClick: (event: React.MouseEvent<HTMLDivElement>) => void;
     handlePropertyClick: (propertyNode: PropertyTreeNode, event?: React.MouseEvent, options?: { fromShortcut?: boolean }) => void;
+    handleTopicClick: (topicPath: string, options?: { fromShortcut?: boolean }) => void;
 }
 
 export function useNavigationPaneTreeInteractions({
@@ -119,6 +125,7 @@ export function useNavigationPaneTreeInteractions({
     propertyTreeService,
     tagTree,
     propertyTree,
+    topicService,
     tagsVirtualFolderHasChildren,
     setShortcutsExpanded,
     setRecentNotesExpanded,
@@ -590,6 +597,55 @@ export function useNavigationPaneTreeInteractions({
         ]
     );
 
+    /**
+     * Topic rows go through applyTreeSelection like folders, tags and properties, so
+     * auto-expand, collapse-on-reselect and single-pane focus all behave identically.
+     * Selecting a topic also opens its topic note when one exists.
+     */
+    const handleTopicClick = useCallback(
+        (topicPath: string, options?: { fromShortcut?: boolean }) => {
+            if (!topicPath) {
+                return;
+            }
+
+            const topicNode = topicService?.findTopicNodeByPath(topicPath) ?? null;
+            const isSelectedTopic = selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath === topicPath;
+
+            applyTreeSelection({
+                hasChildren: Boolean(topicNode && topicNode.children.size > 0),
+                isExpanded: expansionState.expandedTopics.has(topicPath),
+                isSelected: isSelectedTopic,
+                fromShortcut: options?.fromShortcut,
+                onSelect: () => {
+                    selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath });
+
+                    // Opening the topic note is part of selecting a topic, so it happens on
+                    // every click rather than only when the file list is revealed.
+                    const topicFile = getTopicNote(getTopicNameFromPath(topicPath), app);
+                    if (topicFile) {
+                        const leaf = app.workspace.getLeaf(false);
+                        if (leaf) {
+                            void leaf.openFile(topicFile, { active: false });
+                        }
+                    }
+                },
+                onToggleExpand: () => {
+                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
+                }
+            });
+        },
+        [
+            app,
+            applyTreeSelection,
+            expansionDispatch,
+            expansionState.expandedTopics,
+            selectionDispatch,
+            selectionState.selectedTopicPath,
+            selectionState.selectionType,
+            topicService
+        ]
+    );
+
     const handleTagCollectionClick = useCallback(
         (tagCollectionId: string, event: React.MouseEvent<HTMLDivElement>) => {
             handleTagClick(tagCollectionId, event);
@@ -753,7 +809,8 @@ export function useNavigationPaneTreeInteractions({
         handleTagClick,
         handleTagCollectionClick,
         handlePropertyCollectionClick,
-        handlePropertyClick
+        handlePropertyClick,
+        handleTopicClick
     };
 
     // Identity-stable facade; calls forward to the latest handlers through a ref
@@ -772,6 +829,7 @@ export function useNavigationPaneTreeInteractions({
         'handleTagClick',
         'handleTagCollectionClick',
         'handlePropertyCollectionClick',
-        'handlePropertyClick'
+        'handlePropertyClick',
+        'handleTopicClick'
     ]);
 }

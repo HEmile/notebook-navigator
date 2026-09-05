@@ -38,7 +38,6 @@ import { VirtualFolderComponent, type VirtualFolderTrailingAction } from '../Vir
 import type { NavigationPaneRowProps } from './NavigationPaneItemRenderer.types';
 import type { TopicTreeItem as TopicTreeItemType } from '../../types/virtualization';
 import type { NavigationPaneRowContext } from './NavigationPaneItemRenderer.types';
-import { useTopicNavigation } from '../../hooks/useTopicNavigation';
 import { useExpansionDispatch } from '../../context/ExpansionContext';
 import { useContextMenu } from '../../hooks/useContextMenu';
 import { getNavigationItemSearchMatch } from './navigationPaneItemState';
@@ -53,9 +52,8 @@ interface TopicRowProps {
 }
 
 function TopicRow({ item, context, isSelected, isExpanded }: TopicRowProps) {
-    const { settings } = context;
+    const { settings, tree } = context;
     const expansionDispatch = useExpansionDispatch();
-    const { navigateToTopic } = useTopicNavigation();
     const itemRef = useRef<HTMLDivElement>(null);
     const chevronRef = useRef<HTMLDivElement>(null);
     const iconRef = useRef<HTMLSpanElement>(null);
@@ -100,9 +98,9 @@ function TopicRow({ item, context, isSelected, isExpanded }: TopicRowProps) {
     const handleClick = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation();
-            navigateToTopic(topicPath);
+            tree.handleTopicClick(topicPath);
         },
-        [navigateToTopic, topicPath]
+        [tree, topicPath]
     );
 
     const classes = ['nn-navitem', 'nn-tag'];

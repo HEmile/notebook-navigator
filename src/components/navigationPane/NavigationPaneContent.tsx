@@ -23,7 +23,7 @@ import { Platform, TFile, TFolder } from 'obsidian';
 import { Virtualizer } from '@tanstack/react-virtual';
 import { useExpansionDispatch, useExpansionState } from '../../context/ExpansionContext';
 import { useNavigationSelection, useSelectionDispatch } from '../../context/SelectionContext';
-import { useServices, useMetadataService, useCommandQueue } from '../../context/ServicesContext';
+import { useServices, useMetadataService, useCommandQueue, useTopicService } from '../../context/ServicesContext';
 import { useSettingsState, useSettingsUpdate, useActiveProfile } from '../../context/SettingsContext';
 import { useUXPreferences } from '../../context/UXPreferencesContext';
 import { useFileCache } from '../../context/StorageContext';
@@ -137,6 +137,7 @@ interface NavigationPaneProps {
 export const NavigationPane = React.memo(
     forwardRef<NavigationPaneHandle, NavigationPaneProps>(function NavigationPane(props, ref) {
         const { app, isMobile, plugin, fileSystemOps, propertyTreeService, tagOperations, propertyOperations } = useServices();
+        const topicService = useTopicService();
         const commandQueue = useCommandQueue();
         const metadataService = useMetadataService();
         const expansionState = useExpansionState();
@@ -491,6 +492,7 @@ export const NavigationPane = React.memo(
             propertyTreeService,
             tagTree: props.navigationTreeSections.renderTagTree,
             propertyTree: props.navigationTreeSections.renderPropertyTree,
+            topicService,
             tagsVirtualFolderHasChildren,
             setShortcutsExpanded: shortcuts.setShortcutsExpanded,
             setRecentNotesExpanded: shortcuts.setRecentNotesExpanded,
