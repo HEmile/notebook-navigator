@@ -19,23 +19,29 @@
 import { useCallback } from 'react';
 import { useSelectionDispatch } from '../context/SelectionContext';
 import { useUIState, useUIDispatch } from '../context/UIStateContext';
-import { useServices } from '../context/ServicesContext';
+import { useServices, useTopicService } from '../context/ServicesContext';
 import { getTopicNote } from '../utils/topicNotes';
-import { getTopicNameFromPath } from '../utils/topicGraph';
+import { getTopicNameFromPath, resolveTopicPath } from '../utils/topicGraph';
 
 export function useTopicNavigation() {
     const selectionDispatch = useSelectionDispatch();
     const uiState = useUIState();
     const uiDispatch = useUIDispatch();
     const { app } = useServices();
+    const topicService = useTopicService();
 
     const navigateToTopic = useCallback(
-        (topicPath: string) => {
-            if (!topicPath) {
+        (topicPathOrName: string) => {
+            if (!topicPathOrName) {
                 return;
             }
 
-            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: topicPath });
+            // Tree rows pass a full topic path, topic shortcuts pass a bare topic name.
+            // Normalize to a path so the file list and the selected row both resolve.
+            const topicGraph = topicService?.getTopicGraph();
+            const topicPath = (topicGraph ? resolveTopicPath(topicGraph, topicPathOrName) : null) ?? topicPathOrName;
+
+            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath });
 
             // ACTIVATE_PANE sets the focused pane and the visible single-pane view together:
             // single pane reveals the file list, dual pane keeps focus in the navigation pane.
@@ -51,7 +57,7 @@ export function useTopicNavigation() {
                 }
             }
         },
-        [selectionDispatch, uiState.singlePane, uiDispatch, app]
+        [selectionDispatch, uiState.singlePane, uiDispatch, app, topicService]
     );
 
     return { navigateToTopic };

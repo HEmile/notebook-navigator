@@ -430,6 +430,34 @@ export function getAllTopicPathsToRoot(topicNode: TopicNode): string[][] {
 }
 
 /**
+ * Resolves a topic path or a bare topic name to a full slash-separated topic path.
+ *
+ * Navigation pane rows pass a full path, but topic shortcuts store only a topic name.
+ * A nested topic's name does not resolve through findTopicNodeByPath, because the top
+ * level of the graph holds root topics only, so fall back to a name search and rebuild
+ * the path from the node's first ancestor chain.
+ *
+ * @returns The resolved path, or null when the topic is not in the graph.
+ */
+export function resolveTopicPath(graph: Map<string, TopicNode>, topicPathOrName: string): string | null {
+    if (!topicPathOrName) {
+        return null;
+    }
+
+    if (findTopicNodeByPath(graph, topicPathOrName)) {
+        return topicPathOrName;
+    }
+
+    const topicNode = findTopicNode(graph, topicPathOrName);
+    if (!topicNode) {
+        return null;
+    }
+
+    const ancestorPaths = getAllTopicPathsToRoot(topicNode);
+    return ancestorPaths.length > 0 ? `${ancestorPaths[0].join('/')}/${topicNode.name}` : topicNode.name;
+}
+
+/**
  * @public Placeholder for hidden-topic filtering; see the TODO below.
  */
 export function excludeFromTopicTree(tree: Map<string, TopicNode>, _matcher: HiddenTagMatcher): Map<string, TopicNode> {
