@@ -24,7 +24,7 @@ import type { SelectionAction, SelectionState } from '../../context/SelectionCon
 import type { UIAction } from '../../context/UIStateContext';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { SearchShortcut, ShortcutEntry } from '../../types/shortcuts';
-import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isSearchShortcut, isTagShortcut } from '../../types/shortcuts';
+import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isSearchShortcut, isTagShortcut, isTopicShortcut } from '../../types/shortcuts';
 import { resolvePropertyShortcutNodeId } from '../../utils/propertyTree';
 import { resolveCanonicalTagPath } from '../../utils/tagUtils';
 import { runAsyncAction } from '../../utils/async';
@@ -42,6 +42,7 @@ interface HydratedShortcutActionItem {
     search: SearchShortcut | null;
     tagPath: string | null;
     propertyNodeId: string | null;
+    topicName: string | null;
     isMissing: boolean;
 }
 
@@ -67,6 +68,7 @@ interface UseNavigationPaneShortcutActionsProps {
     onRevealProperty: (propertyNodeId: string, options?: RevealPropertyOptions) => boolean;
     onRevealFile: (file: TFile) => void;
     onRevealShortcutFile?: (file: TFile) => void;
+    onNavigateToTopic: (topicName: string) => void;
     tagTree: Map<string, import('../../types/storage').TagTreeNode>;
     hydratedShortcuts: HydratedShortcutActionItem[];
 }
@@ -88,6 +90,7 @@ export function useNavigationPaneShortcutActions({
     onRevealProperty,
     onRevealFile,
     onRevealShortcutFile,
+    onNavigateToTopic,
     tagTree,
     hydratedShortcuts
 }: UseNavigationPaneShortcutActionsProps) {
@@ -320,6 +323,16 @@ export function useNavigationPaneShortcutActions({
         ]
     );
 
+    const handleShortcutTopicActivate = useCallback(
+        (topicName: string, shortcutKey: string) => {
+            setActiveShortcut(shortcutKey);
+            onNavigateToTopic(topicName);
+            selectionDispatch({ type: 'SET_KEYBOARD_NAVIGATION', isKeyboardNavigation: true });
+            scheduleShortcutRelease();
+        },
+        [onNavigateToTopic, scheduleShortcutRelease, selectionDispatch, setActiveShortcut]
+    );
+
     const openShortcutByNumber = useCallback(
         async (shortcutNumber: number) => {
             if (!Number.isInteger(shortcutNumber) || shortcutNumber < 1) {
@@ -331,7 +344,7 @@ export function useNavigationPaneShortcutActions({
                 return false;
             }
 
-            const { key, shortcut, folder, note, search, tagPath, propertyNodeId } = entry;
+            const { key, shortcut, folder, note, search, tagPath, propertyNodeId, topicName } = entry;
 
             if (isFolderShortcut(shortcut) && folder) {
                 handleShortcutFolderActivate(folder, key);
@@ -365,6 +378,11 @@ export function useNavigationPaneShortcutActions({
                 return handleShortcutPropertyActivate(resolvedNodeId, key);
             }
 
+            if (isTopicShortcut(shortcut) && topicName) {
+                handleShortcutTopicActivate(topicName, key);
+                return true;
+            }
+
             return false;
         },
         [
@@ -373,6 +391,7 @@ export function useNavigationPaneShortcutActions({
             handleShortcutPropertyActivate,
             handleShortcutSearchActivate,
             handleShortcutTagActivate,
+            handleShortcutTopicActivate,
             hydratedShortcuts
         ]
     );
@@ -387,6 +406,7 @@ export function useNavigationPaneShortcutActions({
         handleShortcutSearchActivate,
         handleShortcutTagActivate,
         handleShortcutPropertyActivate,
+        handleShortcutTopicActivate,
         openShortcutByNumber
     };
 }

@@ -29,8 +29,9 @@ export type ShortcutContextMenuTarget =
     | { type: 'note'; key: string; file: TFile }
     | { type: 'tag'; key: string; tagPath: string }
     | { type: 'property'; key: string; propertyNodeId: string }
+    | { type: 'topic'; key: string; topicName: string }
     | { type: 'search'; key: string }
-    | { type: 'missing'; key: string; kind: 'folder' | 'note' | 'tag' | 'property' };
+    | { type: 'missing'; key: string; kind: 'folder' | 'note' | 'tag' | 'property' | 'topic' };
 
 export interface NavigationPaneShortcutRenderState {
     activeShortcutId: string | null;
@@ -51,6 +52,7 @@ export interface NavigationPaneShortcutRenderState {
     handleShortcutSearchActivate: (shortcutKey: string, searchShortcut: SearchShortcut) => void;
     handleShortcutTagActivate: (tagPath: string, shortcutKey: string) => void;
     handleShortcutPropertyActivate: (propertyNodeId: string, shortcutKey: string) => boolean;
+    handleShortcutTopicActivate: (topicName: string, shortcutKey: string) => void;
     handleShortcutContextMenu: (event: React.MouseEvent<HTMLDivElement>, target: ShortcutContextMenuTarget) => void;
     handleRecentFileContextMenu: (event: React.MouseEvent<HTMLDivElement>, file: TFile) => void;
     handleShortcutRootDragOver: (event: React.DragEvent<HTMLElement>) => void;

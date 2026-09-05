@@ -107,6 +107,7 @@ export const STRINGS_EN = {
         noteExists: 'Note already in shortcuts',
         tagExists: 'Tag already in shortcuts',
         propertyExists: 'Property already in shortcuts',
+        topicExists: 'Topic already in shortcuts',
         invalidProperty: 'Invalid property shortcut',
         searchExists: 'Search shortcut already exists',
         emptySearchQuery: 'Enter a search query before saving it',

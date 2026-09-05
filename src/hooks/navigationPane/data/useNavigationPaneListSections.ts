@@ -28,7 +28,7 @@ import {
     SHORTCUTS_VIRTUAL_FOLDER_ID
 } from '../../../types';
 import type { TagTreeNode } from '../../../types/storage';
-import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isSearchShortcut, isTagShortcut } from '../../../types/shortcuts';
+import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isSearchShortcut, isTagShortcut, isTopicShortcut } from '../../../types/shortcuts';
 import type { CombinedNavigationItem } from '../../../types/virtualization';
 import { isFolderInExcludedFolder, shouldExcludeFileName, shouldExcludeFileWithMatcher } from '../../../utils/fileFilters';
 import { getDBInstance } from '../../../storage/fileOperations';
@@ -322,6 +322,18 @@ export function useNavigationPaneListSections({
                     isMissing,
                     isExcluded,
                     missingLabel: isMissing ? resolvedPath : undefined
+                });
+                return;
+            }
+
+            if (isTopicShortcut(shortcut)) {
+                items.push({
+                    type: NavigationPaneItemType.SHORTCUT_TOPIC,
+                    key,
+                    level: itemLevel,
+                    shortcut,
+                    topicName: shortcut.topicName,
+                    displayName: shortcut.alias && shortcut.alias.length > 0 ? shortcut.alias : shortcut.topicName
                 });
                 return;
             }

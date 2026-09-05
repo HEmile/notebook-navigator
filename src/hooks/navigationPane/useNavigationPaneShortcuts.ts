@@ -41,6 +41,7 @@ import type { NoteCountInfo } from '../../types/noteCounts';
 import type { SearchShortcut } from '../../types/shortcuts';
 import type { NavigateToFolderOptions, RevealPropertyOptions, RevealTagOptions } from '../useNavigatorReveal';
 import { useNavigationPaneShortcutActions } from './useNavigationPaneShortcutActions';
+import { useTopicNavigation } from '../useTopicNavigation';
 import { useNavigationPaneShortcutDisplay } from './useNavigationPaneShortcutDisplay';
 import { useNavigationPaneShortcutDnD } from './useNavigationPaneShortcutDnD';
 import { useNavigationPaneShortcutMenus } from './useNavigationPaneShortcutMenus';
@@ -197,6 +198,8 @@ export function useNavigationPaneShortcuts({
         uiDispatch({ type: 'SET_PIN_SHORTCUTS', value: !uiState.pinShortcuts });
     }, [uiDispatch, uiState.pinShortcuts]);
 
+    const { navigateToTopic } = useTopicNavigation();
+
     const shortcutActions = useNavigationPaneShortcutActions({
         app,
         commandQueue,
@@ -214,6 +217,7 @@ export function useNavigationPaneShortcuts({
         onRevealProperty,
         onRevealFile,
         onRevealShortcutFile,
+        onNavigateToTopic: navigateToTopic,
         tagTree: fileData.tagTree,
         hydratedShortcuts
     });
@@ -293,6 +297,7 @@ export function useNavigationPaneShortcuts({
         handleShortcutSearchActivate: shortcutActions.handleShortcutSearchActivate,
         handleShortcutTagActivate: shortcutActions.handleShortcutTagActivate,
         handleShortcutPropertyActivate: shortcutActions.handleShortcutPropertyActivate,
+        handleShortcutTopicActivate: shortcutActions.handleShortcutTopicActivate,
         handleShortcutContextMenu: shortcutMenus.handleShortcutContextMenu,
         handleRecentFileContextMenu: shortcutMenus.handleRecentFileContextMenu,
         handleShortcutRootDragOver: shortcutDnD.handleShortcutRootDragOver,

@@ -195,6 +195,12 @@ export interface ShortcutPropertyNavItem extends ShortcutNavigationBase {
     displayName: string;
 }
 
+export interface ShortcutTopicNavItem extends ShortcutNavigationBase {
+    type: typeof NavigationPaneItemType.SHORTCUT_TOPIC;
+    topicName: string;
+    displayName: string;
+}
+
 export interface RootSpacerItem {
     type: typeof NavigationPaneItemType.ROOT_SPACER;
     key: string;
@@ -233,6 +239,7 @@ export type CombinedNavigationItem =
     | ShortcutSearchNavItem
     | ShortcutTagNavItem
     | ShortcutPropertyNavItem
+    | ShortcutTopicNavItem
     | RootSpacerItem
     | TopSpacerItem
     | BottomSpacerItem

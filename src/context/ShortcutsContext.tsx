@@ -32,6 +32,7 @@ import {
     isSearchShortcut,
     isTagShortcut,
     isPropertyShortcut,
+    isTopicShortcut,
     normalizePropertyShortcutNodeId,
     normalizeSearchShortcutName,
     normalizeShortcutStartTarget
@@ -48,6 +49,10 @@ const getShortcutFingerprint = (shortcut: ShortcutEntry): string => {
     if (isFolderShortcut(shortcut) || isNoteShortcut(shortcut) || isTagShortcut(shortcut) || isPropertyShortcut(shortcut)) {
         const path = isTagShortcut(shortcut) ? shortcut.tagPath : isPropertyShortcut(shortcut) ? shortcut.nodeId : shortcut.path;
         return `${shortcut.type}:${path}`;
+    }
+
+    if (isTopicShortcut(shortcut)) {
+        return `${shortcut.type}:${shortcut.topicName}`;
     }
 
     const startTarget = getShortcutStartTargetFingerprint(shortcut.startTarget);
@@ -74,6 +79,7 @@ interface HydratedShortcut {
     search: SearchShortcut | null;
     tagPath: string | null;
     propertyNodeId: string | null;
+    topicName: string | null;
     isMissing: boolean;
 }
 
@@ -88,11 +94,13 @@ export interface ShortcutsContextValue {
     noteShortcutKeysByPath: Map<string, string>;
     tagShortcutKeysByPath: Map<string, string>;
     propertyShortcutKeysByNodeId: Map<string, string>;
+    topicShortcutKeysByName: Map<string, string>;
     searchShortcutsByName: Map<string, SearchShortcut>;
     addFolderShortcut: (path: string, options?: { index?: number }) => Promise<boolean>;
     addNoteShortcut: (path: string, options?: { index?: number }) => Promise<boolean>;
     addTagShortcut: (tagPath: string, options?: { index?: number }) => Promise<boolean>;
     addPropertyShortcut: (nodeId: string, options?: { index?: number }) => Promise<boolean>;
+    addTopicShortcut: (topicName: string, options?: { index?: number }) => Promise<boolean>;
     addSearchShortcut: (
         input: { name: string; query: string; provider: SearchProvider; startTarget?: ShortcutStartTarget },
         options?: { index?: number }
@@ -107,6 +115,7 @@ export interface ShortcutsContextValue {
     hasNoteShortcut: (path: string) => boolean;
     hasTagShortcut: (tagPath: string) => boolean;
     hasPropertyShortcut: (nodeId: string) => boolean;
+    hasTopicShortcut: (topicName: string) => boolean;
     findSearchShortcut: (name: string) => SearchShortcut | undefined;
 }
 
@@ -348,6 +357,16 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
         return map;
     }, [rawShortcuts]);
 
+    const topicShortcutKeysByName = useMemo(() => {
+        const map = new Map<string, string>();
+        rawShortcuts.forEach(shortcut => {
+            if (isTopicShortcut(shortcut) && shortcut.topicName) {
+                map.set(shortcut.topicName, getShortcutKey(shortcut));
+            }
+        });
+        return map;
+    }, [rawShortcuts]);
+
     // Maps search shortcut names in canonical form to shortcuts for fast lookup
     const searchShortcutsByName = useMemo(() => {
         const map = new Map<string, SearchShortcut>();
@@ -429,6 +448,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                         search: null,
                         tagPath: null,
                         propertyNodeId: null,
+                        topicName: null,
                         isMissing: false
                     };
                 }
@@ -440,6 +460,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                     search: null,
                     tagPath: null,
                     propertyNodeId: null,
+                    topicName: null,
                     isMissing: true
                 };
             }
@@ -455,6 +476,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                         search: null,
                         tagPath: null,
                         propertyNodeId: null,
+                        topicName: null,
                         isMissing: false
                     };
                 }
@@ -466,6 +488,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                     search: null,
                     tagPath: null,
                     propertyNodeId: null,
+                    topicName: null,
                     isMissing: true
                 };
             }
@@ -480,6 +503,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                     search: null,
                     tagPath: normalizedTagPath ?? shortcut.tagPath,
                     propertyNodeId: null,
+                    topicName: null,
                     isMissing: !normalizedTagPath
                 };
             }
@@ -494,7 +518,22 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                     search: null,
                     tagPath: null,
                     propertyNodeId: normalizedNodeId ?? shortcut.nodeId,
+                    topicName: null,
                     isMissing: !normalizedNodeId
+                };
+            }
+
+            if (isTopicShortcut(shortcut)) {
+                return {
+                    key,
+                    shortcut,
+                    folder: null,
+                    note: null,
+                    search: null,
+                    tagPath: null,
+                    propertyNodeId: null,
+                    topicName: shortcut.topicName,
+                    isMissing: false
                 };
             }
 
@@ -507,6 +546,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
                 search: shortcut,
                 tagPath: null,
                 propertyNodeId: null,
+                topicName: null,
                 isMissing: false
             };
         });
@@ -755,6 +795,20 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
         [insertShortcut, propertyShortcutKeysByNodeId]
     );
 
+    const addTopicShortcut = useCallback(
+        async (topicName: string, options?: { index?: number }) => {
+            if (!topicName) {
+                return false;
+            }
+            if (topicShortcutKeysByName.has(topicName)) {
+                showNotice(strings.shortcuts.topicExists, { variant: 'warning' });
+                return false;
+            }
+            return insertShortcut({ type: ShortcutType.TOPIC, topicName }, options?.index);
+        },
+        [insertShortcut, topicShortcutKeysByName]
+    );
+
     // Adds a search shortcut with validation for name and query uniqueness
     const addSearchShortcut = useCallback(
         async (
@@ -909,6 +963,11 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
         [propertyShortcutKeysByNodeId]
     );
 
+    const hasTopicShortcut = useCallback(
+        (topicName: string) => topicShortcutKeysByName.has(topicName),
+        [topicShortcutKeysByName]
+    );
+
     // Finds a search shortcut by name (case-insensitive)
     const findSearchShortcut = useCallback(
         (name: string) => searchShortcutsByName.get(normalizeSearchShortcutName(name)),
@@ -924,11 +983,13 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             noteShortcutKeysByPath,
             tagShortcutKeysByPath,
             propertyShortcutKeysByNodeId,
+            topicShortcutKeysByName,
             searchShortcutsByName,
             addFolderShortcut,
             addNoteShortcut,
             addTagShortcut,
             addPropertyShortcut,
+            addTopicShortcut,
             addSearchShortcut,
             addShortcutsBatch,
             removeShortcut,
@@ -940,6 +1001,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             hasNoteShortcut,
             hasTagShortcut,
             hasPropertyShortcut,
+            hasTopicShortcut,
             findSearchShortcut
         }),
         [
@@ -950,11 +1012,13 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             noteShortcutKeysByPath,
             tagShortcutKeysByPath,
             propertyShortcutKeysByNodeId,
+            topicShortcutKeysByName,
             searchShortcutsByName,
             addFolderShortcut,
             addNoteShortcut,
             addTagShortcut,
             addPropertyShortcut,
+            addTopicShortcut,
             addSearchShortcut,
             addShortcutsBatch,
             removeShortcut,
@@ -966,6 +1030,7 @@ export function ShortcutsProvider({ children }: ShortcutsProviderProps) {
             hasNoteShortcut,
             hasTagShortcut,
             hasPropertyShortcut,
+            hasTopicShortcut,
             findSearchShortcut
         ]
     );

@@ -31,6 +31,7 @@ type ShortcutTagNavigationItem = Extract<CombinedNavigationItem, { type: typeof 
 type ShortcutPropertyNavigationItem = Extract<CombinedNavigationItem, { type: typeof NavigationPaneItemType.SHORTCUT_PROPERTY }>;
 type ShortcutNoteNavigationItem = Extract<CombinedNavigationItem, { type: typeof NavigationPaneItemType.SHORTCUT_NOTE }>;
 type ShortcutSearchNavigationItem = Extract<CombinedNavigationItem, { type: typeof NavigationPaneItemType.SHORTCUT_SEARCH }>;
+type ShortcutTopicNavigationItem = Extract<CombinedNavigationItem, { type: typeof NavigationPaneItemType.SHORTCUT_TOPIC }>;
 
 function resolveShortcutPropertyIcon(ctx: NavigationItemDecorationContext, propertyNodeId: string): string {
     if (propertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
@@ -135,6 +136,23 @@ function decorateShortcutNoteNavigationItem(
     };
 }
 
+function decorateShortcutTopicNavigationItem(ctx: NavigationItemDecorationContext, item: ShortcutTopicNavigationItem): CombinedNavigationItem {
+    const tagColorData = ctx.metadataService.getTagColorData(item.topicName);
+    const colors = resolveShortcutDecorationColors({
+        ctx,
+        itemKey: item.key,
+        color: tagColorData.color,
+        backgroundColor: undefined
+    });
+
+    return {
+        ...item,
+        icon: ctx.metadataService.getTagIcon(item.topicName) || resolveUXIcon(ctx.settings.interfaceIcons, 'nav-tag'),
+        color: colors.color,
+        backgroundColor: colors.backgroundColor
+    };
+}
+
 function decorateShortcutSearchNavigationItem(
     ctx: NavigationItemDecorationContext,
     item: ShortcutSearchNavigationItem
@@ -166,6 +184,8 @@ export function decorateShortcutNavigationItem(
             return decorateShortcutPropertyNavigationItem(ctx, item);
         case NavigationPaneItemType.SHORTCUT_NOTE:
             return decorateShortcutNoteNavigationItem(ctx, item);
+        case NavigationPaneItemType.SHORTCUT_TOPIC:
+            return decorateShortcutTopicNavigationItem(ctx, item);
         case NavigationPaneItemType.SHORTCUT_SEARCH:
             return decorateShortcutSearchNavigationItem(ctx, item);
         default:

@@ -23,6 +23,8 @@ import type { MenuServices } from './menuTypes';
 import { ItemType } from '../../types';
 import { setAsyncOnClick } from './menuAsyncHelpers';
 import type { Menu } from 'obsidian';
+import { addShortcutRenameMenuItem } from './shortcutRenameMenuItem';
+import { resolveUXIconForMenu } from '../../utils/uxIcons';
 
 export interface TopicMenuBuilderParams {
     topicName: string;
@@ -90,6 +92,50 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
             modal.open();
         });
     });
+
+    // Add to shortcuts / Remove from shortcuts
+    if (services.shortcuts) {
+        const { topicShortcutKeysByName, addTopicShortcut, removeShortcut, renameShortcut, shortcutMap } = services.shortcuts;
+        const existingShortcutKey = topicShortcutKeysByName.get(topicName);
+
+        menu.addSeparator();
+
+        if (existingShortcutKey) {
+            const existingShortcut = shortcutMap.get(existingShortcutKey);
+            addShortcutRenameMenuItem({
+                app,
+                menu,
+                shortcutKey: existingShortcutKey,
+                defaultLabel: topicName,
+                existingShortcut,
+                title: strings.shortcuts.rename,
+                placeholder: strings.searchInput.shortcutNamePlaceholder,
+                renameShortcut
+            });
+        }
+
+        menu.addItem((item: MenuItem) => {
+            if (existingShortcutKey) {
+                setAsyncOnClick(
+                    item
+                        .setTitle(strings.shortcuts.remove)
+                        .setIcon(resolveUXIconForMenu(settings.interfaceIcons, 'nav-shortcuts', 'lucide-star-off')),
+                    async () => {
+                        await removeShortcut(existingShortcutKey);
+                    }
+                );
+            } else {
+                setAsyncOnClick(
+                    item
+                        .setTitle(strings.shortcuts.add)
+                        .setIcon(resolveUXIconForMenu(settings.interfaceIcons, 'nav-shortcuts', 'lucide-star')),
+                    async () => {
+                        await addTopicShortcut(topicName);
+                    }
+                );
+            }
+        });
+    }
 
     menu.addSeparator();
 

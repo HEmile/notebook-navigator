@@ -21,7 +21,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
 import { NavigationPaneItemType } from '../../types';
 import type { ShortcutContextMenuTarget } from '../../hooks/navigationPane/navigationPaneShortcutTypes';
-import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isTagShortcut } from '../../types/shortcuts';
+import { isFolderShortcut, isNoteShortcut, isPropertyShortcut, isTagShortcut, isTopicShortcut } from '../../types/shortcuts';
 import { runAsyncAction } from '../../utils/async';
 import { resolveUXIcon } from '../../utils/uxIcons';
 import { getFolderNote } from '../../utils/folderNotes';
@@ -339,6 +339,55 @@ export function NavigationPaneShortcutRow({ item, context }: NavigationPaneRowPr
                         return;
                     }
                     shortcuts.handleShortcutPropertyActivate(propertyNodeId, item.key);
+                },
+                onRemove: () => {
+                    runAsyncAction(() => shortcuts.removeShortcut(item.key));
+                },
+                onContextMenu: (event: React.MouseEvent<HTMLDivElement>) => shortcuts.handleShortcutContextMenu(event, contextTarget),
+                dragHandlers: shortcuts.buildShortcutExternalHandlers(item.key),
+                dragHandleConfig: shortcuts.shortcutDragHandleConfig
+            };
+
+            if (shortcuts.shouldUseShortcutDnd) {
+                return (
+                    <SortableShortcutItem
+                        sortableId={item.key}
+                        canReorder={shortcuts.shouldUseShortcutDnd}
+                        isDragSource={isDragSource}
+                        {...shortcutProps}
+                    />
+                );
+            }
+
+            return <ShortcutItem {...shortcutProps} isDragSource={isDragSource} />;
+        }
+
+        case NavigationPaneItemType.SHORTCUT_TOPIC: {
+            const isMissing = Boolean(item.isMissing);
+            const topicName = item.topicName;
+            const topicAlias = isTopicShortcut(item.shortcut) ? item.shortcut.alias : undefined;
+            const topicLabel = topicAlias && topicAlias.length > 0 ? topicAlias : item.displayName;
+            const contextTarget: ShortcutContextMenuTarget = !isMissing
+                ? { type: 'topic', key: item.key, topicName }
+                : { type: 'missing', key: item.key, kind: 'topic' };
+            const isDragSource = shortcuts.shouldUseShortcutDnd && shortcuts.activeShortcutId === item.key;
+            const shortcutProps = {
+                icon: isMissing ? 'lucide-alert-triangle' : (item.icon ?? 'lucide-tags'),
+                color: isMissing ? undefined : item.color,
+                backgroundColor: isMissing ? undefined : getSolidBackground(item.backgroundColor),
+                label: topicLabel,
+                description: undefined,
+                level: item.level,
+                type: 'tag' as const,
+                badge: shortcuts.shortcutNumberBadgesByKey.get(item.key),
+                forceShowCount: shortcuts.shouldShowShortcutCounts,
+                isDisabled: isMissing,
+                isMissing,
+                onClick: () => {
+                    if (isMissing) {
+                        return;
+                    }
+                    shortcuts.handleShortcutTopicActivate(topicName, item.key);
                 },
                 onRemove: () => {
                     runAsyncAction(() => shortcuts.removeShortcut(item.key));

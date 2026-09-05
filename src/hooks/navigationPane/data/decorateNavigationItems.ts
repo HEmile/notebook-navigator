@@ -259,6 +259,7 @@ function decorateNavigationItem(ctx: NavigationItemDecorationContext, item: Comb
         case NavigationPaneItemType.SHORTCUT_FOLDER:
         case NavigationPaneItemType.SHORTCUT_TAG:
         case NavigationPaneItemType.SHORTCUT_PROPERTY:
+        case NavigationPaneItemType.SHORTCUT_TOPIC:
         case NavigationPaneItemType.SHORTCUT_NOTE:
         case NavigationPaneItemType.SHORTCUT_SEARCH: {
             const decoratedShortcut = decorateShortcutNavigationItem(ctx, item);

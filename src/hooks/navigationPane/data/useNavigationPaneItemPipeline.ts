@@ -99,6 +99,7 @@ const isShortcutNavigationItem = (item: CombinedNavigationItem): boolean => {
         item.type === NavigationPaneItemType.SHORTCUT_SEARCH ||
         item.type === NavigationPaneItemType.SHORTCUT_TAG ||
         item.type === NavigationPaneItemType.SHORTCUT_PROPERTY ||
+        item.type === NavigationPaneItemType.SHORTCUT_TOPIC ||
         item.type === NavigationPaneItemType.SHORTCUT_HEADER
     );
 };

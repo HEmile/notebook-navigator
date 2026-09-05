@@ -31,6 +31,7 @@ import {
     buildFolderMenu,
     buildPropertyMenu,
     buildTagMenu,
+    buildTopicMenu,
     type MenuDispatchers,
     type MenuServices,
     type MenuState
@@ -161,6 +162,13 @@ export function useNavigationPaneShortcutMenus({
                     state,
                     dispatchers,
                     options: { disableNavigationSeparatorActions: true }
+                });
+            } else if (target.type === 'topic') {
+                buildTopicMenu({
+                    topicName: target.topicName,
+                    menu,
+                    services: menuServices,
+                    settings
                 });
             }
 

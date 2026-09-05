@@ -28,6 +28,7 @@ export function NavigationPaneItemRenderer({ item, context }: NavigationPaneRowP
         case NavigationPaneItemType.SHORTCUT_SEARCH:
         case NavigationPaneItemType.SHORTCUT_TAG:
         case NavigationPaneItemType.SHORTCUT_PROPERTY:
+        case NavigationPaneItemType.SHORTCUT_TOPIC:
         case NavigationPaneItemType.RECENT_NOTE:
             return <NavigationPaneShortcutRow item={item} context={context} />;
 
