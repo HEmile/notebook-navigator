@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_IT = {
+    language: {
+        downloading: 'Download delle lingue…',
+        continueInEnglish: 'Continua in inglese',
+        downloadFailed: 'Download delle lingue non riuscito. Notebook Navigator usa l’inglese.'
+    },
     // Common UI elements
     common: {
         cancel: 'Annulla', // Button text for canceling dialogs and operations (English: Cancel)
@@ -87,6 +92,7 @@ export const STRINGS_IT = {
         pinShortcutsAndRecentFiles: 'Fissa scorciatoie e file recenti',
         unpinShortcuts: 'Rimuovi fissatura scorciatoie',
         unpinShortcutsAndRecentFiles: 'Rimuovi fissatura scorciatoie e file recenti',
+        resizePinnedShortcuts: 'Ridimensiona le scorciatoie fissate',
         profileMenuAria: 'Cambia profilo vault'
     },
 
@@ -112,8 +118,17 @@ export const STRINGS_IT = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'Impossibile leggere il modello della nota giornaliera.',
         createFailed: 'Impossibile creare la nota giornaliera.'
+    },
+
+    templates: {
+        invalidTokens: 'Il modello "{name}" contiene token non validi: {tokens}',
+        invalidFileNameTokens: 'Il formato del nome file di "{name}" contiene token non validi: {tokens}',
+        readFailed: 'Impossibile leggere il modello "{name}". La nota è stata creata senza di esso.',
+        folderNotSet: 'Imposta la cartella dei modelli in Operazioni sui file e modelli > Modelli prima di creare note da modello.',
+        templateNotFound: 'Il modello "{name}" non è stato trovato.',
+        folderNotFound: 'La cartella "{name}" non è stata trovata.',
+        templaterMissing: 'Il plugin Templater non è installato. Cambia il motore dei modelli in Operazioni sui file e modelli > Modelli.'
     },
 
     shortcuts: {
@@ -363,6 +378,9 @@ export const STRINGS_IT = {
             duplicateFolder: 'Duplica cartella',
             searchInFolder: 'Cerca nella cartella',
             createFolderNote: 'Crea nota cartella',
+            setFolderTemplate: 'Imposta modello cartella...',
+            changeFolderTemplate: 'Cambia modello cartella...',
+            removeFolderTemplate: 'Rimuovi modello cartella',
             detachFolderNote: 'Scollega nota cartella',
             deleteFolderNote: 'Elimina nota cartella',
             changeIcon: 'Cambia icona',
@@ -721,7 +739,28 @@ export const STRINGS_IT = {
                 dismiss: 'per chiudere'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'Aggiungi comando',
+            titleEdit: 'Modifica comando',
+            name: 'Nome del comando',
+            namePlaceholder: 'Nuova nota riunione',
+            template: 'Modello',
+            templateDesc: 'Facoltativo. Senza modello si applica il modello cartella della cartella di destinazione, se impostato.',
+            templatePlaceholder: 'Modelli/Riunione.md',
+            fileNameFormat: 'Formato del nome file',
+            fileNameFormatDesc:
+                "I token come {{date:YYYYMMDD}} e {{prompt:Titolo}} vengono sostituiti all'esecuzione del comando. Ogni prompt chiede un valore e la stessa etichetta nel modello riceve lo stesso valore. {{number}} è uno in più del numero più alto usato dalle note nella cartella con lo stesso schema di nome, e {{number:00}} lo completa con zeri. Anche il modello può usare {{number}}, e {{title}} inserisce il nome file generato.",
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Titolo}}',
+            location: 'Posizione',
+            folder: 'Cartella',
+            folderPlaceholder: 'Riunioni',
+            icon: 'Icona',
+            placement: 'Pulsante',
+            placementNone: 'Nessuno',
+            placementRibbon: 'Barra multifunzione',
+            placementTabBar: 'Barra delle schede'
+        },
+        templateFile: {
             placeholder: 'Cerca modelli...',
             instructions: {
                 navigate: 'per navigare',
@@ -923,6 +962,9 @@ export const STRINGS_IT = {
         openMonthlyNote: 'Apri nota mensile',
         openQuarterlyNote: 'Apri nota trimestrale',
         openYearlyNote: 'Apri nota annuale',
+        openNextPeriodicNote: 'Apri nota periodica successiva',
+        openPreviousPeriodicNote: 'Apri nota periodica precedente',
+        openParentPeriodicNote: 'Apri nota periodica superiore',
         revealFile: 'Mostra file', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: 'Cerca', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Cerca in tutto il vault', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1111,10 +1153,12 @@ export const STRINGS_IT = {
                 }
             },
             fileOperations: {
-                label: 'Operazioni sui file',
-                description: 'Modelli, conferme di eliminazione, allegati e comportamento in caso di conflitti di spostamento dei file.',
+                label: 'Operazioni sui file e modelli',
+                description:
+                    'Modelli, comandi di creazione note, conferme di eliminazione, allegati e comportamento nei conflitti di spostamento dei file.',
                 groups: {
-                    templates: 'Modelli'
+                    templates: 'Modelli',
+                    templateCommands: 'Comandi di creazione note'
                 }
             },
             frontmatterFields: {
@@ -1175,6 +1219,10 @@ export const STRINGS_IT = {
                     listPane: 'Mostra nel pannello lista',
                     hidden: 'Non mostrare'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'Colora il titolo del pannello lista',
+                desc: 'Applica il colore della cartella, etichetta o proprietà selezionata al titolo del pannello lista.'
             },
             defaultSortOrder: {
                 name: 'Ordinamento predefinito',
@@ -1724,11 +1772,11 @@ export const STRINGS_IT = {
                 name: 'Posizione cartella modelli',
                 desc: 'Il selettore file modello mostra le note da questa cartella.',
                 placeholder: 'Modelli',
-                usage: 'Usato dalle note calendario e dalle note cartella. Configura i modelli in Calendario > Integrazione calendario e Cartelle e note cartella > File note cartella.'
+                usage: 'I modelli nella cartella dei modelli sono usati dalle note calendario, dalle note cartella, dai modelli cartella e da Nuova nota da modello. Configura i modelli del calendario in Calendario > Integrazione calendario e quelli delle note cartella in Cartelle e note cartella > File note cartella.'
             },
             calendarDailyNotePattern: {
                 name: 'Note giornaliere',
-                desc: "Formatta percorso usando formato data Moment. Racchiudi i nomi delle sottocartelle tra parentesi quadre, es. [Work]/YYYY. Clicca sull'icona del modello per impostare un modello. Imposta la posizione della cartella modelli in Operazioni sui file > Modelli.",
+                desc: "Formatta percorso usando formato data Moment. Racchiudi i nomi delle sottocartelle tra parentesi quadre, es. [Work]/YYYY. Clicca sull'icona del modello per impostare un modello. Imposta la posizione della cartella modelli in Operazioni sui file e modelli > Modelli.",
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'Il modello deve poter essere formattato e rianalizzato come una data completa (anno, mese, giorno).'
             },
@@ -1736,15 +1784,48 @@ export const STRINGS_IT = {
                 momentDescPrefix: 'Formatta percorso usando ',
                 momentLinkText: 'formato data Moment',
                 momentDescSuffix:
-                    ". Racchiudi i nomi delle sottocartelle tra parentesi quadre, es. [Work]/YYYY. Clicca sull'icona del modello per impostare un modello. Imposta la posizione della cartella modelli in Operazioni sui file > Modelli.",
-                templateTokenNoticeLabel: 'Importante!',
-                templateTokenNotice:
-                    'Il supporto ai modelli richiede il plugin Templater. I formati integrati come {{date}} e {{title}} funzionano solo quando {source} è impostato su {option}.',
+                    ". Racchiudi i nomi delle sottocartelle tra parentesi quadre, es. [Work]/YYYY. Clicca sull'icona del modello per impostare un modello. Imposta la posizione della cartella modelli in Operazioni sui file e modelli > Modelli.",
                 example: 'Sintassi attuale: {path}'
             },
-            templaterSupport: {
-                installed: '✅ Il plugin Templater è installato con supporto completo ai modelli.',
-                missing: '⚠️ Installa il plugin Templater per il supporto ai modelli.'
+            templateEngine: {
+                name: 'Motore dei modelli',
+                desc: 'Motore che elabora i file modello quando Notebook Navigator crea note. Automatico usa Templater per i modelli che contengono <% quando il plugin Templater è installato. Tutti gli altri modelli usano il motore integrato.',
+                options: {
+                    automatic: 'Automatico',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Plugin Templater: installato',
+                templaterNotInstalled: 'Plugin Templater: non installato',
+                templaterAutomatic:
+                    'I modelli che contengono comandi Templater (<%) vengono elaborati da Templater. Tutti gli altri modelli vengono elaborati dal motore integrato.',
+                templaterUsage:
+                    'Tutti i modelli vengono elaborati da Templater. I token integrati nei file modello non vengono sostituiti.',
+                templaterMissingWarning:
+                    'Non è possibile creare note dai modelli. Cambia {setting} in {automatic} o {builtin} in {location}, oppure installa e attiva il plugin Templater.',
+                tokens: 'Token integrati: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} a {{sunday}}, {{cursor}}. Scrivi {{!date}} per mantenere {{date}} come testo.',
+                usage: 'I token dei modelli come {{title}} e {{date}} vengono sostituiti alla creazione della nota. Configura il motore dei modelli in Operazioni sui file e modelli > Modelli.'
+            },
+            showFolderTemplateIcons: {
+                name: 'Mostra icone dei modelli cartella',
+                desc: "Contrassegna con un'icona nel riquadro di navigazione le cartelle che hanno un proprio modello."
+            },
+            templateCommands: {
+                name: 'Comandi',
+                desc: 'Ogni comando crea una nota con un nome file generato, dal proprio modello o dal modello cartella. Eseguilo dalla palette dei comandi oppure assegnalo a una scorciatoia o a un pulsante.',
+                empty: 'Nessun comando aggiunto.',
+                add: 'Aggiungi comando',
+                edit: 'Modifica',
+                unnamed: 'Comando senza nome',
+                locationCurrent: 'Cartella corrente',
+                locationFolder: 'Cartella specifica'
+            },
+            folderTemplates: {
+                name: 'Modelli cartella',
+                desc: 'Le nuove note usano il modello della loro cartella o della cartella superiore più vicina. Imposta i modelli dal menu contestuale della cartella. I modelli di calendario, note giornaliere e note cartella hanno la precedenza.',
+                empty: 'Nessun modello cartella impostato.',
+                scopeSubfolders: 'Cartella e sottocartelle',
+                scopeFolder: 'Solo questa cartella'
             },
             calendarWeeklyNotePattern: {
                 name: 'Note settimanali',
@@ -1917,7 +1998,7 @@ export const STRINGS_IT = {
             },
             vaultProfiles: {
                 name: 'Profilo vault',
-                desc: "I profili memorizzano visibilità tipi file, file nascosti, cartelle nascoste, etichette nascoste, regole di proprietà per note nascoste, scorciatoie e banner navigazione. Cambia profilo dall'intestazione del pannello navigazione.",
+                desc: 'I profili memorizzano visibilità tipi file, file nascosti, cartelle nascoste, etichette nascoste, regole di proprietà per note nascoste, scorciatoie e banner navigazione. Cambia profilo qui o dal selettore profilo vault nel pannello navigazione.',
                 defaultName: 'Predefinito',
                 addButton: 'Aggiungi profilo',
                 editProfilesButton: 'Modifica profili',
@@ -1937,9 +2018,9 @@ export const STRINGS_IT = {
                     duplicateName: 'Nome profilo già esistente'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'Posizione titolo vault',
-                desc: 'Scegli dove viene mostrato il titolo del vault.',
+            vaultProfileSwitcher: {
+                name: 'Selettore profilo vault',
+                desc: 'Scegli dove viene mostrato il selettore profilo vault.',
                 options: {
                     header: "Mostra nell'intestazione",
                     navigation: 'Mostra nel pannello di navigazione'
@@ -2483,7 +2564,7 @@ export const STRINGS_IT = {
             },
             folderNoteTemplate: {
                 name: 'Modello nota cartella',
-                desc: 'File modello usato durante la creazione delle note cartella. I modelli Markdown possono usare Templater. I modelli Canvas e Base vengono copiati come contenuto del file. Imposta la posizione della cartella modelli in Operazioni sui file > Modelli.',
+                desc: 'File modello usato durante la creazione delle note cartella. I modelli Markdown possono usare Templater. I modelli Canvas e Base vengono copiati come contenuto del file. Imposta la posizione della cartella modelli in Operazioni sui file e modelli > Modelli.',
                 formatWarning: 'Il formato del modello deve corrispondere al tipo di nota cartella selezionato: .md, .canvas o .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2619,10 +2700,32 @@ export const STRINGS_IT = {
                 buttonText: '❤️ Sponsorizza',
                 coffeeButton: '☕️ Offrimi un caffè'
             },
-            otherPlugins: {
-                name: 'Scopri i miei altri plugin',
-                betterPaste: 'Ripulisce testo, link e immagini incollati',
-                pixelPerfectImage: 'Ridimensionamento esatto delle immagini e altro'
+            markdownPointBanner: {
+                heading: 'Usi Canva, Keynote o PowerPoint?',
+                atTop: {
+                    name: 'Mostra il banner di MarkdownPoint in alto',
+                    desc: 'Se disattivato, il banner appare più in basso nella pagina delle impostazioni.'
+                },
+                credit: 'di Johan Sanneblad',
+                messages: [
+                    { headline: 'Scrivi le tue slide in Markdown.', subtext: 'Trascina testi e immagini dove vuoi.' },
+                    { headline: 'Un’alternativa gratuita a PowerPoint.', subtext: 'Anche condivisione e collaborazione sono gratis.' },
+                    { headline: 'Anima come in Apple Motion.', subtext: 'Usa keyframe, tracciati e morph.' },
+                    { headline: 'Collabora come su Google Slides.', subtext: 'Con puntatori e commenti in tempo reale.' },
+                    { headline: 'Vedi tutto il testo in un unico posto.', subtext: 'Apri View > Outline e modificalo in Markdown.' },
+                    { headline: 'Aggancia gli oggetti come in Figma.', subtext: 'Allinea per spaziatura, dimensione e angolo.' },
+                    { headline: 'Evidenzia con i ==segni di uguale==.', subtext: '**Grassetto** e *corsivo* vanno come in Obsidian.' },
+                    { headline: 'Esporta la presentazione in video 4K.', subtext: 'Per animarla non ti serve After Effects.' },
+                    { headline: 'Le note del relatore sono in Markdown.', subtext: 'Stanno nello stesso file delle slide.' },
+                    { headline: 'Le tue slide sono cartelle sul computer.', subtext: 'Non ti serve un account per creare slide.' },
+                    { headline: 'Metti del codice nelle tue slide.', subtext: 'Il codice è evidenziato in 21 linguaggi.' },
+                    { headline: 'Condividi le slide con un link.', subtext: 'Pubblicale online con un account gratuito.' },
+                    { headline: 'Versiona le presentazioni con Git.', subtext: 'Sono file di testo Markdown e YAML.' },
+                    { headline: 'Crea diagrammi di flusso dal testo.', subtext: 'Scrivi codice Mermaid e ottieni un diagramma.' },
+                    { headline: 'Usa una cartella sincronizzata.', subtext: 'Dropbox, iCloud Drive e OneDrive funzionano.' },
+                    { headline: 'Sfoglia i temi come in Obsidian.', subtext: 'Sono gratis e si installano con un clic.' },
+                    { headline: 'Gratis per uso personale e commerciale.', subtext: 'Scaricala per Mac o Windows.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: "Controlla nuova versione all'avvio",

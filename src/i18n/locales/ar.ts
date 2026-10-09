@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_AR = {
+    language: {
+        downloading: 'جارٍ تنزيل اللغات…',
+        continueInEnglish: 'المتابعة بالإنجليزية',
+        downloadFailed: 'تعذّر تنزيل اللغات. يستخدم Notebook Navigator اللغة الإنجليزية.'
+    },
     // Common UI elements
     common: {
         cancel: 'إلغاء', // Button text for canceling dialogs and operations (English: Cancel)
@@ -87,6 +92,7 @@ export const STRINGS_AR = {
         pinShortcutsAndRecentFiles: 'تثبيت الاختصارات والملفات الحديثة',
         unpinShortcuts: 'إلغاء تثبيت الاختصارات',
         unpinShortcutsAndRecentFiles: 'إلغاء تثبيت الاختصارات والملفات الحديثة',
+        resizePinnedShortcuts: 'تغيير حجم الاختصارات المثبتة',
         profileMenuAria: 'تغيير ملف تعريف الخزنة'
     },
 
@@ -112,8 +118,17 @@ export const STRINGS_AR = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'فشل في قراءة قالب الملاحظة اليومية.',
         createFailed: 'تعذر إنشاء الملاحظة اليومية.'
+    },
+
+    templates: {
+        invalidTokens: 'القالب "{name}" يحتوي على رموز غير صالحة: {tokens}',
+        invalidFileNameTokens: 'تنسيق اسم الملف للأمر "{name}" يحتوي على رموز غير صالحة: {tokens}',
+        readFailed: 'تعذّر قراءة القالب "{name}". تم إنشاء الملاحظة بدونه.',
+        folderNotSet: 'اضبط مجلد القوالب في عمليات الملفات والقوالب > قوالب قبل إنشاء ملاحظات من القوالب.',
+        templateNotFound: 'لم يتم العثور على القالب "{name}".',
+        folderNotFound: 'لم يتم العثور على المجلد "{name}".',
+        templaterMissing: 'إضافة Templater غير مثبتة. غيّر محرك القوالب في عمليات الملفات والقوالب > قوالب.'
     },
 
     shortcuts: {
@@ -363,6 +378,9 @@ export const STRINGS_AR = {
             duplicateFolder: 'تكرار المجلد',
             searchInFolder: 'البحث في المجلد',
             createFolderNote: 'إنشاء ملاحظة مجلد',
+            setFolderTemplate: 'تعيين قالب المجلد...',
+            changeFolderTemplate: 'تغيير قالب المجلد...',
+            removeFolderTemplate: 'إزالة قالب المجلد',
             detachFolderNote: 'فصل ملاحظة المجلد',
             deleteFolderNote: 'حذف ملاحظة المجلد',
             changeIcon: 'تغيير الأيقونة',
@@ -721,7 +739,28 @@ export const STRINGS_AR = {
                 dismiss: 'للإغلاق'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'إضافة أمر',
+            titleEdit: 'تحرير الأمر',
+            name: 'اسم الأمر',
+            namePlaceholder: 'ملاحظة اجتماع جديدة',
+            template: 'القالب',
+            templateDesc: 'اختياري. بدون قالب، يُطبَّق قالب مجلد المجلد الهدف إن كان معيّنًا.',
+            templatePlaceholder: 'Templates/Meeting.md',
+            fileNameFormat: 'صيغة اسم الملف',
+            fileNameFormatDesc:
+                'تُستبدل الرموز مثل {{date:YYYYMMDD}} و{{prompt:Title}} عند تشغيل الأمر. يطلب كل إدخال قيمة، وتحصل التسمية نفسها في القالب على القيمة نفسها. {{number}} أكبر بواحد من أعلى رقم تستخدمه الملاحظات في المجلد بنمط الاسم نفسه، و{{number:00}} يضيف أصفارًا في البداية. يمكن للقالب استخدام {{number}} أيضًا، ويُدرج {{title}} اسم الملف المُنشأ.',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Title}}',
+            location: 'الموقع',
+            folder: 'المجلد',
+            folderPlaceholder: 'Meetings',
+            icon: 'أيقونة',
+            placement: 'زر',
+            placementNone: 'لا شيء',
+            placementRibbon: 'الشريط',
+            placementTabBar: 'شريط التبويبات'
+        },
+        templateFile: {
             placeholder: 'البحث عن القوالب...',
             instructions: {
                 navigate: 'للتنقل',
@@ -922,6 +961,9 @@ export const STRINGS_AR = {
         openMonthlyNote: 'فتح الملاحظة الشهرية',
         openQuarterlyNote: 'فتح الملاحظة الفصلية',
         openYearlyNote: 'فتح الملاحظة السنوية',
+        openNextPeriodicNote: 'فتح الملاحظة الدورية التالية',
+        openPreviousPeriodicNote: 'فتح الملاحظة الدورية السابقة',
+        openParentPeriodicNote: 'فتح الملاحظة الدورية الأعلى',
         revealFile: 'الكشف عن الملف', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: 'بحث', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'البحث في الخزنة بالكامل', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1110,10 +1152,11 @@ export const STRINGS_AR = {
                 }
             },
             fileOperations: {
-                label: 'عمليات الملفات',
-                description: 'قوالب، تأكيدات الحذف والمرفقات وسلوك تعارض نقل الملفات.',
+                label: 'عمليات الملفات والقوالب',
+                description: 'القوالب وأوامر إنشاء الملاحظات وتأكيدات الحذف والمرفقات وسلوك تعارض نقل الملفات.',
                 groups: {
-                    templates: 'قوالب'
+                    templates: 'قوالب',
+                    templateCommands: 'أوامر إنشاء الملاحظات'
                 }
             },
             frontmatterFields: {
@@ -1173,6 +1216,10 @@ export const STRINGS_AR = {
                     listPane: 'إظهار في لوحة القائمة',
                     hidden: 'عدم الإظهار'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'تلوين عنوان لوحة القائمة',
+                desc: 'تطبيق لون المجلد أو الوسم أو الخاصية المحددة على عنوان لوحة القائمة.'
             },
             defaultSortOrder: {
                 name: 'ترتيب الفرز الافتراضي',
@@ -1721,11 +1768,11 @@ export const STRINGS_AR = {
                 name: 'موقع مجلد القوالب',
                 desc: 'يعرض منتقي ملفات القوالب الملاحظات من هذا المجلد.',
                 placeholder: 'قوالب',
-                usage: 'تُستخدم بواسطة ملاحظات التقويم وملاحظات المجلد. اضبط القوالب في التقويم > تكامل التقويم والمجلدات وملاحظات المجلد > ملفات ملاحظات المجلد.'
+                usage: 'تُستخدم القوالب الموجودة في مجلد القوالب بواسطة ملاحظات التقويم وملاحظات المجلد وقوالب المجلدات وملاحظة جديدة من قالب. اضبط قوالب التقويم في التقويم > تكامل التقويم وقوالب ملاحظات المجلد في المجلدات وملاحظات المجلد > ملفات ملاحظات المجلد.'
             },
             calendarDailyNotePattern: {
                 name: 'الملاحظات اليومية',
-                desc: 'تنسيق المسار باستخدام تنسيق تاريخ Moment. ضع أسماء المجلدات الفرعية بين أقواس معقوفة، مثال [Work]/YYYY. انقر على أيقونة القالب لتعيين قالب. حدد موقع مجلد القوالب في عمليات الملفات > قوالب.',
+                desc: 'تنسيق المسار باستخدام تنسيق تاريخ Moment. ضع أسماء المجلدات الفرعية بين أقواس معقوفة، مثال [Work]/YYYY. انقر على أيقونة القالب لتعيين قالب. حدد موقع مجلد القوالب في عمليات الملفات والقوالب > قوالب.',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'يجب أن يقوم النمط بتنسيق التاريخ ثم تحليله مرة أخرى كتاريخ كامل (السنة، الشهر، اليوم).'
             },
@@ -1733,15 +1780,47 @@ export const STRINGS_AR = {
                 momentDescPrefix: 'تنسيق المسار باستخدام ',
                 momentLinkText: 'تنسيق تاريخ Moment',
                 momentDescSuffix:
-                    '. ضع أسماء المجلدات الفرعية بين أقواس معقوفة، مثال [Work]/YYYY. انقر على أيقونة القالب لتعيين قالب. حدد موقع مجلد القوالب في عمليات الملفات > قوالب.',
-                templateTokenNoticeLabel: 'مهم!',
-                templateTokenNotice:
-                    'دعم القوالب يتطلب إضافة Templater. الصيغ المدمجة مثل {{date}} و {{title}} لا تعمل إلا عندما يكون {source} مضبوطًا على {option}.',
+                    '. ضع أسماء المجلدات الفرعية بين أقواس معقوفة، مثال [Work]/YYYY. انقر على أيقونة القالب لتعيين قالب. حدد موقع مجلد القوالب في عمليات الملفات والقوالب > قوالب.',
                 example: 'الصيغة الحالية: {path}'
             },
-            templaterSupport: {
-                installed: '✅ تم تثبيت إضافة Templater مع دعم كامل للقوالب.',
-                missing: '⚠️ ثبّت إضافة Templater للحصول على دعم القوالب.'
+            templateEngine: {
+                name: 'محرك القوالب',
+                desc: 'المحرك الذي يعالج ملفات القوالب عندما ينشئ Notebook Navigator الملاحظات. يستخدم الوضع التلقائي Templater للقوالب التي تحتوي على <% عندما تكون إضافة Templater مثبتة. تستخدم بقية القوالب المحرك المدمج.',
+                options: {
+                    automatic: 'تلقائي',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'إضافة Templater: مثبتة',
+                templaterNotInstalled: 'إضافة Templater: غير مثبتة',
+                templaterAutomatic:
+                    'تتم معالجة القوالب التي تحتوي على أوامر Templater (<%) بواسطة Templater. تتم معالجة بقية القوالب بواسطة المحرك المدمج.',
+                templaterUsage: 'تتم معالجة جميع القوالب بواسطة Templater. لا يتم استبدال الرموز المدمجة في ملفات القوالب.',
+                templaterMissingWarning:
+                    'لا يمكن إنشاء الملاحظات من القوالب. غيّر {setting} إلى {automatic} أو {builtin} في {location}، أو ثبّت إضافة Templater وفعّلها.',
+                tokens: 'الرموز المدمجة: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} إلى {{sunday}}, {{cursor}}. اكتب {{!date}} للإبقاء على {{date}} كنص.',
+                usage: 'تُستبدل رموز القالب مثل {{title}} و{{date}} عند إنشاء الملاحظة. اضبط محرك القوالب في عمليات الملفات والقوالب > قوالب.'
+            },
+            showFolderTemplateIcons: {
+                name: 'إظهار أيقونات قوالب المجلدات',
+                desc: 'يميّز المجلدات التي لها قالب خاص بأيقونة في لوحة التنقل.'
+            },
+            templateCommands: {
+                name: 'الأوامر',
+                desc: 'ينشئ كل أمر ملاحظة باسم ملف مُولَّد من قالبه الخاص أو من قالب المجلد. شغّله من لوحة الأوامر أو اربطه باختصار أو زر.',
+                empty: 'لم تتم إضافة أوامر.',
+                add: 'إضافة أمر',
+                edit: 'تحرير',
+                unnamed: 'أمر بلا اسم',
+                locationCurrent: 'المجلد الحالي',
+                locationFolder: 'مجلد محدد'
+            },
+            folderTemplates: {
+                name: 'قوالب المجلدات',
+                desc: 'تستخدم الملاحظات الجديدة قالب مجلدها أو أقرب مجلد أصل. عيّن القوالب من قائمة سياق المجلد. قوالب التقويم والملاحظات اليومية وملاحظات المجلد لها الأولوية.',
+                empty: 'لم يتم تعيين قوالب مجلدات.',
+                scopeSubfolders: 'المجلد والمجلدات الفرعية',
+                scopeFolder: 'هذا المجلد فقط'
             },
             calendarWeeklyNotePattern: {
                 name: 'الملاحظات الأسبوعية',
@@ -1911,7 +1990,7 @@ export const STRINGS_AR = {
             },
             vaultProfiles: {
                 name: 'ملف تعريف الخزنة',
-                desc: 'تخزن ملفات التعريف رؤية أنواع الملفات والملفات المخفية والمجلدات المخفية والوسوم المخفية وقواعد الخصائص للملاحظات المخفية والاختصارات ولافتة التنقل. بدّل ملفات التعريف من رأس لوحة التنقل.',
+                desc: 'تخزن ملفات التعريف رؤية أنواع الملفات والملفات المخفية والمجلدات المخفية والوسوم المخفية وقواعد الخصائص للملاحظات المخفية والاختصارات ولافتة التنقل. بدّل ملفات التعريف من هنا أو من مبدّل ملف تعريف الخزنة في لوحة التنقل.',
                 defaultName: 'افتراضي',
                 addButton: 'إضافة ملف تعريف',
                 editProfilesButton: 'تحرير ملفات التعريف',
@@ -1931,9 +2010,9 @@ export const STRINGS_AR = {
                     duplicateName: 'اسم ملف التعريف موجود بالفعل'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'موضع عنوان الخزنة',
-                desc: 'اختر مكان عرض عنوان الخزنة.',
+            vaultProfileSwitcher: {
+                name: 'مبدّل ملف تعريف الخزنة',
+                desc: 'اختر مكان عرض مبدّل ملف تعريف الخزنة.',
                 options: {
                     header: 'عرض في الرأس',
                     navigation: 'عرض في لوحة التنقل'
@@ -2476,7 +2555,7 @@ export const STRINGS_AR = {
             },
             folderNoteTemplate: {
                 name: 'قالب ملاحظة المجلد',
-                desc: 'ملف قالب يُستخدم عند إنشاء ملاحظات المجلد. يمكن لقوالب Markdown استخدام Templater. تُنسخ قوالب Canvas وBase كمحتوى للملف. حدد موقع مجلد القوالب في عمليات الملفات > قوالب.',
+                desc: 'ملف قالب يُستخدم عند إنشاء ملاحظات المجلد. يمكن لقوالب Markdown استخدام Templater. تُنسخ قوالب Canvas وBase كمحتوى للملف. حدد موقع مجلد القوالب في عمليات الملفات والقوالب > قوالب.',
                 formatWarning: 'يجب أن يتطابق تنسيق القالب مع نوع ملاحظة المجلد المحدد: .md أو .canvas أو .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2612,10 +2691,32 @@ export const STRINGS_AR = {
                 buttonText: '❤️ رعاية',
                 coffeeButton: '☕️ اشترِ لي قهوة'
             },
-            otherPlugins: {
-                name: 'اطّلع على إضافاتي الأخرى',
-                betterPaste: 'تنظيف النص والروابط والصور الملصقة',
-                pixelPerfectImage: 'تغيير حجم الصور بدقة والمزيد'
+            markdownPointBanner: {
+                heading: 'هل تستخدم Canva أو Keynote أو PowerPoint؟',
+                atTop: {
+                    name: 'إظهار لافتة MarkdownPoint في الأعلى',
+                    desc: 'عند الإيقاف، تظهر اللافتة في موضع أدنى من صفحة الإعدادات.'
+                },
+                credit: 'من تطوير Johan Sanneblad',
+                messages: [
+                    { headline: 'اكتب شرائحك بـ Markdown.', subtext: 'اسحب النصوص والصور إلى حيث تريد.' },
+                    { headline: 'بديل مجاني لـ PowerPoint.', subtext: 'المشاركة والتعاون مجانيان أيضًا.' },
+                    { headline: 'أضف الحركة كما في Apple Motion.', subtext: 'استخدم الإطارات المفتاحية والمسارات والتحويلات.' },
+                    { headline: 'تعاون كما في Google Slides.', subtext: 'مع مؤشرات وتعليقات في الوقت الفعلي.' },
+                    { headline: 'شاهد نصوص كل الشرائح في مكان واحد.', subtext: 'افتح View > Outline وحرّرها بـ Markdown.' },
+                    { headline: 'حاذِ العناصر كما في Figma.', subtext: 'تصطف حسب المسافات والأحجام والزوايا.' },
+                    { headline: 'ميّز الكلمات بـ ==علامات التساوي==.', subtext: '**الغامق** و*المائل* يعملان تمامًا كما في Obsidian.' },
+                    { headline: 'صدّر عرضك فيديو بدقة 4K.', subtext: 'لا تحتاج إلى After Effects لتحريكه.' },
+                    { headline: 'ملاحظات المتحدث بـ Markdown أيضًا.', subtext: 'تُحفظ في ملف الشرائح نفسه.' },
+                    { headline: 'كل عرض تقديمي مجلد على حاسوبك.', subtext: 'لا تحتاج إلى حساب لإنشاء الشرائح.' },
+                    { headline: 'ضع الكود على شرائحك.', subtext: 'كتل الكود ملوّنة لـ 21 لغة برمجة.' },
+                    { headline: 'شارك عرضك برابط.', subtext: 'انشره على الإنترنت بحساب مجاني.' },
+                    { headline: 'تتبّع عروضك في Git.', subtext: 'العروض ملفات نصية بصيغة Markdown وYAML.' },
+                    { headline: 'أنشئ مخططات انسيابية من النص.', subtext: 'اكتب كود Mermaid واحصل على مخطط.' },
+                    { headline: 'احفظ عروضك في مجلد متزامن.', subtext: 'تعمل مع Dropbox وiCloud Drive وOneDrive.' },
+                    { headline: 'تصفّح السمات كما في Obsidian.', subtext: 'كل السمات مجانية وتُثبَّت بنقرة واحدة.' },
+                    { headline: 'مجاني للاستخدام الشخصي والتجاري.', subtext: 'نزّله لـ Mac أو Windows.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: 'التحقق من إصدار جديد عند البدء',

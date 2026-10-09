@@ -18,6 +18,7 @@
 
 import { IconProvider, IconDefinition, IconRenderResult } from '../types';
 import { getIconIds, setIcon } from 'obsidian';
+import { getRegisteredIconIds } from '../../../utils/iconizeFormat';
 import { resetIconContainer } from './providerUtils';
 
 // Obsidian exposes Lucide identifiers with this prefix, but the rest of the
@@ -36,9 +37,6 @@ const LUCIDE_PREFIX = 'lucide-';
 export class LucideIconProvider implements IconProvider {
     id = 'lucide';
     name = 'Lucide';
-    // Caches the raw prefixed identifiers returned by Obsidian so we avoid
-    // extra `getIconIds()` calls.
-    private iconCache: string[] | null = null;
 
     /**
      * Lucide icons are bundled with Obsidian and have no separate version
@@ -98,7 +96,7 @@ export class LucideIconProvider implements IconProvider {
      * at the start of the loop so the search logic and results remain canonical.
      *
      * @param query - The search query
-     * @returns Array of matching icon definitions, limited to 50 results
+     * @returns Array of all matching icon definitions, best match first
      */
     search(query: string): IconDefinition[] {
         const normalizedQuery = query.toLowerCase().trim();
@@ -154,8 +152,7 @@ export class LucideIconProvider implements IconProvider {
             return a.id.localeCompare(b.id);
         });
 
-        // Return top 50 results to avoid overwhelming the UI
-        return matches.map(match => match.icon).slice(0, 50);
+        return matches.map(match => match.icon);
     }
 
     /**
@@ -181,17 +178,13 @@ export class LucideIconProvider implements IconProvider {
     }
 
     /**
-     * Gets the cached list of available Lucide icons.
-     * Lazy-loads the icon list on first access.
+     * Gets the list of available Lucide icons, including icons other plugins registered with `addIcon()`.
      *
-     * The cache stores what Obsidian returns so we can keep reusing the same
-     * array without repeatedly touching the API.
+     * Reads the snapshot shared with frontmatter parsing, so every icon the picker lists can also be
+     * written to and read from frontmatter.
      */
-    private getIconList(): string[] {
-        if (!this.iconCache) {
-            this.iconCache = getIconIds();
-        }
-        return this.iconCache;
+    private getIconList(): readonly string[] {
+        return getRegisteredIconIds();
     }
 
     /**

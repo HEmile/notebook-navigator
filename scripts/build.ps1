@@ -115,6 +115,13 @@ if (($env:Path -split ';') -notcontains $ResolvedNodeDir) {
     $env:Path = "$ResolvedNodeDir;$env:Path"
 }
 
+Write-Host 'Generating language pack...'
+$languages = Invoke-BuildCommand -FilePath $Npm -ArgumentList @('run', 'build:languages')
+if ($languages.Status -ne 0) {
+    Write-Host "$ErrorMark Language generation failed"
+    exit 1
+}
+
 Write-Host 'Generating icon constants...'
 $icon = Invoke-BuildCommand -FilePath $Npm -ArgumentList @('run', 'build:icons')
 
@@ -247,8 +254,8 @@ if (($BuildErrors -eq 0) -and ($BuildWarnings -eq 0)) {
     if ($build.Status -eq 0) {
         Write-Host "$SuccessMark Build completed successfully"
 
-        $localPowerShellScript = Join-Path $ScriptDir 'build-local.ps1'
-        $localBashScript = Join-Path $ScriptDir 'build-local.sh'
+        $localPowerShellScript = Join-Path $ScriptDir 'local/build-local.ps1'
+        $localBashScript = Join-Path $ScriptDir 'local/build-local.sh'
 
         if (Test-Path -LiteralPath $localPowerShellScript) {
             Write-Host 'Running local PowerShell post-build script...'

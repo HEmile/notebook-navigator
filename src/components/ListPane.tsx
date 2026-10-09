@@ -256,6 +256,8 @@ interface ListPaneTitleChromeProps {
     onToggleGroupExpansion: () => boolean;
     actionsDisabled?: boolean;
     shouldShowDesktopTitleArea: boolean;
+    folderDecorationModel: FolderDecorationModel;
+    fileItemPillDecorationModel: FileItemPillDecorationModel;
     children: React.ReactNode;
 }
 
@@ -270,9 +272,14 @@ function ListPaneTitleChrome({
     onToggleGroupExpansion,
     actionsDisabled,
     shouldShowDesktopTitleArea,
+    folderDecorationModel,
+    fileItemPillDecorationModel,
     children
 }: ListPaneTitleChromeProps) {
-    const { desktopTitle, breadcrumbSegments, iconName, showIcon } = useListPaneTitle();
+    const { desktopTitle, breadcrumbSegments, iconName, showIcon, titleColor } = useListPaneTitle({
+        folderDecorationModel,
+        fileItemPillDecorationModel
+    });
     return (
         <>
             <ListPaneHeader
@@ -289,9 +296,10 @@ function ListPaneTitleChrome({
                 breadcrumbSegments={breadcrumbSegments}
                 iconName={iconName}
                 showIcon={showIcon}
+                titleColor={titleColor}
             />
             {children}
-            {shouldShowDesktopTitleArea ? <ListPaneTitleArea desktopTitle={desktopTitle} /> : null}
+            {shouldShowDesktopTitleArea ? <ListPaneTitleArea desktopTitle={desktopTitle} titleColor={titleColor} /> : null}
         </>
     );
 }
@@ -548,7 +556,6 @@ export const ListPane = React.memo(
         const effectiveGroupBy = resolveEffectiveListGroupingForSort({
             groupBy: appearanceSettings.groupBy,
             sortOption: effectiveSortOption,
-            selectionType,
             isManualSortActive,
             isManualSortEditActive
         });
@@ -1754,6 +1761,8 @@ export const ListPane = React.memo(
                         onToggleGroupExpansion={toggleGroupExpansion}
                         actionsDisabled={isManualSortEditActive}
                         shouldShowDesktopTitleArea={shouldShowDesktopTitleArea}
+                        folderDecorationModel={folderDecorationModel}
+                        fileItemPillDecorationModel={fileItemPillDecorationModel}
                     >
                         {/* Android - toolbar at top */}
                         {useMobileChrome && isAndroid && !manualSortEditState ? listToolbar : null}

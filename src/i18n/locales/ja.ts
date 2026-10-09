@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_JA = {
+    language: {
+        downloading: '言語をダウンロード中…',
+        continueInEnglish: '英語で続行',
+        downloadFailed: '言語のダウンロードに失敗しました。Notebook Navigator は英語を使用しています。'
+    },
     // Common UI elements
     common: {
         cancel: 'キャンセル', // Button text for canceling dialogs and operations (English: Cancel)
@@ -86,6 +91,7 @@ export const STRINGS_JA = {
         pinShortcutsAndRecentFiles: 'ショートカットと最近のファイルを固定',
         unpinShortcuts: 'ショートカットの固定を解除',
         unpinShortcutsAndRecentFiles: 'ショートカットと最近のファイルの固定を解除',
+        resizePinnedShortcuts: '固定したショートカットのサイズを変更',
         profileMenuAria: '保管庫プロファイルを変更'
     },
 
@@ -111,8 +117,19 @@ export const STRINGS_JA = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'デイリーノートのテンプレートを読み込めませんでした。',
         createFailed: 'デイリーノートを作成できませんでした。'
+    },
+
+    templates: {
+        invalidTokens: 'テンプレート「{name}」に無効なトークンが含まれています: {tokens}',
+        invalidFileNameTokens: '「{name}」のファイル名形式に無効なトークンが含まれています: {tokens}',
+        readFailed: 'テンプレート「{name}」を読み込めませんでした。ノートはテンプレートなしで作成されました。',
+        folderNotSet:
+            'テンプレートからノートを作成する前に、ファイル操作とテンプレート > テンプレート でテンプレートフォルダを設定してください。',
+        templateNotFound: 'テンプレート「{name}」が見つかりません。',
+        folderNotFound: 'フォルダ「{name}」が見つかりません。',
+        templaterMissing:
+            'Templaterプラグインがインストールされていません。ファイル操作とテンプレート > テンプレート でテンプレートエンジンを変更してください。'
     },
 
     shortcuts: {
@@ -363,6 +380,9 @@ export const STRINGS_JA = {
             duplicateFolder: 'フォルダを複製',
             searchInFolder: 'フォルダ内を検索',
             createFolderNote: 'フォルダノートを作成',
+            setFolderTemplate: 'フォルダテンプレートを設定...',
+            changeFolderTemplate: 'フォルダテンプレートを変更...',
+            removeFolderTemplate: 'フォルダテンプレートを削除',
             detachFolderNote: 'フォルダノートを解除',
             deleteFolderNote: 'フォルダノートを削除',
             changeIcon: 'アイコンを変更',
@@ -722,7 +742,28 @@ export const STRINGS_JA = {
                 dismiss: 'でキャンセル'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'コマンドを追加',
+            titleEdit: 'コマンドを編集',
+            name: 'コマンド名',
+            namePlaceholder: '新しい会議ノート',
+            template: 'テンプレート',
+            templateDesc: '省略可能。テンプレートがない場合、設定されていれば対象フォルダのフォルダテンプレートが適用されます。',
+            templatePlaceholder: 'Templates/Meeting.md',
+            fileNameFormat: 'ファイル名の形式',
+            fileNameFormatDesc:
+                '{{date:YYYYMMDD}} や {{prompt:Title}} などのトークンはコマンド実行時に置き換えられます。各プロンプトは値を尋ね、テンプレート内の同じラベルには同じ値が入ります。{{number}} は、同じ名前パターンのフォルダー内ノートで使われている最大の番号に 1 を足した値で、{{number:00}} はゼロで桁を埋めます。テンプレートでも {{number}} を使え、{{title}} は生成されたファイル名を挿入します。',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Title}}',
+            location: '場所',
+            folder: 'フォルダ',
+            folderPlaceholder: 'Meetings',
+            icon: 'アイコン',
+            placement: 'ボタン',
+            placementNone: 'なし',
+            placementRibbon: 'リボン',
+            placementTabBar: 'タブバー'
+        },
+        templateFile: {
             placeholder: 'テンプレートを検索...',
             instructions: {
                 navigate: 'でナビゲート',
@@ -925,6 +966,9 @@ export const STRINGS_JA = {
         openMonthlyNote: 'マンスリーノートを開く',
         openQuarterlyNote: '四半期ノートを開く',
         openYearlyNote: '年次ノートを開く',
+        openNextPeriodicNote: '次の定期ノートを開く',
+        openPreviousPeriodicNote: '前の定期ノートを開く',
+        openParentPeriodicNote: '上位の定期ノートを開く',
         revealFile: 'ファイルを表示', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: '検索', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: '保管庫全体を検索', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1113,10 +1157,11 @@ export const STRINGS_JA = {
                 }
             },
             fileOperations: {
-                label: 'ファイル操作',
-                description: 'テンプレート、削除確認、添付ファイル、ファイル移動時の競合動作。',
+                label: 'ファイル操作とテンプレート',
+                description: 'テンプレート、ノート作成コマンド、削除の確認、添付ファイル、ファイル移動時の競合の動作。',
                 groups: {
-                    templates: 'テンプレート'
+                    templates: 'テンプレート',
+                    templateCommands: 'ノート作成コマンド'
                 }
             },
             frontmatterFields: {
@@ -1176,6 +1221,10 @@ export const STRINGS_JA = {
                     listPane: 'リストペインに表示',
                     hidden: '表示しない'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'リストペインのタイトルに色を付ける',
+                desc: '選択中のフォルダ、タグ、またはプロパティの色をリストペインのタイトルに適用します。'
             },
             defaultSortOrder: {
                 name: 'デフォルトの並び順',
@@ -1724,11 +1773,11 @@ export const STRINGS_JA = {
                 name: 'テンプレートフォルダの場所',
                 desc: 'テンプレートファイルピッカーはこのフォルダからノートを表示します。',
                 placeholder: 'テンプレート',
-                usage: 'カレンダーノートとフォルダノートで使用されます。テンプレートは カレンダー > カレンダー連携 と フォルダとフォルダノート > フォルダノートファイル で設定します。'
+                usage: 'テンプレートフォルダ内のテンプレートは、カレンダーノート、フォルダノート、フォルダテンプレート、テンプレートから新規ノートで使用されます。カレンダーのテンプレートは カレンダー > カレンダー連携 で、フォルダノートのテンプレートは フォルダとフォルダノート > フォルダノートファイル で設定します。'
             },
             calendarDailyNotePattern: {
                 name: 'デイリーノート',
-                desc: 'Moment 日付フォーマットを使用してパスを指定。サブフォルダ名は角括弧で囲みます（例：[Work]/YYYY）。テンプレートアイコンをクリックしてテンプレートを設定。 テンプレートフォルダの場所はファイル操作 > テンプレートで設定してください。',
+                desc: 'Moment 日付フォーマットを使用してパスを指定。サブフォルダ名は角括弧で囲みます（例：[Work]/YYYY）。テンプレートアイコンをクリックしてテンプレートを設定。 テンプレートフォルダの場所はファイル操作とテンプレート > テンプレートで設定してください。',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'パターンは完全な日付（年、月、日）としてフォーマットされ、再度パースできる必要があります。'
             },
@@ -1736,15 +1785,47 @@ export const STRINGS_JA = {
                 momentDescPrefix: '',
                 momentLinkText: 'Moment 日付フォーマット',
                 momentDescSuffix:
-                    'を使用してパスを指定。サブフォルダ名は角括弧で囲みます（例：[Work]/YYYY）。テンプレートアイコンをクリックしてテンプレートを設定。 テンプレートフォルダの場所はファイル操作 > テンプレートで設定してください。',
-                templateTokenNoticeLabel: '重要！',
-                templateTokenNotice:
-                    'テンプレートのサポートには Templater プラグインが必要です。{{date}} や {{title}} などの組み込み形式は、{source} が {option} に設定されている場合にのみ使用できます。',
+                    'を使用してパスを指定。サブフォルダ名は角括弧で囲みます（例：[Work]/YYYY）。テンプレートアイコンをクリックしてテンプレートを設定。 テンプレートフォルダの場所はファイル操作とテンプレート > テンプレートで設定してください。',
                 example: '現在の構文: {path}'
             },
-            templaterSupport: {
-                installed: '✅ Templater プラグインがインストールされており、テンプレートの完全サポートが利用できます。',
-                missing: '⚠️ テンプレートのサポートを利用するには、Templater プラグインをインストールしてください。'
+            templateEngine: {
+                name: 'テンプレートエンジン',
+                desc: 'Notebook Navigatorがノートを作成するときにテンプレートファイルを処理するエンジン。 自動は、Templaterプラグインがインストールされている場合、<% を含むテンプレートにTemplaterを使用します。それ以外のテンプレートは内蔵エンジンを使用します。',
+                options: {
+                    automatic: '自動',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Templaterプラグイン: インストール済み',
+                templaterNotInstalled: 'Templaterプラグイン: 未インストール',
+                templaterAutomatic:
+                    'Templaterコマンド（<%）を含むテンプレートはTemplaterで処理されます。それ以外のテンプレートは内蔵エンジンで処理されます。',
+                templaterUsage: 'すべてのテンプレートはTemplaterで処理されます。テンプレートファイル内の内蔵トークンは置き換えられません。',
+                templaterMissingWarning:
+                    'テンプレートからノートを作成できません。{location}で{setting}を{automatic}または{builtin}に変更するか、Templaterプラグインをインストールして有効にしてください。',
+                tokens: '内蔵トークン: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}}〜{{sunday}}, {{cursor}}。{{date}} をそのまま残すには {{!date}} と書きます。',
+                usage: '{{title}} や {{date}} などのテンプレートトークンはノート作成時に置き換えられます。テンプレートエンジンは ファイル操作とテンプレート > テンプレート で設定します。'
+            },
+            showFolderTemplateIcons: {
+                name: 'フォルダテンプレートのアイコンを表示',
+                desc: '独自のフォルダテンプレートを持つフォルダをナビゲーションペインにアイコンで示します。'
+            },
+            templateCommands: {
+                name: 'コマンド',
+                desc: '各コマンドは、独自のテンプレートまたはフォルダテンプレートから、生成されたファイル名でノートを作成します。コマンドパレットから実行するか、ホットキーやボタンに割り当てます。',
+                empty: 'コマンドはありません。',
+                add: 'コマンドを追加',
+                edit: '編集',
+                unnamed: '名前のないコマンド',
+                locationCurrent: '現在のフォルダ',
+                locationFolder: '特定のフォルダ'
+            },
+            folderTemplates: {
+                name: 'フォルダテンプレート',
+                desc: '新規ノートは、そのフォルダまたは最も近い親フォルダのテンプレートを使用します。テンプレートはフォルダのコンテキストメニューで設定します。カレンダー、デイリーノート、フォルダノートのテンプレートが優先されます。',
+                empty: 'フォルダテンプレートは設定されていません。',
+                scopeSubfolders: 'フォルダとサブフォルダ',
+                scopeFolder: 'このフォルダのみ'
             },
             calendarWeeklyNotePattern: {
                 name: 'ウィークリーノート',
@@ -1882,7 +1963,7 @@ export const STRINGS_JA = {
             },
             vaultProfiles: {
                 name: '保管庫プロファイル',
-                desc: 'プロファイルは、ファイルタイプの表示、非表示ファイル、非表示フォルダ、非表示タグ、非表示ノート用のプロパティルール、ショートカット、ナビゲーションバナーを保存します。ナビゲーションペインのヘッダーからプロファイルを切り替えます。',
+                desc: 'プロファイルは、ファイルタイプの表示、非表示ファイル、非表示フォルダ、非表示タグ、非表示ノート用のプロパティルール、ショートカット、ナビゲーションバナーを保存します。プロファイルはここ、またはナビゲーションペインの保管庫プロファイル切り替えから切り替えます。',
                 defaultName: 'デフォルト',
                 addButton: 'プロファイルを追加',
                 editProfilesButton: 'プロファイルを編集',
@@ -1902,9 +1983,9 @@ export const STRINGS_JA = {
                     duplicateName: 'プロファイル名は既に存在します'
                 }
             },
-            vaultTitlePlacement: {
-                name: '保管庫タイトルの配置',
-                desc: '保管庫タイトルの表示場所を選択します。',
+            vaultProfileSwitcher: {
+                name: '保管庫プロファイル切り替え',
+                desc: '保管庫プロファイル切り替えの表示場所を選択します。',
                 options: {
                     header: 'ヘッダーに表示',
                     navigation: 'ナビゲーションペインに表示'
@@ -2479,7 +2560,7 @@ export const STRINGS_JA = {
             },
             folderNoteTemplate: {
                 name: 'フォルダノートテンプレート',
-                desc: 'フォルダノート作成時に使用するテンプレートファイル。MarkdownテンプレートではTemplaterを使用できます。CanvasとBaseテンプレートはファイル内容としてコピーされます。テンプレートフォルダの場所はファイル操作 > テンプレートで設定してください。',
+                desc: 'フォルダノート作成時に使用するテンプレートファイル。MarkdownテンプレートではTemplaterを使用できます。CanvasとBaseテンプレートはファイル内容としてコピーされます。テンプレートフォルダの場所はファイル操作とテンプレート > テンプレートで設定してください。',
                 formatWarning: 'テンプレート形式は選択したフォルダノートの種類と一致している必要があります: .md、.canvas、.base。'
             },
             folderNamesOpenFolderNotes: {
@@ -2615,10 +2696,32 @@ export const STRINGS_JA = {
                 buttonText: '❤️ スポンサーになる',
                 coffeeButton: '☕️ コーヒーをおごる'
             },
-            otherPlugins: {
-                name: 'ほかのプラグインも見る',
-                betterPaste: '貼り付けたテキスト、リンク、画像を整える',
-                pixelPerfectImage: '正確な画像リサイズなど'
+            markdownPointBanner: {
+                heading: 'Canva、Keynote、PowerPoint を使っていますか？',
+                atTop: {
+                    name: 'MarkdownPoint のバナーを上部に表示',
+                    desc: 'オフにすると、バナーは設定ページの下のほうに表示されます。'
+                },
+                credit: '作者：Johan Sanneblad',
+                messages: [
+                    { headline: 'スライドは Markdown で書けます。', subtext: 'テキストや画像はドラッグで動かせます。' },
+                    { headline: 'PowerPoint に代わる無料アプリ。', subtext: '共有も共同編集も無料です。' },
+                    { headline: 'Apple Motion のように動かせます。', subtext: 'キーフレーム、パス、モーフを使えます。' },
+                    { headline: 'Google Slides のように共同編集できます。', subtext: 'ポインターとコメントがリアルタイムで見えます。' },
+                    { headline: '全スライドのテキストを一覧できます。', subtext: 'View > Outline から Markdown で編集できます。' },
+                    { headline: 'Figma のようにスナップします。', subtext: '間隔、サイズ、角度で揃います。' },
+                    { headline: '==等号== でハイライトできます。', subtext: '**太字** と *斜体* も Obsidian と同じです。' },
+                    { headline: 'プレゼンを 4K 動画で書き出せます。', subtext: 'アニメーションに After Effects は要りません。' },
+                    { headline: '発表者ノートも Markdown です。', subtext: 'スライドと同じファイルに保存されます。' },
+                    { headline: 'プレゼンはパソコン上のフォルダです。', subtext: 'スライド作成にアカウントは要りません。' },
+                    { headline: 'スライドにコードを載せられます。', subtext: 'コードは21言語でハイライトされます。' },
+                    { headline: 'プレゼンをリンクで共有できます。', subtext: '無料アカウントでウェブに公開できます。' },
+                    { headline: 'プレゼンを Git で管理できます。', subtext: 'Markdown と YAML のテキストファイルです。' },
+                    { headline: 'テキストでフローチャートを作れます。', subtext: 'Mermaid のコードを書くと図になります。' },
+                    { headline: 'プレゼンは同期フォルダに置けます。', subtext: 'Dropbox、iCloud Drive、OneDrive で使えます。' },
+                    { headline: 'Obsidian のようにテーマを選べます。', subtext: 'テーマはすべて無料で、ワンクリックで入ります。' },
+                    { headline: '個人でも商用でも無料です。', subtext: 'Mac 版か Windows 版をダウンロードできます。' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: '起動時に新しいバージョンを確認',

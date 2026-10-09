@@ -33,6 +33,7 @@ import {
 import { getPropertyGroupingKey } from '../../settings/types';
 import { resolvePropertyGroupingDirection } from '../../utils/listGrouping';
 import { partitionPinnedFiles } from '../../utils/fileFinder';
+import { resolvePropertyDisplayText } from '../../utils/propertyUtils';
 import {
     formatManualSortGroupHeaderLabel,
     getCachedManualSortGroupHeader,
@@ -122,6 +123,9 @@ const EMPTY_MANUAL_SORT_GROUP_HEADER_FILE_BY_MEMBER_PATH = new Map<string, TFile
 function splitFolderPath(path: string): string[] {
     return path.split('/').filter(Boolean);
 }
+
+/** Folder group key of notes stored directly in the vault root when the vault root is not the selected folder. */
+const VAULT_ROOT_FOLDER_GROUP_KEY = 'folder:/';
 
 function getLastFolderPathSegment(path: string, fallback: string): string {
     const segments = splitFolderPath(path);
@@ -450,7 +454,7 @@ function buildListItemsInternal(
     }
 
     const shouldGroupByDate = groupingMode === 'date' && isDateSortOption(sortOption);
-    const shouldGroupByFolder = groupingMode === 'folder' && selectionType === ItemType.FOLDER;
+    const shouldGroupByFolder = groupingMode === 'folder';
     const propertyGroupingKey = getPropertyGroupingKey(groupingMode);
     const shouldShowUnsortedSection = isPropertySortOption(sortOption) && isManualSortActive && propertySortKey.trim().length > 0;
 
@@ -528,7 +532,9 @@ function buildListItemsInternal(
         // order, following how Obsidian Bases groups by property. Files inside each group keep
         // the active sort order. The bucket key joins parts with a separator that cannot appear in
         // trimmed part values, so lists with different element boundaries such as ["a b", "c"] and
-        // ["a", "b c"] stay in separate groups.
+        // ["a", "b c"] stay in separate groups. The label shows link display text instead of the raw
+        // markup so "[[Note]]" reads as "Note", matching the property pills on file rows, while the
+        // bucket key keeps the raw value so "[[Note]]" and "Note" stay separate groups.
         const propertyGroupingDirection = resolvePropertyGroupingDirection(groupingMode, sortOption);
         const propertyGroups = new Map<string, { label: string; numericValue: number | null; files: TFile[] }>();
         const ungroupedFiles: TFile[] = [];
@@ -553,7 +559,7 @@ function buildListItemsInternal(
             // The first file to create a bucket decides whether the group carries a numeric key,
             // matching how the first encountered value becomes the group key in Obsidian Bases.
             propertyGroups.set(bucketKey, {
-                label: groupingValue.parts.join(', '),
+                label: groupingValue.parts.map(part => resolvePropertyDisplayText(part)).join(', '),
                 numericValue: groupingValue.numericValue,
                 files: [file]
             });
@@ -658,7 +664,13 @@ function buildListItemsInternal(
         } => {
             const parent = file.parent;
             if (!(parent instanceof TFolder)) {
-                return { key: 'folder:/', label: vaultRootLabel, sortLabel: vaultRootLabel, isCurrentFolder: false, folderPath: null };
+                return {
+                    key: VAULT_ROOT_FOLDER_GROUP_KEY,
+                    label: vaultRootLabel,
+                    sortLabel: vaultRootLabel,
+                    isCurrentFolder: false,
+                    folderPath: null
+                };
             }
 
             if (selectionType === ItemType.FOLDER && baseFolderPath) {
@@ -670,18 +682,6 @@ function buildListItemsInternal(
                         sortLabel: label,
                         isCurrentFolder: true,
                         folderPath: baseFolderPath === '/' ? null : baseFolderPath
-                    };
-                }
-
-                if (baseFolderPath === '/' && parent.path !== '/') {
-                    const header = createFolderGroupHeader(parent.path, parent.path, parent.name);
-                    return {
-                        key: `folder:/${parent.path}`,
-                        label: header.label,
-                        sortLabel: header.sortLabel,
-                        isCurrentFolder: false,
-                        folderPath: header.folderPath,
-                        folderSegments: header.folderSegments
                     };
                 }
 
@@ -701,20 +701,29 @@ function buildListItemsInternal(
                 }
             }
 
-            const parentPath = parent.path === '/' ? '' : parent.path;
-            const [topLevel] = parentPath.split('/');
-            if (topLevel && topLevel.length > 0) {
+            // The vault root selection and tag and property views list notes from the whole vault, so
+            // each note groups under its parent folder labeled with the path from the vault root.
+            // Grouping by top-level folder instead would merge sibling folders such as Projects/A and
+            // Projects/B into one group.
+            if (parent.path === '/') {
                 return {
-                    key: `folder:/${topLevel}`,
-                    label: showFolderGroupPaths ? topLevel : getLastFolderPathSegment(topLevel, topLevel),
-                    sortLabel: topLevel,
+                    key: VAULT_ROOT_FOLDER_GROUP_KEY,
+                    label: vaultRootLabel,
+                    sortLabel: vaultRootLabel,
                     isCurrentFolder: false,
-                    folderPath: topLevel,
-                    folderSegments: showFolderGroupPaths ? buildFolderGroupHeaderSegments(topLevel, topLevel) : undefined
+                    folderPath: null
                 };
             }
 
-            return { key: 'folder:/', label: vaultRootLabel, sortLabel: vaultRootLabel, isCurrentFolder: false, folderPath: null };
+            const header = createFolderGroupHeader(parent.path, parent.path, parent.name);
+            return {
+                key: `folder:/${parent.path}`,
+                label: header.label,
+                sortLabel: header.sortLabel,
+                isCurrentFolder: false,
+                folderPath: header.folderPath,
+                folderSegments: header.folderSegments
+            };
         };
 
         unpinnedFiles.forEach(file => {
@@ -738,6 +747,12 @@ function buildListItemsInternal(
         const orderedGroups = Array.from(folderGroups.entries())
             .map(([key, group]) => ({ key, ...group }))
             .sort((left, right) => {
+                // The vault root group sorts first in either direction, matching the vault root at the
+                // top of the navigation tree, so its position does not depend on the translated label.
+                if (left.key === VAULT_ROOT_FOLDER_GROUP_KEY || right.key === VAULT_ROOT_FOLDER_GROUP_KEY) {
+                    return left.key === right.key ? 0 : left.key === VAULT_ROOT_FOLDER_GROUP_KEY ? -1 : 1;
+                }
+
                 const labelCompare = compareByAlphaSortOrder(left.sortLabel, right.sortLabel, folderGroupSortOrder);
                 if (labelCompare !== 0) {
                     return labelCompare;

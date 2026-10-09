@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_ID = {
+    language: {
+        downloading: 'Mengunduh bahasa…',
+        continueInEnglish: 'Lanjutkan dalam bahasa Inggris',
+        downloadFailed: 'Unduhan bahasa gagal. Notebook Navigator menggunakan bahasa Inggris.'
+    },
     // Common UI elements
     common: {
         cancel: 'Batal',
@@ -87,6 +92,7 @@ export const STRINGS_ID = {
         pinShortcutsAndRecentFiles: 'Sematkan pintasan dan file terbaru',
         unpinShortcuts: 'Lepas sematan pintasan',
         unpinShortcutsAndRecentFiles: 'Lepas sematan pintasan dan file terbaru',
+        resizePinnedShortcuts: 'Ubah ukuran pintasan yang disematkan',
         profileMenuAria: 'Ubah profil vault'
     },
 
@@ -112,8 +118,17 @@ export const STRINGS_ID = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'Gagal membaca template catatan harian.',
         createFailed: 'Tidak dapat membuat catatan harian.'
+    },
+
+    templates: {
+        invalidTokens: 'Template "{name}" berisi token yang tidak valid: {tokens}',
+        invalidFileNameTokens: 'Format nama file "{name}" berisi token yang tidak valid: {tokens}',
+        readFailed: 'Template "{name}" tidak dapat dibaca. Catatan dibuat tanpa template.',
+        folderNotSet: 'Atur folder template di Operasi file & template > Template sebelum membuat catatan dari template.',
+        templateNotFound: 'Template "{name}" tidak ditemukan.',
+        folderNotFound: 'Folder "{name}" tidak ditemukan.',
+        templaterMissing: 'Plugin Templater tidak terpasang. Ubah mesin template di Operasi file & template > Template.'
     },
 
     shortcuts: {
@@ -364,6 +379,9 @@ export const STRINGS_ID = {
             duplicateFolder: 'Duplikat folder',
             searchInFolder: 'Cari di folder',
             createFolderNote: 'Buat catatan folder',
+            setFolderTemplate: 'Atur template folder...',
+            changeFolderTemplate: 'Ubah template folder...',
+            removeFolderTemplate: 'Hapus template folder',
             detachFolderNote: 'Lepaskan catatan folder',
             deleteFolderNote: 'Hapus catatan folder',
             changeIcon: 'Ubah ikon',
@@ -724,7 +742,28 @@ export const STRINGS_ID = {
                 dismiss: 'untuk menutup'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'Tambah perintah',
+            titleEdit: 'Edit perintah',
+            name: 'Nama perintah',
+            namePlaceholder: 'Catatan rapat baru',
+            template: 'Template',
+            templateDesc: 'Opsional. Tanpa template, template folder dari folder tujuan diterapkan jika ada.',
+            templatePlaceholder: 'Template/Rapat.md',
+            fileNameFormat: 'Format nama file',
+            fileNameFormatDesc:
+                'Token seperti {{date:YYYYMMDD}} dan {{prompt:Judul}} diganti saat perintah dijalankan. Setiap prompt meminta nilai, dan label yang sama di template menerima nilai yang sama. {{number}} satu lebih besar dari nomor tertinggi yang dipakai catatan di folder dengan pola nama yang sama, dan {{number:00}} mengisinya dengan nol di depan. Template juga dapat memakai {{number}}, dan {{title}} menyisipkan nama file yang dihasilkan.',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Judul}}',
+            location: 'Lokasi',
+            folder: 'Folder',
+            folderPlaceholder: 'Rapat',
+            icon: 'Ikon',
+            placement: 'Tombol',
+            placementNone: 'Tidak ada',
+            placementRibbon: 'Ribbon',
+            placementTabBar: 'Bilah tab'
+        },
+        templateFile: {
             placeholder: 'Cari template...',
             instructions: {
                 navigate: 'untuk navigasi',
@@ -926,6 +965,9 @@ export const STRINGS_ID = {
         openMonthlyNote: 'Buka catatan bulanan',
         openQuarterlyNote: 'Buka catatan kuartalan',
         openYearlyNote: 'Buka catatan tahunan',
+        openNextPeriodicNote: 'Buka catatan berkala berikutnya',
+        openPreviousPeriodicNote: 'Buka catatan berkala sebelumnya',
+        openParentPeriodicNote: 'Buka catatan berkala induk',
         revealFile: 'Tampilkan file',
         search: 'Cari',
         searchVaultRoot: 'Cari di seluruh vault',
@@ -1114,10 +1156,12 @@ export const STRINGS_ID = {
                 }
             },
             fileOperations: {
-                label: 'Operasi file',
-                description: 'Folder template, konfirmasi hapus, lampiran, dan perilaku konflik saat memindahkan file.',
+                label: 'Operasi file & template',
+                description:
+                    'Template, perintah pembuatan catatan, konfirmasi hapus, lampiran, dan perilaku konflik saat memindahkan file.',
                 groups: {
-                    templates: 'Template'
+                    templates: 'Template',
+                    templateCommands: 'Perintah pembuatan catatan'
                 }
             },
             frontmatterFields: {
@@ -1177,6 +1221,10 @@ export const STRINGS_ID = {
                     listPane: 'Tampilkan di panel daftar',
                     hidden: 'Jangan tampilkan'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'Warnai judul panel daftar',
+                desc: 'Menerapkan warna folder, tag, atau properti yang dipilih ke judul panel daftar.'
             },
             defaultSortOrder: {
                 name: 'Urutan default',
@@ -1726,11 +1774,11 @@ export const STRINGS_ID = {
                 name: 'Lokasi folder template',
                 desc: 'Pemilih file template menampilkan catatan dari folder ini.',
                 placeholder: 'Template',
-                usage: 'Digunakan oleh catatan kalender dan catatan folder. Konfigurasi template di Kalender > Integrasi kalender dan Folder & catatan folder > File catatan folder.'
+                usage: 'Template di folder template digunakan oleh catatan kalender, catatan folder, template folder, dan Catatan baru dari template. Konfigurasi template kalender di Kalender > Integrasi kalender dan template catatan folder di Folder & catatan folder > File catatan folder.'
             },
             calendarDailyNotePattern: {
                 name: 'Catatan harian',
-                desc: 'Format jalur menggunakan format tanggal Moment. Bungkus nama subfolder dalam tanda kurung, misal [Work]/YYYY. Klik ikon template untuk mengatur template. Atur lokasi folder template di Operasi file > Template.',
+                desc: 'Format jalur menggunakan format tanggal Moment. Bungkus nama subfolder dalam tanda kurung, misal [Work]/YYYY. Klik ikon template untuk mengatur template. Atur lokasi folder template di Operasi file & template > Template.',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'Pola harus dapat diformat dan diparse kembali sebagai tanggal lengkap (tahun, bulan, hari).'
             },
@@ -1738,15 +1786,47 @@ export const STRINGS_ID = {
                 momentDescPrefix: 'Format jalur menggunakan ',
                 momentLinkText: 'format tanggal Moment',
                 momentDescSuffix:
-                    '. Bungkus nama subfolder dalam tanda kurung, misal [Work]/YYYY. Klik ikon template untuk mengatur template. Atur lokasi folder template di Operasi file > Template.',
-                templateTokenNoticeLabel: 'Penting!',
-                templateTokenNotice:
-                    'Dukungan template memerlukan plugin Templater. Format bawaan seperti {{date}} dan {{title}} hanya berfungsi jika {source} disetel ke {option}.',
+                    '. Bungkus nama subfolder dalam tanda kurung, misal [Work]/YYYY. Klik ikon template untuk mengatur template. Atur lokasi folder template di Operasi file & template > Template.',
                 example: 'Sintaks saat ini: {path}'
             },
-            templaterSupport: {
-                installed: '✅ Plugin Templater terpasang dengan dukungan template penuh.',
-                missing: '⚠️ Pasang plugin Templater untuk dukungan template.'
+            templateEngine: {
+                name: 'Mesin template',
+                desc: 'Mesin yang memproses file template saat Notebook Navigator membuat catatan. Otomatis menggunakan Templater untuk template yang berisi <% saat plugin Templater terpasang. Semua template lainnya menggunakan mesin bawaan.',
+                options: {
+                    automatic: 'Otomatis',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Plugin Templater: terpasang',
+                templaterNotInstalled: 'Plugin Templater: tidak terpasang',
+                templaterAutomatic:
+                    'Template yang berisi perintah Templater (<%) diproses oleh Templater. Semua template lainnya diproses oleh mesin bawaan.',
+                templaterUsage: 'Semua template diproses oleh Templater. Token bawaan di file template tidak diganti.',
+                templaterMissingWarning:
+                    'Catatan tidak dapat dibuat dari template. Ubah {setting} ke {automatic} atau {builtin} di {location}, atau pasang dan aktifkan plugin Templater.',
+                tokens: 'Token bawaan: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} hingga {{sunday}}, {{cursor}}. Tulis {{!date}} untuk mempertahankan {{date}} sebagai teks.',
+                usage: 'Token template seperti {{title}} dan {{date}} diganti saat catatan dibuat. Konfigurasi mesin template di Operasi file & template > Template.'
+            },
+            showFolderTemplateIcons: {
+                name: 'Tampilkan ikon template folder',
+                desc: 'Menandai folder yang memiliki template sendiri dengan ikon di panel navigasi.'
+            },
+            templateCommands: {
+                name: 'Perintah',
+                desc: 'Setiap perintah membuat catatan dengan nama file yang dihasilkan, dari templatenya sendiri atau template folder. Jalankan dari palet perintah, atau kaitkan dengan pintasan atau tombol.',
+                empty: 'Belum ada perintah.',
+                add: 'Tambah perintah',
+                edit: 'Edit',
+                unnamed: 'Perintah tanpa nama',
+                locationCurrent: 'Folder saat ini',
+                locationFolder: 'Folder tertentu'
+            },
+            folderTemplates: {
+                name: 'Template folder',
+                desc: 'Catatan baru menggunakan template foldernya atau folder induk terdekat. Atur template dari menu konteks folder. Template kalender, catatan harian, dan catatan folder lebih diutamakan.',
+                empty: 'Belum ada template folder.',
+                scopeSubfolders: 'Folder dan subfolder',
+                scopeFolder: 'Hanya folder ini'
             },
             calendarWeeklyNotePattern: {
                 name: 'Catatan mingguan',
@@ -1916,7 +1996,7 @@ export const STRINGS_ID = {
             },
             vaultProfiles: {
                 name: 'Profil vault',
-                desc: 'Profil menyimpan visibilitas jenis file, file tersembunyi, folder tersembunyi, tag tersembunyi, aturan properti untuk catatan tersembunyi, pintasan, dan banner navigasi. Beralih profil dari header panel navigasi.',
+                desc: 'Profil menyimpan visibilitas jenis file, file tersembunyi, folder tersembunyi, tag tersembunyi, aturan properti untuk catatan tersembunyi, pintasan, dan banner navigasi. Beralih profil di sini atau dari pengalih profil vault di panel navigasi.',
                 defaultName: 'Default',
                 addButton: 'Tambah profil',
                 editProfilesButton: 'Edit profil',
@@ -1936,9 +2016,9 @@ export const STRINGS_ID = {
                     duplicateName: 'Nama profil sudah ada'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'Penempatan judul vault',
-                desc: 'Pilih di mana judul vault ditampilkan.',
+            vaultProfileSwitcher: {
+                name: 'Pengalih profil vault',
+                desc: 'Pilih di mana pengalih profil vault ditampilkan.',
                 options: {
                     header: 'Tampilkan di header',
                     navigation: 'Tampilkan di panel navigasi'
@@ -2481,7 +2561,7 @@ export const STRINGS_ID = {
             },
             folderNoteTemplate: {
                 name: 'Template catatan folder',
-                desc: 'File template yang digunakan saat membuat catatan folder. Template Markdown dapat menggunakan Templater. Template Canvas dan Base disalin sebagai isi file. Atur lokasi folder template di Operasi file > Template.',
+                desc: 'File template yang digunakan saat membuat catatan folder. Template Markdown dapat menggunakan Templater. Template Canvas dan Base disalin sebagai isi file. Atur lokasi folder template di Operasi file & template > Template.',
                 formatWarning: 'Format template harus cocok dengan jenis catatan folder yang dipilih: .md, .canvas, atau .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2617,10 +2697,32 @@ export const STRINGS_ID = {
                 buttonText: '❤️ Sponsor',
                 coffeeButton: '☕️ Traktir saya kopi'
             },
-            otherPlugins: {
-                name: 'Lihat plugin saya yang lain',
-                betterPaste: 'Membersihkan teks, tautan, dan gambar yang ditempel',
-                pixelPerfectImage: 'Pengubahan ukuran gambar yang presisi dan lainnya'
+            markdownPointBanner: {
+                heading: 'Apakah Anda memakai Canva, Keynote, atau PowerPoint?',
+                atTop: {
+                    name: 'Tampilkan banner MarkdownPoint di atas',
+                    desc: 'Jika dimatikan, banner muncul lebih ke bawah di halaman pengaturan.'
+                },
+                credit: 'oleh Johan Sanneblad',
+                messages: [
+                    { headline: 'Tulis slide Anda dalam Markdown.', subtext: 'Seret teks dan gambar ke posisi yang Anda mau.' },
+                    { headline: 'Alternatif gratis untuk PowerPoint.', subtext: 'Berbagi dan berkolaborasi juga gratis.' },
+                    { headline: 'Buat animasi ala Apple Motion.', subtext: 'Gunakan keyframe, jalur, dan morph.' },
+                    { headline: 'Berkolaborasi ala Google Slides.', subtext: 'Dengan pointer dan komentar secara real-time.' },
+                    { headline: 'Lihat teks semua slide di satu tempat.', subtext: 'Buka View > Outline dan edit sebagai Markdown.' },
+                    { headline: 'Snap objek ala Figma.', subtext: 'Rapikan berdasarkan jarak, ukuran, dan sudut.' },
+                    { headline: 'Sorot dengan ==tanda sama dengan==.', subtext: '**Tebal** dan *miring* sama seperti di Obsidian.' },
+                    { headline: 'Ekspor presentasi sebagai video 4K.', subtext: 'Tidak perlu After Effects untuk animasinya.' },
+                    { headline: 'Catatan pembicara juga Markdown.', subtext: 'Tersimpan di file yang sama dengan slide.' },
+                    { headline: 'Presentasi tersimpan di komputer Anda.', subtext: 'Anda tidak perlu akun untuk membuat slide.' },
+                    { headline: 'Tampilkan kode di slide Anda.', subtext: 'Blok kode disorot untuk 21 bahasa.' },
+                    { headline: 'Bagikan presentasi dengan tautan.', subtext: 'Terbitkan online dengan akun gratis.' },
+                    { headline: 'Lacak presentasi Anda di Git.', subtext: 'Presentasi berupa file teks Markdown dan YAML.' },
+                    { headline: 'Buat diagram alir dari teks.', subtext: 'Tulis kode Mermaid dan dapatkan diagramnya.' },
+                    { headline: 'Simpan presentasi di folder tersinkron.', subtext: 'Bisa dengan Dropbox, iCloud Drive, atau OneDrive.' },
+                    { headline: 'Jelajahi tema seperti di Obsidian.', subtext: 'Semua gratis dan terpasang dengan sekali klik.' },
+                    { headline: 'Gratis untuk pribadi dan komersial.', subtext: 'Unduh untuk Mac atau Windows.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: 'Periksa versi baru saat mulai',

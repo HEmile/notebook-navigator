@@ -27,9 +27,8 @@ AGENTS.md
 CLAUDE.md
 GEMINI.md
 
-# Ignore local build script
-scripts/build-local.sh
-scripts/build-local.ps1
+# Ignore local scripts (a folder or a link to one)
+scripts/local
 
 # Release lock file
 .release.lock
@@ -40,3 +39,6 @@ web/
 # Obsidian
 .obsidian
 release-notes.md
+
+# Generated release language pack
+languages.json

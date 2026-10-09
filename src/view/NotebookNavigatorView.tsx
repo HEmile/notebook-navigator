@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { LanguageLoadingBoundary } from '../components/LanguageLoadingBoundary';
 import React from 'react';
 import { Root, createRoot } from 'react-dom/client';
 import { ItemView, WorkspaceLeaf, TFile, Platform, TFolder } from 'obsidian';
@@ -24,6 +25,7 @@ import type { NotebookNavigatorHandle } from '../components/NotebookNavigatorCom
 import type { RevealFileOptions, NavigateToFolderOptions } from '../hooks/useNavigatorReveal';
 import type { NavigateToPropertyOptions } from '../utils/propertyNavigation';
 import type { NavigateToTagOptions } from '../utils/tagNavigation';
+import type { ShortcutCommandContext } from '../utils/selectionUtils';
 import { ExpansionProvider } from '../context/ExpansionContext';
 import { SelectionProvider } from '../context/SelectionContext';
 import { ServicesProvider } from '../context/ServicesContext';
@@ -39,11 +41,7 @@ import type NotebookNavigatorPlugin from '../main';
 import { NOTEBOOK_NAVIGATOR_ICON_ID } from '../constants/notebookNavigatorIcon';
 import { NOTEBOOK_NAVIGATOR_VIEW } from '../types';
 import { UXPreferencesProvider } from '../context/UXPreferencesContext';
-import {
-    applyAndroidFontCompensation,
-    clearAndroidFontCompensation,
-    propagateAndroidFontCompensationToMobileRoot
-} from '../utils/androidFontScale';
+import { applyAndroidFontCompensation, clearAndroidFontCompensation } from '../utils/androidFontScale';
 import { ensureNotebookNavigatorSvgFilters } from '../utils/svgFilters';
 
 export const IOS_FLOATING_TOOLBARS_CLASS = 'notebook-navigator-ios-floating-toolbars';
@@ -182,101 +180,50 @@ export class NotebookNavigatorView extends ItemView {
         });
         this.updatePlatformClasses();
 
+        // Must run before the first render, which reads note frontmatter and resolves interface icons
+        this.plugin.refreshIconList();
         this.root = createRoot(container);
         this.root.render(
             <React.StrictMode>
-                <SettingsProvider plugin={this.plugin}>
-                    <UXPreferencesProvider plugin={this.plugin}>
-                        <RecentDataProvider plugin={this.plugin}>
-                            <ServicesProvider plugin={this.plugin}>
-                                <ShortcutsProvider>
-                                    <StorageProvider app={this.plugin.app} api={this.plugin.api}>
-                                        <ExpansionProvider>
-                                            <SelectionProvider
-                                                app={this.plugin.app}
-                                                api={this.plugin.api}
-                                                tagTreeService={this.plugin.tagTreeService}
-                                                propertyTreeService={this.plugin.propertyTreeService}
-                                                // Wrap bound methods in arrow functions to maintain proper this context and satisfy eslint @typescript-eslint/unbound-method
-                                                onFileRename={(listenerId, callback) =>
-                                                    this.plugin.registerFileRenameListener(listenerId, callback)
-                                                }
-                                                onFileRenameUnsubscribe={listenerId => this.plugin.unregisterFileRenameListener(listenerId)}
-                                            >
-                                                <UIStateProvider>
-                                                    <InternalDragSessionProvider>
-                                                        <TooltipProvider>
-                                                            <NotebookNavigatorContainer ref={this.setComponentHandle} />
-                                                        </TooltipProvider>
-                                                    </InternalDragSessionProvider>
-                                                </UIStateProvider>
-                                            </SelectionProvider>
-                                        </ExpansionProvider>
-                                    </StorageProvider>
-                                </ShortcutsProvider>
-                            </ServicesProvider>
-                        </RecentDataProvider>
-                    </UXPreferencesProvider>
-                </SettingsProvider>
+                <LanguageLoadingBoundary service={this.plugin.languageService}>
+                    <SettingsProvider plugin={this.plugin}>
+                        <UXPreferencesProvider plugin={this.plugin}>
+                            <RecentDataProvider plugin={this.plugin}>
+                                <ServicesProvider plugin={this.plugin}>
+                                    <ShortcutsProvider>
+                                        <StorageProvider app={this.plugin.app} api={this.plugin.api}>
+                                            <ExpansionProvider>
+                                                <SelectionProvider
+                                                    app={this.plugin.app}
+                                                    api={this.plugin.api}
+                                                    tagTreeService={this.plugin.tagTreeService}
+                                                    propertyTreeService={this.plugin.propertyTreeService}
+                                                    // Wrap bound methods in arrow functions to maintain proper this context and satisfy eslint @typescript-eslint/unbound-method
+                                                    onFileRename={(listenerId, callback) =>
+                                                        this.plugin.registerFileRenameListener(listenerId, callback)
+                                                    }
+                                                    onFileRenameUnsubscribe={listenerId =>
+                                                        this.plugin.unregisterFileRenameListener(listenerId)
+                                                    }
+                                                >
+                                                    <UIStateProvider>
+                                                        <InternalDragSessionProvider>
+                                                            <TooltipProvider>
+                                                                <NotebookNavigatorContainer ref={this.setComponentHandle} />
+                                                            </TooltipProvider>
+                                                        </InternalDragSessionProvider>
+                                                    </UIStateProvider>
+                                                </SelectionProvider>
+                                            </ExpansionProvider>
+                                        </StorageProvider>
+                                    </ShortcutsProvider>
+                                </ServicesProvider>
+                            </RecentDataProvider>
+                        </UXPreferencesProvider>
+                    </SettingsProvider>
+                </LanguageLoadingBoundary>
             </React.StrictMode>
         );
-
-        // Propagate font compensation to the mobile root element after React renders.
-        // Uses multiple timing strategies since React render timing varies on Android.
-        if (Platform.isAndroidApp) {
-            // Attempts to find and apply compensation to the mobile root element
-            const applyToMobileRoot = () => {
-                const mobileRoot = container.querySelector('.nn-split-container.nn-mobile');
-                if (!(mobileRoot instanceof HTMLElement)) {
-                    return false;
-                }
-                propagateAndroidFontCompensationToMobileRoot(container);
-                return true;
-            };
-
-            const attemptPropagation = () => {
-                if (applyToMobileRoot()) {
-                    return true;
-                }
-                return false;
-            };
-
-            // If mobile root doesn't exist yet, wait for React to render it
-            if (!attemptPropagation()) {
-                // Watch for DOM changes in case React renders asynchronously
-                const observer = new MutationObserver(() => {
-                    if (attemptPropagation()) {
-                        observer.disconnect();
-                    }
-                });
-                observer.observe(container, { childList: true, subtree: true });
-                // Try after next paint in case React batches synchronously
-                window.requestAnimationFrame(() => {
-                    if (attemptPropagation()) {
-                        observer.disconnect();
-                    }
-                });
-                // Fallback timeouts at 100ms, 200ms, and 500ms for slow renders
-                window.setTimeout(() => {
-                    if (attemptPropagation()) {
-                        observer.disconnect();
-                        return;
-                    }
-                    window.setTimeout(() => {
-                        if (attemptPropagation()) {
-                            observer.disconnect();
-                            return;
-                        }
-                        window.setTimeout(() => {
-                            attemptPropagation();
-                            observer.disconnect();
-                        }, 500);
-                    }, 200);
-                }, 100);
-                // Ensure observer is cleaned up after max wait time
-                window.setTimeout(() => observer.disconnect(), 500);
-            }
-        }
     }
 
     /**
@@ -461,10 +408,11 @@ export class NotebookNavigatorView extends ItemView {
     }
 
     /**
-     * Adds the current navigator selection or active file to shortcuts
+     * Toggles the shortcut for the item the command context identifies: the navigator
+     * selection when the user was working in the navigator, otherwise the file open in the editor.
      */
-    async addShortcutForCurrentSelection(): Promise<void> {
-        await this.componentHandle?.addShortcutForCurrentSelection();
+    async addShortcutForCurrentSelection(context: ShortcutCommandContext): Promise<void> {
+        await this.componentHandle?.addShortcutForCurrentSelection(context);
     }
 
     /**

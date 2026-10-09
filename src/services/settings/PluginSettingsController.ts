@@ -58,6 +58,7 @@ import {
     isFeatureImageSizeSetting,
     isFolderNoteOpenLocation,
     isHomepageSource,
+    isListDisplayMode,
     isMouseBackForwardAction,
     isManualSortNewNotePlacement,
     isUnfinishedTaskIconMode,
@@ -72,7 +73,10 @@ import {
     normalizeListSortOverride,
     resolveDeleteAttachmentsSetting,
     type NotebookNavigatorSettings,
-    resolveMoveFileConflictsSetting
+    isFolderTemplateMapping,
+    resolveMoveFileConflictsSetting,
+    resolveTemplateEngineSetting,
+    sanitizeTemplateCommands
 } from '../../settings/types';
 import { LEGACY_STORAGE_KEYS, LOCALSTORAGE_VERSION, localStorage } from '../../utils/localStorage';
 import { clearHiddenFileNameMatcherCache } from '../../utils/fileFilters';
@@ -695,6 +699,10 @@ export class PluginSettingsController {
             this.currentSettings.moveFileConflicts,
             DEFAULT_SETTINGS.moveFileConflicts
         );
+        this.currentSettings.templateEngine = resolveTemplateEngineSetting(
+            this.currentSettings.templateEngine,
+            DEFAULT_SETTINGS.templateEngine
+        );
 
         let uiScaleMigrated = false;
         SYNC_MODE_SETTING_IDS.forEach(settingId => {
@@ -1135,7 +1143,7 @@ export class PluginSettingsController {
     }
 
     private sanitizeNavItemHeightSetting(value: unknown): number {
-        return this.sanitizeBoundedIntegerSetting(value, { min: 20, max: 28, fallback: DEFAULT_SETTINGS.navItemHeight });
+        return this.sanitizeBoundedIntegerSetting(value, { min: 20, max: 40, fallback: DEFAULT_SETTINGS.navItemHeight });
     }
 
     private sanitizeCalendarPlacementSetting(value: unknown): CalendarPlacement {
@@ -1160,7 +1168,11 @@ export class PluginSettingsController {
     }
 
     private sanitizeCompactItemHeightSetting(value: unknown): number {
-        return this.sanitizeBoundedIntegerSetting(value, { min: 20, max: 28, fallback: DEFAULT_SETTINGS.compactItemHeight });
+        return this.sanitizeBoundedIntegerSetting(value, { min: 20, max: 40, fallback: DEFAULT_SETTINGS.compactItemHeight });
+    }
+
+    private sanitizeDefaultListModeSetting(value: unknown): NotebookNavigatorSettings['defaultListMode'] {
+        return isListDisplayMode(value) ? value : DEFAULT_SETTINGS.defaultListMode;
     }
 
     private sanitizeFeatureImageSizeSetting(value: unknown): NotebookNavigatorSettings['featureImageSize'] {
@@ -1300,6 +1312,7 @@ export class PluginSettingsController {
             sanitizeNavIndentSetting: value => this.sanitizeNavIndentSetting(value),
             sanitizeNavItemHeightSetting: value => this.sanitizeNavItemHeightSetting(value),
             sanitizeCalendarWeeksToShowSetting: value => this.sanitizeCalendarWeeksToShowSetting(value),
+            sanitizeDefaultListModeSetting: value => this.sanitizeDefaultListModeSetting(value),
             sanitizeCalendarPlacementSetting: value => this.sanitizeCalendarPlacementSetting(value),
             sanitizeCalendarLeftPlacementSetting: value => this.sanitizeCalendarLeftPlacementSetting(value),
             sanitizeCompactItemHeightSetting: value => this.sanitizeCompactItemHeightSetting(value),
@@ -1371,6 +1384,8 @@ export class PluginSettingsController {
             sanitizeRecord(record, isSettingSyncMode);
 
         this.currentSettings.folderColors = sanitizeStringMap(this.currentSettings.folderColors);
+        this.currentSettings.folderTemplates = sanitizeRecord(this.currentSettings.folderTemplates, isFolderTemplateMapping);
+        this.currentSettings.templateCommands = sanitizeTemplateCommands(this.currentSettings.templateCommands);
         this.currentSettings.folderBackgroundColors = sanitizeStringMap(this.currentSettings.folderBackgroundColors);
         this.currentSettings.fileColors = sanitizeStringMap(this.currentSettings.fileColors);
         this.currentSettings.fileBackgroundColors = sanitizeStringMap(this.currentSettings.fileBackgroundColors);
