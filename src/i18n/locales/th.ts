@@ -2118,7 +2118,8 @@ export const STRINGS_TH = {
                 scopes: {
                     folder: 'โฟลเดอร์: {name}',
                     tag: 'แท็ก: #{name}',
-                    property: 'คุณสมบัติ: {name}'
+                    property: 'คุณสมบัติ: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

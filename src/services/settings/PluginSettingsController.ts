@@ -1398,12 +1398,14 @@ export class PluginSettingsController {
         this.currentSettings.folderSortOverrides = sanitizeSortMap(this.currentSettings.folderSortOverrides);
         this.currentSettings.tagSortOverrides = sanitizeSortMap(this.currentSettings.tagSortOverrides);
         this.currentSettings.propertySortOverrides = sanitizeSortMap(this.currentSettings.propertySortOverrides);
+        this.currentSettings.topicSortOverrides = sanitizeSortMap(this.currentSettings.topicSortOverrides);
         this.currentSettings.folderTreeSortOverrides = sanitizeAlphaSortOrderMap(this.currentSettings.folderTreeSortOverrides);
         this.currentSettings.tagTreeSortOverrides = sanitizeAlphaSortOrderMap(this.currentSettings.tagTreeSortOverrides);
         this.currentSettings.propertyTreeSortOverrides = sanitizeAlphaSortOrderMap(this.currentSettings.propertyTreeSortOverrides);
         this.currentSettings.folderAppearances = sanitizeAppearanceMap(this.currentSettings.folderAppearances);
         this.currentSettings.tagAppearances = sanitizeAppearanceMap(this.currentSettings.tagAppearances);
         this.currentSettings.propertyAppearances = sanitizeAppearanceMap(this.currentSettings.propertyAppearances);
+        this.currentSettings.topicAppearances = sanitizeAppearanceMap(this.currentSettings.topicAppearances);
         this.currentSettings.navigationSeparators = sanitizeBooleanMap(this.currentSettings.navigationSeparators);
         this.currentSettings.externalIconProviders = sanitizeBooleanMap(this.currentSettings.externalIconProviders);
         this.currentSettings.syncModes = sanitizeSettingsSyncMap(this.currentSettings.syncModes);
@@ -1417,7 +1419,8 @@ export class PluginSettingsController {
         const appearanceMaps = [
             this.currentSettings.folderAppearances,
             this.currentSettings.tagAppearances,
-            this.currentSettings.propertyAppearances
+            this.currentSettings.propertyAppearances,
+            this.currentSettings.topicAppearances
         ];
         appearanceMaps.forEach(appearances => {
             Object.entries(appearances).forEach(([key, appearance]) => {

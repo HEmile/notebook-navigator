@@ -2139,7 +2139,8 @@ export const STRINGS_EN = {
                 scopes: {
                     folder: 'Folder: {name}',
                     tag: 'Tag: #{name}',
-                    property: 'Property: {name}'
+                    property: 'Property: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             dateFormat: {

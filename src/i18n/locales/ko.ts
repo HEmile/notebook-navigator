@@ -2121,7 +2121,8 @@ export const STRINGS_KO = {
                 scopes: {
                     folder: '폴더: {name}',
                     tag: '태그: #{name}',
-                    property: '속성: {name}'
+                    property: '속성: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

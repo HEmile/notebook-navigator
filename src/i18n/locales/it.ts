@@ -2130,7 +2130,8 @@ export const STRINGS_IT = {
                 scopes: {
                     folder: 'Cartella: {name}',
                     tag: 'Tag: #{name}',
-                    property: 'Proprietà: {name}'
+                    property: 'Proprietà: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

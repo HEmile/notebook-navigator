@@ -264,14 +264,14 @@ function getActiveManualSortGroupHeaderWordCountConsumerPaths(
 }
 
 /**
- * Checks folder, tag, and property appearance overrides for text count consumers.
+ * Checks folder, tag, property, and topic appearance overrides for text count consumers.
  * A selection can request either count while the global count type is 'none', so extraction
  * must include every count type used by an appearance.
  */
 function hasAppearanceTextCountConsumer(settings: NotebookNavigatorSettings, type: keyof AppearanceTextCountConsumers): boolean {
     // Settings snapshots keep unchanged appearance maps immutable and referentially stable, so each
     // map is scanned only when its contents change and both consumer checks share the result.
-    const records = [settings.folderAppearances, settings.tagAppearances, settings.propertyAppearances];
+    const records = [settings.folderAppearances, settings.tagAppearances, settings.propertyAppearances, settings.topicAppearances];
     return records.some(record => {
         let consumers = appearanceTextCountConsumerCache.get(record);
         if (!consumers) {
@@ -467,7 +467,8 @@ export function getMarkdownTextCountDependencies(app: App, settings: NotebookNav
     const appearanceRecords = [
         { selectionType: ItemType.FOLDER, appearances: settings.folderAppearances },
         { selectionType: ItemType.TAG, appearances: settings.tagAppearances },
-        { selectionType: ItemType.PROPERTY, appearances: settings.propertyAppearances }
+        { selectionType: ItemType.PROPERTY, appearances: settings.propertyAppearances },
+        { selectionType: ItemType.TOPIC, appearances: settings.topicAppearances }
     ];
 
     appearanceRecords.forEach(({ selectionType, appearances }) => {

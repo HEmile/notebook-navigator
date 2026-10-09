@@ -89,6 +89,8 @@ export function formatTextCountDependencyScope(dependency: MarkdownTextCountDepe
             const name = parsed ? (parsed.valuePath ? `${parsed.key} = ${parsed.valuePath}` : parsed.key) : dependency.key;
             return labels.property.replace('{name}', name);
         }
+        case ItemType.TOPIC:
+            return labels.topic.replace('{name}', dependency.key);
         default:
             return dependency.key;
     }

@@ -2125,7 +2125,8 @@ export const STRINGS_TR = {
                 scopes: {
                     folder: 'Klasör: {name}',
                     tag: 'Etiket: #{name}',
-                    property: 'Özellik: {name}'
+                    property: 'Özellik: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

@@ -2126,7 +2126,8 @@ export const STRINGS_UK = {
                 scopes: {
                     folder: 'Папка: {name}',
                     tag: 'Тег: #{name}',
-                    property: 'Властивість: {name}'
+                    property: 'Властивість: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

@@ -2110,7 +2110,8 @@ export const STRINGS_ZH_CN = {
                 scopes: {
                     folder: '文件夹：{name}',
                     tag: '标签：#{name}',
-                    property: '属性：{name}'
+                    property: '属性：{name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

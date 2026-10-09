@@ -2136,7 +2136,8 @@ export const STRINGS_DE = {
                 scopes: {
                     folder: 'Ordner: {name}',
                     tag: 'Tag: #{name}',
-                    property: 'Eigenschaft: {name}'
+                    property: 'Eigenschaft: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

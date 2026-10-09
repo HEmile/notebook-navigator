@@ -2125,7 +2125,8 @@ export const STRINGS_VI = {
                 scopes: {
                     folder: 'Thư mục: {name}',
                     tag: 'Thẻ: #{name}',
-                    property: 'Thuộc tính: {name}'
+                    property: 'Thuộc tính: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

@@ -2136,7 +2136,8 @@ export const STRINGS_ES = {
                 scopes: {
                     folder: 'Carpeta: {name}',
                     tag: 'Etiqueta: #{name}',
-                    property: 'Propiedad: {name}'
+                    property: 'Propiedad: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

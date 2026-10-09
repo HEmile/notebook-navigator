@@ -2132,7 +2132,8 @@ export const STRINGS_PT = {
                 scopes: {
                     folder: 'Pasta: {name}',
                     tag: 'Etiqueta: #{name}',
-                    property: 'Propriedade: {name}'
+                    property: 'Propriedade: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

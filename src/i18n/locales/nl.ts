@@ -2134,7 +2134,8 @@ export const STRINGS_NL = {
                 scopes: {
                     folder: 'Map: {name}',
                     tag: 'Tag: #{name}',
-                    property: 'Eigenschap: {name}'
+                    property: 'Eigenschap: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

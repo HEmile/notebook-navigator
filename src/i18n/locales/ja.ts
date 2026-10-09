@@ -2126,7 +2126,8 @@ export const STRINGS_JA = {
                 scopes: {
                     folder: 'フォルダー: {name}',
                     tag: 'タグ: #{name}',
-                    property: 'プロパティ: {name}'
+                    property: 'プロパティ: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

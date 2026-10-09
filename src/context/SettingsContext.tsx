@@ -227,6 +227,7 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
         folders: Record<string, ListPaneAppearance>;
         tags: Record<string, ListPaneAppearance>;
         properties: Record<string, ListPaneAppearance>;
+        topics: Record<string, ListPaneAppearance>;
     } | null>(null);
 
     const updateSettings = useCallback(
@@ -275,10 +276,12 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
         const folderAppearances = snapshotListPaneAppearanceMap(plugin.settings.folderAppearances, previousAppearanceMaps?.folders);
         const tagAppearances = snapshotListPaneAppearanceMap(plugin.settings.tagAppearances, previousAppearanceMaps?.tags);
         const propertyAppearances = snapshotListPaneAppearanceMap(plugin.settings.propertyAppearances, previousAppearanceMaps?.properties);
+        const topicAppearances = snapshotListPaneAppearanceMap(plugin.settings.topicAppearances, previousAppearanceMaps?.topics);
         previousAppearanceMapsRef.current = {
             folders: folderAppearances,
             tags: tagAppearances,
-            properties: propertyAppearances
+            properties: propertyAppearances,
+            topics: topicAppearances
         };
         const nextSettings: SettingsStateValue = {
             ...plugin.settings,
@@ -296,6 +299,7 @@ export function SettingsProvider({ children, plugin }: SettingsProviderProps) {
             folderAppearances,
             tagAppearances,
             propertyAppearances,
+            topicAppearances,
             pinnedNotes
         };
         // Deep copy vault profiles to prevent mutations from affecting the original settings

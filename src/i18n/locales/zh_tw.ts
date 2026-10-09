@@ -2111,7 +2111,8 @@ export const STRINGS_ZH_TW = {
                 scopes: {
                     folder: '資料夾：{name}',
                     tag: '標籤：#{name}',
-                    property: '屬性：{name}'
+                    property: '屬性：{name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

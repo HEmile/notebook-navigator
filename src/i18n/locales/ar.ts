@@ -2121,7 +2121,8 @@ export const STRINGS_AR = {
                 scopes: {
                     folder: 'المجلد: {name}',
                     tag: 'الوسم: #{name}',
-                    property: 'الخاصية: {name}'
+                    property: 'الخاصية: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {

@@ -2126,7 +2126,8 @@ export const STRINGS_FA = {
                 scopes: {
                     folder: 'پوشه: {name}',
                     tag: 'برچسب: #{name}',
-                    property: 'ویژگی: {name}'
+                    property: 'ویژگی: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
