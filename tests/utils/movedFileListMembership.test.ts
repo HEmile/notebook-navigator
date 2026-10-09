@@ -114,6 +114,24 @@ describe('createMovedFileListMembershipCheck', () => {
         expect(isInList(plain)).toBe(true);
     });
 
+    it('keeps a moved file in a topic scope and applies hidden folders even when hidden items are shown', () => {
+        const kept = createTestTFile('Work/note.md');
+        const hidden = createTestTFile('Archive/note.md');
+        const app = createApp([kept, hidden]);
+        const settings = createSettings({ hiddenFolders: ['Archive'] });
+
+        const isInList = createMovedFileListMembershipCheck(
+            { selectionType: ItemType.TOPIC, selectedTopicPath: 'Parent/Child' },
+            settings,
+            { includeDescendantNotes: true, showHiddenItems: true },
+            false,
+            app
+        );
+
+        expect(isInList(kept)).toBe(true);
+        expect(isInList(hidden)).toBe(false);
+    });
+
     it('drops every moved file while a search is active', () => {
         const note = createTestTFile('Inbox/note.md');
         const inbox = createFolder('Inbox', [note]);

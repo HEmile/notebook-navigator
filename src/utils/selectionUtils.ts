@@ -143,6 +143,10 @@ export function getFilesForNavigationSelection(
  * and paths, and companion drawing images can all start matching at the new path or a conflict-renamed
  * name. The rename handler synchronously seeds the storage mirror at the new path from the existing
  * record, so the hidden file tag rule can read the moved file's cached tags before the trees refresh.
+ *
+ * Topic lists behave the same way: the topic graph keys member notes by path and is rebuilt after the
+ * metadata cache resolves the rename, while the move keeps the links and tags that make a note a member.
+ * Topic lists never show hidden items, so the visibility check ignores the show hidden items toggle.
  */
 export function createMovedFileListMembershipCheck(
     selectionScope: NavigationSelectionScope,
@@ -180,6 +184,10 @@ export function createMovedFileListMembershipCheck(
     const isPropertyScope = selectionScope.selectionType === ItemType.PROPERTY && !!selectionScope.selectedProperty;
     if (isTagScope || isPropertyScope) {
         return createScopedSelectionVisibilityCheck(settings, visibility, app);
+    }
+
+    if (selectionScope.selectionType === ItemType.TOPIC && selectionScope.selectedTopicPath) {
+        return createScopedSelectionVisibilityCheck(settings, { ...visibility, showHiddenItems: false }, app);
     }
 
     return () => false;
