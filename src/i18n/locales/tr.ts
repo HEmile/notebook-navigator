@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_TR = {
+    language: {
+        downloading: 'Diller indiriliyor…',
+        continueInEnglish: 'İngilizce devam et',
+        downloadFailed: 'Diller indirilemedi. Notebook Navigator İngilizce kullanıyor.'
+    },
     // Common UI elements
     common: {
         cancel: 'İptal', // Button text for canceling dialogs and operations (English: Cancel)
@@ -87,6 +92,7 @@ export const STRINGS_TR = {
         pinShortcutsAndRecentFiles: 'Kısayolları ve son dosyaları sabitle',
         unpinShortcuts: 'Kısayolları sabitlemeden çıkar',
         unpinShortcutsAndRecentFiles: 'Kısayolları ve son dosyaları sabitlemeden çıkar',
+        resizePinnedShortcuts: 'Sabitlenmiş kısayolları yeniden boyutlandır',
         profileMenuAria: 'Kasa profilini değiştir'
     },
 
@@ -112,8 +118,17 @@ export const STRINGS_TR = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'Günlük not şablonu okunamadı.',
         createFailed: 'Günlük not oluşturulamadı.'
+    },
+
+    templates: {
+        invalidTokens: '"{name}" şablonu geçersiz belirteçler içeriyor: {tokens}',
+        invalidFileNameTokens: '"{name}" komutunun dosya adı biçimi geçersiz belirteçler içeriyor: {tokens}',
+        readFailed: '"{name}" şablonu okunamadı. Not şablon olmadan oluşturuldu.',
+        folderNotSet: 'Şablondan not oluşturmadan önce Dosya işlemleri ve şablonlar > Şablonlar bölümünde şablon klasörünü ayarlayın.',
+        templateNotFound: '"{name}" şablonu bulunamadı.',
+        folderNotFound: '"{name}" klasörü bulunamadı.',
+        templaterMissing: 'Templater eklentisi yüklü değil. Şablon motorunu Dosya işlemleri ve şablonlar > Şablonlar bölümünden değiştirin.'
     },
 
     shortcuts: {
@@ -364,6 +379,9 @@ export const STRINGS_TR = {
             duplicateFolder: 'Klasörü çoğalt',
             searchInFolder: 'Klasörde ara',
             createFolderNote: 'Klasör notu oluştur',
+            setFolderTemplate: 'Klasör şablonu ayarla...',
+            changeFolderTemplate: 'Klasör şablonunu değiştir...',
+            removeFolderTemplate: 'Klasör şablonunu kaldır',
             detachFolderNote: 'Klasör notunu ayır',
             deleteFolderNote: 'Klasör notunu sil',
             changeIcon: 'Simgeyi değiştir',
@@ -723,7 +741,28 @@ export const STRINGS_TR = {
                 dismiss: 'kapatmak için'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'Komut ekle',
+            titleEdit: 'Komutu düzenle',
+            name: 'Komut adı',
+            namePlaceholder: 'Yeni toplantı notu',
+            template: 'Şablon',
+            templateDesc: 'İsteğe bağlı. Şablon yoksa, ayarlanmışsa hedef klasörün klasör şablonu uygulanır.',
+            templatePlaceholder: 'Şablonlar/Toplantı.md',
+            fileNameFormat: 'Dosya adı biçimi',
+            fileNameFormatDesc:
+                '{{date:YYYYMMDD}} ve {{prompt:Başlık}} gibi belirteçler komut çalıştığında değiştirilir. Her istem bir değer sorar ve şablondaki aynı etiket aynı değeri alır. {{number}}, klasörde aynı ad desenini kullanan notların en yüksek numarasından bir fazlasıdır ve {{number:00}} başına sıfır ekler. Şablon da {{number}} kullanabilir ve {{title}} oluşturulan dosya adını ekler.',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Başlık}}',
+            location: 'Konum',
+            folder: 'Klasör',
+            folderPlaceholder: 'Toplantılar',
+            icon: 'Simge',
+            placement: 'Düğme',
+            placementNone: 'Yok',
+            placementRibbon: 'Şerit',
+            placementTabBar: 'Sekme çubuğu'
+        },
+        templateFile: {
             placeholder: 'Şablon ara...',
             instructions: {
                 navigate: 'gezinmek için',
@@ -924,6 +963,9 @@ export const STRINGS_TR = {
         openMonthlyNote: 'Aylık notu aç',
         openQuarterlyNote: 'Çeyreklik notu aç',
         openYearlyNote: 'Yıllık notu aç',
+        openNextPeriodicNote: 'Sonraki periyodik notu aç',
+        openPreviousPeriodicNote: 'Önceki periyodik notu aç',
+        openParentPeriodicNote: 'Üst periyodik notu aç',
         revealFile: 'Dosyayı göster', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: 'Ara', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Tüm kasada ara', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1112,10 +1154,11 @@ export const STRINGS_TR = {
                 }
             },
             fileOperations: {
-                label: 'Dosya işlemleri',
-                description: 'Şablonlar, silme onayları, ekler ve dosya taşıma çakışma davranışı.',
+                label: 'Dosya işlemleri ve şablonlar',
+                description: 'Şablonlar, not oluşturma komutları, silme onayları, ekler ve dosya taşıma çakışmalarındaki davranış.',
                 groups: {
-                    templates: 'Şablonlar'
+                    templates: 'Şablonlar',
+                    templateCommands: 'Not oluşturma komutları'
                 }
             },
             frontmatterFields: {
@@ -1176,6 +1219,10 @@ export const STRINGS_TR = {
                     listPane: 'Liste bölmesinde göster',
                     hidden: 'Gösterme'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'Liste bölmesi başlığını renklendir',
+                desc: 'Seçili klasörün, etiketin veya özelliğin rengini liste bölmesi başlığına uygular.'
             },
             defaultSortOrder: {
                 name: 'Varsayılan sıralama düzeni',
@@ -1725,11 +1772,11 @@ export const STRINGS_TR = {
                 name: 'Şablon klasörü konumu',
                 desc: 'Şablon dosya seçici bu klasördeki notları gösterir.',
                 placeholder: 'Şablonlar',
-                usage: 'Takvim notları ve klasör notları tarafından kullanılır. Şablonları Takvim > Takvim entegrasyonu ve Klasörler ve klasör notları > Klasör notu dosyaları bölümünde yapılandırın.'
+                usage: 'Şablon klasöründeki şablonlar takvim notları, klasör notları, klasör şablonları ve Şablondan yeni not tarafından kullanılır. Takvim şablonlarını Takvim > Takvim entegrasyonu, klasör notu şablonlarını Klasörler ve klasör notları > Klasör notu dosyaları bölümünde yapılandırın.'
             },
             calendarDailyNotePattern: {
                 name: 'Günlük notlar',
-                desc: 'Moment tarih biçimini kullanarak yolu biçimlendir. Alt klasör adlarını köşeli parantez içine alın, örn. [Work]/YYYY. Şablon ayarlamak için şablon simgesine tıklayın. Şablon klasörü konumunu Dosya işlemleri > Şablonlar bölümünden ayarlayın.',
+                desc: 'Moment tarih biçimini kullanarak yolu biçimlendir. Alt klasör adlarını köşeli parantez içine alın, örn. [Work]/YYYY. Şablon ayarlamak için şablon simgesine tıklayın. Şablon klasörü konumunu Dosya işlemleri ve şablonlar > Şablonlar bölümünden ayarlayın.',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'Desen, tam bir tarih (yıl, ay, gün) olarak biçimlendirilmeli ve tekrar ayrıştırılabilmelidir.'
             },
@@ -1737,15 +1784,47 @@ export const STRINGS_TR = {
                 momentDescPrefix: '',
                 momentLinkText: 'Moment tarih biçimi',
                 momentDescSuffix:
-                    ' kullanarak yolu biçimlendir. Alt klasör adlarını köşeli parantez içine alın, örn. [Work]/YYYY. Şablon ayarlamak için şablon simgesine tıklayın. Şablon klasörü konumunu Dosya işlemleri > Şablonlar bölümünden ayarlayın.',
-                templateTokenNoticeLabel: 'Önemli!',
-                templateTokenNotice:
-                    'Şablon desteği Templater eklentisini gerektirir. {{date}} ve {{title}} gibi yerleşik biçimler yalnızca {source} ayarı {option} olarak seçildiğinde kullanılabilir.',
+                    ' kullanarak yolu biçimlendir. Alt klasör adlarını köşeli parantez içine alın, örn. [Work]/YYYY. Şablon ayarlamak için şablon simgesine tıklayın. Şablon klasörü konumunu Dosya işlemleri ve şablonlar > Şablonlar bölümünden ayarlayın.',
                 example: 'Geçerli sözdizimi: {path}'
             },
-            templaterSupport: {
-                installed: '✅ Templater eklentisi tam şablon desteğiyle yüklü.',
-                missing: '⚠️ Şablon desteği için Templater eklentisini yükleyin.'
+            templateEngine: {
+                name: 'Şablon motoru',
+                desc: 'Notebook Navigator not oluştururken şablon dosyalarını işleyen motor. Otomatik, Templater eklentisi yüklüyse <% içeren şablonlar için Templater kullanır. Diğer tüm şablonlar yerleşik motoru kullanır.',
+                options: {
+                    automatic: 'Otomatik',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Templater eklentisi: yüklü',
+                templaterNotInstalled: 'Templater eklentisi: yüklü değil',
+                templaterAutomatic:
+                    'Templater komutları (<%) içeren şablonlar Templater tarafından işlenir. Diğer tüm şablonlar yerleşik motor tarafından işlenir.',
+                templaterUsage: 'Tüm şablonlar Templater tarafından işlenir. Şablon dosyalarındaki yerleşik belirteçler değiştirilmez.',
+                templaterMissingWarning:
+                    'Şablonlardan not oluşturulamıyor. {location} bölümünde {setting} ayarını {automatic} veya {builtin} olarak değiştirin ya da Templater eklentisini yükleyip etkinleştirin.',
+                tokens: 'Yerleşik belirteçler: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} - {{sunday}}, {{cursor}}. {{date}} metnini olduğu gibi bırakmak için {{!date}} yazın.',
+                usage: '{{title}} ve {{date}} gibi şablon belirteçleri not oluşturulurken değiştirilir. Şablon motorunu Dosya işlemleri ve şablonlar > Şablonlar bölümünden yapılandırın.'
+            },
+            showFolderTemplateIcons: {
+                name: 'Klasör şablonu simgelerini göster',
+                desc: 'Kendi klasör şablonu olan klasörleri gezinti bölmesinde bir simgeyle işaretler.'
+            },
+            templateCommands: {
+                name: 'Komutlar',
+                desc: 'Her komut, kendi şablonundan veya klasör şablonundan oluşturulan bir dosya adıyla not oluşturur. Komut paletinden çalıştırın veya bir kısayola ya da düğmeye bağlayın.',
+                empty: 'Komut eklenmedi.',
+                add: 'Komut ekle',
+                edit: 'Düzenle',
+                unnamed: 'Adsız komut',
+                locationCurrent: 'Geçerli klasör',
+                locationFolder: 'Belirli klasör'
+            },
+            folderTemplates: {
+                name: 'Klasör şablonları',
+                desc: 'Yeni notlar kendi klasörünün veya en yakın üst klasörün şablonunu kullanır. Şablonları klasörün bağlam menüsünden ayarlayın. Takvim, günlük not ve klasör notu şablonları önceliklidir.',
+                empty: 'Klasör şablonu ayarlanmadı.',
+                scopeSubfolders: 'Klasör ve alt klasörler',
+                scopeFolder: 'Yalnızca bu klasör'
             },
             calendarWeeklyNotePattern: {
                 name: 'Haftalık notlar',
@@ -1915,7 +1994,7 @@ export const STRINGS_TR = {
             },
             vaultProfiles: {
                 name: 'Kasa profili',
-                desc: 'Profiller dosya türü görünürlüğünü, gizli dosyaları, gizli klasörleri, gizli etiketleri, gizli notlar için özellik kurallarını, kısayolları ve gezinme afişini saklar. Gezinme bölmesi başlığından profilleri değiştir.',
+                desc: 'Profiller dosya türü görünürlüğünü, gizli dosyaları, gizli klasörleri, gizli etiketleri, gizli notlar için özellik kurallarını, kısayolları ve gezinme afişini saklar. Profilleri buradan veya gezinme bölmesindeki kasa profili değiştiriciden değiştir.',
                 defaultName: 'Varsayılan',
                 addButton: 'Profil ekle',
                 editProfilesButton: 'Profilleri düzenle',
@@ -1935,9 +2014,9 @@ export const STRINGS_TR = {
                     duplicateName: 'Profil adı zaten var'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'Kasa başlığı konumu',
-                desc: 'Kasa başlığının gösterileceği yeri seçin.',
+            vaultProfileSwitcher: {
+                name: 'Kasa profili değiştirici',
+                desc: 'Kasa profili değiştiricinin gösterileceği yeri seçin.',
                 options: {
                     header: 'Başlıkta göster',
                     navigation: 'Gezinme bölmesinde göster'
@@ -2046,7 +2125,8 @@ export const STRINGS_TR = {
                 scopes: {
                     folder: 'Klasör: {name}',
                     tag: 'Etiket: #{name}',
-                    property: 'Özellik: {name}'
+                    property: 'Özellik: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2480,7 +2560,7 @@ export const STRINGS_TR = {
             },
             folderNoteTemplate: {
                 name: 'Klasör notu şablonu',
-                desc: 'Klasör notları oluşturulurken kullanılan şablon dosyası. Markdown şablonları Templater kullanabilir. Canvas ve Base şablonları dosya içeriği olarak kopyalanır. Şablon klasörü konumunu Dosya işlemleri > Şablonlar bölümünden ayarlayın.',
+                desc: 'Klasör notları oluşturulurken kullanılan şablon dosyası. Markdown şablonları Templater kullanabilir. Canvas ve Base şablonları dosya içeriği olarak kopyalanır. Şablon klasörü konumunu Dosya işlemleri ve şablonlar > Şablonlar bölümünden ayarlayın.',
                 formatWarning: 'Şablon biçimi seçilen klasör notu türüyle eşleşmelidir: .md, .canvas veya .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2616,10 +2696,32 @@ export const STRINGS_TR = {
                 buttonText: '❤️ Sponsor ol',
                 coffeeButton: '☕️ Bana bir kahve ısmarla'
             },
-            otherPlugins: {
-                name: 'Diğer eklentilerime göz at',
-                betterPaste: 'Yapıştırılan metni, bağlantıları ve görselleri temizler',
-                pixelPerfectImage: 'Tam isabetli görsel boyutlandırma ve daha fazlası'
+            markdownPointBanner: {
+                heading: 'Canva, Keynote veya PowerPoint mi kullanıyorsunuz?',
+                atTop: {
+                    name: 'MarkdownPoint afişini en üstte göster',
+                    desc: 'Kapalıyken afiş, ayarlar sayfasında daha aşağıda görünür.'
+                },
+                credit: "Johan Sanneblad'dan",
+                messages: [
+                    { headline: 'Slaytlarınızı Markdown ile yazın.', subtext: 'Metinleri ve görselleri istediğiniz yere sürükleyin.' },
+                    { headline: "PowerPoint'e ücretsiz bir alternatif.", subtext: 'Paylaşım ve iş birliği de ücretsiz.' },
+                    { headline: 'Apple Motion gibi canlandırın.', subtext: 'Anahtar kareler, yollar ve dönüşümler kullanın.' },
+                    { headline: 'Google Slides gibi birlikte çalışın.', subtext: 'Gerçek zamanlı işaretçiler ve yorumlarla.' },
+                    { headline: 'Tüm slaytların metnini tek yerde görün.', subtext: "View > Outline'ı açıp Markdown olarak düzenleyin." },
+                    { headline: 'Nesneleri Figma gibi hizalayın.', subtext: 'Aralık, boyut ve açıya göre yerine otururlar.' },
+                    { headline: '==Eşittir işaretleriyle== vurgulayın.', subtext: "**Kalın** ve *italik* Obsidian'daki gibi çalışır." },
+                    { headline: 'Sunumu 4K video olarak dışa aktarın.', subtext: "Canlandırmak için After Effects'e ihtiyacınız yok." },
+                    { headline: 'Konuşmacı notları da Markdown.', subtext: 'Slaytlarla aynı dosyada kaydedilir.' },
+                    { headline: 'Her sunum bilgisayarınızda bir klasördür.', subtext: 'Slayt hazırlamak için hesap gerekmez.' },
+                    { headline: 'Slaytlarınıza kod ekleyin.', subtext: 'Kod blokları 21 dil için renklendirilir.' },
+                    { headline: 'Sunumunuzu bir bağlantıyla paylaşın.', subtext: "Ücretsiz bir hesapla web'de yayınlayın." },
+                    { headline: "Sunumlarınızı Git'te takip edin.", subtext: 'Sunumlar Markdown ve YAML metin dosyalarıdır.' },
+                    { headline: 'Metinden akış şemaları oluşturun.', subtext: 'Mermaid kodu yazın ve diyagramı alın.' },
+                    { headline: 'Sunumlarınızı eşitlenen klasörde tutun.', subtext: 'Dropbox, iCloud Drive ve OneDrive ile çalışır.' },
+                    { headline: 'Temalara Obsidian’daki gibi göz atın.', subtext: 'Tüm temalar ücretsiz ve tek tıkla kurulur.' },
+                    { headline: 'Kişisel ve ticari kullanım için ücretsiz.', subtext: 'Mac veya Windows için indirin.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: 'Başlangıçta yeni sürüm kontrolü',

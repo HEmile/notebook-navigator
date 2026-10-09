@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_UK = {
+    language: {
+        downloading: 'Завантаження мов…',
+        continueInEnglish: 'Продовжити англійською',
+        downloadFailed: 'Не вдалося завантажити мови. Notebook Navigator використовує англійську.'
+    },
     // Common UI elements
     common: {
         cancel: 'Скасувати', // Button text for canceling dialogs and operations (English: Cancel)
@@ -88,6 +93,7 @@ export const STRINGS_UK = {
         pinShortcutsAndRecentFiles: 'Закріпити ярлики та останні файли',
         unpinShortcuts: 'Відкріпити ярлики',
         unpinShortcutsAndRecentFiles: 'Відкріпити ярлики та останні файли',
+        resizePinnedShortcuts: 'Змінити розмір закріплених ярликів',
         profileMenuAria: 'Змінити профіль сховища'
     },
 
@@ -113,8 +119,17 @@ export const STRINGS_UK = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'Не вдалося прочитати шаблон щоденної нотатки.',
         createFailed: 'Неможливо створити щоденну нотатку.'
+    },
+
+    templates: {
+        invalidTokens: 'Шаблон «{name}» містить неприпустимі токени: {tokens}',
+        invalidFileNameTokens: 'Формат назви файлу команди «{name}» містить неприпустимі токени: {tokens}',
+        readFailed: 'Не вдалося прочитати шаблон «{name}». Нотатку створено без нього.',
+        folderNotSet: 'Укажіть теку шаблонів у розділі Операції з файлами та шаблони > Шаблони, перш ніж створювати нотатки з шаблонів.',
+        templateNotFound: 'Шаблон «{name}» не знайдено.',
+        folderNotFound: 'Теку «{name}» не знайдено.',
+        templaterMissing: 'Плагін Templater не встановлено. Змініть рушій шаблонів у розділі Операції з файлами та шаблони > Шаблони.'
     },
 
     shortcuts: {
@@ -365,6 +380,9 @@ export const STRINGS_UK = {
             duplicateFolder: 'Дублювати теку',
             searchInFolder: 'Шукати в теці',
             createFolderNote: 'Створити нотатку теки',
+            setFolderTemplate: 'Задати шаблон теки...',
+            changeFolderTemplate: 'Змінити шаблон теки...',
+            removeFolderTemplate: 'Прибрати шаблон теки',
             detachFolderNote: "Від'єднати нотатку теки",
             deleteFolderNote: 'Видалити нотатку теки',
             changeIcon: 'Змінити іконку',
@@ -723,7 +741,28 @@ export const STRINGS_UK = {
                 dismiss: 'для закриття'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'Додати команду',
+            titleEdit: 'Змінити команду',
+            name: 'Назва команди',
+            namePlaceholder: 'Нова нотатка зустрічі',
+            template: 'Шаблон',
+            templateDesc: "Необов'язково. Без шаблону застосовується шаблон теки цільової теки, якщо його задано.",
+            templatePlaceholder: 'Шаблони/Зустріч.md',
+            fileNameFormat: 'Формат назви файлу',
+            fileNameFormatDesc:
+                'Токени на кшталт {{date:YYYYMMDD}} і {{prompt:Назва}} замінюються під час запуску команди. Кожен запит просить значення, і та сама мітка в шаблоні отримує те саме значення. {{number}} на одиницю більший за найбільший номер, який використовують нотатки в теці з тим самим шаблоном назви, а {{number:00}} доповнює його нулями. Шаблон також може використовувати {{number}}, а {{title}} вставляє сформовану назву файлу.',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Назва}}',
+            location: 'Розташування',
+            folder: 'Тека',
+            folderPlaceholder: 'Зустрічі',
+            icon: 'Значок',
+            placement: 'Кнопка',
+            placementNone: 'Немає',
+            placementRibbon: 'Стрічка',
+            placementTabBar: 'Панель вкладок'
+        },
+        templateFile: {
             placeholder: 'Пошук шаблонів...',
             instructions: {
                 navigate: 'для навігації',
@@ -924,6 +963,9 @@ export const STRINGS_UK = {
         openMonthlyNote: 'Відкрити щомісячну нотатку',
         openQuarterlyNote: 'Відкрити квартальну нотатку',
         openYearlyNote: 'Відкрити щорічну нотатку',
+        openNextPeriodicNote: 'Відкрити наступну періодичну нотатку',
+        openPreviousPeriodicNote: 'Відкрити попередню періодичну нотатку',
+        openParentPeriodicNote: 'Відкрити батьківську періодичну нотатку',
         revealFile: 'Показати файл', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: 'Пошук', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Пошук у всьому сховищі', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1112,10 +1154,12 @@ export const STRINGS_UK = {
                 }
             },
             fileOperations: {
-                label: 'Операції з файлами',
-                description: 'Шаблони, підтвердження видалення, вкладення та поведінка при конфлікті переміщення файлів.',
+                label: 'Операції з файлами та шаблони',
+                description:
+                    'Шаблони, команди створення нотаток, підтвердження видалення, вкладення та поведінка під час конфліктів переміщення файлів.',
                 groups: {
-                    templates: 'Шаблони'
+                    templates: 'Шаблони',
+                    templateCommands: 'Команди створення нотаток'
                 }
             },
             frontmatterFields: {
@@ -1176,6 +1220,10 @@ export const STRINGS_UK = {
                     listPane: 'Показувати в панелі списку',
                     hidden: 'Не показувати'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'Розфарбовувати заголовок панелі списку',
+                desc: 'Застосовує колір вибраної папки, мітки або властивості до заголовка панелі списку.'
             },
             defaultSortOrder: {
                 name: 'Порядок сортування за замовчуванням',
@@ -1725,11 +1773,11 @@ export const STRINGS_UK = {
                 name: 'Розташування теки шаблонів',
                 desc: 'Вибір файлу шаблону показує нотатки з цієї теки.',
                 placeholder: 'Шаблони',
-                usage: 'Використовується нотатками календаря та нотатками тек. Налаштуйте шаблони в Календар > Інтеграція з календарем і Теки та нотатки тек > Файли нотаток тек.'
+                usage: 'Шаблони з теки шаблонів використовуються нотатками календаря, нотатками тек, шаблонами тек і командою Нова нотатка з шаблону. Шаблони календаря налаштовуються в Календар > Інтеграція з календарем, шаблони нотаток тек — у Теки та нотатки тек > Файли нотаток тек.'
             },
             calendarDailyNotePattern: {
                 name: 'Щоденні нотатки',
-                desc: 'Формат шляху з використанням формату дати Moment. Беріть назви підтек у квадратні дужки, напр. [Work]/YYYY. Натисніть на іконку шаблону, щоб задати шаблон. Вкажіть розташування теки шаблонів у Операції з файлами > Шаблони.',
+                desc: 'Формат шляху з використанням формату дати Moment. Беріть назви підтек у квадратні дужки, напр. [Work]/YYYY. Натисніть на іконку шаблону, щоб задати шаблон. Вкажіть розташування теки шаблонів у Операції з файлами та шаблони > Шаблони.',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'Шаблон має форматуватися і знову розбиратися як повна дата (рік, місяць, день).'
             },
@@ -1737,15 +1785,47 @@ export const STRINGS_UK = {
                 momentDescPrefix: 'Формат шляху з використанням ',
                 momentLinkText: 'формату дати Moment',
                 momentDescSuffix:
-                    '. Беріть назви підтек у квадратні дужки, напр. [Work]/YYYY. Натисніть на іконку шаблону, щоб задати шаблон. Вкажіть розташування теки шаблонів у Операції з файлами > Шаблони.',
-                templateTokenNoticeLabel: 'Важливо!',
-                templateTokenNotice:
-                    'Підтримка шаблонів потребує плагіна Templater. Вбудовані формати, такі як {{date}} і {{title}}, працюють лише коли для параметра {source} вибрано значення {option}.',
+                    '. Беріть назви підтек у квадратні дужки, напр. [Work]/YYYY. Натисніть на іконку шаблону, щоб задати шаблон. Вкажіть розташування теки шаблонів у Операції з файлами та шаблони > Шаблони.',
                 example: 'Поточний синтаксис: {path}'
             },
-            templaterSupport: {
-                installed: '✅ Плагін Templater встановлено з повною підтримкою шаблонів.',
-                missing: '⚠️ Установіть плагін Templater для підтримки шаблонів.'
+            templateEngine: {
+                name: 'Рушій шаблонів',
+                desc: 'Рушій, що обробляє файли шаблонів під час створення нотаток у Notebook Navigator. Автоматично використовує Templater для шаблонів, що містять <%, якщо плагін Templater встановлено. Усі інші шаблони використовують вбудований рушій.',
+                options: {
+                    automatic: 'Автоматично',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Плагін Templater: встановлено',
+                templaterNotInstalled: 'Плагін Templater: не встановлено',
+                templaterAutomatic:
+                    'Шаблони, що містять команди Templater (<%), обробляються Templater. Усі інші шаблони обробляються вбудованим рушієм.',
+                templaterUsage: 'Усі шаблони обробляються Templater. Вбудовані токени у файлах шаблонів не замінюються.',
+                templaterMissingWarning:
+                    'Нотатки не можна створити з шаблонів. У розділі {location} змініть {setting} на {automatic} або {builtin} чи встановіть і ввімкніть плагін Templater.',
+                tokens: 'Вбудовані токени: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} — {{sunday}}, {{cursor}}. Напишіть {{!date}}, щоб залишити {{date}} як текст.',
+                usage: 'Токени шаблону, як-от {{title}} і {{date}}, замінюються під час створення нотатки. Налаштуйте рушій шаблонів у розділі Операції з файлами та шаблони > Шаблони.'
+            },
+            showFolderTemplateIcons: {
+                name: 'Показувати значки шаблонів тек',
+                desc: 'Позначає значком у панелі навігації теки, що мають власний шаблон.'
+            },
+            templateCommands: {
+                name: 'Команди',
+                desc: 'Кожна команда створює нотатку зі згенерованою назвою файлу з власного шаблону або шаблону теки. Запускайте її з палітри команд або призначте на гарячу клавішу чи кнопку.',
+                empty: 'Команди не додано.',
+                add: 'Додати команду',
+                edit: 'Змінити',
+                unnamed: 'Команда без назви',
+                locationCurrent: 'Поточна тека',
+                locationFolder: 'Указана тека'
+            },
+            folderTemplates: {
+                name: 'Шаблони тек',
+                desc: 'Нові нотатки використовують шаблон своєї теки або найближчої батьківської теки. Шаблони задаються в контекстному меню теки. Шаблони календаря, щоденних нотаток і нотаток тек мають пріоритет.',
+                empty: 'Шаблони тек не задано.',
+                scopeSubfolders: 'Тека та підтеки',
+                scopeFolder: 'Лише ця тека'
             },
             calendarWeeklyNotePattern: {
                 name: 'Щотижневі нотатки',
@@ -1915,7 +1995,7 @@ export const STRINGS_UK = {
             },
             vaultProfiles: {
                 name: 'Профіль сховища',
-                desc: 'Профілі зберігають видимість типів файлів, приховані файли, приховані теки, приховані мітки, правила властивостей для прихованих нотаток, ярлики та банер навігації. Перемикайте профілі із заголовка панелі навігації.',
+                desc: 'Профілі зберігають видимість типів файлів, приховані файли, приховані теки, приховані мітки, правила властивостей для прихованих нотаток, ярлики та банер навігації. Перемикайте профілі тут або через перемикач профілю сховища на панелі навігації.',
                 defaultName: 'За замовчуванням',
                 addButton: 'Додати профіль',
                 editProfilesButton: 'Редагувати профілі',
@@ -1935,9 +2015,9 @@ export const STRINGS_UK = {
                     duplicateName: 'Назва профілю вже існує'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'Розташування назви сховища',
-                desc: 'Виберіть, де відображається назва сховища.',
+            vaultProfileSwitcher: {
+                name: 'Перемикач профілю сховища',
+                desc: 'Виберіть, де відображається перемикач профілю сховища.',
                 options: {
                     header: 'Показати в заголовку',
                     navigation: 'Показати на панелі навігації'
@@ -2046,7 +2126,8 @@ export const STRINGS_UK = {
                 scopes: {
                     folder: 'Папка: {name}',
                     tag: 'Тег: #{name}',
-                    property: 'Властивість: {name}'
+                    property: 'Властивість: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2480,7 +2561,7 @@ export const STRINGS_UK = {
             },
             folderNoteTemplate: {
                 name: 'Шаблон нотатки теки',
-                desc: 'Файл шаблону, який використовується під час створення нотаток тек. Шаблони Markdown можуть використовувати Templater. Шаблони Canvas і Base копіюються як вміст файлу. Вкажіть розташування теки шаблонів у Операції з файлами > Шаблони.',
+                desc: 'Файл шаблону, який використовується під час створення нотаток тек. Шаблони Markdown можуть використовувати Templater. Шаблони Canvas і Base копіюються як вміст файлу. Вкажіть розташування теки шаблонів у Операції з файлами та шаблони > Шаблони.',
                 formatWarning: 'Формат шаблону має відповідати вибраному типу нотатки теки: .md, .canvas або .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2616,10 +2697,32 @@ export const STRINGS_UK = {
                 buttonText: '❤️ Спонсорувати',
                 coffeeButton: '☕️ Купити мені каву'
             },
-            otherPlugins: {
-                name: 'Подивіться мої інші плагіни',
-                betterPaste: 'Очищає вставлений текст, посилання та зображення',
-                pixelPerfectImage: 'Точна зміна розміру зображень та інше'
+            markdownPointBanner: {
+                heading: 'Користуєтеся Canva, Keynote чи PowerPoint?',
+                atTop: {
+                    name: 'Показувати банер MarkdownPoint угорі',
+                    desc: 'Якщо вимкнено, банер показується нижче на сторінці налаштувань.'
+                },
+                credit: 'від Johan Sanneblad',
+                messages: [
+                    { headline: 'Пишіть слайди в Markdown.', subtext: 'Перетягуйте текст і зображення куди потрібно.' },
+                    { headline: 'Безкоштовна заміна PowerPoint.', subtext: 'Спільний доступ і співпраця теж безкоштовні.' },
+                    { headline: 'Анімуйте як у Apple Motion.', subtext: 'Є ключові кадри, траєкторії й морфінг.' },
+                    { headline: 'Співпрацюйте як у Google Slides.', subtext: 'З курсорами й коментарями в реальному часі.' },
+                    { headline: 'Увесь текст слайдів в одному місці.', subtext: 'Відкрийте View > Outline і редагуйте Markdown.' },
+                    { headline: 'Прив’язуйте об’єкти як у Figma.', subtext: 'Вирівнюйте за відступами, розміром і кутом.' },
+                    { headline: 'Виділяйте ==знаками рівності==.', subtext: '**Жирний** і *курсив* працюють як в Obsidian.' },
+                    { headline: 'Експортуйте презентацію у відео 4K.', subtext: 'After Effects для анімації не потрібен.' },
+                    { headline: 'Нотатки доповідача теж у Markdown.', subtext: 'Вони зберігаються в тому ж файлі, що й слайди.' },
+                    { headline: 'Усе зберігається на комп’ютері.', subtext: 'Для роботи зі слайдами акаунт не потрібен.' },
+                    { headline: 'Додавайте код на слайди.', subtext: 'Блоки коду підсвічуються для 21 мови.' },
+                    { headline: 'Діліться презентацією за посиланням.', subtext: 'Публікуйте її онлайн з безкоштовним акаунтом.' },
+                    { headline: 'Відстежуйте зміни презентацій у Git.', subtext: 'Це текстові файли Markdown і YAML.' },
+                    { headline: 'Створюйте блок-схеми з тексту.', subtext: 'Напишіть код Mermaid і отримайте діаграму.' },
+                    { headline: 'Тримайте слайди в хмарній теці.', subtext: 'Працює з Dropbox, iCloud Drive і OneDrive.' },
+                    { headline: 'Обирайте теми як в Obsidian.', subtext: 'Усі теми безкоштовні й ставляться одним кліком.' },
+                    { headline: 'Безкоштовно для дому й роботи.', subtext: 'Завантажте для Mac або Windows.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: 'Перевіряти нову версію при запуску',

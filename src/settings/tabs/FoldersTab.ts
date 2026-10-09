@@ -32,9 +32,9 @@ import { addSettingSyncModeToggle } from '../syncModeToggle';
 import { FilePathInputSuggest } from '../../suggest/FilePathInputSuggest';
 import { FOLDER_NOTE_NAME_PATTERN_TOKEN } from '../../utils/folderNoteName';
 import { normalizeOptionalVaultFilePath } from '../../utils/pathUtils';
-import { getTemplaterCreateNoteFromTemplate } from '../../utils/templaterIntegration';
 import { isFolderNoteTemplateCompatible, isSupportedFolderNoteExtension } from '../../utils/folderNotes';
 import { setElementVisible } from '../dependentSettings';
+import { renderTemplateEngineStatus } from '../templateEngineStatus';
 
 /** Builds native 1.13 setting definitions for folder and folder note settings. */
 export function createFoldersSettingDefinitions(context: SettingsTabContext, heading?: string): SettingDefinitionItem[] {
@@ -124,7 +124,7 @@ export function createFoldersSettingDefinitions(context: SettingsTabContext, hea
                     render: setting => renderFolderNoteTemplateSetting(setting, context)
                 }),
                 createRenderDefinition({
-                    name: 'Templater',
+                    name: 'Templates',
                     searchable: false,
                     render: setting => renderFolderNoteTemplateInfoSetting(setting, context)
                 })
@@ -195,13 +195,10 @@ function renderFolderNoteTemplateSetting(setting: Setting, context: SettingsTabC
     updateWarning();
 }
 
-function renderFolderNoteTemplateInfoSetting(setting: Setting, context: SettingsTabContext): void {
+export function renderFolderNoteTemplateInfoSetting(setting: Setting, context: SettingsTabContext): void {
     setting.setName('').setDesc('');
     setting.settingEl.addClass('nn-setting-info-container');
     setting.descEl.empty();
-
-    const templaterSupportText = getTemplaterCreateNoteFromTemplate(context.app)
-        ? strings.settings.items.templaterSupport.installed
-        : strings.settings.items.templaterSupport.missing;
-    setting.descEl.createEl('strong', { text: templaterSupportText });
+    setting.descEl.createDiv({ text: strings.settings.items.templateEngine.usage });
+    renderTemplateEngineStatus(setting, context, 'folders-template-engine-status');
 }

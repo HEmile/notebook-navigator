@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_PT = {
+    language: {
+        downloading: 'A transferir idiomas…',
+        continueInEnglish: 'Continuar em inglês',
+        downloadFailed: 'A transferência dos idiomas falhou. O Notebook Navigator está a usar inglês.'
+    },
     // Common UI elements
     common: {
         cancel: 'Cancelar', // Button text for canceling dialogs and operations (English: Cancel)
@@ -87,6 +92,7 @@ export const STRINGS_PT = {
         pinShortcutsAndRecentFiles: 'Fixar atalhos e ficheiros recentes',
         unpinShortcuts: 'Desafixar atalhos',
         unpinShortcutsAndRecentFiles: 'Desafixar atalhos e ficheiros recentes',
+        resizePinnedShortcuts: 'Redimensionar atalhos fixados',
         profileMenuAria: 'Alterar perfil do cofre'
     },
 
@@ -112,8 +118,17 @@ export const STRINGS_PT = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'Falha ao ler o modelo de nota diária.',
         createFailed: 'Não foi possível criar a nota diária.'
+    },
+
+    templates: {
+        invalidTokens: 'O modelo "{name}" contém tokens inválidos: {tokens}',
+        invalidFileNameTokens: 'O formato de nome de ficheiro de "{name}" contém tokens inválidos: {tokens}',
+        readFailed: 'Não foi possível ler o modelo "{name}". A nota foi criada sem ele.',
+        folderNotSet: 'Defina a pasta de modelos em Operações de ficheiros e modelos > Modelos antes de criar notas a partir de modelos.',
+        templateNotFound: 'O modelo "{name}" não foi encontrado.',
+        folderNotFound: 'A pasta "{name}" não foi encontrada.',
+        templaterMissing: 'O plugin Templater não está instalado. Altere o motor de modelos em Operações de ficheiros e modelos > Modelos.'
     },
 
     shortcuts: {
@@ -364,6 +379,9 @@ export const STRINGS_PT = {
             duplicateFolder: 'Duplicar pasta',
             searchInFolder: 'Pesquisar na pasta',
             createFolderNote: 'Criar nota de pasta',
+            setFolderTemplate: 'Definir modelo da pasta...',
+            changeFolderTemplate: 'Alterar modelo da pasta...',
+            removeFolderTemplate: 'Remover modelo da pasta',
             detachFolderNote: 'Desvincular nota de pasta',
             deleteFolderNote: 'Eliminar nota de pasta',
             changeIcon: 'Alterar ícone',
@@ -724,7 +742,28 @@ export const STRINGS_PT = {
                 dismiss: 'para fechar'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'Adicionar comando',
+            titleEdit: 'Editar comando',
+            name: 'Nome do comando',
+            namePlaceholder: 'Nova nota de reunião',
+            template: 'Modelo',
+            templateDesc: 'Opcional. Sem modelo, aplica-se o modelo de pasta da pasta de destino, se existir.',
+            templatePlaceholder: 'Modelos/Reunião.md',
+            fileNameFormat: 'Formato do nome do ficheiro',
+            fileNameFormatDesc:
+                'Tokens como {{date:YYYYMMDD}} e {{prompt:Título}} são substituídos ao executar o comando. Cada pedido pede um valor, e a mesma etiqueta no modelo recebe o mesmo valor. {{number}} é um a mais que o maior número usado pelas notas da pasta com o mesmo padrão de nome, e {{number:00}} preenche-o com zeros. O modelo também pode usar {{number}}, e {{title}} insere o nome de ficheiro gerado.',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Título}}',
+            location: 'Localização',
+            folder: 'Pasta',
+            folderPlaceholder: 'Reuniões',
+            icon: 'Ícone',
+            placement: 'Botão',
+            placementNone: 'Nenhum',
+            placementRibbon: 'Faixa lateral',
+            placementTabBar: 'Barra de separadores'
+        },
+        templateFile: {
             placeholder: 'Pesquisar modelos...',
             instructions: {
                 navigate: 'para navegar',
@@ -926,6 +965,9 @@ export const STRINGS_PT = {
         openMonthlyNote: 'Abrir nota mensal',
         openQuarterlyNote: 'Abrir nota trimestral',
         openYearlyNote: 'Abrir nota anual',
+        openNextPeriodicNote: 'Abrir nota periódica seguinte',
+        openPreviousPeriodicNote: 'Abrir nota periódica anterior',
+        openParentPeriodicNote: 'Abrir nota periódica superior',
         revealFile: 'Revelar ficheiro', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: 'Pesquisar', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Pesquisar em todo o cofre', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1114,10 +1156,12 @@ export const STRINGS_PT = {
                 }
             },
             fileOperations: {
-                label: 'Operações de ficheiros',
-                description: 'Modelos, confirmações de eliminação, anexos e comportamento de conflitos ao mover ficheiros.',
+                label: 'Operações de ficheiros e modelos',
+                description:
+                    'Modelos, comandos de criação de notas, confirmações de eliminação, anexos e comportamento em conflitos ao mover ficheiros.',
                 groups: {
-                    templates: 'Modelos'
+                    templates: 'Modelos',
+                    templateCommands: 'Comandos de criação de notas'
                 }
             },
             frontmatterFields: {
@@ -1178,6 +1222,10 @@ export const STRINGS_PT = {
                     listPane: 'Mostrar no painel de lista',
                     hidden: 'Não mostrar'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'Colorir o título do painel de lista',
+                desc: 'Aplica a cor da pasta, etiqueta ou propriedade selecionada ao título do painel de lista.'
             },
             defaultSortOrder: {
                 name: 'Ordem de ordenação predefinida',
@@ -1727,11 +1775,11 @@ export const STRINGS_PT = {
                 name: 'Localização da pasta de modelos',
                 desc: 'O seletor de ficheiros de modelo mostra notas desta pasta.',
                 placeholder: 'Modelos',
-                usage: 'Usada por notas de calendário e notas de pasta. Configure os modelos em Calendário > Integração do calendário e Pastas e notas de pasta > Ficheiros de notas de pasta.'
+                usage: 'Os modelos na pasta de modelos são usados por notas de calendário, notas de pasta, modelos de pasta e Nova nota a partir de modelo. Configure os modelos de calendário em Calendário > Integração do calendário e os de notas de pasta em Pastas e notas de pasta > Ficheiros de notas de pasta.'
             },
             calendarDailyNotePattern: {
                 name: 'Notas diárias',
-                desc: 'Formatar caminho usando formato de data Moment. Coloque nomes de subpastas entre colchetes, ex. [Work]/YYYY. Clique no ícone de modelo para definir um modelo. Definir localização da pasta de modelos em Operações de ficheiros > Modelos.',
+                desc: 'Formatar caminho usando formato de data Moment. Coloque nomes de subpastas entre colchetes, ex. [Work]/YYYY. Clique no ícone de modelo para definir um modelo. Definir localização da pasta de modelos em Operações de ficheiros e modelos > Modelos.',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'O padrão deve ser formatado e analisado novamente como uma data completa (ano, mês, dia).'
             },
@@ -1739,15 +1787,48 @@ export const STRINGS_PT = {
                 momentDescPrefix: 'Formatar caminho usando ',
                 momentLinkText: 'formato de data Moment',
                 momentDescSuffix:
-                    '. Coloque nomes de subpastas entre colchetes, ex. [Work]/YYYY. Clique no ícone de modelo para definir um modelo. Definir localização da pasta de modelos em Operações de ficheiros > Modelos.',
-                templateTokenNoticeLabel: 'Importante!',
-                templateTokenNotice:
-                    'O suporte de modelos requer o plug-in Templater. Formatos integrados como {{date}} e {{title}} só funcionam quando {source} está definido como {option}.',
+                    '. Coloque nomes de subpastas entre colchetes, ex. [Work]/YYYY. Clique no ícone de modelo para definir um modelo. Definir localização da pasta de modelos em Operações de ficheiros e modelos > Modelos.',
                 example: 'Sintaxe atual: {path}'
             },
-            templaterSupport: {
-                installed: '✅ O plug-in Templater está instalado com suporte completo de modelos.',
-                missing: '⚠️ Instale o plug-in Templater para suporte de modelos.'
+            templateEngine: {
+                name: 'Motor de modelos',
+                desc: 'Motor que processa os ficheiros de modelo quando o Notebook Navigator cria notas. Automático usa o Templater para modelos que contêm <% quando o plugin Templater está instalado. Todos os outros modelos usam o motor integrado.',
+                options: {
+                    automatic: 'Automático',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Plugin Templater: instalado',
+                templaterNotInstalled: 'Plugin Templater: não instalado',
+                templaterAutomatic:
+                    'Os modelos que contêm comandos do Templater (<%) são processados pelo Templater. Todos os outros modelos são processados pelo motor integrado.',
+                templaterUsage:
+                    'Todos os modelos são processados pelo Templater. Os tokens integrados nos ficheiros de modelo não são substituídos.',
+                templaterMissingWarning:
+                    'Não é possível criar notas a partir de modelos. Altere {setting} para {automatic} ou {builtin} em {location}, ou instale e ative o plugin Templater.',
+                tokens: 'Tokens integrados: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} a {{sunday}}, {{cursor}}. Escreva {{!date}} para manter {{date}} como texto.',
+                usage: 'Tokens de modelo como {{title}} e {{date}} são substituídos ao criar a nota. Configure o motor de modelos em Operações de ficheiros e modelos > Modelos.'
+            },
+            showFolderTemplateIcons: {
+                name: 'Mostrar ícones de modelo de pasta',
+                desc: 'Marca com um ícone no painel de navegação as pastas que têm o seu próprio modelo.'
+            },
+            templateCommands: {
+                name: 'Comandos',
+                desc: 'Cada comando cria uma nota com um nome de ficheiro gerado, a partir do próprio modelo ou do modelo de pasta. Execute-o a partir da paleta de comandos ou associe-o a um atalho ou botão.',
+                empty: 'Nenhum comando adicionado.',
+                add: 'Adicionar comando',
+                edit: 'Editar',
+                unnamed: 'Comando sem nome',
+                locationCurrent: 'Pasta atual',
+                locationFolder: 'Pasta específica'
+            },
+            folderTemplates: {
+                name: 'Modelos de pasta',
+                desc: 'Novas notas usam o modelo da sua pasta ou da pasta superior mais próxima. Defina os modelos no menu de contexto da pasta. Modelos de calendário, notas diárias e notas de pasta têm prioridade.',
+                empty: 'Nenhum modelo de pasta definido.',
+                scopeSubfolders: 'Pasta e subpastas',
+                scopeFolder: 'Apenas esta pasta'
             },
             calendarWeeklyNotePattern: {
                 name: 'Notas semanais',
@@ -1919,7 +2000,7 @@ export const STRINGS_PT = {
             },
             vaultProfiles: {
                 name: 'Perfil do cofre',
-                desc: 'Os perfis armazenam visibilidade de tipos de ficheiro, ficheiros ocultos, pastas ocultas, etiquetas ocultas, regras de propriedades para notas ocultas, atalhos e banner de navegação. Mude de perfis a partir do cabeçalho do painel de navegação.',
+                desc: 'Os perfis armazenam visibilidade de tipos de ficheiro, ficheiros ocultos, pastas ocultas, etiquetas ocultas, regras de propriedades para notas ocultas, atalhos e banner de navegação. Mude de perfil aqui ou a partir do seletor de perfil do cofre no painel de navegação.',
                 defaultName: 'Predefinido',
                 addButton: 'Adicionar perfil',
                 editProfilesButton: 'Editar perfis',
@@ -1939,9 +2020,9 @@ export const STRINGS_PT = {
                     duplicateName: 'Nome de perfil já existe'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'Posição do título do cofre',
-                desc: 'Escolha onde o título do cofre é mostrado.',
+            vaultProfileSwitcher: {
+                name: 'Seletor de perfil do cofre',
+                desc: 'Escolha onde o seletor de perfil do cofre é mostrado.',
                 options: {
                     header: 'Mostrar no cabeçalho',
                     navigation: 'Mostrar no painel de navegação'
@@ -2051,7 +2132,8 @@ export const STRINGS_PT = {
                 scopes: {
                     folder: 'Pasta: {name}',
                     tag: 'Etiqueta: #{name}',
-                    property: 'Propriedade: {name}'
+                    property: 'Propriedade: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2485,7 +2567,7 @@ export const STRINGS_PT = {
             },
             folderNoteTemplate: {
                 name: 'Modelo de nota de pasta',
-                desc: 'Ficheiro de modelo usado ao criar notas de pasta. Os modelos Markdown podem usar Templater. Os modelos Canvas e Base são copiados como conteúdo do ficheiro. Definir localização da pasta de modelos em Operações de ficheiros > Modelos.',
+                desc: 'Ficheiro de modelo usado ao criar notas de pasta. Os modelos Markdown podem usar Templater. Os modelos Canvas e Base são copiados como conteúdo do ficheiro. Definir localização da pasta de modelos em Operações de ficheiros e modelos > Modelos.',
                 formatWarning: 'O formato do modelo deve corresponder ao tipo de nota de pasta selecionado: .md, .canvas ou .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2621,10 +2703,32 @@ export const STRINGS_PT = {
                 buttonText: '❤️ Patrocinar',
                 coffeeButton: '☕️ Compre-me um café'
             },
-            otherPlugins: {
-                name: 'Veja os meus outros plugins',
-                betterPaste: 'Limpa texto, ligações e imagens colados',
-                pixelPerfectImage: 'Redimensionamento exato de imagens e mais'
+            markdownPointBanner: {
+                heading: 'Usa o Canva, o Keynote ou o PowerPoint?',
+                atTop: {
+                    name: 'Mostrar o banner do MarkdownPoint no topo',
+                    desc: 'Quando desativado, o banner aparece mais abaixo na página de definições.'
+                },
+                credit: 'por Johan Sanneblad',
+                messages: [
+                    { headline: 'Escreva diapositivos em Markdown.', subtext: 'Arraste texto e imagens para onde quiser.' },
+                    { headline: 'Uma alternativa gratuita ao PowerPoint.', subtext: 'A partilha e a colaboração também são gratuitas.' },
+                    { headline: 'Anime como no Apple Motion.', subtext: 'Use keyframes, trajetórias e morphs.' },
+                    { headline: 'Colabore como no Google Slides.', subtext: 'Com ponteiros e comentários em tempo real.' },
+                    { headline: 'Veja todo o texto num só sítio.', subtext: 'Abra View > Outline e edite em Markdown.' },
+                    { headline: 'Encaixe objetos como no Figma.', subtext: 'Alinhe por espaçamento, tamanho e ângulo.' },
+                    { headline: 'Realce com ==sinais de igual==.', subtext: '**Negrito** e *itálico* são como no Obsidian.' },
+                    { headline: 'Exporte a apresentação em vídeo 4K.', subtext: 'Não precisa do After Effects para a animar.' },
+                    { headline: 'As notas do orador são Markdown.', subtext: 'Ficam no mesmo ficheiro que os diapositivos.' },
+                    { headline: 'Tudo fica guardado no seu computador.', subtext: 'Não precisa de conta para criar diapositivos.' },
+                    { headline: 'Ponha código nos seus diapositivos.', subtext: 'O código é realçado em 21 linguagens.' },
+                    { headline: 'Partilhe com uma ligação.', subtext: 'Publique-a online com uma conta gratuita.' },
+                    { headline: 'Controle versões no Git.', subtext: 'São ficheiros de texto Markdown e YAML.' },
+                    { headline: 'Crie fluxogramas a partir de texto.', subtext: 'Escreva código Mermaid e obtenha um diagrama.' },
+                    { headline: 'Guarde tudo numa pasta sincronizada.', subtext: 'Funciona com Dropbox, iCloud Drive e OneDrive.' },
+                    { headline: 'Explore temas como no Obsidian.', subtext: 'São gratuitos e instalam-se com um clique.' },
+                    { headline: 'Gratuito para uso pessoal e comercial.', subtext: 'Descarregue-o para Mac ou Windows.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: 'Verificar nova versão ao iniciar',

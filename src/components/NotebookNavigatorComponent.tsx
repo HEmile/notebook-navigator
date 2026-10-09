@@ -18,7 +18,7 @@
 
 // src/components/NotebookNavigatorComponent.tsx
 import React, { useEffect, useImperativeHandle, forwardRef, useRef, useState, useCallback, useLayoutEffect, useMemo } from 'react';
-import { TFile, TFolder } from 'obsidian';
+import { Platform, TFile, TFolder } from 'obsidian';
 import { useExpansionState } from '../context/ExpansionContext';
 import { useSelectionState, useSelectionDispatch, resolvePrimarySelectedFile } from '../context/SelectionContext';
 import { useServices } from '../context/ServicesContext';
@@ -49,13 +49,19 @@ import {
     type BackgroundMode,
     type DualPaneOrientation
 } from '../types';
-import { getSelectedPath, getFilesForSelection, orderFilesByReference } from '../utils/selectionUtils';
+import {
+    getSelectedPath,
+    createMovedFileListMembershipCheck,
+    orderFilesByReference,
+    resolveShortcutTargetFromNavigatorSelection,
+    type ShortcutCommandContext
+} from '../utils/selectionUtils';
 import { normalizeNavigationPath } from '../utils/navigationIndex';
 import { createIndexMap } from '../utils/arrayUtils';
 import { deleteSelectedFiles } from '../utils/deleteOperations';
 import { calculateCompactListMetrics } from '../utils/listPaneMetrics';
 import { getNavigationPaneSizing } from '../utils/paneSizing';
-import { getAndroidFontScale } from '../utils/androidFontScale';
+import { getAndroidFontScale, propagateAndroidFontCompensationToMobileRoot } from '../utils/androidFontScale';
 import {
     getBackgroundClasses,
     getSinglePaneEntryView,
@@ -65,7 +71,7 @@ import {
 } from '../utils/paneLayout';
 import { confirmRemoveAllTagsFromFiles, openAddTagToFilesModal, removeTagFromFilesWithPrompt } from '../utils/tagModalHelpers';
 import { normalizeTagPath } from '../utils/tagUtils';
-import { getTemplaterCreateNewNoteFromTemplate } from '../utils/templaterIntegration';
+import { createNoteFromTemplateInFolder } from '../utils/fileCreationUtils';
 import { normalizePropertyNodeId } from '../utils/propertyTree';
 import { collectFileMenuPropertyActions } from '../utils/propertyMenuActions';
 import { openMergeNotesModal } from '../utils/mergeNotesModal';
@@ -157,7 +163,7 @@ export interface NotebookNavigatorHandle {
     moveSelectedFiles: () => Promise<void>;
     navigateBack: () => Promise<boolean>;
     navigateForward: () => Promise<boolean>;
-    addShortcutForCurrentSelection: () => Promise<void>;
+    addShortcutForCurrentSelection: (context: ShortcutCommandContext) => Promise<void>;
     navigateToFolder: (folder: TFolder | string, options?: NavigateToFolderOptions) => boolean;
     navigateToTag: (tagPath: string, options?: NavigateToTagOptions) => string | null;
     navigateToProperty: (propertyNodeId: string, options?: NavigateToPropertyOptions) => string | null;
@@ -249,10 +255,12 @@ export const NotebookNavigatorComponent = React.memo(
             noteShortcutKeysByPath,
             tagShortcutKeysByPath,
             propertyShortcutKeysByNodeId,
+            topicShortcutKeysByName,
             addFolderShortcut,
             addNoteShortcut,
             addTagShortcut,
             addPropertyShortcut,
+            addTopicShortcut,
             removeShortcut,
             hydratedShortcuts
         } = useShortcuts();
@@ -396,6 +404,14 @@ export const NotebookNavigatorComponent = React.memo(
         // Ref callback that stores the navigator root element
         const containerCallbackRef = useCallback((node: HTMLDivElement | null) => {
             containerRef.current = node;
+            if (Platform.isAndroidApp && node) {
+                const viewContainer = node.closest('.notebook-navigator');
+                if (viewContainer instanceof HTMLElement) {
+                    // Language and storage loading can delay this mount. Copy compensation before layout effects
+                    // measure the real navigator, because the mobile root overrides inherited font-size variables.
+                    propagateAndroidFontCompensationToMobileRoot(viewContainer);
+                }
+            }
         }, []);
 
         useEffect(() => {
@@ -1060,12 +1076,7 @@ export const NotebookNavigatorComponent = React.memo(
                         return;
                     }
 
-                    const createNewNoteFromTemplate = getTemplaterCreateNewNoteFromTemplate(app);
-                    if (!createNewNoteFromTemplate) {
-                        return;
-                    }
-
-                    await createNewNoteFromTemplate(selectionState.selectedFolder);
+                    await createNoteFromTemplateInFolder(app, settings, selectionState.selectedFolder);
                 },
                 moveSelectedFiles: async () => {
                     // Get selected files
@@ -1076,27 +1087,22 @@ export const NotebookNavigatorComponent = React.memo(
                         return;
                     }
 
-                    // Get all files in the current view for smart selection
-                    const allFiles = getFilesForSelection(
-                        selectionState,
-                        settings,
-                        {
-                            includeDescendantNotes: uxRef.current.includeDescendantNotes,
-                            showHiddenItems: uxRef.current.showHiddenItems
-                        },
-                        app,
-                        tagTreeService,
-                        propertyTreeService
-                    );
-
                     // Move files with modal
                     await fileSystemOps.moveFilesWithModal(selectedFiles, {
-                        selectedFile: selectionState.selectedFile,
                         dispatch: selectionDispatch,
-                        allFiles
+                        isFileInCurrentList: createMovedFileListMembershipCheck(
+                            selectionState,
+                            settings,
+                            {
+                                includeDescendantNotes: uxRef.current.includeDescendantNotes,
+                                showHiddenItems: uxRef.current.showHiddenItems
+                            },
+                            uxRef.current.searchActive,
+                            app
+                        )
                     });
                 },
-                addShortcutForCurrentSelection: async () => {
+                addShortcutForCurrentSelection: async ({ useNavigatorSelection, activeFile }: ShortcutCommandContext) => {
                     const toggleShortcut = async (
                         existingShortcutKey: string | undefined,
                         addShortcut: () => Promise<boolean>
@@ -1109,53 +1115,68 @@ export const NotebookNavigatorComponent = React.memo(
                         await addShortcut();
                     };
 
-                    // Try selected files first
-                    const selectedFiles = getSelectedFiles();
-                    if (selectedFiles.length > 0) {
-                        const selectedFilePath = selectedFiles[0].path;
-                        await toggleShortcut(noteShortcutKeysByPath.get(selectedFilePath), () => addNoteShortcut(selectedFilePath));
+                    const toggleNoteShortcut = (path: string): Promise<void> =>
+                        toggleShortcut(noteShortcutKeysByPath.get(path), () => addNoteShortcut(path));
+
+                    // The command handler decides before revealing the navigator whether the user was
+                    // working in it. Outside the navigator the note open in the editor is the target,
+                    // because the navigator selection can be a folder or tag chosen earlier that has
+                    // nothing to do with the note on screen.
+                    if (!useNavigatorSelection) {
+                        if (activeFile) {
+                            await toggleNoteShortcut(activeFile.path);
+                            return;
+                        }
+                        showNotice(strings.common.noSelection, { variant: 'warning' });
                         return;
                     }
 
-                    // Try selected tag
-                    if (selectionState.selectedTag) {
-                        const selectedTagPath = selectionState.selectedTag;
-                        const normalizedTagPath = normalizeTagPath(selectedTagPath);
-                        await toggleShortcut(normalizedTagPath ? tagShortcutKeysByPath.get(normalizedTagPath) : undefined, () =>
-                            addTagShortcut(selectedTagPath)
-                        );
+                    // Single pane shows one pane at a time, so the visible pane is the one the user
+                    // works in. Dual pane uses the focused pane, with search focus counting as the list.
+                    const focusedContentPane: ContentPane = uiState.focusedPane === 'navigation' ? 'navigation' : 'files';
+                    const activePane = uiState.singlePane ? uiState.currentSinglePaneView : focusedContentPane;
+                    const target = resolveShortcutTargetFromNavigatorSelection({
+                        activePane,
+                        selectedFilePath: getSelectedFiles()[0]?.path ?? null,
+                        selectedFolderPath: selectionState.selectedFolder?.path ?? null,
+                        selectedTag: selectionState.selectedTag,
+                        selectedProperty: selectionState.selectedProperty,
+                        selectedTopicPath: selectionState.selectedTopicPath
+                    });
+
+                    if (!target) {
+                        showNotice(strings.common.noSelection, { variant: 'warning' });
                         return;
                     }
 
-                    // Try selected property
-                    if (selectionState.selectedProperty) {
-                        const selectedPropertyNodeId = selectionState.selectedProperty;
-                        const normalizedNodeId =
-                            selectedPropertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
-                                ? PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
-                                : normalizePropertyNodeId(selectedPropertyNodeId);
-                        await toggleShortcut(normalizedNodeId ? propertyShortcutKeysByNodeId.get(normalizedNodeId) : undefined, () =>
-                            addPropertyShortcut(selectedPropertyNodeId)
-                        );
-                        return;
+                    switch (target.type) {
+                        case 'note':
+                            await toggleNoteShortcut(target.path);
+                            return;
+                        case 'tag': {
+                            const normalizedTagPath = normalizeTagPath(target.tagPath);
+                            await toggleShortcut(normalizedTagPath ? tagShortcutKeysByPath.get(normalizedTagPath) : undefined, () =>
+                                addTagShortcut(target.tagPath)
+                            );
+                            return;
+                        }
+                        case 'property': {
+                            const normalizedNodeId =
+                                target.nodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
+                                    ? PROPERTIES_ROOT_VIRTUAL_FOLDER_ID
+                                    : normalizePropertyNodeId(target.nodeId);
+                            await toggleShortcut(normalizedNodeId ? propertyShortcutKeysByNodeId.get(normalizedNodeId) : undefined, () =>
+                                addPropertyShortcut(target.nodeId)
+                            );
+                            return;
+                        }
+                        case 'topic':
+                            await toggleShortcut(topicShortcutKeysByName.get(target.topicName), () => addTopicShortcut(target.topicName));
+                            return;
+                        case 'folder':
+                            await toggleShortcut(folderShortcutKeysByPath.get(target.path), () => addFolderShortcut(target.path));
+                            return;
                     }
-
-                    // Try selected folder
-                    if (selectionState.selectedFolder) {
-                        const selectedFolderPath = selectionState.selectedFolder.path;
-                        await toggleShortcut(folderShortcutKeysByPath.get(selectedFolderPath), () => addFolderShortcut(selectedFolderPath));
-                        return;
-                    }
-
-                    // Fall back to active file
-                    const activeFile = app.workspace.getActiveFile();
-                    if (activeFile) {
-                        await toggleShortcut(noteShortcutKeysByPath.get(activeFile.path), () => addNoteShortcut(activeFile.path));
-                        return;
-                    }
-
-                    // Show error if nothing is selected
-                    showNotice(strings.common.noSelection, { variant: 'warning' });
                 },
                 navigateToFolder,
                 navigateToTag,
@@ -1340,6 +1361,7 @@ export const NotebookNavigatorComponent = React.memo(
             navigateSelectionHistory,
             uiState.singlePane,
             uiState.currentSinglePaneView,
+            uiState.focusedPane,
             preserveNavigationFocusForModal,
             app,
             settings,
@@ -1360,6 +1382,8 @@ export const NotebookNavigatorComponent = React.memo(
             addTagShortcut,
             propertyShortcutKeysByNodeId,
             addPropertyShortcut,
+            topicShortcutKeysByName,
+            addTopicShortcut,
             removeShortcut,
             handleModifySearchWithDateFilter
         ]);

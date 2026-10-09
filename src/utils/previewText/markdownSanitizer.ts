@@ -43,7 +43,17 @@ const BASE_PATTERNS = [
     /`[^`]+`/.source,
     /!\[.*?\]\([^)]+\)/.source,
     /!\[\[.*?\]\]/.source,
-    /#[\w\-/]+(?=\s|$)/.source,
+    // Consumes wiki links so the tag and formatting patterns never match inside them. Obsidian
+    // renders `[[Page|x #tag **y**]]` with the alias as literal link text. The closing `]` is left
+    // unconsumed because the italic patterns use it as their prefix character; otherwise
+    // `[[Page]]*em*` keeps its `*` markers.
+    /\[\[[^\]\n\r]*\](?=\])/.source,
+    // Obsidian parses `#` as a tag only when the value is not all digits (`#860` is text), and
+    // only at a line start, after whitespace, or right after closing inline syntax. This pattern
+    // covers the line start and whitespace cases, so `page#section` stays as text; a tag glued to
+    // closing syntax, such as `**x**#tag`, also stays as text. The whitespace prefix is captured
+    // so the callback can keep it.
+    /(^|\s)#(?!\d+(?=\s|$))[\w\-/]+(?=\s|$)/.source,
     /\\([*_~`])/.source,
     /\*\*\*((?:(?!\*\*\*).)+)\*\*\*/.source,
     /___((?:(?!___).)+)___/.source,
@@ -79,6 +89,7 @@ const REGEX_STRIP_INLINE_MARKDOWN = new RegExp(BASE_PATTERNS.filter(pattern => !
 const REGEX_BLOCKQUOTE_MARKERS = /^\s{0,3}(?:>\s*)+/gm;
 const REGEX_MARKDOWN_HARD_ESCAPES = /\\([\u0021-\u002F\u003A-\u0040\u005B-\u0060\u007B-\u007E])/g;
 const REGEX_MARKDOWN_HARD_LINE_BREAK = /\\\r?\n/g;
+const REGEX_OBSIDIAN_HIGHLIGHT_COLOR_MARKER = /^[🔴🟠🟡🟢🔵🟣]/u;
 
 function protectMarkdownHardEscapes(text: string): { protectedText: string; escapeSegments: string[]; escapeBase: string } {
     if (!text.includes('\\')) {
@@ -327,6 +338,13 @@ export function stripMarkdownSyntax(
             return '';
         }
 
+        // Wiki links are returned unchanged so replaceWikiLinkSyntax extracts the display text
+        // after the strip passes. The whole match is checked because a markdown link match can
+        // also start with `[[`, as in `[[x](url)`, and must fall through so its capture is returned.
+        if (/^\[\[[^\]\n\r]*\]$/.test(match)) {
+            return match;
+        }
+
         // Removes bare callout markers and matches from other patterns that contain a callout
         // marker, such as `[!note](url)` link matches.
         if (match.match(/\[![\w-]+\]/)) {
@@ -344,8 +362,12 @@ export function stripMarkdownSyntax(
             return ' ';
         }
 
-        if (match.match(/#[\w\-/]+(?=\s|$)/)) {
-            return '';
+        // Only a match of the tag pattern itself is a tag. Links, bold spans, and headings can
+        // contain `#tag` text; they must fall through so their capture is returned, otherwise the
+        // whole link or span is dropped. The next pass then strips just the tag.
+        const tagMatch = match.match(/^(\s?)#[\w\-/]+$/);
+        if (tagMatch) {
+            return tagMatch[1] ?? '';
         }
 
         const trimmedFootnoteMatch = match.trimStart();
@@ -393,10 +415,16 @@ export function stripMarkdownSyntax(
             return '';
         }
 
+        // Composite patterns may open bold before the highlight. Check the source position because a
+        // circle at the start of a nested capture is not color syntax unless it directly follows `==`.
+        const highlightContentOffset = match.startsWith('==') ? 2 : match.startsWith('**==') || match.startsWith('__==') ? 4 : -1;
+        const hasHighlightColorMarker =
+            highlightContentOffset >= 0 && REGEX_OBSIDIAN_HIGHLIGHT_COLOR_MARKER.test(match.slice(highlightContentOffset));
+
         for (let i = 0; i < captureLength; i += 1) {
             const capture = args[i];
             if (typeof capture === 'string') {
-                return capture;
+                return hasHighlightColorMarker ? capture.replace(REGEX_OBSIDIAN_HIGHLIGHT_COLOR_MARKER, '') : capture;
             }
         }
 

@@ -106,6 +106,87 @@ export interface ReleaseNote {
  */
 const RELEASE_NOTES: ReleaseNote[] = [
     {
+        version: '3.4.4',
+        date: '2026-10-12',
+        showOnUpdate: true,
+        banner: '3.4.4.jpg',
+        info: "Thank you to everyone who bought me a coffee! For the past year I have been building a new presentation app. I give two or three presentations every week at work, and I never really liked Keynote or PowerPoint. I tried Canva, but it locks your slides in, and I tried Slidev, but found it clumsy, cluttered and limited. So I made my own: MarkdownPoint.\n\nIt's out now, and it's free for real, for both personal and commercial use. Desktop apps for Mac and Windows, with no tracking, no in-app purchases and no subscriptions. Just free. I spent all the coffee money on it, and I'll keep sharing and collaboration free for as long as I can afford it. Give it a try at [markdownpoint.com](https://markdownpoint.com) and let me know if you love it as much as I do!",
+        new: [
+            'New banner at the top of the settings page for MarkdownPoint, my free presentation app for Mac and Windows, which you can move further down the page by turning off ==Show MarkdownPoint banner at the top== in Advanced.',
+            'New commands `Open next periodic note` and `Open previous periodic note` open the note for the next or previous day, week, month, quarter or year from the active periodic note, and create the note when it is missing.',
+            'New command `Open parent periodic note` opens the weekly note of the active daily note, the monthly note of a weekly note, and so on up to the yearly note.',
+            'Tags and properties can now be grouped by `Folder` in the sort menu, which lists each note under its parent folder.'
+        ],
+        improved: [
+            'Increased the maximum of ==Item height== in the navigation pane and ==Compact item height== in the list pane from 28 to 40 pixels.',
+            'Added a sync toggle to ==Default list mode==, so you can use compact mode on your phone to show more notes at a time and keep standard mode on your desktop.'
+        ],
+        fixed: [
+            'Searching the Vault tab of the icon picker now lists the closest matches first, so SVG icons with short file names no longer drop out of the 50 shown results [#1526](https://github.com/johansan/notebook-navigator/issues/1526).',
+            'The icon picker now shows how many icons matched when a search on the Vault, Lucide, or Emoji tab has more than 50 results.',
+            'Tag, date, folder, and file suggestions now list the closest matches first.',
+            'Feature images larger than 60 megapixels are now skipped on mobile instead of reloading Obsidian while thumbnails are generated [#1527](https://github.com/johansan/notebook-navigator/issues/1527).',
+            'Icons that other plugins add to Obsidian, such as Custom Icons, are now saved to frontmatter when picked, shown when set in frontmatter, and kept in ==File name icon map==, ==File type icon map==, and ==Interface icons== [#1531](https://github.com/johansan/notebook-navigator/issues/1531).',
+            'Icons from another plugin now show in Notebook Navigator menus and in the calendar tab header.'
+        ]
+    },
+    {
+        version: '3.4.3',
+        date: '2026-09-24',
+        showOnUpdate: true,
+        banner: '3.4.3.jpg',
+        info: 'We just reached 1 million downloads! What a milestone! Thank you for using Notebook Navigator and for all your support and feedback!',
+        new: [
+            'New `{{number}}` token for the file name format of ==Create note commands==: `Note {{number:00}}` names notes `Note 01`, `Note 02` and so on, continuing from the highest number already used by notes with the same name pattern in the folder, and templates can insert the same number with `{{number}}`.'
+        ],
+        improved: [
+            'Moved all translations except English out of the plugin into a language pack that is downloaded once per plugin version and cached on the device, **reducing the plugin file size from 4.9 MB to 2.6 MB**, keeping it well below the 5 MB file size limit of Obsidian Sync Standard, and improving startup times.'
+        ],
+        changed: [
+            'Changed ==Color list pane title== to apply the color to the title text even when ==Apply color to icons only== is enabled.'
+        ],
+        fixed: [
+            'Switching between a Base folder note and another folder note in the right sidebar added a new pane each time and has been fixed [#1498](https://github.com/johansan/notebook-navigator/issues/1498).',
+            '`{{cursor}}` in a template did not move the cursor in new notes and has been fixed [#1501](https://github.com/johansan/notebook-navigator/issues/1501).',
+            'Templater `<% tp.file.cursor() %>` was left as text in notes created by ==Create note commands==, folder notes, and calendar notes and has been fixed [#1510](https://github.com/johansan/notebook-navigator/issues/1510).',
+            'Middle-clicking shortcuts, recent notes, folder notes, and calendar notes on Linux pasted the primary selection into the note and has been fixed [#1505](https://github.com/johansan/notebook-navigator/issues/1505).',
+            'Tag and property rainbow colors shifted on each selection with ==Filter tags by selection== or ==Filter properties by selection== enabled and did not match the list pane pills, which has been fixed.',
+            '`Add to shortcuts` from the command palette added a previously selected folder or tag instead of the open note and has been fixed [#1511](https://github.com/johansan/notebook-navigator/issues/1511).',
+            'Preview text left out links and formatted text containing a hashtag, such as `Issue #860`, and removed hashtags that Obsidian does not treat as tags, which has been fixed [#1514](https://github.com/johansan/notebook-navigator/issues/1514).'
+        ]
+    },
+    {
+        version: '3.4.1',
+        date: '2026-09-14',
+        showOnUpdate: true,
+        banner: '3.4.1.jpg',
+        info: 'Many users told me they do not want to install [Templater](https://community.obsidian.md/plugins/templater-obsidian), [QuickAdd](https://community.obsidian.md/plugins/quickadd) or [Commander](https://community.obsidian.md/plugins/cmdr) but would still want the functionality from those plugins. Notebook Navigator 3.4 adds important parts of those plugins to its core: a customizable built-in template engine (Templater), new create note commands (QuickAdd) and the option to place commands to the ribbon or tab bar buttons (Commander). Thank you for using Notebook Navigator!',
+        new: [
+            'A new customizable built-in template engine for calendar notes, folder notes and `New note from template` that replaces tokens such as `{{title}}`, `{{date}}`, `{{date+1d}}`, `{{yesterday}}`, `{{monday}}`, `{{time}}`, `{{now}}` and `{{cursor}}` without needing the Templater plugin (see the [Templates section in the README](https://github.com/johansan/notebook-navigator#106-templates) for the full list).',
+            'New setting in `File operations & templates`: ==Template engine== with `Automatic` (will use Templater for files containing `<%`, otherwise the built-in engine), `Notebook Navigator` and `Templater`.',
+            '==Create note commands==: under `File operations & templates` you can now add commands that create a note with a generated file name such as `{{date:YYYYMMDD}} {{prompt:Title}}` from a template or the folder template, in the current or a specific folder, ready to run from the command palette, a hotkey, or a button with its own icon on the ribbon or the tab bar.',
+            '==Folder templates==: right-click a folder, including the vault root, and choose `Set folder template...` so every new note in that folder or its subfolders starts from the template, with the closest folder winning. Lots of flexiblitity, such as apply to all subfolders or current folder only, and option to show or hide an icon in navigation pane for folders with templates assigned.',
+            'New setting in `List pane`: ==Color list pane title== applies the color of the selected folder, tag or property to the list pane title.'
+        ],
+        changed: [
+            'Renamed the `Vault title placement` setting to `Vault profile switcher` and changed so it is now hidden if only one vault profile exists [#1494](https://github.com/johansan/notebook-navigator/issues/1494).'
+        ],
+        fixed: [
+            'When the calendar in the right sidebar was slightly taller than its pane on Windows or Linux, hovering days or the month header made the calendar shake as the scrollbar appeared and disappeared. The calendar sidebar now never scrolls and keeps a stable size [#1492](https://github.com/johansan/notebook-navigator/issues/1492).',
+            'When moving selected files, files that remain in the current list, such as notes moved between folders while a tag is selected, now stay selected, and only files that leave the list are deselected [#1488](https://github.com/johansan/notebook-navigator/issues/1488).'
+        ]
+    },
+    {
+        version: '3.3.7',
+        date: '2026-09-07',
+        showOnUpdate: false,
+        fixed: [
+            'Obsidian 1.14 added support for colored highlights by placing circles inside the highlight (🔴🟠🟡🟢🔵🟣). These are now removed from the preview text in list pane.',
+            'Middle-clicking a file on Linux now opens it in a new tab without pasting the primary selection into the note.',
+            'When grouping notes by a property with `Group by`, a link value such as `[[Project Note]]` now shows as `Project Note` in the group header, matching how it appears in the property pills [#1478](https://github.com/johansan/notebook-navigator/issues/1478).'
+        ]
+    },
+    {
         version: '3.3.6',
         date: '2026-09-01',
         showOnUpdate: true,

@@ -84,6 +84,8 @@ export interface MenuServices {
     commandQueue: CommandQueueService | null;
     shortcuts: ShortcutsContextValue | null;
     visibility: VisibilityPreferences;
+    /** Whether a list pane search is active; moves during a search always deselect the moved files. */
+    searchActive: boolean;
 }
 
 /**

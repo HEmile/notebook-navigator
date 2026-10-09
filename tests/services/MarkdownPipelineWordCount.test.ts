@@ -158,6 +158,22 @@ describe('Markdown pipeline appearance relevance', () => {
         expect(hasMarkdownWordCountConsumer(settings, app)).toBe(true);
     });
 
+    it('counts topic appearances that request text counts like tag appearances', () => {
+        const { app } = createApp();
+        const settings = createSettings({
+            textCountDisplay: 'none',
+            showTooltips: false,
+            showTooltipWordCount: false,
+            topicAppearances: { Reading: { textCount: 'words' } }
+        });
+
+        expect(getMarkdownTextCountDependencies(app, settings)).toEqual([
+            { reason: 'appearance', selectionType: ItemType.TOPIC, key: 'Reading' }
+        ]);
+        expect(hasMarkdownWordCountConsumer(settings, app)).toBe(true);
+        expect(haveMarkdownCountConsumersChanged(createSettings({ textCountDisplay: 'none' }), settings, app)).toBe(true);
+    });
+
     it('lists only dependencies for count kinds the global display omits', () => {
         const { app } = createApp();
         const characterOverride = createSettings({

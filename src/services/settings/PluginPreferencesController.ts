@@ -29,6 +29,7 @@ import {
     type CalendarWeeksToShow,
     type FeatureImagePixelSizeSetting,
     type FeatureImageSizeSetting,
+    type ListDisplayMode,
     type NotebookNavigatorSettings,
     type NarrowSidebarLayout,
     type NarrowSidebarTriggerMode,
@@ -504,7 +505,7 @@ export class PluginPreferencesController {
             localStorageKey: this.options.keys.navItemHeightKey,
             rawValue: height,
             min: 20,
-            max: 28,
+            max: 40,
             fallback: DEFAULT_SETTINGS.navItemHeight
         });
     }
@@ -551,13 +552,21 @@ export class PluginPreferencesController {
         });
     }
 
+    public setDefaultListMode(mode: ListDisplayMode): void {
+        this.updateSettingAndMirrorToLocalStorage({
+            settingId: 'defaultListMode',
+            localStorageKey: this.options.keys.defaultListModeKey,
+            nextValue: mode
+        });
+    }
+
     public setCompactItemHeight(height: number): void {
         this.updateBoundedNumberSettingAndMirror({
             settingId: 'compactItemHeight',
             localStorageKey: this.options.keys.compactItemHeightKey,
             rawValue: height,
             min: 20,
-            max: 28,
+            max: 40,
             fallback: DEFAULT_SETTINGS.compactItemHeight
         });
     }

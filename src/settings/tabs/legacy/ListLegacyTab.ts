@@ -86,7 +86,17 @@ export function renderListPaneTab(context: SettingsTabContext): void {
             });
         }
 
-        appearanceGroup.addSetting(setting => {
+        addToggleSetting(
+            appearanceGroup.addSetting,
+            strings.settings.items.colorListPaneTitle.name,
+            strings.settings.items.colorListPaneTitle.desc,
+            () => plugin.settings.colorListPaneTitle,
+            value => {
+                plugin.settings.colorListPaneTitle = value;
+            }
+        );
+
+        const defaultListModeSetting = appearanceGroup.addSetting(setting => {
             setting
                 .setName(strings.settings.items.defaultListMode.name)
                 .setDesc(strings.settings.items.defaultListMode.desc)
@@ -95,15 +105,16 @@ export function renderListPaneTab(context: SettingsTabContext): void {
                         .addOption('standard', strings.settings.items.defaultListMode.options.standard)
                         .addOption('compact', strings.settings.items.defaultListMode.options.compact)
                         .setValue(plugin.settings.defaultListMode)
-                        .onChange(async value => {
+                        .onChange(value => {
                             if (!isListDisplayMode(value)) {
                                 return;
                             }
-                            plugin.settings.defaultListMode = value === 'compact' ? 'compact' : 'standard';
-                            await plugin.saveSettingsAndUpdate();
+                            plugin.setDefaultListMode(value);
                         })
                 );
         });
+
+        addSettingSyncModeToggle({ setting: defaultListModeSetting, plugin, settingId: 'defaultListMode' });
 
         const compactItemHeightSetting = appearanceGroup.addSetting(setting => {
             renderSliderSetting(setting, {
@@ -112,7 +123,7 @@ export function renderListPaneTab(context: SettingsTabContext): void {
                 value: plugin.settings.compactItemHeight,
                 defaultValue: DEFAULT_SETTINGS.compactItemHeight,
                 min: 20,
-                max: 28,
+                max: 40,
                 step: 1,
                 resetTooltip: strings.settings.items.compactItemHeight.resetTooltip,
                 formatValue: formatPixelSliderValue,

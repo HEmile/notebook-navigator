@@ -44,9 +44,13 @@ export interface MomentInstance {
     month(): number;
     year(): number;
     date(): number;
+    /** Day of the week, 0 = Sunday. */
+    day(): number;
     set(values: Record<string, number>): MomentInstance;
     get(unit: string): number;
     toDate(): Date;
+    /** Details of the parse that created the instance. `parsedDateParts[0]` is the year it read, also when the parse is invalid. */
+    parsingFlags(): { parsedDateParts: readonly (number | undefined)[] };
 }
 
 export interface MomentApi {

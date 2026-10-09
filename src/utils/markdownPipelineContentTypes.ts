@@ -208,12 +208,34 @@ function hasActiveCustomGroupingForHeader(app: App, settings: NotebookNavigatorS
     }
 
     const frontmatter = metadata?.frontmatter;
-    if (!settings.showProperties || !frontmatter) {
+    if (
+        settings.showProperties &&
+        frontmatter &&
+        getPropertySelectionPaths(frontmatter, settings).some(propertyPath =>
+            hasEffectiveCustomListGroupingForSelection(settings, ItemType.PROPERTY, propertyPath)
+        )
+    ) {
+        return true;
+    }
+
+    return hasAnyCustomGroupedTopic(settings);
+}
+
+/**
+ * Topic membership comes from the topic graph, which this module cannot reach, so any topic list that
+ * resolves to custom grouping keeps header extraction active for every candidate file.
+ */
+function hasAnyCustomGroupedTopic(settings: NotebookNavigatorSettings): boolean {
+    if (!settings.showTopics) {
         return false;
     }
-    return getPropertySelectionPaths(frontmatter, settings).some(propertyPath =>
-        hasEffectiveCustomListGroupingForSelection(settings, ItemType.PROPERTY, propertyPath)
-    );
+    const topicNames = new Set([...Object.keys(settings.topicAppearances), ...Object.keys(settings.topicSortOverrides)]);
+    for (const topicName of topicNames) {
+        if (hasEffectiveCustomListGroupingForSelection(settings, ItemType.TOPIC, topicName)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function getActiveManualSortGroupHeaderWordCountConsumerPaths(
@@ -242,14 +264,14 @@ function getActiveManualSortGroupHeaderWordCountConsumerPaths(
 }
 
 /**
- * Checks folder, tag, and property appearance overrides for text count consumers.
+ * Checks folder, tag, property, and topic appearance overrides for text count consumers.
  * A selection can request either count while the global count type is 'none', so extraction
  * must include every count type used by an appearance.
  */
 function hasAppearanceTextCountConsumer(settings: NotebookNavigatorSettings, type: keyof AppearanceTextCountConsumers): boolean {
     // Settings snapshots keep unchanged appearance maps immutable and referentially stable, so each
     // map is scanned only when its contents change and both consumer checks share the result.
-    const records = [settings.folderAppearances, settings.tagAppearances, settings.propertyAppearances];
+    const records = [settings.folderAppearances, settings.tagAppearances, settings.propertyAppearances, settings.topicAppearances];
     return records.some(record => {
         let consumers = appearanceTextCountConsumerCache.get(record);
         if (!consumers) {
@@ -445,7 +467,8 @@ export function getMarkdownTextCountDependencies(app: App, settings: NotebookNav
     const appearanceRecords = [
         { selectionType: ItemType.FOLDER, appearances: settings.folderAppearances },
         { selectionType: ItemType.TAG, appearances: settings.tagAppearances },
-        { selectionType: ItemType.PROPERTY, appearances: settings.propertyAppearances }
+        { selectionType: ItemType.PROPERTY, appearances: settings.propertyAppearances },
+        { selectionType: ItemType.TOPIC, appearances: settings.topicAppearances }
     ];
 
     appearanceRecords.forEach(({ selectionType, appearances }) => {

@@ -29,6 +29,12 @@ import type {
 } from './settings/tabs/SettingsTabContext';
 import { strings } from './i18n';
 import { createStartResourcesSettingDefinitions } from './settings/tabs/StartResourcesSection';
+import {
+    advanceMarkdownPointBanner,
+    createMarkdownPointBannerDefinitions,
+    renderMarkdownPointBannerGroup
+} from './settings/markdownPointBanner';
+import { SHOW_MARKDOWNPOINT_BANNER } from './constants/fork';
 import { createVaultSetupSettingDefinitions } from './settings/tabs/VaultSetupSection';
 import { createSettingGroupFactory } from './settings/settingGroups';
 import { runAsyncAction } from './utils/async';
@@ -77,6 +83,8 @@ export class NotebookNavigatorSettingTab extends PluginSettingTab {
     private isFallbackSettingsDisplay = false;
     private legacySettingsLandingScrollTop = 0;
     private settingsRenderCleanupCallbacks: (() => void)[] = [];
+    // MarkdownPoint banner position for this settings open; hide() clears it so the next open moves on
+    private markdownPointBannerPosition: number | null = null;
     // Registered settings tab that Obsidian renders native setting definitions on.
     // Obsidian stores rendered definition state on that tab, so DOM-state refreshes must run on it.
     private nativeSettingsHost: PluginSettingTab | null = null;
@@ -399,6 +407,10 @@ export class NotebookNavigatorSettingTab extends PluginSettingTab {
         this.isFallbackSettingsDisplay = true;
         this.activeSettingsPage = null;
         this.prepareSettingsRender(this.containerEl);
+        const isBannerAtTop = this.plugin.settings.showMarkdownPointBannerAtTop;
+        if (SHOW_MARKDOWNPOINT_BANNER && isBannerAtTop) {
+            renderMarkdownPointBannerGroup(this.containerEl, 'top', this.getMarkdownPointBannerPosition());
+        }
 
         const generalDefinition = SETTINGS_PANE_DEFINITION_MAP.get('general');
         generalDefinition?.render(this.createTabContext(this.containerEl));
@@ -410,6 +422,10 @@ export class NotebookNavigatorSettingTab extends PluginSettingTab {
                 this.addLegacySettingsPageLink(pageGroup.addSetting, tabId);
             });
         });
+
+        if (SHOW_MARKDOWNPOINT_BANNER && !isBannerAtTop) {
+            renderMarkdownPointBannerGroup(this.containerEl, 'below', this.getMarkdownPointBannerPosition());
+        }
     }
 
     private addLegacySettingsPageLink(addSetting: AddSettingFunction, tabId: SettingsPaneId): void {
@@ -496,14 +512,19 @@ export class NotebookNavigatorSettingTab extends PluginSettingTab {
         this.isFallbackSettingsDisplay = false;
         const context = this.createTabContext(this.containerEl);
 
-        // Native settings index: vault controls and page links come before informational resources.
+        // Native settings index: the MarkdownPoint banner at the top, vault controls, page links, the banner further
+        // down when the Advanced setting moves it there, then informational resources.
+        const isBannerAtTop = () => this.plugin.settings.showMarkdownPointBannerAtTop;
+        const getBannerPosition = () => this.getMarkdownPointBannerPosition();
         const items: SettingDefinitionItem[] = [
+            ...(SHOW_MARKDOWNPOINT_BANNER ? createMarkdownPointBannerDefinitions('top', isBannerAtTop, getBannerPosition) : []),
             ...createVaultSetupSettingDefinitions(context),
             ...SETTINGS_PAGE_GROUP_DEFINITIONS.map(group => ({
                 type: 'group' as const,
                 heading: group.getHeading(),
                 items: group.items.map(tabId => this.createNativeSettingsPageDefinition(tabId))
             })),
+            ...(SHOW_MARKDOWNPOINT_BANNER ? createMarkdownPointBannerDefinitions('below', isBannerAtTop, getBannerPosition) : []),
             ...createStartResourcesSettingDefinitions(context)
         ];
 
@@ -683,6 +704,12 @@ export class NotebookNavigatorSettingTab extends PluginSettingTab {
         this.resetRenderedSettingsState();
     }
 
+    /** Re-renders within one settings open keep the banner the same; it moves on once per open. */
+    private getMarkdownPointBannerPosition(): number {
+        this.markdownPointBannerPosition ??= advanceMarkdownPointBanner();
+        return this.markdownPointBannerPosition;
+    }
+
     private prepareSettingsRender(containerEl: HTMLElement): void {
         this.settingsRenderContainerEl = containerEl;
         containerEl.empty();
@@ -807,6 +834,7 @@ export class NotebookNavigatorSettingTab extends PluginSettingTab {
         this.tabSettingsUpdateListeners.clear();
         this.showTagsListeners = [];
         this.activeSettingsPage = null;
+        this.markdownPointBannerPosition = null;
         this.settingsRenderContainerEl?.removeClass('nn-settings-tab-root');
         this.settingsRenderContainerEl = null;
         this.containerEl.removeClass('nn-settings-tab-root');
@@ -913,4 +941,3 @@ export type {
     PropertySortSecondaryOption,
     AlphabeticalDateMode
 } from './settings/types';
-export { DEFAULT_SETTINGS } from './settings/defaultSettings';

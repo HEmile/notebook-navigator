@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_ZH_CN = {
+    language: {
+        downloading: '正在下载语言…',
+        continueInEnglish: '继续使用英语',
+        downloadFailed: '语言下载失败。Notebook Navigator 正在使用英语。'
+    },
     // Common UI elements
     common: {
         cancel: '取消', // Button text for canceling dialogs and operations (English: Cancel)
@@ -86,6 +91,7 @@ export const STRINGS_ZH_CN = {
         pinShortcutsAndRecentFiles: '固定快捷方式和最近文件',
         unpinShortcuts: '取消固定快捷方式',
         unpinShortcutsAndRecentFiles: '取消固定快捷方式和最近文件',
+        resizePinnedShortcuts: '调整固定快捷方式的大小',
         profileMenuAria: '更改仓库配置文件'
     },
 
@@ -111,8 +117,17 @@ export const STRINGS_ZH_CN = {
     },
 
     dailyNotes: {
-        templateReadFailed: '读取日记模板失败。',
         createFailed: '创建日记失败。'
+    },
+
+    templates: {
+        invalidTokens: '模板“{name}”包含无效的占位符：{tokens}',
+        invalidFileNameTokens: '“{name}”的文件名格式包含无效的占位符：{tokens}',
+        readFailed: '无法读取模板“{name}”。笔记已在没有模板的情况下创建。',
+        folderNotSet: '从模板新建笔记前，请先在文件操作与模板 > 模板中设置模板文件夹。',
+        templateNotFound: '未找到模板“{name}”。',
+        folderNotFound: '未找到文件夹“{name}”。',
+        templaterMissing: '未安装 Templater 插件。请在文件操作与模板 > 模板中更改模板引擎。'
     },
 
     shortcuts: {
@@ -362,6 +377,9 @@ export const STRINGS_ZH_CN = {
             duplicateFolder: '复制文件夹',
             searchInFolder: '在文件夹中搜索',
             createFolderNote: '创建文件夹笔记',
+            setFolderTemplate: '设置文件夹模板...',
+            changeFolderTemplate: '更改文件夹模板...',
+            removeFolderTemplate: '移除文件夹模板',
             detachFolderNote: '解除文件夹笔记关联',
             deleteFolderNote: '删除文件夹笔记',
             changeIcon: '更改图标',
@@ -716,7 +734,28 @@ export const STRINGS_ZH_CN = {
                 dismiss: '取消'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: '添加命令',
+            titleEdit: '编辑命令',
+            name: '命令名称',
+            namePlaceholder: '新建会议笔记',
+            template: '模板',
+            templateDesc: '可选。未设置模板时，若目标文件夹有文件夹模板则使用它。',
+            templatePlaceholder: 'Templates/Meeting.md',
+            fileNameFormat: '文件名格式',
+            fileNameFormatDesc:
+                '{{date:YYYYMMDD}}、{{prompt:Title}} 等占位符会在运行命令时被替换。每个提示都会询问一个值，模板中相同的标签会获得相同的值。{{number}} 比文件夹中名称模式相同的笔记所用的最大编号大 1，{{number:00}} 会用零补齐位数。模板中也可以使用 {{number}}，{{title}} 会插入生成的文件名。',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Title}}',
+            location: '位置',
+            folder: '文件夹',
+            folderPlaceholder: 'Meetings',
+            icon: '图标',
+            placement: '按钮',
+            placementNone: '无',
+            placementRibbon: '功能区',
+            placementTabBar: '标签栏'
+        },
+        templateFile: {
             placeholder: '搜索模板...',
             instructions: {
                 navigate: '导航',
@@ -917,6 +956,9 @@ export const STRINGS_ZH_CN = {
         openMonthlyNote: '打开月记',
         openQuarterlyNote: '打开季度笔记',
         openYearlyNote: '打开年记',
+        openNextPeriodicNote: '打开下一个周期笔记',
+        openPreviousPeriodicNote: '打开上一个周期笔记',
+        openParentPeriodicNote: '打开上级周期笔记',
         revealFile: '定位文件', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: '搜索', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: '搜索整个仓库', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1105,10 +1147,11 @@ export const STRINGS_ZH_CN = {
                 }
             },
             fileOperations: {
-                label: '文件操作',
-                description: '模板、删除确认、附件和文件移动冲突行为。',
+                label: '文件操作与模板',
+                description: '模板、新建笔记命令、删除确认、附件以及移动文件冲突时的行为。',
                 groups: {
-                    templates: '模板'
+                    templates: '模板',
+                    templateCommands: '新建笔记命令'
                 }
             },
             frontmatterFields: {
@@ -1168,6 +1211,10 @@ export const STRINGS_ZH_CN = {
                     listPane: '显示在列表窗格',
                     hidden: '不显示'
                 }
+            },
+            colorListPaneTitle: {
+                name: '为列表窗格标题着色',
+                desc: '将所选文件夹、标签或属性的颜色应用于列表窗格标题。'
             },
             defaultSortOrder: {
                 name: '默认排序方式',
@@ -1713,11 +1760,11 @@ export const STRINGS_ZH_CN = {
                 name: '模板文件夹位置',
                 desc: '模板文件选择器显示此文件夹中的笔记。',
                 placeholder: '模板',
-                usage: '用于日历笔记和文件夹笔记。在导航日历 > 日历集成和文件夹和文件夹笔记 > 文件夹笔记文件中配置模板。'
+                usage: '模板文件夹中的模板用于日历笔记、文件夹笔记、文件夹模板和从模板新建笔记。在导航日历 > 日历集成中配置日历模板，在文件夹和文件夹笔记 > 文件夹笔记文件中配置文件夹笔记模板。'
             },
             calendarDailyNotePattern: {
                 name: '日记',
-                desc: '使用 Moment 日期格式设置路径。将子文件夹名称用方括号括起来，例如 [Work]/YYYY。点击模板图标设置模板。在文件操作 > 模板中设置模板文件夹位置。',
+                desc: '使用 Moment 日期格式设置路径。将子文件夹名称用方括号括起来，例如 [Work]/YYYY。点击模板图标设置模板。在文件操作与模板 > 模板中设置模板文件夹位置。',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: '模式必须能格式化并重新解析为完整日期（年、月、日）。'
             },
@@ -1725,14 +1772,46 @@ export const STRINGS_ZH_CN = {
                 momentDescPrefix: '使用 ',
                 momentLinkText: 'Moment 日期格式',
                 momentDescSuffix:
-                    ' 设置路径。将子文件夹名称用方括号括起来，例如 [Work]/YYYY。点击模板图标设置模板。在文件操作 > 模板中设置模板文件夹位置。',
-                templateTokenNoticeLabel: '重要！',
-                templateTokenNotice: '模板功能需要 Templater 插件。{{date}} 和 {{title}} 等内置格式仅在{source}设置为{option}时可用。',
+                    ' 设置路径。将子文件夹名称用方括号括起来，例如 [Work]/YYYY。点击模板图标设置模板。在文件操作与模板 > 模板中设置模板文件夹位置。',
                 example: '当前语法：{path}'
             },
-            templaterSupport: {
-                installed: '✅ 已安装 Templater 插件，支持完整模板功能。',
-                missing: '⚠️ 安装 Templater 插件以支持模板功能。'
+            templateEngine: {
+                name: '模板引擎',
+                desc: 'Notebook Navigator 创建笔记时处理模板文件的引擎。 自动模式在已安装 Templater 插件时，对包含 <% 的模板使用 Templater，其他模板使用内置引擎。',
+                options: {
+                    automatic: '自动',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Templater 插件：已安装',
+                templaterNotInstalled: 'Templater 插件：未安装',
+                templaterAutomatic: '包含 Templater 命令（<%）的模板由 Templater 处理，其他模板由内置引擎处理。',
+                templaterUsage: '所有模板都由 Templater 处理。模板文件中的内置占位符不会被替换。',
+                templaterMissingWarning:
+                    '无法从模板创建笔记。请在{location}中将{setting}更改为{automatic}或{builtin}，或安装并启用 Templater 插件。',
+                tokens: '内置占位符：{{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} 至 {{sunday}}, {{cursor}}。写 {{!date}} 可将 {{date}} 保留为文本。',
+                usage: '{{title}}、{{date}} 等模板占位符会在创建笔记时被替换。请在文件操作与模板 > 模板中配置模板引擎。'
+            },
+            showFolderTemplateIcons: {
+                name: '显示文件夹模板图标',
+                desc: '在导航窗格中用图标标记设置了自己模板的文件夹。'
+            },
+            templateCommands: {
+                name: '命令',
+                desc: '每个命令都会用自己的模板或文件夹模板创建一篇笔记并自动生成文件名。可从命令面板运行，或绑定到快捷键或按钮。',
+                empty: '尚未添加命令。',
+                add: '添加命令',
+                edit: '编辑',
+                unnamed: '未命名命令',
+                locationCurrent: '当前文件夹',
+                locationFolder: '指定文件夹'
+            },
+            folderTemplates: {
+                name: '文件夹模板',
+                desc: '新笔记使用其所在文件夹或最近的上级文件夹的模板。在文件夹右键菜单中设置模板。日历、日记和文件夹笔记的模板优先。',
+                empty: '未设置文件夹模板。',
+                scopeSubfolders: '文件夹及子文件夹',
+                scopeFolder: '仅此文件夹'
             },
             calendarWeeklyNotePattern: {
                 name: '周记',
@@ -1869,7 +1948,7 @@ export const STRINGS_ZH_CN = {
             },
             vaultProfiles: {
                 name: '仓库配置文件',
-                desc: '配置文件存储文件类型可见性、隐藏文件、隐藏文件夹、隐藏标签、隐藏笔记的属性规则、快捷方式和导航横幅。从导航窗格标题切换配置文件。',
+                desc: '配置文件存储文件类型可见性、隐藏文件、隐藏文件夹、隐藏标签、隐藏笔记的属性规则、快捷方式和导航横幅。在此处或从导航窗格中的仓库配置文件切换器切换配置文件。',
                 defaultName: '默认',
                 addButton: '添加配置文件',
                 editProfilesButton: '编辑配置文件',
@@ -1888,9 +1967,9 @@ export const STRINGS_ZH_CN = {
                     duplicateName: '配置文件名称已存在'
                 }
             },
-            vaultTitlePlacement: {
-                name: '仓库标题位置',
-                desc: '选择仓库标题显示的位置。',
+            vaultProfileSwitcher: {
+                name: '仓库配置文件切换器',
+                desc: '选择仓库配置文件切换器显示的位置。',
                 options: {
                     header: '显示在标题栏',
                     navigation: '显示在导航窗格'
@@ -2031,7 +2110,8 @@ export const STRINGS_ZH_CN = {
                 scopes: {
                     folder: '文件夹：{name}',
                     tag: '标签：#{name}',
-                    property: '属性：{name}'
+                    property: '属性：{name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2465,7 +2545,7 @@ export const STRINGS_ZH_CN = {
             },
             folderNoteTemplate: {
                 name: '文件夹笔记模板',
-                desc: '创建文件夹笔记时使用的模板文件。Markdown 模板可以使用 Templater。Canvas 和 Base 模板会作为文件内容复制。在文件操作 > 模板中设置模板文件夹位置。',
+                desc: '创建文件夹笔记时使用的模板文件。Markdown 模板可以使用 Templater。Canvas 和 Base 模板会作为文件内容复制。在文件操作与模板 > 模板中设置模板文件夹位置。',
                 formatWarning: '模板格式必须与所选文件夹笔记类型匹配：.md、.canvas 或 .base。'
             },
             folderNamesOpenFolderNotes: {
@@ -2601,10 +2681,32 @@ export const STRINGS_ZH_CN = {
                 buttonText: '❤️ 赞助',
                 coffeeButton: '☕️ 请我喝咖啡'
             },
-            otherPlugins: {
-                name: '看看我的其他插件',
-                betterPaste: '整理粘贴的文本、链接和图片',
-                pixelPerfectImage: '精确的图片缩放等'
+            markdownPointBanner: {
+                heading: '您在用 Canva、Keynote 或 PowerPoint 吗？',
+                atTop: {
+                    name: '在顶部显示 MarkdownPoint 横幅',
+                    desc: '关闭后，横幅会显示在设置页面中较靠下的位置。'
+                },
+                credit: '作者：Johan Sanneblad',
+                messages: [
+                    { headline: '用 Markdown 写幻灯片。', subtext: '把文字和图片拖到你想要的位置。' },
+                    { headline: 'PowerPoint 的免费替代品。', subtext: '分享和协作也都免费。' },
+                    { headline: '像 Apple Motion 一样做动画。', subtext: '可以用关键帧、路径和变形。' },
+                    { headline: '像 Google Slides 一样协作。', subtext: '指针和评论都是实时的。' },
+                    { headline: '在一处查看每页幻灯片的文字。', subtext: '打开 View > Outline，用 Markdown 编辑。' },
+                    { headline: '像 Figma 一样吸附对象。', subtext: '按间距、尺寸和角度对齐。' },
+                    { headline: '用 ==等号== 包住文字就能高亮。', subtext: '**粗体** 和 *斜体* 的用法和 Obsidian 一样。' },
+                    { headline: '把演示文稿导出为 4K 视频。', subtext: '做动画不需要 After Effects。' },
+                    { headline: '演讲者备注也是 Markdown。', subtext: '它们和幻灯片保存在同一个文件里。' },
+                    { headline: '每份演示文稿都是电脑上的一个文件夹。', subtext: '做幻灯片不需要账号。' },
+                    { headline: '把代码放到幻灯片上。', subtext: '代码块支持 21 种语言的语法高亮。' },
+                    { headline: '用链接分享演示文稿。', subtext: '用免费账号发布到网上。' },
+                    { headline: '用 Git 管理你的演示文稿。', subtext: '演示文稿就是 Markdown 和 YAML 文本文件。' },
+                    { headline: '用文字画流程图。', subtext: '写下 Mermaid 代码即可生成图表。' },
+                    { headline: '把演示文稿放在同步文件夹里。', subtext: 'Dropbox、iCloud Drive 和 OneDrive 都可以。' },
+                    { headline: '像 Obsidian 一样挑选主题。', subtext: '所有主题都免费，一键安装。' },
+                    { headline: '个人和商业用途都免费。', subtext: '下载 Mac 版或 Windows 版。' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: '启动时检查新版本',

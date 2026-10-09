@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_KO = {
+    language: {
+        downloading: '언어 다운로드 중…',
+        continueInEnglish: '영어로 계속',
+        downloadFailed: '언어를 다운로드하지 못했습니다. Notebook Navigator가 영어를 사용합니다.'
+    },
     // Common UI elements
     common: {
         cancel: '취소', // Button text for canceling dialogs and operations (English: Cancel)
@@ -86,6 +91,7 @@ export const STRINGS_KO = {
         pinShortcutsAndRecentFiles: '바로가기와 최근 파일을 고정',
         unpinShortcuts: '바로가기 고정을 해제',
         unpinShortcutsAndRecentFiles: '바로가기와 최근 파일 고정을 해제',
+        resizePinnedShortcuts: '고정된 바로가기 크기 조정',
         profileMenuAria: '보관함 프로필 변경'
     },
 
@@ -111,8 +117,17 @@ export const STRINGS_KO = {
     },
 
     dailyNotes: {
-        templateReadFailed: '일일 노트 템플릿을 읽을 수 없습니다.',
         createFailed: '일일 노트를 생성할 수 없습니다.'
+    },
+
+    templates: {
+        invalidTokens: '템플릿 "{name}"에 잘못된 토큰이 있습니다: {tokens}',
+        invalidFileNameTokens: '"{name}"의 파일 이름 형식에 잘못된 토큰이 있습니다: {tokens}',
+        readFailed: '템플릿 "{name}"을(를) 읽을 수 없습니다. 노트는 템플릿 없이 만들어졌습니다.',
+        folderNotSet: '템플릿으로 노트를 만들기 전에 파일 작업 및 템플릿 > 템플릿에서 템플릿 폴더를 설정하세요.',
+        templateNotFound: '템플릿 "{name}"을(를) 찾을 수 없습니다.',
+        folderNotFound: '폴더 "{name}"을(를) 찾을 수 없습니다.',
+        templaterMissing: 'Templater 플러그인이 설치되어 있지 않습니다. 파일 작업 및 템플릿 > 템플릿에서 템플릿 엔진을 변경하세요.'
     },
 
     shortcuts: {
@@ -362,6 +377,9 @@ export const STRINGS_KO = {
             duplicateFolder: '폴더 복제',
             searchInFolder: '폴더에서 검색',
             createFolderNote: '폴더 노트 만들기',
+            setFolderTemplate: '폴더 템플릿 설정...',
+            changeFolderTemplate: '폴더 템플릿 변경...',
+            removeFolderTemplate: '폴더 템플릿 제거',
             detachFolderNote: '폴더 노트 해제',
             deleteFolderNote: '폴더 노트 삭제',
             changeIcon: '아이콘 변경',
@@ -721,7 +739,28 @@ export const STRINGS_KO = {
                 dismiss: '닫기'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: '명령 추가',
+            titleEdit: '명령 편집',
+            name: '명령 이름',
+            namePlaceholder: '새 회의 노트',
+            template: '템플릿',
+            templateDesc: '선택 사항입니다. 템플릿이 없으면 대상 폴더에 폴더 템플릿이 설정된 경우 그 템플릿이 적용됩니다.',
+            templatePlaceholder: 'Templates/Meeting.md',
+            fileNameFormat: '파일 이름 형식',
+            fileNameFormatDesc:
+                '{{date:YYYYMMDD}}, {{prompt:Title}} 같은 토큰은 명령을 실행할 때 치환됩니다. 각 프롬프트는 값을 묻고, 템플릿의 같은 레이블은 같은 값을 받습니다. {{number}}는 폴더에서 같은 이름 패턴을 사용하는 노트의 가장 큰 번호보다 1 큰 값이고, {{number:00}}은 0으로 자릿수를 채웁니다. 템플릿에서도 {{number}}를 사용할 수 있고, {{title}}은 생성된 파일 이름을 삽입합니다.',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Title}}',
+            location: '위치',
+            folder: '폴더',
+            folderPlaceholder: 'Meetings',
+            icon: '아이콘',
+            placement: '버튼',
+            placementNone: '없음',
+            placementRibbon: '리본',
+            placementTabBar: '탭 바'
+        },
+        templateFile: {
             placeholder: '템플릿 검색...',
             instructions: {
                 navigate: '이동',
@@ -923,6 +962,9 @@ export const STRINGS_KO = {
         openMonthlyNote: '월간 노트 열기',
         openQuarterlyNote: '분기 노트 열기',
         openYearlyNote: '연간 노트 열기',
+        openNextPeriodicNote: '다음 정기 노트 열기',
+        openPreviousPeriodicNote: '이전 정기 노트 열기',
+        openParentPeriodicNote: '상위 정기 노트 열기',
         revealFile: '파일 표시', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: '검색', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: '보관함 전체 검색', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1111,10 +1153,11 @@ export const STRINGS_KO = {
                 }
             },
             fileOperations: {
-                label: '파일 작업',
-                description: '템플릿, 삭제 확인, 첨부 파일 및 파일 이동 충돌 동작.',
+                label: '파일 작업 및 템플릿',
+                description: '템플릿, 노트 만들기 명령, 삭제 확인, 첨부 파일, 파일 이동 충돌 동작.',
                 groups: {
-                    templates: '템플릿'
+                    templates: '템플릿',
+                    templateCommands: '노트 만들기 명령'
                 }
             },
             frontmatterFields: {
@@ -1174,6 +1217,10 @@ export const STRINGS_KO = {
                     listPane: '목록 창에 표시',
                     hidden: '표시하지 않음'
                 }
+            },
+            colorListPaneTitle: {
+                name: '목록 창 제목에 색상 적용',
+                desc: '선택한 폴더, 태그 또는 속성의 색상을 목록 창 제목에 적용합니다.'
             },
             defaultSortOrder: {
                 name: '기본 정렬 순서',
@@ -1722,11 +1769,11 @@ export const STRINGS_KO = {
                 name: '템플릿 폴더 위치',
                 desc: '템플릿 파일 선택기가 이 폴더의 노트를 표시합니다.',
                 placeholder: '템플릿',
-                usage: '캘린더 노트와 폴더 노트에서 사용됩니다. 템플릿은 달력 > 캘린더 연동 및 폴더 및 폴더 노트 > 폴더 노트 파일에서 설정하세요.'
+                usage: '템플릿 폴더의 템플릿은 캘린더 노트, 폴더 노트, 폴더 템플릿, 템플릿으로 새 노트에서 사용됩니다. 캘린더 템플릿은 달력 > 캘린더 연동에서, 폴더 노트 템플릿은 폴더 및 폴더 노트 > 폴더 노트 파일에서 설정하세요.'
             },
             calendarDailyNotePattern: {
                 name: '일일 노트',
-                desc: 'Moment 날짜 형식을 사용하여 경로 지정. 하위 폴더 이름은 대괄호로 감싸세요, 예: [Work]/YYYY. 템플릿 아이콘을 클릭하여 템플릿을 설정하세요. 템플릿 폴더 위치는 파일 작업 > 템플릿에서 설정하세요.',
+                desc: 'Moment 날짜 형식을 사용하여 경로 지정. 하위 폴더 이름은 대괄호로 감싸세요, 예: [Work]/YYYY. 템플릿 아이콘을 클릭하여 템플릿을 설정하세요. 템플릿 폴더 위치는 파일 작업 및 템플릿 > 템플릿에서 설정하세요.',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: '패턴은 전체 날짜(연, 월, 일)로 포맷되고 다시 파싱될 수 있어야 합니다.'
             },
@@ -1734,15 +1781,46 @@ export const STRINGS_KO = {
                 momentDescPrefix: '',
                 momentLinkText: 'Moment 날짜 형식',
                 momentDescSuffix:
-                    '을 사용하여 경로 지정. 하위 폴더 이름은 대괄호로 감싸세요, 예: [Work]/YYYY. 템플릿 아이콘을 클릭하여 템플릿을 설정하세요. 템플릿 폴더 위치는 파일 작업 > 템플릿에서 설정하세요.',
-                templateTokenNoticeLabel: '중요!',
-                templateTokenNotice:
-                    '템플릿 지원에는 Templater 플러그인이 필요합니다. {{date}}, {{title}} 같은 기본 형식은 {source}이(가) {option}으로 설정된 경우에만 사용할 수 있습니다.',
+                    '을 사용하여 경로 지정. 하위 폴더 이름은 대괄호로 감싸세요, 예: [Work]/YYYY. 템플릿 아이콘을 클릭하여 템플릿을 설정하세요. 템플릿 폴더 위치는 파일 작업 및 템플릿 > 템플릿에서 설정하세요.',
                 example: '현재 구문: {path}'
             },
-            templaterSupport: {
-                installed: '✅ Templater 플러그인이 설치되어 전체 템플릿 지원을 사용할 수 있습니다.',
-                missing: '⚠️ 템플릿 지원을 사용하려면 Templater 플러그인을 설치하세요.'
+            templateEngine: {
+                name: '템플릿 엔진',
+                desc: 'Notebook Navigator가 노트를 만들 때 템플릿 파일을 처리하는 엔진입니다. 자동은 Templater 플러그인이 설치된 경우 <%를 포함한 템플릿에 Templater를 사용합니다. 그 외 템플릿은 내장 엔진을 사용합니다.',
+                options: {
+                    automatic: '자동',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Templater 플러그인: 설치됨',
+                templaterNotInstalled: 'Templater 플러그인: 설치되지 않음',
+                templaterAutomatic: 'Templater 명령(<%)이 포함된 템플릿은 Templater가 처리합니다. 그 외 템플릿은 내장 엔진이 처리합니다.',
+                templaterUsage: '모든 템플릿은 Templater가 처리합니다. 템플릿 파일의 내장 토큰은 치환되지 않습니다.',
+                templaterMissingWarning:
+                    '템플릿으로 노트를 만들 수 없습니다. {location}에서 {setting}을 {automatic} 또는 {builtin}로 변경하거나 Templater 플러그인을 설치하고 활성화하세요.',
+                tokens: '내장 토큰: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}}~{{sunday}}, {{cursor}}. {{date}}를 텍스트로 유지하려면 {{!date}}로 작성하세요.',
+                usage: '{{title}}, {{date}} 같은 템플릿 토큰은 노트를 만들 때 치환됩니다. 템플릿 엔진은 파일 작업 및 템플릿 > 템플릿에서 설정하세요.'
+            },
+            showFolderTemplateIcons: {
+                name: '폴더 템플릿 아이콘 표시',
+                desc: '자체 폴더 템플릿이 있는 폴더를 탐색 창에 아이콘으로 표시합니다.'
+            },
+            templateCommands: {
+                name: '명령',
+                desc: '각 명령은 자체 템플릿 또는 폴더 템플릿으로 생성된 파일 이름의 노트를 만듭니다. 명령 팔레트에서 실행하거나 단축키 또는 버튼에 연결하세요.',
+                empty: '추가된 명령이 없습니다.',
+                add: '명령 추가',
+                edit: '편집',
+                unnamed: '이름 없는 명령',
+                locationCurrent: '현재 폴더',
+                locationFolder: '특정 폴더'
+            },
+            folderTemplates: {
+                name: '폴더 템플릿',
+                desc: '새 노트는 해당 폴더 또는 가장 가까운 상위 폴더의 템플릿을 사용합니다. 템플릿은 폴더 컨텍스트 메뉴에서 설정합니다. 캘린더, 일일 노트, 폴더 노트 템플릿이 우선합니다.',
+                empty: '설정된 폴더 템플릿이 없습니다.',
+                scopeSubfolders: '폴더 및 하위 폴더',
+                scopeFolder: '이 폴더만'
             },
             calendarWeeklyNotePattern: {
                 name: '주간 노트',
@@ -1912,7 +1990,7 @@ export const STRINGS_KO = {
             },
             vaultProfiles: {
                 name: '보관함 프로필',
-                desc: '프로필은 파일 유형 가시성, 숨겨진 파일, 숨겨진 폴더, 숨겨진 태그, 숨겨진 노트용 속성 규칙, 바로가기, 탐색 배너를 저장합니다. 탐색 창 헤더에서 프로필을 전환합니다.',
+                desc: '프로필은 파일 유형 가시성, 숨겨진 파일, 숨겨진 폴더, 숨겨진 태그, 숨겨진 노트용 속성 규칙, 바로가기, 탐색 배너를 저장합니다. 여기 또는 탐색 창의 보관함 프로필 전환기에서 프로필을 전환합니다.',
                 defaultName: '기본',
                 addButton: '프로필 추가',
                 editProfilesButton: '프로필 편집',
@@ -1932,9 +2010,9 @@ export const STRINGS_KO = {
                     duplicateName: '프로필 이름이 이미 존재합니다'
                 }
             },
-            vaultTitlePlacement: {
-                name: '보관함 제목 위치',
-                desc: '보관함 제목이 표시되는 위치를 선택합니다.',
+            vaultProfileSwitcher: {
+                name: '보관함 프로필 전환기',
+                desc: '보관함 프로필 전환기가 표시되는 위치를 선택합니다.',
                 options: {
                     header: '헤더에 표시',
                     navigation: '탐색 창에 표시'
@@ -2043,7 +2121,8 @@ export const STRINGS_KO = {
                 scopes: {
                     folder: '폴더: {name}',
                     tag: '태그: #{name}',
-                    property: '속성: {name}'
+                    property: '속성: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2477,7 +2556,7 @@ export const STRINGS_KO = {
             },
             folderNoteTemplate: {
                 name: '폴더 노트 템플릿',
-                desc: '폴더 노트를 만들 때 사용하는 템플릿 파일입니다. Markdown 템플릿은 Templater를 사용할 수 있습니다. Canvas 및 Base 템플릿은 파일 내용으로 복사됩니다. 템플릿 폴더 위치는 파일 작업 > 템플릿에서 설정하세요.',
+                desc: '폴더 노트를 만들 때 사용하는 템플릿 파일입니다. Markdown 템플릿은 Templater를 사용할 수 있습니다. Canvas 및 Base 템플릿은 파일 내용으로 복사됩니다. 템플릿 폴더 위치는 파일 작업 및 템플릿 > 템플릿에서 설정하세요.',
                 formatWarning: '템플릿 형식은 선택한 폴더 노트 유형과 일치해야 합니다: .md, .canvas 또는 .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2612,10 +2691,32 @@ export const STRINGS_KO = {
                 buttonText: '❤️ 후원하기',
                 coffeeButton: '☕️ 커피 한 잔 사주기'
             },
-            otherPlugins: {
-                name: '제가 만든 다른 플러그인 보기',
-                betterPaste: '붙여넣은 텍스트, 링크, 이미지를 정리',
-                pixelPerfectImage: '정확한 이미지 크기 조정 등'
+            markdownPointBanner: {
+                heading: 'Canva, Keynote, PowerPoint를 쓰시나요?',
+                atTop: {
+                    name: 'MarkdownPoint 배너를 맨 위에 표시',
+                    desc: '끄면 배너가 설정 페이지 아래쪽에 표시됩니다.'
+                },
+                credit: '제작: Johan Sanneblad',
+                messages: [
+                    { headline: '슬라이드를 Markdown으로 쓰세요.', subtext: '텍스트와 이미지는 원하는 곳으로 드래그하세요.' },
+                    { headline: 'PowerPoint의 무료 대안입니다.', subtext: '공유와 공동 작업도 무료입니다.' },
+                    { headline: 'Apple Motion처럼 애니메이션을 만드세요.', subtext: '키프레임, 경로, 모핑을 사용할 수 있습니다.' },
+                    { headline: 'Google Slides처럼 공동 작업하세요.', subtext: '포인터와 댓글이 실시간으로 보입니다.' },
+                    { headline: '모든 슬라이드의 글을 한곳에서 보세요.', subtext: 'View > Outline을 열고 Markdown으로 편집하세요.' },
+                    { headline: 'Figma처럼 개체를 스냅하세요.', subtext: '간격, 크기, 각도에 맞춰 정렬됩니다.' },
+                    { headline: '==등호==로 감싸면 하이라이트됩니다.', subtext: '**굵게**와 *기울임*은 Obsidian과 똑같이 작동합니다.' },
+                    { headline: '발표 자료를 4K 영상으로 내보내세요.', subtext: '애니메이션에 After Effects가 필요 없습니다.' },
+                    { headline: '발표자 노트도 Markdown입니다.', subtext: '슬라이드와 같은 파일에 저장됩니다.' },
+                    { headline: '발표 자료는 컴퓨터 속 폴더 하나입니다.', subtext: '슬라이드를 만드는 데 계정이 필요 없습니다.' },
+                    { headline: '슬라이드에 코드를 넣으세요.', subtext: '코드 블록은 21개 언어의 구문 강조를 지원합니다.' },
+                    { headline: '링크로 발표 자료를 공유하세요.', subtext: '무료 계정으로 웹에 게시할 수 있습니다.' },
+                    { headline: '발표 자료를 Git으로 관리하세요.', subtext: '발표 자료는 Markdown과 YAML 텍스트 파일입니다.' },
+                    { headline: '텍스트로 순서도를 만드세요.', subtext: 'Mermaid 코드를 쓰면 다이어그램이 됩니다.' },
+                    { headline: '발표 자료를 동기화 폴더에 두세요.', subtext: 'Dropbox, iCloud Drive, OneDrive 모두 됩니다.' },
+                    { headline: 'Obsidian처럼 테마를 둘러보세요.', subtext: '모든 테마는 무료이며 클릭 한 번으로 설치됩니다.' },
+                    { headline: '개인용과 상업용 모두 무료입니다.', subtext: 'Mac 또는 Windows용으로 내려받으세요.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: '시작 시 새 버전 확인',

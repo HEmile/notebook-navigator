@@ -29,7 +29,15 @@ import type { NotebookNavigatorSettings } from '../settings/types';
 import type { IPropertyTreeProvider } from '../interfaces/IPropertyTreeProvider';
 import type { ITagTreeProvider } from '../interfaces/ITagTreeProvider';
 import type { TopicService } from '../services/TopicGraphService';
-import { getFilesForFolder, getFilesForProperty, getFilesForTag, getFilesForTopicByPath } from './fileFinder';
+import {
+    createScopedSelectionVisibilityCheck,
+    getFilesForFolder,
+    getFilesForProperty,
+    getFilesForTag,
+    getFilesForTopicByPath
+} from './fileFinder';
+import type { PropertySelectionNodeId } from './propertyTree';
+import { getTopicNameFromPath } from './topicGraph';
 
 /**
  * Utilities for managing file selection operations
@@ -56,42 +64,6 @@ export function getSelectedPath(
         return selectionState.selectedTopicPath;
     }
     return null;
-}
-
-/**
- * Get all files for the current selection (folder or tag)
- * @param selectionState The current selection state
- * @param settings Plugin settings
- * @param visibility Visibility preferences for descendant notes and hidden items display
- * @param app Obsidian app instance
- * @param tagTreeService Tag tree service for tag operations
- * @returns Array of files in the selected folder or with the selected tag
- */
-export function getFilesForSelection(
-    selectionState: SelectionState,
-    settings: NotebookNavigatorSettings,
-    visibility: VisibilityPreferences,
-    app: App,
-    tagTreeService: ITagTreeProvider | null,
-    propertyTreeService: IPropertyTreeProvider | null,
-    topicService?: TopicService | null
-): TFile[] {
-    return getFilesForNavigationSelection(
-        {
-            selectionType: selectionState.selectionType,
-            selectedFolder: selectionState.selectedFolder,
-            selectedTag: selectionState.selectedTag,
-            selectedProperty: selectionState.selectedProperty,
-            selectedTopicPath: selectionState.selectedTopicPath
-        },
-        settings,
-        visibility,
-        app,
-        tagTreeService,
-        propertyTreeService,
-        undefined,
-        topicService
-    );
 }
 
 export interface NavigationSelectionScope {
@@ -131,6 +103,11 @@ export function getPinnedSectionCollapseKey(selectionScope: NavigationSelectionS
         return `property:${selectionScope.selectedProperty}`;
     }
 
+    if (selectionScope.selectionType === ItemType.TOPIC && selectionScope.selectedTopicPath) {
+        // Keyed by name like topic pins and appearances, so every path to a topic shares its collapse state
+        return `topic:${getTopicNameFromPath(selectionScope.selectedTopicPath)}`;
+    }
+
     return `folder:${selectionScope.selectedFolder?.path ?? '/'}`;
 }
 
@@ -160,9 +137,72 @@ export function getFilesForNavigationSelection(
 }
 
 /**
- * Find the next file to select after removing files (delete or move)
+ * Creates the list-membership check used to reconcile the file selection after files were moved.
+ * The returned function runs after the move, with the file's new path, and answers whether the file
+ * still belongs to the list the selection was made in.
+ *
+ * Folder lists are recomputed from the vault, which reflects a move as soon as the rename resolves.
+ * Tag and property lists use tree path sets that are refreshed asynchronously, so recomputing them
+ * here can report a moved file as missing. A move preserves the file's tags and properties, so for
+ * those scopes only the per-file visibility rules are re-evaluated: hidden folders, hidden file names
+ * and paths, and companion drawing images can all start matching at the new path or a conflict-renamed
+ * name. The rename handler synchronously seeds the storage mirror at the new path from the existing
+ * record, so the hidden file tag rule can read the moved file's cached tags before the trees refresh.
+ *
+ * Topic lists behave the same way: the topic graph keys member notes by path and is rebuilt after the
+ * metadata cache resolves the rename, while the move keeps the links and tags that make a note a member.
+ * Topic lists never show hidden items, so the visibility check ignores the show hidden items toggle.
+ */
+export function createMovedFileListMembershipCheck(
+    selectionScope: NavigationSelectionScope,
+    settings: NotebookNavigatorSettings,
+    visibility: VisibilityPreferences,
+    searchActive: boolean,
+    app: App
+): (file: TFile) => boolean {
+    // Search results are recomputed asynchronously after the storage sync and cannot be evaluated for a
+    // moved file at this point, so a move during an active search always drops the moved files from the
+    // selection. Otherwise a file that a folder: token or a renamed name no longer matches would stay
+    // selected without being visible, and the list refresh does not reconcile that afterwards.
+    if (searchActive) {
+        return () => false;
+    }
+
+    if (selectionScope.selectionType === ItemType.FOLDER) {
+        const selectedFolder = selectionScope.selectedFolder;
+        if (!selectedFolder) {
+            return () => false;
+        }
+
+        // Computed lazily so the folder list is built once, after the move, even when several files moved.
+        let folderFilePaths: Set<string> | null = null;
+        return file => {
+            if (!folderFilePaths) {
+                const folderFiles = getFilesForFolder(selectedFolder, settings, visibility, app, { orderResults: false });
+                folderFilePaths = new Set(folderFiles.map(entry => entry.path));
+            }
+            return folderFilePaths.has(file.path);
+        };
+    }
+
+    const isTagScope = selectionScope.selectionType === ItemType.TAG && !!selectionScope.selectedTag;
+    const isPropertyScope = selectionScope.selectionType === ItemType.PROPERTY && !!selectionScope.selectedProperty;
+    if (isTagScope || isPropertyScope) {
+        return createScopedSelectionVisibilityCheck(settings, visibility, app);
+    }
+
+    if (selectionScope.selectionType === ItemType.TOPIC && selectionScope.selectedTopicPath) {
+        return createScopedSelectionVisibilityCheck(settings, { ...visibility, showHiddenItems: false }, app);
+    }
+
+    return () => false;
+}
+
+/**
+ * Find the next file to select after deleting files. Moves do not use this: a moved file keeps or loses
+ * its selection based on list membership instead, see createMovedFileListMembershipCheck.
  * @param allFiles - All files in the current view
- * @param removedPaths - Set of paths that are being removed (deleted or moved)
+ * @param removedPaths - Set of paths that are being removed
  * @returns The file to select after removal, or null if none
  */
 export function findNextFileAfterRemoval(allFiles: readonly TFile[], removedPaths: Set<string>): TFile | null {
@@ -346,4 +386,62 @@ export async function updateSelectionAfterFileOperation(
     } catch (error) {
         console.error('Failed to open next file:', error);
     }
+}
+
+/**
+ * Context the Add to shortcuts command captures before it reveals the navigator.
+ */
+export interface ShortcutCommandContext {
+    /** True when the user was working in the navigator, so the navigator selection is the target */
+    useNavigatorSelection: boolean;
+    /** File open in the editor when the command ran; null when no file is open */
+    activeFile: TFile | null;
+}
+
+/** Navigator item the Add to shortcuts command toggles */
+export type ShortcutCommandTarget =
+    | { type: 'note'; path: string }
+    | { type: 'folder'; path: string }
+    | { type: 'tag'; tagPath: string }
+    | { type: 'property'; nodeId: PropertySelectionNodeId }
+    | { type: 'topic'; topicName: string };
+
+export interface ShortcutSelectionSource {
+    /** Pane the user is working in; search focus counts as the list pane */
+    activePane: 'navigation' | 'files';
+    /** First selected file in the list pane, or null when the list has no selection */
+    selectedFilePath: string | null;
+    selectedFolderPath: string | null;
+    selectedTag: string | null;
+    selectedProperty: PropertySelectionNodeId | null;
+    selectedTopicPath: string | null;
+}
+
+/**
+ * Resolves the navigator item that the Add to shortcuts command toggles.
+ * The list pane resolves to the selected note and the navigation pane resolves to the
+ * selected tag, property, topic, or folder. Returns null when the active pane has no selection
+ * instead of falling back to the other pane, because a remembered folder or tag is not what
+ * the user is looking at and the toggle would then remove an unrelated shortcut.
+ */
+export function resolveShortcutTargetFromNavigatorSelection(source: ShortcutSelectionSource): ShortcutCommandTarget | null {
+    if (source.activePane === 'files') {
+        return source.selectedFilePath ? { type: 'note', path: source.selectedFilePath } : null;
+    }
+
+    if (source.selectedTag) {
+        return { type: 'tag', tagPath: source.selectedTag };
+    }
+    if (source.selectedProperty) {
+        return { type: 'property', nodeId: source.selectedProperty };
+    }
+    if (source.selectedTopicPath) {
+        // Topic shortcuts are keyed by topic name; the path only records which parents the topic was reached through
+        const topicName = getTopicNameFromPath(source.selectedTopicPath);
+        return topicName ? { type: 'topic', topicName } : null;
+    }
+    if (source.selectedFolderPath) {
+        return { type: 'folder', path: source.selectedFolderPath };
+    }
+    return null;
 }

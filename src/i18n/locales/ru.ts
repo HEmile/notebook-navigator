@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_RU = {
+    language: {
+        downloading: 'Загрузка языков…',
+        continueInEnglish: 'Продолжить на английском',
+        downloadFailed: 'Не удалось загрузить языки. Notebook Navigator использует английский.'
+    },
     // Common UI elements
     common: {
         cancel: 'Отмена', // Button text for canceling dialogs and operations (English: Cancel)
@@ -87,6 +92,7 @@ export const STRINGS_RU = {
         pinShortcutsAndRecentFiles: 'Закрепить ярлыки и недавние файлы',
         unpinShortcuts: 'Открепить ярлыки',
         unpinShortcutsAndRecentFiles: 'Открепить ярлыки и недавние файлы',
+        resizePinnedShortcuts: 'Изменить размер закреплённых ярлыков',
         profileMenuAria: 'Сменить профиль хранилища'
     },
 
@@ -112,8 +118,17 @@ export const STRINGS_RU = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'Не удалось прочитать шаблон ежедневной заметки.',
         createFailed: 'Невозможно создать ежедневную заметку.'
+    },
+
+    templates: {
+        invalidTokens: 'Шаблон «{name}» содержит недопустимые токены: {tokens}',
+        invalidFileNameTokens: 'Формат имени файла команды «{name}» содержит недопустимые токены: {tokens}',
+        readFailed: 'Не удалось прочитать шаблон «{name}». Заметка создана без него.',
+        folderNotSet: 'Укажите папку шаблонов в разделе Операции с файлами и шаблоны > Шаблоны, прежде чем создавать заметки из шаблонов.',
+        templateNotFound: 'Шаблон «{name}» не найден.',
+        folderNotFound: 'Папка «{name}» не найдена.',
+        templaterMissing: 'Плагин Templater не установлен. Измените движок шаблонов в разделе Операции с файлами и шаблоны > Шаблоны.'
     },
 
     shortcuts: {
@@ -364,6 +379,9 @@ export const STRINGS_RU = {
             duplicateFolder: 'Дублировать папку',
             searchInFolder: 'Искать в папке',
             createFolderNote: 'Создать заметку папки',
+            setFolderTemplate: 'Задать шаблон папки...',
+            changeFolderTemplate: 'Изменить шаблон папки...',
+            removeFolderTemplate: 'Убрать шаблон папки',
             detachFolderNote: 'Отвязать заметку папки',
             deleteFolderNote: 'Удалить заметку папки',
             changeIcon: 'Изменить иконку',
@@ -722,7 +740,28 @@ export const STRINGS_RU = {
                 dismiss: 'для закрытия'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'Добавить команду',
+            titleEdit: 'Изменить команду',
+            name: 'Название команды',
+            namePlaceholder: 'Новая заметка о встрече',
+            template: 'Шаблон',
+            templateDesc: 'Необязательно. Без шаблона применяется шаблон папки целевой папки, если он задан.',
+            templatePlaceholder: 'Шаблоны/Встреча.md',
+            fileNameFormat: 'Формат имени файла',
+            fileNameFormatDesc:
+                'Токены вроде {{date:YYYYMMDD}} и {{prompt:Название}} заменяются при запуске команды. Каждый запрос спрашивает значение, и та же метка в шаблоне получает то же значение. {{number}} на единицу больше наибольшего номера, который используют заметки в папке с тем же шаблоном имени, а {{number:00}} дополняет его нулями. Шаблон тоже может использовать {{number}}, а {{title}} вставляет сформированное имя файла.',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Название}}',
+            location: 'Расположение',
+            folder: 'Папка',
+            folderPlaceholder: 'Встречи',
+            icon: 'Значок',
+            placement: 'Кнопка',
+            placementNone: 'Нет',
+            placementRibbon: 'Лента',
+            placementTabBar: 'Панель вкладок'
+        },
+        templateFile: {
             placeholder: 'Поиск шаблонов...',
             instructions: {
                 navigate: 'для навигации',
@@ -924,6 +963,9 @@ export const STRINGS_RU = {
         openMonthlyNote: 'Открыть ежемесячную заметку',
         openQuarterlyNote: 'Открыть квартальную заметку',
         openYearlyNote: 'Открыть годовую заметку',
+        openNextPeriodicNote: 'Открыть следующую периодическую заметку',
+        openPreviousPeriodicNote: 'Открыть предыдущую периодическую заметку',
+        openParentPeriodicNote: 'Открыть родительскую периодическую заметку',
         revealFile: 'Показать файл', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: 'Поиск', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Поиск по всему хранилищу', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1112,10 +1154,12 @@ export const STRINGS_RU = {
                 }
             },
             fileOperations: {
-                label: 'Операции с файлами',
-                description: 'Шаблоны, подтверждения удаления, вложения и поведение при конфликтах перемещения файлов.',
+                label: 'Операции с файлами и шаблоны',
+                description:
+                    'Шаблоны, команды создания заметок, подтверждения удаления, вложения и поведение при конфликтах перемещения файлов.',
                 groups: {
-                    templates: 'Шаблоны'
+                    templates: 'Шаблоны',
+                    templateCommands: 'Команды создания заметок'
                 }
             },
             frontmatterFields: {
@@ -1175,6 +1219,10 @@ export const STRINGS_RU = {
                     listPane: 'Показывать в панели списка',
                     hidden: 'Не показывать'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'Окрашивать заголовок панели списка',
+                desc: 'Применяет цвет выбранной папки, тега или свойства к заголовку панели списка.'
             },
             defaultSortOrder: {
                 name: 'Сортировка по умолчанию',
@@ -1724,11 +1772,11 @@ export const STRINGS_RU = {
                 name: 'Расположение папки шаблонов',
                 desc: 'Выбор файла шаблона показывает заметки из этой папки.',
                 placeholder: 'Шаблоны',
-                usage: 'Используется заметками календаря и заметками папок. Настройте шаблоны в Календарь > Интеграция с календарём и Папки и заметки папок > Файлы заметок папок.'
+                usage: 'Шаблоны из папки шаблонов используются заметками календаря, заметками папок, шаблонами папок и командой Новая заметка из шаблона. Шаблоны календаря настраиваются в Календарь > Интеграция с календарём, шаблоны заметок папок — в Папки и заметки папок > Файлы заметок папок.'
             },
             calendarDailyNotePattern: {
                 name: 'Ежедневные заметки',
-                desc: 'Формат пути с использованием формата даты Moment. Заключайте названия подпапок в скобки, напр. [Work]/YYYY. Нажмите на иконку шаблона, чтобы задать шаблон. Укажите расположение папки шаблонов в Операции с файлами > Шаблоны.',
+                desc: 'Формат пути с использованием формата даты Moment. Заключайте названия подпапок в скобки, напр. [Work]/YYYY. Нажмите на иконку шаблона, чтобы задать шаблон. Укажите расположение папки шаблонов в Операции с файлами и шаблоны > Шаблоны.',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'Шаблон должен форматироваться и разбираться обратно как полная дата (год, месяц, день).'
             },
@@ -1736,15 +1784,47 @@ export const STRINGS_RU = {
                 momentDescPrefix: 'Формат пути с использованием ',
                 momentLinkText: 'формата даты Moment',
                 momentDescSuffix:
-                    '. Заключайте названия подпапок в скобки, напр. [Work]/YYYY. Нажмите на иконку шаблона, чтобы задать шаблон. Укажите расположение папки шаблонов в Операции с файлами > Шаблоны.',
-                templateTokenNoticeLabel: 'Важно!',
-                templateTokenNotice:
-                    'Поддержка шаблонов требует плагина Templater. Встроенные форматы, такие как {{date}} и {{title}}, работают только когда для параметра {source} выбрано значение {option}.',
+                    '. Заключайте названия подпапок в скобки, напр. [Work]/YYYY. Нажмите на иконку шаблона, чтобы задать шаблон. Укажите расположение папки шаблонов в Операции с файлами и шаблоны > Шаблоны.',
                 example: 'Текущий синтаксис: {path}'
             },
-            templaterSupport: {
-                installed: '✅ Плагин Templater установлен с полной поддержкой шаблонов.',
-                missing: '⚠️ Установите плагин Templater для поддержки шаблонов.'
+            templateEngine: {
+                name: 'Движок шаблонов',
+                desc: 'Движок, обрабатывающий файлы шаблонов при создании заметок в Notebook Navigator. Автоматически использует Templater для шаблонов, содержащих <%, если плагин Templater установлен. Все остальные шаблоны используют встроенный движок.',
+                options: {
+                    automatic: 'Автоматически',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Плагин Templater: установлен',
+                templaterNotInstalled: 'Плагин Templater: не установлен',
+                templaterAutomatic:
+                    'Шаблоны, содержащие команды Templater (<%), обрабатываются Templater. Все остальные шаблоны обрабатываются встроенным движком.',
+                templaterUsage: 'Все шаблоны обрабатываются Templater. Встроенные токены в файлах шаблонов не заменяются.',
+                templaterMissingWarning:
+                    'Заметки нельзя создать из шаблонов. В разделе {location} измените {setting} на {automatic} или {builtin} либо установите и включите плагин Templater.',
+                tokens: 'Встроенные токены: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} — {{sunday}}, {{cursor}}. Напишите {{!date}}, чтобы оставить {{date}} как текст.',
+                usage: 'Токены шаблона, такие как {{title}} и {{date}}, заменяются при создании заметки. Настройте движок шаблонов в разделе Операции с файлами и шаблоны > Шаблоны.'
+            },
+            showFolderTemplateIcons: {
+                name: 'Показывать значки шаблонов папок',
+                desc: 'Отмечает значком в панели навигации папки, у которых есть собственный шаблон.'
+            },
+            templateCommands: {
+                name: 'Команды',
+                desc: 'Каждая команда создаёт заметку с сгенерированным именем файла из собственного шаблона или шаблона папки. Запускайте её из палитры команд или назначьте на горячую клавишу или кнопку.',
+                empty: 'Команды не добавлены.',
+                add: 'Добавить команду',
+                edit: 'Изменить',
+                unnamed: 'Команда без названия',
+                locationCurrent: 'Текущая папка',
+                locationFolder: 'Указанная папка'
+            },
+            folderTemplates: {
+                name: 'Шаблоны папок',
+                desc: 'Новые заметки используют шаблон своей папки или ближайшей родительской папки. Шаблоны задаются в контекстном меню папки. Шаблоны календаря, ежедневных заметок и заметок папок имеют приоритет.',
+                empty: 'Шаблоны папок не заданы.',
+                scopeSubfolders: 'Папка и подпапки',
+                scopeFolder: 'Только эта папка'
             },
             calendarWeeklyNotePattern: {
                 name: 'Еженедельные заметки',
@@ -1914,7 +1994,7 @@ export const STRINGS_RU = {
             },
             vaultProfiles: {
                 name: 'Профиль хранилища',
-                desc: 'Профили хранят видимость типов файлов, скрытые файлы, скрытые папки, скрытые теги, правила свойств для скрытых заметок, ярлыки и баннер навигации. Переключайте профили из заголовка панели навигации.',
+                desc: 'Профили хранят видимость типов файлов, скрытые файлы, скрытые папки, скрытые теги, правила свойств для скрытых заметок, ярлыки и баннер навигации. Переключайте профили здесь или через переключатель профиля хранилища в панели навигации.',
                 defaultName: 'По умолчанию',
                 addButton: 'Добавить профиль',
                 editProfilesButton: 'Редактировать профили',
@@ -1934,9 +2014,9 @@ export const STRINGS_RU = {
                     duplicateName: 'Профиль с таким названием уже существует'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'Расположение названия хранилища',
-                desc: 'Выберите, где отображается название хранилища.',
+            vaultProfileSwitcher: {
+                name: 'Переключатель профиля хранилища',
+                desc: 'Выберите, где отображается переключатель профиля хранилища.',
                 options: {
                     header: 'Показать в заголовке',
                     navigation: 'Показать в панели навигации'
@@ -2046,7 +2126,8 @@ export const STRINGS_RU = {
                 scopes: {
                     folder: 'Папка: {name}',
                     tag: 'Тег: #{name}',
-                    property: 'Свойство: {name}'
+                    property: 'Свойство: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2480,7 +2561,7 @@ export const STRINGS_RU = {
             },
             folderNoteTemplate: {
                 name: 'Шаблон заметки папки',
-                desc: 'Файл шаблона, используемый при создании заметок папок. Шаблоны Markdown могут использовать Templater. Шаблоны Canvas и Base копируются как содержимое файла. Укажите расположение папки шаблонов в Операции с файлами > Шаблоны.',
+                desc: 'Файл шаблона, используемый при создании заметок папок. Шаблоны Markdown могут использовать Templater. Шаблоны Canvas и Base копируются как содержимое файла. Укажите расположение папки шаблонов в Операции с файлами и шаблоны > Шаблоны.',
                 formatWarning: 'Формат шаблона должен соответствовать выбранному типу заметки папки: .md, .canvas или .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2616,10 +2697,32 @@ export const STRINGS_RU = {
                 buttonText: '❤️ Спонсор',
                 coffeeButton: '☕️ Купить кофе'
             },
-            otherPlugins: {
-                name: 'Посмотрите мои другие плагины',
-                betterPaste: 'Очищает вставленный текст, ссылки и изображения',
-                pixelPerfectImage: 'Точное изменение размера изображений и другое'
+            markdownPointBanner: {
+                heading: 'Пользуетесь Canva, Keynote или PowerPoint?',
+                atTop: {
+                    name: 'Показывать баннер MarkdownPoint вверху',
+                    desc: 'Если выключено, баннер показывается ниже на странице настроек.'
+                },
+                credit: 'от Johan Sanneblad',
+                messages: [
+                    { headline: 'Пишите слайды в Markdown.', subtext: 'Перетаскивайте текст и картинки куда нужно.' },
+                    { headline: 'Бесплатная альтернатива PowerPoint.', subtext: 'Общий доступ и совместная работа бесплатны.' },
+                    { headline: 'Анимируйте как в Apple Motion.', subtext: 'Есть ключевые кадры, траектории и морфинг.' },
+                    { headline: 'Работайте вместе как в Google Slides.', subtext: 'Курсоры и комментарии в реальном времени.' },
+                    { headline: 'Весь текст слайдов в одном месте.', subtext: 'Откройте View > Outline и правьте Markdown.' },
+                    { headline: 'Привязывайте объекты как в Figma.', subtext: 'Выравнивайте по отступам, размеру и углу.' },
+                    { headline: 'Выделяйте ==знаками равенства==.', subtext: '**Жирный** и *курсив* работают как в Obsidian.' },
+                    { headline: 'Экспортируйте слайды в видео 4K.', subtext: 'After Effects для анимации не нужен.' },
+                    { headline: 'Заметки докладчика в Markdown.', subtext: 'Они хранятся в том же файле, что и слайды.' },
+                    { headline: 'Всё хранится на вашем компьютере.', subtext: 'Для работы со слайдами аккаунт не нужен.' },
+                    { headline: 'Добавляйте код на слайды.', subtext: 'Блоки кода подсвечиваются для 21 языка.' },
+                    { headline: 'Делитесь презентацией по ссылке.', subtext: 'Публикуйте её онлайн с бесплатным аккаунтом.' },
+                    { headline: 'Храните версии слайдов в Git.', subtext: 'Это текстовые файлы Markdown и YAML.' },
+                    { headline: 'Создавайте блок-схемы из текста.', subtext: 'Напишите код Mermaid и получите диаграмму.' },
+                    { headline: 'Держите слайды в облачной папке.', subtext: 'Работает с Dropbox, iCloud Drive и OneDrive.' },
+                    { headline: 'Выбирайте темы как в Obsidian.', subtext: 'Все темы бесплатные и ставятся в один клик.' },
+                    { headline: 'Бесплатно для дома и работы.', subtext: 'Скачайте для Mac или Windows.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: 'Проверять новую версию при запуске',

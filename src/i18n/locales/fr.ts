@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_FR = {
+    language: {
+        downloading: 'Téléchargement des langues…',
+        continueInEnglish: 'Continuer en anglais',
+        downloadFailed: 'Le téléchargement des langues a échoué. Notebook Navigator utilise l’anglais.'
+    },
     // Common UI elements
     common: {
         cancel: 'Annuler', // Button text for canceling dialogs and operations (English: Cancel)
@@ -87,6 +92,7 @@ export const STRINGS_FR = {
         pinShortcutsAndRecentFiles: 'Épingler les raccourcis et fichiers récents',
         unpinShortcuts: 'Détacher les raccourcis',
         unpinShortcutsAndRecentFiles: 'Détacher les raccourcis et fichiers récents',
+        resizePinnedShortcuts: 'Redimensionner les raccourcis épinglés',
         profileMenuAria: 'Changer le profil du coffre'
     },
 
@@ -112,8 +118,19 @@ export const STRINGS_FR = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'Échec de la lecture du modèle de note quotidienne.',
         createFailed: 'Impossible de créer la note quotidienne.'
+    },
+
+    templates: {
+        invalidTokens: 'Le modèle "{name}" contient des jetons non valides : {tokens}',
+        invalidFileNameTokens: 'Le format de nom de fichier de "{name}" contient des jetons non valides : {tokens}',
+        readFailed: 'Impossible de lire le modèle "{name}". La note a été créée sans lui.',
+        folderNotSet:
+            'Définissez le dossier des modèles dans Opérations sur les fichiers et modèles > Modèles avant de créer des notes depuis un modèle.',
+        templateNotFound: 'Le modèle "{name}" est introuvable.',
+        folderNotFound: 'Le dossier "{name}" est introuvable.',
+        templaterMissing:
+            "Le plugin Templater n'est pas installé. Modifiez le moteur de modèles dans Opérations sur les fichiers et modèles > Modèles."
     },
 
     shortcuts: {
@@ -365,6 +382,9 @@ export const STRINGS_FR = {
             duplicateFolder: 'Dupliquer le dossier',
             searchInFolder: 'Rechercher dans le dossier',
             createFolderNote: 'Créer une note de dossier',
+            setFolderTemplate: 'Définir le modèle de dossier...',
+            changeFolderTemplate: 'Changer le modèle de dossier...',
+            removeFolderTemplate: 'Retirer le modèle de dossier',
             detachFolderNote: 'Détacher la note de dossier',
             deleteFolderNote: 'Supprimer la note de dossier',
             changeIcon: "Changer l'icône",
@@ -726,7 +746,28 @@ export const STRINGS_FR = {
                 dismiss: 'pour annuler'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'Ajouter une commande',
+            titleEdit: 'Modifier la commande',
+            name: 'Nom de la commande',
+            namePlaceholder: 'Nouvelle note de réunion',
+            template: 'Modèle',
+            templateDesc: "Facultatif. Sans modèle, le modèle de dossier du dossier cible s'applique s'il est défini.",
+            templatePlaceholder: 'Modèles/Réunion.md',
+            fileNameFormat: 'Format du nom de fichier',
+            fileNameFormatDesc:
+                "Les jetons tels que {{date:YYYYMMDD}} et {{prompt:Titre}} sont remplacés à l'exécution de la commande. Chaque invite demande une valeur, et la même étiquette dans le modèle reçoit la même valeur. {{number}} vaut un de plus que le numéro le plus élevé utilisé par les notes du dossier ayant le même motif de nom, et {{number:00}} le complète avec des zéros. Le modèle peut aussi utiliser {{number}}, et {{title}} insère le nom de fichier généré.",
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Titre}}',
+            location: 'Emplacement',
+            folder: 'Dossier',
+            folderPlaceholder: 'Réunions',
+            icon: 'Icône',
+            placement: 'Bouton',
+            placementNone: 'Aucun',
+            placementRibbon: 'Ruban',
+            placementTabBar: "Barre d'onglets"
+        },
+        templateFile: {
             placeholder: 'Rechercher des modèles...',
             instructions: {
                 navigate: 'pour naviguer',
@@ -929,6 +970,9 @@ export const STRINGS_FR = {
         openMonthlyNote: 'Ouvrir la note mensuelle',
         openQuarterlyNote: 'Ouvrir la note trimestrielle',
         openYearlyNote: 'Ouvrir la note annuelle',
+        openNextPeriodicNote: 'Ouvrir la note périodique suivante',
+        openPreviousPeriodicNote: 'Ouvrir la note périodique précédente',
+        openParentPeriodicNote: 'Ouvrir la note périodique parente',
         revealFile: 'Révéler le fichier', // Command palette: Reveals and selects the currently active file in the navigator (English: Reveal file)
         search: 'Rechercher', // Command palette: Toggle search in the file list (English: Search)
         searchVaultRoot: 'Rechercher dans tout le coffre', // Command palette: Selects the vault root folder and focuses search with subfolders included (English: Search whole vault)
@@ -1117,11 +1161,12 @@ export const STRINGS_FR = {
                 }
             },
             fileOperations: {
-                label: 'Opérations sur les fichiers',
+                label: 'Opérations sur les fichiers et modèles',
                 description:
-                    'Modèles, confirmations de suppression, pièces jointes et comportement en cas de conflit de déplacement de fichiers.',
+                    'Modèles, commandes de création de notes, confirmations de suppression, pièces jointes et gestion des conflits lors du déplacement de fichiers.',
                 groups: {
-                    templates: 'Modèles'
+                    templates: 'Modèles',
+                    templateCommands: 'Commandes de création de notes'
                 }
             },
             frontmatterFields: {
@@ -1182,6 +1227,10 @@ export const STRINGS_FR = {
                     listPane: 'Afficher dans le panneau de liste',
                     hidden: 'Ne pas afficher'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'Colorer le titre du panneau de liste',
+                desc: 'Applique la couleur du dossier, du mot-clé ou de la propriété sélectionné au titre du panneau de liste.'
             },
             defaultSortOrder: {
                 name: 'Ordre de tri par défaut',
@@ -1731,11 +1780,11 @@ export const STRINGS_FR = {
                 name: 'Emplacement du dossier de modèles',
                 desc: 'Le sélecteur de fichiers de modèles affiche les notes de ce dossier.',
                 placeholder: 'Modèles',
-                usage: 'Utilisé par les notes de calendrier et les notes de dossier. Configurez les modèles dans Calendrier > Intégration du calendrier et Dossiers et notes de dossier > Fichiers de notes de dossier.'
+                usage: 'Les modèles du dossier de modèles sont utilisés par les notes de calendrier, les notes de dossier, les modèles de dossier et Nouvelle note depuis un modèle. Configurez les modèles de calendrier dans Calendrier > Intégration du calendrier et ceux des notes de dossier dans Dossiers et notes de dossier > Fichiers de notes de dossier.'
             },
             calendarDailyNotePattern: {
                 name: 'Notes quotidiennes',
-                desc: "Formater le chemin en utilisant le format de date Moment. Entourez les noms de sous-dossiers de crochets, par ex. [Work]/YYYY. Cliquez sur l'icône de modèle pour définir un modèle. Définir l'emplacement du dossier de modèles dans Opérations sur les fichiers > Modèles.",
+                desc: "Formater le chemin en utilisant le format de date Moment. Entourez les noms de sous-dossiers de crochets, par ex. [Work]/YYYY. Cliquez sur l'icône de modèle pour définir un modèle. Définir l'emplacement du dossier de modèles dans Opérations sur les fichiers et modèles > Modèles.",
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'Le modèle doit pouvoir être formaté et ré-analysé comme une date complète (année, mois, jour).'
             },
@@ -1743,15 +1792,48 @@ export const STRINGS_FR = {
                 momentDescPrefix: 'Formater le chemin en utilisant le ',
                 momentLinkText: 'format de date Moment',
                 momentDescSuffix:
-                    ". Entourez les noms de sous-dossiers de crochets, par ex. [Work]/YYYY. Cliquez sur l'icône de modèle pour définir un modèle. Définir l'emplacement du dossier de modèles dans Opérations sur les fichiers > Modèles.",
-                templateTokenNoticeLabel: 'Important !',
-                templateTokenNotice:
-                    'La prise en charge des modèles nécessite le plugin Templater. Les formats intégrés comme {{date}} et {{title}} fonctionnent uniquement lorsque {source} est défini sur {option}.',
+                    ". Entourez les noms de sous-dossiers de crochets, par ex. [Work]/YYYY. Cliquez sur l'icône de modèle pour définir un modèle. Définir l'emplacement du dossier de modèles dans Opérations sur les fichiers et modèles > Modèles.",
                 example: 'Syntaxe actuelle : {path}'
             },
-            templaterSupport: {
-                installed: '✅ Le plugin Templater est installé avec la prise en charge complète des modèles.',
-                missing: '⚠️ Installez le plugin Templater pour la prise en charge des modèles.'
+            templateEngine: {
+                name: 'Moteur de modèles',
+                desc: 'Moteur qui traite les fichiers de modèle lorsque Notebook Navigator crée des notes. Automatique utilise Templater pour les modèles contenant <% lorsque le plugin Templater est installé. Tous les autres modèles utilisent le moteur intégré.',
+                options: {
+                    automatic: 'Automatique',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Plugin Templater : installé',
+                templaterNotInstalled: 'Plugin Templater : non installé',
+                templaterAutomatic:
+                    'Les modèles contenant des commandes Templater (<%) sont traités par Templater. Tous les autres modèles sont traités par le moteur intégré.',
+                templaterUsage:
+                    'Tous les modèles sont traités par Templater. Les jetons intégrés des fichiers de modèle ne sont pas remplacés.',
+                templaterMissingWarning:
+                    'Impossible de créer des notes à partir de modèles. Dans {location}, réglez {setting} sur {automatic} ou {builtin}, ou installez et activez le plugin Templater.',
+                tokens: 'Jetons intégrés : {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} à {{sunday}}, {{cursor}}. Écrivez {{!date}} pour conserver {{date}} en texte.',
+                usage: 'Les jetons de modèle tels que {{title}} et {{date}} sont remplacés à la création de la note. Configurez le moteur de modèles dans Opérations sur les fichiers et modèles > Modèles.'
+            },
+            showFolderTemplateIcons: {
+                name: 'Afficher les icônes de modèle de dossier',
+                desc: 'Signale par une icône dans le volet de navigation les dossiers ayant leur propre modèle.'
+            },
+            templateCommands: {
+                name: 'Commandes',
+                desc: 'Chaque commande crée une note avec un nom de fichier généré, depuis son propre modèle ou le modèle de dossier. Lancez-la depuis la palette de commandes, ou associez-la à un raccourci ou à un bouton.',
+                empty: 'Aucune commande ajoutée.',
+                add: 'Ajouter une commande',
+                edit: 'Modifier',
+                unnamed: 'Commande sans nom',
+                locationCurrent: 'Dossier actuel',
+                locationFolder: 'Dossier spécifique'
+            },
+            folderTemplates: {
+                name: 'Modèles de dossier',
+                desc: 'Les nouvelles notes utilisent le modèle de leur dossier ou du dossier parent le plus proche. Définissez les modèles depuis le menu contextuel du dossier. Les modèles de calendrier, de notes quotidiennes et de notes de dossier sont prioritaires.',
+                empty: 'Aucun modèle de dossier défini.',
+                scopeSubfolders: 'Dossier et sous-dossiers',
+                scopeFolder: 'Ce dossier uniquement'
             },
             calendarWeeklyNotePattern: {
                 name: 'Notes hebdomadaires',
@@ -1892,7 +1974,7 @@ export const STRINGS_FR = {
             },
             vaultProfiles: {
                 name: 'Profil du coffre',
-                desc: "Les profils stockent la visibilité des types de fichiers, les fichiers cachés, les dossiers cachés, les mots-clés cachés, les règles de propriétés pour les notes cachées, les raccourcis et la bannière de navigation. Changez de profil depuis l'en-tête du panneau de navigation.",
+                desc: 'Les profils stockent la visibilité des types de fichiers, les fichiers cachés, les dossiers cachés, les mots-clés cachés, les règles de propriétés pour les notes cachées, les raccourcis et la bannière de navigation. Changez de profil ici ou depuis le sélecteur de profil du coffre dans le panneau de navigation.',
                 defaultName: 'Par défaut',
                 addButton: 'Ajouter un profil',
                 editProfilesButton: 'Modifier les profils',
@@ -1912,9 +1994,9 @@ export const STRINGS_FR = {
                     duplicateName: 'Le nom du profil existe déjà'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'Placement du titre du coffre',
-                desc: 'Choisissez où le titre du coffre est affiché.',
+            vaultProfileSwitcher: {
+                name: 'Sélecteur de profil du coffre',
+                desc: 'Choisissez où le sélecteur de profil du coffre est affiché.',
                 options: {
                     header: "Afficher dans l'en-tête",
                     navigation: 'Afficher dans le panneau de navigation'
@@ -2056,7 +2138,8 @@ export const STRINGS_FR = {
                 scopes: {
                     folder: 'Dossier : {name}',
                     tag: 'Tag : #{name}',
-                    property: 'Propriété : {name}'
+                    property: 'Propriété : {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2490,7 +2573,7 @@ export const STRINGS_FR = {
             },
             folderNoteTemplate: {
                 name: 'Modèle de note de dossier',
-                desc: "Fichier modèle utilisé lors de la création de notes de dossier. Les modèles Markdown peuvent utiliser Templater. Les modèles Canvas et Base sont copiés comme contenu de fichier. Définir l'emplacement du dossier de modèles dans Opérations sur les fichiers > Modèles.",
+                desc: "Fichier modèle utilisé lors de la création de notes de dossier. Les modèles Markdown peuvent utiliser Templater. Les modèles Canvas et Base sont copiés comme contenu de fichier. Définir l'emplacement du dossier de modèles dans Opérations sur les fichiers et modèles > Modèles.",
                 formatWarning: 'Le format du modèle doit correspondre au type de note de dossier sélectionné : .md, .canvas ou .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2626,10 +2709,32 @@ export const STRINGS_FR = {
                 buttonText: '❤️ Sponsoriser',
                 coffeeButton: '☕️ Offrez-moi un café'
             },
-            otherPlugins: {
-                name: 'Découvrez mes autres plugins',
-                betterPaste: 'Nettoie le texte, les liens et les images collés',
-                pixelPerfectImage: 'Redimensionnement exact des images et plus'
+            markdownPointBanner: {
+                heading: 'Vous utilisez Canva, Keynote ou PowerPoint ?',
+                atTop: {
+                    name: 'Afficher la bannière MarkdownPoint en haut',
+                    desc: 'Désactivé, la bannière apparaît plus bas dans la page des paramètres.'
+                },
+                credit: 'par Johan Sanneblad',
+                messages: [
+                    { headline: 'Écrivez vos diapos en Markdown.', subtext: 'Glissez textes et images là où vous voulez.' },
+                    { headline: 'Une alternative gratuite à PowerPoint.', subtext: 'Partage et collaboration sont aussi gratuits.' },
+                    { headline: 'Animez comme avec Apple Motion.', subtext: 'Utilisez keyframes, tracés et morphs.' },
+                    { headline: 'Collaborez comme sur Google Slides.', subtext: 'Avec curseurs et commentaires en temps réel.' },
+                    { headline: 'Voyez tout le texte en un seul endroit.', subtext: 'Ouvrez View > Outline et modifiez en Markdown.' },
+                    { headline: 'Aimantez les objets comme dans Figma.', subtext: 'Alignez par espacement, taille et angle.' },
+                    { headline: 'Surlignez avec des ==signes égal==.', subtext: '**Gras** et *italique* sont comme dans Obsidian.' },
+                    { headline: 'Exportez vos diapos en vidéo 4K.', subtext: 'Pas besoin d’After Effects pour les animer.' },
+                    { headline: 'Vos notes d’orateur sont en Markdown.', subtext: 'Elles sont dans le même fichier que les diapos.' },
+                    { headline: 'Vos diapos sont sur votre ordinateur.', subtext: 'Créez des diapos sans aucun compte.' },
+                    { headline: 'Mettez du code sur vos diapos.', subtext: 'Les blocs de code sont colorés en 21 langages.' },
+                    { headline: 'Partagez une présentation par lien.', subtext: 'Publiez-la en ligne avec un compte gratuit.' },
+                    { headline: 'Versionnez vos présentations avec Git.', subtext: 'Ce sont des fichiers texte Markdown et YAML.' },
+                    { headline: 'Créez des organigrammes en texte.', subtext: 'Écrivez du Mermaid et obtenez un diagramme.' },
+                    { headline: 'Utilisez un dossier synchronisé.', subtext: 'Dropbox, iCloud Drive et OneDrive fonctionnent.' },
+                    { headline: 'Parcourez des thèmes à la Obsidian.', subtext: 'Ils sont gratuits et s’installent en un clic.' },
+                    { headline: 'Gratuit pour un usage perso et pro.', subtext: 'Téléchargez-le pour Mac ou Windows.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: 'Vérifier les nouvelles versions au démarrage',

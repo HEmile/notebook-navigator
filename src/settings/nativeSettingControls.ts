@@ -28,7 +28,7 @@ import type {
 import { requireApiVersion } from 'obsidian';
 import { DEFAULT_SETTINGS } from './defaultSettings';
 import type { NotebookNavigatorSettings } from './types';
-import { normalizeCalendarCustomRootFolder } from '../utils/calendarCustomNotePatterns';
+import { normalizeOptionalVaultFolderPath } from '../utils/pathUtils';
 
 type SettingsKeyOfType<T> = Extract<
     {
@@ -117,6 +117,7 @@ const BOOLEAN_SETTING_KEYS = [
     'useFrontmatterMetadata',
     'showReleaseNotes',
     'checkForUpdatesOnStart',
+    'showMarkdownPointBannerAtTop',
     'showFileTaskProgress',
     'showFileTaskProgressBar',
     'showFileTaskProgressCount',
@@ -157,6 +158,7 @@ const BOOLEAN_SETTING_KEYS = [
     'showParentFolderIcon',
     'showWordCountPercentage',
     'showSelectedNavigationPills',
+    'colorListPaneTitle',
     'stickyGroupHeaders',
     'showFolderGroupPaths',
     'showGroupHeaderItemCounts',
@@ -173,7 +175,8 @@ const BOOLEAN_SETTING_KEYS = [
     'collapseOtherBranchesOnExpand',
     'autoSelectFirstFileOnFocusChange',
     'autoExpandNavItems',
-    'springLoadedFolders'
+    'springLoadedFolders',
+    'showFolderTemplateIcons'
 ] as const satisfies readonly SettingsKeyOfType<boolean>[];
 
 const STRING_SETTING_KEYS = [
@@ -187,6 +190,7 @@ const STRING_SETTING_KEYS = [
     'calendarWeekendDays',
     'calendarMonthHeadingFormat',
     'calendarTemplateFolder',
+    'templateEngine',
     'navCountLeaderStyle',
     'unfinishedTaskIcon',
     'textCountDisplay',
@@ -194,7 +198,6 @@ const STRING_SETTING_KEYS = [
     'characterCountSpaces',
     'alphabeticalDateMode',
     'listPaneTitle',
-    'defaultListMode',
     'propertySortSecondary',
     'manualSortNewNotePlacement',
     'collapseBehavior'
@@ -212,6 +215,7 @@ const STRING_SETTING_KEY_SET: ReadonlySet<string> = new Set(STRING_SETTING_KEYS)
 const STRING_SETTING_OPTIONS: Partial<Record<NativeStringControlKey, readonly string[]>> = {
     deleteAttachments: ['ask', 'always', 'never'],
     moveFileConflicts: ['ask', 'rename'],
+    templateEngine: ['automatic', 'builtin', 'templater'],
     folderNoteType: ['ask', 'markdown', 'canvas', 'base'],
     folderNoteOpenLocation: ['current-tab', 'new-tab', 'right-sidebar'],
     shortcutBadgeDisplay: ['index', 'count', 'none'],
@@ -225,7 +229,6 @@ const STRING_SETTING_OPTIONS: Partial<Record<NativeStringControlKey, readonly st
     characterCountSpaces: ['include', 'exclude'],
     alphabeticalDateMode: ['created', 'modified'],
     listPaneTitle: ['header', 'list', 'hidden'],
-    defaultListMode: ['standard', 'compact'],
     propertySortSecondary: ['title', 'filename', 'created', 'modified'],
     manualSortNewNotePlacement: ['top', 'bottom', 'below-selected-note', 'unsorted'],
     collapseBehavior: ['all', 'folders-only', 'tags-only', 'properties-only']
@@ -260,7 +263,7 @@ export const NATIVE_SETTING_DOM_STATE_REFRESH_KEYS: ReadonlySet<NativeSettingCon
 export function createGroupDefinition(
     heading: string | undefined,
     items: DefinitionItems,
-    options?: { visible?: boolean | (() => boolean) }
+    options?: { visible?: boolean | (() => boolean); cls?: string }
 ): SettingDefinitionGroup {
     const group: SettingDefinitionGroup = {
         type: 'group',
@@ -269,6 +272,9 @@ export function createGroupDefinition(
 
     if (requireApiVersion('1.13.0') && heading) {
         group.heading = heading;
+    }
+    if (requireApiVersion('1.13.0') && options?.cls) {
+        group.cls = options.cls;
     }
     if (requireApiVersion('1.13.0') && options?.visible !== undefined) {
         group.visible = options.visible;
@@ -483,7 +489,8 @@ function setStringSetting(settings: NotebookNavigatorSettings, key: NativeString
 
 function normalizeStringSettingValue(key: NativeStringControlKey, value: string): string {
     if (key === 'calendarTemplateFolder') {
-        return normalizeCalendarCustomRootFolder(value);
+        // The picker distinguishes an explicitly selected vault root from an unset template folder.
+        return normalizeOptionalVaultFolderPath(value) ?? '';
     }
 
     return value;

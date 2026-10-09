@@ -1,6 +1,6 @@
-Read in your language: [English](https://notebooknavigator.com/docs.html) • [العربية](https://notebooknavigator.com/ar/docs.html) • [Deutsch](https://notebooknavigator.com/de/docs.html) • [Español](https://notebooknavigator.com/es/docs.html) • [فارسی](https://notebooknavigator.com/fa/docs.html) • [Français](https://notebooknavigator.com/fr/docs.html) • [Bahasa Indonesia](https://notebooknavigator.com/id/docs.html) • [Italiano](https://notebooknavigator.com/it/docs.html) • [Nederlands](https://notebooknavigator.com/nl/docs.html) • [Polski](https://notebooknavigator.com/pl/docs.html) • [Português](https://notebooknavigator.com/pt/docs.html) • [Português (Brasil)](https://notebooknavigator.com/pt-br/docs.html) • [Русский](https://notebooknavigator.com/ru/docs.html) • [ไทย](https://notebooknavigator.com/th/docs.html) • [Türkçe](https://notebooknavigator.com/tr/docs.html) • [Українська](https://notebooknavigator.com/uk/docs.html) • [Tiếng Việt](https://notebooknavigator.com/vi/docs.html) • [日本語](https://notebooknavigator.com/ja/docs.html) • [한국어](https://notebooknavigator.com/ko/docs.html) • [中文简体](https://notebooknavigator.com/zh-cn/docs.html) • [中文繁體](https://notebooknavigator.com/zh-tw/docs.html)
+# ![Notebook Navigator](https://github.com/johansan/notebook-navigator/blob/main/images/notebook-navigator.png?raw=true)
 
-![Notebook Navigator Screenshot](https://github.com/johansan/notebook-navigator/blob/main/images/notebook-navigator.png?raw=true)
+Read in your language: [English](https://notebooknavigator.com/docs.html) • [العربية](https://notebooknavigator.com/ar/docs.html) • [Deutsch](https://notebooknavigator.com/de/docs.html) • [Español](https://notebooknavigator.com/es/docs.html) • [فارسی](https://notebooknavigator.com/fa/docs.html) • [Français](https://notebooknavigator.com/fr/docs.html) • [Bahasa Indonesia](https://notebooknavigator.com/id/docs.html) • [Italiano](https://notebooknavigator.com/it/docs.html) • [Nederlands](https://notebooknavigator.com/nl/docs.html) • [Polski](https://notebooknavigator.com/pl/docs.html) • [Português](https://notebooknavigator.com/pt/docs.html) • [Português (Brasil)](https://notebooknavigator.com/pt-br/docs.html) • [Русский](https://notebooknavigator.com/ru/docs.html) • [ไทย](https://notebooknavigator.com/th/docs.html) • [Türkçe](https://notebooknavigator.com/tr/docs.html) • [Українська](https://notebooknavigator.com/uk/docs.html) • [Tiếng Việt](https://notebooknavigator.com/vi/docs.html) • [日本語](https://notebooknavigator.com/ja/docs.html) • [한국어](https://notebooknavigator.com/ko/docs.html) • [中文简体](https://notebooknavigator.com/zh-cn/docs.html) • [中文繁體](https://notebooknavigator.com/zh-tw/docs.html)
 
 Turn Obsidian into a fast, customizable notes browser with folders, tags, properties and shortcuts in one view.
 Visual previews. Full keyboard navigation. Dual-pane layout. Mobile optimized. Works with 100,000+ notes.
@@ -13,7 +13,7 @@ Coming from another app? Read the switching guides for [Evernote](https://notebo
 
 ![Obsidian Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=Downloads&query=%24%5B%22notebook-navigator%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json) ![Obsidian Compatibility](https://img.shields.io/badge/Obsidian-v1.11.0+-483699?logo=obsidian&style=flat-square) [![Discord](https://img.shields.io/discord/1405458145974943846?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/6eeSUvzEJr)
 
-[![Quality checks](https://github.com/johansan/notebook-navigator/actions/workflows/ci.yml/badge.svg)](https://github.com/johansan/notebook-navigator/actions/workflows/ci.yml) [![Security scan](https://github.com/johansan/notebook-navigator/actions/workflows/codeql.yml/badge.svg)](https://github.com/johansan/notebook-navigator/actions/workflows/codeql.yml) [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/johansan/notebook-navigator/badge)](https://securityscorecards.dev/viewer/?uri=github.com/johansan/notebook-navigator) [![OpenSSF Baseline](https://www.bestpractices.dev/projects/12715/baseline)](https://www.bestpractices.dev/en/projects/12715/baseline-1)
+[![Quality checks](https://github.com/johansan/notebook-navigator/actions/workflows/ci.yml/badge.svg)](https://github.com/johansan/notebook-navigator/actions/workflows/ci.yml) [![Security scan](https://github.com/johansan/notebook-navigator/actions/workflows/codeql.yml/badge.svg)](https://github.com/johansan/notebook-navigator/actions/workflows/codeql.yml)
 
 <br/>
 
@@ -42,7 +42,7 @@ The video has subtitles in 21 languages.
 
 Notebook Navigator is checked with [TypeScript](https://www.typescriptlang.org/), [ESLint](https://eslint.org/) with the official [Obsidian ESLint plugin](https://github.com/obsidianmd/eslint-plugin), [Prettier](https://prettier.io/), [Vitest](https://vitest.dev/) and a production build before changes are merged. The build must complete with zero errors and zero warnings.
 
-Security checks run through [CodeQL](https://codeql.github.com/), with scan history in the [CodeQL workflow runs](https://github.com/johansan/notebook-navigator/actions/workflows/codeql.yml), and the [OpenSSF Scorecard](https://securityscorecards.dev/viewer/?uri=github.com/johansan/notebook-navigator). Current status is shown in the badges at the top of this page.
+Security checks run through [CodeQL](https://codeql.github.com/), with scan history in the [CodeQL workflow runs](https://github.com/johansan/notebook-navigator/actions/workflows/codeql.yml). Current status is shown in the badges at the top of this page.
 
 Notebook Navigator runs locally, but some features make documented HTTP requests for updates, downloads, and remote content. See [section 11 - Network and Diagnostics Disclosure](#11-network-and-diagnostics-disclosure) for the full list.
 
@@ -286,13 +286,13 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - `Notebook Navigator: Select vault profile` Opens modal to switch between vault profiles
 - `Notebook Navigator: Select vault profile 1-3` Activates a vault profile by its position. Opens the profile selection modal when no profile exists at that position
 - `Notebook Navigator: Reveal file` Reveals current file in navigator. Expands parent folders and scrolls to file. This command is useful if you have the setting `Auto-reveal active note` switched off and want to reveal notes manually. **Suggestion:** Bind to a shortcut key like `Cmd/Ctrl+Shift+R` to quickly change the selected folder or tag to the current file
-- `Notebook Navigator: Open all files` Opens all notes in the currently selected folder or tag. When opening 15 or more files, shows a confirmation dialog
+- `Notebook Navigator: Open all files` Opens all notes in the currently selected folder, tag, or property. When opening 15 or more files, shows a confirmation dialog
 - `Notebook Navigator: Navigate to folder` Search dialog to jump to any folder
 - `Notebook Navigator: Navigate to tag` Search dialog to jump to any tag
 - `Notebook Navigator: Navigate to property` Search dialog to jump to any property key or value
 - `Notebook Navigator: Navigate back` Moves to the previous folder, tag, or property selection in navigator history
 - `Notebook Navigator: Navigate forward` Moves to the next folder, tag, or property selection in navigator history
-- `Notebook Navigator: Add to shortcuts` Adds or removes the current file, folder, tag, or property from shortcuts
+- `Notebook Navigator: Add to shortcuts` Adds or removes the active note from shortcuts, or the selected note, folder, tag, or property when the navigator is focused
 - `Notebook Navigator: Open shortcut 1-9` Opens shortcut by its position in the shortcuts list
 - `Notebook Navigator: Search` Opens quick search field or focuses it if already open. Search persists between sessions. **Suggestion:** Bind to a shortcut key like `Cmd/Ctrl+Shift+S` for quick file filtering
 - `Notebook Navigator: Search whole vault` Selects the vault root folder and opens search with subfolders included (available when either `Show root folder` or `Show hidden items` is enabled)
@@ -324,13 +324,16 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - `Notebook Navigator: Open monthly note` Opens the current monthly note. Creates the note if it doesn't exist
 - `Notebook Navigator: Open quarterly note` Opens the current quarterly note. Creates the note if it doesn't exist
 - `Notebook Navigator: Open yearly note` Opens the current yearly note. Creates the note if it doesn't exist
+- `Notebook Navigator: Open next periodic note` From a daily, weekly, monthly, quarterly or yearly note, opens the note for the next period. Creates the note if it doesn't exist
+- `Notebook Navigator: Open previous periodic note` Same as `Open next periodic note`, for the period before the active note
+- `Notebook Navigator: Open parent periodic note` Opens the weekly note of the active daily note, the monthly note of a weekly note, the quarterly note of a monthly note and the yearly note of a quarterly note. Skips periods that have no note pattern. A week that spans two months opens the monthly note of its first day. Creates the note if it doesn't exist
 
 **File operations**
 
 **Important:** Obsidian has no context of "current folder or tag", so when creating notes in Obsidian by default they are created in the root folder, same folder as current file, or a specific folder. When working with Notebook Navigator you always want to create new notes in the currently selected folder or tag, so the first thing you should do is bind `Cmd/Ctrl+N` to `Notebook Navigator: Create new note` so new notes are always created in the currently selected folder or tag. The same also applies to moving and deleting files. This is why you should use these commands instead of the built-in Obsidian commands when using Notebook Navigator.
 
 - `Notebook Navigator: Create new note` Create note in currently selected folder. **Suggestion:** Bind `Cmd/Ctrl+N` to this command (unbind from Obsidian's default "Create new note" first)
-- `Notebook Navigator: Create new note from template` Create note from template in currently selected folder (requires Templater)
+- `Notebook Navigator: Create new note from template` Create note from template in currently selected folder
 - `Notebook Navigator: Move files` Move selected files to another folder. Selects next file in current folder
 - `Notebook Navigator: Merge notes` Create one note from selected Markdown notes in the current list order
 - `Notebook Navigator: Convert to folder note` Create a folder matching the file name and move the file inside as the folder note
@@ -389,6 +392,9 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 | `notebook-navigator:open-monthly-note`              | Notebook Navigator: Open monthly note                      |
 | `notebook-navigator:open-quarterly-note`            | Notebook Navigator: Open quarterly note                    |
 | `notebook-navigator:open-yearly-note`               | Notebook Navigator: Open yearly note                       |
+| `notebook-navigator:open-next-periodic-note`        | Notebook Navigator: Open next periodic note                |
+| `notebook-navigator:open-previous-periodic-note`    | Notebook Navigator: Open previous periodic note            |
+| `notebook-navigator:open-parent-periodic-note`      | Notebook Navigator: Open parent periodic note              |
 | `notebook-navigator:toggle-descendants`             | Notebook Navigator: Toggle descendants                     |
 | `notebook-navigator:toggle-hidden`                  | Notebook Navigator: Toggle hidden folders, tags, and notes |
 | `notebook-navigator:toggle-tag-sort`                | Notebook Navigator: Toggle tag sort order                  |
@@ -460,6 +466,7 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - **Note previews** - 1–5 preview lines with optional HTML stripping
 - **Thumbnails** - Featured images plus auto-generated thumbnails for PDF, SVG, and drawing files stored in the metadata cache
 - **External images** - Optional downloads for external images and YouTube thumbnails
+- **Folder grouping** - Group notes by parent folder when viewing a folder, tag, or property
 - **Date grouping** - Group notes by Today, Yesterday, Previous 7 days, Previous 30 days, months, and years when sorted by date
 - **Property grouping** - Group notes by a frontmatter property value, matching group by in Obsidian Bases: notes sharing the same value collect under one header, notes without the property go into a trailing None group, and groups sort by value with natural ordering
 - **Frontmatter support** - Read note names and timestamps from frontmatter fields
@@ -477,9 +484,112 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 - **Drag and drop** - File moves, tagging, shortcut assignment, tag tree reparenting, spring-loaded folders
 - **Context menus** - Create notes/folders/canvases/bases/drawings and run file/tag actions
 - **Drawings** - Create Excalidraw and Tldraw drawings from navigation and list pane menus
-- **Templates** - New note from template commands with the Templater plugin
+- **Templates** - Built-in template engine with `{{title}}`, `{{date}}`, `{{cursor}}` and other tokens for calendar notes, folder notes and new notes from template, plus optional Templater support (see [10.6 Templates](#106-templates))
 - **File operations** - Create, rename, duplicate, move, trash files and folders
 - **Filtering** - Folder/tag/note/file exclusions with patterns and frontmatter properties
+
+<br/>
+
+### 10.6 Templates
+
+Templates are markdown notes stored in the folder set under **File operations & templates > Templates > Template folder location**. Notebook Navigator applies them when it creates calendar notes, folder notes, notes created with `New note from template` and, through folder templates, any new note in a folder. Daily notes that Notebook Navigator creates with the Daily Notes core plugin settings use the template configured in that plugin. The **Template engine** setting selects how a template is processed:
+
+| Engine             | Behavior                                                                                                                            |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Automatic          | Uses Templater for templates that contain `<%` when the Templater plugin is installed. All other templates use the built-in engine. |
+| Notebook Navigator | Always uses the built-in engine.                                                                                                    |
+| Templater          | Always uses the Templater plugin.                                                                                                   |
+
+One engine processes each template. In Automatic mode a template that contains `<%` is handed to Templater as a whole, and any `{{...}}` tokens in it stay as written. When Notebook Navigator opens a note that Templater created, it runs Templater's `Jump to next cursor location` command after the note finishes opening in the active editor, so `<% tp.file.cursor() %>` markers place the cursor independent of Templater's `Automatic jump to cursor` setting. Notes opened in the background can apply the cursor when activated within 10 seconds of creation.
+
+**Using Templater alongside Notebook Navigator.** With the engine set to `Notebook Navigator`, Templater's commands, hotkeys and `Insert template` keep working, and `<%...%>` text in templates is left unchanged. Templater's `Trigger Templater on new file creation` option is independent of this setting: when it is on, Templater also processes every note Notebook Navigator creates, runs any `<%...%>` commands in it and can apply its own folder templates to notes whose body is empty apart from frontmatter. Turn that option off when Notebook Navigator handles creation templates, or exclude the folders Notebook Navigator manages in Templater's settings.
+
+The built-in engine replaces the tokens below when the note is created. Unknown `{{...}}` text is left unchanged, so templates shared with other plugins keep working. Write `{{!date}}` to keep `{{date}}` as text. In quoted frontmatter values such as `title: "{{prompt:Title}}"`, replacements escape quotes and backslashes according to the YAML quote style.
+
+| Token                               | Result                                                                                                                                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `{{title}}`                         | File name of the note without extension                                                                                                                                                                                        |
+| `{{folder}}`                        | Name of the folder containing the note                                                                                                                                                                                         |
+| `{{path}}`                          | Vault path of the note                                                                                                                                                                                                         |
+| `{{date}}`                          | Date of the note. Periodic notes use the start of their period and format it with their file name pattern. Other notes use today in the format from General > Formatting > Date format.                                        |
+| `{{date:FORMAT}}`                   | Date of the note in a [Moment format](https://momentjs.com/docs/#/displaying/format/), for example `{{date:dddd, MMMM D}}`                                                                                                     |
+| `{{date+1d}}`, `{{date-2w:FORMAT}}` | Date of the note with an offset. Units: `y` year, `Q` quarter, `M` month, `w` week, `d` day, `h` hour, `m` minute, `s` second                                                                                                  |
+| `{{yesterday}}`, `{{tomorrow}}`     | Day before or after the note date, in the same default format as `{{date}}` unless a format is given                                                                                                                           |
+| `{{monday}}` to `{{sunday}}`        | Days of the week that contains the note date, in the Date format setting unless a format is given. Weekly notes use the seven days starting at the note date.                                                                  |
+| `{{time}}`, `{{time:FORMAT}}`       | Current time in the format from General > Formatting > Time format                                                                                                                                                             |
+| `{{today}}`, `{{today:FORMAT}}`     | Current date in the format from General > Formatting > Date format. Use `{{today:YYYY-MM-DD}}` for date properties in frontmatter.                                                                                             |
+| `{{now}}`, `{{now:FORMAT}}`         | Current date and time as an ISO 8601 timestamp, default `YYYY-MM-DD[T]HH:mm:ssZ`, the format Notebook Navigator reads from frontmatter                                                                                         |
+| `{{cursor}}`                        | Removed from the note. The editor cursor is placed here when the note opens.                                                                                                                                                   |
+| `{{prompt:Label}}`                  | Asks for a value when the note is created and inserts it. The same label used more than once, including in a command's file name format, is asked once. `{{value:Label}}` works the same way, and a label defaults to `Value`. |
+| `{{number}}`, `{{number:00}}`       | Next number in the file name format of a create note command: one higher than the highest number used by notes in the target folder with the same name pattern, or 1 when there are none. `{{number:00}}` pads it with zeros to the length of the format. In the template of a note created that way, `{{number}}` inserts the same number and `{{title}}` the generated file name, such as `Note 01`. |
+
+**Folder templates**
+
+A folder template applies to every note created in that folder and, by default, its subfolders. Right-click a folder, including the vault root, and choose `Set folder template...`. The closest folder with an applicable template wins, so a template on the root folder acts as the default for the whole vault and a template on `Personal/DailyNotes` overrides it there. Explicit templates configured for calendar notes, daily notes and folder notes take precedence over folder templates. The configured folder templates are listed under File operations & templates > Templates, where each one can be limited to `This folder only` or removed. Folders with their own template show a small icon before their note count in the navigation pane; **Show folder template icons** turns that off.
+
+Folder templates apply to notes created by Notebook Navigator: `New note`, notes created from a tag or property, calendar notes, daily notes and folder notes. Notes created by Obsidian itself or by other plugins are not filled.
+
+**Examples**
+
+A standard template for all notes, set as the folder template of the root folder `/`:
+
+```markdown
+---
+created: "{{now}}"
+---
+```
+
+A calendar note template that asks for a title when the note is created. Set it under Calendar > Calendar integration, or as the folder template of the daily notes folder, where it overrides the root template. With `Name fields` under Frontmatter set to `title`, the list pane shows the entered title instead of the file name:
+
+```markdown
+---
+created: "{{now}}"
+title: "{{prompt:Title}}"
+---
+
+## Tasks
+
+- [ ] {{cursor}}
+
+## Notes
+```
+
+**Create note commands**
+
+Under File operations & templates > Create note commands you can add your own commands. Each command has a name, an optional template, a file name format, a location, either the folder currently selected in the navigator or a specific folder, and an optional button with its own icon on the ribbon or on the tab bar of every note. Without a template the folder template of the target folder applies, so a folder that already has one only needs the command for its name and prompts. Running the command asks for every `{{prompt:Label}}` value in the file name format and the template, creates the note with the generated name and opens it. Commands appear in the command palette as `Notebook Navigator: <name>`, so they can also be bound to hotkeys.
+
+Example meeting note command with the file name format `{{date:YYYYMMDD}} {{prompt:Title}}` and this template:
+
+```markdown
+---
+title: "{{prompt:Title}}"
+created: "{{now}}"
+---
+
+## Attendees
+
+- {{cursor}}
+
+## Notes
+```
+
+Running it asks for the title once, names the note `20260916 Weekly sync` and writes the same title into the `title` property.
+
+A file name format with `{{number}}` continues a sequence: `Note {{number:00}}` names the notes `Note 01`, `Note 02` and so on, and `{{prompt:Project}} {{number:000}}` keeps a separate sequence per project. The number is one higher than the highest number used by notes in the target folder whose names match the rest of the format, so deleting a lower note leaves a gap while deleting the highest note frees its number. The template of that note can use `{{number}}` for the number on its own, while `{{title}}` gives the generated file name such as `Note 01`.
+
+Weekly note template:
+
+```markdown
+# Week {{date:ww}} of {{date:gggg}}
+
+- [[{{monday:YYYY-MM-DD}}]]
+- [[{{tuesday:YYYY-MM-DD}}]]
+- [[{{wednesday:YYYY-MM-DD}}]]
+- [[{{thursday:YYYY-MM-DD}}]]
+- [[{{friday:YYYY-MM-DD}}]]
+
+{{cursor}}
+```
 
 <br/>
 
@@ -517,11 +627,26 @@ Notebook Navigator runs locally, but some features make HTTP requests from Obsid
 - **Paths and identifiers:** Startup initialization, PDF diagnostics, and error cases can include the Obsidian app/vault identifier, vault-relative PDF paths, or error stack details. Review and redact the file before sharing it publicly.
 - **Upload:** Notebook Navigator does not upload debug files. They are shared only if you upload, attach, or sync them outside the plugin.
 
-### 11.5 Privacy and data handling
+### 11.5 Language downloads
+
+- **Request:** `https://github.com/johansan/notebook-navigator/releases/download/<installed-version>/languages.json`
+- **Frequency:** On startup when the language pack matching the installed plugin is not cached. All languages are downloaded together.
+- **Storage:** Each language is stored separately in vault-local IndexedDB on the device. Later launches read only the selected language without a network request.
+- **Offline use:** English is bundled. Settings remain available during downloads. The navigator shows a loading screen with **Continue in English**; failed downloads also use English. A download completed after continuing in English is used on the next launch.
+- **Data:** Sends standard HTTP metadata; does not include vault content. Downloaded files contain text data, while language formatting functions remain bundled with the plugin.
+
+### 11.6 Settings banner
+
+- **Where:** The top of the Notebook Navigator settings page shows a static banner for [MarkdownPoint](https://markdownpoint.com), a free presentation app made by the author of Notebook Navigator.
+- **Setting:** "Show MarkdownPoint banner at the top" under Advanced moves the banner further down the settings page when turned off.
+- **Content:** The banner's images and text are bundled with the plugin. It loads nothing from the network and sends no data. Each time settings open it shows the next of its designs and messages; which one was shown last is stored in Obsidian local storage on the device.
+- **Link:** Clicking the banner opens `https://markdownpoint.com` in your browser.
+
+### 11.7 Privacy and data handling
 
 - Notebook Navigator does not send note content, file names, tags, or debug files to a Notebook Navigator server.
 - Requests to GitHub, YouTube, and any external image host are made directly from your device and include standard HTTP metadata (IP address, user-agent, and similar).
-- Downloaded icon packs and images are stored locally (IndexedDB). Recent notes/files and UI state are stored locally (Obsidian local storage).
+- Downloaded languages, icon packs, and images are stored locally (IndexedDB). Recent notes/files and UI state are stored locally (Obsidian local storage).
 
 <br/>
 

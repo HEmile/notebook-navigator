@@ -500,6 +500,7 @@ export class MarkdownPipelineContentProvider extends FeatureImageContentProvider
             'folderSortOverrides',
             'tagSortOverrides',
             'propertySortOverrides',
+            'topicSortOverrides',
             'wordCountTargetProperty'
         ];
     }

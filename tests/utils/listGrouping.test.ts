@@ -42,14 +42,18 @@ import {
     updatePropertyGroupingOverrideKeys
 } from '../../src/utils/listGrouping';
 
-type GroupingSettings = Pick<NotebookNavigatorSettings, 'noteGrouping' | 'folderAppearances' | 'tagAppearances' | 'propertyAppearances'>;
+type GroupingSettings = Pick<
+    NotebookNavigatorSettings,
+    'noteGrouping' | 'folderAppearances' | 'tagAppearances' | 'propertyAppearances' | 'topicAppearances'
+>;
 
 function createGroupingSettings(noteGrouping: GroupingSettings['noteGrouping']): GroupingSettings {
     return {
         noteGrouping,
         folderAppearances: {},
         tagAppearances: {},
-        propertyAppearances: {}
+        propertyAppearances: {},
+        topicAppearances: {}
     };
 }
 
@@ -73,9 +77,9 @@ describe('resolveListGrouping property selections', () => {
         expect(result.hasCustomOverride).toBe(true);
     });
 
-    it('normalizes invalid folder grouping overrides for properties', () => {
+    it('uses folder grouping overrides for properties', () => {
         const propertyNodeId = buildPropertyKeyNodeId('status');
-        const settings = createGroupingSettings('folder');
+        const settings = createGroupingSettings('date');
         settings.propertyAppearances = {
             [propertyNodeId]: { groupBy: 'folder' }
         };
@@ -87,22 +91,61 @@ describe('resolveListGrouping property selections', () => {
         });
 
         expect(result.defaultGrouping).toBe('date');
-        expect(result.effectiveGrouping).toBe('date');
-        expect(result.normalizedOverride).toBeUndefined();
-        expect(result.hasCustomOverride).toBe(false);
+        expect(result.effectiveGrouping).toBe('folder');
+        expect(result.normalizedOverride).toBe('folder');
+        expect(result.hasCustomOverride).toBe(true);
     });
 
-    it('falls back to normalized default grouping when no property override exists', () => {
+    it('uses a default folder grouping for tag and property views without an override', () => {
         const settings = createGroupingSettings('folder');
 
-        const result = resolveListGrouping({
+        const propertyResult = resolveListGrouping({
             settings,
             selectionType: ItemType.PROPERTY,
             propertyNodeId: buildPropertyKeyNodeId('status')
         });
+        const tagResult = resolveListGrouping({
+            settings,
+            selectionType: ItemType.TAG,
+            tag: 'work'
+        });
+
+        [propertyResult, tagResult].forEach(result => {
+            expect(result.defaultGrouping).toBe('folder');
+            expect(result.effectiveGrouping).toBe('folder');
+            expect(result.normalizedOverride).toBeUndefined();
+            expect(result.hasCustomOverride).toBe(false);
+        });
+    });
+});
+
+describe('resolveListGrouping topic selections', () => {
+    it('uses topic grouping overrides keyed by topic name', () => {
+        const settings = createGroupingSettings('date');
+        settings.topicAppearances = {
+            Reading: { groupBy: 'folder' }
+        };
+
+        const result = resolveListGrouping({
+            settings,
+            selectionType: ItemType.TOPIC,
+            topicName: 'Reading'
+        });
 
         expect(result.defaultGrouping).toBe('date');
-        expect(result.effectiveGrouping).toBe('date');
+        expect(result.effectiveGrouping).toBe('folder');
+        expect(result.normalizedOverride).toBe('folder');
+        expect(result.hasCustomOverride).toBe(true);
+    });
+
+    it('uses the default grouping for topics without an override', () => {
+        const result = resolveListGrouping({
+            settings: createGroupingSettings('folder'),
+            selectionType: ItemType.TOPIC,
+            topicName: 'Reading'
+        });
+
+        expect(result.effectiveGrouping).toBe('folder');
         expect(result.normalizedOverride).toBeUndefined();
         expect(result.hasCustomOverride).toBe(false);
     });
@@ -113,45 +156,25 @@ describe('resolveEffectiveListGroupingForSort', () => {
         expect(
             resolveEffectiveListGroupingForSort({
                 groupBy: 'date',
-                sortOption: 'property-asc',
-                selectionType: ItemType.FOLDER
+                sortOption: 'property-asc'
             })
         ).toBe('none');
     });
 
-    it('keeps folder grouping for property-sorted folder views', () => {
+    it('keeps folder grouping with property sort', () => {
         expect(
             resolveEffectiveListGroupingForSort({
                 groupBy: 'folder',
-                sortOption: 'property-asc',
-                selectionType: ItemType.FOLDER
+                sortOption: 'property-asc'
             })
         ).toBe('folder');
-    });
-
-    it('uses no grouping for property-sorted tag and property views', () => {
-        expect(
-            resolveEffectiveListGroupingForSort({
-                groupBy: 'date',
-                sortOption: 'property-asc',
-                selectionType: ItemType.TAG
-            })
-        ).toBe('none');
-        expect(
-            resolveEffectiveListGroupingForSort({
-                groupBy: 'date',
-                sortOption: 'property-asc',
-                selectionType: ItemType.PROPERTY
-            })
-        ).toBe('none');
     });
 
     it('keeps custom grouping with property sort', () => {
         expect(
             resolveEffectiveListGroupingForSort({
                 groupBy: 'custom',
-                sortOption: 'property-asc',
-                selectionType: ItemType.TAG
+                sortOption: 'property-asc'
             })
         ).toBe('custom');
     });
@@ -160,8 +183,7 @@ describe('resolveEffectiveListGroupingForSort', () => {
         expect(
             resolveEffectiveListGroupingForSort({
                 groupBy: 'date',
-                sortOption: 'title-asc',
-                selectionType: ItemType.FOLDER
+                sortOption: 'title-asc'
             })
         ).toBe('none');
     });
@@ -170,8 +192,7 @@ describe('resolveEffectiveListGroupingForSort', () => {
         expect(
             resolveEffectiveListGroupingForSort({
                 groupBy: 'date',
-                sortOption: 'modified-desc',
-                selectionType: ItemType.FOLDER
+                sortOption: 'modified-desc'
             })
         ).toBe('date');
     });
@@ -181,30 +202,21 @@ describe('resolveEffectiveListGroupingForSort', () => {
             resolveEffectiveListGroupingForSort({
                 groupBy: 'folder',
                 sortOption: 'property-asc',
-                selectionType: ItemType.FOLDER,
                 isManualSortActive: true
             })
         ).toBe('custom');
     });
 
-    it('keeps property grouping under every sort and selection type', () => {
+    it('keeps property grouping under every sort', () => {
         const groupBy = createPropertyGroupingOption('status', 'asc');
         (['modified-desc', 'title-asc', 'property-asc'] as const).forEach(sortOption => {
             expect(
                 resolveEffectiveListGroupingForSort({
                     groupBy,
-                    sortOption,
-                    selectionType: ItemType.FOLDER
+                    sortOption
                 })
             ).toBe(groupBy);
         });
-        expect(
-            resolveEffectiveListGroupingForSort({
-                groupBy,
-                sortOption: 'property-asc',
-                selectionType: ItemType.TAG
-            })
-        ).toBe(groupBy);
     });
 
     it('locks manual sort to custom groups even with property grouping', () => {
@@ -212,7 +224,6 @@ describe('resolveEffectiveListGroupingForSort', () => {
             resolveEffectiveListGroupingForSort({
                 groupBy: createPropertyGroupingOption('status', 'asc'),
                 sortOption: 'property-asc',
-                selectionType: ItemType.FOLDER,
                 isManualSortActive: true
             })
         ).toBe('custom');
@@ -398,6 +409,16 @@ describe('hasEffectiveCustomListGroupingForSelection', () => {
         settings.folderAppearances.Projects = { groupBy: 'custom' };
 
         expect(hasEffectiveCustomListGroupingForSelection(settings, ItemType.FOLDER, 'Projects')).toBe(true);
+    });
+
+    it('detects custom grouping on a topic override', () => {
+        const settings = structuredClone(DEFAULT_SETTINGS);
+        settings.noteGrouping = 'none';
+        settings.defaultFolderSort = 'title-asc';
+        settings.topicAppearances.Reading = { groupBy: 'custom' };
+
+        expect(hasEffectiveCustomListGroupingForSelection(settings, ItemType.TOPIC, 'Reading')).toBe(true);
+        expect(hasEffectiveCustomListGroupingForSelection(settings, ItemType.TOPIC, 'Writing')).toBe(false);
     });
 
     it('detects custom grouping forced by manual sorting', () => {

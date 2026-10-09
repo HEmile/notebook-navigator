@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_ZH_TW = {
+    language: {
+        downloading: '正在下載語言…',
+        continueInEnglish: '繼續使用英語',
+        downloadFailed: '語言下載失敗。Notebook Navigator 正在使用英語。'
+    },
     // Common UI elements
     common: {
         cancel: '取消',
@@ -86,6 +91,7 @@ export const STRINGS_ZH_TW = {
         pinShortcutsAndRecentFiles: '釘選捷徑和最近檔案',
         unpinShortcuts: '取消釘選捷徑',
         unpinShortcutsAndRecentFiles: '取消釘選捷徑和最近檔案',
+        resizePinnedShortcuts: '調整釘選捷徑的大小',
         profileMenuAria: '變更儲存庫設定檔'
     },
 
@@ -111,8 +117,17 @@ export const STRINGS_ZH_TW = {
     },
 
     dailyNotes: {
-        templateReadFailed: '讀取每日筆記範本失敗。',
         createFailed: '建立每日筆記失敗。'
+    },
+
+    templates: {
+        invalidTokens: '範本「{name}」包含無效的佔位符：{tokens}',
+        invalidFileNameTokens: '「{name}」的檔案名稱格式包含無效的佔位符：{tokens}',
+        readFailed: '無法讀取範本「{name}」。筆記已在沒有範本的情況下建立。',
+        folderNotSet: '從範本新建筆記前，請先在檔案操作與範本 > 範本中設定範本資料夾。',
+        templateNotFound: '找不到範本「{name}」。',
+        folderNotFound: '找不到資料夾「{name}」。',
+        templaterMissing: '未安裝 Templater 外掛。請在檔案操作與範本 > 範本中變更範本引擎。'
     },
 
     shortcuts: {
@@ -363,6 +378,9 @@ export const STRINGS_ZH_TW = {
             duplicateFolder: '複製資料夾',
             searchInFolder: '在資料夾中搜尋',
             createFolderNote: '建立資料夾筆記',
+            setFolderTemplate: '設定資料夾範本...',
+            changeFolderTemplate: '變更資料夾範本...',
+            removeFolderTemplate: '移除資料夾範本',
             detachFolderNote: '解除資料夾筆記',
             deleteFolderNote: '刪除資料夾筆記',
             changeIcon: '變更圖示',
@@ -717,7 +735,28 @@ export const STRINGS_ZH_TW = {
                 dismiss: '取消'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: '新增命令',
+            titleEdit: '編輯命令',
+            name: '命令名稱',
+            namePlaceholder: '新增會議筆記',
+            template: '範本',
+            templateDesc: '選填。未設定範本時，若目標資料夾有資料夾範本則使用它。',
+            templatePlaceholder: 'Templates/Meeting.md',
+            fileNameFormat: '檔名格式',
+            fileNameFormatDesc:
+                '{{date:YYYYMMDD}}、{{prompt:Title}} 等佔位符會在執行命令時被取代。每個提示都會詢問一個值，範本中相同的標籤會取得相同的值。{{number}} 比資料夾中名稱模式相同的筆記所用的最大編號大 1，{{number:00}} 會用零補齊位數。範本中也可以使用 {{number}}，{{title}} 會插入產生的檔案名稱。',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Title}}',
+            location: '位置',
+            folder: '資料夾',
+            folderPlaceholder: 'Meetings',
+            icon: '圖示',
+            placement: '按鈕',
+            placementNone: '無',
+            placementRibbon: '功能區',
+            placementTabBar: '分頁列'
+        },
+        templateFile: {
             placeholder: '搜尋範本...',
             instructions: {
                 navigate: '導覽',
@@ -918,6 +957,9 @@ export const STRINGS_ZH_TW = {
         openMonthlyNote: '開啟每月筆記',
         openQuarterlyNote: '開啟季度筆記',
         openYearlyNote: '開啟每年筆記',
+        openNextPeriodicNote: '開啟下一個週期筆記',
+        openPreviousPeriodicNote: '開啟上一個週期筆記',
+        openParentPeriodicNote: '開啟上層週期筆記',
         revealFile: '定位檔案',
         search: '搜尋',
         searchVaultRoot: '搜尋整個儲存庫',
@@ -1106,10 +1148,11 @@ export const STRINGS_ZH_TW = {
                 }
             },
             fileOperations: {
-                label: '檔案操作',
-                description: '範本、刪除確認、附件與檔案移動衝突行為。',
+                label: '檔案操作與範本',
+                description: '範本、新建筆記命令、刪除確認、附件以及移動檔案衝突時的行為。',
                 groups: {
-                    templates: '範本'
+                    templates: '範本',
+                    templateCommands: '新建筆記命令'
                 }
             },
             frontmatterFields: {
@@ -1169,6 +1212,10 @@ export const STRINGS_ZH_TW = {
                     listPane: '顯示在列表窗格',
                     hidden: '不顯示'
                 }
+            },
+            colorListPaneTitle: {
+                name: '為列表窗格標題著色',
+                desc: '將所選資料夾、標籤或屬性的顏色套用至列表窗格標題。'
             },
             defaultSortOrder: {
                 name: '預設排序方式',
@@ -1714,11 +1761,11 @@ export const STRINGS_ZH_TW = {
                 name: '範本資料夾位置',
                 desc: '範本檔案選擇器顯示此資料夾中的筆記。',
                 placeholder: '範本',
-                usage: '用於日曆筆記與資料夾筆記。在導覽日曆 > 日曆整合和資料夾與資料夾筆記 > 資料夾筆記檔案中設定範本。'
+                usage: '範本資料夾中的範本用於日曆筆記、資料夾筆記、資料夾範本與從範本新建筆記。在導覽日曆 > 日曆整合中設定日曆範本，在資料夾與資料夾筆記 > 資料夾筆記檔案中設定資料夾筆記範本。'
             },
             calendarDailyNotePattern: {
                 name: '每日筆記',
-                desc: '使用 Moment 日期格式設定路徑。將子資料夾名稱用方括號括起來，例如 [Work]/YYYY。點擊範本圖示設定範本。在檔案操作 > 範本中設定範本資料夾位置。',
+                desc: '使用 Moment 日期格式設定路徑。將子資料夾名稱用方括號括起來，例如 [Work]/YYYY。點擊範本圖示設定範本。在檔案操作與範本 > 範本中設定範本資料夾位置。',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: '模式必須能格式化並重新解析為完整日期（年、月、日）。'
             },
@@ -1726,14 +1773,46 @@ export const STRINGS_ZH_TW = {
                 momentDescPrefix: '使用 ',
                 momentLinkText: 'Moment 日期格式',
                 momentDescSuffix:
-                    ' 設定路徑。將子資料夾名稱用方括號括起來，例如 [Work]/YYYY。點擊範本圖示設定範本。在檔案操作 > 範本中設定範本資料夾位置。',
-                templateTokenNoticeLabel: '重要！',
-                templateTokenNotice: '範本功能需要 Templater 外掛程式。{{date}} 與 {{title}} 等內建格式僅在{source}設定為{option}時可用。',
+                    ' 設定路徑。將子資料夾名稱用方括號括起來，例如 [Work]/YYYY。點擊範本圖示設定範本。在檔案操作與範本 > 範本中設定範本資料夾位置。',
                 example: '目前語法：{path}'
             },
-            templaterSupport: {
-                installed: '✅ 已安裝 Templater 外掛程式，支援完整範本功能。',
-                missing: '⚠️ 安裝 Templater 外掛程式以支援範本功能。'
+            templateEngine: {
+                name: '範本引擎',
+                desc: 'Notebook Navigator 建立筆記時處理範本檔案的引擎。 自動模式在已安裝 Templater 外掛時，對包含 <% 的範本使用 Templater，其他範本使用內建引擎。',
+                options: {
+                    automatic: '自動',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'Templater 外掛：已安裝',
+                templaterNotInstalled: 'Templater 外掛：未安裝',
+                templaterAutomatic: '包含 Templater 命令（<%）的範本由 Templater 處理，其他範本由內建引擎處理。',
+                templaterUsage: '所有範本都由 Templater 處理。範本檔案中的內建佔位符不會被取代。',
+                templaterMissingWarning:
+                    '無法從範本建立筆記。請在{location}中將{setting}變更為{automatic}或{builtin}，或安裝並啟用 Templater 外掛。',
+                tokens: '內建佔位符：{{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} 至 {{sunday}}, {{cursor}}。寫 {{!date}} 可將 {{date}} 保留為文字。',
+                usage: '{{title}}、{{date}} 等範本佔位符會在建立筆記時被取代。請在檔案操作與範本 > 範本中設定範本引擎。'
+            },
+            showFolderTemplateIcons: {
+                name: '顯示資料夾範本圖示',
+                desc: '在導覽窗格中以圖示標記設定了自己範本的資料夾。'
+            },
+            templateCommands: {
+                name: '命令',
+                desc: '每個命令都會以自己的範本或資料夾範本建立一則筆記並自動產生檔名。可從命令面板執行，或綁定到快捷鍵或按鈕。',
+                empty: '尚未新增命令。',
+                add: '新增命令',
+                edit: '編輯',
+                unnamed: '未命名命令',
+                locationCurrent: '目前資料夾',
+                locationFolder: '指定資料夾'
+            },
+            folderTemplates: {
+                name: '資料夾範本',
+                desc: '新筆記使用其所在資料夾或最近上層資料夾的範本。在資料夾右鍵選單中設定範本。日曆、每日筆記和資料夾筆記的範本優先。',
+                empty: '未設定資料夾範本。',
+                scopeSubfolders: '資料夾及子資料夾',
+                scopeFolder: '僅此資料夾'
             },
             calendarWeeklyNotePattern: {
                 name: '週記',
@@ -1870,7 +1949,7 @@ export const STRINGS_ZH_TW = {
             },
             vaultProfiles: {
                 name: '儲存庫設定檔',
-                desc: '設定檔儲存檔案類型可見性、隱藏檔案、隱藏資料夾、隱藏標籤、隱藏筆記的屬性規則、捷徑和導覽橫幅。從導覽窗格標題切換設定檔。',
+                desc: '設定檔儲存檔案類型可見性、隱藏檔案、隱藏資料夾、隱藏標籤、隱藏筆記的屬性規則、捷徑和導覽橫幅。在此處或從導覽窗格中的儲存庫設定檔切換器切換設定檔。',
                 defaultName: '預設',
                 addButton: '新增設定檔',
                 editProfilesButton: '編輯設定檔',
@@ -1889,9 +1968,9 @@ export const STRINGS_ZH_TW = {
                     duplicateName: '設定檔名稱已存在'
                 }
             },
-            vaultTitlePlacement: {
-                name: '儲存庫標題位置',
-                desc: '選擇儲存庫標題顯示的位置。',
+            vaultProfileSwitcher: {
+                name: '儲存庫設定檔切換器',
+                desc: '選擇儲存庫設定檔切換器顯示的位置。',
                 options: {
                     header: '顯示在標題列',
                     navigation: '顯示在導覽窗格'
@@ -2032,7 +2111,8 @@ export const STRINGS_ZH_TW = {
                 scopes: {
                     folder: '資料夾：{name}',
                     tag: '標籤：#{name}',
-                    property: '屬性：{name}'
+                    property: '屬性：{name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2466,7 +2546,7 @@ export const STRINGS_ZH_TW = {
             },
             folderNoteTemplate: {
                 name: '資料夾筆記範本',
-                desc: '建立資料夾筆記時使用的範本檔案。Markdown 範本可以使用 Templater。Canvas 和 Base 範本會作為檔案內容複製。在檔案操作 > 範本中設定範本資料夾位置。',
+                desc: '建立資料夾筆記時使用的範本檔案。Markdown 範本可以使用 Templater。Canvas 和 Base 範本會作為檔案內容複製。在檔案操作與範本 > 範本中設定範本資料夾位置。',
                 formatWarning: '範本格式必須與所選資料夾筆記類型相符：.md、.canvas 或 .base。'
             },
             folderNamesOpenFolderNotes: {
@@ -2601,10 +2681,32 @@ export const STRINGS_ZH_TW = {
                 buttonText: '❤️ 贊助',
                 coffeeButton: '☕️ 請我喝咖啡'
             },
-            otherPlugins: {
-                name: '看看我的其他外掛程式',
-                betterPaste: '整理貼上的文字、連結和圖片',
-                pixelPerfectImage: '精確的圖片縮放等'
+            markdownPointBanner: {
+                heading: '您在用 Canva、Keynote 或 PowerPoint 嗎？',
+                atTop: {
+                    name: '在頂端顯示 MarkdownPoint 橫幅',
+                    desc: '關閉後，橫幅會顯示在設定頁面中較下方的位置。'
+                },
+                credit: '作者：Johan Sanneblad',
+                messages: [
+                    { headline: '用 Markdown 寫投影片。', subtext: '把文字和圖片拖曳到你要的位置。' },
+                    { headline: 'PowerPoint 的免費替代方案。', subtext: '分享和協作也都免費。' },
+                    { headline: '像 Apple Motion 一樣做動畫。', subtext: '可以用關鍵影格、路徑和變形。' },
+                    { headline: '像 Google Slides 一樣協作。', subtext: '指標和留言都是即時的。' },
+                    { headline: '在同一處檢視每張投影片的文字。', subtext: '開啟 View > Outline，用 Markdown 編輯。' },
+                    { headline: '像 Figma 一樣貼齊物件。', subtext: '依間距、尺寸和角度對齊。' },
+                    { headline: '用 ==等號== 包住文字就能醒目提示。', subtext: '**粗體** 和 *斜體* 的用法和 Obsidian 一樣。' },
+                    { headline: '把簡報匯出成 4K 影片。', subtext: '做動畫不需要 After Effects。' },
+                    { headline: '演講者備忘稿也是 Markdown。', subtext: '它們和投影片存在同一個檔案裡。' },
+                    { headline: '每份簡報都是電腦裡的一個資料夾。', subtext: '製作投影片不需要帳號。' },
+                    { headline: '把程式碼放上投影片。', subtext: '程式碼區塊支援 21 種語言的語法突顯。' },
+                    { headline: '用連結分享簡報。', subtext: '用免費帳號發布到網路上。' },
+                    { headline: '用 Git 管理你的簡報。', subtext: '簡報就是 Markdown 和 YAML 純文字檔。' },
+                    { headline: '用文字畫流程圖。', subtext: '寫下 Mermaid 程式碼就能產生圖表。' },
+                    { headline: '把簡報放在同步資料夾裡。', subtext: 'Dropbox、iCloud Drive 和 OneDrive 都可以。' },
+                    { headline: '像 Obsidian 一樣挑選主題。', subtext: '所有主題都免費，一鍵安裝。' },
+                    { headline: '個人和商業用途都免費。', subtext: '下載 Mac 版或 Windows 版。' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: '啟動時檢查新版本',

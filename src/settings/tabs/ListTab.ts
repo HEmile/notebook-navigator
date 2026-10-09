@@ -25,6 +25,7 @@ import {
     createPropertyGroupingOption,
     getPropertyGroupingKey,
     getPropertyGroupingOrder,
+    isListDisplayMode,
     MANUAL_SORT_NEW_NOTE_PLACEMENT_OPTIONS,
     normalizeListNoteGroupingOption,
     PROPERTY_SORT_SECONDARY_OPTIONS,
@@ -271,14 +272,15 @@ function createListAppearanceDefinitionGroup(context: SettingsTabContext): Setti
     }
 
     items.push(
-        createDropdownDefinition('defaultListMode', {
+        createToggleDefinition('colorListPaneTitle', {
+            name: strings.settings.items.colorListPaneTitle.name,
+            desc: strings.settings.items.colorListPaneTitle.desc
+        }),
+        createRenderDefinition({
             name: strings.settings.items.defaultListMode.name,
             desc: strings.settings.items.defaultListMode.desc,
             aliases: Object.values(strings.settings.items.defaultListMode.options),
-            options: {
-                standard: strings.settings.items.defaultListMode.options.standard,
-                compact: strings.settings.items.defaultListMode.options.compact
-            }
+            render: setting => renderDefaultListModeSetting(setting, context)
         }),
         createRenderDefinition({
             name: strings.settings.items.compactItemHeight.name,
@@ -709,6 +711,28 @@ function renderIncludeDescendantNotesSetting(setting: Setting, context: Settings
     addSettingSyncModeToggle({ setting, plugin, settingId: 'includeDescendantNotes' });
 }
 
+function renderDefaultListModeSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+
+    setting
+        .setName(strings.settings.items.defaultListMode.name)
+        .setDesc(strings.settings.items.defaultListMode.desc)
+        .addDropdown(dropdown =>
+            dropdown
+                .addOption('standard', strings.settings.items.defaultListMode.options.standard)
+                .addOption('compact', strings.settings.items.defaultListMode.options.compact)
+                .setValue(plugin.settings.defaultListMode)
+                .onChange(value => {
+                    if (!isListDisplayMode(value)) {
+                        return;
+                    }
+                    plugin.setDefaultListMode(value);
+                })
+        );
+
+    addSettingSyncModeToggle({ setting, plugin, settingId: 'defaultListMode' });
+}
+
 function renderCompactItemHeightSetting(setting: Setting, context: SettingsTabContext): void {
     const { plugin } = context;
 
@@ -718,7 +742,7 @@ function renderCompactItemHeightSetting(setting: Setting, context: SettingsTabCo
         value: plugin.settings.compactItemHeight,
         defaultValue: DEFAULT_SETTINGS.compactItemHeight,
         min: 20,
-        max: 28,
+        max: 40,
         step: 1,
         resetTooltip: strings.settings.items.compactItemHeight.resetTooltip,
         formatValue: formatPixelSliderValue,

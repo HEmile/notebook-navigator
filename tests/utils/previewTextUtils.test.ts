@@ -57,6 +57,18 @@ describe('PreviewTextUtils.extractPreviewText', () => {
         expect(preview).toBe('Value with italic content');
     });
 
+    it('removes Obsidian color markers directly after opening highlight delimiters', () => {
+        const content = '==🔴Red== ==🟠Orange== ==🟡Yellow== ==🟢Green== ==🔵 Blue== ==🟣Purple==';
+        const preview = PreviewTextUtils.extractPreviewText(content, skipCodeSettings);
+        expect(preview).toBe('Red Orange Yellow Green Blue Purple');
+    });
+
+    it('keeps color circles that are not directly after opening highlight delimiters', () => {
+        const content = '== 🔴Anaplan== ==Status 🔴==';
+        const preview = PreviewTextUtils.extractPreviewText(content, skipCodeSettings);
+        expect(preview).toBe('🔴Anaplan Status 🔴');
+    });
+
     it('keeps inline code content while removing backticks when code blocks are included', () => {
         const preview = PreviewTextUtils.extractPreviewText('Example `inline` snippet', includeCodeSettings);
         expect(preview).toBe('Example inline snippet');
@@ -205,6 +217,51 @@ describe('PreviewTextUtils.extractPreviewText', () => {
     it('keeps escaped tags as literal text', () => {
         const preview = PreviewTextUtils.extractPreviewText('Escaped \\#tag tail', skipCodeSettings);
         expect(preview).toBe('Escaped #tag tail');
+    });
+
+    it('keeps link text that contains a numeric hashtag', () => {
+        const content = [
+            '#days',
+            '',
+            '2026-09-23',
+            '',
+            '[\\[FR\\] regex-based colors and icons · Issue #860 · GitHub](https://github.com/johansan/notebook-navigator/issues/860)',
+            '',
+            '---',
+            '[[Issues]]'
+        ].join('\n');
+        const preview = PreviewTextUtils.extractPreviewText(content, skipCodeSettings);
+        expect(preview).toBe('2026-09-23 [FR] regex-based colors and icons · Issue #860 · GitHub Issues');
+    });
+
+    it('strips tags inside links and formatting without dropping the surrounding text', () => {
+        const content =
+            'See [the #tag docs](https://example.org) then **bold #tag** then ==mark #tag== then ~~strike #tag~~ then *em #tag* here';
+        const preview = PreviewTextUtils.extractPreviewText(content, skipCodeSettings);
+        expect(preview).toBe('See the docs then bold then mark then strike then em here');
+    });
+
+    it('strips tags inside included headings without dropping the heading text', () => {
+        const preview = PreviewTextUtils.extractPreviewText('# Title #tag\nBody', skipCodeSettings);
+        expect(preview).toBe('Title Body');
+    });
+
+    it('keeps hashtags that are only digits', () => {
+        const content = 'Issue #860 and [Issue #1984](https://example.org) stay, #y2024 #2024/q1 #1-2 go';
+        const preview = PreviewTextUtils.extractPreviewText(content, skipCodeSettings);
+        expect(preview).toBe('Issue #860 and Issue #1984 stay, go');
+    });
+
+    it('keeps hashtags that do not follow whitespace', () => {
+        const content = 'Open https://example.org/page#section and foo#bar here';
+        const preview = PreviewTextUtils.extractPreviewText(content, skipCodeSettings);
+        expect(preview).toBe('Open https://example.org/page#section and foo#bar here');
+    });
+
+    it('strips tags at line starts after list and blockquote markers', () => {
+        const content = ['- #tag item', '> #quoted line', '#start of line'].join('\n');
+        const preview = PreviewTextUtils.extractPreviewText(content, skipCodeSettings);
+        expect(preview).toBe('item line of line');
     });
 
     it('does not alter backslashes in paths', () => {
@@ -896,6 +953,22 @@ describe('PreviewTextUtils.extractPreviewText', () => {
         const content = 'Alpha [[Page|#1]] beta';
         const preview = PreviewTextUtils.extractPreviewText(content, skipCodeSettings);
         expect(preview).toBe('Alpha #1 beta');
+    });
+
+    it('keeps tags and formatting in wiki link alias text as literal text', () => {
+        const content = 'Alpha [[Page|x #tag y]] mid **[[Page|#tag z]]** and [[Page|**bold** w]] beta';
+        const preview = PreviewTextUtils.extractPreviewText(content, skipCodeSettings);
+        expect(preview).toBe('Alpha x #tag y mid #tag z and **bold** w beta');
+    });
+
+    it('strips emphasis directly after a wiki link', () => {
+        const preview = PreviewTextUtils.extractPreviewText('A [[Page|x]]*em* and [[Page|y]]_em_ B', skipCodeSettings);
+        expect(preview).toBe('A xem and yem B');
+    });
+
+    it('strips markdown link syntax when the link text starts with a bracket', () => {
+        const preview = PreviewTextUtils.extractPreviewText('Alpha [[x](https://example.org) beta [[Page]]', skipCodeSettings);
+        expect(preview).toBe('Alpha [x beta Page');
     });
 
     it('normalizes wiki link display text consistently across passes', () => {

@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_TH = {
+    language: {
+        downloading: 'กำลังดาวน์โหลดภาษา…',
+        continueInEnglish: 'ดำเนินการต่อเป็นภาษาอังกฤษ',
+        downloadFailed: 'ดาวน์โหลดภาษาไม่สำเร็จ Notebook Navigator กำลังใช้ภาษาอังกฤษ'
+    },
     // Common UI elements
     common: {
         cancel: 'ยกเลิก',
@@ -87,6 +92,7 @@ export const STRINGS_TH = {
         pinShortcutsAndRecentFiles: 'ปักหมุดทางลัดและไฟล์ล่าสุด',
         unpinShortcuts: 'เลิกปักหมุดทางลัด',
         unpinShortcutsAndRecentFiles: 'เลิกปักหมุดทางลัดและไฟล์ล่าสุด',
+        resizePinnedShortcuts: 'ปรับขนาดทางลัดที่ปักหมุด',
         profileMenuAria: 'เปลี่ยนโปรไฟล์ห้องนิรภัย'
     },
 
@@ -112,8 +118,17 @@ export const STRINGS_TH = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'ไม่สามารถอ่านเทมเพลตโน้ตรายวันได้',
         createFailed: 'ไม่สามารถสร้างโน้ตรายวันได้'
+    },
+
+    templates: {
+        invalidTokens: 'เทมเพลต "{name}" มีโทเค็นที่ไม่ถูกต้อง: {tokens}',
+        invalidFileNameTokens: 'รูปแบบชื่อไฟล์ของ "{name}" มีโทเค็นที่ไม่ถูกต้อง: {tokens}',
+        readFailed: 'ไม่สามารถอ่านเทมเพลต "{name}" ได้ สร้างโน้ตโดยไม่ใช้เทมเพลต',
+        folderNotSet: 'ตั้งค่าโฟลเดอร์เทมเพลตใน การดำเนินการกับไฟล์และเทมเพลต > เทมเพลต ก่อนสร้างโน้ตจากเทมเพลต',
+        templateNotFound: 'ไม่พบเทมเพลต "{name}"',
+        folderNotFound: 'ไม่พบโฟลเดอร์ "{name}"',
+        templaterMissing: 'ยังไม่ได้ติดตั้งปลั๊กอิน Templater เปลี่ยนเอนจินเทมเพลตได้ใน การดำเนินการกับไฟล์และเทมเพลต > เทมเพลต'
     },
 
     shortcuts: {
@@ -363,6 +378,9 @@ export const STRINGS_TH = {
             duplicateFolder: 'ทำซ้ำโฟลเดอร์',
             searchInFolder: 'ค้นหาในโฟลเดอร์',
             createFolderNote: 'สร้างโน้ตโฟลเดอร์',
+            setFolderTemplate: 'ตั้งเทมเพลตโฟลเดอร์...',
+            changeFolderTemplate: 'เปลี่ยนเทมเพลตโฟลเดอร์...',
+            removeFolderTemplate: 'นำเทมเพลตโฟลเดอร์ออก',
             detachFolderNote: 'แยกโน้ตโฟลเดอร์',
             deleteFolderNote: 'ลบโน้ตโฟลเดอร์',
             changeIcon: 'เปลี่ยนไอคอน',
@@ -718,7 +736,28 @@ export const STRINGS_TH = {
                 dismiss: 'เพื่อปิด'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'เพิ่มคำสั่ง',
+            titleEdit: 'แก้ไขคำสั่ง',
+            name: 'ชื่อคำสั่ง',
+            namePlaceholder: 'โน้ตการประชุมใหม่',
+            template: 'เทมเพลต',
+            templateDesc: 'ไม่บังคับ หากไม่มีเทมเพลต จะใช้เทมเพลตโฟลเดอร์ของโฟลเดอร์ปลายทางหากตั้งไว้',
+            templatePlaceholder: 'Templates/Meeting.md',
+            fileNameFormat: 'รูปแบบชื่อไฟล์',
+            fileNameFormatDesc:
+                'โทเค็นเช่น {{date:YYYYMMDD}} และ {{prompt:Title}} จะถูกแทนที่เมื่อเรียกใช้คำสั่ง แต่ละพรอมต์จะถามค่า และป้ายชื่อเดียวกันในเทมเพลตจะได้รับค่าเดียวกัน {{number}} คือค่าที่มากกว่าหมายเลขสูงสุดที่โน้ตในโฟลเดอร์ซึ่งมีรูปแบบชื่อเดียวกันใช้อยู่หนึ่ง และ {{number:00}} จะเติมศูนย์ข้างหน้า เทมเพลตก็ใช้ {{number}} ได้เช่นกัน และ {{title}} จะแทรกชื่อไฟล์ที่สร้างขึ้น',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Title}}',
+            location: 'ตำแหน่ง',
+            folder: 'โฟลเดอร์',
+            folderPlaceholder: 'Meetings',
+            icon: 'ไอคอน',
+            placement: 'ปุ่ม',
+            placementNone: 'ไม่มี',
+            placementRibbon: 'ริบบอน',
+            placementTabBar: 'แถบแท็บ'
+        },
+        templateFile: {
             placeholder: 'ค้นหาเทมเพลต...',
             instructions: {
                 navigate: 'เพื่อนำทาง',
@@ -919,6 +958,9 @@ export const STRINGS_TH = {
         openMonthlyNote: 'เปิดโน้ตรายเดือน',
         openQuarterlyNote: 'เปิดโน้ตรายไตรมาส',
         openYearlyNote: 'เปิดโน้ตรายปี',
+        openNextPeriodicNote: 'เปิดโน้ตตามรอบถัดไป',
+        openPreviousPeriodicNote: 'เปิดโน้ตตามรอบก่อนหน้า',
+        openParentPeriodicNote: 'เปิดโน้ตตามรอบระดับบน',
         revealFile: 'แสดงไฟล์',
         search: 'ค้นหา',
         searchVaultRoot: 'ค้นหาทั้งห้องนิรภัย',
@@ -1107,10 +1149,11 @@ export const STRINGS_TH = {
                 }
             },
             fileOperations: {
-                label: 'การดำเนินการกับไฟล์',
-                description: 'เทมเพลต การยืนยันการลบ ไฟล์แนบ และพฤติกรรมความขัดแย้งเมื่อย้ายไฟล์',
+                label: 'การดำเนินการกับไฟล์และเทมเพลต',
+                description: 'เทมเพลต คำสั่งสร้างโน้ต การยืนยันการลบ ไฟล์แนบ และพฤติกรรมเมื่อเกิดข้อขัดแย้งในการย้ายไฟล์',
                 groups: {
-                    templates: 'เทมเพลต'
+                    templates: 'เทมเพลต',
+                    templateCommands: 'คำสั่งสร้างโน้ต'
                 }
             },
             frontmatterFields: {
@@ -1170,6 +1213,10 @@ export const STRINGS_TH = {
                     listPane: 'แสดงในแผงรายการ',
                     hidden: 'ไม่แสดง'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'ใส่สีชื่อแผงรายการ',
+                desc: 'ใช้สีของโฟลเดอร์ แท็ก หรือคุณสมบัติที่เลือกกับชื่อแผงรายการ'
             },
             defaultSortOrder: {
                 name: 'ลำดับการเรียงเริ่มต้น',
@@ -1719,11 +1766,11 @@ export const STRINGS_TH = {
                 name: 'ตำแหน่งโฟลเดอร์เทมเพลต',
                 desc: 'ตัวเลือกไฟล์เทมเพลตแสดงโน้ตจากโฟลเดอร์นี้',
                 placeholder: 'เทมเพลต',
-                usage: 'ใช้โดยโน้ตปฏิทินและโน้ตโฟลเดอร์ กำหนดค่าเทมเพลตใน ปฏิทิน > การรวมปฏิทิน และ โฟลเดอร์และโน้ตโฟลเดอร์ > ไฟล์โน้ตโฟลเดอร์'
+                usage: 'เทมเพลตในโฟลเดอร์เทมเพลตใช้โดยโน้ตปฏิทิน โน้ตโฟลเดอร์ เทมเพลตโฟลเดอร์ และโน้ตใหม่จากเทมเพลต กำหนดค่าเทมเพลตปฏิทินใน ปฏิทิน > การรวมปฏิทิน และเทมเพลตโน้ตโฟลเดอร์ใน โฟลเดอร์และโน้ตโฟลเดอร์ > ไฟล์โน้ตโฟลเดอร์'
             },
             calendarDailyNotePattern: {
                 name: 'โน้ตรายวัน',
-                desc: 'กำหนดเส้นทางโดยใช้รูปแบบวันที่ Moment ใส่ชื่อโฟลเดอร์ย่อยในวงเล็บเหลี่ยม เช่น [Work]/YYYY คลิกไอคอนเทมเพลตเพื่อตั้งค่าเทมเพลต ตั้งค่าตำแหน่งโฟลเดอร์เทมเพลตในการดำเนินการกับไฟล์ > เทมเพลต',
+                desc: 'กำหนดเส้นทางโดยใช้รูปแบบวันที่ Moment ใส่ชื่อโฟลเดอร์ย่อยในวงเล็บเหลี่ยม เช่น [Work]/YYYY คลิกไอคอนเทมเพลตเพื่อตั้งค่าเทมเพลต ตั้งค่าตำแหน่งโฟลเดอร์เทมเพลตในการดำเนินการกับไฟล์และเทมเพลต > เทมเพลต',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'รูปแบบต้องสามารถจัดรูปแบบและแยกวิเคราะห์กลับเป็นวันที่แบบเต็ม (ปี เดือน วัน) ได้'
             },
@@ -1731,15 +1778,47 @@ export const STRINGS_TH = {
                 momentDescPrefix: 'กำหนดเส้นทางโดยใช้ ',
                 momentLinkText: 'รูปแบบวันที่ Moment',
                 momentDescSuffix:
-                    ' ใส่ชื่อโฟลเดอร์ย่อยในวงเล็บเหลี่ยม เช่น [Work]/YYYY คลิกไอคอนเทมเพลตเพื่อตั้งค่าเทมเพลต ตั้งค่าตำแหน่งโฟลเดอร์เทมเพลตในการดำเนินการกับไฟล์ > เทมเพลต',
-                templateTokenNoticeLabel: 'สำคัญ!',
-                templateTokenNotice:
-                    'การรองรับเทมเพลตต้องใช้ปลั๊กอิน Templater รูปแบบในตัว เช่น {{date}} และ {{title}} ใช้ได้เฉพาะเมื่อตั้ง {source} เป็น {option}',
+                    ' ใส่ชื่อโฟลเดอร์ย่อยในวงเล็บเหลี่ยม เช่น [Work]/YYYY คลิกไอคอนเทมเพลตเพื่อตั้งค่าเทมเพลต ตั้งค่าตำแหน่งโฟลเดอร์เทมเพลตในการดำเนินการกับไฟล์และเทมเพลต > เทมเพลต',
                 example: 'รูปแบบปัจจุบัน: {path}'
             },
-            templaterSupport: {
-                installed: '✅ ติดตั้งปลั๊กอิน Templater พร้อมการรองรับเทมเพลตเต็มรูปแบบแล้ว',
-                missing: '⚠️ ติดตั้งปลั๊กอิน Templater เพื่อใช้การรองรับเทมเพลต'
+            templateEngine: {
+                name: 'เอนจินเทมเพลต',
+                desc: 'เอนจินที่ประมวลผลไฟล์เทมเพลตเมื่อ Notebook Navigator สร้างโน้ต อัตโนมัติจะใช้ Templater กับเทมเพลตที่มี <% เมื่อติดตั้งปลั๊กอิน Templater ไว้ เทมเพลตอื่นทั้งหมดใช้เอนจินในตัว',
+                options: {
+                    automatic: 'อัตโนมัติ',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'ปลั๊กอิน Templater: ติดตั้งแล้ว',
+                templaterNotInstalled: 'ปลั๊กอิน Templater: ยังไม่ได้ติดตั้ง',
+                templaterAutomatic:
+                    'เทมเพลตที่มีคำสั่ง Templater (<%) จะประมวลผลด้วย Templater ส่วนเทมเพลตอื่นทั้งหมดจะประมวลผลด้วยเอนจินในตัว',
+                templaterUsage: 'เทมเพลตทั้งหมดจะประมวลผลด้วย Templater โทเค็นในตัวในไฟล์เทมเพลตจะไม่ถูกแทนที่',
+                templaterMissingWarning:
+                    'ไม่สามารถสร้างโน้ตจากเทมเพลตได้ เปลี่ยน {setting} เป็น {automatic} หรือ {builtin} ใน {location} หรือติดตั้งและเปิดใช้งานปลั๊กอิน Templater',
+                tokens: 'โทเค็นในตัว: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} ถึง {{sunday}}, {{cursor}} เขียน {{!date}} เพื่อคง {{date}} ไว้เป็นข้อความ',
+                usage: 'โทเค็นเทมเพลต เช่น {{title}} และ {{date}} จะถูกแทนที่เมื่อสร้างโน้ต กำหนดค่าเอนจินเทมเพลตได้ใน การดำเนินการกับไฟล์และเทมเพลต > เทมเพลต'
+            },
+            showFolderTemplateIcons: {
+                name: 'แสดงไอคอนเทมเพลตโฟลเดอร์',
+                desc: 'ทำเครื่องหมายโฟลเดอร์ที่มีเทมเพลตของตัวเองด้วยไอคอนในบานหน้าต่างนำทาง'
+            },
+            templateCommands: {
+                name: 'คำสั่ง',
+                desc: 'แต่ละคำสั่งจะสร้างโน้ตพร้อมชื่อไฟล์ที่สร้างให้ จากเทมเพลตของคำสั่งเองหรือเทมเพลตโฟลเดอร์ เรียกใช้จากแผงคำสั่ง หรือผูกกับปุ่มลัดหรือปุ่มบนแถบเครื่องมือ',
+                empty: 'ยังไม่ได้เพิ่มคำสั่ง',
+                add: 'เพิ่มคำสั่ง',
+                edit: 'แก้ไข',
+                unnamed: 'คำสั่งไม่มีชื่อ',
+                locationCurrent: 'โฟลเดอร์ปัจจุบัน',
+                locationFolder: 'โฟลเดอร์ที่กำหนด'
+            },
+            folderTemplates: {
+                name: 'เทมเพลตโฟลเดอร์',
+                desc: 'โน้ตใหม่ใช้เทมเพลตของโฟลเดอร์นั้นหรือของโฟลเดอร์แม่ที่ใกล้ที่สุด ตั้งเทมเพลตจากเมนูบริบทของโฟลเดอร์ เทมเพลตปฏิทิน โน้ตประจำวัน และโน้ตโฟลเดอร์มีความสำคัญกว่า',
+                empty: 'ยังไม่ได้ตั้งเทมเพลตโฟลเดอร์',
+                scopeSubfolders: 'โฟลเดอร์และโฟลเดอร์ย่อย',
+                scopeFolder: 'เฉพาะโฟลเดอร์นี้'
             },
             calendarWeeklyNotePattern: {
                 name: 'โน้ตรายสัปดาห์',
@@ -1909,7 +1988,7 @@ export const STRINGS_TH = {
             },
             vaultProfiles: {
                 name: 'โปรไฟล์ห้องนิรภัย',
-                desc: 'โปรไฟล์เก็บการมองเห็นประเภทไฟล์ ไฟล์ที่ซ่อน โฟลเดอร์ที่ซ่อน แท็กที่ซ่อน กฎคุณสมบัติสำหรับโน้ตที่ซ่อน ทางลัด และแบนเนอร์นำทาง สลับโปรไฟล์จากส่วนหัวแผงนำทาง',
+                desc: 'โปรไฟล์เก็บการมองเห็นประเภทไฟล์ ไฟล์ที่ซ่อน โฟลเดอร์ที่ซ่อน แท็กที่ซ่อน กฎคุณสมบัติสำหรับโน้ตที่ซ่อน ทางลัด และแบนเนอร์นำทาง สลับโปรไฟล์ที่นี่หรือจากตัวสลับโปรไฟล์ห้องนิรภัยในแผงนำทาง',
                 defaultName: 'ค่าเริ่มต้น',
                 addButton: 'เพิ่มโปรไฟล์',
                 editProfilesButton: 'แก้ไขโปรไฟล์',
@@ -1928,9 +2007,9 @@ export const STRINGS_TH = {
                     duplicateName: 'ชื่อโปรไฟล์มีอยู่แล้ว'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'ตำแหน่งชื่อห้องนิรภัย',
-                desc: 'เลือกตำแหน่งที่จะแสดงชื่อห้องนิรภัย',
+            vaultProfileSwitcher: {
+                name: 'ตัวสลับโปรไฟล์ห้องนิรภัย',
+                desc: 'เลือกตำแหน่งที่จะแสดงตัวสลับโปรไฟล์ห้องนิรภัย',
                 options: {
                     header: 'แสดงในส่วนหัว',
                     navigation: 'แสดงในแผงนำทาง'
@@ -2039,7 +2118,8 @@ export const STRINGS_TH = {
                 scopes: {
                     folder: 'โฟลเดอร์: {name}',
                     tag: 'แท็ก: #{name}',
-                    property: 'คุณสมบัติ: {name}'
+                    property: 'คุณสมบัติ: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2473,7 +2553,7 @@ export const STRINGS_TH = {
             },
             folderNoteTemplate: {
                 name: 'เทมเพลตโน้ตโฟลเดอร์',
-                desc: 'ไฟล์เทมเพลตที่ใช้เมื่อสร้างโน้ตโฟลเดอร์ เทมเพลต Markdown สามารถใช้ Templater ได้ เทมเพลต Canvas และ Base จะถูกคัดลอกเป็นเนื้อหาไฟล์ ตั้งค่าตำแหน่งโฟลเดอร์เทมเพลตในการดำเนินการกับไฟล์ > เทมเพลต',
+                desc: 'ไฟล์เทมเพลตที่ใช้เมื่อสร้างโน้ตโฟลเดอร์ เทมเพลต Markdown สามารถใช้ Templater ได้ เทมเพลต Canvas และ Base จะถูกคัดลอกเป็นเนื้อหาไฟล์ ตั้งค่าตำแหน่งโฟลเดอร์เทมเพลตในการดำเนินการกับไฟล์และเทมเพลต > เทมเพลต',
                 formatWarning: 'รูปแบบเทมเพลตต้องตรงกับประเภทโน้ตโฟลเดอร์ที่เลือก: .md, .canvas หรือ .base'
             },
             folderNamesOpenFolderNotes: {
@@ -2609,10 +2689,32 @@ export const STRINGS_TH = {
                 buttonText: '❤️ สปอนเซอร์',
                 coffeeButton: '☕️ เลี้ยงกาแฟ'
             },
-            otherPlugins: {
-                name: 'ดูปลั๊กอินอื่นของฉัน',
-                betterPaste: 'จัดระเบียบข้อความ ลิงก์ และรูปภาพที่วาง',
-                pixelPerfectImage: 'ปรับขนาดภาพได้แม่นยำและอื่น ๆ'
+            markdownPointBanner: {
+                heading: 'ใช้ Canva, Keynote หรือ PowerPoint อยู่หรือเปล่า',
+                atTop: {
+                    name: 'แสดงแบนเนอร์ MarkdownPoint ที่ด้านบน',
+                    desc: 'เมื่อปิด แบนเนอร์จะแสดงในตำแหน่งที่ต่ำลงในหน้าการตั้งค่า'
+                },
+                credit: 'โดย Johan Sanneblad',
+                messages: [
+                    { headline: 'เขียนสไลด์ของคุณด้วย Markdown', subtext: 'ลากข้อความและรูปภาพไปวางตรงที่คุณต้องการ' },
+                    { headline: 'ทางเลือกฟรีแทน PowerPoint', subtext: 'การแชร์และการทำงานร่วมกันก็ฟรีด้วย' },
+                    { headline: 'ทำแอนิเมชันได้แบบ Apple Motion', subtext: 'ใช้คีย์เฟรม พาธ และมอร์ฟ' },
+                    { headline: 'ทำงานร่วมกันแบบ Google Slides', subtext: 'พร้อมตัวชี้และความคิดเห็นแบบเรียลไทม์' },
+                    { headline: 'ดูข้อความของทุกสไลด์ในที่เดียว', subtext: 'เปิด View > Outline แล้วแก้ไขเป็น Markdown' },
+                    { headline: 'สแนปวัตถุแบบ Figma', subtext: 'จัดแนวตามระยะห่าง ขนาด และมุม' },
+                    { headline: 'ไฮไลต์คำด้วย ==เครื่องหมายเท่ากับ==', subtext: '**ตัวหนา** และ *ตัวเอียง* ใช้ได้เหมือนใน Obsidian' },
+                    { headline: 'ส่งออกงานนำเสนอเป็นวิดีโอ 4K', subtext: 'คุณไม่ต้องใช้ After Effects เพื่อทำแอนิเมชัน' },
+                    { headline: 'โน้ตผู้บรรยายก็เป็น Markdown เหมือนกัน', subtext: 'บันทึกไว้ในไฟล์เดียวกับสไลด์' },
+                    { headline: 'งานนำเสนอคือโฟลเดอร์ในเครื่องของคุณ', subtext: 'คุณไม่ต้องมีบัญชีเพื่อสร้างสไลด์' },
+                    { headline: 'ใส่โค้ดลงในสไลด์ของคุณ', subtext: 'บล็อกโค้ดไฮไลต์ไวยากรณ์ได้ 21 ภาษา' },
+                    { headline: 'แชร์งานนำเสนอด้วยลิงก์', subtext: 'เผยแพร่ออนไลน์ด้วยบัญชีฟรี' },
+                    { headline: 'ติดตามงานนำเสนอของคุณใน Git', subtext: 'งานนำเสนอเป็นไฟล์ข้อความ Markdown และ YAML' },
+                    { headline: 'สร้างผังงานจากข้อความ', subtext: 'เขียนโค้ด Mermaid แล้วจะได้ไดอะแกรม' },
+                    { headline: 'เก็บงานนำเสนอไว้ในโฟลเดอร์ที่ซิงค์', subtext: 'ใช้ได้ทั้ง Dropbox, iCloud Drive และ OneDrive' },
+                    { headline: 'เลือกธีมได้เหมือนใน Obsidian', subtext: 'ทุกธีมฟรี ติดตั้งได้ในคลิกเดียว' },
+                    { headline: 'ฟรีทั้งใช้ส่วนตัวและเชิงพาณิชย์', subtext: 'ดาวน์โหลดสำหรับ Mac หรือ Windows' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: 'ตรวจสอบเวอร์ชันใหม่เมื่อเริ่ม',

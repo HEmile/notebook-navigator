@@ -21,6 +21,11 @@
  * Organized by feature/component for easy maintenance
  */
 export const STRINGS_FA = {
+    language: {
+        downloading: 'در حال دانلود زبان‌ها…',
+        continueInEnglish: 'ادامه به انگلیسی',
+        downloadFailed: 'دانلود زبان‌ها ناموفق بود. Notebook Navigator از انگلیسی استفاده می‌کند.'
+    },
     // Common UI elements
     common: {
         cancel: 'لغو',
@@ -87,6 +92,7 @@ export const STRINGS_FA = {
         pinShortcutsAndRecentFiles: 'سنجاق کردن میانبرها و فایل‌های اخیر',
         unpinShortcuts: 'برداشتن سنجاق میانبرها',
         unpinShortcutsAndRecentFiles: 'برداشتن سنجاق میانبرها و فایل‌های اخیر',
+        resizePinnedShortcuts: 'تغییر اندازه میانبرهای سنجاق‌شده',
         profileMenuAria: 'تغییر پروفایل خزانه'
     },
 
@@ -112,8 +118,17 @@ export const STRINGS_FA = {
     },
 
     dailyNotes: {
-        templateReadFailed: 'خواندن الگوی یادداشت روزانه ناموفق بود.',
         createFailed: 'ایجاد یادداشت روزانه ممکن نیست.'
+    },
+
+    templates: {
+        invalidTokens: 'الگوی "{name}" شامل توکن‌های نامعتبر است: {tokens}',
+        invalidFileNameTokens: 'قالب نام فایل "{name}" شامل توکن‌های نامعتبر است: {tokens}',
+        readFailed: 'خواندن الگوی "{name}" ممکن نبود. یادداشت بدون الگو ایجاد شد.',
+        folderNotSet: 'پیش از ایجاد یادداشت از الگو، پوشه الگوها را در عملیات فایل و الگوها > الگوها تنظیم کنید.',
+        templateNotFound: 'الگوی "{name}" پیدا نشد.',
+        folderNotFound: 'پوشه "{name}" پیدا نشد.',
+        templaterMissing: 'افزونه Templater نصب نیست. موتور الگو را در عملیات فایل و الگوها > الگوها تغییر دهید.'
     },
 
     shortcuts: {
@@ -363,6 +378,9 @@ export const STRINGS_FA = {
             duplicateFolder: 'کپی پوشه',
             searchInFolder: 'جستجو در پوشه',
             createFolderNote: 'ایجاد یادداشت پوشه',
+            setFolderTemplate: 'تنظیم الگوی پوشه...',
+            changeFolderTemplate: 'تغییر الگوی پوشه...',
+            removeFolderTemplate: 'حذف الگوی پوشه',
             detachFolderNote: 'جدا کردن یادداشت پوشه',
             deleteFolderNote: 'حذف یادداشت پوشه',
             changeIcon: 'تغییر آیکون',
@@ -724,7 +742,28 @@ export const STRINGS_FA = {
                 dismiss: 'برای بستن'
             }
         },
-        calendarTemplate: {
+        templateCommand: {
+            titleAdd: 'افزودن فرمان',
+            titleEdit: 'ویرایش فرمان',
+            name: 'نام فرمان',
+            namePlaceholder: 'یادداشت جلسه جدید',
+            template: 'الگو',
+            templateDesc: 'اختیاری. بدون الگو، در صورت تنظیم، الگوی پوشه مقصد اعمال می‌شود.',
+            templatePlaceholder: 'Templates/Meeting.md',
+            fileNameFormat: 'قالب نام فایل',
+            fileNameFormatDesc:
+                'توکن‌هایی مانند {{date:YYYYMMDD}} و {{prompt:Title}} هنگام اجرای فرمان جایگزین می‌شوند. هر پرسش یک مقدار می‌خواهد و همان برچسب در الگو همان مقدار را دریافت می‌کند. {{number}} یک واحد بیشتر از بزرگ‌ترین شماره‌ای است که یادداشت‌های پوشه با همان الگوی نام استفاده کرده‌اند و {{number:00}} آن را با صفر پر می‌کند. الگو نیز می‌تواند از {{number}} استفاده کند و {{title}} نام فایل تولیدشده را درج می‌کند.',
+            fileNameFormatPlaceholder: '{{date:YYYYMMDD}} {{prompt:Title}}',
+            location: 'محل',
+            folder: 'پوشه',
+            folderPlaceholder: 'Meetings',
+            icon: 'آیکون',
+            placement: 'دکمه',
+            placementNone: 'هیچ',
+            placementRibbon: 'ریبون',
+            placementTabBar: 'نوار زبانه‌ها'
+        },
+        templateFile: {
             placeholder: 'جستجوی الگوها...',
             instructions: {
                 navigate: 'برای ناوبری',
@@ -926,6 +965,9 @@ export const STRINGS_FA = {
         openMonthlyNote: 'باز کردن یادداشت ماهانه',
         openQuarterlyNote: 'باز کردن یادداشت فصلی',
         openYearlyNote: 'باز کردن یادداشت سالانه',
+        openNextPeriodicNote: 'باز کردن یادداشت دوره‌ای بعدی',
+        openPreviousPeriodicNote: 'باز کردن یادداشت دوره‌ای قبلی',
+        openParentPeriodicNote: 'باز کردن یادداشت دوره‌ای بالاتر',
         revealFile: 'نمایش فایل',
         search: 'جستجو',
         searchVaultRoot: 'جستجو در کل خزانه',
@@ -1114,10 +1156,11 @@ export const STRINGS_FA = {
                 }
             },
             fileOperations: {
-                label: 'عملیات فایل',
-                description: 'الگوها، تأییدیه‌های حذف، پیوست‌ها و رفتار تعارض در جابجایی فایل.',
+                label: 'عملیات فایل و الگوها',
+                description: 'الگوها، فرمان‌های ایجاد یادداشت، تأیید حذف، پیوست‌ها و رفتار در تعارض هنگام انتقال فایل.',
                 groups: {
-                    templates: 'الگوها'
+                    templates: 'الگوها',
+                    templateCommands: 'فرمان‌های ایجاد یادداشت'
                 }
             },
             frontmatterFields: {
@@ -1177,6 +1220,10 @@ export const STRINGS_FA = {
                     listPane: 'نمایش در پنل لیست',
                     hidden: 'نمایش نده'
                 }
+            },
+            colorListPaneTitle: {
+                name: 'رنگ‌آمیزی عنوان پنل لیست',
+                desc: 'رنگ پوشه، برچسب یا ویژگی انتخاب‌شده را روی عنوان پنل لیست اعمال می‌کند.'
             },
             defaultSortOrder: {
                 name: 'ترتیب پیش‌فرض مرتب‌سازی',
@@ -1726,11 +1773,11 @@ export const STRINGS_FA = {
                 name: 'محل پوشه الگوها',
                 desc: 'انتخابگر فایل الگو یادداشت‌های این پوشه را نمایش می‌دهد.',
                 placeholder: 'الگوها',
-                usage: 'برای یادداشت‌های تقویم و یادداشت‌های پوشه استفاده می‌شود. الگوها را در تقویم > یکپارچه‌سازی تقویم و پوشه‌ها و یادداشت‌های پوشه > فایل‌های یادداشت پوشه پیکربندی کنید.'
+                usage: 'الگوهای موجود در پوشه الگوها برای یادداشت‌های تقویم، یادداشت‌های پوشه، الگوهای پوشه و یادداشت جدید از الگو استفاده می‌شوند. الگوهای تقویم را در تقویم > یکپارچه‌سازی تقویم و الگوهای یادداشت پوشه را در پوشه‌ها و یادداشت‌های پوشه > فایل‌های یادداشت پوشه پیکربندی کنید.'
             },
             calendarDailyNotePattern: {
                 name: 'یادداشت‌های روزانه',
-                desc: 'قالب‌بندی مسیر با استفاده از قالب تاریخ Moment. نام زیرپوشه‌ها را در کروشه قرار دهید، مثال [Work]/YYYY. روی آیکون الگو کلیک کنید تا الگو تنظیم شود. محل پوشه الگوها را در عملیات فایل > الگوها تنظیم کنید.',
+                desc: 'قالب‌بندی مسیر با استفاده از قالب تاریخ Moment. نام زیرپوشه‌ها را در کروشه قرار دهید، مثال [Work]/YYYY. روی آیکون الگو کلیک کنید تا الگو تنظیم شود. محل پوشه الگوها را در عملیات فایل و الگوها > الگوها تنظیم کنید.',
                 placeholder: 'YYYY/YYYYMMDD',
                 parsingError: 'الگو باید بتواند به یک تاریخ کامل (سال، ماه، روز) قالب‌بندی شود و دوباره به همان تاریخ تجزیه شود.'
             },
@@ -1738,15 +1785,47 @@ export const STRINGS_FA = {
                 momentDescPrefix: 'قالب‌بندی مسیر با استفاده از ',
                 momentLinkText: 'فرمت تاریخ Moment',
                 momentDescSuffix:
-                    '. نام زیرپوشه‌ها را در کروشه قرار دهید، مثال [Work]/YYYY. روی آیکون الگو کلیک کنید تا الگو تنظیم شود. محل پوشه الگوها را در عملیات فایل > الگوها تنظیم کنید.',
-                templateTokenNoticeLabel: 'مهم!',
-                templateTokenNotice:
-                    'پشتیبانی از الگوها به افزونه Templater نیاز دارد. قالب‌های داخلی مانند {{date}} و {{title}} فقط زمانی کار می‌کنند که {source} روی {option} تنظیم شده باشد.',
+                    '. نام زیرپوشه‌ها را در کروشه قرار دهید، مثال [Work]/YYYY. روی آیکون الگو کلیک کنید تا الگو تنظیم شود. محل پوشه الگوها را در عملیات فایل و الگوها > الگوها تنظیم کنید.',
                 example: 'نحوه نگارش فعلی: {path}'
             },
-            templaterSupport: {
-                installed: '✅ افزونه Templater با پشتیبانی کامل از الگوها نصب شده است.',
-                missing: '⚠️ برای پشتیبانی از الگوها، افزونه Templater را نصب کنید.'
+            templateEngine: {
+                name: 'موتور الگو',
+                desc: 'موتوری که هنگام ایجاد یادداشت توسط Notebook Navigator فایل‌های الگو را پردازش می‌کند. حالت خودکار در صورت نصب بودن افزونه Templater، برای الگوهایی که شامل <% هستند از Templater استفاده می‌کند. سایر الگوها از موتور داخلی استفاده می‌کنند.',
+                options: {
+                    automatic: 'خودکار',
+                    builtin: 'Notebook Navigator',
+                    templater: 'Templater'
+                },
+                templaterInstalled: 'افزونه Templater: نصب شده',
+                templaterNotInstalled: 'افزونه Templater: نصب نشده',
+                templaterAutomatic:
+                    'الگوهایی که شامل دستورات Templater (<%) هستند توسط Templater پردازش می‌شوند. سایر الگوها توسط موتور داخلی پردازش می‌شوند.',
+                templaterUsage: 'همه الگوها توسط Templater پردازش می‌شوند. توکن‌های داخلی در فایل‌های الگو جایگزین نمی‌شوند.',
+                templaterMissingWarning:
+                    'نمی‌توان یادداشت‌ها را از الگوها ایجاد کرد. در {location}، {setting} را به {automatic} یا {builtin} تغییر دهید، یا افزونه Templater را نصب و فعال کنید.',
+                tokens: 'توکن‌های داخلی: {{title}}, {{folder}}, {{path}}, {{date}}, {{date:FORMAT}}, {{date+1d}}, {{time}}, {{today}}, {{now}}, {{yesterday}}, {{tomorrow}}, {{monday}} تا {{sunday}}, {{cursor}}. برای حفظ {{date}} به‌صورت متن، {{!date}} بنویسید.',
+                usage: 'توکن‌های الگو مانند {{title}} و {{date}} هنگام ایجاد یادداشت جایگزین می‌شوند. موتور الگو را در عملیات فایل و الگوها > الگوها پیکربندی کنید.'
+            },
+            showFolderTemplateIcons: {
+                name: 'نمایش آیکون الگوی پوشه',
+                desc: 'پوشه‌هایی را که الگوی اختصاصی دارند با یک آیکون در پنجره ناوبری مشخص می‌کند.'
+            },
+            templateCommands: {
+                name: 'فرمان‌ها',
+                desc: 'هر فرمان یادداشتی با نام فایل تولیدشده، از الگوی خودش یا الگوی پوشه می‌سازد. آن را از پالت فرمان اجرا کنید یا به یک کلید میانبر یا دکمه اختصاص دهید.',
+                empty: 'فرمانی افزوده نشده است.',
+                add: 'افزودن فرمان',
+                edit: 'ویرایش',
+                unnamed: 'فرمان بی‌نام',
+                locationCurrent: 'پوشه فعلی',
+                locationFolder: 'پوشه مشخص'
+            },
+            folderTemplates: {
+                name: 'الگوهای پوشه',
+                desc: 'یادداشت‌های جدید از الگوی پوشه خود یا نزدیک‌ترین پوشه والد استفاده می‌کنند. الگوها را از منوی زمینه پوشه تنظیم کنید. الگوهای تقویم، یادداشت روزانه و یادداشت پوشه اولویت دارند.',
+                empty: 'هیچ الگوی پوشه‌ای تنظیم نشده است.',
+                scopeSubfolders: 'پوشه و زیرپوشه‌ها',
+                scopeFolder: 'فقط این پوشه'
             },
             calendarWeeklyNotePattern: {
                 name: 'یادداشت‌های هفتگی',
@@ -1916,7 +1995,7 @@ export const STRINGS_FA = {
             },
             vaultProfiles: {
                 name: 'پروفایل خزانه',
-                desc: 'پروفایل‌ها نمایش انواع فایل، فایل‌های مخفی، پوشه‌های مخفی، برچسب‌های مخفی، قوانین ویژگی برای یادداشت‌های مخفی، میانبرها و بنر ناوبری را ذخیره می‌کنند. پروفایل‌ها را از هدر پنل ناوبری تعویض کنید.',
+                desc: 'پروفایل‌ها نمایش انواع فایل، فایل‌های مخفی، پوشه‌های مخفی، برچسب‌های مخفی، قوانین ویژگی برای یادداشت‌های مخفی، میانبرها و بنر ناوبری را ذخیره می‌کنند. پروفایل‌ها را از اینجا یا از تعویض‌کننده پروفایل خزانه در پنل ناوبری تعویض کنید.',
                 defaultName: 'پیش‌فرض',
                 addButton: 'افزودن پروفایل',
                 editProfilesButton: 'ویرایش پروفایل‌ها',
@@ -1936,9 +2015,9 @@ export const STRINGS_FA = {
                     duplicateName: 'نام پروفایل وجود دارد'
                 }
             },
-            vaultTitlePlacement: {
-                name: 'محل عنوان خزانه',
-                desc: 'انتخاب کنید عنوان خزانه کجا نمایش داده شود.',
+            vaultProfileSwitcher: {
+                name: 'تعویض‌کننده پروفایل خزانه',
+                desc: 'انتخاب کنید تعویض‌کننده پروفایل خزانه کجا نمایش داده شود.',
                 options: {
                     header: 'نمایش در سربرگ',
                     navigation: 'نمایش در پنل ناوبری'
@@ -2047,7 +2126,8 @@ export const STRINGS_FA = {
                 scopes: {
                     folder: 'پوشه: {name}',
                     tag: 'برچسب: #{name}',
-                    property: 'ویژگی: {name}'
+                    property: 'ویژگی: {name}',
+                    topic: 'Topic: {name}'
                 }
             },
             propertyKeys: {
@@ -2481,7 +2561,7 @@ export const STRINGS_FA = {
             },
             folderNoteTemplate: {
                 name: 'الگوی یادداشت پوشه',
-                desc: 'فایل الگویی که هنگام ایجاد یادداشت‌های پوشه استفاده می‌شود. الگوهای Markdown می‌توانند از Templater استفاده کنند. الگوهای Canvas و Base به‌عنوان محتوای فایل کپی می‌شوند. محل پوشه الگوها را در عملیات فایل > الگوها تنظیم کنید.',
+                desc: 'فایل الگویی که هنگام ایجاد یادداشت‌های پوشه استفاده می‌شود. الگوهای Markdown می‌توانند از Templater استفاده کنند. الگوهای Canvas و Base به‌عنوان محتوای فایل کپی می‌شوند. محل پوشه الگوها را در عملیات فایل و الگوها > الگوها تنظیم کنید.',
                 formatWarning: 'قالب الگو باید با نوع یادداشت پوشه انتخاب‌شده مطابقت داشته باشد: .md، .canvas یا .base.'
             },
             folderNamesOpenFolderNotes: {
@@ -2617,10 +2697,38 @@ export const STRINGS_FA = {
                 buttonText: '❤️ حمایت مالی',
                 coffeeButton: '☕️ یک قهوه مهمانم کن'
             },
-            otherPlugins: {
-                name: 'افزونه‌های دیگرم را ببینید',
-                betterPaste: 'پاکسازی متن، پیوندها و تصاویر چسبانده‌شده',
-                pixelPerfectImage: 'تغییر اندازه دقیق تصویر و بیشتر'
+            markdownPointBanner: {
+                heading: 'از Canva، Keynote یا PowerPoint استفاده می‌کنید؟',
+                atTop: {
+                    name: 'نمایش بنر MarkdownPoint در بالا',
+                    desc: 'اگر خاموش باشد، بنر پایین‌تر در صفحهٔ تنظیمات نشان داده می‌شود.'
+                },
+                credit: 'ساختهٔ Johan Sanneblad',
+                messages: [
+                    { headline: 'اسلایدهایتان را با Markdown بنویسید.', subtext: 'متن و تصاویر را به هر جا که می‌خواهید بکشید.' },
+                    { headline: 'جایگزینی رایگان برای PowerPoint.', subtext: 'اشتراک‌گذاری و همکاری هم رایگان است.' },
+                    { headline: 'مثل Apple Motion متحرک‌سازی کنید.', subtext: 'از کی‌فریم، مسیر و مورف استفاده کنید.' },
+                    { headline: 'مثل Google Slides همکاری کنید.', subtext: 'نشانگرها و نظرها را هم‌زمان می‌بینید.' },
+                    { headline: 'متن همهٔ اسلایدها را یکجا ببینید.', subtext: 'View > Outline را باز کنید و با Markdown ویرایش کنید.' },
+                    { headline: 'اشیا را مثل Figma هم‌تراز کنید.', subtext: 'بر اساس فاصله، اندازه و زاویه تراز می‌شوند.' },
+                    {
+                        headline: 'کلمه‌ها را با ==علامت مساوی== هایلایت کنید.',
+                        subtext: '**پررنگ** و *ایتالیک* درست مثل Obsidian کار می‌کنند.'
+                    },
+                    { headline: 'از ارائه‌تان ویدیوی 4K خروجی بگیرید.', subtext: 'برای متحرک‌سازی به After Effects نیاز ندارید.' },
+                    { headline: 'یادداشت‌های سخنران هم Markdown هستند.', subtext: 'در همان فایل اسلایدها ذخیره می‌شوند.' },
+                    { headline: 'هر ارائه یک پوشه روی رایانهٔ شماست.', subtext: 'برای ساختن اسلاید به حساب کاربری نیاز ندارید.' },
+                    { headline: 'کد را روی اسلایدها بگذارید.', subtext: 'بلوک‌های کد در ۲۱ زبان رنگ‌بندی نحوی دارند.' },
+                    { headline: 'ارائه را با یک پیوند به اشتراک بگذارید.', subtext: 'با یک حساب رایگان آن را آنلاین منتشر کنید.' },
+                    { headline: 'ارائه‌هایتان را با Git مدیریت کنید.', subtext: 'ارائه‌ها فایل‌های متنی Markdown و YAML هستند.' },
+                    { headline: 'از متن فلوچارت بسازید.', subtext: 'با نوشتن کد Mermaid نمودار بسازید.' },
+                    {
+                        headline: 'ارائه‌هایتان را در یک پوشهٔ همگام نگه دارید.',
+                        subtext: 'Dropbox، iCloud Drive و OneDrive همه کار می‌کنند.'
+                    },
+                    { headline: 'تم‌ها را مثل Obsidian مرور کنید.', subtext: 'همهٔ تم‌ها رایگان‌اند و با یک کلیک نصب می‌شوند.' },
+                    { headline: 'رایگان برای استفادهٔ شخصی و تجاری.', subtext: 'نسخهٔ Mac یا Windows را دانلود کنید.' }
+                ]
             },
             checkForNewVersionOnStart: {
                 name: 'بررسی نسخه جدید هنگام شروع',
