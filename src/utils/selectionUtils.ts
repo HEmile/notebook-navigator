@@ -103,6 +103,11 @@ export function getPinnedSectionCollapseKey(selectionScope: NavigationSelectionS
         return `property:${selectionScope.selectedProperty}`;
     }
 
+    if (selectionScope.selectionType === ItemType.TOPIC && selectionScope.selectedTopicPath) {
+        // Keyed by name like topic pins and appearances, so every path to a topic shares its collapse state
+        return `topic:${getTopicNameFromPath(selectionScope.selectedTopicPath)}`;
+    }
+
     return `folder:${selectionScope.selectedFolder?.path ?? '/'}`;
 }
 

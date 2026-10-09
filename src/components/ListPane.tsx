@@ -478,7 +478,13 @@ export const ListPane = React.memo(
                 focusElementPreventScroll(container);
             }
         }, [isManualSortEditActive, props.rootContainerRef]);
-        const pinnedCollapseKey = getPinnedSectionCollapseKey({ selectionType, selectedFolder, selectedTag, selectedProperty });
+        const pinnedCollapseKey = getPinnedSectionCollapseKey({
+            selectionType,
+            selectedFolder,
+            selectedTag,
+            selectedProperty,
+            selectedTopicPath
+        });
         const collapsedPinnedContexts = useCollapsedPinnedContexts();
         const pinnedGroupExpanded = collapsedPinnedContexts[pinnedCollapseKey] !== true;
         const handlePinnedGroupHeaderToggle = React.useCallback(() => {

@@ -177,6 +177,7 @@ describe('collapsed pinned context helpers', () => {
             'folder:Projects': true,
             'tag:work/client': true,
             [`property:${propertyKey}`]: true,
+            'topic:Reading': true,
             folder: true,
             'tag:': true,
             'folder:Archive': false
@@ -187,7 +188,8 @@ describe('collapsed pinned context helpers', () => {
             'folder:/': true,
             'folder:Projects': true,
             'tag:work/client': true,
-            [`property:${propertyKey}`]: true
+            [`property:${propertyKey}`]: true,
+            'topic:Reading': true
         });
     });
 

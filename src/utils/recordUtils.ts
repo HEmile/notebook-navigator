@@ -150,7 +150,7 @@ export interface PinnedNoteContextValue {
     topic: boolean;
 }
 
-const PINNED_SECTION_COLLAPSE_KEY_PREFIXES: readonly `${NavigatorContext}:`[] = ['folder:', 'tag:', 'property:'];
+const PINNED_SECTION_COLLAPSE_KEY_PREFIXES: readonly `${NavigatorContext}:`[] = ['folder:', 'tag:', 'property:', 'topic:'];
 
 function isPinnedSectionCollapseKey(value: string): value is PinnedSectionCollapseKey {
     return PINNED_SECTION_COLLAPSE_KEY_PREFIXES.some(prefix => value.startsWith(prefix) && value.length > prefix.length);

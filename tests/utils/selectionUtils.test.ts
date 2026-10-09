@@ -17,7 +17,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { orderFilesByReference, resolveShortcutTargetFromNavigatorSelection } from '../../src/utils/selectionUtils';
+import { ItemType } from '../../src/types';
+import {
+    getPinnedSectionCollapseKey,
+    orderFilesByReference,
+    resolveShortcutTargetFromNavigatorSelection
+} from '../../src/utils/selectionUtils';
 import { createTestTFile } from './createTestTFile';
 
 describe('orderFilesByReference', () => {
@@ -30,6 +35,13 @@ describe('orderFilesByReference', () => {
         const ordered = orderFilesByReference([third, first, second], [outsideReference, second, first]);
 
         expect(ordered.map(file => file.path)).toEqual([second.path, first.path, third.path]);
+    });
+});
+
+describe('getPinnedSectionCollapseKey', () => {
+    it('keys topic selections by topic name instead of falling back to the root folder', () => {
+        expect(getPinnedSectionCollapseKey({ selectionType: ItemType.TOPIC, selectedTopicPath: 'Parent/Child' })).toBe('topic:Child');
+        expect(getPinnedSectionCollapseKey({ selectionType: ItemType.TOPIC, selectedTopicPath: 'Child' })).toBe('topic:Child');
     });
 });
 
