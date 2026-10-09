@@ -85,11 +85,13 @@ export class SearchTopicInputSuggest extends AbstractInputSuggest<TopicSuggestio
             if (result) matches.push({ name: topic.name, match: result });
         }
 
+        // Obsidian fuzzy scores are negative penalties where values closer to 0 are better matches,
+        // so sort descending before applying the limit. Otherwise the closest matches are cut off.
         matches.sort((a, b) => {
-            const scoreA = a.match?.score ?? Number.POSITIVE_INFINITY;
-            const scoreB = b.match?.score ?? Number.POSITIVE_INFINITY;
+            const scoreA = a.match?.score ?? Number.NEGATIVE_INFINITY;
+            const scoreB = b.match?.score ?? Number.NEGATIVE_INFINITY;
             if (scoreA === scoreB) return naturalCompare(a.name, b.name);
-            return scoreA - scoreB;
+            return scoreB - scoreA;
         });
 
         return matches.slice(0, this.limit);
