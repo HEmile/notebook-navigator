@@ -38,7 +38,8 @@ describe('resolveShortcutTargetFromNavigatorSelection', () => {
         selectedFilePath: null,
         selectedFolderPath: null,
         selectedTag: null,
-        selectedProperty: null
+        selectedProperty: null,
+        selectedTopicPath: null
     };
 
     it('resolves the selected note when the list pane is active', () => {
@@ -89,6 +90,16 @@ describe('resolveShortcutTargetFromNavigatorSelection', () => {
                 selectedProperty: 'status:done'
             })
         ).toEqual({ type: 'property', nodeId: 'status:done' });
+    });
+
+    it('resolves the selected topic by name when the navigation pane is active', () => {
+        expect(
+            resolveShortcutTargetFromNavigatorSelection({
+                ...emptySelection,
+                activePane: 'navigation',
+                selectedTopicPath: 'Parent/Child'
+            })
+        ).toEqual({ type: 'topic', topicName: 'Child' });
     });
 
     it('returns null when the navigation pane has no selection', () => {

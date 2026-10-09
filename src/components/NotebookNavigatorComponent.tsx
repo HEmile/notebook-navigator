@@ -255,10 +255,12 @@ export const NotebookNavigatorComponent = React.memo(
             noteShortcutKeysByPath,
             tagShortcutKeysByPath,
             propertyShortcutKeysByNodeId,
+            topicShortcutKeysByName,
             addFolderShortcut,
             addNoteShortcut,
             addTagShortcut,
             addPropertyShortcut,
+            addTopicShortcut,
             removeShortcut,
             hydratedShortcuts
         } = useShortcuts();
@@ -1138,7 +1140,8 @@ export const NotebookNavigatorComponent = React.memo(
                         selectedFilePath: getSelectedFiles()[0]?.path ?? null,
                         selectedFolderPath: selectionState.selectedFolder?.path ?? null,
                         selectedTag: selectionState.selectedTag,
-                        selectedProperty: selectionState.selectedProperty
+                        selectedProperty: selectionState.selectedProperty,
+                        selectedTopicPath: selectionState.selectedTopicPath
                     });
 
                     if (!target) {
@@ -1167,6 +1170,9 @@ export const NotebookNavigatorComponent = React.memo(
                             );
                             return;
                         }
+                        case 'topic':
+                            await toggleShortcut(topicShortcutKeysByName.get(target.topicName), () => addTopicShortcut(target.topicName));
+                            return;
                         case 'folder':
                             await toggleShortcut(folderShortcutKeysByPath.get(target.path), () => addFolderShortcut(target.path));
                             return;
@@ -1376,6 +1382,8 @@ export const NotebookNavigatorComponent = React.memo(
             addTagShortcut,
             propertyShortcutKeysByNodeId,
             addPropertyShortcut,
+            topicShortcutKeysByName,
+            addTopicShortcut,
             removeShortcut,
             handleModifySearchWithDateFilter
         ]);

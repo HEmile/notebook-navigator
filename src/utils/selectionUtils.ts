@@ -37,6 +37,7 @@ import {
     getFilesForTopicByPath
 } from './fileFinder';
 import type { PropertySelectionNodeId } from './propertyTree';
+import { getTopicNameFromPath } from './topicGraph';
 
 /**
  * Utilities for managing file selection operations
@@ -389,7 +390,8 @@ export type ShortcutCommandTarget =
     | { type: 'note'; path: string }
     | { type: 'folder'; path: string }
     | { type: 'tag'; tagPath: string }
-    | { type: 'property'; nodeId: PropertySelectionNodeId };
+    | { type: 'property'; nodeId: PropertySelectionNodeId }
+    | { type: 'topic'; topicName: string };
 
 export interface ShortcutSelectionSource {
     /** Pane the user is working in; search focus counts as the list pane */
@@ -399,12 +401,13 @@ export interface ShortcutSelectionSource {
     selectedFolderPath: string | null;
     selectedTag: string | null;
     selectedProperty: PropertySelectionNodeId | null;
+    selectedTopicPath: string | null;
 }
 
 /**
  * Resolves the navigator item that the Add to shortcuts command toggles.
  * The list pane resolves to the selected note and the navigation pane resolves to the
- * selected tag, property, or folder. Returns null when the active pane has no selection
+ * selected tag, property, topic, or folder. Returns null when the active pane has no selection
  * instead of falling back to the other pane, because a remembered folder or tag is not what
  * the user is looking at and the toggle would then remove an unrelated shortcut.
  */
@@ -418,6 +421,11 @@ export function resolveShortcutTargetFromNavigatorSelection(source: ShortcutSele
     }
     if (source.selectedProperty) {
         return { type: 'property', nodeId: source.selectedProperty };
+    }
+    if (source.selectedTopicPath) {
+        // Topic shortcuts are keyed by topic name; the path only records which parents the topic was reached through
+        const topicName = getTopicNameFromPath(source.selectedTopicPath);
+        return topicName ? { type: 'topic', topicName } : null;
     }
     if (source.selectedFolderPath) {
         return { type: 'folder', path: source.selectedFolderPath };
