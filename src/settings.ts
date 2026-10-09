@@ -34,6 +34,7 @@ import {
     createMarkdownPointBannerDefinitions,
     renderMarkdownPointBannerGroup
 } from './settings/markdownPointBanner';
+import { SHOW_MARKDOWNPOINT_BANNER } from './constants/fork';
 import { createVaultSetupSettingDefinitions } from './settings/tabs/VaultSetupSection';
 import { createSettingGroupFactory } from './settings/settingGroups';
 import { runAsyncAction } from './utils/async';
@@ -407,7 +408,7 @@ export class NotebookNavigatorSettingTab extends PluginSettingTab {
         this.activeSettingsPage = null;
         this.prepareSettingsRender(this.containerEl);
         const isBannerAtTop = this.plugin.settings.showMarkdownPointBannerAtTop;
-        if (isBannerAtTop) {
+        if (SHOW_MARKDOWNPOINT_BANNER && isBannerAtTop) {
             renderMarkdownPointBannerGroup(this.containerEl, 'top', this.getMarkdownPointBannerPosition());
         }
 
@@ -422,7 +423,7 @@ export class NotebookNavigatorSettingTab extends PluginSettingTab {
             });
         });
 
-        if (!isBannerAtTop) {
+        if (SHOW_MARKDOWNPOINT_BANNER && !isBannerAtTop) {
             renderMarkdownPointBannerGroup(this.containerEl, 'below', this.getMarkdownPointBannerPosition());
         }
     }
@@ -516,14 +517,14 @@ export class NotebookNavigatorSettingTab extends PluginSettingTab {
         const isBannerAtTop = () => this.plugin.settings.showMarkdownPointBannerAtTop;
         const getBannerPosition = () => this.getMarkdownPointBannerPosition();
         const items: SettingDefinitionItem[] = [
-            ...createMarkdownPointBannerDefinitions('top', isBannerAtTop, getBannerPosition),
+            ...(SHOW_MARKDOWNPOINT_BANNER ? createMarkdownPointBannerDefinitions('top', isBannerAtTop, getBannerPosition) : []),
             ...createVaultSetupSettingDefinitions(context),
             ...SETTINGS_PAGE_GROUP_DEFINITIONS.map(group => ({
                 type: 'group' as const,
                 heading: group.getHeading(),
                 items: group.items.map(tabId => this.createNativeSettingsPageDefinition(tabId))
             })),
-            ...createMarkdownPointBannerDefinitions('below', isBannerAtTop, getBannerPosition),
+            ...(SHOW_MARKDOWNPOINT_BANNER ? createMarkdownPointBannerDefinitions('below', isBannerAtTop, getBannerPosition) : []),
             ...createStartResourcesSettingDefinitions(context)
         ];
 

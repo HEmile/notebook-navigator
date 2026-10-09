@@ -29,6 +29,7 @@ import { getNavigationPaneSizing } from '../../../utils/paneSizing';
 import { createSettingGroupFactory } from '../../settingGroups';
 import { getNotSyncedSettingName } from '../../syncModeToggle';
 import type { SettingsTabContext } from '../SettingsTabContext';
+import { SHOW_MARKDOWNPOINT_BANNER } from '../../../constants/fork';
 
 /** Legacy settings renderer used only by Obsidian versions before native 1.13 setting definitions. */
 export function renderAdvancedTab(context: SettingsTabContext): void {
@@ -57,17 +58,19 @@ export function renderAdvancedTab(context: SettingsTabContext): void {
             );
     });
 
-    advancedGroup.addSetting(setting => {
-        setting
-            .setName(strings.settings.items.markdownPointBanner.atTop.name)
-            .setDesc(strings.settings.items.markdownPointBanner.atTop.desc)
-            .addToggle(toggle =>
-                toggle.setValue(plugin.settings.showMarkdownPointBannerAtTop).onChange(async value => {
-                    plugin.settings.showMarkdownPointBannerAtTop = value;
-                    await plugin.saveSettingsAndUpdate();
-                })
-            );
-    });
+    if (SHOW_MARKDOWNPOINT_BANNER) {
+        advancedGroup.addSetting(setting => {
+            setting
+                .setName(strings.settings.items.markdownPointBanner.atTop.name)
+                .setDesc(strings.settings.items.markdownPointBanner.atTop.desc)
+                .addToggle(toggle =>
+                    toggle.setValue(plugin.settings.showMarkdownPointBannerAtTop).onChange(async value => {
+                        plugin.settings.showMarkdownPointBannerAtTop = value;
+                        await plugin.saveSettingsAndUpdate();
+                    })
+                );
+        });
+    }
 
     advancedGroup.addSetting(setting => {
         setting

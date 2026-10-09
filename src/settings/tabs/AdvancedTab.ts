@@ -30,6 +30,7 @@ import { runAsyncAction } from '../../utils/async';
 import { showNotice } from '../../utils/noticeUtils';
 import { createGroupDefinition, createRenderDefinition, createToggleDefinition } from '../nativeSettingControls';
 import { getNotSyncedSettingName } from '../syncModeToggle';
+import { SHOW_MARKDOWNPOINT_BANNER } from '../../constants/fork';
 
 /** Builds native 1.13 setting definitions for advanced settings. */
 export function createAdvancedSettingDefinitions(context: SettingsTabContext): SettingDefinitionItem[] {
@@ -38,10 +39,14 @@ export function createAdvancedSettingDefinitions(context: SettingsTabContext): S
             name: strings.settings.items.checkForNewVersionOnStart.name,
             desc: strings.settings.items.checkForNewVersionOnStart.desc
         }),
-        createToggleDefinition('showMarkdownPointBannerAtTop', {
-            name: strings.settings.items.markdownPointBanner.atTop.name,
-            desc: strings.settings.items.markdownPointBanner.atTop.desc
-        }),
+        ...(SHOW_MARKDOWNPOINT_BANNER
+            ? [
+                  createToggleDefinition('showMarkdownPointBannerAtTop', {
+                      name: strings.settings.items.markdownPointBanner.atTop.name,
+                      desc: strings.settings.items.markdownPointBanner.atTop.desc
+                  })
+              ]
+            : []),
         createRenderDefinition({
             name: getNotSyncedSettingName(strings.settings.items.startupDebugLogging.name),
             desc: strings.settings.items.startupDebugLogging.desc,
