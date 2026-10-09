@@ -51,6 +51,7 @@ import { addManualSortGroupHeaderMenuItems } from './manualSortGroupHeaderMenuIt
 import { addMergeNotesMenuItem } from './mergeNotesMenuItems';
 import { resolveEffectiveListGroupingForSort, resolveListGrouping } from '../listGrouping';
 import { resolveFileIconId } from '../fileIconUtils';
+import { getTopicNameFromPath } from '../topicGraph';
 
 type FileStyleTarget = { type: 'folder'; folderPath: string } | { type: 'files'; files: TFile[] };
 
@@ -603,19 +604,22 @@ function addManualSortGroupHeaderAction(params: AddManualSortGroupHeaderActionPa
         return false;
     }
 
+    const selectedTopicName = selectionState.selectedTopicPath ? getTopicNameFromPath(selectionState.selectedTopicPath) : null;
     const sortSpec = getEffectiveListSort(
         settings,
         selectionState.selectionType,
         selectionState.selectedFolder,
         selectionState.selectedTag,
-        selectionState.selectedProperty
+        selectionState.selectedProperty,
+        selectedTopicName
     );
     const groupingInfo = resolveListGrouping({
         settings,
         selectionType: selectionState.selectionType,
         folderPath: selectionState.selectedFolder?.path ?? null,
         tag: selectionState.selectedTag ?? null,
-        propertyNodeId: selectionState.selectedProperty ?? null
+        propertyNodeId: selectionState.selectedProperty ?? null,
+        topicName: selectedTopicName
     });
     const effectiveGrouping = resolveEffectiveListGroupingForSort({
         groupBy: groupingInfo.effectiveGrouping,

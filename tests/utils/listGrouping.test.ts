@@ -42,14 +42,18 @@ import {
     updatePropertyGroupingOverrideKeys
 } from '../../src/utils/listGrouping';
 
-type GroupingSettings = Pick<NotebookNavigatorSettings, 'noteGrouping' | 'folderAppearances' | 'tagAppearances' | 'propertyAppearances'>;
+type GroupingSettings = Pick<
+    NotebookNavigatorSettings,
+    'noteGrouping' | 'folderAppearances' | 'tagAppearances' | 'propertyAppearances' | 'topicAppearances'
+>;
 
 function createGroupingSettings(noteGrouping: GroupingSettings['noteGrouping']): GroupingSettings {
     return {
         noteGrouping,
         folderAppearances: {},
         tagAppearances: {},
-        propertyAppearances: {}
+        propertyAppearances: {},
+        topicAppearances: {}
     };
 }
 
@@ -112,6 +116,38 @@ describe('resolveListGrouping property selections', () => {
             expect(result.normalizedOverride).toBeUndefined();
             expect(result.hasCustomOverride).toBe(false);
         });
+    });
+});
+
+describe('resolveListGrouping topic selections', () => {
+    it('uses topic grouping overrides keyed by topic name', () => {
+        const settings = createGroupingSettings('date');
+        settings.topicAppearances = {
+            Reading: { groupBy: 'folder' }
+        };
+
+        const result = resolveListGrouping({
+            settings,
+            selectionType: ItemType.TOPIC,
+            topicName: 'Reading'
+        });
+
+        expect(result.defaultGrouping).toBe('date');
+        expect(result.effectiveGrouping).toBe('folder');
+        expect(result.normalizedOverride).toBe('folder');
+        expect(result.hasCustomOverride).toBe(true);
+    });
+
+    it('uses the default grouping for topics without an override', () => {
+        const result = resolveListGrouping({
+            settings: createGroupingSettings('folder'),
+            selectionType: ItemType.TOPIC,
+            topicName: 'Reading'
+        });
+
+        expect(result.effectiveGrouping).toBe('folder');
+        expect(result.normalizedOverride).toBeUndefined();
+        expect(result.hasCustomOverride).toBe(false);
     });
 });
 
@@ -373,6 +409,16 @@ describe('hasEffectiveCustomListGroupingForSelection', () => {
         settings.folderAppearances.Projects = { groupBy: 'custom' };
 
         expect(hasEffectiveCustomListGroupingForSelection(settings, ItemType.FOLDER, 'Projects')).toBe(true);
+    });
+
+    it('detects custom grouping on a topic override', () => {
+        const settings = structuredClone(DEFAULT_SETTINGS);
+        settings.noteGrouping = 'none';
+        settings.defaultFolderSort = 'title-asc';
+        settings.topicAppearances.Reading = { groupBy: 'custom' };
+
+        expect(hasEffectiveCustomListGroupingForSelection(settings, ItemType.TOPIC, 'Reading')).toBe(true);
+        expect(hasEffectiveCustomListGroupingForSelection(settings, ItemType.TOPIC, 'Writing')).toBe(false);
     });
 
     it('detects custom grouping forced by manual sorting', () => {

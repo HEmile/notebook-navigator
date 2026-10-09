@@ -732,9 +732,17 @@ export function useListActions({
                 selectionType: selectionState.selectionType,
                 folderPath: selectionState.selectedFolder ? selectionState.selectedFolder.path : null,
                 tag: selectionState.selectedTag ?? null,
-                propertyNodeId: selectionState.selectedProperty ?? null
+                propertyNodeId: selectionState.selectedProperty ?? null,
+                topicName: selectionState.selectedTopicPath ? getTopicOverrideKey(selectionState.selectedTopicPath) : null
             }),
-        [settings, selectionState.selectedFolder, selectionState.selectedProperty, selectionState.selectedTag, selectionState.selectionType]
+        [
+            settings,
+            selectionState.selectedFolder,
+            selectionState.selectedProperty,
+            selectionState.selectedTag,
+            selectionState.selectedTopicPath,
+            selectionState.selectionType
+        ]
     );
     const selectionGroupOverride = groupingInfo.normalizedOverride;
     const hasSelectionGroupOverride = groupingInfo.hasCustomOverride;

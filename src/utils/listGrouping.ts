@@ -58,11 +58,16 @@ export function resolvePropertyGroupingDirection(groupBy: ListNoteGroupingOption
 }
 
 interface ResolveListGroupingParams {
-    settings: Pick<NotebookNavigatorSettings, 'noteGrouping' | 'folderAppearances' | 'tagAppearances' | 'propertyAppearances'>;
+    settings: Pick<
+        NotebookNavigatorSettings,
+        'noteGrouping' | 'folderAppearances' | 'tagAppearances' | 'propertyAppearances' | 'topicAppearances'
+    >;
     selectionType?: ItemType;
     folderPath?: string | null;
     tag?: string | null;
     propertyNodeId?: string | null;
+    /** Topic name; topic appearances are keyed by name rather than by the path the topic was reached through */
+    topicName?: string | null;
 }
 
 export interface ListGroupingResolution {
@@ -300,7 +305,12 @@ export function resolveListGroupingOverride({
 }): ListGroupingResolution {
     const globalDefault: ListNoteGroupingOption = noteGrouping ?? 'none';
 
-    if (selectionType === ItemType.FOLDER || selectionType === ItemType.TAG || selectionType === ItemType.PROPERTY) {
+    if (
+        selectionType === ItemType.FOLDER ||
+        selectionType === ItemType.TAG ||
+        selectionType === ItemType.PROPERTY ||
+        selectionType === ItemType.TOPIC
+    ) {
         return {
             defaultGrouping: globalDefault,
             effectiveGrouping: groupBy ?? globalDefault,
@@ -317,7 +327,7 @@ export function resolveListGroupingOverride({
     };
 }
 
-/** Returns whether one folder, tag, or property selection resolves to custom grouping after its sort override is applied. */
+/** Returns whether one folder, tag, property, or topic selection resolves to custom grouping after its sort override is applied. */
 export function hasEffectiveCustomListGroupingForSelection(
     settings: NotebookNavigatorSettings,
     selectionType: ItemType,
@@ -338,6 +348,10 @@ export function hasEffectiveCustomListGroupingForSelection(
             case ItemType.PROPERTY:
                 groupBy = settings.propertyAppearances[key]?.groupBy;
                 sortOverride = settings.propertySortOverrides[key];
+                break;
+            case ItemType.TOPIC:
+                groupBy = settings.topicAppearances[key]?.groupBy;
+                sortOverride = settings.topicSortOverrides[key];
                 break;
         }
     }
@@ -363,7 +377,8 @@ export function resolveListGrouping({
     selectionType,
     folderPath,
     tag,
-    propertyNodeId
+    propertyNodeId,
+    topicName
 }: ResolveListGroupingParams): ListGroupingResolution {
     const globalDefault: ListNoteGroupingOption = settings.noteGrouping ?? 'none';
 
@@ -389,6 +404,14 @@ export function resolveListGrouping({
             noteGrouping: globalDefault,
             selectionType,
             groupBy: settings.propertyAppearances?.[propertyNodeId]?.groupBy
+        });
+    }
+
+    if (selectionType === ItemType.TOPIC && topicName) {
+        return resolveListGroupingOverride({
+            noteGrouping: globalDefault,
+            selectionType,
+            groupBy: settings.topicAppearances?.[topicName]?.groupBy
         });
     }
 

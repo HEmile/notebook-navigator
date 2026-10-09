@@ -208,12 +208,34 @@ function hasActiveCustomGroupingForHeader(app: App, settings: NotebookNavigatorS
     }
 
     const frontmatter = metadata?.frontmatter;
-    if (!settings.showProperties || !frontmatter) {
+    if (
+        settings.showProperties &&
+        frontmatter &&
+        getPropertySelectionPaths(frontmatter, settings).some(propertyPath =>
+            hasEffectiveCustomListGroupingForSelection(settings, ItemType.PROPERTY, propertyPath)
+        )
+    ) {
+        return true;
+    }
+
+    return hasAnyCustomGroupedTopic(settings);
+}
+
+/**
+ * Topic membership comes from the topic graph, which this module cannot reach, so any topic list that
+ * resolves to custom grouping keeps header extraction active for every candidate file.
+ */
+function hasAnyCustomGroupedTopic(settings: NotebookNavigatorSettings): boolean {
+    if (!settings.showTopics) {
         return false;
     }
-    return getPropertySelectionPaths(frontmatter, settings).some(propertyPath =>
-        hasEffectiveCustomListGroupingForSelection(settings, ItemType.PROPERTY, propertyPath)
-    );
+    const topicNames = new Set([...Object.keys(settings.topicAppearances), ...Object.keys(settings.topicSortOverrides)]);
+    for (const topicName of topicNames) {
+        if (hasEffectiveCustomListGroupingForSelection(settings, ItemType.TOPIC, topicName)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function getActiveManualSortGroupHeaderWordCountConsumerPaths(
