@@ -376,6 +376,13 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
             }).color;
         }
 
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            // Topic rows read their color from the tag color record keyed by topic name, without rainbow colors.
+            const topicPath = selectionState.selectedTopicPath;
+            const topicName = topicPath.split('/').pop() ?? topicPath;
+            return metadataService.getTagColorData(topicName).color;
+        }
+
         return undefined;
     }, [
         fileItemPillDecorationModel,
@@ -385,6 +392,7 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
         selectionState.selectedFolder,
         selectionState.selectedProperty,
         selectionState.selectedTag,
+        selectionState.selectedTopicPath,
         selectionState.selectionType,
         settings.colorListPaneTitle,
         settings.inheritPropertyColors,
