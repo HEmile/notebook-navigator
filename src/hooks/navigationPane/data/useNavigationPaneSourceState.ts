@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { TFolder, type App } from 'obsidian';
 import type { ShortcutsContextValue } from '../../../context/ShortcutsContext';
 import type { ActiveProfileState } from '../../../context/SettingsContext';
@@ -31,15 +31,19 @@ import {
     createHiddenFileNameMatcherForVisibility,
     type HiddenFileNameMatcher
 } from '../../../utils/fileFilters';
-import { getDirectPropertyKeyNoteCount } from '../../../utils/propertyTree';
+import { getDirectPropertyKeyNoteCount, getTotalPropertyNoteCount } from '../../../utils/propertyTree';
 import { createHiddenTagVisibility } from '../../../utils/tagPrefixMatcher';
-import { excludeFromTagTree } from '../../../utils/tagTree';
+import { excludeFromTagTree, getTagNodeByPath } from '../../../utils/tagTree';
+import { compareByAlphaSortOrder } from '../../../utils/sortUtils';
+import { getTagChildName } from '../../../utils/treeFlattener';
+import { useChildOrderAppend } from '../../useChildOrderAppend';
 import { getPropertyKeySet } from '../../../utils/vaultProfiles';
 import type { FolderNavigationSourceState } from '../../useFolderNavigationSourceState';
 import { useRootPropertyOrder } from '../../useRootPropertyOrder';
 import { useRootTagOrder } from '../../useRootTagOrder';
 import {
     comparePropertyKeyNodesAlphabetically,
+    comparePropertyValueNodesAlphabetically,
     compareTagAlphabetically,
     createPropertyComparator,
     createTagComparator,
@@ -71,9 +75,6 @@ export interface NavigationPaneSourceState {
     folderCountFileNameMatcher: HiddenFileNameMatcher | null;
     hiddenFilePropertyMatcher: ReturnType<typeof createFrontmatterPropertyExclusionMatcher>;
     rootFolders: TFolder[];
-    rootLevelFolders: TFolder[];
-    rootFolderOrderMap: Map<string, number>;
-    missingRootFolderPaths: string[];
     tagTree: Map<string, TagTreeNode>;
     propertyTree: Map<string, PropertyTreeNode>;
     untaggedCount: number;
@@ -84,6 +85,8 @@ export interface NavigationPaneSourceState {
     hasRootPropertyShortcut: boolean;
     tagComparator: TagComparator | undefined;
     hiddenRootTagNodes: Map<string, TagTreeNode>;
+    /** Tag paths in excluded folders, empty while hidden items are shown */
+    excludedTagPaths: ReadonlySet<string>;
     tagTreeForOrdering: Map<string, TagTreeNode>;
     rootTagOrderMap: Map<string, number>;
     missingRootTagPaths: string[];
@@ -136,9 +139,6 @@ export function useNavigationPaneSourceState({
     const {
         hiddenFolders,
         rootFolders,
-        rootLevelFolders,
-        rootFolderOrderMap,
-        missingRootFolderPaths,
         fileChangeVersion,
         folderChangeVersion,
         metadataDecorationVersion,
@@ -187,6 +187,12 @@ export function useNavigationPaneSourceState({
         }
         return fileData.hiddenRootTags ?? new Map<string, TagTreeNode>();
     }, [fileData.hiddenRootTags, showHiddenItems, settings.showTags]);
+    const excludedTagPaths = useMemo((): ReadonlySet<string> => {
+        if (!settings.showTags || showHiddenItems) {
+            return new Set<string>();
+        }
+        return fileData.excludedTagPaths;
+    }, [fileData.excludedTagPaths, showHiddenItems, settings.showTags]);
 
     const tagTreeForOrdering = useMemo(() => {
         if (hiddenRootTagNodes.size === 0) {
@@ -219,6 +225,61 @@ export function useNavigationPaneSourceState({
         settings,
         propertyTree,
         comparator: propertyKeyComparator
+    });
+
+    // Children in the order the tree shows them, so new nested tags and property values join the end of a manually
+    // ordered parent in that order
+    const getTagChildNames = useCallback(
+        (tree: Map<string, TagTreeNode>, parentPath: string): string[] => {
+            const parent = getTagNodeByPath(tree, parentPath);
+            if (!parent) {
+                return [];
+            }
+            const override = Object.prototype.hasOwnProperty.call(settings.tagTreeSortOverrides, parentPath)
+                ? settings.tagTreeSortOverrides[parentPath]
+                : undefined;
+            const compare: TagComparator = override
+                ? (a, b) => compareByAlphaSortOrder(a.name, b.name, override)
+                : (tagComparator ?? compareTagAlphabetically);
+            return Array.from(parent.children.values())
+                .sort(compare)
+                .map(child => getTagChildName(child.path));
+        },
+        [settings.tagTreeSortOverrides, tagComparator]
+    );
+    // The visible tree, so a hidden tag joins the order at the bottom when it is first shown, below the tags that
+    // were added while it was hidden
+    useChildOrderAppend({
+        settingsKey: 'tagChildOrder',
+        tree: visibleTagTree,
+        getChildNames: getTagChildNames
+    });
+
+    const getPropertyValueNames = useCallback(
+        (tree: Map<string, PropertyTreeNode>, keyNodeId: string): string[] => {
+            const keyNode = Array.from(tree.values()).find(node => node.id === keyNodeId);
+            if (!keyNode) {
+                return [];
+            }
+            const compare = createPropertyComparator({
+                order: Object.prototype.hasOwnProperty.call(settings.propertyTreeSortOverrides, keyNodeId)
+                    ? settings.propertyTreeSortOverrides[keyNodeId]
+                    : settings.propertySortOrder,
+                compareAlphabetically: comparePropertyValueNodesAlphabetically,
+                getFrequency: node =>
+                    includeDescendantNotes && node.valuePath ? getTotalPropertyNoteCount(keyNode, node.valuePath) : node.notesWithValue.size
+            });
+            return Array.from(keyNode.children.values())
+                .filter(child => child.valuePath !== null)
+                .sort(compare)
+                .map(child => child.valuePath ?? '');
+        },
+        [includeDescendantNotes, settings.propertySortOrder, settings.propertyTreeSortOverrides]
+    );
+    useChildOrderAppend({
+        settingsKey: 'propertyChildOrder',
+        tree: propertyTree,
+        getChildNames: getPropertyValueNames
     });
 
     const visiblePropertyNavigationKeySet = useMemo(
@@ -262,9 +323,6 @@ export function useNavigationPaneSourceState({
             folderCountFileNameMatcher,
             hiddenFilePropertyMatcher,
             rootFolders,
-            rootLevelFolders,
-            rootFolderOrderMap,
-            missingRootFolderPaths,
             tagTree,
             propertyTree,
             untaggedCount,
@@ -275,6 +333,7 @@ export function useNavigationPaneSourceState({
             hasRootPropertyShortcut,
             tagComparator,
             hiddenRootTagNodes,
+            excludedTagPaths,
             tagTreeForOrdering,
             rootTagOrderMap,
             missingRootTagPaths,
@@ -305,9 +364,6 @@ export function useNavigationPaneSourceState({
             folderCountFileNameMatcher,
             hiddenFilePropertyMatcher,
             rootFolders,
-            rootLevelFolders,
-            rootFolderOrderMap,
-            missingRootFolderPaths,
             tagTree,
             propertyTree,
             untaggedCount,
@@ -318,6 +374,7 @@ export function useNavigationPaneSourceState({
             hasRootPropertyShortcut,
             tagComparator,
             hiddenRootTagNodes,
+            excludedTagPaths,
             tagTreeForOrdering,
             rootTagOrderMap,
             missingRootTagPaths,

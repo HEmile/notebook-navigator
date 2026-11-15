@@ -63,6 +63,14 @@ export const STRINGS_JA = {
         manualSortHint: 'ドラッグして並べ替えます。並び順は数値インデックス値としてプロパティ「{property}」に保存されます。',
         manualSortNonMarkdownHint: 'Markdown 以外のファイルは下部に表示され、並べ替えできません。',
         unsortedSection: '未ソート',
+        // MarkdownPoint presentation rows: the cover slide count and the presentation.mdpoint detail labels
+        presentation: {
+            slideCount: '{count} 枚のスライド',
+            slideCountOne: '1 枚のスライド',
+            theme: 'テーマ',
+            slides: 'スライド',
+            size: 'サイズ'
+        },
         propertyGroupNoValue: 'なし',
         manualSortDone: '完了',
         manualSortMultipleWriteFailure: '{count} 件のファイルが失敗しました。最初: {path}: {message}'
@@ -85,8 +93,9 @@ export const STRINGS_JA = {
         reorderRootFoldersTitle: 'ナビゲーションを並べ替え',
         reorderRootFoldersHint: '矢印またはドラッグで並べ替え',
         vaultRootLabel: '保管庫',
-        resetRootToAlpha: 'アルファベット順にリセット',
-        resetRootToFrequency: '頻度順にリセット',
+        resetAllFolders: 'すべてのフォルダをリセット',
+        resetAllTags: 'すべてのタグをリセット',
+        resetAllProperties: 'すべてのプロパティをリセット',
         pinShortcuts: 'ショートカットを固定',
         pinShortcutsAndRecentFiles: 'ショートカットと最近のファイルを固定',
         unpinShortcuts: 'ショートカットの固定を解除',
@@ -246,10 +255,12 @@ export const STRINGS_JA = {
                     items: [
                         '`.key` `key` で始まるプロパティキーを持つノートを含める。',
                         '`.key=value` プロパティ値に `value` を含むノートを含める。',
+                        '`.key=null` プロパティ `key` があり値が空のノートを含める。`.key="null"` はテキスト `null` を検索する。',
                         '`."Reading Status"` 空白を含むプロパティキーを持つノートを含める。',
                         '`."Reading Status"="In Progress"` 空白を含むキーと値はダブルクォートで囲む必要があります。',
                         '`-.key` `key` で始まるプロパティキーを持つノートを除外する。',
                         '`-.key=value` プロパティ値に `value` を含むノートを除外する。',
+                        '`-.key=null` プロパティ `key` があり値が空のノートを除外する。',
                         'Cmd/Ctrl+クリックでプロパティをANDで追加。Cmd/Ctrl+Shift+クリックでORで追加。'
                     ]
                 },
@@ -931,6 +942,7 @@ export const STRINGS_JA = {
             cannotMoveIntoSelf: 'フォルダを自分自身またはそのサブフォルダに移動することはできません。',
             itemAlreadyExists: 'この場所に「{name}」という名前の項目がすでに存在します。',
             failedToMove: '移動に失敗しました：{error}',
+            failedToCopy: '「{name}」のコピーに失敗しました：{error}',
             failedToAddTag: 'タグ「{tag}」の追加に失敗しました',
             failedToSetProperty: 'プロパティの更新に失敗しました: {error}',
             failedToClearTags: 'タグのクリアに失敗しました',
@@ -943,7 +955,9 @@ export const STRINGS_JA = {
             filesAlreadyHaveProperty: '{count}個のファイルにはすでにこのプロパティがあります',
             noTagsToClear: 'クリアするタグがありません',
             fileImported: '1個のファイルをインポートしました',
-            filesImported: '{count}個のファイルをインポートしました'
+            filesImported: '{count}個のファイルをインポートしました',
+            fileCopied: '1個のファイルをコピーしました',
+            filesCopied: '{count}個のファイルをコピーしました'
         }
     },
 
@@ -1071,8 +1085,6 @@ export const STRINGS_JA = {
             exportFailed: 'メタデータレポートのエクスポートに失敗しました'
         },
         index: {
-            label: '一般設定',
-            description: 'リリースノート、サポート、保管庫プロファイル、ファイルタイプ、プロパティキー。',
             groups: {
                 about: 'このプラグインについて'
             }
@@ -1090,11 +1102,12 @@ export const STRINGS_JA = {
             },
             appearanceAndBehavior: {
                 label: '外観と動作',
-                description: '動作、キーボード操作、マウスボタン、外観、書式。',
+                description: '動作、キーボード操作、マウスボタン、デュアルペイン、外観、書式。',
                 groups: {
                     startup: '起動',
                     keyboardNavigation: 'キーボード操作',
                     mouseButtons: 'マウスボタン',
+                    dualPane: 'デュアルペイン',
                     desktopAppearance: 'デスクトップの外観',
                     mobileAppearance: 'モバイルの外観',
                     appearance: '外観',
@@ -1203,7 +1216,8 @@ export const STRINGS_JA = {
                 description: '診断、メタデータのクリーンアップ、インポート/エクスポート、リセット。',
                 groups: {
                     maintenance: 'メンテナンス',
-                    resetSettings: '設定をリセット'
+                    resetSettings: '設定をリセット',
+                    thirdPartyLicenses: 'サードパーティライセンス'
                 }
             }
         },
@@ -1582,10 +1596,6 @@ export const STRINGS_JA = {
                 name: '最初のノートを自動選択',
                 desc: 'フォルダ、タグ、またはプロパティを切り替えた際に自動的に最初のノートを開きます。'
             },
-            disableShortcutAutoScroll: {
-                name: 'ショートカットの自動スクロールを無効化',
-                desc: 'ショートカット内の項目をクリックしてもナビゲーションペインをスクロールしません。'
-            },
             expandOnSelection: {
                 name: '選択時に展開',
                 desc: '選択時にフォルダ、タグ、プロパティを展開します。シングルペインモードでは、最初の選択で展開、2回目の選択でファイルを表示します。'
@@ -1672,7 +1682,6 @@ export const STRINGS_JA = {
             calendarLocale: {
                 name: 'ロケール',
                 desc: 'カレンダーの日付形式、週番号、週の開始曜日を制御します。',
-                weekPathMismatchWarning: '表示されるカレンダーとウィークリーノートのパスで、週の開始曜日または週番号が異なります。',
                 options: {
                     systemDefault: 'デフォルト'
                 }
@@ -1786,7 +1795,9 @@ export const STRINGS_JA = {
                 momentLinkText: 'Moment 日付フォーマット',
                 momentDescSuffix:
                     'を使用してパスを指定。サブフォルダ名は角括弧で囲みます（例：[Work]/YYYY）。テンプレートアイコンをクリックしてテンプレートを設定。 テンプレートフォルダの場所はファイル操作とテンプレート > テンプレートで設定してください。',
-                example: '現在の構文: {path}'
+                example: '現在の構文: {path}',
+                weekYearWarning:
+                    '"gggg" と "GGGG" は週の年であるため、年末年始の日付に誤った年が付くことがあります。"YYYY" を使用してください。'
             },
             templateEngine: {
                 name: 'テンプレートエンジン',
@@ -1830,10 +1841,14 @@ export const STRINGS_JA = {
             calendarWeeklyNotePattern: {
                 name: 'ウィークリーノート',
                 parsingError: 'パターンは完全な週（週年、週番号）としてフォーマットされ、再度パースできる必要があります。',
-                weekPathMismatchWarning:
-                    'ウィークリーノートのパスは定期ノートのロケールを使用します。一致するロケールを使用するか、月曜日から始まる週には "GGGG" と "WW" を使用してください。',
+                isoWeeksWarning:
+                    'ウィークリーノートは ISO 週（"W" または "G"）を使用するため、カレンダーは週を月曜日から始め、ISO 週番号を表示します。ロケールに従う週には "gggg" と "ww" を使用してください。',
+                calendarYearWarning:
+                    'ウィークリーノートは "YYYY" から年を取得するため、12 月に始まる第 1 週には前年が付きます。"GGGG" と "WW"、または "gggg" と "ww" を使用してください。',
                 mixedWeekTokensWarning:
-                    'このパターンは月曜日基準の週トークン（"W" または "G"）とロケール基準の週トークン（"w" または "g"）を混在させています。一貫して 1 つのセットを使用してください。月曜日から始まる週には "GGGG" と "WW"、ウィークリーノートが選択したロケールに従う場合は "gggg" と "ww" を使用してください。'
+                    'ウィークリーノートで ISO 週トークン（"W" または "G"）とロケール週トークン（"w" または "g"）が混在しています。ISO 週には "GGGG" と "WW"、ロケールに従う週には "gggg" と "ww" を使用してください。',
+                weekPathMismatchWarning:
+                    'カレンダーのロケールと定期ノートのロケールで週の開始日または週番号が異なるため、ウィークリーノートのパスがカレンダーの週と一致しません。両方を同じロケールに設定するか、ISO 週には "GGGG" と "WW" を使用してください。'
             },
             calendarMonthlyNotePattern: {
                 name: 'マンスリーノート',
@@ -1905,7 +1920,10 @@ export const STRINGS_JA = {
                     downloadButtonText: 'ダウンロード',
                     copyNotice: '設定がクリップボードにコピーされました。',
                     downloadNotice: '設定がエクスポートされました。',
-                    downloadError: '設定のダウンロードに失敗しました: {message}'
+                    downloadError: '設定のダウンロードに失敗しました: {message}',
+                    saveButtonText: '保管庫に保存',
+                    saveNotice: '設定を {path} に保存しました。',
+                    saveError: '設定の保存に失敗しました: {message}'
                 }
             },
             resetAllSettings: {
@@ -2547,7 +2565,7 @@ export const STRINGS_JA = {
             },
             folderNoteType: {
                 name: 'デフォルトのフォルダノート形式',
-                desc: 'コンテキストメニューで作成されるフォルダノートの形式です。',
+                desc: 'コンテキストメニューで作成されるフォルダノートの形式です。フォルダに複数の形式のフォルダノートがある場合はこの形式が優先されます。',
                 options: {
                     ask: '作成時に確認',
                     markdown: 'Markdown',
@@ -2649,6 +2667,11 @@ export const STRINGS_JA = {
                 desc: 'フロントマターフィールドのカンマ区切りリスト。最初の空でない値を使用。ファイル名にフォールバック。',
                 placeholder: 'title, name'
             },
+            frontmatterNameFormat: {
+                name: 'ノート名の形式',
+                desc: 'フロントマターの名前を持つノートに表示される名前。{{name}} はフロントマターの名前、{{filename}} はファイル名、{{date}} または {{date:FORMAT}} はデイリーノートの日付です。形式に {{date}} が含まれる場合、デイリーノート以外のノートにはフロントマターの名前だけが表示されます。',
+                placeholder: '{{name}}'
+            },
             frontmatterIconField: {
                 name: 'アイコンフィールド',
                 desc: 'ファイルアイコン用のフロントマターフィールド。空のままにすると設定に保存されたアイコンを使用。',
@@ -2707,20 +2730,26 @@ export const STRINGS_JA = {
                 messages: [
                     { headline: 'スライドは Markdown で書けます。', subtext: 'テキストや画像はドラッグで動かせます。' },
                     { headline: 'PowerPoint に代わる無料アプリ。', subtext: '共有も共同編集も無料です。' },
+                    { headline: 'プレゼンはパソコン上のフォルダです。', subtext: 'スライド作成にアカウントは要りません。' },
                     { headline: 'Apple Motion のように動かせます。', subtext: 'キーフレーム、パス、モーフを使えます。' },
-                    { headline: 'Google Slides のように共同編集できます。', subtext: 'ポインターとコメントがリアルタイムで見えます。' },
+                    { headline: 'スライドに 3D モデルを置けます。', subtext: 'GLB や glTF を開くか、Meshy で生成します。' },
+                    { headline: 'Google Slides のように共同編集できます。', subtext: 'みんなのポインターとコメントが見えます。' },
                     { headline: '全スライドのテキストを一覧できます。', subtext: 'View > Outline から Markdown で編集できます。' },
                     { headline: 'Figma のようにスナップします。', subtext: '間隔、サイズ、角度で揃います。' },
-                    { headline: '==等号== でハイライトできます。', subtext: '**太字** と *斜体* も Obsidian と同じです。' },
                     { headline: 'プレゼンを 4K 動画で書き出せます。', subtext: 'アニメーションに After Effects は要りません。' },
-                    { headline: '発表者ノートも Markdown です。', subtext: 'スライドと同じファイルに保存されます。' },
-                    { headline: 'プレゼンはパソコン上のフォルダです。', subtext: 'スライド作成にアカウントは要りません。' },
-                    { headline: 'スライドにコードを載せられます。', subtext: 'コードは21言語でハイライトされます。' },
+                    { headline: '3D キャラクターが歩いて走ります。', subtext: 'リギングとアニメーションには Meshy を使います。' },
+                    { headline: '==等号== でハイライトできます。', subtext: '**太字** と *斜体* も Obsidian と同じです。' },
+                    { headline: 'Figma のようなオートレイアウト。', subtext: 'グループを横一列か縦一列に並べます。' },
                     { headline: 'プレゼンをリンクで共有できます。', subtext: '無料アカウントでウェブに公開できます。' },
-                    { headline: 'プレゼンを Git で管理できます。', subtext: 'Markdown と YAML のテキストファイルです。' },
-                    { headline: 'テキストでフローチャートを作れます。', subtext: 'Mermaid のコードを書くと図になります。' },
+                    { headline: 'Blender のような 3D ライティング。', subtext: 'ポイント、サン、スポット、エリアのライトと影。' },
+                    { headline: 'プレゼンを Git で管理できます。', subtext: 'Markdown と JSON のテキストファイルです。' },
+                    { headline: 'Figma のようにコンポーネントを作れます。', subtext: '一度編集すると、すべてのインスタンスが変わります。' },
+                    { headline: 'Obsidian のようにテーマを選べます。', subtext: '無料のテーマをワンクリックでインストールできます。' },
                     { headline: 'プレゼンは同期フォルダに置けます。', subtext: 'Dropbox、iCloud Drive、OneDrive で使えます。' },
-                    { headline: 'Obsidian のようにテーマを選べます。', subtext: 'テーマはすべて無料で、ワンクリックで入ります。' },
+                    { headline: '剛体物理演算つきの 3D。', subtext: 'オブジェクトを落とし、倒し、積み上げます。' },
+                    { headline: '発表者ノートも Markdown です。', subtext: 'スライドと同じファイルに保存されます。' },
+                    { headline: 'Figma のようにシェイプを結合できます。', subtext: '結合、型抜き、交差、中マドが使えます。' },
+                    { headline: 'スライドにコードを載せられます。', subtext: 'コードは21言語でハイライトされます。' },
                     { headline: '個人でも商用でも無料です。', subtext: 'Mac 版か Windows 版をダウンロードできます。' }
                 ]
             },

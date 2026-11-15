@@ -16,12 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { SettingsTabContext } from '../SettingsTabContext';
-import { renderStartResourcesSection } from '../StartResourcesSection';
-import { renderGeneralVaultSetupSection } from '../VaultSetupSection';
+import { describe, expect, it } from 'vitest';
+import { buildPropertyKeyNodeId, buildPropertyValueNodeId, buildPropertyValueNodeIdFromKeyNodeId } from '../../src/utils/propertyTree';
 
-/** Renders the General settings page. */
-export function renderGeneralTab(context: SettingsTabContext): void {
-    renderGeneralVaultSetupSection(context);
-    renderStartResourcesSection(context);
-}
+describe('buildPropertyValueNodeIdFromKeyNodeId', () => {
+    it('builds the same id as buildPropertyValueNodeId, including encoded values', () => {
+        // Manual value orders store raw value paths; cleanup and counts must find the encoded node ids
+        ['done', '50%', 'a=b', 'https://example.com/?x=1&y=%20'].forEach(valuePath => {
+            expect(buildPropertyValueNodeIdFromKeyNodeId(buildPropertyKeyNodeId('progress'), valuePath)).toBe(
+                buildPropertyValueNodeId('progress', valuePath)
+            );
+        });
+    });
+});

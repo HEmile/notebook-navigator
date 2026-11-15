@@ -175,12 +175,14 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
         createMissingPeriodicNote: true
     },
 
-    // General tab - Desktop appearance
+    // General tab - Dual pane
     dualPane: true,
     dualPaneOrientation: 'horizontal',
     narrowSidebarLayout: 'singlePane',
     narrowSidebarTriggerMode: 'fitPanes',
     narrowSidebarCustomWidth: NARROW_SIDEBAR_CUSTOM_WIDTH_DEFAULT,
+
+    // General tab - Desktop appearance
     showTooltips: false,
     showTooltipPath: true,
     showTooltipTags: false,
@@ -269,7 +271,6 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showSectionIcons: true,
     showShortcuts: true,
     shortcutBadgeDisplay: 'index',
-    skipAutoScroll: false,
     showRecentNotes: true,
     hideRecentNotes: 'none',
     pinRecentNotesWithShortcuts: false,
@@ -353,6 +354,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     frontmatterColorField: 'color',
     frontmatterBackgroundField: 'background',
     frontmatterNameField: '',
+    frontmatterNameFormat: '{{name}}',
     frontmatterCreatedField: '',
     frontmatterModifiedField: '',
     frontmatterDateFormat: '',
@@ -465,18 +467,21 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     folderBackgroundColors: sanitizeRecord<string>(undefined),
     folderSortOverrides: sanitizeRecord<NotebookNavigatorSettings['folderSortOverrides'][string]>(undefined),
     folderTreeSortOverrides: sanitizeRecord<NotebookNavigatorSettings['folderTreeSortOverrides'][string]>(undefined),
+    folderChildOrder: sanitizeRecord<string[]>(undefined),
     folderAppearances: sanitizeRecord<ListPaneAppearance>(undefined),
     tagIcons: sanitizeRecord<string>(undefined),
     tagColors: sanitizeRecord<string>(undefined),
     tagBackgroundColors: sanitizeRecord<string>(undefined),
     tagSortOverrides: sanitizeRecord<NotebookNavigatorSettings['tagSortOverrides'][string]>(undefined),
     tagTreeSortOverrides: sanitizeRecord<NotebookNavigatorSettings['tagTreeSortOverrides'][string]>(undefined),
+    tagChildOrder: sanitizeRecord<string[]>(undefined),
     tagAppearances: sanitizeRecord<ListPaneAppearance>(undefined),
     propertyIcons: sanitizeRecord<string>(undefined),
     propertyColors: sanitizeRecord<string>(undefined),
     propertyBackgroundColors: sanitizeRecord<string>(undefined),
     propertySortOverrides: sanitizeRecord<NotebookNavigatorSettings['propertySortOverrides'][string]>(undefined),
     propertyTreeSortOverrides: sanitizeRecord<NotebookNavigatorSettings['propertyTreeSortOverrides'][string]>(undefined),
+    propertyChildOrder: sanitizeRecord<string[]>(undefined),
     propertyAppearances: sanitizeRecord<ListPaneAppearance>(undefined),
 
     topicSortOverrides: sanitizeRecord<NotebookNavigatorSettings['topicSortOverrides'][string]>(undefined),
@@ -486,7 +491,6 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     navigationSeparators: sanitizeRecord<boolean>(undefined),
     userColors: [...DEFAULT_CUSTOM_COLORS],
     lastShownVersion: '',
-    rootFolderOrder: [],
     rootTagOrder: [],
     rootPropertyOrder: []
 };

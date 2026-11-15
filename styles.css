@@ -341,7 +341,7 @@ body {
     --nn-theme-calendar-day-today-color: var(--nn-theme-calendar-day-in-month-color);
     --nn-theme-calendar-day-today-bg: var(--text-selection);
     --nn-theme-calendar-day-active-border-color: var(--interactive-accent);
-    --nn-theme-calendar-day-active-border-width: 3px;
+    --nn-theme-calendar-day-active-border-width: 2px;
 
     /* Indicators and feature images */
     --nn-theme-calendar-note-indicator-color: var(--nn-theme-foreground-faded);
@@ -2474,6 +2474,8 @@ button.nn-icon-button.nn-navitem-hover-action-button {
 .nn-root-reorder-list {
     display: flex;
     flex-direction: column;
+    /* Same space as the list spacer between sections in the navigation tree */
+    gap: 8px;
     margin: 0;
     padding: 0;
 }
@@ -2482,6 +2484,14 @@ button.nn-icon-button.nn-navitem-hover-action-button {
     display: flex;
     flex-direction: column;
     position: relative;
+}
+
+/* A dragged folder carries its expanded subfolders; it stays opaque and on top so siblings
+   sliding into place pass beneath it */
+.nn-root-reorder-branch--dragging {
+    position: relative;
+    z-index: 1;
+    background-color: var(--nn-theme-nav-bg);
 }
 
 .nn-root-reorder-item {
@@ -2496,13 +2506,29 @@ button.nn-icon-button.nn-navitem-hover-action-button {
     font-weight: var(--nn-theme-navitem-custom-color-name-font-weight);
 }
 
+/* A sort indicator box as wide as a section arrow button, so it centers under the down arrow */
+.nn-root-reorder-item .nn-navitem-count {
+    min-width: 28px;
+    margin-inline-end: 0;
+}
+
+/* The manual order icon sits in the count badge at the badge's text size */
+.nn-root-reorder-manual-badge > span {
+    display: flex;
+}
+
+.nn-root-reorder-manual-badge svg {
+    width: var(--nn-navitem-count-font-size);
+    height: var(--nn-navitem-count-font-size);
+}
+
 .nn-root-reorder-item--missing .nn-shortcut-label {
     text-decoration: line-through;
     color: var(--nn-theme-foreground-muted);
 }
 
 .nn-root-reorder-actions {
-    margin-top: 0.75rem;
+    margin-block: 0.75rem;
     display: flex;
     justify-content: center;
 }
@@ -2543,7 +2569,6 @@ button.nn-icon-button.nn-navitem-hover-action-button {
 
 .nn-root-reorder-section-controls {
     display: flex;
-    gap: 0.25rem;
 }
 
 .nn-root-reorder-section-button {
@@ -3045,6 +3070,9 @@ button.nn-navigation-calendar-year-label {
     aspect-ratio: 16 / 9;
 }
 
+/* No overflow clip, because the active outline and the feature-image overlay extend 0.5px past the cell; clipping them
+   cuts each side by a different amount as the cell's subpixel position changes, so the outline's thickness changes on resize.
+   Labels without feature images clip and truncate themselves. */
 button.nn-navigation-calendar-year-month {
     position: relative;
     background-color: transparent;
@@ -3056,8 +3084,6 @@ button.nn-navigation-calendar-year-month {
     padding: 6px;
     text-align: center;
     white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
     font-variant-numeric: tabular-nums;
     display: flex;
     align-items: center;
@@ -4915,6 +4941,116 @@ button.nn-navigation-calendar-day {
     height: min(24px, 42%);
     color: var(--nn-theme-foreground-muted);
 }
+/* Source: src/styles/sections/list-presentations.css */
+/* ========================================================================
+   Presentation Rows
+   ======================================================================== */
+
+/* MarkdownPoint presentations in the list pane: the slides.md row shows a cover slide below its file name and
+   the presentation.mdpoint row shows the theme, slide count and slide size. Both rows have fixed heights that
+   getPresentationRowHeight in src/utils/listPaneMeasurements.ts mirrors, so a change here must change it too. */
+
+/* The cover background, text and muted colors come from the presentation's theme as inline custom properties;
+   Obsidian's colors apply until the theme files are readable. */
+.nn-presentation-cover {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    height: 144px;
+    margin-top: 6px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+    border-radius: 6px;
+    background-color: var(--nn-presentation-cover-bg, var(--background-secondary));
+    color: var(--nn-presentation-cover-text, var(--text-normal));
+    /* A hairline in the cover's own text color separates light covers from a light list background */
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nn-presentation-cover-text, var(--text-normal)) 10%, transparent);
+}
+
+.nn-presentation-cover-eyebrow,
+.nn-presentation-cover-date {
+    flex-shrink: 0;
+    overflow: hidden;
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    line-height: var(--nn-file-single-text-line-height);
+    color: var(--nn-presentation-cover-muted, var(--text-muted));
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* The eyebrow takes the free space below it, so the title and date sit at the bottom and long titles grow upward */
+.nn-presentation-cover-eyebrow {
+    margin-bottom: auto;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* Three title lines fill the cover between the eyebrow and the date at the desktop font size */
+.nn-presentation-cover-title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: calc(var(--nn-file-name-size-mobile, var(--nn-file-name-size)) * 1.5);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+/* The larger mobile title fits two lines, otherwise the date is cut off at the bottom of the cover */
+.nn-mobile .nn-presentation-cover-title {
+    -webkit-line-clamp: 2;
+}
+
+/* Centered Title layouts stack the eyebrow, title and date above the lower part of the cover */
+.nn-presentation-cover[data-align='center'] {
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 24px;
+    text-align: center;
+}
+
+.nn-presentation-cover[data-align='center'] .nn-presentation-cover-eyebrow {
+    margin-bottom: 0;
+}
+
+.nn-presentation-cover[data-align='center'] .nn-presentation-cover-title {
+    -webkit-line-clamp: 2;
+}
+
+/* Three single-line rows of label and value, matching the list's metadata lines */
+.nn-presentation-details {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0 12px;
+    margin: 0;
+    font-size: var(--nn-file-small-size-mobile, var(--nn-file-small-size));
+    line-height: var(--nn-file-single-text-line-height);
+}
+
+.nn-presentation-details dt {
+    color: var(--nn-theme-file-date-color);
+}
+
+.nn-presentation-details dd {
+    overflow: hidden;
+    margin: 0;
+    color: var(--nn-theme-file-preview-color);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.nn-file.nn-selected .nn-presentation-details dt {
+    color: var(--nn-selected-file-date-color);
+}
+
+.nn-file.nn-selected .nn-presentation-details dd {
+    color: var(--nn-selected-file-preview-color);
+}
 /* Source: src/styles/sections/list-group-headers.css */
 
 /* ========================================================================
@@ -5463,6 +5599,15 @@ button.nn-list-group-header-collapse-button .nn-list-group-header-icon {
     pointer-events: none;
 }
 
+/* A selected note shortcut takes the file selection colors while the list pane has focus, because clicking it in dual
+   pane mode moves focus there. The row then shows as active, like a clicked folder shortcut, while delete and rename act
+   on that note. With navigation focus, as in single pane mode, the navigation selection colors apply, so the row stays
+   active there too. */
+.nn-split-container[data-focus-pane='files'] .nn-navitem.nn-selected[data-nav-item-type='note']::after {
+    background-color: var(--nn-selected-file-bg-color);
+    box-shadow: inset 0 0 0 var(--nn-theme-file-border-width) var(--nn-selected-file-border-color);
+}
+
 .nn-navitem.nn-selected > .nn-navitem-content {
     position: relative;
     z-index: 2;
@@ -5492,8 +5637,14 @@ button.nn-list-group-header-collapse-button .nn-list-group-header-icon {
     color: var(--nn-selected-navitem-name-color);
 }
 
-.nn-navitem.nn-selected[data-nav-item-type='note'] .nn-navitem-name {
+/* A selected note shortcut follows the file selection while the list pane has focus (see state-selection.css) */
+.nn-split-container[data-focus-pane='files'] .nn-navitem.nn-selected[data-nav-item-type='note'] .nn-navitem-name {
     color: var(--nn-selected-file-name-color);
+}
+
+/* Matches the icon of a selected file in the list, which keeps one color in both pane focus states */
+.nn-split-container[data-focus-pane='files'] .nn-navitem.nn-selected[data-nav-item-type='note'] .nn-navitem-icon {
+    color: var(--nn-theme-navitem-selected-icon-color);
 }
 
 .nn-navitem.nn-selected .nn-navitem-count {
@@ -7298,21 +7449,6 @@ body.nn-resizing {
     margin-top: 0;
 }
 
-.nn-settings-legacy-titlebar {
-    padding-inline: 0;
-}
-
-.nn-settings-legacy-titlebar .setting-item-name {
-    display: flex;
-    align-items: center;
-    gap: var(--size-2-2);
-}
-
-.nn-settings-legacy-page-link:focus-visible {
-    outline: 2px solid var(--background-modifier-border-focus);
-    outline-offset: -2px;
-}
-
 /* Utility class for conditionally hidden settings */
 .nn-setting-hidden {
     display: none;
@@ -7321,6 +7457,11 @@ body.nn-resizing {
 .nn-setting-warning {
     color: var(--text-error);
     font-weight: 600;
+}
+
+/* Separates warnings when several apply to one setting */
+.nn-setting-warning-message + .nn-setting-warning-message {
+    margin-top: var(--size-4-1);
 }
 
 .nn-setting-template-tokens,
@@ -7751,14 +7892,6 @@ button.nn-youtube-button svg {
 .nn-slider-control input[type='range'] {
     flex: 0 0 100px;
 }
-
-.nn-slider-value {
-    flex: 0 0 48px;
-    font-size: var(--font-ui-smaller);
-    color: var(--nn-theme-foreground-muted);
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
 /* Source: src/styles/sections/settings-markdownpoint-banner.css */
 
 /* ========================================================================
@@ -7796,6 +7929,14 @@ button.nn-youtube-button svg {
     --nn-markdownpoint-edge: rgba(0, 0, 0, 0.08);
     --nn-markdownpoint-drop: rgba(40, 30, 20, 0.28);
     container-type: inline-size;
+}
+
+/* The row holds a light and a dark banner with the same message; only the one for Obsidian's current
+   theme shows, so switching between light and dark swaps the design while settings are open.
+   display: none also takes the other banner out of the tab order and the accessibility tree. */
+.theme-dark .nn-markdownpoint-banner:not(.nn-markdownpoint-banner-dark),
+.theme-light .nn-markdownpoint-banner-dark {
+    display: none;
 }
 
 .nn-markdownpoint-banner-dark {
@@ -7905,6 +8046,13 @@ button.nn-youtube-button svg {
         0 0 0 1px var(--nn-markdownpoint-edge),
         0 8px 18px -6px var(--nn-markdownpoint-drop);
     transform: translateY(-50%);
+}
+
+/* Dark designs dim the file and the slide, which would otherwise stand out brighter than the
+   banner's own text */
+.nn-markdownpoint-banner-dark .nn-markdownpoint-file,
+.nn-markdownpoint-banner-dark .nn-markdownpoint-slide {
+    filter: brightness(0.65);
 }
 
 /* The three lines are centered on each other, and the column is only as wide as its widest line, so the
@@ -8120,6 +8268,30 @@ button.nn-youtube-button svg {
     border: none;
     padding: 0;
     margin-top: 0;
+}
+/* Source: src/styles/sections/settings-third-party-licenses.css */
+
+/* ========================================================================
+   Third-Party Licenses Section
+   ======================================================================== */
+
+/* The license text replaces the setting row, so the row drops its own chrome */
+.nn-third-party-licenses.setting-item {
+    border: none;
+    padding: 0;
+}
+
+/* License notices keep their line breaks and wrap on narrow screens; the settings page scrolls them */
+.nn-third-party-licenses-text {
+    padding: var(--size-4-3);
+    border-radius: var(--radius-s);
+    background-color: var(--background-secondary);
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    user-select: text;
 }
 /* Source: src/styles/sections/modal-color-picker.css */
 
@@ -11054,7 +11226,7 @@ settings:
         title: Selection outline thickness
         description: Border width for active calendar outlines.
         type: variable-number-slider
-        default: 3
+        default: 2
         format: px
         min: 1
         max: 4

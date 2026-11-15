@@ -64,6 +64,14 @@ export const STRINGS_PL = {
             'Przeciągnij, aby zmienić kolejność. Kolejność jest zapisywana jako wartości indeksu liczbowego w atrybucie „{property}”.',
         manualSortNonMarkdownHint: 'Pliki inne niż Markdown są wyświetlane na dole i nie można zmieniać ich kolejności.',
         unsortedSection: 'Nieposortowane',
+        // MarkdownPoint presentation rows: the cover slide count and the presentation.mdpoint detail labels
+        presentation: {
+            slideCount: 'Slajdy: {count}',
+            slideCountOne: '1 slajd',
+            theme: 'Motyw',
+            slides: 'Slajdy',
+            size: 'Rozmiar'
+        },
         propertyGroupNoValue: 'Brak',
         manualSortDone: 'Gotowe',
         manualSortMultipleWriteFailure: 'Nie udało się przetworzyć plików: {count}; pierwszy: {path}: {message}'
@@ -86,8 +94,9 @@ export const STRINGS_PL = {
         reorderRootFoldersTitle: 'Zmień kolejność elementów',
         reorderRootFoldersHint: 'Użyj strzałek lub przeciągnij, aby zmienić kolejność',
         vaultRootLabel: 'Sejf',
-        resetRootToAlpha: 'Ustaw alfabetycznie',
-        resetRootToFrequency: 'Ustaw według częstotliwości',
+        resetAllFolders: 'Resetuj wszystkie foldery',
+        resetAllTags: 'Resetuj wszystkie tagi',
+        resetAllProperties: 'Resetuj wszystkie atrybuty',
         pinShortcuts: 'Przypnij skróty',
         pinShortcutsAndRecentFiles: 'Przypnij skróty i ostatnie pliki',
         unpinShortcuts: 'Odepnij skróty',
@@ -246,10 +255,12 @@ export const STRINGS_PL = {
                     items: [
                         '`.key` Uwzględnij notatki z kluczem atrybutu zaczynającym się od `key`.',
                         '`.key=value` Uwzględnij notatki, których wartość atrybutu zawiera `value`.',
+                        '`.key=null` Uwzględnij notatki, w których atrybut `key` istnieje, ale nie ma wartości. `.key="null"` wyszukuje tekst `null`.',
                         '`."Reading Status"` Uwzględnij notatki z atrybutem zawierającym spacje.',
                         '`."Reading Status"="In Progress"` Atrybuty i ich wartości ze spacjami muszą być w podwójnych cudzysłowach.',
                         '`-.key` Wyklucz notatki z kluczem atrybutu zaczynającym się od `key`.',
                         '`-.key=value` Wyklucz notatki, których wartość atrybutu zawiera `value`.',
+                        '`-.key=null` Wyklucz notatki, w których atrybut `key` istnieje, ale nie ma wartości.',
                         'Kliknij atrybut z Cmd/Ctrl, aby dodać go operatorem AND. Kliknij atrybut z Cmd/Ctrl+Shift, aby dodać go operatorem OR.'
                     ]
                 },
@@ -934,6 +945,7 @@ export const STRINGS_PL = {
             cannotMoveIntoSelf: 'Nie można przenieść do tego samego lub podrzędnego folderu.',
             itemAlreadyExists: 'Element o nazwie "{name}" już istnieje w tej lokalizacji.',
             failedToMove: 'Nie udało się przenieść: {error}',
+            failedToCopy: 'Nie udało się skopiować "{name}": {error}',
             failedToAddTag: 'Nie udało się dodać tagu "{tag}"',
             failedToSetProperty: 'Nie udało się zaktualizować atrybutu: {error}',
             failedToClearTags: 'Nie udało się wyczyścić tagów',
@@ -946,7 +958,9 @@ export const STRINGS_PL = {
             filesAlreadyHaveProperty: 'Wiele plików ({count}) ma już ten atrybut',
             noTagsToClear: 'Brak tagów do wyczyszczenia',
             fileImported: 'Zaimportowano 1 plik',
-            filesImported: 'Zaimportowano wiele plików ({count})'
+            filesImported: 'Zaimportowano wiele plików ({count})',
+            fileCopied: 'Skopiowano 1 plik',
+            filesCopied: 'Skopiowano wiele plików ({count})'
         }
     },
 
@@ -1074,8 +1088,6 @@ export const STRINGS_PL = {
             exportFailed: 'Nie udało się wyeksportować raportu metadanych'
         },
         index: {
-            label: 'Ogólne',
-            description: 'Informacje o wydaniu, wsparcie, profil sejfu, typy plików i klucze atrybutów.',
             groups: {
                 about: 'O wtyczce'
             }
@@ -1093,11 +1105,12 @@ export const STRINGS_PL = {
             },
             appearanceAndBehavior: {
                 label: 'Wygląd i zachowanie',
-                description: 'Zachowanie, nawigacja klawiaturą, przyciski myszy, wygląd i formatowanie.',
+                description: 'Zachowanie, nawigacja klawiaturą, przyciski myszy, podwójny panel, wygląd i formatowanie.',
                 groups: {
                     startup: 'Uruchamianie',
                     keyboardNavigation: 'Nawigacja klawiaturą',
                     mouseButtons: 'Przyciski myszy',
+                    dualPane: 'Podwójny panel',
                     desktopAppearance: 'Wygląd na komputerze',
                     mobileAppearance: 'Wygląd mobilny',
                     appearance: 'Wygląd',
@@ -1207,7 +1220,8 @@ export const STRINGS_PL = {
                 description: 'Diagnostyka, czyszczenie metadanych, import/eksport i resetowanie.',
                 groups: {
                     maintenance: 'Konserwacja',
-                    resetSettings: 'Resetowanie ustawień'
+                    resetSettings: 'Resetowanie ustawień',
+                    thirdPartyLicenses: 'Licencje stron trzecich'
                 }
             }
         },
@@ -1586,10 +1600,6 @@ export const STRINGS_PL = {
                 name: 'Automatycznie wybierz pierwszą notatkę',
                 desc: 'Automatycznie otwiera pierwszą notatkę po zmianie folderu, tagu lub atrybutu.'
             },
-            disableShortcutAutoScroll: {
-                name: 'Wyłącz automatyczne przewijanie skrótów',
-                desc: 'Nie przewijaj panelu nawigacji podczas klikania elementów w skrótach.'
-            },
             expandOnSelection: {
                 name: 'Rozwiń podczas zaznaczania',
                 desc: 'Rozwija foldery, tagi i atrybuty po zaznaczeniu. W trybie pojedynczego panelu pierwsze zaznaczenie powoduje rozwinięcie, drugie zaznaczenie powoduje wyświetlenie plików.'
@@ -1676,8 +1686,6 @@ export const STRINGS_PL = {
             calendarLocale: {
                 name: 'Ustawienia regionalne',
                 desc: 'Kontroluje formatowanie dat kalendarza, numerację tygodni i pierwszy dzień tygodnia.',
-                weekPathMismatchWarning:
-                    'Widoczny kalendarz i ścieżki notatek tygodniowych używają różnych początków tygodni lub numeracji tygodni.',
                 options: {
                     systemDefault: 'Domyślne'
                 }
@@ -1791,7 +1799,9 @@ export const STRINGS_PL = {
                 momentLinkText: 'formatu daty Moment',
                 momentDescSuffix:
                     '. Nazwy podfolderów umieść w nawiasach, np. [Work]/YYYY. Kliknij ikonkę szablonu, aby ustawić szablon. Ustaw lokalizację folderu szablonów w sekcji Operacje na plikach i szablony > Szablony.',
-                example: 'Aktywna składnia: {path}'
+                example: 'Aktywna składnia: {path}',
+                weekYearWarning:
+                    '"gggg" i "GGGG" to lata tygodniowe, więc daty w okolicach Nowego Roku mogą otrzymać niewłaściwy rok. Użyj "YYYY".'
             },
             templateEngine: {
                 name: 'Silnik szablonów',
@@ -1836,10 +1846,14 @@ export const STRINGS_PL = {
             calendarWeeklyNotePattern: {
                 name: 'Notatki tygodniowe',
                 parsingError: 'Wzór musi być tak sformatowany, aby można było odczytać pełny tydzień (rok tygodnia, numer tygodnia).',
-                weekPathMismatchWarning:
-                    'Ścieżki notatek tygodniowych używają ustawień regionalnych notatek okresowych. Użyj pasujących ustawień regionalnych lub użyj "GGGG" z "WW" dla tygodni rozpoczynających się w poniedziałek.',
+                isoWeeksWarning:
+                    'Notatki tygodniowe używają tygodni ISO ("W" lub "G"), więc kalendarz zaczyna tygodnie w poniedziałek i pokazuje numery tygodni ISO. Użyj "gggg" z "ww" dla tygodni zgodnych z ustawieniami regionalnymi.',
+                calendarYearWarning:
+                    'Notatki tygodniowe biorą rok z "YYYY", więc tydzień 1 zaczynający się w grudniu otrzymuje poprzedni rok. Użyj "GGGG" z "WW" lub "gggg" z "ww".',
                 mixedWeekTokensWarning:
-                    'Ten wzór miesza tokeny tygodnia rozpoczynające się w poniedziałek ("W" lub "G") z tokenami tygodnia opartymi na ustawieniach regionalnych ("w" lub "g"). Użyj konsekwentnie jednego zestawu: "GGGG" z "WW" dla tygodni rozpoczynających się w poniedziałek lub "gggg" z "ww", jeśli notatki tygodniowe mają być zgodne z wybranymi ustawieniami regionalnymi.'
+                    'Notatki tygodniowe łączą tokeny tygodni ISO ("W" lub "G") z tokenami tygodni regionalnych ("w" lub "g"). Użyj "GGGG" z "WW" dla tygodni ISO lub "gggg" z "ww" dla tygodni zgodnych z ustawieniami regionalnymi.',
+                weekPathMismatchWarning:
+                    'Ustawienia regionalne kalendarza i ustawienia regionalne notatek okresowych inaczej zaczynają lub numerują tygodnie, więc ścieżki notatek tygodniowych nie pasują do tygodni w kalendarzu. Ustaw te same ustawienia regionalne w obu miejscach lub użyj "GGGG" z "WW" dla tygodni ISO.'
             },
             calendarMonthlyNotePattern: {
                 name: 'Notatki miesięczne',
@@ -1911,7 +1925,10 @@ export const STRINGS_PL = {
                     downloadButtonText: 'Pobierz',
                     copyNotice: 'Ustawienia skopiowane do schowka.',
                     downloadNotice: 'Ustawienia wyeksportowane.',
-                    downloadError: 'Nie udało się pobrać ustawień: {message}'
+                    downloadError: 'Nie udało się pobrać ustawień: {message}',
+                    saveButtonText: 'Zapisz w sejfie',
+                    saveNotice: 'Ustawienia zapisano w {path}.',
+                    saveError: 'Nie udało się zapisać ustawień: {message}'
                 }
             },
             resetAllSettings: {
@@ -2555,7 +2572,7 @@ export const STRINGS_PL = {
             },
             folderNoteType: {
                 name: 'Domyślny rodzaj notatki folderu',
-                desc: 'Rodzaj notatki folderu tworzony za pomocą menu kontekstowego.',
+                desc: 'Rodzaj notatki folderu tworzony za pomocą menu kontekstowego i preferowany, gdy folder zawiera notatki folderu kilku rodzajów.',
                 options: {
                     ask: 'Pytaj przy tworzeniu',
                     markdown: 'Markdown',
@@ -2682,6 +2699,11 @@ export const STRINGS_PL = {
                 desc: 'Lista pól metadanych rozdzielonych przecinkami. Używana jest pierwsza poprawna wartość. W przypadku braku wartości używana jest nazwa pliku.',
                 placeholder: 'title, name'
             },
+            frontmatterNameFormat: {
+                name: 'Format nazwy notatki',
+                desc: 'Nazwa wyświetlana dla notatek, które mają nazwę w metadanych. {{name}} to nazwa z metadanych, {{filename}} nazwa pliku, a {{date}} lub {{date:FORMAT}} data notatki dziennika. Gdy format zawiera {{date}}, notatki, które nie są notatkami dziennika, pokazują tylko nazwę z metadanych.',
+                placeholder: '{{name}}'
+            },
             frontmatterCreatedField: {
                 name: 'Pole znacznika czasu utworzenia',
                 desc: 'Nazwa pola metadanych dla znacznika czasu utworzenia. Pozostaw puste, aby używać tylko daty systemu plików.',
@@ -2715,20 +2737,26 @@ export const STRINGS_PL = {
                 messages: [
                     { headline: 'Pisz slajdy w Markdown.', subtext: 'Przeciągaj tekst i obrazy tam, gdzie chcesz.' },
                     { headline: 'Darmowa alternatywa dla PowerPoint.', subtext: 'Udostępnianie i współpraca też są darmowe.' },
+                    { headline: 'Prezentacja to folder na komputerze.', subtext: 'Do tworzenia slajdów nie potrzebujesz konta.' },
                     { headline: 'Animuj jak w Apple Motion.', subtext: 'Używaj klatek kluczowych, ścieżek i morfingu.' },
-                    { headline: 'Współpracuj jak w Google Slides.', subtext: 'Z kursorami i komentarzami na żywo.' },
+                    { headline: 'Umieść modele 3D na slajdach.', subtext: 'Otwórz plik GLB lub glTF albo użyj Meshy.' },
+                    { headline: 'Współpracuj jak w Google Slides.', subtext: 'Widzisz kursory i komentarze wszystkich.' },
                     { headline: 'Cały tekst slajdów w jednym miejscu.', subtext: 'Otwórz View > Outline i edytuj w Markdown.' },
                     { headline: 'Przyciągaj obiekty jak w Figma.', subtext: 'Wyrównuj według odstępów, rozmiaru i kąta.' },
-                    { headline: 'Wyróżniaj słowa ==znakami równości==.', subtext: '**Pogrubienie** i *kursywa* są jak w Obsidian.' },
                     { headline: 'Eksportuj prezentację jako wideo 4K.', subtext: 'Do animacji nie potrzebujesz After Effects.' },
-                    { headline: 'Notatki prelegenta to też Markdown.', subtext: 'Są zapisane w tym samym pliku co slajdy.' },
-                    { headline: 'Prezentacja to folder na komputerze.', subtext: 'Do tworzenia slajdów nie potrzebujesz konta.' },
-                    { headline: 'Umieść kod na slajdach.', subtext: 'Bloki kodu są podświetlane w 21 językach.' },
+                    { headline: 'Postacie 3D chodzą i biegają.', subtext: 'Użyj Meshy do riggingu i animacji.' },
+                    { headline: 'Wyróżniaj słowa ==znakami równości==.', subtext: '**Pogrubienie** i *kursywa* są jak w Obsidian.' },
+                    { headline: 'Używaj auto layoutu jak w Figma.', subtext: 'Ułóż grupę w rzędzie lub kolumnie.' },
                     { headline: 'Udostępnij prezentację linkiem.', subtext: 'Opublikuj ją online z darmowym kontem.' },
-                    { headline: 'Śledź zmiany prezentacji w Git.', subtext: 'Prezentacje to pliki tekstowe Markdown i YAML.' },
-                    { headline: 'Twórz schematy blokowe z tekstu.', subtext: 'Napisz kod Mermaid, a dostaniesz diagram.' },
+                    { headline: 'Oświetlenie 3D jak w Blender.', subtext: 'Punkt, słońce, reflektor i obszar z cieniami.' },
+                    { headline: 'Śledź zmiany prezentacji w Git.', subtext: 'Prezentacje to pliki tekstowe Markdown i JSON.' },
+                    { headline: 'Twórz komponenty jak w Figma.', subtext: 'Edytuj raz, a zmieni się każda instancja.' },
+                    { headline: 'Przeglądaj motywy jak w Obsidian.', subtext: 'Zainstaluj darmowy motyw jednym kliknięciem.' },
                     { headline: 'Trzymaj prezentacje w chmurze.', subtext: 'Działa z Dropbox, iCloud Drive i OneDrive.' },
-                    { headline: 'Przeglądaj motywy jak w Obsidian.', subtext: 'Są darmowe i instalują się jednym kliknięciem.' },
+                    { headline: '3D z fizyką brył sztywnych.', subtext: 'Upuszczaj, przewracaj i układaj obiekty.' },
+                    { headline: 'Notatki prelegenta to też Markdown.', subtext: 'Są zapisane w tym samym pliku co slajdy.' },
+                    { headline: 'Łącz kształty jak w Figma.', subtext: 'Suma, różnica, część wspólna lub wykluczenie.' },
+                    { headline: 'Umieść kod na slajdach.', subtext: 'Bloki kodu są podświetlane w 21 językach.' },
                     { headline: 'Darmowy w domu i w pracy.', subtext: 'Pobierz na Mac lub Windows.' }
                 ]
             },

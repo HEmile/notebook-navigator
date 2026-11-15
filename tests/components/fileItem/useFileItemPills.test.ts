@@ -559,7 +559,7 @@ describe('useFileItemPills', () => {
             visibleNavigationPropertyKeys: new Set<string>(),
             matchedProperties: [
                 {
-                    clause: { key: 'workflow', value: 'waiting' }
+                    clause: { key: 'workflow', match: 'value', value: 'waiting' }
                 }
             ]
         });
@@ -586,7 +586,7 @@ describe('useFileItemPills', () => {
             visibleNavigationPropertyKeys: new Set<string>(['status']),
             matchedProperties: [
                 {
-                    clause: { key: 'status', value: 'done' }
+                    clause: { key: 'status', match: 'value', value: 'done' }
                 }
             ]
         });
@@ -611,7 +611,7 @@ describe('useFileItemPills', () => {
             visibleNavigationPropertyKeys: new Set<string>(['aliases']),
             matchedProperties: [
                 {
-                    clause: { key: 'alias', value: null }
+                    clause: { key: 'alias', match: 'key' }
                 }
             ]
         });
@@ -619,6 +619,71 @@ describe('useFileItemPills', () => {
         expect(markup).toContain('&quot;propertyKey&quot;:&quot;Aliases&quot;');
         expect(markup).toContain('&quot;foldedKeyTerms&quot;:[&quot;alias&quot;]');
         expect(markup).toContain('>Best project<');
+    });
+
+    it('returns key evidence without values for an exact key matched by an empty-value clause', () => {
+        const markup = renderPillRows({
+            file: createTestTFile('Notes/EmptyLens.md'),
+            isCompactMode: false,
+            tags: [],
+            properties: [
+                { fieldKey: 'Lens', value: '' },
+                { fieldKey: 'Lens-Type', value: '' }
+            ],
+            wordCount: null,
+            settings: {
+                ...DEFAULT_SETTINGS,
+                showFileProperties: true
+            },
+            visiblePropertyKeys: new Set<string>(),
+            visibleNavigationPropertyKeys: new Set<string>(),
+            matchedProperties: [
+                {
+                    clause: { key: 'lens', match: 'empty' }
+                }
+            ]
+        });
+
+        expect(markup).toContain(
+            '&quot;propertyKey&quot;:&quot;Lens&quot;,&quot;foldedKeyTerms&quot;:[&quot;lens&quot;],&quot;values&quot;:[]'
+        );
+        expect(markup).not.toContain('Lens-Type');
+    });
+
+    it('orders values of one property by its manual value order, then alphabetically', () => {
+        const render = (propertyChildOrder: Record<string, string[]>) =>
+            renderPillRows({
+                file: createTestTFile('Notes/OrderedValues.md'),
+                isCompactMode: false,
+                tags: [],
+                properties: [
+                    { fieldKey: 'status', value: 'done', valueKind: 'string' },
+                    { fieldKey: 'status', value: 'todo', valueKind: 'string' },
+                    { fieldKey: 'status', value: 'blocked', valueKind: 'string' }
+                ],
+                wordCount: null,
+                settings: {
+                    ...DEFAULT_SETTINGS,
+                    showFileProperties: true,
+                    propertyChildOrder
+                },
+                visiblePropertyKeys: new Set<string>(['status']),
+                visibleNavigationPropertyKeys: new Set<string>(['status']),
+                fileItemPillOrderModel: {
+                    tagTree: new Map(),
+                    rootTagOrderMap: new Map(),
+                    tagComparator: undefined,
+                    rootPropertyNavigationOrderMap: new Map()
+                }
+            });
+
+        const manual = render({ 'key:status': ['todo', 'done'] });
+        expect(manual.indexOf('>todo<')).toBeLessThan(manual.indexOf('>done<'));
+        expect(manual.indexOf('>done<')).toBeLessThan(manual.indexOf('>blocked<'));
+
+        const alphabetical = render({});
+        expect(alphabetical.indexOf('>blocked<')).toBeLessThan(alphabetical.indexOf('>done<'));
+        expect(alphabetical.indexOf('>done<')).toBeLessThan(alphabetical.indexOf('>todo<'));
     });
 
     it('orders property groups by the navigation properties section order', () => {

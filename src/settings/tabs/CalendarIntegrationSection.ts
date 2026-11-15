@@ -16,8 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { DropdownComponent, Setting } from 'obsidian';
-import type { SettingDefinitionItem } from 'obsidian';
+import type { DropdownComponent, Setting, SettingDefinitionItem } from 'obsidian';
 import { getCurrentLanguage, strings } from '../../i18n';
 import {
     getMomentApi,
@@ -27,43 +26,35 @@ import {
     type MomentApi
 } from '../../utils/moment';
 import { getActiveVaultProfile } from '../../utils/vaultProfiles';
-import type { createSettingGroupFactory } from '../settingGroups';
-import { createDependentSettingsSection, setElementVisible } from '../dependentSettings';
 import { isCalendarPeriodicNotesLocaleSource } from '../types';
 import { createGroupDefinition, createRenderDefinition } from '../nativeSettingControls';
 import {
     createCalendarCustomPatternRenderers,
     createCalendarCustomPatternSettingDefinitions,
-    renderCalendarCustomPatternSection,
     type CalendarSelectedLocales
 } from './CalendarCustomPatternSection';
 import type { SettingsTabContext } from './SettingsTabContext';
-
-type CreateSettingGroup = ReturnType<typeof createSettingGroupFactory>;
-
-interface CalendarIntegrationSectionOptions {
-    calendarLocaleWarningEl: HTMLElement;
-}
 
 interface CalendarIntegrationSettingDefinitionOptions {
     getCalendarLocaleWarningEl: () => HTMLElement | null;
 }
 
-function formatLocaleWeekdayExample(locale: string): string {
+/** Returns the localized name of the first day of the week in `locale`, such as "Sunday" for `en` and "Montag" for `de`. */
+function formatLocaleWeekStart(locale: string): string {
     const currentMomentApi = getMomentApi();
-    const sampleDate = currentMomentApi?.('2026-01-19', 'YYYY-MM-DD', true).locale(locale);
-    if (!sampleDate?.isValid()) {
+    if (!currentMomentApi) {
         return '';
     }
 
-    const formatted = sampleDate.format('dddd').trim();
+    // `startOf('week')` follows the locale's first day of the week.
+    const formatted = currentMomentApi().locale(locale).startOf('week').format('dddd').trim();
     const [first = '', ...rest] = Array.from(formatted);
     return first ? `${first.toLocaleUpperCase()}${rest.join('')}` : '';
 }
 
 function formatPeriodicNotesLocaleOption(label: string, locale: string): string {
-    const example = formatLocaleWeekdayExample(locale);
-    return example ? `${label} - ${locale} (${example})` : `${label} - ${locale}`;
+    const weekStart = formatLocaleWeekStart(locale);
+    return weekStart ? `${label} - ${locale} (${weekStart})` : `${label} - ${locale}`;
 }
 
 function createSelectedCalendarLocalesResolver(context: SettingsTabContext): (momentApi: MomentApi | null) => CalendarSelectedLocales {
@@ -133,6 +124,10 @@ function renderCalendarPeriodicNotesLocaleOptions(
             optionEl.text = label;
         }
     });
+
+    // Obsidian sizes a dropdown to its selected label when the value is set, so a longer label would be clipped
+    // without setting the value again. `setValue` does not run the change handler.
+    dropdown.setValue(dropdown.getValue());
 }
 
 function renderCalendarPeriodicNotesLocaleSetting(
@@ -235,71 +230,4 @@ export function createCalendarIntegrationSettingDefinitions(
             ...createCalendarCustomPatternSettingDefinitions(customPatternRenderers, isNotebookNavigatorIntegration)
         ])
     ];
-}
-
-export function renderCalendarIntegrationSection(
-    context: SettingsTabContext,
-    createGroup: CreateSettingGroup,
-    options: CalendarIntegrationSectionOptions
-): () => void {
-    const { calendarLocaleWarningEl } = options;
-    const { plugin } = context;
-    const getActiveProfile = () => getActiveVaultProfile(plugin.settings);
-    const resolveSelectedCalendarLocales = createSelectedCalendarLocalesResolver(context);
-
-    const calendarIntegrationGroup = createGroup(strings.settings.pages.calendar.groups.calendarIntegration);
-    let renderCalendarIntegrationVisibility = (): void => {};
-
-    const calendarIntegrationSetting = calendarIntegrationGroup.addSetting(setting => {
-        renderCalendarIntegrationModeSetting(setting, context, () => renderCalendarIntegrationVisibility());
-    });
-
-    const dailyNotesInfoSettingsEl = createDependentSettingsSection(calendarIntegrationSetting);
-    const customCalendarSettingsEl = createDependentSettingsSection(calendarIntegrationSetting);
-
-    renderDailyNotesInfoSetting(new Setting(dailyNotesInfoSettingsEl));
-
-    let calendarPeriodicNotesLocaleDropdown: DropdownComponent | null = null;
-
-    const refreshCalendarPeriodicNotesLocaleOptions = (): void => {
-        renderCalendarPeriodicNotesLocaleOptions(calendarPeriodicNotesLocaleDropdown, resolveSelectedCalendarLocales);
-    };
-
-    renderCalendarPeriodicNotesLocaleSetting(new Setting(customCalendarSettingsEl), context, {
-        setDropdown: dropdown => {
-            calendarPeriodicNotesLocaleDropdown = dropdown;
-        },
-        refresh: () => renderCalendarIntegrationVisibility()
-    });
-
-    const customPatternController = renderCalendarCustomPatternSection({
-        context,
-        containerEl: customCalendarSettingsEl,
-        getCalendarLocaleWarningEl: () => calendarLocaleWarningEl,
-        getActiveProfile,
-        resolveSelectedCalendarLocales,
-        requestVisibilityRefresh: () => renderCalendarIntegrationVisibility()
-    });
-
-    renderCalendarIntegrationVisibility = (): void => {
-        const isDailyNotes = plugin.settings.calendarIntegrationMode === 'daily-notes';
-        const isCustom = plugin.settings.calendarIntegrationMode === 'notebook-navigator';
-
-        refreshCalendarPeriodicNotesLocaleOptions();
-        setElementVisible(dailyNotesInfoSettingsEl, isDailyNotes);
-        setElementVisible(customCalendarSettingsEl, isCustom);
-
-        if (!isCustom) {
-            customPatternController.hideMessages();
-            return;
-        }
-
-        customPatternController.refresh();
-    };
-
-    context.registerSettingsUpdateListener('calendar-tab-calendar-integration', () => {
-        renderCalendarIntegrationVisibility();
-    });
-
-    return renderCalendarIntegrationVisibility;
 }

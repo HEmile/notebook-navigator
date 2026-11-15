@@ -167,9 +167,6 @@ function createSourceState(params?: {
         folderCountFileNameMatcher: null,
         hiddenFilePropertyMatcher: { hasCriteria: false, matches: () => false },
         rootFolders: [],
-        rootLevelFolders: [],
-        rootFolderOrderMap: new Map(),
-        missingRootFolderPaths: [],
         tagTree: visibleTagTree,
         propertyTree,
         untaggedCount: 0,
@@ -313,7 +310,7 @@ describe('useNavigationPaneTreeSections', () => {
                         settings,
                         metadataService,
                         fileNameIconNeedles: [],
-                        getFileDisplayName: file => file.basename,
+                        getFileNameForIconMatch: file => file.basename,
                         folderDecorationModel: {
                             isExcludedPath: () => false,
                             folderRainbowColors: { colorsByPath: new Map(), rootColor: undefined, getInheritedColor: () => undefined },

@@ -11,7 +11,7 @@ Coming from another app? Read the switching guides for [Evernote](https://notebo
 
 <br/>
 
-![Obsidian Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=Downloads&query=%24%5B%22notebook-navigator%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json) ![Obsidian Compatibility](https://img.shields.io/badge/Obsidian-v1.11.0+-483699?logo=obsidian&style=flat-square) [![Discord](https://img.shields.io/discord/1405458145974943846?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/6eeSUvzEJr)
+![Obsidian Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&label=Downloads&query=%24%5B%22notebook-navigator%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json) ![Obsidian Compatibility](https://img.shields.io/badge/Obsidian-v1.13.0+-483699?logo=obsidian&style=flat-square) [![Discord](https://img.shields.io/discord/1405458145974943846?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/6eeSUvzEJr)
 
 [![Quality checks](https://github.com/johansan/notebook-navigator/actions/workflows/ci.yml/badge.svg)](https://github.com/johansan/notebook-navigator/actions/workflows/ci.yml) [![Security scan](https://github.com/johansan/notebook-navigator/actions/workflows/codeql.yml/badge.svg)](https://github.com/johansan/notebook-navigator/actions/workflows/codeql.yml)
 
@@ -168,10 +168,12 @@ Filters files by display name, alias, tags, properties, dates, folders, extensio
 
 - `.key` - Include notes with a property key that starts with `key`
 - `.key=value` - Include notes where the property value contains `value`
+- `.key=null` - Include notes where the property `key` exists with no value (`.key="null"` searches for the text `null`)
 - `."Reading Status"` - Property key with whitespace (double-quoted)
 - `."Reading Status"="In Progress"` - Keys and values with whitespace must be double-quoted
 - `-.key` - Exclude notes with a property key that starts with `key`
 - `-.key=value` - Exclude notes where the property value contains `value`
+- `-.key=null` - Exclude notes where the property `key` exists with no value
 - Cmd/Ctrl+Click a property to add with AND. Cmd/Ctrl+Shift+Click to add with OR
 
 **Filters**
@@ -481,7 +483,7 @@ Set custom hotkeys for these commands in Obsidian's Hotkeys settings:
 
 - **Search** - Filter by file name, aliases, tags, properties, dates, folders, extensions, and tasks with AND/OR/exclusions
 - **Omnisearch integration** - Full-text search via [Omnisearch](https://github.com/scambier/obsidian-omnisearch)
-- **Drag and drop** - File moves, tagging, shortcut assignment, tag tree reparenting, spring-loaded folders
+- **Drag and drop** - File moves, file copies (hold Option on macOS or Ctrl on Windows and Linux), tagging, shortcut assignment, tag tree reparenting, spring-loaded folders
 - **Context menus** - Create notes/folders/canvases/bases/drawings and run file/tag actions
 - **Drawings** - Create Excalidraw and Tldraw drawings from navigation and list pane menus
 - **Templates** - Built-in template engine with `{{title}}`, `{{date}}`, `{{cursor}}` and other tokens for calendar notes, folder notes and new notes from template, plus optional Templater support (see [10.6 Templates](#106-templates))
@@ -635,14 +637,7 @@ Notebook Navigator runs locally, but some features make HTTP requests from Obsid
 - **Offline use:** English is bundled. Settings remain available during downloads. The navigator shows a loading screen with **Continue in English**; failed downloads also use English. A download completed after continuing in English is used on the next launch.
 - **Data:** Sends standard HTTP metadata; does not include vault content. Downloaded files contain text data, while language formatting functions remain bundled with the plugin.
 
-### 11.6 Settings banner
-
-- **Where:** The top of the Notebook Navigator settings page shows a static banner for [MarkdownPoint](https://markdownpoint.com), a free presentation app made by the author of Notebook Navigator.
-- **Setting:** "Show MarkdownPoint banner at the top" under Advanced moves the banner further down the settings page when turned off.
-- **Content:** The banner's images and text are bundled with the plugin. It loads nothing from the network and sends no data. Each time settings open it shows the next of its designs and messages; which one was shown last is stored in Obsidian local storage on the device.
-- **Link:** Clicking the banner opens `https://markdownpoint.com` in your browser.
-
-### 11.7 Privacy and data handling
+### 11.6 Privacy and data handling
 
 - Notebook Navigator does not send note content, file names, tags, or debug files to a Notebook Navigator server.
 - Requests to GitHub, YouTube, and any external image host are made directly from your device and include standard HTTP metadata (IP address, user-agent, and similar).

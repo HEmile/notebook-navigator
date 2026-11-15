@@ -63,6 +63,14 @@ export const STRINGS_AR = {
         manualSortHint: 'اسحب لإعادة الترتيب. يتم حفظ الترتيب كقيم رقمية للفهرس في الخاصية "{property}".',
         manualSortNonMarkdownHint: 'الملفات غير Markdown تظهر في الأسفل ولا يمكن إعادة ترتيبها.',
         unsortedSection: 'غير مرتبة',
+        // MarkdownPoint presentation rows: the cover slide count and the presentation.mdpoint detail labels
+        presentation: {
+            slideCount: 'الشرائح: {count}',
+            slideCountOne: 'شريحة واحدة',
+            theme: 'السمة',
+            slides: 'الشرائح',
+            size: 'الحجم'
+        },
         propertyGroupNoValue: 'بدون',
         manualSortDone: 'تم',
         manualSortMultipleWriteFailure: 'فشل {count} من الملفات؛ الأول: {path}: {message}'
@@ -86,8 +94,9 @@ export const STRINGS_AR = {
         reorderRootFoldersTitle: 'إعادة ترتيب التنقل',
         reorderRootFoldersHint: 'استخدم الأسهم أو اسحب لإعادة الترتيب',
         vaultRootLabel: 'الخزنة',
-        resetRootToAlpha: 'إعادة الترتيب الأبجدي',
-        resetRootToFrequency: 'إعادة الترتيب حسب التكرار',
+        resetAllFolders: 'إعادة تعيين كل المجلدات',
+        resetAllTags: 'إعادة تعيين كل الوسوم',
+        resetAllProperties: 'إعادة تعيين كل الخصائص',
         pinShortcuts: 'تثبيت الاختصارات',
         pinShortcutsAndRecentFiles: 'تثبيت الاختصارات والملفات الحديثة',
         unpinShortcuts: 'إلغاء تثبيت الاختصارات',
@@ -245,10 +254,12 @@ export const STRINGS_AR = {
                     items: [
                         '`.key` تضمين الملاحظات التي يبدأ مفتاح الخاصية فيها بـ `key`.',
                         '`.key=value` تضمين الملاحظات التي تحتوي قيمة الخاصية فيها على `value`.',
+                        '`.key=null` تضمين الملاحظات التي توجد فيها الخاصية `key` دون قيمة. يبحث `.key="null"` عن النص `null`.',
                         '`."Reading Status"` تضمين الملاحظات التي تحتوي على مفتاح خاصية يتضمن مسافات.',
                         '`."Reading Status"="In Progress"` المفاتيح والقيم التي تحتوي على مسافات يجب وضعها بين علامات اقتباس مزدوجة.',
                         '`-.key` استبعاد الملاحظات التي يبدأ مفتاح الخاصية فيها بـ `key`.',
                         '`-.key=value` استبعاد الملاحظات التي تحتوي قيمة الخاصية فيها على `value`.',
+                        '`-.key=null` استبعاد الملاحظات التي توجد فيها الخاصية `key` دون قيمة.',
                         'انقر على خاصية مع Cmd/Ctrl لإضافتها بـ AND، ومع Cmd/Ctrl+Shift لإضافتها بـ OR.'
                     ]
                 },
@@ -926,6 +937,7 @@ export const STRINGS_AR = {
             cannotMoveIntoSelf: 'لا يمكن نقل مجلد إلى نفسه أو إلى مجلد فرعي.',
             itemAlreadyExists: 'عنصر باسم "{name}" موجود بالفعل في هذا الموقع.',
             failedToMove: 'فشل النقل: {error}',
+            failedToCopy: 'فشل نسخ "{name}": {error}',
             failedToAddTag: 'فشل إضافة الوسم "{tag}"',
             failedToSetProperty: 'فشل في تحديث الخاصية: {error}',
             failedToClearTags: 'فشل مسح الوسوم',
@@ -938,7 +950,9 @@ export const STRINGS_AR = {
             filesAlreadyHaveProperty: '{count} من الملفات تحتوي بالفعل على هذه الخاصية',
             noTagsToClear: 'لا توجد وسوم لمسحها',
             fileImported: 'تم استيراد ملف واحد',
-            filesImported: 'تم استيراد {count} من الملفات'
+            filesImported: 'تم استيراد {count} من الملفات',
+            fileCopied: 'تم نسخ ملف واحد',
+            filesCopied: 'تم نسخ {count} من الملفات'
         }
     },
 
@@ -1066,8 +1080,6 @@ export const STRINGS_AR = {
             exportFailed: 'فشل تصدير تقرير البيانات الوصفية'
         },
         index: {
-            label: 'عام',
-            description: 'ملاحظات الإصدار والدعم وملف تعريف الخزنة وأنواع الملفات ومفاتيح الخصائص.',
             groups: {
                 about: 'حول'
             }
@@ -1085,11 +1097,12 @@ export const STRINGS_AR = {
             },
             appearanceAndBehavior: {
                 label: 'المظهر والسلوك',
-                description: 'السلوك والتنقل بلوحة المفاتيح وأزرار الفأرة والمظهر والتنسيق.',
+                description: 'السلوك والتنقل بلوحة المفاتيح وأزرار الفأرة واللوحتان والمظهر والتنسيق.',
                 groups: {
                     startup: 'بدء التشغيل',
                     keyboardNavigation: 'التنقل بلوحة المفاتيح',
                     mouseButtons: 'أزرار الفأرة',
+                    dualPane: 'اللوحتان',
                     desktopAppearance: 'مظهر سطح المكتب',
                     mobileAppearance: 'مظهر الهاتف المحمول',
                     appearance: 'المظهر',
@@ -1198,7 +1211,8 @@ export const STRINGS_AR = {
                 description: 'التشخيص وتنظيف البيانات الوصفية والاستيراد/التصدير وإعادة التعيين.',
                 groups: {
                     maintenance: 'الصيانة',
-                    resetSettings: 'إعادة ضبط الإعدادات'
+                    resetSettings: 'إعادة ضبط الإعدادات',
+                    thirdPartyLicenses: 'تراخيص الجهات الخارجية'
                 }
             }
         },
@@ -1577,10 +1591,6 @@ export const STRINGS_AR = {
                 name: 'التحديد التلقائي لأول ملاحظة',
                 desc: 'فتح أول ملاحظة تلقائيًا عند تبديل المجلدات أو الوسوم أو الخصائص.'
             },
-            disableShortcutAutoScroll: {
-                name: 'تعطيل التمرير التلقائي للاختصارات',
-                desc: 'عدم تمرير لوحة التنقل عند النقر على عناصر في الاختصارات.'
-            },
             expandOnSelection: {
                 name: 'التوسيع عند التحديد',
                 desc: 'توسيع المجلدات والوسوم والخصائص عند تحديدها. في وضع اللوحة الواحدة، التحديد الأول يوسع، والتحديد الثاني يعرض الملفات.'
@@ -1667,7 +1677,6 @@ export const STRINGS_AR = {
             calendarLocale: {
                 name: 'اللغة',
                 desc: 'التحكم في تنسيق تواريخ التقويم وترقيم الأسابيع واليوم الأول من الأسبوع.',
-                weekPathMismatchWarning: 'التقويم المرئي ومسارات الملاحظات الأسبوعية تستخدم بدايات أسابيع أو ترقيم أسابيع مختلفة.',
                 options: {
                     systemDefault: 'افتراضي'
                 }
@@ -1781,7 +1790,8 @@ export const STRINGS_AR = {
                 momentLinkText: 'تنسيق تاريخ Moment',
                 momentDescSuffix:
                     '. ضع أسماء المجلدات الفرعية بين أقواس معقوفة، مثال [Work]/YYYY. انقر على أيقونة القالب لتعيين قالب. حدد موقع مجلد القوالب في عمليات الملفات والقوالب > قوالب.',
-                example: 'الصيغة الحالية: {path}'
+                example: 'الصيغة الحالية: {path}',
+                weekYearWarning: '"gggg" و"GGGG" سنوات أسبوعية، لذا قد تحصل التواريخ القريبة من رأس السنة على سنة خاطئة. استخدم "YYYY".'
             },
             templateEngine: {
                 name: 'محرك القوالب',
@@ -1825,10 +1835,14 @@ export const STRINGS_AR = {
             calendarWeeklyNotePattern: {
                 name: 'الملاحظات الأسبوعية',
                 parsingError: 'يجب أن يقوم النمط بتنسيق الأسبوع ثم تحليله مرة أخرى كأسبوع كامل (سنة الأسبوع، رقم الأسبوع).',
-                weekPathMismatchWarning:
-                    'تستخدم مسارات الملاحظات الأسبوعية لغة الملاحظات الدورية. استخدم لغات متطابقة، أو استخدم "GGGG" مع "WW" للأسابيع المستندة إلى الإثنين.',
+                isoWeeksWarning:
+                    'تستخدم الملاحظات الأسبوعية أسابيع ISO ("W" أو "G")، لذا يبدأ التقويم الأسابيع يوم الإثنين ويعرض أرقام أسابيع ISO. استخدم "gggg" مع "ww" لأسابيع تتبع اللغة.',
+                calendarYearWarning:
+                    'تأخذ الملاحظات الأسبوعية السنة من "YYYY"، لذا يحصل الأسبوع 1 الذي يبدأ في ديسمبر على السنة السابقة. استخدم "GGGG" مع "WW"، أو "gggg" مع "ww".',
                 mixedWeekTokensWarning:
-                    'هذا النمط يخلط رموز الأسبوع المستندة إلى الإثنين ("W" أو "G") مع رموز الأسبوع المستندة إلى اللغة ("w" أو "g"). استخدم مجموعة واحدة باستمرار: "GGGG" مع "WW" للأسابيع المستندة إلى الإثنين، أو "gggg" مع "ww" إذا كانت الملاحظات الأسبوعية يجب أن تتبع اللغة المحددة.'
+                    'تخلط الملاحظات الأسبوعية رموز أسابيع ISO ("W" أو "G") مع رموز أسابيع اللغة ("w" أو "g"). استخدم "GGGG" مع "WW" لأسابيع ISO، أو "gggg" مع "ww" لأسابيع تتبع اللغة.',
+                weekPathMismatchWarning:
+                    'تختلف لغة التقويم ولغة الملاحظات الدورية في بداية الأسابيع أو ترقيمها، لذا لا تتطابق مسارات الملاحظات الأسبوعية مع الأسابيع في التقويم. اضبط كلتيهما على اللغة نفسها، أو استخدم "GGGG" مع "WW" لأسابيع ISO.'
             },
             calendarMonthlyNotePattern: {
                 name: 'الملاحظات الشهرية',
@@ -1900,7 +1914,10 @@ export const STRINGS_AR = {
                     downloadButtonText: 'تنزيل',
                     copyNotice: 'تم نسخ الإعدادات إلى الحافظة.',
                     downloadNotice: 'تم تصدير الإعدادات.',
-                    downloadError: 'فشل تنزيل الإعدادات: {message}'
+                    downloadError: 'فشل تنزيل الإعدادات: {message}',
+                    saveButtonText: 'حفظ في الخزنة',
+                    saveNotice: 'حُفظت الإعدادات في {path}.',
+                    saveError: 'فشل حفظ الإعدادات: {message}'
                 }
             },
             resetAllSettings: {
@@ -2542,7 +2559,7 @@ export const STRINGS_AR = {
             },
             folderNoteType: {
                 name: 'نوع ملاحظة المجلد الافتراضي',
-                desc: 'نوع ملاحظة المجلد المنشأة من قائمة السياق.',
+                desc: 'نوع ملاحظة المجلد المنشأة من قائمة السياق، والمفضل عندما يحتوي المجلد على ملاحظات مجلد من أنواع متعددة.',
                 options: {
                     ask: 'السؤال عند الإنشاء',
                     markdown: 'Markdown',
@@ -2669,6 +2686,11 @@ export const STRINGS_AR = {
                 desc: 'قائمة حقول البيانات الأمامية مفصولة بفواصل. يُستخدم أول قيمة غير فارغة. يعود لاسم الملف.',
                 placeholder: 'title, name'
             },
+            frontmatterNameFormat: {
+                name: 'تنسيق اسم الملاحظة',
+                desc: 'الاسم المعروض للملاحظات التي لها اسم في البيانات الأمامية. {{name}} هو اسم البيانات الأمامية، و {{filename}} اسم الملف، و {{date}} أو {{date:FORMAT}} تاريخ الملاحظة اليومية. عند وجود {{date}} في التنسيق، تعرض الملاحظات غير اليومية اسم البيانات الأمامية فقط.',
+                placeholder: '{{name}}'
+            },
             frontmatterCreatedField: {
                 name: 'حقل طابع وقت الإنشاء',
                 desc: 'اسم حقل البيانات الأمامية لطابع وقت الإنشاء. اتركه فارغًا لاستخدام تاريخ نظام الملفات فقط.',
@@ -2702,20 +2724,26 @@ export const STRINGS_AR = {
                 messages: [
                     { headline: 'اكتب شرائحك بـ Markdown.', subtext: 'اسحب النصوص والصور إلى حيث تريد.' },
                     { headline: 'بديل مجاني لـ PowerPoint.', subtext: 'المشاركة والتعاون مجانيان أيضًا.' },
+                    { headline: 'كل عرض تقديمي مجلد على حاسوبك.', subtext: 'لا تحتاج إلى حساب لإنشاء الشرائح.' },
                     { headline: 'أضف الحركة كما في Apple Motion.', subtext: 'استخدم الإطارات المفتاحية والمسارات والتحويلات.' },
-                    { headline: 'تعاون كما في Google Slides.', subtext: 'مع مؤشرات وتعليقات في الوقت الفعلي.' },
+                    { headline: 'ضع نماذج ثلاثية الأبعاد على شرائحك.', subtext: 'افتح ملف GLB أو glTF، أو أنشئ نموذجًا باستخدام Meshy.' },
+                    { headline: 'تعاون كما في Google Slides.', subtext: 'شاهد مؤشرات الجميع وتعليقاتهم.' },
                     { headline: 'شاهد نصوص كل الشرائح في مكان واحد.', subtext: 'افتح View > Outline وحرّرها بـ Markdown.' },
                     { headline: 'حاذِ العناصر كما في Figma.', subtext: 'تصطف حسب المسافات والأحجام والزوايا.' },
-                    { headline: 'ميّز الكلمات بـ ==علامات التساوي==.', subtext: '**الغامق** و*المائل* يعملان تمامًا كما في Obsidian.' },
                     { headline: 'صدّر عرضك فيديو بدقة 4K.', subtext: 'لا تحتاج إلى After Effects لتحريكه.' },
-                    { headline: 'ملاحظات المتحدث بـ Markdown أيضًا.', subtext: 'تُحفظ في ملف الشرائح نفسه.' },
-                    { headline: 'كل عرض تقديمي مجلد على حاسوبك.', subtext: 'لا تحتاج إلى حساب لإنشاء الشرائح.' },
-                    { headline: 'ضع الكود على شرائحك.', subtext: 'كتل الكود ملوّنة لـ 21 لغة برمجة.' },
+                    { headline: 'اجعل الشخصيات ثلاثية الأبعاد تمشي أو تركض.', subtext: 'استخدم Meshy لبناء الهيكل والتحريك.' },
+                    { headline: 'ميّز الكلمات بـ ==علامات التساوي==.', subtext: '**الغامق** و*المائل* يعملان تمامًا كما في Obsidian.' },
+                    { headline: 'استخدم التخطيط التلقائي كما في Figma.', subtext: 'رتّب مجموعة في صف أو عمود.' },
                     { headline: 'شارك عرضك برابط.', subtext: 'انشره على الإنترنت بحساب مجاني.' },
-                    { headline: 'تتبّع عروضك في Git.', subtext: 'العروض ملفات نصية بصيغة Markdown وYAML.' },
-                    { headline: 'أنشئ مخططات انسيابية من النص.', subtext: 'اكتب كود Mermaid واحصل على مخطط.' },
+                    { headline: 'إضاءة ثلاثية الأبعاد كما في Blender.', subtext: 'أضواء نقطية وشمسية وبقعية ومساحية مع ظلال.' },
+                    { headline: 'تتبّع عروضك في Git.', subtext: 'العروض ملفات نصية بصيغة Markdown وJSON.' },
+                    { headline: 'أنشئ مكونات كما في Figma.', subtext: 'عدّلها مرة واحدة فتتغير كل النسخ.' },
+                    { headline: 'تصفّح السمات كما في Obsidian.', subtext: 'ثبّت سمة مجانية بنقرة واحدة.' },
                     { headline: 'احفظ عروضك في مجلد متزامن.', subtext: 'تعمل مع Dropbox وiCloud Drive وOneDrive.' },
-                    { headline: 'تصفّح السمات كما في Obsidian.', subtext: 'كل السمات مجانية وتُثبَّت بنقرة واحدة.' },
+                    { headline: 'ثلاثي الأبعاد بفيزياء الأجسام الصلبة.', subtext: 'أسقِط الأجسام أو اقلبها أو كدّسها.' },
+                    { headline: 'ملاحظات المتحدث بـ Markdown أيضًا.', subtext: 'تُحفظ في ملف الشرائح نفسه.' },
+                    { headline: 'ادمج الأشكال كما في Figma.', subtext: 'وحّد أو اطرح أو قاطع أو استبعد.' },
+                    { headline: 'ضع الكود على شرائحك.', subtext: 'كتل الكود ملوّنة لـ 21 لغة برمجة.' },
                     { headline: 'مجاني للاستخدام الشخصي والتجاري.', subtext: 'نزّله لـ Mac أو Windows.' }
                 ]
             },

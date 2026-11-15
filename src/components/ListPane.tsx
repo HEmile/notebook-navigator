@@ -65,7 +65,7 @@ import { useListPaneSelectionCoordinator } from '../hooks/useListPaneSelectionCo
 import type { EnsureSelectionOptions, EnsureSelectionResult, SelectFileOptions } from '../hooks/useListPaneSelectionCoordinator';
 import { useContextMenu } from '../hooks/useContextMenu';
 import { IOS_FLOATING_TOOLBAR_HEIGHT_PX, ItemType, ListPaneItemType, type CSSPropertiesWithVars } from '../types';
-import { getEffectiveListSort, getSortField, isManualSortPropertyKey, sortFiles } from '../utils/sortUtils';
+import { getEffectiveListSort, getSortField, isManualSortPropertyKey, sortFiles, type PropertySortValue } from '../utils/sortUtils';
 import { ListPaneHeader } from './ListPaneHeader';
 import { ListToolbar } from './ListToolbar';
 import { Calendar } from './calendar';
@@ -170,6 +170,8 @@ interface ListPaneProps {
      */
     onSearchTokensChange?: (state: SearchNavFilterState) => void;
     folderDecorationModel: FolderDecorationModel;
+    /** Resolves the name the navigation pane sorts a folder by, so folder groups follow its order */
+    getFolderSortName: (folder: TFolder) => string;
     fileItemPillDecorationModel: FileItemPillDecorationModel;
     fileItemPillOrderModel: FileItemPillOrderModel;
     onNavigateToFolder: (folderPath: string, options?: NavigateToFolderOptions) => void;
@@ -312,6 +314,7 @@ export const ListPane = React.memo(
             onRevealTag,
             onRevealProperty,
             folderDecorationModel,
+            getFolderSortName,
             fileItemPillDecorationModel,
             fileItemPillOrderModel
         } = props;
@@ -327,7 +330,8 @@ export const ListPane = React.memo(
         const showHiddenItems = uxPreferences.showHiddenItems;
         const showCalendar = uxPreferences.showCalendar;
         const appearanceSettings = useListPaneAppearance();
-        const { getFileDisplayName, getDB, getFileTimestamps, hasPreview, regenerateFeatureImageForFile } = useFileCache();
+        const { getFileDisplayName, getFileNameForIconMatch, getDB, getFileTimestamps, hasPreview, regenerateFeatureImageForFile } =
+            useFileCache();
         const { noteShortcutKeysByPath, addNoteShortcut, removeShortcut } = useShortcuts();
         const uiState = useUIState();
         const isVerticalDualPane = !uiState.singlePane && uiState.effectiveDualPaneOrientation === 'vertical';
@@ -721,6 +725,7 @@ export const ListPane = React.memo(
             settings,
             activeProfile,
             groupBy: effectiveAppearanceSettings.groupBy,
+            getFolderSortName,
             showFileTags: effectiveAppearanceSettings.showTags,
             showFileDate: effectiveAppearanceSettings.showDate,
             pinnedGroupExpanded,
@@ -823,12 +828,13 @@ export const ListPane = React.memo(
         const fileItemStorage = useMemo<FileItemStorageHelpers>(
             () => ({
                 getFileDisplayName,
+                getFileNameForIconMatch,
                 getDB,
                 getFileTimestamps,
                 hasPreview,
                 regenerateFeatureImageForFile
             }),
-            [getFileDisplayName, getDB, getFileTimestamps, hasPreview, regenerateFeatureImageForFile]
+            [getFileDisplayName, getFileNameForIconMatch, getDB, getFileTimestamps, hasPreview, regenerateFeatureImageForFile]
         );
         const hiddenTagVisibility = useMemo(
             () => createHiddenTagVisibility(activeProfile.hiddenTags, showHiddenItems),
@@ -1131,14 +1137,17 @@ export const ListPane = React.memo(
                 }
 
                 const sortedFiles = [...sourceFiles];
-                const propertyValueByPath = new Map<string, string | null>();
-                const getCachedManualSortPropertyValue = (file: TFile): string | null => {
+                const propertyValueByPath = new Map<string, PropertySortValue | null>();
+                const getCachedManualSortPropertyValue = (file: TFile): PropertySortValue | null => {
                     if (propertyValueByPath.has(file.path)) {
                         return propertyValueByPath.get(file.path) ?? null;
                     }
 
                     const pendingRank = rankByPath.get(file.path);
-                    const value = pendingRank === undefined ? getManualSortPropertyValue(app, file, propertyKey) : pendingRank.toString();
+                    const value: PropertySortValue | null =
+                        pendingRank === undefined
+                            ? getManualSortPropertyValue(app, file, propertyKey)
+                            : { type: 'number', value: pendingRank };
                     propertyValueByPath.set(file.path, value);
                     return value;
                 };

@@ -65,6 +65,7 @@ import {
     hasVisibleTagPills,
     getListPaneHeaderHeight,
     getListPaneMeasurements,
+    getPresentationRowHeight,
     getPropertyRowCount,
     shouldShowExtensionBadgeThumbnail,
     shouldShowFeatureImageArea,
@@ -75,6 +76,7 @@ import type { PropertySelectionNodeId } from '../utils/propertyTree';
 import { getCachedFileTags } from '../utils/tagUtils';
 import type { HiddenTagVisibility } from '../utils/tagPrefixMatcher';
 import { getDrawingFeatureImageSource, resolveDrawingFeatureImageFileForProvider } from '../utils/drawingFeatureImages';
+import { getPresentationFileRole, getPresentationService } from '../services/PresentationService';
 import { useThemeMode } from './useThemeMode';
 import type { ThemeMode } from '../utils/themeMode';
 import { getListSortOverrideForSelection, resolveListSort } from '../utils/sortUtils';
@@ -672,6 +674,7 @@ export function useListPaneScroll({
     const prevListKeyRef = useRef<string>(''); // Previous folder/tag context to detect navigation
     const prevScrollPreservationConfigRef = useRef<PreviousScrollPreservationConfig | null>(null);
     const prevSearchQueryRef = useRef<string | undefined>(undefined); // Track search query changes
+    const prevSearchIndexVersionRef = useRef<number>(0); // Track search result changes
     const prevGroupCollapseStateSignatureRef = useRef<string>(groupCollapseStateSignature);
 
     // ========== Scroll Orchestration ==========
@@ -850,6 +853,11 @@ export function useListPaneScroll({
             }
 
             if (item.type === ListPaneItemType.FILE && item.data instanceof TFile) {
+                // Compact mode renders presentation files as ordinary compact rows
+                const presentationRole = rowSizingConfig.isCompactMode ? null : getPresentationFileRole(item.data);
+                if (presentationRole) {
+                    return getPresentationRowHeight(presentationRole, heights);
+                }
                 return estimateFileRowHeight(
                     resolveListFileRowHeightInputs({
                         app,
@@ -1308,6 +1316,20 @@ export function useListPaneScroll({
     }, [enabled, filePathToIndex, getDB, rowSizingConfig, rowVirtualizer]);
 
     /**
+     * Refresh size estimates when files become or stop being presentation files, because presentation rows
+     * use fixed heights that differ from the ordinary row estimate for the same file.
+     */
+    useEffect(() => {
+        const presentationService = getPresentationService();
+        if (!enabled || !rowVirtualizer || !presentationService) return;
+
+        const remeasureScheduler = remeasureSchedulerRef.current;
+        return presentationService.subscribeToRoles(() => {
+            remeasureScheduler?.schedule();
+        });
+    }, [enabled, rowVirtualizer]);
+
+    /**
      * Listen for mobile drawer visibility events.
      * Ensures selected file is visible when drawer opens.
      * SCROLL_MOBILE_VISIBILITY: Sets pending scroll with 'visibility-change' reason
@@ -1318,7 +1340,9 @@ export function useListPaneScroll({
         const handleVisible = () => {
             // If we have a selected file, set a pending scroll
             // This works regardless of whether auto-reveal has run yet
-            if (selectedFile && rowVirtualizer) {
+            // Only a file the list shows is queued. A file outside the list, such as a shortcut note, would leave a
+            // request that never runs and outranks the scroll to the top of a new search query.
+            if (selectedFile && filePathToIndex.has(selectedFile.path) && rowVirtualizer) {
                 setPending({
                     type: 'file',
                     filePath: selectedFile.path,
@@ -1420,8 +1444,13 @@ export function useListPaneScroll({
             includeDescendantNotes
         };
 
+        // Requests a file scroll only for a selected file the list shows. The list rebuilds in the same render as the
+        // config change, so the index already holds the new list here. A file outside the list, such as a shortcut
+        // note, would leave a request that never runs and outranks the scroll to the top of a new search query.
+        const selectedFileInList = selectedFile !== null && filePathToIndex.has(selectedFile.path);
+
         // Layout-only changes can keep the same path/index map, so scroll against the current version.
-        if (revealFileOnListChanges && selectedFile) {
+        if (revealFileOnListChanges && selectedFileInList) {
             requestPendingScroll({
                 type: 'file',
                 filePath: selectedFile.path,
@@ -1429,7 +1458,7 @@ export function useListPaneScroll({
                 minIndexVersion: indexVersionRef.current
             });
         } else if (wasShowingDescendants && !nowShowingDescendants) {
-            // Special case: When disabling descendants and no file selected, scroll to top
+            // Special case: When disabling descendants and no file in the list is selected, scroll to top
             requestPendingScroll({
                 type: 'top',
                 reason: 'list-structure-change',
@@ -1440,6 +1469,7 @@ export function useListPaneScroll({
         isScrollContainerReady,
         rowVirtualizer,
         selectedFile,
+        filePathToIndex,
         includeDescendantNotes,
         revealFileOnListChanges,
         scrollPreservationSignature,
@@ -1624,7 +1654,7 @@ export function useListPaneScroll({
 
     /**
      * Handle search query changes.
-     * Scrolls to top when search filters change and selected file is not in results.
+     * Scrolls to top when the query or the results change and the selected file is not in the results.
      * SCROLL_SEARCH: Sets pending scroll to top when appropriate
      */
     useLayoutEffect(() => {
@@ -1636,19 +1666,24 @@ export function useListPaneScroll({
 
         if (!selectedFile) {
             prevSearchQueryRef.current = searchQuery;
+            prevSearchIndexVersionRef.current = indexVersionRef.current;
             return;
         }
 
         if (!isScrollContainerReady || !rowVirtualizer) {
-            // Defer handling until visible/ready without consuming the query change
+            // Defer handling until visible/ready without consuming the query or result change
             return;
         }
 
         // Check if selected file exists in the filtered list (based on current index)
         const selectedFileInList = filePathToIndex.has(selectedFile.path);
 
+        // The index version changes only when the list's paths or their order change, so a render that only
+        // changes the selected file counts as neither change.
         const queryChanged = prevSearchQueryRef.current !== searchQuery;
+        const resultsChanged = prevSearchIndexVersionRef.current !== indexVersionRef.current;
         prevSearchQueryRef.current = searchQuery;
+        prevSearchIndexVersionRef.current = indexVersionRef.current;
 
         // Scroll to top when search filters remove the selected file, regardless of whether
         // this happened immediately on query change or after the list rebuilt
@@ -1661,19 +1696,17 @@ export function useListPaneScroll({
                 suppressSearchTopScrollRef.current = false;
                 return;
             }
-            requestPendingScroll({ type: 'top', reason: 'list-structure-change', minIndexVersion: indexVersionRef.current });
+            // Selecting a file outside the results, such as a shortcut note or a hidden file, keeps the scroll
+            // position, because only a new query or new results move the list to the top.
+            if (queryChanged || resultsChanged) {
+                requestPendingScroll({ type: 'top', reason: 'list-structure-change', minIndexVersion: indexVersionRef.current });
+            }
             return;
         }
 
         // Reset suppression flag after checking
         if (suppressTopScroll && suppressSearchTopScrollRef) {
             suppressSearchTopScrollRef.current = false;
-        }
-
-        // If the selected file remains in the list, folder-navigation effects handle its visibility
-        // No action needed here; keep for completeness when queryChanged
-        if (queryChanged) {
-            // No-op
         }
     }, [
         searchQuery,

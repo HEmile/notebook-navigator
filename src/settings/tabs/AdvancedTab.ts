@@ -18,6 +18,7 @@
 
 import { ButtonComponent } from 'obsidian';
 import type { Setting, SettingDefinitionGroup, SettingDefinitionItem } from 'obsidian';
+import { THIRD_PARTY_LICENSES_TEXT } from '../../constants/thirdPartyLicenses';
 import { strings } from '../../i18n';
 import { ConfirmModal } from '../../modals/ConfirmModal';
 import { SettingsExportModal, SettingsImportModal } from '../../modals/SettingsTransferModal';
@@ -28,9 +29,9 @@ import { isDualPaneSupported } from '../../utils/paneLayout';
 import { localStorage } from '../../utils/localStorage';
 import { runAsyncAction } from '../../utils/async';
 import { showNotice } from '../../utils/noticeUtils';
+import { SHOW_MARKDOWNPOINT_BANNER } from '../markdownPointBanner';
 import { createGroupDefinition, createRenderDefinition, createToggleDefinition } from '../nativeSettingControls';
 import { getNotSyncedSettingName } from '../syncModeToggle';
-import { SHOW_MARKDOWNPOINT_BANNER } from '../../constants/fork';
 
 /** Builds native 1.13 setting definitions for advanced settings. */
 export function createAdvancedSettingDefinitions(context: SettingsTabContext): SettingDefinitionItem[] {
@@ -39,14 +40,11 @@ export function createAdvancedSettingDefinitions(context: SettingsTabContext): S
             name: strings.settings.items.checkForNewVersionOnStart.name,
             desc: strings.settings.items.checkForNewVersionOnStart.desc
         }),
-        ...(SHOW_MARKDOWNPOINT_BANNER
-            ? [
-                  createToggleDefinition('showMarkdownPointBannerAtTop', {
-                      name: strings.settings.items.markdownPointBanner.atTop.name,
-                      desc: strings.settings.items.markdownPointBanner.atTop.desc
-                  })
-              ]
-            : []),
+        createToggleDefinition('showMarkdownPointBannerAtTop', {
+            name: strings.settings.items.markdownPointBanner.atTop.name,
+            desc: strings.settings.items.markdownPointBanner.atTop.desc,
+            visible: SHOW_MARKDOWNPOINT_BANNER
+        }),
         createRenderDefinition({
             name: getNotSyncedSettingName(strings.settings.items.startupDebugLogging.name),
             desc: strings.settings.items.startupDebugLogging.desc,
@@ -134,11 +132,25 @@ export function createAdvancedSettingDefinitions(context: SettingsTabContext): S
         })
     ];
 
+    const licenseItems: NonNullable<SettingDefinitionGroup['items']> = [
+        createRenderDefinition({
+            name: strings.settings.pages.advanced.groups.thirdPartyLicenses,
+            render: renderThirdPartyLicensesSetting
+        })
+    ];
+
     return [
         createGroupDefinition(undefined, generalItems),
         createGroupDefinition(strings.settings.pages.advanced.groups.maintenance, maintenanceItems),
-        createGroupDefinition(strings.settings.pages.advanced.groups.resetSettings, resetItems)
+        createGroupDefinition(strings.settings.pages.advanced.groups.resetSettings, resetItems),
+        createGroupDefinition(strings.settings.pages.advanced.groups.thirdPartyLicenses, licenseItems)
     ];
+}
+
+function renderThirdPartyLicensesSetting(setting: Setting): void {
+    setting.setName('').setDesc('');
+    setting.settingEl.addClass('nn-third-party-licenses');
+    setting.descEl.createDiv({ cls: 'nn-third-party-licenses-text', text: THIRD_PARTY_LICENSES_TEXT });
 }
 
 function renderDebugLoggingSetting(setting: Setting, context: SettingsTabContext): void {

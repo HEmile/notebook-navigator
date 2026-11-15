@@ -32,12 +32,21 @@ import {
     isFolderInExcludedFolder
 } from './fileFilters';
 import { shouldDisplayFile, FILE_VISIBILITY } from './fileTypeUtils';
-import { getEffectiveListSort, getPropertySortValueFromRecord, isPropertySortOption, sortFiles, type EffectiveListSort } from './sortUtils';
+import {
+    getEffectiveListSort,
+    getPropertySortValueFromRecord,
+    isManualSortPropertyKey,
+    isPropertySortOption,
+    sortFiles,
+    type EffectiveListSort,
+    type PropertySortValue
+} from './sortUtils';
+import { getManualSortPropertyValue } from './manualSort';
 import { getDBInstanceOrNull } from '../storage/fileOperations';
 import { extractMetadata, type ProcessedMetadata } from '../utils/metadataExtractor';
 import { extractCurrentFrontmatterMetadataFromFileData } from './frontmatterMetadataCache';
 import { METADATA_SENTINEL } from '../storage/IndexedDBStorage';
-import { getFileDisplayName as getDisplayName } from './fileNameUtils';
+import { getNoteDisplayName } from './noteNameFormat';
 import { getFolderNote, getFolderNoteDetectionSettings } from './folderNoteLookup';
 import { createHiddenTagVisibility, normalizeTagPathValue } from './tagPrefixMatcher';
 import { collectTopicDescendants } from './topicGraph';
@@ -215,11 +224,19 @@ function collectVisibleMarkdownFilesFromPaths(paths: Iterable<string>, app: App,
     return files;
 }
 
-function createPropertySortValueGetter(app: App, propertySortKey: string): (file: TFile) => string | null {
+function createPropertySortValueGetter(
+    app: App,
+    settings: NotebookNavigatorSettings,
+    propertySortKey: string
+): (file: TFile) => PropertySortValue | null {
     const trimmedKey = propertySortKey.trim();
-    const cache = new Map<string, string | null>();
+    // Manual sort ranks are positive integers stored as numbers or as digit strings. Reading them
+    // through the rank parser orders 2000 and "1000" by rank, as manual-sort planning does; the
+    // general property rule reads "1000" as text and compares it with 2000 as text.
+    const isManualSortKey = isManualSortPropertyKey(settings, trimmedKey);
+    const cache = new Map<string, PropertySortValue | null>();
 
-    return (file: TFile): string | null => {
+    return (file: TFile): PropertySortValue | null => {
         if (trimmedKey.length === 0) {
             return null;
         }
@@ -231,8 +248,9 @@ function createPropertySortValueGetter(app: App, propertySortKey: string): (file
             return cache.get(file.path) ?? null;
         }
 
-        const fileCache = app.metadataCache.getFileCache(file);
-        const extracted = getPropertySortValueFromRecord(fileCache?.frontmatter, trimmedKey);
+        const extracted = isManualSortKey
+            ? getManualSortPropertyValue(app, file, trimmedKey)
+            : getPropertySortValueFromRecord(app.metadataCache.getFileCache(file)?.frontmatter, trimmedKey);
         cache.set(file.path, extracted);
         return extracted;
     };
@@ -243,7 +261,7 @@ function sortNavigationFiles(files: TFile[], settings: NotebookNavigatorSettings
     const isPropertySort = isPropertySortOption(sortOption);
     const propertySortKey = sortSpec.propertyKey.trim();
     const getPropertySortValue =
-        isPropertySort && propertySortKey.length > 0 ? createPropertySortValueGetter(app, propertySortKey) : undefined;
+        isPropertySort && propertySortKey.length > 0 ? createPropertySortValueGetter(app, settings, propertySortKey) : undefined;
 
     if (settings.useFrontmatterMetadata) {
         const db = getDBInstanceOrNull();
@@ -287,9 +305,16 @@ function sortNavigationFiles(files: TFile[], settings: NotebookNavigatorSettings
             return metadata.fm;
         };
 
+        // Sorting compares each file many times and a formatted name can parse the path as a daily note, so each
+        // file's name is resolved once per sort.
+        const titleCache = new Map<string, string>();
         const getTitle = (file: TFile) => {
-            const metadata = getCached(file);
-            return getDisplayName(file, { fn: metadata.fn }, settings);
+            let title = titleCache.get(file.path);
+            if (title === undefined) {
+                title = getNoteDisplayName(app, settings, file, getCached(file).fn);
+                titleCache.set(file.path, title);
+            }
+            return title;
         };
 
         sortFiles(files, sortOption, getCreatedTime, getModifiedTime, getTitle, getPropertySortValue, sortSpec.propertySortSecondary);

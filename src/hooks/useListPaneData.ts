@@ -83,6 +83,8 @@ interface UseListPaneDataParams {
     activeProfile: ActiveProfileState;
     /** Effective grouping for the current list selection */
     groupBy: ListNoteGroupingOption;
+    /** Resolves the name the navigation pane sorts a folder by */
+    getFolderSortName: (folder: TFolder) => string;
     /** Effective tag visibility for the current list selection */
     showFileTags: boolean;
     /** Effective date visibility for the current list selection */
@@ -143,6 +145,7 @@ export function useListPaneData({
     settings,
     activeProfile,
     groupBy,
+    getFolderSortName,
     showFileTags,
     showFileDate,
     pinnedGroupExpanded,
@@ -203,7 +206,6 @@ export function useListPaneData({
         () => createFrontmatterPropertyExclusionMatcher(hiddenFileProperties),
         [hiddenFileProperties]
     );
-    const selectedFolderPath = selectionType === ItemType.FOLDER ? (selectedFolder?.path ?? null) : null;
     const selectedSortOverride = getListSortOverrideForSelection(
         settings,
         selectionType,
@@ -212,7 +214,6 @@ export function useListPaneData({
         selectedProperty,
         selectedTopicPath ? (selectedTopicPath.split('/').pop() ?? selectedTopicPath) : null
     );
-    const selectedFolderGroupSortOrder = settings.folderTreeSortOverrides?.[selectedFolderPath ?? '/'] ?? settings.folderSortOrder;
     const listConfig = useMemo<ListPaneConfig>(
         () => ({
             pinnedNotes: settings.pinnedNotes,
@@ -222,11 +223,19 @@ export function useListPaneData({
             showFolderGroupPaths: settings.showFolderGroupPaths,
             showCurrentFolderFilesAtBottom: settings.showCurrentFolderFilesAtBottom,
             groupBy,
-            folderGroupSortOrder: selectedFolderGroupSortOrder
+            folderSiblingOrder: {
+                childOrder: settings.folderChildOrder,
+                defaultSortOrder: settings.folderSortOrder,
+                childSortOrderOverrides: settings.folderTreeSortOverrides,
+                getFolderSortName
+            }
         }),
         [
             settings.filterPinnedByFolder,
-            selectedFolderGroupSortOrder,
+            settings.folderChildOrder,
+            settings.folderSortOrder,
+            settings.folderTreeSortOverrides,
+            getFolderSortName,
             groupBy,
             pinnedGroupExpanded,
             settings.pinnedNotes,
@@ -276,8 +285,17 @@ export function useListPaneData({
         settings.hideFolderNoteInList,
         settings.hideDrawingPreviewImages,
         settings.folderNoteNamePattern,
+        settings.folderNoteType,
         settings.useFrontmatterMetadata,
         settings.frontmatterNameField,
+        // Title sorting orders notes by their formatted names, which these settings change.
+        settings.frontmatterNameFormat,
+        settings.dateFormat,
+        settings.calendarIntegrationMode,
+        settings.calendarCustomFilePattern,
+        settings.calendarLocale,
+        settings.calendarPeriodicNotesLocaleSource,
+        activeProfile.profile.periodicNotesFolder,
         settings.frontmatterCreatedField,
         settings.frontmatterModifiedField,
         settings.frontmatterDateFormat,

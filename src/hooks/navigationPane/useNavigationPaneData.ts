@@ -111,10 +111,8 @@ interface UseNavigationPaneDataResult {
     propertyCounts: Map<string, NoteCountInfo>;
     /** Map from folder path to current/descendant note counts */
     folderCounts: Map<string, NoteCountInfo>;
-    /** Ordered list of root-level folders */
-    rootLevelFolders: TFolder[];
-    /** Paths from settings that are not currently present in the vault */
-    missingRootFolderPaths: string[];
+    /** Resolves the name the folder tree sorts folders by alphabetically */
+    getFolderSortName: (folder: TFolder) => string;
     /** Final ordered keys used for rendering root-level tags in navigation */
     resolvedRootTagKeys: string[];
     /** Combined tag tree used for ordering (includes hidden roots) */
@@ -162,7 +160,7 @@ export function useNavigationPaneData({
     const { fileNameIconNeedles } = useSettingsDerived();
     const { recentNotes } = useRecentData();
     const metadataService = useMetadataService();
-    const { getFileDisplayName } = useFileCache();
+    const { getFileNameForIconMatch } = useFileCache();
     const { hydratedShortcuts } = useShortcuts();
     const uxPreferences = useUXPreferences();
     const includeDescendantNotes = uxPreferences.includeDescendantNotes;
@@ -175,8 +173,7 @@ export function useNavigationPaneData({
         fileVisibility,
         navigationBannerPath,
         folderCountFileNameMatcher,
-        rootLevelFolders,
-        missingRootFolderPaths,
+        getFolderSortName,
         untaggedCount,
         visibleTaggedCount,
         rootTagOrderMap,
@@ -235,7 +232,7 @@ export function useNavigationPaneData({
         settings,
         metadataService,
         fileNameIconNeedles,
-        getFileDisplayName,
+        getFileNameForIconMatch,
         folderDecorationModel,
         navRainbowState,
         tagRainbowColors,
@@ -292,8 +289,7 @@ export function useNavigationPaneData({
         tagCounts,
         propertyCounts,
         folderCounts,
-        rootLevelFolders,
-        missingRootFolderPaths,
+        getFolderSortName,
         resolvedRootTagKeys,
         rootOrderingTagTree,
         rootTagOrderMap,

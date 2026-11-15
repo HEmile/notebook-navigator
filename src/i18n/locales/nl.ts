@@ -64,6 +64,14 @@ export const STRINGS_NL = {
             'Sleep om opnieuw te ordenen. De volgorde wordt opgeslagen als numerieke indexwaarden in de eigenschap "{property}".',
         manualSortNonMarkdownHint: 'Niet-Markdown-bestanden worden onderaan getoond en kunnen niet opnieuw worden geordend.',
         unsortedSection: 'Niet gesorteerd',
+        // MarkdownPoint presentation rows: the cover slide count and the presentation.mdpoint detail labels
+        presentation: {
+            slideCount: "{count} dia's",
+            slideCountOne: '1 dia',
+            theme: 'Thema',
+            slides: "Dia's",
+            size: 'Grootte'
+        },
         propertyGroupNoValue: 'Geen',
         manualSortDone: 'Klaar',
         manualSortMultipleWriteFailure: '{count} bestanden mislukt; eerste: {path}: {message}'
@@ -87,8 +95,9 @@ export const STRINGS_NL = {
         reorderRootFoldersTitle: 'Navigatie herschikken',
         reorderRootFoldersHint: 'Gebruik pijlen of sleep om te herschikken',
         vaultRootLabel: 'Kluis',
-        resetRootToAlpha: 'Terugzetten naar alfabetische volgorde',
-        resetRootToFrequency: 'Terugzetten naar frequentievolgorde',
+        resetAllFolders: 'Alle mappen terugzetten',
+        resetAllTags: 'Alle tags terugzetten',
+        resetAllProperties: 'Alle eigenschappen terugzetten',
         pinShortcuts: 'Snelkoppelingen vastpinnen',
         pinShortcutsAndRecentFiles: 'Snelkoppelingen en recente bestanden vastpinnen',
         unpinShortcuts: 'Snelkoppelingen losmaken',
@@ -250,10 +259,12 @@ export const STRINGS_NL = {
                     items: [
                         '`.key` Notities opnemen met een eigenschapssleutel die begint met `key`.',
                         '`.key=value` Notities opnemen waarvan de eigenschapswaarde `value` bevat.',
+                        '`.key=null` Notities opnemen waarin de eigenschap `key` bestaat zonder waarde. `.key="null"` zoekt naar de tekst `null`.',
                         '`."Reading Status"` Notities opnemen met een eigenschapssleutel die spaties bevat.',
                         '`."Reading Status"="In Progress"` Sleutels en waarden met spaties moeten tussen dubbele aanhalingstekens staan.',
                         '`-.key` Notities uitsluiten met een eigenschapssleutel die begint met `key`.',
                         '`-.key=value` Notities uitsluiten waarvan de eigenschapswaarde `value` bevat.',
+                        '`-.key=null` Notities uitsluiten waarin de eigenschap `key` bestaat zonder waarde.',
                         'Cmd/Ctrl+Klik op een eigenschap om toe te voegen met AND. Cmd/Ctrl+Shift+Klik om toe te voegen met OR.'
                     ]
                 },
@@ -934,6 +945,7 @@ export const STRINGS_NL = {
             cannotMoveIntoSelf: 'Kan een map niet in zichzelf of een submap verplaatsen.',
             itemAlreadyExists: 'Een item met de naam "{name}" bestaat al op deze locatie.',
             failedToMove: 'Verplaatsen mislukt: {error}',
+            failedToCopy: 'Kopiëren van "{name}" mislukt: {error}',
             failedToAddTag: 'Kan tag "{tag}" niet toevoegen',
             failedToSetProperty: 'Kan eigenschap niet bijwerken: {error}',
             failedToClearTags: 'Kan tags niet wissen',
@@ -946,7 +958,9 @@ export const STRINGS_NL = {
             filesAlreadyHaveProperty: '{count} bestanden hebben deze eigenschap al',
             noTagsToClear: 'Geen tags om te wissen',
             fileImported: '1 bestand geïmporteerd',
-            filesImported: '{count} bestanden geïmporteerd'
+            filesImported: '{count} bestanden geïmporteerd',
+            fileCopied: '1 bestand gekopieerd',
+            filesCopied: '{count} bestanden gekopieerd'
         }
     },
 
@@ -1074,8 +1088,6 @@ export const STRINGS_NL = {
             exportFailed: 'Kan metadatarapport niet exporteren'
         },
         index: {
-            label: 'Algemeen',
-            description: 'Releasenotities, ondersteuning, kluisprofiel, bestandstypen en eigenschapssleutels.',
             groups: {
                 about: 'Over'
             }
@@ -1093,11 +1105,12 @@ export const STRINGS_NL = {
             },
             appearanceAndBehavior: {
                 label: 'Uiterlijk & gedrag',
-                description: 'Gedrag, toetsenbordnavigatie, muisknoppen, uiterlijk en opmaak.',
+                description: 'Gedrag, toetsenbordnavigatie, muisknoppen, dubbel paneel, uiterlijk en opmaak.',
                 groups: {
                     startup: 'Opstarten',
                     keyboardNavigation: 'Toetsenbordnavigatie',
                     mouseButtons: 'Muisknoppen',
+                    dualPane: 'Dubbel paneel',
                     desktopAppearance: 'Desktop-uiterlijk',
                     mobileAppearance: 'Mobiel uiterlijk',
                     appearance: 'Uiterlijk',
@@ -1208,7 +1221,8 @@ export const STRINGS_NL = {
                 description: 'Diagnostiek, opschonen van metadata, import/export en herstellen.',
                 groups: {
                     maintenance: 'Onderhoud',
-                    resetSettings: 'Instellingen resetten'
+                    resetSettings: 'Instellingen resetten',
+                    thirdPartyLicenses: 'Licenties van derden'
                 }
             }
         },
@@ -1587,10 +1601,6 @@ export const STRINGS_NL = {
                 name: 'Eerste notitie automatisch selecteren',
                 desc: 'Automatisch de eerste notitie openen bij het wisselen van mappen, tags of eigenschappen.'
             },
-            disableShortcutAutoScroll: {
-                name: 'Automatisch scrollen voor snelkoppelingen uitschakelen',
-                desc: 'Het navigatiepaneel niet scrollen bij klikken op items in snelkoppelingen.'
-            },
             expandOnSelection: {
                 name: 'Uitvouwen bij selectie',
                 desc: 'Mappen, tags en eigenschappen uitvouwen bij selectie. In enkelvoudige paneelmodus: eerste selectie vouwt uit, tweede selectie toont bestanden.'
@@ -1677,8 +1687,6 @@ export const STRINGS_NL = {
             calendarLocale: {
                 name: 'Taal',
                 desc: 'Bepaalt datumopmaak van de kalender, weeknummering en eerste dag van de week.',
-                weekPathMismatchWarning:
-                    'De zichtbare kalender en de paden voor wekelijkse notities gebruiken verschillende weekbegindagen of weeknummering.',
                 options: {
                     systemDefault: 'Standaard'
                 }
@@ -1792,7 +1800,9 @@ export const STRINGS_NL = {
                 momentLinkText: 'Moment-datumnotatie',
                 momentDescSuffix:
                     '. Zet submapnamen tussen haakjes, bijv. [Work]/YYYY. Klik op het sjabloonpictogram om een sjabloon in te stellen. Stel de sjabloonmaplocatie in bij Bestandsbewerkingen & sjablonen > Sjablonen.',
-                example: 'Huidige syntaxis: {path}'
+                example: 'Huidige syntaxis: {path}',
+                weekYearWarning:
+                    '"gggg" en "GGGG" zijn weekjaren, dus datums rond nieuwjaar kunnen het verkeerde jaar krijgen. Gebruik "YYYY".'
             },
             templateEngine: {
                 name: 'Sjabloonengine',
@@ -1837,10 +1847,14 @@ export const STRINGS_NL = {
             calendarWeeklyNotePattern: {
                 name: 'Wekelijkse notities',
                 parsingError: 'Het patroon moet kunnen formatteren en terug-parsen naar een volledige week (weekjaar, weeknummer).',
-                weekPathMismatchWarning:
-                    'De paden voor wekelijkse notities gebruiken de taal voor periodieke notities. Gebruik overeenkomende talen, of gebruik "GGGG" met "WW" voor maandag-gebaseerde weken.',
+                isoWeeksWarning:
+                    'Wekelijkse notities gebruiken ISO-weken ("W" of "G"), dus de kalender begint weken op maandag en toont ISO-weeknummers. Gebruik "gggg" met "ww" voor weken die de taal volgen.',
+                calendarYearWarning:
+                    'Wekelijkse notities nemen het jaar uit "YYYY", dus een week 1 die in december begint krijgt het vorige jaar. Gebruik "GGGG" met "WW", of "gggg" met "ww".',
                 mixedWeekTokensWarning:
-                    'Dit patroon combineert maandag-gebaseerde weektokens ("W" of "G") met taal-gebaseerde weektokens ("w" of "g"). Gebruik consistent één set: "GGGG" met "WW" voor maandag-gebaseerde weken, of "gggg" met "ww" als wekelijkse notities de geselecteerde taal moeten volgen.'
+                    'Wekelijkse notities mengen ISO-weektokens ("W" of "G") met taal-weektokens ("w" of "g"). Gebruik "GGGG" met "WW" voor ISO-weken, of "gggg" met "ww" voor weken die de taal volgen.',
+                weekPathMismatchWarning:
+                    'De taal van de kalender en de taal voor periodieke notities beginnen of nummeren weken verschillend, dus de paden van wekelijkse notities komen niet overeen met de weken in de kalender. Stel beide in op dezelfde taal, of gebruik "GGGG" met "WW" voor ISO-weken.'
             },
             calendarMonthlyNotePattern: {
                 name: 'Maandelijkse notities',
@@ -1912,7 +1926,10 @@ export const STRINGS_NL = {
                     downloadButtonText: 'Downloaden',
                     copyNotice: 'Instellingen gekopieerd naar klembord.',
                     downloadNotice: 'Instellingen geëxporteerd.',
-                    downloadError: 'Downloaden van instellingen mislukt: {message}'
+                    downloadError: 'Downloaden van instellingen mislukt: {message}',
+                    saveButtonText: 'Opslaan in kluis',
+                    saveNotice: 'Instellingen opgeslagen in {path}.',
+                    saveError: 'Opslaan van instellingen mislukt: {message}'
                 }
             },
             resetAllSettings: {
@@ -2555,7 +2572,7 @@ export const STRINGS_NL = {
             },
             folderNoteType: {
                 name: 'Standaard mapnotitietype',
-                desc: 'Mapnotitietype aangemaakt vanuit het contextmenu.',
+                desc: 'Mapnotitietype dat vanuit het contextmenu wordt aangemaakt en de voorkeur krijgt wanneer een map mapnotities van meerdere typen heeft.',
                 options: {
                     ask: 'Vragen bij aanmaken',
                     markdown: 'Markdown',
@@ -2682,6 +2699,11 @@ export const STRINGS_NL = {
                 desc: 'Kommagescheiden lijst van frontmatter-velden. Eerste niet-lege waarde wordt gebruikt. Valt terug op bestandsnaam.',
                 placeholder: 'title, name'
             },
+            frontmatterNameFormat: {
+                name: 'Notitienaamopmaak',
+                desc: 'Naam die wordt getoond voor notities met een frontmatter-naam. {{name}} is de frontmatter-naam, {{filename}} de bestandsnaam en {{date}} of {{date:FORMAT}} de datum van een dagelijkse notitie. Bevat de opmaak {{date}}, dan tonen notities die geen dagelijkse notitie zijn alleen de frontmatter-naam.',
+                placeholder: '{{name}}'
+            },
             frontmatterCreatedField: {
                 name: 'Aangemaakt tijdstempelveld',
                 desc: 'Frontmatter-veldnaam voor de aanmaaktijdstempel. Laat leeg om alleen bestandssysteemdatum te gebruiken.',
@@ -2715,20 +2737,26 @@ export const STRINGS_NL = {
                 messages: [
                     { headline: 'Schrijf je slides in Markdown.', subtext: 'Sleep tekst en afbeeldingen waar je ze wilt.' },
                     { headline: 'Een gratis alternatief voor PowerPoint.', subtext: 'Delen en samenwerken zijn ook gratis.' },
+                    { headline: 'Je slides zijn mappen op je computer.', subtext: 'Je hebt geen account nodig voor slides.' },
                     { headline: 'Animeer zoals in Apple Motion.', subtext: 'Gebruik keyframes, paden en morphs.' },
-                    { headline: 'Werk samen zoals in Google Slides.', subtext: 'Met cursors en reacties in realtime.' },
+                    { headline: 'Zet 3D-modellen op je slides.', subtext: 'Open een GLB- of glTF-bestand of gebruik Meshy.' },
+                    { headline: 'Werk samen zoals in Google Slides.', subtext: 'Zie ieders cursor en reacties.' },
                     { headline: 'Zie alle slidetekst op één plek.', subtext: 'Open View > Outline en bewerk in Markdown.' },
                     { headline: 'Snap objecten zoals in Figma.', subtext: 'Lijn uit op afstand, grootte en hoek.' },
-                    { headline: 'Markeer met ==isgelijktekens==.', subtext: '**Vet** en *cursief* werken zoals in Obsidian.' },
                     { headline: 'Exporteer je presentatie als 4K-video.', subtext: 'Je hebt geen After Effects nodig om te animeren.' },
-                    { headline: 'Sprekersnotities zijn ook Markdown.', subtext: 'Ze staan in hetzelfde bestand als de slides.' },
-                    { headline: 'Je slides zijn mappen op je computer.', subtext: 'Je hebt geen account nodig voor slides.' },
-                    { headline: 'Zet code op je slides.', subtext: 'Code krijgt syntaxiskleuring in 21 talen.' },
+                    { headline: 'Laat 3D-personages lopen of rennen.', subtext: 'Gebruik Meshy voor rigging en animatie.' },
+                    { headline: 'Markeer met ==isgelijktekens==.', subtext: '**Vet** en *cursief* werken zoals in Obsidian.' },
+                    { headline: 'Gebruik auto layout zoals in Figma.', subtext: 'Zet een groep in een rij of een kolom.' },
                     { headline: 'Deel een presentatie met een link.', subtext: 'Zet hem online met een gratis account.' },
-                    { headline: 'Beheer je presentaties in Git.', subtext: 'Het zijn Markdown- en YAML-tekstbestanden.' },
-                    { headline: 'Maak stroomdiagrammen van tekst.', subtext: 'Schrijf Mermaid-code en krijg een diagram.' },
+                    { headline: '3D-belichting zoals in Blender.', subtext: 'Punt-, zon-, spot- en vlaklampen met schaduwen.' },
+                    { headline: 'Beheer je presentaties in Git.', subtext: 'Het zijn Markdown- en JSON-tekstbestanden.' },
+                    { headline: 'Bouw componenten zoals in Figma.', subtext: 'Bewerk ze één keer en elke instantie verandert.' },
+                    { headline: 'Blader door thema’s zoals in Obsidian.', subtext: 'Installeer een gratis thema met één klik.' },
                     { headline: 'Gebruik een gesynchroniseerde map.', subtext: 'Dropbox, iCloud Drive en OneDrive werken.' },
-                    { headline: 'Blader door thema’s zoals in Obsidian.', subtext: 'Ze zijn gratis en met één klik geïnstalleerd.' },
+                    { headline: '3D met starre-lichamenfysica.', subtext: 'Laat objecten vallen, kantelen en opstapelen.' },
+                    { headline: 'Sprekersnotities zijn ook Markdown.', subtext: 'Ze staan in hetzelfde bestand als de slides.' },
+                    { headline: 'Combineer vormen zoals in Figma.', subtext: 'Verenigen, aftrekken, snijden of uitsluiten.' },
+                    { headline: 'Zet code op je slides.', subtext: 'Code krijgt syntaxiskleuring in 21 talen.' },
                     { headline: 'Gratis voor privé en zakelijk gebruik.', subtext: 'Download het voor Mac of Windows.' }
                 ]
             },

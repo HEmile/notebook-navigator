@@ -17,8 +17,8 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { type App, type TFolder } from 'obsidian';
-import type { NotebookNavigatorSettings } from '../settings/types';
+import { Menu, TFolder, type App } from 'obsidian';
+import type { AlphaSortOrder, NotebookNavigatorSettings, TagSortOrder } from '../settings/types';
 import type { PropertyTreeNode, TagTreeNode } from '../types/storage';
 import type { CombinedNavigationItem } from '../types/virtualization';
 import { NavigationPaneItemType, UNTAGGED_TAG_ID, STORAGE_KEYS, NavigationSectionId } from '../types';
@@ -29,21 +29,59 @@ import { areStringArraysEqual } from '../utils/arrayUtils';
 import { RootFolderReorderItem } from '../components/RootFolderReorderItem';
 import { runAsyncAction } from '../utils/async';
 import { mergeNavigationSectionOrder, sanitizeNavigationSectionOrder } from '../utils/navigationSections';
-import { getPathBaseName } from '../utils/pathUtils';
 import type { ActiveProfileState } from '../context/SettingsContext';
 import { shouldExcludeFolder } from '../utils/fileFilters';
 import { createHiddenTagMatcher, matchesHiddenTagPattern } from '../utils/tagPrefixMatcher';
 import { NOTEBOOK_NAVIGATOR_ICON_ID } from '../constants/notebookNavigatorIcon';
 import { resolveUXIcon } from '../utils/uxIcons';
 import { resolveFolderDisplayName } from '../utils/folderDisplayName';
-import { buildPropertyKeyNodeId } from '../utils/propertyTree';
+import { buildPropertyKeyNodeId, buildPropertyValueNodeIdFromKeyNodeId, getTotalPropertyNoteCount } from '../utils/propertyTree';
+import { useUXPreferences } from '../context/UXPreferencesContext';
+import { getChildOrder, getTagChildName, mergeDisplayedOrder, sortFolderSiblings } from '../utils/treeFlattener';
+import { getTagNodeByPath } from '../utils/tagTree';
+import { compareByAlphaSortOrder } from '../utils/sortUtils';
+import {
+    comparePropertyValueNodesAlphabetically,
+    compareTagAlphabetically,
+    createPropertyComparator,
+    type TagComparator
+} from './navigationPane/data/navigationComparators';
+import { sanitizeRecord } from '../utils/recordUtils';
+import { getChildFolderPath } from '../utils/pathUtils';
+import { resolveFolderDecorationColors, type FolderDecorationModel } from '../utils/folderDecoration';
+import {
+    resolveFileItemPropertyDecorationColors,
+    resolveFileItemTagDecorationColors,
+    type FileItemPillDecorationModel
+} from '../utils/fileItemPillDecoration';
+import { ObsidianIcon } from '../components/ObsidianIcon';
 
-export interface RootFolderDescriptor {
+export type ReorderTreeType = 'folder' | 'tag' | 'property';
+
+/**
+ * A row in a reorder mode tree. `key` identifies the row and is the parent key of its children: a folder path, a
+ * tag path, or a property node id. `name` is what the parent's stored order holds: a folder name, a root tag path
+ * or nested tag name, or a property key or value path. A missing row is a stored name with nothing behind it.
+ */
+export interface ReorderTreeNode {
     key: string;
-    folder: TFolder | null;
-    isVault?: boolean;
-    isMissing?: boolean;
+    name: string;
+    parentPath: string;
+    hasChildren: boolean;
+    props: React.ComponentProps<typeof RootFolderReorderItem>;
 }
+
+/** One category's tree in reorder mode */
+export interface ReorderTreeSource {
+    type: ReorderTreeType;
+    getChildren: (parentPath: string) => ReorderTreeNode[];
+    /** The navigation tree's expanded rows, shared so the expand/collapse all button works in reorder mode */
+    expanded: ReadonlySet<string>;
+    onToggle: (key: string) => void;
+    canReorder: boolean;
+}
+
+type ChildOrderSettingsKey = 'folderChildOrder' | 'tagChildOrder' | 'propertyChildOrder';
 
 export interface RootTagDescriptor {
     key: string;
@@ -72,13 +110,35 @@ const TAGS_VIRTUAL_REORDER_KEY = '__nn-tags-root__';
 export interface UseNavigationRootReorderOptions {
     app: App;
     items: CombinedNavigationItem[];
+    /** Changes with every folder create, delete and rename at any depth */
+    folderChangeVersion: number;
     settings: NotebookNavigatorSettings;
     showHiddenItems: boolean;
     updateSettings: (updater: (settings: NotebookNavigatorSettings) => void) => Promise<void>;
     sectionOrder: NavigationSectionId[];
     setSectionOrder: React.Dispatch<React.SetStateAction<NavigationSectionId[]>>;
-    rootLevelFolders: TFolder[];
-    missingRootFolderPaths: string[];
+    getFolderSortName: (folder: TFolder) => string;
+    /** Hides a folder through its folder note (hidden file names, tags or properties), as the navigation tree does */
+    folderExclusionByFolderNote: ((folder: TFolder) => boolean) | undefined;
+    folderDecorationModel: FolderDecorationModel;
+    /** Global tag and property rainbow colors, for rows the navigation tree does not render */
+    fileItemPillDecorationModel: FileItemPillDecorationModel;
+    tagComparator: TagComparator | undefined;
+    /**
+     * Complete tag tree (all tags plus hidden roots). Decides whether a stored name is missing, because the visible
+     * tree drops hidden tags and a hidden child would otherwise look missing and be offered for removal.
+     */
+    tagTreeForOrdering: Map<string, TagTreeNode>;
+    /**
+     * Tag tree the navigation pane shows, without hidden tags and the ancestors they leave empty. Nested rows,
+     * expansion and sorting follow it, because its node counts leave out hidden descendants.
+     */
+    visibleTagTree: Map<string, TagTreeNode>;
+    /**
+     * Tag paths carried by files in excluded folders. The complete tag tree leaves them out, so a stored name found
+     * here is a hidden child, skipped like a hidden folder, rather than a missing one offered for removal.
+     */
+    excludedTagPaths: ReadonlySet<string>;
     resolvedRootTagKeys: string[];
     rootOrderingTagTree: Map<string, TagTreeNode>;
     missingRootTagPaths: string[];
@@ -97,44 +157,96 @@ export interface UseNavigationRootReorderOptions {
 }
 
 export interface NavigationRootReorderState {
-    reorderableRootFolders: RootFolderDescriptor[];
     reorderableRootTags: RootTagDescriptor[];
     reorderableRootProperties: RootPropertyDescriptor[];
     sectionReorderItems: SectionReorderRenderItem[];
-    folderReorderItems: RootReorderRenderItem[];
-    tagReorderItems: RootReorderRenderItem[];
-    propertyReorderItems: RootReorderRenderItem[];
+    getFolderReorderChildren: (parentPath: string) => ReorderTreeNode[];
+    getTagReorderChildren: (parentPath: string) => ReorderTreeNode[];
+    getPropertyReorderChildren: (parentKey: string) => ReorderTreeNode[];
     canReorderSections: boolean;
-    canReorderRootFolders: boolean;
-    canReorderRootTags: boolean;
-    canReorderRootProperties: boolean;
+    canReorderFolders: boolean;
+    canReorderTags: boolean;
+    canReorderProperties: boolean;
     canReorderRootItems: boolean;
     showRootFolderSection: boolean;
     showRootTagSection: boolean;
     showRootPropertySection: boolean;
-    resetRootTagOrderLabel: string;
-    resetRootPropertyOrderLabel: string;
-    vaultRootDescriptor: RootFolderDescriptor | undefined;
-    handleResetRootFolderOrder: () => Promise<void>;
-    handleResetRootTagOrder: () => Promise<void>;
-    handleResetRootPropertyOrder: () => Promise<void>;
+    handleResetFolderOrder: () => Promise<void>;
+    handleResetTagOrder: () => Promise<void>;
+    handleResetPropertyOrder: () => Promise<void>;
     reorderSectionOrder: (orderedKeys: NavigationSectionId[]) => Promise<void>;
-    reorderRootFolderOrder: (orderedKeys: string[]) => Promise<void>;
-    reorderRootTagOrder: (orderedKeys: string[]) => Promise<void>;
-    reorderRootPropertyOrder: (orderedKeys: string[]) => Promise<void>;
+    reorderTreeChildren: (type: ReorderTreeType, parentPath: string, orderedNames: string[]) => Promise<void>;
+}
+
+function getOwnOverride(overrides: Record<string, AlphaSortOrder>, key: string): AlphaSortOrder | undefined {
+    return Object.prototype.hasOwnProperty.call(overrides, key) ? overrides[key] : undefined;
+}
+
+function getSortLabel(order: TagSortOrder, options: { alphaAsc: string; alphaDesc: string; lowToHigh: string; highToLow: string }): string {
+    switch (order) {
+        case 'alpha-desc':
+            return options.alphaDesc;
+        case 'frequency-asc':
+            return options.lowToHigh;
+        case 'frequency-desc':
+            return options.highToLow;
+        default:
+            return options.alphaAsc;
+    }
+}
+
+/**
+ * Builds a parent's rows: stored names in stored order, with stored names whose child is missing as missing rows,
+ * then the displayed children the order does not list, in tree order. Stored names of children that exist but are
+ * not displayed (hidden) are skipped. The panel calls the row builders while rendering, so rows always reflect the
+ * current vault and trees.
+ */
+function orderChildRows<T>(params: {
+    storedOrder: readonly string[];
+    displayed: readonly T[];
+    allChildNames: ReadonlySet<string>;
+    getName: (child: T) => string;
+    buildRow: (child: T) => ReorderTreeNode;
+    buildMissingRow: (name: string) => ReorderTreeNode;
+}): ReorderTreeNode[] {
+    const { storedOrder, displayed, allChildNames, getName, buildRow, buildMissingRow } = params;
+    const storedNames = new Set(storedOrder);
+    const displayedByName = new Map(displayed.map(child => [getName(child), child]));
+    const rows: ReorderTreeNode[] = [];
+    storedOrder.forEach(name => {
+        const child = displayedByName.get(name);
+        if (child !== undefined) {
+            rows.push(buildRow(child));
+        } else if (!allChildNames.has(name)) {
+            rows.push(buildMissingRow(name));
+        }
+    });
+    displayed.forEach(child => {
+        if (!storedNames.has(getName(child))) {
+            rows.push(buildRow(child));
+        }
+    });
+    return rows;
 }
 
 export function useNavigationRootReorder(options: UseNavigationRootReorderOptions): NavigationRootReorderState {
     const {
         app,
         items,
+        folderChangeVersion,
         settings,
         showHiddenItems,
         updateSettings,
         sectionOrder,
         setSectionOrder,
-        rootLevelFolders,
-        missingRootFolderPaths,
+        getFolderSortName,
+        folderExclusionByFolderNote,
+        folderDecorationModel,
+        fileItemPillDecorationModel,
+        tagComparator,
+        tagTreeForOrdering,
+        visibleTagTree,
+        excludedTagPaths,
         resolvedRootTagKeys,
         rootOrderingTagTree,
         missingRootTagPaths,
@@ -154,7 +266,13 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
 
     const {
         showRootFolder,
-        rootFolderOrder,
+        folderChildOrder,
+        folderSortOrder,
+        folderTreeSortOverrides,
+        tagChildOrder,
+        tagTreeSortOverrides,
+        propertyChildOrder,
+        propertyTreeSortOverrides,
         rootTagOrder,
         rootPropertyOrder,
         showUntagged,
@@ -167,6 +285,7 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
     } = settings;
 
     const { hiddenFolders, hiddenTags } = activeProfile;
+    const { includeDescendantNotes } = useUXPreferences();
     const hiddenTagMatcher = useMemo(() => createHiddenTagMatcher(hiddenTags), [hiddenTags]);
     const hasHiddenTagRules = useMemo(() => {
         return (
@@ -176,58 +295,6 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
             hiddenTagMatcher.endsWithNames.length > 0
         );
     }, [hiddenTagMatcher]);
-
-    const rootFolderDescriptors = useMemo<RootFolderDescriptor[]>(() => {
-        const descriptors: RootFolderDescriptor[] = [];
-        if (showRootFolder) {
-            const vaultRoot = app.vault.getRoot();
-            descriptors.push({ key: vaultRoot.path, folder: vaultRoot, isVault: true });
-        }
-
-        const folderMap = new Map<string, TFolder>();
-        rootLevelFolders.forEach(folder => {
-            folderMap.set(folder.path, folder);
-        });
-
-        const missingSet = new Set(missingRootFolderPaths);
-        const orderedPaths = rootFolderOrder.length > 0 ? rootFolderOrder : rootLevelFolders.map(folder => folder.path);
-        const seen = new Set<string>();
-
-        orderedPaths.forEach(path => {
-            if (seen.has(path)) {
-                return;
-            }
-            seen.add(path);
-            const existing = folderMap.get(path);
-            if (existing) {
-                descriptors.push({ key: path, folder: existing });
-            } else if (missingSet.has(path)) {
-                descriptors.push({ key: path, folder: null, isMissing: true });
-            }
-        });
-
-        rootLevelFolders.forEach(folder => {
-            if (!seen.has(folder.path)) {
-                descriptors.push({ key: folder.path, folder });
-            }
-        });
-
-        return descriptors;
-    }, [app.vault, missingRootFolderPaths, rootFolderOrder, rootLevelFolders, showRootFolder]);
-
-    const resetRootTagOrderLabel = useMemo(() => {
-        if (tagSortOrder === 'frequency-asc' || tagSortOrder === 'frequency-desc') {
-            return strings.navigationPane.resetRootToFrequency;
-        }
-        return strings.navigationPane.resetRootToAlpha;
-    }, [tagSortOrder]);
-
-    const resetRootPropertyOrderLabel = useMemo(() => {
-        if (propertySortOrder === 'frequency-asc' || propertySortOrder === 'frequency-desc') {
-            return strings.navigationPane.resetRootToFrequency;
-        }
-        return strings.navigationPane.resetRootToAlpha;
-    }, [propertySortOrder]);
 
     const rootTagDescriptors = useMemo<RootTagDescriptor[]>(() => {
         const descriptors: RootTagDescriptor[] = [];
@@ -327,20 +394,39 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         return descriptors;
     }, [missingRootPropertyKeys, resolvedRootPropertyKeys, rootOrderingPropertyTree, rootPropertyOrder]);
 
-    const reorderableRootFolders = useMemo<RootFolderDescriptor[]>(() => {
-        return rootFolderDescriptors.filter(entry => {
-            if (entry.isVault) {
-                return false;
-            }
-            if (!showHiddenItems) {
-                const folderName = entry.folder ? entry.folder.name : getPathBaseName(entry.key);
-                if (hiddenFolders.length > 0 && shouldExcludeFolder(folderName, hiddenFolders, entry.key)) {
-                    return false;
+    // Hidden by a folder name or path rule, or through its folder note, the same folders the navigation tree hides
+    const isFolderHidden = useCallback(
+        (folder: TFolder): boolean =>
+            (hiddenFolders.length > 0 && shouldExcludeFolder(folder.name, hiddenFolders, folder.path)) ||
+            (folderExclusionByFolderNote?.(folder) ?? false),
+        [folderExclusionByFolderNote, hiddenFolders]
+    );
+    const isFolderDisplayed = useCallback(
+        (folder: TFolder): boolean => showHiddenItems || !isFolderHidden(folder),
+        [isFolderHidden, showHiddenItems]
+    );
+
+    const vaultRoot = app.vault.getRoot();
+    // Folder availability is read from the vault, not from expanded reorder rows, so collapsing the
+    // branch that holds the only reorderable siblings does not close reorder mode. folderChangeVersion
+    // changes with every folder create, delete and rename at any depth, which is when it is recomputed.
+    const { hasRootFolders, canReorderFolders } = useMemo(() => {
+        void folderChangeVersion;
+        const hasDisplayedSiblings = (folder: TFolder): boolean => {
+            let displayedChildCount = 0;
+            return folder.children.some(child => {
+                if (child instanceof TFolder && isFolderDisplayed(child)) {
+                    displayedChildCount += 1;
                 }
-            }
-            return true;
-        });
-    }, [hiddenFolders, rootFolderDescriptors, showHiddenItems]);
+                return displayedChildCount > 1;
+            });
+        };
+        return {
+            hasRootFolders: vaultRoot.children.some(child => child instanceof TFolder) || getChildOrder(folderChildOrder, '/').length > 0,
+            // Most vaults qualify at the root, which skips listing every folder
+            canReorderFolders: hasDisplayedSiblings(vaultRoot) || app.vault.getAllFolders(false).some(hasDisplayedSiblings)
+        };
+    }, [app.vault, folderChangeVersion, folderChildOrder, isFolderDisplayed, vaultRoot]);
 
     const reorderableRootTags = useMemo<RootTagDescriptor[]>(() => {
         return rootTagDescriptors.filter(entry => {
@@ -376,7 +462,7 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                 return showRecentNotes;
             }
             if (identifier === NavigationSectionId.FOLDERS) {
-                return reorderableRootFolders.length > 0;
+                return hasRootFolders;
             }
             if (identifier === NavigationSectionId.TAGS) {
                 return showTags && reorderableRootTags.length > 0;
@@ -387,7 +473,7 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
             return true;
         });
     }, [
-        reorderableRootFolders.length,
+        hasRootFolders,
         reorderableRootTags.length,
         propertiesSectionActive,
         sectionOrderWithDefaults,
@@ -411,29 +497,27 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         [sectionOrderWithDefaults, setSectionOrder]
     );
 
-    const canReorderRootFolders = reorderableRootFolders.length > 1;
-    const canReorderRootTags = reorderableRootTags.length > 1;
-    const canReorderRootProperties = reorderableRootProperties.length > 1;
-    const canReorderRootItems = canReorderSections || canReorderRootFolders || canReorderRootTags || canReorderRootProperties;
-    const showRootFolderSection = reorderableRootFolders.length > 0;
+    const showRootFolderSection = hasRootFolders;
     const showRootTagSection = reorderableRootTags.length > 0;
     const showRootPropertySection = reorderableRootProperties.length > 0;
 
     const rootItemMaps = useMemo(() => {
         const folderIconMap = new Map<string, string | undefined>();
         const folderColorMap = new Map<string, string | undefined>();
-        const folderDisplayNameMap = new Map<string, string | undefined>();
         const tagIconMap = new Map<string, string | undefined>();
         const tagColorMap = new Map<string, string | undefined>();
         const propertyIconMap = new Map<string, string | undefined>();
         const propertyColorMap = new Map<string, string | undefined>();
+        const propertyValueIconMap = new Map<string, string | undefined>();
+        const propertyValueColorMap = new Map<string, string | undefined>();
 
+        // Rows take the icons and colors of the decorated tree items, which include rainbow colors. Reorder mode
+        // shares expansion with the tree, so every expanded row has an item.
         items.forEach(item => {
             if (item.type === NavigationPaneItemType.FOLDER) {
                 const path = item.data.path;
                 folderIconMap.set(path, item.icon);
                 folderColorMap.set(path, item.color);
-                folderDisplayNameMap.set(path, item.displayName);
                 return;
             }
             if (item.type === NavigationPaneItemType.TAG) {
@@ -446,42 +530,77 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                 const key = item.data.key;
                 propertyIconMap.set(key, item.icon);
                 propertyColorMap.set(key, item.color);
+                return;
+            }
+            if (item.type === NavigationPaneItemType.PROPERTY_VALUE) {
+                propertyValueIconMap.set(item.data.id, item.icon);
+                propertyValueColorMap.set(item.data.id, item.color);
             }
         });
 
         return {
             rootFolderIconMap: folderIconMap,
             rootFolderColorMap: folderColorMap,
-            rootFolderDisplayNameMap: folderDisplayNameMap,
-            rootTagIconMap: tagIconMap,
-            rootTagColorMap: tagColorMap,
+            treeTagIconMap: tagIconMap,
+            treeTagColorMap: tagColorMap,
             rootPropertyIconMap: propertyIconMap,
-            rootPropertyColorMap: propertyColorMap
+            rootPropertyColorMap: propertyColorMap,
+            propertyValueIconMap,
+            propertyValueColorMap
         };
     }, [items]);
 
     const {
         rootFolderIconMap,
         rootFolderColorMap,
-        rootFolderDisplayNameMap,
-        rootTagIconMap,
-        rootTagColorMap,
+        treeTagIconMap,
+        treeTagColorMap,
         rootPropertyIconMap,
-        rootPropertyColorMap
+        rootPropertyColorMap,
+        propertyValueIconMap,
+        propertyValueColorMap
     } = rootItemMaps;
-    const vaultRootDescriptor = useMemo(() => rootFolderDescriptors.find(entry => entry.isVault), [rootFolderDescriptors]);
 
-    const handleRootOrderChange = useCallback(
-        async (orderedPaths: string[]) => {
-            const normalizedOrder = orderedPaths.slice();
-            if (areStringArraysEqual(normalizedOrder, rootFolderOrder)) {
+    // A tag or property the tree renders keeps its item color. Rows the tree leaves out ("filter by selection" scopes
+    // it to the selection) resolve rainbow colors from the global model, as file pills do.
+    const getTagRowColor = useCallback(
+        (tagPath: string): string | undefined =>
+            treeTagColorMap.has(tagPath)
+                ? treeTagColorMap.get(tagPath)
+                : resolveFileItemTagDecorationColors({
+                      model: fileItemPillDecorationModel,
+                      tagPath,
+                      color: metadataService.getTagColor(tagPath),
+                      backgroundColor: undefined
+                  }).color,
+        [fileItemPillDecorationModel, metadataService, treeTagColorMap]
+    );
+    const getPropertyRowColor = useCallback(
+        (nodeId: string, treeColors: ReadonlyMap<string, string | undefined>, treeKey: string): string | undefined =>
+            treeColors.has(treeKey)
+                ? treeColors.get(treeKey)
+                : resolveFileItemPropertyDecorationColors({
+                      model: fileItemPillDecorationModel,
+                      nodeId,
+                      color: metadataService.getPropertyColor(nodeId),
+                      backgroundColor: undefined
+                  }).color,
+        [fileItemPillDecorationModel, metadataService]
+    );
+    const reorderChildOrder = useCallback(
+        async (settingsKey: ChildOrderSettingsKey, parentKey: string, orderedNames: string[]) => {
+            const storedOrder = getChildOrder(settings[settingsKey], parentKey);
+            const nextOrder = mergeDisplayedOrder(storedOrder, orderedNames);
+            if (areStringArraysEqual(nextOrder, storedOrder)) {
                 return;
             }
             await updateSettings(current => {
-                current.rootFolderOrder = normalizedOrder;
+                const nextRecord = sanitizeRecord(current[settingsKey]);
+                nextRecord[parentKey] = nextOrder;
+                current[settingsKey] = nextRecord;
             });
         },
-        [rootFolderOrder, updateSettings]
+        [settings, updateSettings]
     );
 
     const handleRootTagOrderChange = useCallback(
@@ -510,41 +629,39 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         [rootPropertyOrder, updateSettings]
     );
 
-    const reorderRootFolderOrder = useCallback(
-        async (orderedKeys: string[]) => {
-            await handleRootOrderChange(orderedKeys);
-        },
-        [handleRootOrderChange]
-    );
-
-    const reorderRootTagOrder = useCallback(
-        async (orderedKeys: string[]) => {
-            await handleRootTagOrderChange(orderedKeys);
-        },
-        [handleRootTagOrderChange]
-    );
-
-    const reorderRootPropertyOrder = useCallback(
-        async (orderedKeys: string[]) => {
-            await handleRootPropertyOrderChange(orderedKeys);
-        },
-        [handleRootPropertyOrderChange]
-    );
-
-    const handleRemoveMissingRootFolder = useCallback(
-        async (path: string) => {
-            if (!path) {
-                return;
+    /** Writes a drop in any reorder tree; root tags and root property keys keep their own stored orders */
+    const reorderTreeChildren = useCallback(
+        async (type: ReorderTreeType, parentPath: string, orderedNames: string[]) => {
+            if (type === 'folder') {
+                await reorderChildOrder('folderChildOrder', parentPath, orderedNames);
+            } else if (type === 'tag') {
+                await (parentPath === '/'
+                    ? handleRootTagOrderChange(orderedNames)
+                    : reorderChildOrder('tagChildOrder', parentPath, orderedNames));
+            } else {
+                await (parentPath === '/'
+                    ? handleRootPropertyOrderChange(orderedNames)
+                    : reorderChildOrder('propertyChildOrder', parentPath, orderedNames));
             }
+        },
+        [handleRootPropertyOrderChange, handleRootTagOrderChange, reorderChildOrder]
+    );
+
+    const removeMissingChildName = useCallback(
+        async (settingsKey: ChildOrderSettingsKey, parentKey: string, name: string) => {
             await updateSettings(current => {
-                if (!Array.isArray(current.rootFolderOrder)) {
-                    current.rootFolderOrder = [];
+                const storedOrder = getChildOrder(current[settingsKey], parentKey);
+                if (!storedOrder.includes(name)) {
                     return;
                 }
-                if (!current.rootFolderOrder.includes(path)) {
-                    return;
+                const nextOrder = storedOrder.filter(entry => entry !== name);
+                const nextRecord = sanitizeRecord(current[settingsKey]);
+                if (nextOrder.length > 0) {
+                    nextRecord[parentKey] = nextOrder;
+                } else {
+                    delete nextRecord[parentKey];
                 }
-                current.rootFolderOrder = current.rootFolderOrder.filter(entry => entry !== path);
+                current[settingsKey] = nextRecord;
             });
         },
         [updateSettings]
@@ -615,65 +732,196 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         );
     }, []);
 
-    const folderReorderItems = useMemo<RootReorderRenderItem[]>(() => {
-        return reorderableRootFolders.map(entry => {
-            const isMissing = entry.isMissing === true;
-            const baseName = entry.folder ? entry.folder.name : getPathBaseName(entry.key);
-            const isHidden = hiddenFolders.length > 0 && shouldExcludeFolder(baseName, hiddenFolders, entry.key);
-            const displayLabel =
-                entry.folder === null
-                    ? getPathBaseName(entry.key)
-                    : rootFolderDisplayNameMap.get(entry.key) ||
-                      resolveFolderDisplayName({
-                          app,
-                          metadataService,
-                          settings: { customVaultName },
-                          folderPath: entry.key,
-                          fallbackName: entry.folder.name
-                      });
-            // Hidden roots are not present in navigation maps, so read icon data directly from metadata
-            const iconName = rootFolderIconMap.get(entry.key) ?? (isMissing ? undefined : metadataService.getFolderIcon(entry.key));
-            const iconColor = rootFolderColorMap.get(entry.key) ?? (isMissing ? undefined : metadataService.getFolderColor(entry.key));
-
-            let displayIcon = resolveUXIcon(settings.interfaceIcons, 'nav-folder-closed');
-            if (isMissing) {
-                displayIcon = 'lucide-folder-off';
-            } else if (iconName) {
-                displayIcon = iconName;
+    /**
+     * Returns the reorder mode badge for a parent's child order: a numbered-list icon for a manual order, ↑ or ↓ for
+     * an alphabetical override, nothing for the default order. A manual order wins over an override because it
+     * decides the listed children; the override only sorts the unlisted rest. Shown with note counts, as the tree's
+     * ↑/↓ is.
+     */
+    const renderSortBadge = useCallback(
+        (childOrder: Record<string, string[]>, overrides: Record<string, AlphaSortOrder>, parentKey: string): React.ReactNode => {
+            if (!settings.showNoteCount) {
+                return undefined;
             }
+            if (getChildOrder(childOrder, parentKey).length > 0) {
+                return (
+                    <span className="nn-navitem-count nn-root-reorder-manual-badge" aria-label={strings.paneHeader.manualSort}>
+                        <ObsidianIcon name="lucide-list-ordered" />
+                    </span>
+                );
+            }
+            if (!Object.prototype.hasOwnProperty.call(overrides, parentKey)) {
+                return undefined;
+            }
+            return <span className="nn-navitem-count">{overrides[parentKey] === 'alpha-desc' ? '↓' : '↑'}</span>;
+        },
+        [settings.showNoteCount]
+    );
 
-            const removeAction = isMissing ? buildRemoveMissingAction(entry.key, handleRemoveMissingRootFolder) : undefined;
-
-            return {
-                key: entry.key,
-                props: {
-                    icon: displayIcon,
-                    color: iconColor,
-                    label: displayLabel,
-                    level: 1,
-                    dragHandlers: undefined,
-                    isDragSource: false,
-                    isMissing,
-                    itemType: 'folder',
-                    className: showHiddenItems && isHidden ? 'nn-excluded' : undefined,
-                    trailingAccessory: removeAction
-                }
+    /**
+     * Returns a child sort menu handler for a row. Default, A to Z and Z to A go through the same service calls as
+     * the tree's `Change sort order` menu, so they also clear the manual order. Manual sort only shows whether a
+     * manual order is active, because dragging is the only way to set one.
+     */
+    const createSortContextMenu = useCallback(
+        (params: {
+            hasManualOrder: boolean;
+            override: AlphaSortOrder | undefined;
+            defaultLabel: string;
+            onDefault: () => Promise<void>;
+            onAlpha: (order: AlphaSortOrder) => Promise<void>;
+        }): ((event: React.MouseEvent<HTMLDivElement>) => void) => {
+            const { hasManualOrder, override, defaultLabel, onDefault, onAlpha } = params;
+            return event => {
+                event.preventDefault();
+                event.stopPropagation();
+                const menu = new Menu();
+                menu.addItem(item => {
+                    item.setTitle(`${strings.folderAppearance.defaultLabel} (${defaultLabel})`)
+                        .setChecked(!hasManualOrder && !override)
+                        .onClick(() => {
+                            runAsyncAction(onDefault);
+                        });
+                });
+                menu.addSeparator();
+                // Alphabetical choices stay unchecked while a manual order decides the child order
+                menu.addItem(item => {
+                    item.setTitle(strings.settings.items.folderSortOrder.options.alphaAsc)
+                        .setChecked(!hasManualOrder && override === 'alpha-asc')
+                        .onClick(() => {
+                            runAsyncAction(() => onAlpha('alpha-asc'));
+                        });
+                });
+                menu.addItem(item => {
+                    item.setTitle(strings.settings.items.folderSortOrder.options.alphaDesc)
+                        .setChecked(!hasManualOrder && override === 'alpha-desc')
+                        .onClick(() => {
+                            runAsyncAction(() => onAlpha('alpha-desc'));
+                        });
+                });
+                menu.addItem(item => {
+                    item.setTitle(strings.paneHeader.manualSort).setChecked(hasManualOrder).setDisabled(!hasManualOrder);
+                });
+                menu.showAtMouseEvent(event.nativeEvent);
             };
-        });
-    }, [
-        app,
-        reorderableRootFolders,
-        rootFolderIconMap,
-        rootFolderColorMap,
-        rootFolderDisplayNameMap,
-        metadataService,
-        settings.interfaceIcons,
-        customVaultName,
-        buildRemoveMissingAction,
-        handleRemoveMissingRootFolder,
-        hiddenFolders,
-        showHiddenItems
-    ]);
+        },
+        []
+    );
+
+    const folderDefaultSortLabel =
+        folderSortOrder === 'alpha-desc'
+            ? strings.settings.items.folderSortOrder.options.alphaDesc
+            : strings.settings.items.folderSortOrder.options.alphaAsc;
+    const tagDefaultSortLabel = getSortLabel(tagSortOrder, strings.settings.items.tagSortOrder.options);
+    const propertyDefaultSortLabel = getSortLabel(propertySortOrder, strings.settings.items.propertySortOrder.options);
+
+    const getFolderReorderChildren = useCallback(
+        (parentPath: string): ReorderTreeNode[] => {
+            const parent = parentPath === '/' ? app.vault.getRoot() : app.vault.getFolderByPath(parentPath);
+            const childFolders = parent ? parent.children.filter((child): child is TFolder => child instanceof TFolder) : [];
+            // Root-level folders sit one level below the folders section header
+            const level = parentPath === '/' ? 1 : parentPath.split('/').length + 1;
+
+            const buildRow = (folder: TFolder): ReorderTreeNode => {
+                const displayData = metadataService.getFolderDisplayData(folder.path);
+                const { color } = resolveFolderDecorationColors({
+                    model: folderDecorationModel,
+                    folderPath: folder.path,
+                    color: displayData.color,
+                    backgroundColor: displayData.backgroundColor
+                });
+                const grandchildNames = new Set<string>();
+                let hasChildren = false;
+                folder.children.forEach(child => {
+                    if (child instanceof TFolder) {
+                        grandchildNames.add(child.name);
+                        hasChildren = hasChildren || isFolderDisplayed(child);
+                    }
+                });
+                // A stored name without a folder still renders as a missing row, so its parent must expand
+                const hasManualOrder = getChildOrder(folderChildOrder, folder.path).length > 0;
+                hasChildren = hasChildren || getChildOrder(folderChildOrder, folder.path).some(name => !grandchildNames.has(name));
+                const isHidden = isFolderHidden(folder);
+
+                return {
+                    key: folder.path,
+                    name: folder.name,
+                    parentPath,
+                    hasChildren,
+                    props: {
+                        icon: displayData.icon ?? resolveUXIcon(settings.interfaceIcons, 'nav-folder-closed'),
+                        color,
+                        label: displayData.displayName || folder.name,
+                        level,
+                        isMissing: false,
+                        itemType: 'folder',
+                        className: showHiddenItems && isHidden ? 'nn-excluded' : undefined,
+                        countSlot: renderSortBadge(folderChildOrder, folderTreeSortOverrides, folder.path),
+                        onContextMenu:
+                            hasChildren || hasManualOrder
+                                ? createSortContextMenu({
+                                      hasManualOrder,
+                                      override: getOwnOverride(folderTreeSortOverrides, folder.path),
+                                      defaultLabel: folderDefaultSortLabel,
+                                      onDefault: () => metadataService.removeFolderChildSortOrderOverride(folder.path),
+                                      onAlpha: order => metadataService.setFolderChildSortOrderOverride(folder.path, order)
+                                  })
+                                : undefined
+                    }
+                };
+            };
+
+            const buildMissingRow = (name: string): ReorderTreeNode => {
+                const key = getChildFolderPath(parentPath, name);
+                return {
+                    key,
+                    name,
+                    parentPath,
+                    hasChildren: false,
+                    props: {
+                        icon: 'lucide-folder-off',
+                        label: name,
+                        level,
+                        isMissing: true,
+                        itemType: 'folder',
+                        trailingAccessory: buildRemoveMissingAction(key, () => removeMissingChildName('folderChildOrder', parentPath, name))
+                    }
+                };
+            };
+
+            return orderChildRows({
+                storedOrder: getChildOrder(folderChildOrder, parentPath),
+                displayed: sortFolderSiblings(childFolders.filter(isFolderDisplayed), parentPath, {
+                    childOrder: folderChildOrder,
+                    defaultSortOrder: folderSortOrder,
+                    childSortOrderOverrides: folderTreeSortOverrides,
+                    getFolderSortName
+                }),
+                allChildNames: new Set(childFolders.map(folder => folder.name)),
+                getName: folder => folder.name,
+                buildRow,
+                buildMissingRow
+            });
+        },
+        [
+            app.vault,
+            buildRemoveMissingAction,
+            createSortContextMenu,
+            folderChildOrder,
+            folderDecorationModel,
+            folderDefaultSortLabel,
+            folderSortOrder,
+            folderTreeSortOverrides,
+            getFolderSortName,
+            isFolderDisplayed,
+            isFolderHidden,
+            metadataService,
+            removeMissingChildName,
+            renderSortBadge,
+            settings.interfaceIcons,
+            showHiddenItems
+        ]
+    );
 
     const tagReorderItems = useMemo<RootReorderRenderItem[]>(() => {
         return reorderableRootTags.map(entry => {
@@ -688,15 +936,14 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                 displayIcon = metadataService.getTagIcon(entry.key) ?? resolveUXIcon(settings.interfaceIcons, 'nav-tag');
                 label = strings.tagList.untaggedLabel;
             } else {
-                const iconFromTree = rootTagIconMap.get(entry.key);
+                const iconFromTree = treeTagIconMap.get(entry.key);
                 const metadataIcon = metadataService.getTagIcon(entry.key);
                 displayIcon =
                     iconFromTree ?? metadataIcon ?? (isMissing ? 'lucide-tag-off' : resolveUXIcon(settings.interfaceIcons, 'nav-tag'));
                 label = entry.tag ? `#${entry.tag.displayPath}` : `#${entry.key}`;
             }
 
-            const metadataColor = isUntagged ? undefined : metadataService.getTagColor(entry.key);
-            const iconColor = rootTagColorMap.get(entry.key) ?? metadataColor;
+            const iconColor = isUntagged ? undefined : getTagRowColor(entry.key);
             const removeAction = isMissing ? buildRemoveMissingAction(entry.key, handleRemoveMissingRootTag) : undefined;
 
             return {
@@ -717,8 +964,8 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         });
     }, [
         reorderableRootTags,
-        rootTagIconMap,
-        rootTagColorMap,
+        treeTagIconMap,
+        getTagRowColor,
         metadataService,
         settings.interfaceIcons,
         buildRemoveMissingAction,
@@ -733,11 +980,9 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
             const isMissing = entry.isMissing === true;
             const nodeId = entry.node?.id ?? buildPropertyKeyNodeId(entry.key);
             const iconFromTree = rootPropertyIconMap.get(entry.key);
-            const colorFromTree = rootPropertyColorMap.get(entry.key);
             const iconFromMetadata = metadataService.getPropertyIcon(nodeId);
-            const colorFromMetadata = metadataService.getPropertyColor(nodeId);
             const displayIcon = iconFromTree ?? iconFromMetadata ?? resolveUXIcon(settings.interfaceIcons, 'nav-property');
-            const iconColor = colorFromTree ?? colorFromMetadata;
+            const iconColor = getPropertyRowColor(nodeId, rootPropertyColorMap, entry.key);
             const label = entry.node ? entry.node.name : entry.key;
             const removeAction = isMissing ? buildRemoveMissingAction(entry.key, handleRemoveMissingRootProperty) : undefined;
 
@@ -760,18 +1005,284 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         reorderableRootProperties,
         rootPropertyIconMap,
         rootPropertyColorMap,
+        getPropertyRowColor,
         metadataService,
         settings.interfaceIcons,
         buildRemoveMissingAction,
         handleRemoveMissingRootProperty
     ]);
 
+    // A stored name is missing only when no tag of that path exists: hidden tags and tags in excluded folders exist
+    const getMissingTagChildNames = useCallback(
+        (parentPath: string, storedOrder: readonly string[]): string[] => {
+            if (storedOrder.length === 0) {
+                return [];
+            }
+            const parent = getTagNodeByPath(tagTreeForOrdering, parentPath);
+            // Compared by name, because a child of #tag//child is keyed with both slashes
+            const childNames = new Set(Array.from(parent?.children.values() ?? [], child => getTagChildName(child.path)));
+            return storedOrder.filter(name => !childNames.has(name) && !excludedTagPaths.has(`${parentPath}/${name}`));
+        },
+        [excludedTagPaths, tagTreeForOrdering]
+    );
+
+    // Takes the visible node being rendered (null when the tree does not show the tag), so rows need no lookup
+    const tagHasChildren = useCallback(
+        (tagPath: string, visibleNode: TagTreeNode | null): boolean =>
+            (visibleNode?.children.size ?? 0) > 0 ||
+            // A stored name without a tag still renders as a missing row, so its parent must expand
+            getMissingTagChildNames(tagPath, getChildOrder(tagChildOrder, tagPath)).length > 0,
+        [getMissingTagChildNames, tagChildOrder]
+    );
+
+    const createTagSortMenu = useCallback(
+        (tagPath: string) =>
+            createSortContextMenu({
+                hasManualOrder: getChildOrder(tagChildOrder, tagPath).length > 0,
+                override: getOwnOverride(tagTreeSortOverrides, tagPath),
+                defaultLabel: tagDefaultSortLabel,
+                onDefault: () => metadataService.removeTagChildSortOrderOverride(tagPath),
+                onAlpha: order => metadataService.setTagChildSortOrderOverride(tagPath, order)
+            }),
+        [createSortContextMenu, metadataService, tagChildOrder, tagDefaultSortLabel, tagTreeSortOverrides]
+    );
+
+    const getTagReorderChildren = useCallback(
+        (parentPath: string): ReorderTreeNode[] => {
+            if (parentPath === '/') {
+                // Root rows follow the root tag order, which also holds Untagged and missing roots
+                return reorderableRootTags.map((entry, index) => {
+                    const hasChildren = entry.tag ? tagHasChildren(entry.key, visibleTagTree.get(entry.key) ?? null) : false;
+                    const hasManualOrder = getChildOrder(tagChildOrder, entry.key).length > 0;
+                    return {
+                        key: entry.key,
+                        name: entry.key,
+                        parentPath,
+                        hasChildren,
+                        props: {
+                            ...tagReorderItems[index].props,
+                            countSlot: entry.tag ? renderSortBadge(tagChildOrder, tagTreeSortOverrides, entry.key) : undefined,
+                            onContextMenu: entry.tag && (hasChildren || hasManualOrder) ? createTagSortMenu(entry.key) : undefined
+                        }
+                    };
+                });
+            }
+
+            const visibleParent = getTagNodeByPath(visibleTagTree, parentPath);
+            const override = getOwnOverride(tagTreeSortOverrides, parentPath);
+            const compare: TagComparator = override
+                ? (a, b) => compareByAlphaSortOrder(a.name, b.name, override)
+                : (tagComparator ?? compareTagAlphabetically);
+            const level = parentPath.split('/').length + 1;
+            const storedOrder = getChildOrder(tagChildOrder, parentPath);
+            const missingNames = new Set(getMissingTagChildNames(parentPath, storedOrder));
+
+            return orderChildRows({
+                storedOrder,
+                displayed: visibleParent ? Array.from(visibleParent.children.values()).sort(compare) : [],
+                allChildNames: new Set(storedOrder.filter(name => !missingNames.has(name))),
+                getName: child => getTagChildName(child.path),
+                buildRow: node => {
+                    const hasChildren = tagHasChildren(node.path, node);
+                    const hasManualOrder = getChildOrder(tagChildOrder, node.path).length > 0;
+                    const isHidden = hasHiddenTagRules && matchesHiddenTagPattern(node.path, node.name, hiddenTagMatcher);
+                    return {
+                        key: node.path,
+                        name: getTagChildName(node.path),
+                        parentPath,
+                        hasChildren,
+                        props: {
+                            icon:
+                                treeTagIconMap.get(node.path) ??
+                                metadataService.getTagIcon(node.path) ??
+                                resolveUXIcon(settings.interfaceIcons, 'nav-tag'),
+                            color: getTagRowColor(node.path),
+                            label: node.name,
+                            level,
+                            isMissing: false,
+                            itemType: 'tag',
+                            className: showHiddenItems && isHidden ? 'nn-excluded' : undefined,
+                            countSlot: renderSortBadge(tagChildOrder, tagTreeSortOverrides, node.path),
+                            onContextMenu: hasChildren || hasManualOrder ? createTagSortMenu(node.path) : undefined
+                        }
+                    };
+                },
+                buildMissingRow: name => {
+                    const key = `${parentPath}/${name}`;
+                    return {
+                        key,
+                        name,
+                        parentPath,
+                        hasChildren: false,
+                        props: {
+                            icon: 'lucide-tag-off',
+                            label: name,
+                            level,
+                            isMissing: true,
+                            itemType: 'tag',
+                            trailingAccessory: buildRemoveMissingAction(key, () =>
+                                removeMissingChildName('tagChildOrder', parentPath, name)
+                            )
+                        }
+                    };
+                }
+            });
+        },
+        [
+            buildRemoveMissingAction,
+            createTagSortMenu,
+            hasHiddenTagRules,
+            hiddenTagMatcher,
+            metadataService,
+            removeMissingChildName,
+            renderSortBadge,
+            reorderableRootTags,
+            settings.interfaceIcons,
+            showHiddenItems,
+            getMissingTagChildNames,
+            tagChildOrder,
+            tagComparator,
+            tagHasChildren,
+            tagReorderItems,
+            tagTreeSortOverrides,
+            getTagRowColor,
+            treeTagIconMap,
+            visibleTagTree
+        ]
+    );
+
+    const createPropertySortMenu = useCallback(
+        (keyNodeId: string) =>
+            createSortContextMenu({
+                hasManualOrder: getChildOrder(propertyChildOrder, keyNodeId).length > 0,
+                override: getOwnOverride(propertyTreeSortOverrides, keyNodeId),
+                defaultLabel: propertyDefaultSortLabel,
+                onDefault: () => metadataService.removePropertyChildSortOrderOverride(keyNodeId),
+                onAlpha: order => metadataService.setPropertyChildSortOrderOverride(keyNodeId, order)
+            }),
+        [createSortContextMenu, metadataService, propertyChildOrder, propertyDefaultSortLabel, propertyTreeSortOverrides]
+    );
+
+    const getPropertyReorderChildren = useCallback(
+        (parentKey: string): ReorderTreeNode[] => {
+            if (parentKey === '/') {
+                // Root rows follow the root property order; a key row's children are keyed by its node id
+                return reorderableRootProperties.map((entry, index) => {
+                    const keyNode = entry.node;
+                    const keyNodeId = keyNode?.id ?? buildPropertyKeyNodeId(entry.key);
+                    const valueNames = new Set(keyNode ? Array.from(keyNode.children.values()).map(child => child.valuePath ?? '') : []);
+                    const hasChildren =
+                        keyNode !== null &&
+                        (keyNode.children.size > 0 || getChildOrder(propertyChildOrder, keyNodeId).some(name => !valueNames.has(name)));
+                    const hasManualOrder = getChildOrder(propertyChildOrder, keyNodeId).length > 0;
+                    return {
+                        key: keyNodeId,
+                        name: entry.key,
+                        parentPath: parentKey,
+                        hasChildren,
+                        props: {
+                            ...propertyReorderItems[index].props,
+                            countSlot: keyNode ? renderSortBadge(propertyChildOrder, propertyTreeSortOverrides, keyNodeId) : undefined,
+                            onContextMenu: keyNode && (hasChildren || hasManualOrder) ? createPropertySortMenu(keyNodeId) : undefined
+                        }
+                    };
+                });
+            }
+
+            const keyNode = Array.from(rootOrderingPropertyTree.values()).find(node => node.id === parentKey);
+            const values = keyNode ? Array.from(keyNode.children.values()) : [];
+            const compare = createPropertyComparator({
+                order: getOwnOverride(propertyTreeSortOverrides, parentKey) ?? propertySortOrder,
+                compareAlphabetically: comparePropertyValueNodesAlphabetically,
+                // Same frequency as the navigation tree, so a drop keeps the unlisted values in the order shown there
+                getFrequency: node =>
+                    includeDescendantNotes && keyNode && node.valuePath
+                        ? getTotalPropertyNoteCount(keyNode, node.valuePath)
+                        : node.notesWithValue.size
+            });
+
+            return orderChildRows({
+                storedOrder: getChildOrder(propertyChildOrder, parentKey),
+                displayed: values.slice().sort(compare),
+                allChildNames: new Set(values.map(value => value.valuePath ?? '')),
+                getName: value => value.valuePath ?? '',
+                buildRow: value => ({
+                    key: value.id,
+                    name: value.valuePath ?? '',
+                    parentPath: parentKey,
+                    hasChildren: false,
+                    props: {
+                        icon:
+                            propertyValueIconMap.get(value.id) ??
+                            metadataService.getPropertyIcon(value.id) ??
+                            resolveUXIcon(settings.interfaceIcons, 'nav-property-value'),
+                        color: getPropertyRowColor(value.id, propertyValueColorMap, value.id),
+                        label: value.name,
+                        level: 2,
+                        isMissing: false,
+                        itemType: 'property'
+                    }
+                }),
+                buildMissingRow: name => {
+                    const key = buildPropertyValueNodeIdFromKeyNodeId(parentKey, name);
+                    return {
+                        key,
+                        name,
+                        parentPath: parentKey,
+                        hasChildren: false,
+                        props: {
+                            icon: 'lucide-circle-off',
+                            label: name,
+                            level: 2,
+                            isMissing: true,
+                            itemType: 'property',
+                            trailingAccessory: buildRemoveMissingAction(key, () =>
+                                removeMissingChildName('propertyChildOrder', parentKey, name)
+                            )
+                        }
+                    };
+                }
+            });
+        },
+        [
+            buildRemoveMissingAction,
+            createPropertySortMenu,
+            metadataService,
+            propertyChildOrder,
+            propertyReorderItems,
+            propertySortOrder,
+            getPropertyRowColor,
+            propertyValueColorMap,
+            propertyValueIconMap,
+            propertyTreeSortOverrides,
+            removeMissingChildName,
+            renderSortBadge,
+            reorderableRootProperties,
+            rootOrderingPropertyTree,
+            settings.interfaceIcons,
+            includeDescendantNotes
+        ]
+    );
+
+    // Availability covers every level, read from the trees rather than expanded rows
+    const canReorderTags = useMemo(() => {
+        if (reorderableRootTags.length > 1) {
+            return true;
+        }
+        const hasReorderableChildren = (node: TagTreeNode): boolean =>
+            node.children.size > 1 || Array.from(node.children.values()).some(hasReorderableChildren);
+        return Array.from(visibleTagTree.values()).some(hasReorderableChildren);
+    }, [reorderableRootTags.length, visibleTagTree]);
+    const canReorderProperties =
+        reorderableRootProperties.length > 1 || Array.from(rootOrderingPropertyTree.values()).some(node => node.children.size > 1);
+    const canReorderRootItems = canReorderSections || canReorderFolders || canReorderTags || canReorderProperties;
+
     const sectionReorderItems = useMemo<SectionReorderRenderItem[]>(() => {
         return sectionDisplayOrder.map(identifier => {
             const isHidden =
                 (identifier === NavigationSectionId.SHORTCUTS && !showShortcuts) ||
                 (identifier === NavigationSectionId.RECENT && !showRecentNotes) ||
-                (identifier === NavigationSectionId.FOLDERS && rootFolderDescriptors.length === 0) ||
+                (identifier === NavigationSectionId.FOLDERS && !showRootFolder && !hasRootFolders) ||
                 (identifier === NavigationSectionId.TAGS && !showTags) ||
                 (identifier === NavigationSectionId.PROPERTIES && !propertiesSectionActive);
             let icon = 'lucide-circle';
@@ -779,6 +1290,8 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
             let chevronIcon: string | undefined;
             let onClick: ((event: React.MouseEvent<HTMLDivElement>) => void) | undefined;
             let color: string | undefined;
+            let countSlot: React.ReactNode;
+            let onContextMenu: ((event: React.MouseEvent<HTMLDivElement>) => void) | undefined;
 
             if (identifier === NavigationSectionId.SHORTCUTS) {
                 icon = resolveUXIcon(settings.interfaceIcons, 'nav-shortcuts');
@@ -787,9 +1300,22 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                 icon = resolveUXIcon(settings.interfaceIcons, 'nav-recent-files');
                 label = strings.navigationPane.recentFilesHeader;
             } else if (identifier === NavigationSectionId.FOLDERS) {
-                if (vaultRootDescriptor) {
-                    const vaultIcon = rootFolderIconMap.get(vaultRootDescriptor.key);
-                    color = rootFolderColorMap.get(vaultRootDescriptor.key);
+                if (showRootFolder) {
+                    const vaultIcon = rootFolderIconMap.get(vaultRoot.path);
+                    color = rootFolderColorMap.get(vaultRoot.path);
+                    // The vault root row is the folders section header here, so it carries the root's sort indicator
+                    countSlot = renderSortBadge(folderChildOrder, folderTreeSortOverrides, vaultRoot.path);
+                    const hasManualRootOrder = getChildOrder(folderChildOrder, vaultRoot.path).length > 0;
+                    onContextMenu =
+                        hasRootFolders || hasManualRootOrder
+                            ? createSortContextMenu({
+                                  hasManualOrder: hasManualRootOrder,
+                                  override: getOwnOverride(folderTreeSortOverrides, vaultRoot.path),
+                                  defaultLabel: folderDefaultSortLabel,
+                                  onDefault: () => metadataService.removeFolderChildSortOrderOverride(vaultRoot.path),
+                                  onAlpha: order => metadataService.setFolderChildSortOrderOverride(vaultRoot.path, order)
+                              })
+                            : undefined;
                     if (vaultIcon) {
                         icon = vaultIcon;
                     } else {
@@ -799,8 +1325,8 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                         app,
                         metadataService,
                         settings: { customVaultName },
-                        folderPath: vaultRootDescriptor.key,
-                        fallbackName: vaultRootDescriptor.folder?.name ?? app.vault.getRoot().name
+                        folderPath: vaultRoot.path,
+                        fallbackName: vaultRoot.name
                     });
                 } else {
                     icon = NOTEBOOK_NAVIGATOR_ICON_ID;
@@ -832,6 +1358,8 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                     color,
                     onClick,
                     chevronIcon,
+                    countSlot,
+                    onContextMenu,
                     itemType: 'section',
                     className: isHidden ? 'nn-excluded' : undefined
                 }
@@ -843,14 +1371,20 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         showRecentNotes,
         showTags,
         propertiesSectionActive,
-        rootFolderDescriptors.length,
-        vaultRootDescriptor,
+        hasRootFolders,
+        showRootFolder,
+        vaultRoot,
         rootFolderIconMap,
         rootFolderColorMap,
         customVaultName,
         app,
         metadataService,
-        settings.interfaceIcons,
+        settings,
+        createSortContextMenu,
+        folderChildOrder,
+        folderDefaultSortLabel,
+        folderTreeSortOverrides,
+        renderSortBadge,
         foldersSectionExpanded,
         tagsSectionExpanded,
         handleToggleFoldersSection,
@@ -859,49 +1393,47 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
         handleTogglePropertiesSection
     ]);
 
-    const handleResetRootFolderOrder = useCallback(async () => {
+    // Clears the manual order of every folder level; a single folder resets from its context menu
+    const handleResetFolderOrder = useCallback(async () => {
         await updateSettings(current => {
-            current.rootFolderOrder = [];
+            current.folderChildOrder = sanitizeRecord<string[]>(undefined);
         });
     }, [updateSettings]);
 
-    const handleResetRootTagOrder = useCallback(async () => {
+    // Each category's reset clears every level: the root order and every nested manual order
+    const handleResetTagOrder = useCallback(async () => {
         await updateSettings(current => {
             current.rootTagOrder = [];
+            current.tagChildOrder = sanitizeRecord<string[]>(undefined);
         });
     }, [updateSettings]);
 
-    const handleResetRootPropertyOrder = useCallback(async () => {
+    const handleResetPropertyOrder = useCallback(async () => {
         await updateSettings(current => {
             current.rootPropertyOrder = [];
+            current.propertyChildOrder = sanitizeRecord<string[]>(undefined);
         });
     }, [updateSettings]);
 
     return {
-        reorderableRootFolders,
         reorderableRootTags,
         reorderableRootProperties,
         sectionReorderItems,
-        folderReorderItems,
-        tagReorderItems,
-        propertyReorderItems,
+        getFolderReorderChildren,
+        getTagReorderChildren,
+        getPropertyReorderChildren,
         canReorderSections,
-        canReorderRootFolders,
-        canReorderRootTags,
-        canReorderRootProperties,
+        canReorderFolders,
+        canReorderTags,
+        canReorderProperties,
         canReorderRootItems,
         showRootFolderSection,
         showRootTagSection,
         showRootPropertySection,
-        resetRootTagOrderLabel,
-        resetRootPropertyOrderLabel,
-        vaultRootDescriptor,
-        handleResetRootFolderOrder,
-        handleResetRootTagOrder,
-        handleResetRootPropertyOrder,
+        handleResetFolderOrder,
+        handleResetTagOrder,
+        handleResetPropertyOrder,
         reorderSectionOrder,
-        reorderRootFolderOrder,
-        reorderRootTagOrder,
-        reorderRootPropertyOrder
+        reorderTreeChildren
     };
 }
