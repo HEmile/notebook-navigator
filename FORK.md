@@ -41,6 +41,12 @@ Upstream 3.5.0 requires Obsidian 1.13 and removed the pre-1.13 settings pages. T
 page builds native setting definitions (`createTopicsSettingDefinitions` in `src/settings/tabs/TopicsTab.ts`) and uses
 render rows, so upstream's control key lists in `nativeSettingControls.ts` stay untouched.
 
+### Dependency review workflow removed (2026-11-15)
+
+Upstream's `.github/workflows/dependency-review.yml` needs GitHub's Dependency graph, which is off for this repository,
+so the check failed on every pull request. The fork deletes the workflow. If an upstream merge reports a modify/delete
+conflict on it, keep it deleted (`git rm`).
+
 ### Versioning
 
 The fork uses upstream's version numbers. Merge branches are named `merge-upstream-<version>`. When a merge includes
