@@ -43,6 +43,7 @@ import {
     buildPropertySeparatorKey,
     buildSectionSeparatorKey,
     buildTagSeparatorKey,
+    buildTopicSeparatorKey,
     parseNavigationSeparatorKey
 } from '../../../utils/navigationSeparators';
 import { normalizePropertyNodeId } from '../../../utils/propertyTree';
@@ -261,6 +262,7 @@ export function useNavigationPaneItemPipeline({
         const folderSeparators = new Set<string>();
         const tagSeparators = new Set<string>();
         const propertySeparators = new Set<string>();
+        const topicSeparators = new Set<string>();
         const sectionSeparatorIds = new Set<NavigationSectionIdType>();
         let useSectionSpacerForRootFolder = false;
 
@@ -308,12 +310,17 @@ export function useNavigationPaneItemPipeline({
                     propertySeparators.add(normalizedNodeId);
                 }
             }
+
+            if (descriptor.type === 'topic') {
+                topicSeparators.add(descriptor.name);
+            }
         });
 
         const hasAnySeparators =
             folderSeparators.size > 0 ||
             tagSeparators.size > 0 ||
             propertySeparators.size > 0 ||
+            topicSeparators.size > 0 ||
             sectionSeparatorIds.size > 0 ||
             useSectionSpacerForRootFolder;
 
@@ -321,6 +328,7 @@ export function useNavigationPaneItemPipeline({
             folderSeparators,
             tagSeparators,
             propertySeparators,
+            topicSeparators,
             sectionSeparatorIds,
             useSectionSpacerForRootFolder,
             hasAnySeparators
@@ -332,6 +340,7 @@ export function useNavigationPaneItemPipeline({
             folderSeparators,
             tagSeparators,
             propertySeparators,
+            topicSeparators,
             sectionSeparatorIds,
             useSectionSpacerForRootFolder,
             hasAnySeparators
@@ -370,7 +379,8 @@ export function useNavigationPaneItemPipeline({
             spacerKeysWithSeparators.size === 0 &&
             folderSeparators.size === 0 &&
             tagSeparators.size === 0 &&
-            propertySeparators.size === 0
+            propertySeparators.size === 0 &&
+            topicSeparators.size === 0
         ) {
             return items;
         }
@@ -409,6 +419,9 @@ export function useNavigationPaneItemPipeline({
                 propertySeparators.has(item.data.id)
             ) {
                 result.push(createCustomSeparator(buildPropertySeparatorKey(item.data.id)));
+            } else if (item.type === NavigationPaneItemType.TOPIC && topicSeparators.has(item.data.name.toLowerCase())) {
+                // A topic can show in several branches; the row path keeps each separator's key unique
+                result.push(createCustomSeparator(`${buildTopicSeparatorKey(item.data.name)}|${item.key}`));
             }
 
             result.push(item);

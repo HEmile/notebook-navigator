@@ -20,11 +20,11 @@ import { MenuItem } from 'obsidian';
 import { strings } from '../../i18n';
 import type { NotebookNavigatorSettings } from '../../settings/types';
 import type { MenuServices } from './menuTypes';
-import { ItemType } from '../../types';
 import { setAsyncOnClick } from './menuAsyncHelpers';
 import type { Menu } from 'obsidian';
 import { addShortcutRenameMenuItem } from './shortcutRenameMenuItem';
-import { resolveUXIconForMenu } from '../../utils/uxIcons';
+import { resolveUXIcon, resolveUXIconForMenu } from '../../utils/uxIcons';
+import { addStyleMenu } from './styleMenuBuilder';
 
 export interface TopicMenuBuilderParams {
     topicName: string;
@@ -44,68 +44,92 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
         menu.addSeparator();
     }
 
-    // Change icon, only while topic icons are shown
-    if (settings.showTopicIcons) {
-        menu.addItem((item: MenuItem) => {
-            setAsyncOnClick(item.setTitle(strings.contextMenu.topic.changeIcon).setIcon('lucide-image'), async () => {
-                const { IconPickerModal } = await import('../../modals/IconPickerModal');
-                // Topic icons have their own record, so the picker reports the choice instead of writing a tag icon
-                const modal = new IconPickerModal(app, metadataService, topicName, ItemType.TAG, {
-                    titleOverride: topicName,
-                    currentIconId: metadataService.getTopicIcon(topicName) ?? null,
-                    disableMetadataUpdates: true
-                });
-                modal.onChooseIcon = async iconId => {
-                    if (iconId) {
-                        await metadataService.setTopicIcon(topicName, iconId);
-                    } else {
-                        await metadataService.removeTopicIcon(topicName);
-                    }
-                    return { handled: true };
-                };
-                modal.open();
-            });
-        });
-    }
-
-    // Change color
-    menu.addItem((item: MenuItem) => {
-        setAsyncOnClick(item.setTitle(strings.contextMenu.topic.changeColor).setIcon('lucide-palette'), async () => {
-            const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, {
-                title: topicName,
-                initialColor: metadataService.getTopicColor(topicName) ?? null,
-                settingsProvider: metadataService.getSettingsProvider(),
-                onChooseColor: async color => {
+    // Appearance: one dialog for icon, color and background, opened on the tab of the chosen item
+    const openAppearanceModal = async (initialTab: 'icon' | 'color' | 'background'): Promise<void> => {
+        const { AppearanceModal } = await import('../../modals/AppearanceModal');
+        const modal = new AppearanceModal(app, {
+            title: topicName,
+            metadataService,
+            initialTab,
+            defaultIcon: settings.showTopicIcons ? resolveUXIcon(settings.interfaceIcons, 'nav-tag') : null,
+            icon: settings.showTopicIcons
+                ? {
+                      initial: metadataService.getTopicIcon(topicName) ?? null,
+                      apply: async iconId => {
+                          if (iconId === null) {
+                              await metadataService.removeTopicIcon(topicName);
+                              return;
+                          }
+                          await metadataService.setTopicIcon(topicName, iconId);
+                      }
+                  }
+                : undefined,
+            color: {
+                initial: metadataService.getTopicColor(topicName) ?? null,
+                apply: async color => {
                     if (color === null) {
                         await metadataService.removeTopicColor(topicName);
                         return;
                     }
                     await metadataService.setTopicColor(topicName, color);
                 }
-            });
-            modal.open();
-        });
-    });
-
-    // Change background color
-    menu.addItem((item: MenuItem) => {
-        setAsyncOnClick(item.setTitle(strings.contextMenu.topic.changeBackground).setIcon('lucide-paint-bucket'), async () => {
-            const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
-            const modal = new ColorPickerModal(app, {
-                title: topicName,
-                initialColor: metadataService.getTopicBackgroundColor(topicName) ?? null,
-                settingsProvider: metadataService.getSettingsProvider(),
-                onChooseColor: async color => {
+            },
+            background: {
+                initial: metadataService.getTopicBackgroundColor(topicName) ?? null,
+                apply: async color => {
                     if (color === null) {
                         await metadataService.removeTopicBackgroundColor(topicName);
                         return;
                     }
                     await metadataService.setTopicBackgroundColor(topicName, color);
                 }
-            });
-            modal.open();
+            }
         });
+        modal.open();
+    };
+
+    if (settings.showTopicIcons) {
+        menu.addItem((item: MenuItem) => {
+            setAsyncOnClick(item.setTitle(strings.contextMenu.topic.changeIcon).setIcon('lucide-image'), () => openAppearanceModal('icon'));
+        });
+    }
+
+    menu.addItem((item: MenuItem) => {
+        setAsyncOnClick(item.setTitle(strings.contextMenu.topic.changeColor).setIcon('lucide-palette'), () => openAppearanceModal('color'));
+    });
+
+    menu.addItem((item: MenuItem) => {
+        setAsyncOnClick(item.setTitle(strings.contextMenu.topic.changeBackground).setIcon('lucide-paint-bucket'), () =>
+            openAppearanceModal('background')
+        );
+    });
+
+    // Copy, paste and remove style, as for tags. Only the topic's own style counts, not inherited colors.
+    const topicIcon = metadataService.getTopicIcon(topicName);
+    const topicColor = metadataService.getTopicColor(topicName);
+    const topicBackground = metadataService.getTopicBackgroundColor(topicName);
+    addStyleMenu({
+        menu,
+        styleData: { icon: topicIcon, color: topicColor, background: topicBackground },
+        hasIcon: settings.showTopicIcons,
+        hasColor: true,
+        hasBackground: true,
+        applyStyle: async clipboard => {
+            const actions: Promise<void>[] = [];
+            if (clipboard.icon) {
+                actions.push(metadataService.setTopicIcon(topicName, clipboard.icon));
+            }
+            if (clipboard.color) {
+                actions.push(metadataService.setTopicColor(topicName, clipboard.color));
+            }
+            if (clipboard.background) {
+                actions.push(metadataService.setTopicBackgroundColor(topicName, clipboard.background));
+            }
+            await Promise.all(actions);
+        },
+        removeIcon: topicIcon ? async () => metadataService.removeTopicIcon(topicName) : undefined,
+        removeColor: topicColor ? async () => metadataService.removeTopicColor(topicName) : undefined,
+        removeBackground: topicBackground ? async () => metadataService.removeTopicBackgroundColor(topicName) : undefined
     });
 
     // Add to shortcuts / Remove from shortcuts
@@ -151,6 +175,20 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
             }
         });
     }
+
+    // Separator line above every row of this topic
+    const separatorTarget = { type: 'topic', name: topicName } as const;
+    const hasSeparator = metadataService.hasNavigationSeparator(separatorTarget);
+    menu.addItem((item: MenuItem) => {
+        const title = hasSeparator ? strings.contextMenu.navigation.removeSeparator : strings.contextMenu.navigation.addSeparator;
+        setAsyncOnClick(item.setTitle(title).setIcon('lucide-separator-horizontal'), async () => {
+            if (hasSeparator) {
+                await metadataService.removeNavigationSeparator(separatorTarget);
+                return;
+            }
+            await metadataService.addNavigationSeparator(separatorTarget);
+        });
+    });
 
     menu.addSeparator();
 

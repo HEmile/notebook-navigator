@@ -41,7 +41,7 @@ export const SPACER_ITEM_TYPES = new Set<NavigationPaneItemType>([
 
 const isCustomSeparatorKey = (key: string): boolean => {
     const parsed = parseNavigationSeparatorKey(key);
-    return parsed?.type === 'folder' || parsed?.type === 'tag' || parsed?.type === 'property';
+    return parsed?.type === 'folder' || parsed?.type === 'tag' || parsed?.type === 'property' || parsed?.type === 'topic';
 };
 
 /** Determines if the navigation item is a top-level folder, tag, or property eligible for root spacing */

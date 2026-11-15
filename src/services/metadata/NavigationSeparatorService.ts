@@ -29,6 +29,7 @@ import {
     buildPropertySeparatorKey,
     buildSectionSeparatorKey,
     buildTagSeparatorKey,
+    buildTopicSeparatorKey,
     normalizeNavigationSeparatorKey,
     parseNavigationSeparatorKey
 } from '../../utils/navigationSeparators';
@@ -232,6 +233,9 @@ export class NavigationSeparatorService extends BaseMetadataService {
         if (target.type === 'property') {
             const normalizedNodeId = normalizePropertyNodeId(target.nodeId);
             return normalizedNodeId ? buildPropertySeparatorKey(normalizedNodeId) : null;
+        }
+        if (target.type === 'topic') {
+            return target.name.trim() ? buildTopicSeparatorKey(target.name) : null;
         }
         const normalizedTagPath = normalizeTagPath(target.path);
         if (!normalizedTagPath) {

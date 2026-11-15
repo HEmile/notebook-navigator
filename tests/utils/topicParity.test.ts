@@ -30,6 +30,7 @@ import type { ExpansionAction } from '../../src/context/ExpansionContext';
 import { TFolder } from 'obsidian';
 import { selectionReducer } from '../../src/context/selection/state';
 import { SelectionAPI } from '../../src/api/modules/SelectionAPI';
+import { buildTopicSeparatorKey, normalizeNavigationSeparatorKey, parseNavigationSeparatorKey } from '../../src/utils/navigationSeparators';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { SelectionState } from '../../src/context/selection/types';
 import type { CombinedNavigationItem } from '../../src/types/virtualization';
@@ -158,5 +159,12 @@ describe('topic lists', () => {
 
         selectionAPI.updateTopicNavigationState(null);
         expect(selectionAPI.getSelectedTopicPath()).toBeNull();
+    });
+
+    it('have separator keys by lowercase name that survive normalization', () => {
+        expect(buildTopicSeparatorKey(' Machine Learning ')).toBe('topic:machine learning');
+        expect(parseNavigationSeparatorKey('topic:machine learning')).toEqual({ type: 'topic', name: 'machine learning' });
+        expect(normalizeNavigationSeparatorKey('topic:Machine Learning')).toBe('topic:machine learning');
+        expect(parseNavigationSeparatorKey('topic:')).toBeNull();
     });
 });

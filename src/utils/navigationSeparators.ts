@@ -61,12 +61,20 @@ export type PropertySeparatorTarget = {
     nodeId: string;
 };
 
-export type NavigationSeparatorTarget = SectionSeparatorTarget | FolderSeparatorTarget | TagSeparatorTarget | PropertySeparatorTarget;
+/** Fork: a separator before every row of a topic, keyed by lowercase topic name */
+export type TopicSeparatorTarget = {
+    type: 'topic';
+    name: string;
+};
+
+export type NavigationSeparatorTarget =
+    SectionSeparatorTarget | FolderSeparatorTarget | TagSeparatorTarget | PropertySeparatorTarget | TopicSeparatorTarget;
 
 const SECTION_PREFIX = 'section:';
 const FOLDER_PREFIX = 'folder:';
 const TAG_PREFIX = 'tag:';
 const PROPERTY_PREFIX = 'property:';
+const TOPIC_PREFIX = 'topic:';
 
 /** Builds the persisted key for a section separator entry */
 export function buildSectionSeparatorKey(id: NavigationSectionId): string {
@@ -87,6 +95,11 @@ export function buildTagSeparatorKey(path: string): string {
 /** Builds the persisted key for a property separator entry */
 export function buildPropertySeparatorKey(nodeId: string): string {
     return `${PROPERTY_PREFIX}${nodeId}`;
+}
+
+/** Fork: builds the persisted key for a topic separator entry */
+export function buildTopicSeparatorKey(name: string): string {
+    return `${TOPIC_PREFIX}${name.trim().toLowerCase()}`;
 }
 
 /** Parses a section key suffix (e.g. "shortcuts", "recents") into a NavigationSectionId */
@@ -135,6 +148,11 @@ export function parseNavigationSeparatorKey(key: string): NavigationSeparatorTar
         };
     }
 
+    if (key.startsWith(TOPIC_PREFIX)) {
+        const name = key.slice(TOPIC_PREFIX.length);
+        return name ? { type: 'topic', name } : null;
+    }
+
     return null;
 }
 
@@ -159,6 +177,10 @@ export function normalizeNavigationSeparatorKey(key: string): string | null {
             return null;
         }
         return buildTagSeparatorKey(normalizedTagPath);
+    }
+
+    if (descriptor.type === 'topic') {
+        return descriptor.name.trim() ? buildTopicSeparatorKey(descriptor.name) : null;
     }
 
     const normalizedNodeId = normalizePropertyNodeId(descriptor.nodeId);
