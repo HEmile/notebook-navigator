@@ -23,7 +23,7 @@ import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { TopicNode } from '../../src/types/storage';
 
 vi.mock('../../src/context/SettingsContext', () => ({
-    useSettingsState: () => ({ ...DEFAULT_SETTINGS, showTagIcons: true, separateNoteCounts: true })
+    useSettingsState: () => ({ ...DEFAULT_SETTINGS, showTopicIcons: true, separateNoteCounts: true })
 }));
 vi.mock('../../src/context/UXPreferencesContext', () => ({
     useUXPreferences: () => ({ includeDescendantNotes: true, showHiddenItems: false })

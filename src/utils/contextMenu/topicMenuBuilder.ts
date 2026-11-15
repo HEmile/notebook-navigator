@@ -44,27 +44,29 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
         menu.addSeparator();
     }
 
-    // Change icon
-    menu.addItem((item: MenuItem) => {
-        setAsyncOnClick(item.setTitle(strings.contextMenu.topic.changeIcon).setIcon('lucide-image'), async () => {
-            const { IconPickerModal } = await import('../../modals/IconPickerModal');
-            // Topic icons have their own record, so the picker reports the choice instead of writing a tag icon
-            const modal = new IconPickerModal(app, metadataService, topicName, ItemType.TAG, {
-                titleOverride: topicName,
-                currentIconId: metadataService.getTopicIcon(topicName) ?? null,
-                disableMetadataUpdates: true
+    // Change icon, only while topic icons are shown
+    if (settings.showTopicIcons) {
+        menu.addItem((item: MenuItem) => {
+            setAsyncOnClick(item.setTitle(strings.contextMenu.topic.changeIcon).setIcon('lucide-image'), async () => {
+                const { IconPickerModal } = await import('../../modals/IconPickerModal');
+                // Topic icons have their own record, so the picker reports the choice instead of writing a tag icon
+                const modal = new IconPickerModal(app, metadataService, topicName, ItemType.TAG, {
+                    titleOverride: topicName,
+                    currentIconId: metadataService.getTopicIcon(topicName) ?? null,
+                    disableMetadataUpdates: true
+                });
+                modal.onChooseIcon = async iconId => {
+                    if (iconId) {
+                        await metadataService.setTopicIcon(topicName, iconId);
+                    } else {
+                        await metadataService.removeTopicIcon(topicName);
+                    }
+                    return { handled: true };
+                };
+                modal.open();
             });
-            modal.onChooseIcon = async iconId => {
-                if (iconId) {
-                    await metadataService.setTopicIcon(topicName, iconId);
-                } else {
-                    await metadataService.removeTopicIcon(topicName);
-                }
-                return { handled: true };
-            };
-            modal.open();
         });
-    });
+    }
 
     // Change color
     menu.addItem((item: MenuItem) => {

@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { resolveTopicStyle } from '../utils/topicStyle';
 import { useEffect, useMemo, useState } from 'react';
 import { TAbstractFile, TFile } from 'obsidian';
 import { useServices, useMetadataService } from '../context/ServicesContext';
@@ -225,6 +226,7 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
             folderColors: settings.folderColors || {},
             tagColors: settings.tagColors || {},
             topicColors: settings.topicColors || {},
+            topicIcons: settings.topicIcons || {},
             propertyColors: settings.propertyColors || {},
             virtualFolderColors: settings.virtualFolderColors || {},
             enableFolderNotes: settings.enableFolderNotes,
@@ -297,6 +299,14 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
             return resolveUXIcon(settings.interfaceIcons, 'nav-property');
         }
 
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            if (!settings.showTopicIcons) {
+                return '';
+            }
+            const topicName = selectionState.selectedTopicPath.split('/').pop() ?? selectionState.selectedTopicPath;
+            return metadataService.getTopicIcon(topicName) || resolveUXIcon(settings.interfaceIcons, 'nav-tag');
+        }
+
         return '';
     }, [
         expansionState.expandedFolders,
@@ -304,6 +314,7 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
         selectionState.selectedFolder,
         selectionState.selectedTag,
         selectionState.selectedProperty,
+        selectionState.selectedTopicPath,
         selectionState.selectionType,
         hiddenFolders,
         showHiddenItems,
@@ -312,6 +323,7 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
         settings.showPropertyIcons,
         settings.showRootFolder,
         settings.showTagIcons,
+        settings.showTopicIcons,
         metadataVersion
     ]);
 
@@ -379,10 +391,11 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
         }
 
         if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
-            // Topic rows read their color from the topic color record keyed by topic name, without rainbow colors.
-            const topicPath = selectionState.selectedTopicPath;
-            const topicName = topicPath.split('/').pop() ?? topicPath;
-            return metadataService.getTopicColor(topicName);
+            // Matches the topic row: own color, then inherited along the path and from the Topics section, no rainbow
+            return resolveTopicStyle(metadataService, selectionState.selectedTopicPath, {
+                inheritTopicColors: settings.inheritTopicColors,
+                virtualFolderColors: settings.virtualFolderColors
+            }).color;
         }
 
         return undefined;
@@ -401,6 +414,7 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
         settings.inheritTagColors,
         settings.showAllPropertiesFolder,
         settings.showAllTagsFolder,
+        settings.inheritTopicColors,
         settings.virtualFolderColors
     ]);
 
@@ -606,7 +620,8 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
         showIcon:
             (selectionState.selectionType === ItemType.FOLDER && settings.showFolderIcons && iconName.length > 0) ||
             (selectionState.selectionType === ItemType.TAG && settings.showTagIcons && iconName.length > 0) ||
-            (selectionState.selectionType === ItemType.PROPERTY && settings.showPropertyIcons && iconName.length > 0),
+            (selectionState.selectionType === ItemType.PROPERTY && settings.showPropertyIcons && iconName.length > 0) ||
+            (selectionState.selectionType === ItemType.TOPIC && settings.showTopicIcons && iconName.length > 0),
         selectionType: selectionState.selectionType
     };
 }

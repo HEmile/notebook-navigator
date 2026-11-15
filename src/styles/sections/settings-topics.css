@@ -1,0 +1,20 @@
+/* Source: src/styles/sections/settings-topics.css */
+
+/* ========================================================================
+   Topics settings page (fork)
+   ======================================================================== */
+
+/* Hidden topics list under the setting description */
+.nn-hidden-topics-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-4-1);
+    margin-top: var(--size-4-2);
+}
+
+.nn-hidden-topics-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--size-4-2);
+}

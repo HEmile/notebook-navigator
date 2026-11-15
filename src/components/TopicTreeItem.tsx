@@ -162,10 +162,10 @@ export const TopicTreeItem = React.memo(
         }, [hasChildren, iconVersion, isExpanded, settings.interfaceIcons]);
 
         React.useEffect(() => {
-            if (iconRef.current && settings.showTagIcons) {
+            if (iconRef.current && settings.showTopicIcons) {
                 getIconService().renderIcon(iconRef.current, icon || resolveUXIcon(settings.interfaceIcons, 'nav-tag'));
             }
-        }, [icon, iconVersion, settings.interfaceIcons, settings.showTagIcons]);
+        }, [icon, iconVersion, settings.interfaceIcons, settings.showTopicIcons]);
 
         React.useImperativeHandle(ref, () => itemRef.current as HTMLDivElement);
 
@@ -199,7 +199,7 @@ export const TopicTreeItem = React.memo(
                         onDoubleClick={handleChevronDoubleClick}
                         tabIndex={-1}
                     />
-                    {settings.showTagIcons && <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />}
+                    {settings.showTopicIcons && <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />}
                     <span className={nameClassName} style={applyColorToName ? { color } : undefined}>
                         {topicNode.name}
                     </span>

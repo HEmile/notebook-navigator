@@ -16,7 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { NavigationPaneItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGS_ROOT_VIRTUAL_FOLDER_ID } from '../../../types';
+import {
+    NavigationPaneItemType,
+    PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
+    TAGS_ROOT_VIRTUAL_FOLDER_ID,
+    TOPICS_ROOT_VIRTUAL_FOLDER_ID
+} from '../../../types';
 import type { CombinedNavigationItem } from '../../../types/virtualization';
 import { parseNavigationSeparatorKey } from '../../../utils/navigationSeparators';
 
@@ -54,6 +59,10 @@ const isRootSpacingCandidate = (item: CombinedNavigationItem, options: RootSpaci
     if (item.type === NavigationPaneItemType.PROPERTY_KEY) {
         return item.level === options.propertyRootLevel;
     }
+    // Fork: root topics sit under the always-shown Topics header, at level 1
+    if (item.type === NavigationPaneItemType.TOPIC) {
+        return item.level === 1;
+    }
     return false;
 };
 
@@ -75,6 +84,9 @@ export function insertRootSpacing(items: CombinedNavigationItem[], spacing: numb
         }
         if (item.data.id === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
             return options.propertyRootLevel > 0;
+        }
+        if (item.data.id === TOPICS_ROOT_VIRTUAL_FOLDER_ID) {
+            return true;
         }
         return false;
     };

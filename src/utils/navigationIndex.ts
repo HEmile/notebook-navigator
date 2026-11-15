@@ -103,7 +103,8 @@ function isIndentGuideTreeItem<TItem extends IndentGuideItem>(item: TItem): item
         item.type === NavigationPaneItemType.UNTAGGED ||
         item.type === NavigationPaneItemType.PROPERTY_KEY ||
         item.type === NavigationPaneItemType.PROPERTY_VALUE ||
-        item.type === NavigationPaneItemType.VIRTUAL_FOLDER
+        item.type === NavigationPaneItemType.VIRTUAL_FOLDER ||
+        item.type === NavigationPaneItemType.TOPIC
     );
 }
 

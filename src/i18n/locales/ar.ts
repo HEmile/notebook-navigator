@@ -2473,6 +2473,25 @@ export const STRINGS_AR = {
                     highToLow: 'high to low'
                 }
             },
+            showTopicIcons: {
+                name: 'Show topic icons',
+                desc: 'Display icons next to topics in the navigation pane.'
+            },
+            inheritTopicColors: {
+                name: 'Inherit topic colors',
+                desc: 'Topics without a color take the color of the parent topic they are shown under, or of the Topics section.'
+            },
+            topicTags: {
+                name: 'Topic tags',
+                desc: 'Notes with one of these tags, or a tag nested under one, become topics. Separate tags with commas.',
+                placeholder: 'topic, person'
+            },
+            hiddenTopics: {
+                name: 'Hidden topics',
+                desc: 'Topics hidden from the navigation pane. Hide a topic from its context menu.',
+                empty: 'No hidden topics.',
+                unhide: 'Show topic'
+            },
             showTags: {
                 name: 'إظهار الوسوم',
                 desc: 'عرض قسم الوسوم في المتصفح.'

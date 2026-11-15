@@ -43,6 +43,12 @@ export function sanitizeTopicSettings(settings: NotebookNavigatorSettings): void
     if (typeof settings.showTopics !== 'boolean') {
         settings.showTopics = DEFAULT_SETTINGS.showTopics;
     }
+    if (typeof settings.showTopicIcons !== 'boolean') {
+        settings.showTopicIcons = DEFAULT_SETTINGS.showTopicIcons;
+    }
+    if (typeof settings.inheritTopicColors !== 'boolean') {
+        settings.inheritTopicColors = DEFAULT_SETTINGS.inheritTopicColors;
+    }
     if (typeof settings.topicSortOrder !== 'string' || !isTagSortOrder(settings.topicSortOrder)) {
         settings.topicSortOrder = DEFAULT_SETTINGS.topicSortOrder;
     }

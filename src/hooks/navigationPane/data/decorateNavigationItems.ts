@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { resolveTopicStyle } from '../../../utils/topicStyle';
 import { TFile } from 'obsidian';
 import type { App } from 'obsidian';
 
@@ -231,11 +232,12 @@ function decorateRecentNoteNavigationItem(ctx: NavigationItemDecorationContext, 
 
 function decorateTopicNavigationItem(ctx: NavigationItemDecorationContext, item: TopicNavigationItem): CombinedNavigationItem {
     const topicNode = item.data;
+    const style = resolveTopicStyle(ctx.metadataService, item.key, ctx.settings);
     return {
         ...item,
         icon: ctx.metadataService.getTopicIcon(topicNode.name),
-        color: ctx.metadataService.getTopicColor(topicNode.name),
-        backgroundColor: ctx.metadataService.getTopicBackgroundColor(topicNode.name)
+        color: style.color,
+        backgroundColor: style.backgroundColor
     };
 }
 

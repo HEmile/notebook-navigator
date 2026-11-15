@@ -158,6 +158,8 @@ Keep this list ordered: later files override earlier ones.
 @import './sections/icons-system.css';
 /* settings-metadata-info.css: metadata info row styles. */
 @import './sections/settings-metadata-info.css';
+/* settings-topics.css: fork Topics settings page (hidden topics list). */
+@import './sections/settings-topics.css';
 
 /* Style settings */
 /* settings-style-settings.css: Style Settings metadata block (`@settings`) for variables and class toggles. */
