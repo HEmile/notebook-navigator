@@ -41,6 +41,7 @@ import { FolderSuggestModal } from '../modals/FolderSuggestModal';
 import { buildPropertyNodeSuggestions, PropertyNodeSuggestModal } from '../modals/PropertyNodeSuggestModal';
 import { TagSuggestModal } from '../modals/TagSuggestModal';
 import { TopicSuggestModal } from '../modals/TopicSuggestModal';
+import { useRestoreSelectedTopic } from '../hooks/useRestoreSelectedTopic';
 import { resolveTopicPath } from '../utils/topicGraph';
 import {
     ItemType,
@@ -305,6 +306,14 @@ export const NotebookNavigatorComponent = React.memo(
         const [isPaneTransitioning, setIsPaneTransitioning] = useState(false);
         const [suppressPaneTransitions, setSuppressPaneTransitions] = useState(false);
         const navigationPaneRef = useRef<NavigationPaneHandle | null>(null);
+        useRestoreSelectedTopic({
+            topicService,
+            showTopics: settings.showTopics,
+            expandedVirtualFolders: expansionState.expandedVirtualFolders,
+            selectionDispatch,
+            expansionDispatch,
+            navigationPaneRef
+        });
         const listPaneRef = useRef<ListPaneHandle | null>(null);
         // Layout is provisional until the container is measured. Recording that initial
         // calculation as dual pane would make a narrow startup look like a later resize.

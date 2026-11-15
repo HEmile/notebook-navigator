@@ -272,6 +272,7 @@ export interface LocalStorageKeys {
     expandedPropertiesKey: string;
     expandedVirtualFoldersKey: string;
     expandedTopicsKey: string;
+    selectedTopicKey: string;
     selectedFolderKey: string;
     selectedPropertyKey: string;
     selectedFileKey: string;
@@ -342,6 +343,7 @@ export const STORAGE_KEYS: LocalStorageKeys = {
     expandedPropertiesKey: 'notebook-navigator-expanded-properties',
     expandedVirtualFoldersKey: 'notebook-navigator-expanded-virtual-folders',
     expandedTopicsKey: 'notebook-navigator-expanded-topics',
+    selectedTopicKey: 'notebook-navigator-selected-topic',
     selectedFolderKey: 'notebook-navigator-selected-folder',
     selectedPropertyKey: 'notebook-navigator-selected-property',
     selectedFileKey: 'notebook-navigator-selected-file',

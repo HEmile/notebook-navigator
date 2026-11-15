@@ -602,6 +602,15 @@ export function useSelectionPersistence({ api, app, state }: UseSelectionPersist
         persistStoredValue(STORAGE_KEYS.selectedTagKey, state.selectedTag, 'Failed to save selected tag to localStorage:');
     }, [state.selectedTag]);
 
+    // Fork: the selected topic path, restored by useRestoreSelectedTopic once the topic graph is built
+    useEffect(() => {
+        persistStoredValue(
+            STORAGE_KEYS.selectedTopicKey,
+            state.selectionType === 'topic' ? state.selectedTopicPath : null,
+            'Failed to save selected topic to localStorage:'
+        );
+    }, [state.selectedTopicPath, state.selectionType]);
+
     useEffect(() => {
         persistStoredValue(STORAGE_KEYS.selectedPropertyKey, state.selectedProperty, 'Failed to save selected property to localStorage:');
     }, [state.selectedProperty]);

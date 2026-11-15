@@ -258,6 +258,24 @@ function getFilesForCommandSelection(plugin: NotebookNavigatorPlugin, selectionS
 
 function resolveStoredCommandSelection(plugin: NotebookNavigatorPlugin, currentFile: TFile | null): CommandNavigationSelectionScope {
     const vault = plugin.app.vault;
+
+    // Fork: a stored topic selection wins while the topic still exists, as the navigator restores it first
+    if (plugin.settings.showTopics) {
+        try {
+            const storedTopicPath = localStorage.get<string>(STORAGE_KEYS.selectedTopicKey);
+            if (storedTopicPath && plugin.topicService?.findTopicNodeByPath(storedTopicPath)) {
+                return {
+                    selectionType: ItemType.TOPIC,
+                    selectedFolder: null,
+                    selectedTag: null,
+                    selectedProperty: null,
+                    selectedTopicPath: storedTopicPath
+                };
+            }
+        } catch (error) {
+            console.error('Failed to load selected topic from localStorage:', error);
+        }
+    }
     let selectedProperty: PropertySelectionNodeId | null = null;
     let selectedTag: string | null = null;
     let selectedFolder: TFolder | null = null;

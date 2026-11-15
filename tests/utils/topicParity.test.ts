@@ -30,6 +30,8 @@ import type { ExpansionAction } from '../../src/context/ExpansionContext';
 import { TFolder } from 'obsidian';
 import { selectionReducer } from '../../src/context/selection/state';
 import { SelectionAPI } from '../../src/api/modules/SelectionAPI';
+import { getTopicAncestorPaths } from '../../src/hooks/useRestoreSelectedTopic';
+import { STORAGE_KEYS } from '../../src/types';
 import { buildTopicSeparatorKey, normalizeNavigationSeparatorKey, parseNavigationSeparatorKey } from '../../src/utils/navigationSeparators';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { SelectionState } from '../../src/context/selection/types';
@@ -166,5 +168,11 @@ describe('topic lists', () => {
         expect(parseNavigationSeparatorKey('topic:machine learning')).toEqual({ type: 'topic', name: 'machine learning' });
         expect(normalizeNavigationSeparatorKey('topic:Machine Learning')).toBe('topic:machine learning');
         expect(parseNavigationSeparatorKey('topic:')).toBeNull();
+    });
+
+    it('restore through a stored path whose ancestors are expanded', () => {
+        expect(STORAGE_KEYS.selectedTopicKey).toBe('notebook-navigator-selected-topic');
+        expect(getTopicAncestorPaths('Science/Physics/Optics')).toEqual(['Science', 'Science/Physics']);
+        expect(getTopicAncestorPaths('Science')).toEqual([]);
     });
 });
