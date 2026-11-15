@@ -470,9 +470,13 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
             if (identifier === NavigationSectionId.PROPERTIES) {
                 return propertiesSectionActive;
             }
+            if (identifier === NavigationSectionId.TOPICS) {
+                return settings.showTopics;
+            }
             return true;
         });
     }, [
+        settings.showTopics,
         hasRootFolders,
         reorderableRootTags.length,
         propertiesSectionActive,
@@ -1284,7 +1288,8 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                 (identifier === NavigationSectionId.RECENT && !showRecentNotes) ||
                 (identifier === NavigationSectionId.FOLDERS && !showRootFolder && !hasRootFolders) ||
                 (identifier === NavigationSectionId.TAGS && !showTags) ||
-                (identifier === NavigationSectionId.PROPERTIES && !propertiesSectionActive);
+                (identifier === NavigationSectionId.PROPERTIES && !propertiesSectionActive) ||
+                (identifier === NavigationSectionId.TOPICS && !settings.showTopics);
             let icon = 'lucide-circle';
             let label = '';
             let chevronIcon: string | undefined;
@@ -1344,6 +1349,10 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                 label = strings.navigationPane.properties;
                 chevronIcon = propertiesSectionExpanded ? 'lucide-chevron-down' : 'lucide-chevron-right';
                 onClick = handleTogglePropertiesSection;
+            } else if (identifier === NavigationSectionId.TOPICS) {
+                // Matches the Topics section header in the navigation pane
+                icon = resolveUXIcon(settings.interfaceIcons, 'nav-tags');
+                label = strings.navigationPane.topics;
             }
 
             return {
