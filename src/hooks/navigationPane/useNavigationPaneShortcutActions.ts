@@ -425,10 +425,26 @@ export function useNavigationPaneShortcutActions({
             setActiveShortcut(shortcutKey);
             onNavigateToTopic(topicName);
             setSelectedShortcut({ key: shortcutKey, target: { type: 'topic', topicName } });
+
+            // Keyboard focus goes to the navigator, as tag shortcuts do, so the arrow keys work right after the click
+            if (!uiState.singlePane) {
+                uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
+                rootContainerRef.current?.focus();
+            }
+
             selectionDispatch({ type: 'SET_KEYBOARD_NAVIGATION', isKeyboardNavigation: true });
             scheduleShortcutRelease();
         },
-        [onNavigateToTopic, scheduleShortcutRelease, selectionDispatch, setActiveShortcut, setSelectedShortcut]
+        [
+            onNavigateToTopic,
+            rootContainerRef,
+            scheduleShortcutRelease,
+            selectionDispatch,
+            setActiveShortcut,
+            setSelectedShortcut,
+            uiDispatch,
+            uiState.singlePane
+        ]
     );
 
     // Selects a note shortcut's note without revealing it and shows the shortcut as selected, as a click does, for
