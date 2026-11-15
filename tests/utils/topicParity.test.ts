@@ -20,7 +20,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 import { shouldShowFileItemParentFolderLine } from '../../src/utils/listPaneMeasurements';
 import { partitionPinnedFiles } from '../../src/utils/fileFinder';
 import { ItemType } from '../../src/types';
@@ -41,7 +41,7 @@ describe('topic lists', () => {
     });
 
     it('only show notes pinned in topic context in the pinned group', () => {
-        const files = ['a.md', 'b.md', 'c.md'].map(path => ({ path }) as TFile);
+        const files = ['a.md', 'b.md', 'c.md'].map(path => new TFile(path));
         const pinnedNotes = {
             'a.md': { folder: true, tag: false, property: false, topic: false },
             'b.md': { folder: false, tag: false, property: false, topic: true },
