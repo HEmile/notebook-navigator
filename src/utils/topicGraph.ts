@@ -76,7 +76,7 @@ export function getTopicNameFromPath(topicPath: string): string {
         topicPath = topicPath.split('/').pop() || '';
     }
     if (topicPath.endsWith('.md')) {
-        return topicPath.split('.').slice(0, -1).join('') || '';
+        return topicPath.slice(0, -'.md'.length);
     }
     return topicPath;
 }

@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { collectTopicFilePaths, findTopicNode, resolveTopicPath } from '../../src/utils/topicGraph';
+import { collectTopicFilePaths, findTopicNode, getTopicNameFromPath, resolveTopicPath } from '../../src/utils/topicGraph';
 import { parseFilterSearchTokens } from '../../src/utils/filterSearch';
 import type { TopicNode } from '../../src/types/storage';
 
@@ -126,5 +126,18 @@ describe('topic search tokens', () => {
     it('resolve excluded topics whose names have capitals', () => {
         const tokens = parseFilterSearchTokens('!topic:"Hobbies"');
         expect(findTopicNode(createGraph(), tokens.excludeTopicTokens[0])?.name).toBe('Hobbies');
+    });
+});
+
+describe('getTopicNameFromPath', () => {
+    it('strips the folder and the .md extension', () => {
+        expect(getTopicNameFromPath('Topics/Physics.md')).toBe('Physics');
+        expect(getTopicNameFromPath('Science/Physics')).toBe('Physics');
+    });
+
+    it('keeps dots inside the name', () => {
+        expect(getTopicNameFromPath('Topics/v1.2.md')).toBe('v1.2');
+        expect(getTopicNameFromPath('Dr. Who.md')).toBe('Dr. Who');
+        expect(getTopicNameFromPath('Science/Node.js')).toBe('Node.js');
     });
 });
