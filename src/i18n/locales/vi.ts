@@ -1031,6 +1031,7 @@ export const STRINGS_VI = {
         navigateToTopic: 'Navigate to topic',
         navigateToTopicPlaceholder: 'Navigate to topic...',
         toggleTopicSort: 'Toggle topic sort order',
+        topicLinkFailed: 'Could not link {file} to topic {topic}. Its hasTopic property has a value that is not a list.',
         restoreDefaultSettings: 'Khôi phục cài đặt mặc định' // Command palette: Replaces the settings file with defaults after startup was aborted (English: Restore default settings)
     },
 

@@ -1026,7 +1026,8 @@ export const STRINGS_EN = {
         revealActiveTopicAllPaths: 'Reveal active note topic (all paths)',
         navigateToTopic: 'Navigate to topic',
         navigateToTopicPlaceholder: 'Navigate to topic...',
-        toggleTopicSort: 'Toggle topic sort order'
+        toggleTopicSort: 'Toggle topic sort order',
+        topicLinkFailed: 'Could not link {file} to topic {topic}. Its hasTopic property has a value that is not a list.'
     },
 
     // Plugin UI

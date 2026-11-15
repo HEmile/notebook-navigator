@@ -1032,6 +1032,7 @@ export const STRINGS_ID = {
         navigateToTopic: 'Navigate to topic',
         navigateToTopicPlaceholder: 'Navigate to topic...',
         toggleTopicSort: 'Toggle topic sort order',
+        topicLinkFailed: 'Could not link {file} to topic {topic}. Its hasTopic property has a value that is not a list.',
         restoreDefaultSettings: 'Pulihkan pengaturan bawaan' // Command palette: Replaces the settings file with defaults after startup was aborted (English: Restore default settings)
     },
 

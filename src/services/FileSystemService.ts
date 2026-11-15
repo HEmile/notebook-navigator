@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { addTopicLinkToFrontmatter, type AddTopicLinkResult } from '../utils/topicFrontmatter';
 import { App, FileSystemAdapter, TFile, TFolder, TAbstractFile, Platform, WorkspaceLeaf, ViewState } from 'obsidian';
 import type { SelectionDispatch } from '../context/SelectionContext';
 import { strings } from '../i18n';
@@ -907,6 +908,59 @@ export class FileSystemOperations {
                 executeCommand(this.app, OBSIDIAN_COMMANDS.EDIT_FILE_TITLE);
             }, TIMEOUTS.FILE_OPERATION_DELAY);
             scheduleDeferredManualSortPrompt?.();
+
+            return file;
+        } catch (error) {
+            this.notifyError(strings.fileSystem.errors.createFile, error);
+            return null;
+        }
+    }
+
+    /**
+     * Fork: creates a new markdown file in the user's configured default location, linked to a topic through
+     * `hasTopic` in its frontmatter. Applies the target folder's template before updating frontmatter.
+     */
+    async createNewFileForTopic(topicName: string, sourcePath?: string, openInNewTab = false): Promise<TFile | null> {
+        const name = topicName.trim();
+        if (!name) {
+            return null;
+        }
+
+        try {
+            const activeFilePath = this.app.workspace.getActiveFile()?.path ?? '';
+            const sourceFilePath = sourcePath?.trim().length ? sourcePath : activeFilePath;
+            const defaultParent = this.app.fileManager.getNewFileParent(sourceFilePath ?? '');
+            const targetFolder = defaultParent instanceof TFolder ? defaultParent : this.app.vault.getRoot();
+            const file = await createFileWithOptions(targetFolder, this.app, {
+                extension: 'md',
+                openFile: false,
+                templateSettings: this.settingsProvider.settings
+            });
+            if (!file) {
+                return null;
+            }
+
+            let result: AddTopicLinkResult = 'added';
+            try {
+                await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
+                    result = addTopicLinkToFrontmatter(frontmatter, name);
+                });
+            } catch (error) {
+                console.error('[Notebook Navigator] Failed to link created note to topic', error);
+                result = 'unsupported-value';
+            }
+            if (result === 'unsupported-value') {
+                showNotice(strings.commands.topicLinkFailed.replace('{file}', file.basename).replace('{topic}', name), {
+                    variant: 'warning'
+                });
+            }
+
+            const leaf = this.app.workspace.getLeaf(openInNewTab);
+            await leaf.openFile(file, { state: { mode: 'source' }, active: true });
+
+            window.setTimeout(() => {
+                executeCommand(this.app, OBSIDIAN_COMMANDS.EDIT_FILE_TITLE);
+            }, TIMEOUTS.FILE_OPERATION_DELAY);
 
             return file;
         } catch (error) {

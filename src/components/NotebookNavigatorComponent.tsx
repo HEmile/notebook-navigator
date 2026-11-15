@@ -42,7 +42,7 @@ import { buildPropertyNodeSuggestions, PropertyNodeSuggestModal } from '../modal
 import { TagSuggestModal } from '../modals/TagSuggestModal';
 import { TopicSuggestModal } from '../modals/TopicSuggestModal';
 import { useRestoreSelectedTopic } from '../hooks/useRestoreSelectedTopic';
-import { resolveTopicPath } from '../utils/topicGraph';
+import { getTopicNameFromPath, resolveTopicPath } from '../utils/topicGraph';
 import {
     ItemType,
     NAVPANE_MEASUREMENTS,
@@ -1098,6 +1098,17 @@ export const NotebookNavigatorComponent = React.memo(
                     ) {
                         const sourcePath = selectionState.selectedFile?.path ?? app.workspace.getActiveFile()?.path ?? '';
                         await fileSystemOps.createNewFileForTag(selectionState.selectedTag, sourcePath, openInNewTab, manualSortContext);
+                        return;
+                    }
+
+                    // Fork: a new note under the selected topic is linked to it through hasTopic
+                    if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+                        const sourcePath = selectionState.selectedFile?.path ?? app.workspace.getActiveFile()?.path ?? '';
+                        await fileSystemOps.createNewFileForTopic(
+                            getTopicNameFromPath(selectionState.selectedTopicPath),
+                            sourcePath,
+                            openInNewTab
+                        );
                         return;
                     }
 

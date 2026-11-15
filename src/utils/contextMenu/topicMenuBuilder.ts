@@ -44,6 +44,15 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
         menu.addSeparator();
     }
 
+    // New note linked to this topic through hasTopic, in the default location for new notes
+    menu.addItem((item: MenuItem) => {
+        setAsyncOnClick(item.setTitle(strings.contextMenu.folder.newNote).setIcon('lucide-pen-box'), async () => {
+            const sourcePath = app.workspace.getActiveFile()?.path ?? '';
+            await services.fileSystemOps.createNewFileForTopic(topicName, sourcePath, settings.createNewNotesInNewTab);
+        });
+    });
+    menu.addSeparator();
+
     // Appearance: one dialog for icon, color and background, opened on the tab of the chosen item
     const openAppearanceModal = async (initialTab: 'icon' | 'color' | 'background'): Promise<void> => {
         const { AppearanceModal } = await import('../../modals/AppearanceModal');

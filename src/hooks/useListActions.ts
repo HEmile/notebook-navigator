@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { getTopicNameFromPath } from '../utils/topicGraph';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Menu, TFolder, type App, type TFile } from 'obsidian';
 import { useSelectionState, useSelectionDispatch } from '../context/SelectionContext';
@@ -498,7 +499,9 @@ export function useListActions({
     const openDefaultListAppearanceSettings = useCallback(() => {
         plugin.openSettings();
     }, [plugin]);
-    const canCreateNewFile = Boolean(selectionState.selectedFolder) || hasCreatableTagSelection || hasCreatablePropertySelection;
+    const hasCreatableTopicSelection = selectionState.selectionType === ItemType.TOPIC && Boolean(selectionState.selectedTopicPath);
+    const canCreateNewFile =
+        Boolean(selectionState.selectedFolder) || hasCreatableTagSelection || hasCreatablePropertySelection || hasCreatableTopicSelection;
     const getRevealableActiveFile = useCallback((): TFile | null => {
         const activeFile = app.workspace.getActiveFile();
         return activeFile?.parent ? activeFile : null;
@@ -554,6 +557,17 @@ export function useListActions({
                     settings.createNewNotesInNewTab,
                     manualSortContext
                 );
+                return;
+            }
+
+            // Fork: a new note under the selected topic is linked to it through hasTopic
+            if (hasCreatableTopicSelection && selectionState.selectedTopicPath) {
+                const sourcePath = selectionState.selectedFile?.path ?? app.workspace.getActiveFile()?.path ?? '';
+                await fileSystemOps.createNewFileForTopic(
+                    getTopicNameFromPath(selectionState.selectedTopicPath),
+                    sourcePath,
+                    settings.createNewNotesInNewTab
+                );
             }
         } catch {
             // Error is handled by FileSystemOperations with user notification
@@ -565,6 +579,8 @@ export function useListActions({
         selectionState.selectedFile,
         hasCreatableTagSelection,
         hasCreatablePropertySelection,
+        hasCreatableTopicSelection,
+        selectionState.selectedTopicPath,
         settings.createNewNotesInNewTab,
         getManualSortNewFileContext,
         fileSystemOps,
