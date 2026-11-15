@@ -85,4 +85,9 @@ describe('TopicTreeItem', () => {
         expect(html).toContain('nn-selected');
         expect(html).toContain('data-path="Science/Physics"');
     });
+
+    it('is draggable only when allowed', () => {
+        expect(render({ isDraggable: true })).toContain('draggable="true"');
+        expect(render()).toContain('draggable="false"');
+    });
 });

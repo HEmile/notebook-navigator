@@ -1028,7 +1028,9 @@ export const STRINGS_EN = {
         navigateToTopic: 'Navigate to topic',
         navigateToTopicPlaceholder: 'Navigate to topic...',
         toggleTopicSort: 'Toggle topic sort order',
-        topicLinkFailed: 'Could not link {file} to topic {topic}. Its hasTopic property has a value that is not a list.'
+        topicLinkFailed: 'Could not link {file} to topic {topic}. Its hasTopic property has a value that is not a list.',
+        topicLinked: 'Linked {count} notes to topic {topic}.',
+        topicLinkSkipped: '{count} notes were not changed because their hasTopic property is not a list.'
     },
 
     // Plugin UI

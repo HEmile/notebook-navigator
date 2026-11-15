@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { TOPIC_DRAG_MIME } from '../../utils/topicDragDrop';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { TFile, TFolder, type App } from 'obsidian';
 import { PointerSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from '@dnd-kit/core';
@@ -54,6 +55,7 @@ interface UseNavigationPaneShortcutDnDProps {
     reorderShortcuts: (orderedKeys: string[]) => Promise<boolean>;
     addTagShortcut: (tagPath: string, options?: { index?: number }) => Promise<boolean>;
     addPropertyShortcut: (nodeId: string, options?: { index?: number }) => Promise<boolean>;
+    addTopicShortcut?: (topicName: string, options?: { index?: number }) => Promise<boolean>;
     addShortcutsBatch: (entries: ShortcutEntry[], options?: { index?: number }) => Promise<number>;
 }
 
@@ -94,6 +96,7 @@ export function useNavigationPaneShortcutDnD({
     reorderShortcuts,
     addTagShortcut,
     addPropertyShortcut,
+    addTopicShortcut,
     addShortcutsBatch
 }: UseNavigationPaneShortcutDnDProps) {
     const shortcutCount = hydratedShortcuts.length;
@@ -198,7 +201,8 @@ export function useNavigationPaneShortcutDnD({
             const hasObsidianFiles = hasPotentialObsidianFileDragType(types) || Boolean(getInternalFileOrFolderDragPaths(internalSession));
             const hasTagPayload = types.includes(TAG_DRAG_MIME) || Boolean(getInternalTagDragPath(internalSession));
             const hasPropertyPayload = types.includes(PROPERTY_DRAG_MIME) || Boolean(getInternalPropertyDragNodeId(internalSession));
-            if (!hasObsidianFiles && !hasTagPayload && !hasPropertyPayload) {
+            const hasTopicPayload = types.includes(TOPIC_DRAG_MIME);
+            if (!hasObsidianFiles && !hasTagPayload && !hasPropertyPayload && !hasTopicPayload) {
                 return false;
             }
 
@@ -252,6 +256,19 @@ export function useNavigationPaneShortcutDnD({
                 });
                 internalDragSession.clearSession();
 
+                return true;
+            }
+
+            // Fork: a dragged topic row becomes a topic shortcut
+            const droppedTopicName = dataTransfer.getData(TOPIC_DRAG_MIME).trim();
+            if (droppedTopicName && addTopicShortcut) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const baseInsertIndex = computeShortcutInsertIndex(event, key);
+                runAsyncAction(async () => {
+                    await addTopicShortcut(droppedTopicName, { index: Math.max(0, baseInsertIndex) });
+                });
                 return true;
             }
 
@@ -344,6 +361,7 @@ export function useNavigationPaneShortcutDnD({
             addPropertyShortcut,
             addShortcutsBatch,
             addTagShortcut,
+            addTopicShortcut,
             app.vault,
             computeShortcutInsertIndex,
             getDragPathType,

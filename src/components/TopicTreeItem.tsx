@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { TOPIC_DRAG_MIME } from '../utils/topicDragDrop';
+import { hasPotentialObsidianFileDragType } from '../utils/dragData';
 import React, { forwardRef, useCallback, useMemo } from 'react';
 import { useSettingsState } from '../context/SettingsContext';
 import { useUXPreferences } from '../context/UXPreferencesContext';
@@ -53,6 +55,10 @@ interface TopicTreeItemProps {
     adjacentFilledClassName?: string;
     icon?: string;
     searchMatch?: 'include' | 'exclude';
+    /** Lets the row be dragged to Shortcuts (topic shortcut) or into a note (a [[link]]) */
+    isDraggable?: boolean;
+    /** Called with the drop data when notes are dropped on the row */
+    onDropNotes?: (dataTransfer: DataTransfer) => void;
 }
 
 /**
@@ -79,7 +85,9 @@ export const TopicTreeItem = React.memo(
             backgroundColor,
             adjacentFilledClassName,
             icon,
-            searchMatch
+            searchMatch,
+            isDraggable = false,
+            onDropNotes
         },
         ref
     ) {
@@ -89,6 +97,7 @@ export const TopicTreeItem = React.memo(
         const iconRef = React.useRef<HTMLSpanElement | null>(null);
         const itemRef = React.useRef<HTMLDivElement | null>(null);
         const iconVersion = useIconServiceVersion();
+        const [isDropTarget, setIsDropTarget] = React.useState(false);
 
         const hasChildren = topicNode.children.size > 0;
         const applyColorToName = Boolean(color) && !settings.colorIconOnly;
@@ -111,8 +120,9 @@ export const TopicTreeItem = React.memo(
             if (backgroundColor) classes.push('nn-has-custom-background');
             if (searchMatch) classes.push('nn-has-search-match');
             if (adjacentFilledClassName) classes.push(adjacentFilledClassName);
+            if (isDropTarget) classes.push('nn-drag-over');
             return classes.join(' ');
-        }, [adjacentFilledClassName, backgroundColor, isHidden, isSelected, searchMatch]);
+        }, [adjacentFilledClassName, backgroundColor, isDropTarget, isHidden, isSelected, searchMatch]);
 
         const nameClassName = applyColorToName ? 'nn-navitem-name nn-has-custom-color' : 'nn-navitem-name';
         const contentClassName = useMemo(() => buildSearchMatchContentClass(['nn-navitem-content'], searchMatch), [searchMatch]);
@@ -167,6 +177,56 @@ export const TopicTreeItem = React.memo(
             }
         }, [icon, iconVersion, settings.interfaceIcons, settings.showTopicIcons]);
 
+        const handleDragStart = useCallback(
+            (event: React.DragEvent<HTMLDivElement>) => {
+                if (!event.dataTransfer) {
+                    return;
+                }
+                event.stopPropagation();
+                event.dataTransfer.setData(TOPIC_DRAG_MIME, topicNode.name);
+                event.dataTransfer.setData('text/plain', `[[${topicNode.name}]]`);
+                event.dataTransfer.effectAllowed = 'copy';
+            },
+            [topicNode.name]
+        );
+
+        // Notes dragged from the list or Obsidian's file explorer can be dropped here; topic rows cannot
+        const acceptsDrop = useCallback(
+            (dataTransfer: DataTransfer | null) =>
+                Boolean(onDropNotes && dataTransfer) &&
+                !Array.from(dataTransfer?.types ?? []).includes(TOPIC_DRAG_MIME) &&
+                hasPotentialObsidianFileDragType(dataTransfer?.types),
+            [onDropNotes]
+        );
+
+        const handleDragOver = useCallback(
+            (event: React.DragEvent<HTMLDivElement>) => {
+                if (!acceptsDrop(event.dataTransfer)) {
+                    return;
+                }
+                event.preventDefault();
+                event.stopPropagation();
+                event.dataTransfer.dropEffect = 'copy';
+                setIsDropTarget(true);
+            },
+            [acceptsDrop]
+        );
+
+        const handleDragLeave = useCallback(() => setIsDropTarget(false), []);
+
+        const handleDrop = useCallback(
+            (event: React.DragEvent<HTMLDivElement>) => {
+                setIsDropTarget(false);
+                if (!onDropNotes || !acceptsDrop(event.dataTransfer)) {
+                    return;
+                }
+                event.preventDefault();
+                event.stopPropagation();
+                onDropNotes(event.dataTransfer);
+            },
+            [acceptsDrop, onDropNotes]
+        );
+
         React.useImperativeHandle(ref, () => itemRef.current as HTMLDivElement);
 
         useContextMenu(itemRef, { type: ItemType.TOPIC, item: topicNode.name });
@@ -189,6 +249,11 @@ export const TopicTreeItem = React.memo(
                 aria-expanded={hasChildren ? isExpanded : undefined}
                 aria-level={level + 1}
                 aria-selected={isSelected}
+                draggable={isDraggable}
+                onDragStart={isDraggable ? handleDragStart : undefined}
+                onDragOver={onDropNotes ? handleDragOver : undefined}
+                onDragLeave={onDropNotes ? handleDragLeave : undefined}
+                onDrop={onDropNotes ? handleDrop : undefined}
             >
                 <div className={contentClassName} onClick={onClick} onDoubleClick={handleDoubleClick}>
                     <IndentGuideColumns levels={indentGuideLevels} />

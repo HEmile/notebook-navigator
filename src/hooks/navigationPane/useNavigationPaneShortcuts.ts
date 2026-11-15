@@ -110,6 +110,7 @@ export function useNavigationPaneShortcuts({
         reorderShortcuts,
         addTagShortcut,
         addPropertyShortcut,
+        addTopicShortcut,
         addShortcutsBatch,
         clearShortcuts,
         removeShortcut,
@@ -199,6 +200,7 @@ export function useNavigationPaneShortcuts({
         reorderShortcuts,
         addTagShortcut,
         addPropertyShortcut,
+        addTopicShortcut,
         addShortcutsBatch
     });
 

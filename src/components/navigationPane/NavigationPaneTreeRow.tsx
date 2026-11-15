@@ -16,6 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { TFile, TFolder } from 'obsidian';
+import { extractFilePathsFromDataTransfer } from '../../utils/dragData';
+import { linkFilesToTopic } from '../../utils/topicDragDrop';
+import { runAsyncAction } from '../../utils/async';
+import { showNotice } from '../../utils/noticeUtils';
 import React, { useCallback } from 'react';
 import {
     NavigationPaneItemType,
@@ -51,9 +56,39 @@ interface TopicTreeRowProps {
 
 /** Fork: wires a topic row to selection and expansion; TopicTreeItem renders it */
 function TopicTreeRow({ item, context, adjacentFilledClassName, isSelected, isExpanded }: TopicTreeRowProps) {
-    const { settings, tree, getSolidBackground, indentGuideLevelsByKey, searchHighlights } = context;
+    const { app, isMobile, settings, tree, getSolidBackground, indentGuideLevelsByKey, searchHighlights } = context;
     const expansionDispatch = useExpansionDispatch();
     const topicPath = item.key;
+    const topicName = item.data.name;
+
+    // Dropped notes are linked to the topic through hasTopic in their frontmatter
+    const handleDropNotes = useCallback(
+        (dataTransfer: DataTransfer) => {
+            const paths = extractFilePathsFromDataTransfer(dataTransfer, {
+                getPathType: path => {
+                    const entry = app.vault.getAbstractFileByPath(path);
+                    return entry instanceof TFile ? 'file' : entry instanceof TFolder ? 'folder' : null;
+                },
+                vaultName: app.vault.getName()
+            });
+            if (!paths || paths.length === 0) {
+                return;
+            }
+            runAsyncAction(async () => {
+                const result = await linkFilesToTopic(app, paths, topicName);
+                if (result.linked > 0) {
+                    showNotice(strings.commands.topicLinked.replace('{count}', result.linked.toString()).replace('{topic}', topicName), {
+                        variant: 'success'
+                    });
+                }
+                const notChanged = result.unsupported + result.failed;
+                if (notChanged > 0) {
+                    showNotice(strings.commands.topicLinkSkipped.replace('{count}', notChanged.toString()), { variant: 'warning' });
+                }
+            });
+        },
+        [app, topicName]
+    );
 
     const handleToggle = useCallback(() => {
         expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
@@ -85,6 +120,8 @@ function TopicTreeRow({ item, context, adjacentFilledClassName, isSelected, isEx
             adjacentFilledClassName={adjacentFilledClassName}
             icon={item.icon}
             searchMatch={getNavigationItemSearchMatch(item, searchHighlights)}
+            isDraggable={!isMobile}
+            onDropNotes={handleDropNotes}
         />
     );
 }
