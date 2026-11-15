@@ -342,12 +342,22 @@ export function collectTopicFilePaths(node: TopicNode, visitedTopics: Set<string
     return filePaths;
 }
 
+/**
+ * Finds a topic by name. An exact match wins; otherwise the first topic whose name matches ignoring case is
+ * returned, since note names (and so topic names) are case-insensitive in Obsidian links and search lowercases
+ * `topic:"..."` tokens.
+ */
 export function findTopicNode(graph: Map<string, TopicNode>, topicName: string): TopicNode | null {
     const visitedTopics = new Set<string>();
+    const lowerTopicName = topicName.toLowerCase();
+    let caseInsensitiveMatch: TopicNode | null = null;
     function searchNode(nodes: Map<string, TopicNode>): TopicNode | null {
         for (const node of nodes.values()) {
             if (node.name === topicName) {
                 return node;
+            }
+            if (!caseInsensitiveMatch && node.name.toLowerCase() === lowerTopicName) {
+                caseInsensitiveMatch = node;
             }
             if (visitedTopics.has(node.name)) {
                 continue;
@@ -360,7 +370,7 @@ export function findTopicNode(graph: Map<string, TopicNode>, topicName: string):
         }
         return null;
     }
-    return searchNode(graph);
+    return searchNode(graph) ?? caseInsensitiveMatch;
 }
 
 export function findTopicNodeByPath(graph: Map<string, TopicNode>, topicPath: string): TopicNode | null {

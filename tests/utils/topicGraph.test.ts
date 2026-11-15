@@ -17,7 +17,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveTopicPath } from '../../src/utils/topicGraph';
+import { collectTopicFilePaths, findTopicNode, resolveTopicPath } from '../../src/utils/topicGraph';
+import { parseFilterSearchTokens } from '../../src/utils/filterSearch';
 import type { TopicNode } from '../../src/types/storage';
 
 function createTopicNode(name: string): TopicNode {
@@ -85,5 +86,45 @@ describe('resolveTopicPath', () => {
 
     it('returns null for an empty input', () => {
         expect(resolveTopicPath(createGraph(), '')).toBeNull();
+    });
+});
+
+describe('findTopicNode', () => {
+    it('finds nested topics by exact name', () => {
+        expect(findTopicNode(createGraph(), 'Optics')?.name).toBe('Optics');
+    });
+
+    it('ignores case when there is no exact match', () => {
+        expect(findTopicNode(createGraph(), 'optics')?.name).toBe('Optics');
+        expect(findTopicNode(createGraph(), 'SCIENCE')?.name).toBe('Science');
+    });
+
+    it('prefers an exact match over an earlier case-insensitive one', () => {
+        const graph = createGraph();
+        const lower = createTopicNode('science');
+        graph.set('science', lower);
+        expect(findTopicNode(graph, 'science')).toBe(lower);
+    });
+
+    it('returns null for unknown topics', () => {
+        expect(findTopicNode(createGraph(), 'Chemistry')).toBeNull();
+    });
+});
+
+describe('topic search tokens', () => {
+    it('resolve topics whose names have capitals', () => {
+        const graph = createGraph();
+        graph.get('Science')?.children.get('Physics')?.notesWithTag.add('Notes/Lens.md');
+
+        const tokens = parseFilterSearchTokens('topic:"Physics"');
+        const node = findTopicNode(graph, tokens.topicTokens[0]);
+
+        expect(node?.name).toBe('Physics');
+        expect(node ? [...collectTopicFilePaths(node)] : []).toEqual(['Notes/Lens.md']);
+    });
+
+    it('resolve excluded topics whose names have capitals', () => {
+        const tokens = parseFilterSearchTokens('!topic:"Hobbies"');
+        expect(findTopicNode(createGraph(), tokens.excludeTopicTokens[0])?.name).toBe('Hobbies');
     });
 });
