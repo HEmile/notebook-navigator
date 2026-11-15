@@ -501,7 +501,8 @@ export function shouldShowFileItemParentFolderLine({
         return false;
     }
 
-    if (selectionType === 'tag' || selectionType === 'property') {
+    // Tag, property and topic lists hold notes from the whole vault, so the folder is always useful
+    if (selectionType === 'tag' || selectionType === 'property' || selectionType === 'topic') {
         return true;
     }
 
