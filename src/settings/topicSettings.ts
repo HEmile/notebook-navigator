@@ -46,6 +46,9 @@ export function sanitizeTopicSettings(settings: NotebookNavigatorSettings): void
     if (typeof settings.showTopicIcons !== 'boolean') {
         settings.showTopicIcons = DEFAULT_SETTINGS.showTopicIcons;
     }
+    if (typeof settings.showFileTopics !== 'boolean') {
+        settings.showFileTopics = DEFAULT_SETTINGS.showFileTopics;
+    }
     if (typeof settings.inheritTopicColors !== 'boolean') {
         settings.inheritTopicColors = DEFAULT_SETTINGS.inheritTopicColors;
     }

@@ -19,15 +19,43 @@
 import { TopicNode } from '../types/storage';
 import { findTopicNode, collectTopicDescendants, findTopicNodeByPath } from '../utils/topicGraph';
 
+const EMPTY_TOPIC_NAMES: readonly string[] = [];
+
+/** Maps each note path to the names of the topics that list it directly */
+function buildTopicNamesByPath(graph: Map<string, TopicNode>): Map<string, string[]> {
+    const byPath = new Map<string, string[]>();
+    const seen = new Set<TopicNode>();
+    for (const root of graph.values()) {
+        for (const node of collectTopicDescendants(root)) {
+            if (seen.has(node)) {
+                continue;
+            }
+            seen.add(node);
+            node.notesWithTag.forEach(path => {
+                const names = byPath.get(path);
+                if (names) {
+                    names.push(node.name);
+                } else {
+                    byPath.set(path, [node.name]);
+                }
+            });
+        }
+    }
+    byPath.forEach(names => names.sort((a, b) => a.localeCompare(b)));
+    return byPath;
+}
+
 export class TopicService {
     private topicGraph: Map<string, TopicNode> = new Map();
     private topicNames: Set<string> = new Set();
+    private topicNamesByPath: Map<string, string[]> = new Map();
     private version = 0;
     private listeners = new Set<() => void>();
 
     updateTopicGraph(graph: Map<string, TopicNode>): void {
         this.topicGraph = graph;
         this.topicNames = new Set(this.getAllTopicNames());
+        this.topicNamesByPath = buildTopicNamesByPath(graph);
         this.version += 1;
         this.listeners.forEach(listener => listener());
     }
@@ -43,6 +71,11 @@ export class TopicService {
         return () => {
             this.listeners.delete(listener);
         };
+    }
+
+    /** Names of the topics a note belongs to directly, sorted, for topic pills on file rows */
+    getTopicNamesForFile(path: string): readonly string[] {
+        return this.topicNamesByPath.get(path) ?? EMPTY_TOPIC_NAMES;
     }
 
     /** Whether a topic with this exact name is in the current graph */

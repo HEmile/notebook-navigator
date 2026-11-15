@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { useTopicGraphVersion } from '../../hooks/useTopicGraphVersion';
+import { getSelectedTopicPillToHide, getVisibleTopicPills } from '../../utils/topicPills';
 import React, { useCallback, useMemo } from 'react';
 import type { TFile } from 'obsidian';
 import { useMetadataService, useServices } from '../../context/ServicesContext';
@@ -230,6 +232,8 @@ function resolveNormalizedPropertyKeyNodeId(fieldKey: string | undefined): strin
     return normalizePropertyNodeId(rawKeyNodeId) ?? rawKeyNodeId;
 }
 
+const EMPTY_TOPIC_PILLS: readonly string[] = [];
+
 export function useFileItemPills({
     file,
     isCompactMode,
@@ -252,9 +256,10 @@ export function useFileItemPills({
     fileItemPillDecorationModel,
     fileItemPillOrderModel
 }: UseFileItemPillsParams): FileItemPillsState {
-    const { app } = useServices();
+    const { app, topicService, plugin } = useServices();
     const metadataService = useMetadataService();
-    const { selectionType, selectedTag, selectedProperty } = useNavigationSelection();
+    const { selectionType, selectedTag, selectedProperty, selectedTopicPath } = useNavigationSelection();
+    const topicGraphVersion = useTopicGraphVersion(topicService);
     const { navigateToTag, navigateToProperty } = useTagNavigation();
     const wordCountPillIconId = useMemo(() => resolveUXIcon(settings.interfaceIcons, 'file-word-count'), [settings.interfaceIcons]);
     const characterCountPillIconId = useMemo(
@@ -901,48 +906,116 @@ export function useFileItemPills({
         ]
     );
 
+    // Fork: topic pills follow the tags in the tag row (Show topics on notes, off by default)
+    const topicPillNames = useMemo(() => {
+        void topicGraphVersion;
+        if (!topicService || !settings.showTopics || !settings.showFileTopics) {
+            return EMPTY_TOPIC_PILLS;
+        }
+        if (isCompactMode && !settings.showFileTagsInCompactMode) {
+            return EMPTY_TOPIC_PILLS;
+        }
+        return getVisibleTopicPills(
+            topicService.getTopicNamesForFile(file.path),
+            getSelectedTopicPillToHide(selectionType, selectedTopicPath, settings.showSelectedNavigationPills)
+        );
+    }, [
+        file.path,
+        isCompactMode,
+        selectedTopicPath,
+        selectionType,
+        settings.showFileTagsInCompactMode,
+        settings.showFileTopics,
+        settings.showSelectedNavigationPills,
+        settings.showTopics,
+        topicGraphVersion,
+        topicService
+    ]);
+
+    const handleTopicPillClick = useCallback(
+        (event: React.MouseEvent, topicName: string) => {
+            event.stopPropagation();
+            plugin.selectTopic(topicName);
+        },
+        [plugin]
+    );
+
+    const topicPills = useMemo(() => {
+        return topicPillNames.map(topicName => {
+            const color = settings.colorFileTags ? metadataService.getTopicColor(topicName) : undefined;
+            const background = settings.colorFileTags ? metadataService.getTopicBackgroundColor(topicName) : undefined;
+            const iconId = settings.showTopicIcons ? metadataService.getTopicIcon(topicName) : undefined;
+            const style: React.CSSProperties & { '--nn-file-tag-custom-bg'?: string } = {};
+            if (background) {
+                style['--nn-file-tag-custom-bg'] = background;
+            }
+            if (color) {
+                style.color = color;
+            }
+            return (
+                <span
+                    key={`topic:${topicName}`}
+                    className="nn-file-tag nn-file-topic nn-clickable-tag"
+                    data-has-color={color ? 'true' : undefined}
+                    data-has-background={background ? 'true' : undefined}
+                    onClick={event => handleTopicPillClick(event, topicName)}
+                    role="button"
+                    tabIndex={0}
+                    style={color || background ? style : undefined}
+                >
+                    {iconId ? <ServiceIcon iconId={iconId} className="nn-file-pill-inline-icon" aria-hidden={true} /> : null}
+                    {topicName}
+                </span>
+            );
+        });
+    }, [handleTopicPillClick, metadataService, settings.colorFileTags, settings.showTopicIcons, topicPillNames]);
+
     const tagRows = useMemo(() => {
-        if (!shouldShowFileTags) {
+        if (!shouldShowFileTags && topicPills.length === 0) {
             return null;
         }
 
         return (
             <div className="nn-file-tags">
-                {categorizedTags.map((tag, index) => {
-                    const tagColors = tagColorData.get(tag);
-                    const tagColor = tagColors?.color;
-                    const tagBackground = tagColors?.background;
-                    const displayTag = getTagDisplayName(tag);
-                    const tagIconId = tagPillIcons.get(tag);
-                    const tagStyle: React.CSSProperties & { '--nn-file-tag-custom-bg'?: string } = {};
+                {shouldShowFileTags &&
+                    categorizedTags.map((tag, index) => {
+                        const tagColors = tagColorData.get(tag);
+                        const tagColor = tagColors?.color;
+                        const tagBackground = tagColors?.background;
+                        const displayTag = getTagDisplayName(tag);
+                        const tagIconId = tagPillIcons.get(tag);
+                        const tagStyle: React.CSSProperties & { '--nn-file-tag-custom-bg'?: string } = {};
 
-                    if (tagBackground) {
-                        tagStyle['--nn-file-tag-custom-bg'] = tagBackground;
-                    }
+                        if (tagBackground) {
+                            tagStyle['--nn-file-tag-custom-bg'] = tagBackground;
+                        }
 
-                    if (tagColor) {
-                        tagStyle.color = tagColor;
-                    }
+                        if (tagColor) {
+                            tagStyle.color = tagColor;
+                        }
 
-                    return (
-                        <span
-                            key={index}
-                            className="nn-file-tag nn-clickable-tag"
-                            data-has-color={tagColor ? 'true' : undefined}
-                            data-has-background={tagBackground ? 'true' : undefined}
-                            onClick={event => handleTagClick(event, tag)}
-                            role="button"
-                            tabIndex={0}
-                            style={tagColor || tagBackground ? tagStyle : undefined}
-                        >
-                            {tagIconId ? <ServiceIcon iconId={tagIconId} className="nn-file-pill-inline-icon" aria-hidden={true} /> : null}
-                            {displayTag}
-                        </span>
-                    );
-                })}
+                        return (
+                            <span
+                                key={index}
+                                className="nn-file-tag nn-clickable-tag"
+                                data-has-color={tagColor ? 'true' : undefined}
+                                data-has-background={tagBackground ? 'true' : undefined}
+                                onClick={event => handleTagClick(event, tag)}
+                                role="button"
+                                tabIndex={0}
+                                style={tagColor || tagBackground ? tagStyle : undefined}
+                            >
+                                {tagIconId ? (
+                                    <ServiceIcon iconId={tagIconId} className="nn-file-pill-inline-icon" aria-hidden={true} />
+                                ) : null}
+                                {displayTag}
+                            </span>
+                        );
+                    })}
+                {topicPills}
             </div>
         );
-    }, [categorizedTags, getTagDisplayName, handleTagClick, shouldShowFileTags, tagColorData, tagPillIcons]);
+    }, [categorizedTags, getTagDisplayName, handleTagClick, shouldShowFileTags, tagColorData, tagPillIcons, topicPills]);
 
     const propertyRowsNode = useMemo(() => {
         if (!shouldShowProperty) {
@@ -983,10 +1056,11 @@ export function useFileItemPills({
     }, [propertyRowsNode, tagRows, textCountRow]);
 
     return {
-        shouldShowFileTags,
+        // Fork: a tag row holding only topic pills counts as a tag row for layout, matching the height estimate
+        shouldShowFileTags: shouldShowFileTags || topicPills.length > 0,
         shouldShowProperty,
         shouldShowTextCountProperty,
-        hasVisiblePillRows: shouldShowFileTags || shouldShowProperty || shouldShowTextCountProperty,
+        hasVisiblePillRows: shouldShowFileTags || topicPills.length > 0 || shouldShowProperty || shouldShowTextCountProperty,
         propertySearchEvidenceGroups: propertySearchEvidence.groups,
         propertySearchEvidenceHiddenGroupCount: propertySearchEvidence.hiddenGroupCount,
         tooltipTagRow,

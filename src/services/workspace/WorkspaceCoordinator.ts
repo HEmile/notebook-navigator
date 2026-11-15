@@ -156,6 +156,16 @@ export default class WorkspaceCoordinator {
         });
     }
 
+    /** Fork: selects a topic by name in every open navigator */
+    selectTopic(topicName: string): void {
+        this.getNavigatorLeaves().forEach(leaf => {
+            const { view } = leaf;
+            if (isNotebookNavigatorView(view)) {
+                view.selectTopic(topicName);
+            }
+        });
+    }
+
     revealTopicAllPaths(topicPath: string): void {
         this.getNavigatorLeaves().forEach(leaf => {
             const { view } = leaf;

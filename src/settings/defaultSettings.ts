@@ -305,6 +305,7 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
     showTopics: true,
     showTopicIcons: true,
     inheritTopicColors: true,
+    showFileTopics: false,
     topicTags: ['topic', 'jaar', 'decennium', 'maand'],
     topicSortOrder: 'alpha-asc',
     hiddenTopics: [],

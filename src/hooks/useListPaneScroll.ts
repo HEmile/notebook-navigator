@@ -44,6 +44,8 @@
  * - Sticky header tracking for date groups
  */
 
+import { useTopicGraphVersion } from './useTopicGraphVersion';
+import { getSelectedTopicPillToHide, hasVisibleTopicPills } from '../utils/topicPills';
 import { useRef, useCallback, useEffect, useLayoutEffect, useState, useMemo } from 'react';
 import { TFile, TFolder, type App } from 'obsidian';
 import { useVirtualizer, Virtualizer } from '@tanstack/react-virtual';
@@ -199,6 +201,10 @@ export interface ListFileRowSizingConfig extends FileRowHeightConfig {
     hiddenTagVisibility: HiddenTagVisibility;
     visiblePropertyKeys: ReadonlySet<string>;
     themeMode: ThemeMode;
+    // Fork: topic pills share the tag row, so a note with topics and no visible tags still gets one
+    topicPillsEnabled?: boolean;
+    getFileTopicNames?: (path: string) => readonly string[];
+    selectedTopicNameToHide?: string | null;
 }
 
 export type ListRowHeightAffectingContentChangeConfig = Pick<
@@ -561,6 +567,10 @@ export function resolveListFileRowHeightInputs({
         }
     }
 
+    if (!hasTagRow && !showDrawingMissingFeatureImage && config.topicPillsEnabled && config.getFileTopicNames) {
+        hasTagRow = hasVisibleTopicPills(config.getFileTopicNames(file.path), config.selectedTopicNameToHide ?? null);
+    }
+
     const showParentFolderLine = shouldShowFileItemParentFolderLine({
         showParentFolder: config.showParentFolder,
         isPinned: Boolean(item.isPinned),
@@ -644,7 +654,8 @@ export function useListPaneScroll({
     onVirtualizerScrollingChange,
     onScrollContainerVisibilityChange
 }: UseListPaneScrollParams): UseListPaneScrollResult {
-    const { app, isMobile } = useServices();
+    const { app, isMobile, topicService } = useServices();
+    const topicGraphVersion = useTopicGraphVersion(topicService);
     const listMeasurements = getListPaneMeasurements(isMobile);
     const { hasPreview, getDB, isStorageReady } = useFileCache();
     const themeMode = useThemeMode(app);
@@ -777,9 +788,24 @@ export function useListPaneScroll({
             selectedPropertyValueNodeIdToHide,
             hiddenTagVisibility,
             visiblePropertyKeys,
-            themeMode
+            themeMode,
+            topicPillsEnabled: settings.showTopics && settings.showFileTopics && (!isCompactMode || settings.showFileTagsInCompactMode),
+            getFileTopicNames: topicService ? (path: string) => topicService.getTopicNamesForFile(path) : undefined,
+            selectedTopicNameToHide: getSelectedTopicPillToHide(
+                selectionState.selectionType,
+                selectionState.selectedTopicPath,
+                settings.showSelectedNavigationPills
+            )
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- topicGraphVersion re-estimates rows after a topic graph rebuild.
     }, [
+        topicGraphVersion,
+        topicService,
+        settings.showTopics,
+        settings.showFileTopics,
+        settings.showFileTagsInCompactMode,
+        settings.showSelectedNavigationPills,
+        selectionState.selectedTopicPath,
         compactListMetrics.desktopPaddingTotal,
         compactListMetrics.mobilePaddingTotal,
         folderSettings.previewRows,

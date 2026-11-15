@@ -835,6 +835,7 @@ export interface NotebookNavigatorSettings {
     showTopics: boolean;
     showTopicIcons: boolean;
     inheritTopicColors: boolean;
+    showFileTopics: boolean;
     topicTags: string[];
     topicSortOrder: TagSortOrder;
     hiddenTopics: string[];

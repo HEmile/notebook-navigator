@@ -2494,6 +2494,10 @@ export const STRINGS_PT = {
                 name: 'Inherit topic colors',
                 desc: 'Topics without a color take the color of the parent topic they are shown under, or of the Topics section.'
             },
+            showFileTopics: {
+                name: 'Show topics on notes',
+                desc: 'Display the topics a note belongs to as pills next to its tags in the note list. Follows the tag pill setting for compact mode.'
+            },
             topicTags: {
                 name: 'Topic tags',
                 desc: 'Notes with one of these tags, or a tag nested under one, become topics. Separate tags with commas.',

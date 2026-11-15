@@ -459,6 +459,11 @@ export class NotebookNavigatorView extends ItemView {
         this.componentHandle?.navigateToTopicWithModal();
     }
 
+    /** Fork: selects a topic by name in the navigator */
+    selectTopic(topicName: string): void {
+        this.componentHandle?.selectTopic(topicName);
+    }
+
     /**
      * Sets the list pane search query to a date token.
      */

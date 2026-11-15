@@ -22,7 +22,7 @@ import { isTagSortOrder, type NotebookNavigatorSettings } from '../types';
 import type { SettingsTabContext } from './SettingsTabContext';
 import { createGroupDefinition, createRenderDefinition } from '../nativeSettingControls';
 
-type TopicToggleKey = 'showTopics' | 'showTopicIcons' | 'inheritTopicColors';
+type TopicToggleKey = 'showTopics' | 'showTopicIcons' | 'inheritTopicColors' | 'showFileTopics';
 
 /** Builds native setting definitions for the topics settings page */
 export function createTopicsSettingDefinitions(context: SettingsTabContext): SettingDefinitionItem[] {
@@ -61,6 +61,12 @@ export function createTopicsSettingDefinitions(context: SettingsTabContext): Set
                 desc: items.inheritTopicColors.desc,
                 visible: whenTopicsShown,
                 render: setting => renderToggle(setting, context, 'inheritTopicColors', items.inheritTopicColors)
+            }),
+            createRenderDefinition({
+                name: items.showFileTopics.name,
+                desc: items.showFileTopics.desc,
+                visible: whenTopicsShown,
+                render: setting => renderToggle(setting, context, 'showFileTopics', items.showFileTopics)
             }),
             createRenderDefinition({
                 name: items.hiddenTopics.name,

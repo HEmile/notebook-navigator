@@ -1968,6 +1968,11 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
         this.workspaceCoordinator?.revealTopic(topicPath);
     }
 
+    /** Fork: selects a topic by name in the open navigators */
+    selectTopic(topicName: string) {
+        this.workspaceCoordinator?.selectTopic(topicName);
+    }
+
     async revealTopicAllPaths(topicPath: string) {
         this.workspaceCoordinator?.revealTopicAllPaths(topicPath);
     }

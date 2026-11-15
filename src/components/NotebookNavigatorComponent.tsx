@@ -41,7 +41,7 @@ import { FolderSuggestModal } from '../modals/FolderSuggestModal';
 import { buildPropertyNodeSuggestions, PropertyNodeSuggestModal } from '../modals/PropertyNodeSuggestModal';
 import { TagSuggestModal } from '../modals/TagSuggestModal';
 import { TopicSuggestModal } from '../modals/TopicSuggestModal';
-import { useRestoreSelectedTopic } from '../hooks/useRestoreSelectedTopic';
+import { getTopicAncestorPaths, useRestoreSelectedTopic } from '../hooks/useRestoreSelectedTopic';
 import { getTopicNameFromPath, resolveTopicPath } from '../utils/topicGraph';
 import {
     ItemType,
@@ -178,6 +178,7 @@ export interface NotebookNavigatorHandle {
     navigateToTagWithModal: () => void;
     navigateToPropertyWithModal: () => void;
     navigateToTopicWithModal: () => void;
+    selectTopic: (topicName: string) => void;
     addTagToSelectedFiles: () => Promise<void>;
     setPropertyOnSelectedFiles: () => Promise<void>;
     removeTagFromSelectedFiles: () => Promise<void>;
@@ -748,6 +749,34 @@ export const NotebookNavigatorComponent = React.memo(
             [resolveSelectionHistoryEntry, selectionState]
         );
 
+        // Fork: selects a topic by name: expands the Topics section and the topic's branch, selects its first path
+        // and scrolls to the row
+        const selectTopicByName = useCallback(
+            (topicName: string) => {
+                if (!topicService) {
+                    return;
+                }
+                const topicPath = resolveTopicPath(topicService.getTopicGraph(), topicName);
+                if (!topicPath) {
+                    return;
+                }
+                if (!expansionState.expandedVirtualFolders.has(TOPICS_ROOT_VIRTUAL_FOLDER_ID)) {
+                    const expandedVirtualFolders = new Set(expansionState.expandedVirtualFolders);
+                    expandedVirtualFolders.add(TOPICS_ROOT_VIRTUAL_FOLDER_ID);
+                    expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: expandedVirtualFolders });
+                }
+                const ancestorPaths = getTopicAncestorPaths(topicPath);
+                if (ancestorPaths.length > 0) {
+                    expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: ancestorPaths });
+                }
+                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath, source: 'manual' });
+                window.requestAnimationFrame(() => {
+                    navigationPaneRef.current?.requestScroll(topicPath, { align: 'center', itemType: ItemType.TOPIC });
+                });
+            },
+            [expansionDispatch, expansionState.expandedVirtualFolders, selectionDispatch, topicService]
+        );
+
         const navigateSelectionHistory = useCallback(
             (direction: 'back' | 'forward'): boolean => {
                 const target = getSelectionHistoryTarget(direction);
@@ -1286,32 +1315,16 @@ export const NotebookNavigatorComponent = React.memo(
                     modal.open();
                 },
                 navigateToTopicWithModal: () => {
-                    // Fork: picks a topic, opens its branch and the Topics section, selects it and scrolls to it
+                    // Fork: picks a topic, then selects it like selectTopic
                     if (!topicService) {
                         return;
                     }
                     const topicNames = Array.from(new Set(topicService.getAllTopicNames())).sort((a, b) => a.localeCompare(b));
-                    const modal = new TopicSuggestModal(app, topicNames, topicName => {
-                        const topicPath = resolveTopicPath(topicService.getTopicGraph(), topicName);
-                        if (!topicPath) {
-                            return;
-                        }
-                        if (!expansionState.expandedVirtualFolders.has(TOPICS_ROOT_VIRTUAL_FOLDER_ID)) {
-                            const expandedVirtualFolders = new Set(expansionState.expandedVirtualFolders);
-                            expandedVirtualFolders.add(TOPICS_ROOT_VIRTUAL_FOLDER_ID);
-                            expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: expandedVirtualFolders });
-                        }
-                        const parts = topicPath.split('/');
-                        const ancestorPaths = parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join('/'));
-                        if (ancestorPaths.length > 0) {
-                            expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: ancestorPaths });
-                        }
-                        selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath, source: 'manual' });
-                        window.requestAnimationFrame(() => {
-                            navigationPaneRef.current?.requestScroll(topicPath, { align: 'center', itemType: ItemType.TOPIC });
-                        });
-                    });
+                    const modal = new TopicSuggestModal(app, topicNames, topicName => selectTopicByName(topicName));
                     modal.open();
+                },
+                selectTopic: (topicName: string) => {
+                    selectTopicByName(topicName);
                 },
                 addTagToSelectedFiles: async () => {
                     if (!tagOperations) {
@@ -1474,8 +1487,7 @@ export const NotebookNavigatorComponent = React.memo(
             removeShortcut,
             handleModifySearchWithDateFilter,
             topicService,
-            expansionDispatch,
-            expansionState.expandedVirtualFolders
+            selectTopicByName
         ]);
 
         // Add platform class and background mode classes
