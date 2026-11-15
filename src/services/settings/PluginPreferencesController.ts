@@ -380,8 +380,8 @@ export class PluginPreferencesController {
         }
 
         settings.topicSortOrder = order;
-        localStorage.set(this.options.keys.topicSortOrderKey, order);
-        // topicSortOrder is not a sync-mode setting, so persist it through a plain save.
+        // topicSortOrder is not a sync-mode setting, so persist it through a plain save and re-render explicitly.
+        this.options.notifySettingsUpdate();
         runAsyncAction(() => this.options.saveSettings());
     }
 
