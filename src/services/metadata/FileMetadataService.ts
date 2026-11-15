@@ -460,7 +460,7 @@ export class FileMetadataService extends BaseMetadataService {
         const contexts = normalizePinnedNoteContext(rawContexts);
 
         if (!context) {
-            return contexts.folder || contexts.tag || contexts.property;
+            return contexts.folder || contexts.tag || contexts.property || contexts.topic;
         }
 
         return contexts[context] || false;

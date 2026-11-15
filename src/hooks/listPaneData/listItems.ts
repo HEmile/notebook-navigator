@@ -248,7 +248,9 @@ function buildListItemsInternal(
               ? ItemType.FOLDER
               : selectionType === ItemType.PROPERTY
                 ? ItemType.PROPERTY
-                : undefined;
+                : selectionType === ItemType.TOPIC
+                  ? ItemType.TOPIC
+                  : undefined;
     const db = getDB();
     const pinnedDisplayScope =
         listConfig.filterPinnedByFolder && selectionType === ItemType.FOLDER && selectedFolder

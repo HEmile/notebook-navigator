@@ -729,10 +729,10 @@ export class MetadataAPI {
 
         if (!context) {
             // No context - check if pinned in any context
-            return contexts.folder || contexts.tag || contexts.property;
+            return contexts.folder || contexts.tag || contexts.property || contexts.topic;
         } else if (context === 'all') {
             // Check if pinned in all contexts
-            return contexts.folder && contexts.tag && contexts.property;
+            return contexts.folder && contexts.tag && contexts.property && contexts.topic;
         } else if (context === 'folder') {
             return contexts.folder;
         } else if (context === 'property') {
@@ -764,10 +764,11 @@ export class MetadataAPI {
 
         if (context === 'all') {
             // Pin in all contexts
-            if (!contexts.folder || !contexts.tag || !contexts.property) {
+            if (!contexts.folder || !contexts.tag || !contexts.property || !contexts.topic) {
                 contexts.folder = true;
                 contexts.tag = true;
                 contexts.property = true;
+                contexts.topic = true;
                 changed = true;
             }
         } else if (context === 'folder') {
@@ -832,7 +833,7 @@ export class MetadataAPI {
         }
 
         // Remove if unpinned from all contexts
-        if (changed && contexts && !contexts.folder && !contexts.tag && !contexts.property) {
+        if (changed && contexts && !contexts.folder && !contexts.tag && !contexts.property && !contexts.topic) {
             delete plugin.settings.pinnedNotes[file.path];
         }
 

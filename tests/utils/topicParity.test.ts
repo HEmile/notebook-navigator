@@ -20,7 +20,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { TFile } from 'obsidian';
 import { shouldShowFileItemParentFolderLine } from '../../src/utils/listPaneMeasurements';
+import { partitionPinnedFiles } from '../../src/utils/fileFinder';
+import { ItemType } from '../../src/types';
 
 describe('topic lists', () => {
     it('show the parent folder line like tag lists', () => {
@@ -35,5 +38,19 @@ describe('topic lists', () => {
         expect(shouldShowFileItemParentFolderLine({ ...base, selectionType: 'tag' })).toBe(true);
         expect(shouldShowFileItemParentFolderLine({ ...base, selectionType: 'topic', isPinned: true })).toBe(false);
         expect(shouldShowFileItemParentFolderLine({ ...base, selectionType: 'topic', fileParentPath: '/' })).toBe(false);
+    });
+
+    it('only show notes pinned in topic context in the pinned group', () => {
+        const files = ['a.md', 'b.md', 'c.md'].map(path => ({ path }) as TFile);
+        const pinnedNotes = {
+            'a.md': { folder: true, tag: false, property: false, topic: false },
+            'b.md': { folder: false, tag: false, property: false, topic: true },
+            'c.md': { folder: false, tag: true, property: false, topic: false }
+        };
+
+        const { pinnedFiles, unpinnedFiles } = partitionPinnedFiles(files, pinnedNotes, ItemType.TOPIC);
+
+        expect(pinnedFiles.map(file => file.path)).toEqual(['b.md']);
+        expect(unpinnedFiles.map(file => file.path)).toEqual(['a.md', 'c.md']);
     });
 });
