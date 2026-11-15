@@ -96,6 +96,7 @@ export const STRINGS_ID = {
         vaultRootLabel: 'Vault',
         resetAllFolders: 'Atur ulang semua folder',
         resetAllTags: 'Atur ulang semua tag',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Atur ulang semua properti',
         pinShortcuts: 'Sematkan pintasan',
         pinShortcutsAndRecentFiles: 'Sematkan pintasan dan file terbaru',

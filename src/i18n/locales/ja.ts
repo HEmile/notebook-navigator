@@ -95,6 +95,7 @@ export const STRINGS_JA = {
         vaultRootLabel: '保管庫',
         resetAllFolders: 'すべてのフォルダをリセット',
         resetAllTags: 'すべてのタグをリセット',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'すべてのプロパティをリセット',
         pinShortcuts: 'ショートカットを固定',
         pinShortcutsAndRecentFiles: 'ショートカットと最近のファイルを固定',

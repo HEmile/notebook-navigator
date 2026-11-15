@@ -96,6 +96,7 @@ export const STRINGS_EN = {
         vaultRootLabel: 'Vault',
         resetAllFolders: 'Reset all folders',
         resetAllTags: 'Reset all tags',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Reset all properties',
         pinShortcuts: 'Pin shortcuts',
         pinShortcutsAndRecentFiles: 'Pin shortcuts and recent files',

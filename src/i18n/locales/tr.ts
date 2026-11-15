@@ -96,6 +96,7 @@ export const STRINGS_TR = {
         vaultRootLabel: 'Kasa',
         resetAllFolders: 'Tüm klasörleri sıfırla',
         resetAllTags: 'Tüm etiketleri sıfırla',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Tüm özellikleri sıfırla',
         pinShortcuts: 'Kısayolları sabitle',
         pinShortcutsAndRecentFiles: 'Kısayolları ve son dosyaları sabitle',

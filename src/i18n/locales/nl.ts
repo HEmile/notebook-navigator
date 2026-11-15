@@ -97,6 +97,7 @@ export const STRINGS_NL = {
         vaultRootLabel: 'Kluis',
         resetAllFolders: 'Alle mappen terugzetten',
         resetAllTags: 'Alle tags terugzetten',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Alle eigenschappen terugzetten',
         pinShortcuts: 'Snelkoppelingen vastpinnen',
         pinShortcutsAndRecentFiles: 'Snelkoppelingen en recente bestanden vastpinnen',

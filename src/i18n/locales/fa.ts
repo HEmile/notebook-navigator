@@ -96,6 +96,7 @@ export const STRINGS_FA = {
         vaultRootLabel: 'خزانه',
         resetAllFolders: 'بازنشانی همه پوشه‌ها',
         resetAllTags: 'بازنشانی همه برچسب‌ها',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'بازنشانی همه ویژگی‌ها',
         pinShortcuts: 'سنجاق کردن میانبرها',
         pinShortcutsAndRecentFiles: 'سنجاق کردن میانبرها و فایل‌های اخیر',

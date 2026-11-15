@@ -96,6 +96,7 @@ export const STRINGS_AR = {
         vaultRootLabel: 'الخزنة',
         resetAllFolders: 'إعادة تعيين كل المجلدات',
         resetAllTags: 'إعادة تعيين كل الوسوم',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'إعادة تعيين كل الخصائص',
         pinShortcuts: 'تثبيت الاختصارات',
         pinShortcutsAndRecentFiles: 'تثبيت الاختصارات والملفات الحديثة',

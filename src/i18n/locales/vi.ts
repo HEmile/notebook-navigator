@@ -96,6 +96,7 @@ export const STRINGS_VI = {
         vaultRootLabel: 'Vault',
         resetAllFolders: 'Đặt lại tất cả thư mục',
         resetAllTags: 'Đặt lại tất cả thẻ',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Đặt lại tất cả thuộc tính',
         pinShortcuts: 'Ghim lối tắt',
         pinShortcutsAndRecentFiles: 'Ghim lối tắt và tệp gần đây',

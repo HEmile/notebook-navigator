@@ -95,6 +95,7 @@ export const STRINGS_ZH_CN = {
         vaultRootLabel: '仓库',
         resetAllFolders: '重置所有文件夹',
         resetAllTags: '重置所有标签',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: '重置所有属性',
         pinShortcuts: '固定快捷方式',
         pinShortcutsAndRecentFiles: '固定快捷方式和最近文件',

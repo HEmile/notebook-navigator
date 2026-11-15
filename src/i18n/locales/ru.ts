@@ -96,6 +96,7 @@ export const STRINGS_RU = {
         vaultRootLabel: 'Хранилище',
         resetAllFolders: 'Сбросить все папки',
         resetAllTags: 'Сбросить все теги',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Сбросить все свойства',
         pinShortcuts: 'Закрепить ярлыки',
         pinShortcutsAndRecentFiles: 'Закрепить ярлыки и недавние файлы',

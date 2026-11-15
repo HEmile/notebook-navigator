@@ -33,7 +33,8 @@ import { useUIState, useUIDispatch } from '../../context/UIStateContext';
 import { useNavigationPaneKeyboard } from '../../hooks/useNavigationPaneKeyboard';
 import { useNavigationPaneData } from '../../hooks/navigationPane/useNavigationPaneData';
 import { useNavigationPaneScroll } from '../../hooks/useNavigationPaneScroll';
-import { useNavigationRootReorder, type ReorderTreeSource } from '../../hooks/useNavigationRootReorder';
+import { useNavigationRootReorder, type ReorderTreeSource, type ReorderTreeType } from '../../hooks/useNavigationRootReorder';
+import { useTopicReorderTree } from '../../hooks/useTopicReorderTree';
 import { useMeasuredElementHeight } from '../../hooks/useMeasuredElementHeight';
 import { usePointerDrag } from '../../hooks/usePointerDrag';
 import { useSurfaceColorVariables } from '../../hooks/useSurfaceColorVariables';
@@ -56,6 +57,7 @@ import {
     RECENT_NOTES_VIRTUAL_FOLDER_ID,
     SHORTCUTS_VIRTUAL_FOLDER_ID,
     TAGS_ROOT_VIRTUAL_FOLDER_ID,
+    TOPICS_ROOT_VIRTUAL_FOLDER_ID,
     type CSSPropertiesWithVars
 } from '../../types';
 import { STORAGE_KEYS } from '../../types';
@@ -735,6 +737,14 @@ export const NavigationPane = React.memo(
             [canReorderProperties, expansionDispatch, expansionState.expandedProperties, getPropertyReorderChildren]
         );
 
+        // Fork: root topics in reorder mode; topic drops write rootTopicOrder, other drops go to the upstream handler
+        const topicReorder = useTopicReorderTree({ settings, topicService, metadataService });
+        const reorderChildren = useCallback(
+            (type: ReorderTreeType, parentPath: string, orderedNames: string[]) =>
+                type === 'topic' ? topicReorder.onReorder(orderedNames) : reorderTreeChildren(type, parentPath, orderedNames),
+            [reorderTreeChildren, topicReorder]
+        );
+
         const handleToggleRootReorder = useCallback(() => {
             if (!canReorderRootItems) {
                 return;
@@ -1289,8 +1299,13 @@ export const NavigationPane = React.memo(
                 onResetTags={handleResetTagOrder}
                 onResetProperties={handleResetPropertyOrder}
                 onReorderSections={reorderSectionOrder}
-                onReorderChildren={reorderTreeChildren}
+                onReorderChildren={reorderChildren}
                 canReorderSections={canReorderSections}
+                topicTree={topicReorder.source}
+                showRootTopicSection={topicReorder.showSection}
+                topicsSectionExpanded={expansionState.expandedVirtualFolders.has(TOPICS_ROOT_VIRTUAL_FOLDER_ID)}
+                showTopicReset={topicReorder.showReset}
+                onResetTopics={topicReorder.onReset}
                 isMobile={isMobile}
             />
         );

@@ -95,6 +95,7 @@ export const STRINGS_ZH_TW = {
         vaultRootLabel: '儲存庫',
         resetAllFolders: '重設所有資料夾',
         resetAllTags: '重設所有標籤',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: '重設所有屬性',
         pinShortcuts: '釘選捷徑',
         pinShortcutsAndRecentFiles: '釘選捷徑和最近檔案',

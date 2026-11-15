@@ -96,6 +96,7 @@ export const STRINGS_IT = {
         vaultRootLabel: 'Vault',
         resetAllFolders: 'Ripristina tutte le cartelle',
         resetAllTags: 'Ripristina tutte le etichette',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Ripristina tutte le proprietà',
         pinShortcuts: 'Fissa scorciatoie',
         pinShortcutsAndRecentFiles: 'Fissa scorciatoie e file recenti',

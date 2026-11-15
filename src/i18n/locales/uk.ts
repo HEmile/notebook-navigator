@@ -97,6 +97,7 @@ export const STRINGS_UK = {
         vaultRootLabel: 'Сховище',
         resetAllFolders: 'Скинути всі теки',
         resetAllTags: 'Скинути всі мітки',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Скинути всі властивості',
         pinShortcuts: 'Закріпити ярлики',
         pinShortcutsAndRecentFiles: 'Закріпити ярлики та останні файли',

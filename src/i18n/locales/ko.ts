@@ -95,6 +95,7 @@ export const STRINGS_KO = {
         vaultRootLabel: '보관함',
         resetAllFolders: '모든 폴더 재설정',
         resetAllTags: '모든 태그 재설정',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: '모든 속성 재설정',
         pinShortcuts: '바로가기를 고정',
         pinShortcutsAndRecentFiles: '바로가기와 최근 파일을 고정',

@@ -95,6 +95,7 @@ export const STRINGS_ES = {
         vaultRootLabel: 'Bóveda',
         resetAllFolders: 'Restablecer todas las carpetas',
         resetAllTags: 'Restablecer todas las etiquetas',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Restablecer todas las propiedades',
         pinShortcuts: 'Fijar accesos directos',
         pinShortcutsAndRecentFiles: 'Fijar accesos directos y archivos recientes',

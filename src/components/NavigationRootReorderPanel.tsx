@@ -57,6 +57,12 @@ interface NavigationRootReorderPanelProps {
     onReorderSections: (orderedKeys: NavigationSectionId[]) => Promise<void> | void;
     onReorderChildren: (type: ReorderTreeType, parentPath: string, orderedNames: string[]) => Promise<void> | void;
     canReorderSections: boolean;
+    // Fork: root topics, listed under the Topics section row
+    topicTree?: ReorderTreeSource;
+    showRootTopicSection?: boolean;
+    topicsSectionExpanded?: boolean;
+    showTopicReset?: boolean;
+    onResetTopics?: () => Promise<void> | void;
 }
 
 interface TreeSortableData {
@@ -66,7 +72,7 @@ interface TreeSortableData {
 }
 
 function isReorderTreeType(value: unknown): value is ReorderTreeType {
-    return value === 'folder' || value === 'tag' || value === 'property';
+    return value === 'folder' || value === 'tag' || value === 'property' || value === 'topic';
 }
 
 function readTreeSortableData(data: unknown): TreeSortableData | null {
@@ -210,7 +216,12 @@ export function NavigationRootReorderPanel({
     onResetProperties,
     onReorderSections,
     onReorderChildren,
-    canReorderSections
+    canReorderSections,
+    topicTree: topicSource,
+    showRootTopicSection = false,
+    topicsSectionExpanded = false,
+    showTopicReset = false,
+    onResetTopics
 }: NavigationRootReorderPanelProps) {
     const settings = useSettingsState();
 
@@ -238,6 +249,11 @@ export function NavigationRootReorderPanel({
     const hasRootFolderRows = folderSource.getChildren('/').length > 0;
     const hasRootTagRows = tagSource.getChildren('/').length > 0;
     const hasRootPropertyRows = propertySource.getChildren('/').length > 0;
+    const topicTree = useMemo<ReorderTreeContext | null>(
+        () => (topicSource ? { ...topicSource, expandIcon, collapseIcon, isMobile } : null),
+        [collapseIcon, expandIcon, isMobile, topicSource]
+    );
+    const hasRootTopicRows = Boolean(topicSource && topicSource.getChildren('/').length > 0);
 
     const sectionIds = useMemo(() => sectionEntries.map(entry => entry.id), [sectionEntries]);
     const sectionIndexMap = useMemo(() => {
@@ -282,7 +298,8 @@ export function NavigationRootReorderPanel({
         sectionEntries.length > 0 ||
         (showRootFolderSection && hasRootFolderRows) ||
         (showRootTagSection && hasRootTagRows) ||
-        (showRootPropertySection && hasRootPropertyRows);
+        (showRootPropertySection && hasRootPropertyRows) ||
+        (showRootTopicSection && hasRootTopicRows);
 
     const handleDragEnd = useCallback(
         (event: DragEndEvent) => {
@@ -291,8 +308,15 @@ export function NavigationRootReorderPanel({
             if (!active || !over || over.type !== active.type || over.parentPath !== active.parentPath) {
                 return;
             }
-            const source = active.type === 'folder' ? folderSource : active.type === 'tag' ? tagSource : propertySource;
-            if (!source.canReorder) {
+            const source =
+                active.type === 'folder'
+                    ? folderSource
+                    : active.type === 'tag'
+                      ? tagSource
+                      : active.type === 'topic'
+                        ? topicSource
+                        : propertySource;
+            if (!source?.canReorder) {
                 return;
             }
             const siblingNames = source.getChildren(active.parentPath).map(node => node.name);
@@ -306,7 +330,7 @@ export function NavigationRootReorderPanel({
                 await onReorderChildren(active.type, active.parentPath, next);
             });
         },
-        [folderSource, onReorderChildren, propertySource, tagSource]
+        [folderSource, onReorderChildren, propertySource, tagSource, topicSource]
     );
 
     const folderList = (
@@ -324,6 +348,12 @@ export function NavigationRootReorderPanel({
             {showPropertyReset ? <ResetAction label={strings.navigationPane.resetAllProperties} onReset={onResetProperties} /> : null}
         </ReorderTreeList>
     );
+
+    const topicList = topicTree ? (
+        <ReorderTreeList parentPath="/" tree={topicTree}>
+            {showTopicReset && onResetTopics ? <ResetAction label={strings.navigationPane.resetAllTopics} onReset={onResetTopics} /> : null}
+        </ReorderTreeList>
+    ) : null;
 
     return (
         <div className="nn-root-reorder-panel">
@@ -386,6 +416,11 @@ export function NavigationRootReorderPanel({
                                     propertiesSectionExpanded &&
                                     showRootPropertySection &&
                                     hasRootPropertyRows;
+                                const shouldRenderTopics =
+                                    item.sectionId === NavigationSectionId.TOPICS &&
+                                    topicsSectionExpanded &&
+                                    showRootTopicSection &&
+                                    hasRootTopicRows;
 
                                 return (
                                     <div key={`section:${item.key}`} className="nn-root-reorder-section">
@@ -393,6 +428,7 @@ export function NavigationRootReorderPanel({
                                         {shouldRenderFolders ? folderList : null}
                                         {shouldRenderTags ? tagList : null}
                                         {shouldRenderProperties ? propertyList : null}
+                                        {shouldRenderTopics ? topicList : null}
                                     </div>
                                 );
                             })
@@ -404,6 +440,9 @@ export function NavigationRootReorderPanel({
                                 {showRootTagSection && hasRootTagRows ? <div className="nn-root-reorder-section">{tagList}</div> : null}
                                 {showRootPropertySection && hasRootPropertyRows ? (
                                     <div className="nn-root-reorder-section">{propertyList}</div>
+                                ) : null}
+                                {showRootTopicSection && hasRootTopicRows ? (
+                                    <div className="nn-root-reorder-section">{topicList}</div>
                                 ) : null}
                             </>
                         )}

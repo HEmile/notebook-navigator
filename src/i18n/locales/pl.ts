@@ -96,6 +96,7 @@ export const STRINGS_PL = {
         vaultRootLabel: 'Sejf',
         resetAllFolders: 'Resetuj wszystkie foldery',
         resetAllTags: 'Resetuj wszystkie tagi',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Resetuj wszystkie atrybuty',
         pinShortcuts: 'Przypnij skróty',
         pinShortcutsAndRecentFiles: 'Przypnij skróty i ostatnie pliki',

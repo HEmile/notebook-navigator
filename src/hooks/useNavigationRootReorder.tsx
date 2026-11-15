@@ -56,7 +56,7 @@ import {
 } from '../utils/fileItemPillDecoration';
 import { ObsidianIcon } from '../components/ObsidianIcon';
 
-export type ReorderTreeType = 'folder' | 'tag' | 'property';
+export type ReorderTreeType = 'folder' | 'tag' | 'property' | 'topic';
 
 /**
  * A row in a reorder mode tree. `key` identifies the row and is the parent key of its children: a folder path, a

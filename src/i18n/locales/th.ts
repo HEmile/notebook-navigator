@@ -96,6 +96,7 @@ export const STRINGS_TH = {
         vaultRootLabel: 'ห้องนิรภัย',
         resetAllFolders: 'รีเซ็ตโฟลเดอร์ทั้งหมด',
         resetAllTags: 'รีเซ็ตแท็กทั้งหมด',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'รีเซ็ตคุณสมบัติทั้งหมด',
         pinShortcuts: 'ปักหมุดทางลัด',
         pinShortcutsAndRecentFiles: 'ปักหมุดทางลัดและไฟล์ล่าสุด',

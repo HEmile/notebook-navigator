@@ -95,6 +95,7 @@ export const STRINGS_DE = {
         vaultRootLabel: 'Vault',
         resetAllFolders: 'Alle Ordner zurücksetzen',
         resetAllTags: 'Alle Tags zurücksetzen',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Alle Eigenschaften zurücksetzen',
         pinShortcuts: 'Verknüpfungen anheften',
         pinShortcutsAndRecentFiles: 'Verknüpfungen und zuletzt verwendete Dateien anheften',

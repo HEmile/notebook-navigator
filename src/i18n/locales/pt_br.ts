@@ -96,6 +96,7 @@ export const STRINGS_PT_BR = {
         vaultRootLabel: 'Cofre',
         resetAllFolders: 'Redefinir todas as pastas',
         resetAllTags: 'Redefinir todas as etiquetas',
+        resetAllTopics: 'Reset topic order',
         resetAllProperties: 'Redefinir todas as propriedades',
         pinShortcuts: 'Fixar atalhos',
         pinShortcutsAndRecentFiles: 'Fixar atalhos e arquivos recentes',

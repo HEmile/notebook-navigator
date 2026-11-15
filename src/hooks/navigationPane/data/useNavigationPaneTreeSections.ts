@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { createTopicComparator, orderRootTopics } from '../../../utils/topicOrder';
 import { useMemo } from 'react';
 import type { App, TFolder } from 'obsidian';
 import type { IPropertyTreeProvider } from '../../../interfaces/IPropertyTreeProvider';
@@ -945,24 +946,15 @@ export function useNavigationPaneTreeSections({
         const topicGraph = topicService.getTopicGraph();
         const hiddenTopics = new Set(settings.hiddenTopics ?? []);
 
-        const sortTopicNodes = (nodes: TopicNode[]): TopicNode[] => {
-            return nodes.slice().sort((a, b) => {
-                switch (settings.topicSortOrder) {
-                    case 'frequency-desc':
-                        return getTotalNoteCount(b) - getTotalNoteCount(a) || a.name.localeCompare(b.name);
-                    case 'frequency-asc':
-                        return getTotalNoteCount(a) - getTotalNoteCount(b) || a.name.localeCompare(b.name);
-                    case 'alpha-desc':
-                        return b.name.localeCompare(a.name);
-                    case 'alpha-asc':
-                    default:
-                        return a.name.localeCompare(b.name);
-                }
-            });
-        };
+        const compareTopicNodes = createTopicComparator(settings.topicSortOrder);
+        const sortTopicNodes = (nodes: TopicNode[]): TopicNode[] => nodes.slice().sort(compareTopicNodes);
 
-        // Root nodes: those with no parents
-        const rootNodes = sortTopicNodes(Array.from(topicGraph.values()).filter(n => n.parents.size === 0));
+        // Root nodes: those with no parents, in the manual root order when one is set (reorder mode)
+        const rootNodes = orderRootTopics(
+            Array.from(topicGraph.values()).filter(n => n.parents.size === 0),
+            settings.rootTopicOrder ?? [],
+            compareTopicNodes
+        );
 
         const items: CombinedNavigationItem[] = [];
 
@@ -1024,6 +1016,7 @@ export function useNavigationPaneTreeSections({
     }, [
         settings.showTopics,
         settings.hiddenTopics,
+        settings.rootTopicOrder,
         settings.interfaceIcons,
         settings.topicSortOrder,
         topicService,
