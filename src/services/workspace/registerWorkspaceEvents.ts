@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { getTopicNameFromPath } from '../../utils/topicGraph';
 import { TFile, TFolder } from 'obsidian';
 import type NotebookNavigatorPlugin from '../../main';
 import { strings } from '../../i18n';
@@ -190,6 +191,15 @@ export default function registerWorkspaceEvents(plugin: NotebookNavigatorPlugin)
                     invalidateVaultIconSvgCache(file.path);
                     iconService.invalidateIconValidationCache();
                     scheduleIconAssetsChanged();
+                }
+
+                // Fork: a renamed topic note keeps its topic settings under the new name
+                if (file.extension === 'md') {
+                    const oldTopicName = getTopicNameFromPath(oldPath);
+                    const newTopicName = getTopicNameFromPath(file.path);
+                    if (oldTopicName !== newTopicName && plugin.topicService?.hasTopicName(oldTopicName)) {
+                        await plugin.metadataService?.handleTopicRename(oldTopicName, newTopicName);
+                    }
                 }
 
                 // Update recent notes history with new path

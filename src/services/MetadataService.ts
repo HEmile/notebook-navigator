@@ -325,6 +325,10 @@ export class MetadataService {
         return this.topicService.removeTopicIcon(topicName);
     }
 
+    async handleTopicRename(oldName: string, newName: string): Promise<void> {
+        return this.topicService.handleTopicRename(oldName, newName);
+    }
+
     async migrateTopicStylesFromTags(topicNames: Iterable<string>): Promise<boolean> {
         return this.topicService.migrateTopicStylesFromTags(topicNames);
     }

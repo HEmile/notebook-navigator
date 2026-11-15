@@ -137,3 +137,42 @@ describe('TopicMetadataService migration', () => {
         expect(provider.saveSettingsAndUpdate).not.toHaveBeenCalled();
     });
 });
+
+describe('TopicMetadataService rename', () => {
+    it('moves every topic-keyed setting to the new name', async () => {
+        const { service, settings, provider } = createService({
+            topicSortOverrides: { Physics: 'title-asc' } as never,
+            topicAppearances: { Physics: { mode: 'compact' } } as never,
+            topicColors: { physics: '#ff0000' },
+            topicIcons: { physics: 'lucide-atom' },
+            hiddenTopics: ['Physics', 'Inbox'],
+            rootTopicOrder: ['Science', 'Physics'],
+            navigationSeparators: { 'topic:physics': true }
+        });
+        settings.vaultProfiles[0].shortcuts = [{ type: 'topic', topicName: 'Physics' } as never];
+        const collapsed: Record<string, boolean> = { 'topic:Physics': true };
+        provider.updateCollapsedPinnedContexts = (mutate: (record: Record<string, boolean>) => boolean) => mutate(collapsed);
+
+        await service.handleTopicRename('Physics', 'Natural Philosophy');
+
+        expect(settings.topicSortOverrides).toEqual({ 'Natural Philosophy': 'title-asc' });
+        expect(settings.topicAppearances).toEqual({ 'Natural Philosophy': { mode: 'compact' } });
+        expect(settings.topicColors).toEqual({ 'natural philosophy': '#ff0000' });
+        expect(settings.topicIcons).toEqual({ 'natural philosophy': 'lucide-atom' });
+        expect(settings.hiddenTopics).toEqual(['Natural Philosophy', 'Inbox']);
+        expect(settings.rootTopicOrder).toEqual(['Science', 'Natural Philosophy']);
+        expect(settings.navigationSeparators).toEqual({ 'topic:natural philosophy': true });
+        expect(settings.vaultProfiles[0].shortcuts).toEqual([{ type: 'topic', topicName: 'Natural Philosophy' }]);
+        expect(collapsed).toEqual({ 'topic:Natural Philosophy': true });
+    });
+
+    it('keeps an entry already stored under the new name, and skips saving when nothing changes', async () => {
+        const { service, settings, provider } = createService({ topicColors: { physics: '#ff0000', optics: '#00ff00' } });
+        await service.handleTopicRename('Physics', 'Optics');
+        expect(settings.topicColors).toEqual({ optics: '#00ff00' });
+
+        provider.saveSettingsAndUpdate.mockClear();
+        await service.handleTopicRename('Unknown', 'Other');
+        expect(provider.saveSettingsAndUpdate).not.toHaveBeenCalled();
+    });
+});

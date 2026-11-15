@@ -21,6 +21,8 @@ import { normalizeCanonicalIconId } from '../../utils/iconizeFormat';
 import { ensureRecord, isStringRecordValue } from '../../utils/recordUtils';
 import { normalizeTagPath } from '../../utils/tagUtils';
 import { BaseMetadataService } from './BaseMetadataService';
+import { isTopicShortcut, type ShortcutEntry } from '../../types/shortcuts';
+import { buildTopicSeparatorKey } from '../../utils/navigationSeparators';
 
 type TopicStyleRecordKey = 'topicColors' | 'topicBackgroundColors' | 'topicIcons';
 
@@ -117,6 +119,34 @@ export class TopicMetadataService extends BaseMetadataService {
         return true;
     }
 
+    /**
+     * Moves everything keyed by a topic name to the topic's new name after its note is renamed: sort overrides,
+     * appearances, styles, hidden state, root order, separators, shortcuts and the pinned-section collapse state.
+     * An entry already stored under the new name is kept.
+     */
+    async handleTopicRename(oldName: string, newName: string): Promise<void> {
+        if (!oldName || !newName || oldName === newName) {
+            return;
+        }
+
+        await this.saveAndUpdate(settings =>
+            renameTopicInSettings(settings, oldName, newName, shortcuts => this.updateShortcuts(settings, shortcuts))
+        );
+
+        const oldCollapseKey = `topic:${oldName}` as const;
+        const newCollapseKey = `topic:${newName}` as const;
+        this.settingsProvider.updateCollapsedPinnedContexts(record => {
+            if (!Object.prototype.hasOwnProperty.call(record, oldCollapseKey)) {
+                return false;
+            }
+            if (!Object.prototype.hasOwnProperty.call(record, newCollapseKey)) {
+                record[newCollapseKey] = record[oldCollapseKey];
+            }
+            delete record[oldCollapseKey];
+            return true;
+        });
+    }
+
     private getStyle(recordKey: TopicStyleRecordKey, topicName: string): string | undefined {
         const key = normalizeTopicStyleKey(topicName);
         return key ? this.settingsProvider.settings[recordKey]?.[key] : undefined;
@@ -165,4 +195,65 @@ export function copyLegacyTopicStyles(settings: NotebookNavigatorSettings, topic
         }
         settings[topicRecordKey] = target;
     }
+}
+
+type ShortcutMutator = (mutate: (shortcut: ShortcutEntry) => ShortcutEntry | null | undefined) => boolean;
+
+function renameRecordKey<T>(record: Record<string, T> | undefined, oldKey: string | null, newKey: string | null): boolean {
+    if (!record || !oldKey || !newKey || oldKey === newKey || !Object.prototype.hasOwnProperty.call(record, oldKey)) {
+        return false;
+    }
+    if (!Object.prototype.hasOwnProperty.call(record, newKey)) {
+        record[newKey] = record[oldKey];
+    }
+    delete record[oldKey];
+    return true;
+}
+
+function renameInList(list: string[], oldName: string, newName: string): string[] | null {
+    if (!list.includes(oldName)) {
+        return null;
+    }
+    return Array.from(new Set(list.map(name => (name === oldName ? newName : name))));
+}
+
+/**
+ * Fork: renames a topic in every settings record keyed by its name. Shortcuts go through `updateShortcuts` so
+ * every vault profile is covered.
+ *
+ * @returns True when settings changed
+ */
+export function renameTopicInSettings(
+    settings: NotebookNavigatorSettings,
+    oldName: string,
+    newName: string,
+    updateShortcuts: ShortcutMutator
+): boolean {
+    let changed = false;
+    changed = renameRecordKey(settings.topicSortOverrides, oldName, newName) || changed;
+    changed = renameRecordKey(settings.topicAppearances, oldName, newName) || changed;
+
+    const oldStyleKey = normalizeTopicStyleKey(oldName);
+    const newStyleKey = normalizeTopicStyleKey(newName);
+    changed = renameRecordKey(settings.topicColors, oldStyleKey, newStyleKey) || changed;
+    changed = renameRecordKey(settings.topicBackgroundColors, oldStyleKey, newStyleKey) || changed;
+    changed = renameRecordKey(settings.topicIcons, oldStyleKey, newStyleKey) || changed;
+    changed = renameRecordKey(settings.navigationSeparators, buildTopicSeparatorKey(oldName), buildTopicSeparatorKey(newName)) || changed;
+
+    const hiddenTopics = renameInList(settings.hiddenTopics, oldName, newName);
+    if (hiddenTopics) {
+        settings.hiddenTopics = hiddenTopics;
+        changed = true;
+    }
+    const rootTopicOrder = renameInList(settings.rootTopicOrder, oldName, newName);
+    if (rootTopicOrder) {
+        settings.rootTopicOrder = rootTopicOrder;
+        changed = true;
+    }
+
+    changed =
+        updateShortcuts(shortcut =>
+            isTopicShortcut(shortcut) && shortcut.topicName === oldName ? { ...shortcut, topicName: newName } : undefined
+        ) || changed;
+    return changed;
 }
