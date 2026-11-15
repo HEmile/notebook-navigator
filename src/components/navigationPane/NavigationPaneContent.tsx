@@ -782,7 +782,9 @@ export const NavigationPane = React.memo(
                     ? ItemType.TAG
                     : selectionState.selectionType === ItemType.PROPERTY
                       ? ItemType.PROPERTY
-                      : ItemType.FOLDER;
+                      : selectionState.selectionType === ItemType.TOPIC
+                        ? ItemType.TOPIC
+                        : ItemType.FOLDER;
             requestScroll(normalizeNavigationPath(itemType, selectedPath), { align: 'auto', itemType });
         }, [requestScroll, selectionState]);
 

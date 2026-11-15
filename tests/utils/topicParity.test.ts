@@ -23,7 +23,10 @@ import { describe, expect, it } from 'vitest';
 import { TFile } from 'obsidian';
 import { shouldShowFileItemParentFolderLine } from '../../src/utils/listPaneMeasurements';
 import { partitionPinnedFiles } from '../../src/utils/fileFinder';
-import { ItemType } from '../../src/types';
+import { ItemType, NavigationPaneItemType } from '../../src/types';
+import { buildNavigationPathIndexMap, getNavigationIndex } from '../../src/utils/navigationIndex';
+import type { CombinedNavigationItem } from '../../src/types/virtualization';
+import type { TopicNode } from '../../src/types/storage';
 
 describe('topic lists', () => {
     it('show the parent folder line like tag lists', () => {
@@ -52,5 +55,15 @@ describe('topic lists', () => {
 
         expect(pinnedFiles.map(file => file.path)).toEqual(['b.md']);
         expect(unpinnedFiles.map(file => file.path)).toEqual(['a.md', 'c.md']);
+    });
+
+    it('index topic rows by their path so they can be scrolled into view', () => {
+        const node: TopicNode = { name: 'Physics', parents: new Map(), children: new Map(), notesWithTag: new Set() };
+        const items = [{ type: NavigationPaneItemType.TOPIC, data: node, level: 2, key: 'Science/Physics' }] as CombinedNavigationItem[];
+
+        const indexMap = buildNavigationPathIndexMap(items);
+
+        expect(getNavigationIndex(indexMap, ItemType.TOPIC, 'Science/Physics')).toBe(0);
+        expect(getNavigationIndex(indexMap, ItemType.FOLDER, 'Science/Physics')).toBeUndefined();
     });
 });

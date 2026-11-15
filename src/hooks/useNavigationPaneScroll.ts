@@ -439,7 +439,9 @@ export function useNavigationPaneScroll({
               ? ItemType.PROPERTY
               : selectionState.selectionType === ItemType.FOLDER
                 ? ItemType.FOLDER
-                : null;
+                : selectionState.selectionType === ItemType.TOPIC
+                  ? ItemType.TOPIC
+                  : null;
 
     // Extract and normalize the currently selected path from selection state
     const selectedPath =
@@ -449,7 +451,9 @@ export function useNavigationPaneScroll({
               ? normalizeNavigationPath(ItemType.TAG, selectionState.selectedTag)
               : selectionState.selectionType === ItemType.PROPERTY && selectionState.selectedProperty
                 ? selectionState.selectedProperty
-                : null;
+                : selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath
+                  ? selectionState.selectedTopicPath
+                  : null;
 
     /**
      * Scroll to selected folder/tag when needed
@@ -549,7 +553,8 @@ export function useNavigationPaneScroll({
             return;
         }
 
-        if (selectedItemType !== ItemType.TAG && selectedItemType !== ItemType.PROPERTY) {
+        // Topic rows also appear late, once the topic graph is built
+        if (selectedItemType !== ItemType.TAG && selectedItemType !== ItemType.PROPERTY && selectedItemType !== ItemType.TOPIC) {
             return;
         }
 

@@ -79,6 +79,9 @@ export function buildNavigationPathIndexMap(items: readonly CombinedNavigationIt
             setNavigationIndex(indexMap, ItemType.PROPERTY, item.key, index);
         } else if (item.type === NavigationPaneItemType.PROPERTY_KEY || item.type === NavigationPaneItemType.PROPERTY_VALUE) {
             setNavigationIndex(indexMap, ItemType.PROPERTY, item.data.id, index);
+        } else if (item.type === NavigationPaneItemType.TOPIC) {
+            // Topic rows are keyed by the path they were reached through, which is also the selected topic path
+            setNavigationIndex(indexMap, ItemType.TOPIC, item.key, index);
         }
     });
 

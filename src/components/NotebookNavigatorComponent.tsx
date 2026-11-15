@@ -851,7 +851,9 @@ export const NotebookNavigatorComponent = React.memo(
                     ? ItemType.TAG
                     : selectionState.selectionType === ItemType.PROPERTY
                       ? ItemType.PROPERTY
-                      : ItemType.FOLDER;
+                      : selectionState.selectionType === ItemType.TOPIC
+                        ? ItemType.TOPIC
+                        : ItemType.FOLDER;
             const normalizedPath = normalizeNavigationPath(itemType, selectedPath);
             navigationPaneRef.current?.requestScroll(normalizedPath, {
                 align: 'auto',
