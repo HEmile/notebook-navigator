@@ -154,6 +154,8 @@ export interface NotebookNavigatorHandle {
     navigateToFile: (file: TFile, options?: RevealFileOptions) => boolean;
     // Reveals a file while preserving the current navigation context when possible
     revealFileInNearestFolder: (file: TFile, options?: RevealFileOptions) => void;
+    // Selects a note shortcut's note without revealing it and shows the shortcut as selected
+    selectNoteShortcut: (note: TFile) => void;
     focusVisiblePane: () => void;
     focusNavigationPane: () => void;
     deleteSelectedFiles: () => void;
@@ -248,6 +250,7 @@ export const NotebookNavigatorComponent = React.memo(
             settings.enableFolderNotes,
             settings.folderNoteNamePattern,
             settings.folderNoteOpenLocation,
+            settings.folderNoteType,
             settings.showNearestFolderNoteInSidebar
         ]);
         const {
@@ -837,14 +840,6 @@ export const NotebookNavigatorComponent = React.memo(
             };
         }, [containerRef, isMobile, uiDispatch]);
 
-        // Handles file reveal from shortcuts, using nearest folder navigation
-        const handleShortcutNoteReveal = useCallback(
-            (file: TFile) => {
-                revealFileInNearestFolder(file, { source: 'shortcut' });
-            },
-            [revealFileInNearestFolder]
-        );
-
         const ensureSelectedNavigationItemVisible = useCallback(() => {
             const selectedPath = getSelectedPath(selectionState);
             if (!selectedPath) {
@@ -960,6 +955,9 @@ export const NotebookNavigatorComponent = React.memo(
                 // Forward to the auto reveal implementation
                 revealFileInNearestFolder: (file: TFile, options?: RevealFileOptions) => {
                     revealFileInNearestFolder(file, options);
+                },
+                selectNoteShortcut: (note: TFile) => {
+                    navigationPaneRef.current?.selectNoteShortcut(note);
                 },
                 focusVisiblePane: () => {
                     if (uiState.singlePane) {
@@ -1599,8 +1597,6 @@ export const NotebookNavigatorComponent = React.memo(
                         onNavigateToFolder={navigateToFolder}
                         onRevealTag={revealTag}
                         onRevealProperty={revealProperty}
-                        onRevealFile={revealFileInNearestFolder}
-                        onRevealShortcutFile={handleShortcutNoteReveal}
                         onModifySearchWithTag={handleModifySearchWithTag}
                         onModifySearchWithProperty={handleModifySearchWithProperty}
                         onModifySearchWithDateFilter={handleModifySearchWithDateFilter}
@@ -1609,6 +1605,7 @@ export const NotebookNavigatorComponent = React.memo(
                         ref={listPaneRef}
                         rootContainerRef={containerRef}
                         folderDecorationModel={folderDecorationModel}
+                        getFolderSortName={folderNavigationSource.getFolderSortName}
                         fileItemPillDecorationModel={fileItemPillDecorationModel}
                         fileItemPillOrderModel={fileItemPillOrderModel}
                         onSearchTokensChange={handleSearchTokensChange}

@@ -15,50 +15,64 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 import { Setting } from 'obsidian';
+import type { SettingDefinitionItem } from 'obsidian';
 import { strings } from '../../i18n';
 import { isTagSortOrder } from '../types';
 import type { SettingsTabContext } from './SettingsTabContext';
-import { createSettingGroupFactory } from '../settingGroups';
+import { createGroupDefinition, createRenderDefinition } from '../nativeSettingControls';
 
-/** Renders the topics settings tab */
-export function renderTopicsTab(context: SettingsTabContext): void {
-    const { containerEl, plugin } = context;
-    const createGroup = createSettingGroupFactory(containerEl);
+/** Builds native setting definitions for the topics settings page */
+export function createTopicsSettingDefinitions(context: SettingsTabContext): SettingDefinitionItem[] {
+    const { plugin } = context;
 
-    const topicsGroup = createGroup(undefined);
+    return [
+        createGroupDefinition(undefined, [
+            createRenderDefinition({
+                name: strings.settings.items.showTopics.name,
+                desc: strings.settings.items.showTopics.desc,
+                render: setting => renderShowTopicsSetting(setting, context)
+            }),
+            createRenderDefinition({
+                name: strings.settings.items.topicSortOrder.name,
+                desc: strings.settings.items.topicSortOrder.desc,
+                aliases: Object.values(strings.settings.items.topicSortOrder.options),
+                visible: () => plugin.settings.showTopics,
+                render: setting => renderTopicSortOrderSetting(setting, context)
+            })
+        ])
+    ];
+}
 
-    topicsGroup.addSetting(setting => {
-        setting
-            .setName(strings.settings.items.showTopics.name)
-            .setDesc(strings.settings.items.showTopics.desc)
-            .addToggle(toggle =>
-                toggle.setValue(plugin.settings.showTopics).onChange(async value => {
-                    plugin.settings.showTopics = value;
-                    await plugin.saveSettingsAndUpdate();
-                })
-            );
+function renderShowTopicsSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+
+    setting.setName(strings.settings.items.showTopics.name).setDesc(strings.settings.items.showTopics.desc);
+    setting.addToggle(toggle =>
+        toggle.setValue(plugin.settings.showTopics).onChange(async value => {
+            plugin.settings.showTopics = value;
+            await plugin.saveSettingsAndUpdate();
+        })
+    );
+}
+
+function renderTopicSortOrderSetting(setting: Setting, context: SettingsTabContext): void {
+    const { plugin } = context;
+    const options = strings.settings.items.topicSortOrder.options;
+
+    setting.setName(strings.settings.items.topicSortOrder.name).setDesc(strings.settings.items.topicSortOrder.desc);
+    setting.addDropdown(dropdown => {
+        dropdown
+            .addOption('alpha-asc', options.alphaAsc)
+            .addOption('alpha-desc', options.alphaDesc)
+            .addOption('frequency-asc', `${options.frequency} (${options.lowToHigh})`)
+            .addOption('frequency-desc', `${options.frequency} (${options.highToLow})`)
+            .setValue(plugin.getTopicSortOrder())
+            .onChange(value => {
+                if (!isTagSortOrder(value)) {
+                    return;
+                }
+                plugin.setTopicSortOrder(value);
+            });
     });
-
-    new Setting(containerEl)
-        .setName(strings.settings.items.topicSortOrder.name)
-        .setDesc(strings.settings.items.topicSortOrder.desc)
-        .addDropdown(dropdown => {
-            const frequencyAscLabel = `${strings.settings.items.topicSortOrder.options.frequency} (${strings.settings.items.topicSortOrder.options.lowToHigh})`;
-            const frequencyDescLabel = `${strings.settings.items.topicSortOrder.options.frequency} (${strings.settings.items.topicSortOrder.options.highToLow})`;
-
-            dropdown
-                .addOption('alpha-asc', strings.settings.items.topicSortOrder.options.alphaAsc)
-                .addOption('alpha-desc', strings.settings.items.topicSortOrder.options.alphaDesc)
-                .addOption('frequency-asc', frequencyAscLabel)
-                .addOption('frequency-desc', frequencyDescLabel)
-                .setValue(plugin.getTopicSortOrder())
-                .onChange(value => {
-                    if (!isTagSortOrder(value)) {
-                        return;
-                    }
-                    plugin.setTopicSortOrder(value);
-                });
-        });
 }

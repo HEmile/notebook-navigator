@@ -63,6 +63,14 @@ export const STRINGS_PT_BR = {
         manualSortHint: 'Arraste para reordenar. A ordem é salva como valores numéricos de índice na propriedade "{property}".',
         manualSortNonMarkdownHint: 'Arquivos não Markdown são exibidos no final e não podem ser reordenados.',
         unsortedSection: 'Não classificados',
+        // MarkdownPoint presentation rows: the cover slide count and the presentation.mdpoint detail labels
+        presentation: {
+            slideCount: '{count} slides',
+            slideCountOne: '1 slide',
+            theme: 'Tema',
+            slides: 'Slides',
+            size: 'Tamanho'
+        },
         propertyGroupNoValue: 'Nenhum',
         manualSortDone: 'Concluído',
         manualSortMultipleWriteFailure: '{count} arquivos falharam; primeiro: {path}: {message}'
@@ -86,8 +94,9 @@ export const STRINGS_PT_BR = {
         reorderRootFoldersTitle: 'Reordenar navegação',
         reorderRootFoldersHint: 'Use setas ou arraste para reordenar',
         vaultRootLabel: 'Cofre',
-        resetRootToAlpha: 'Redefinir para ordem alfabética',
-        resetRootToFrequency: 'Redefinir para ordem de frequência',
+        resetAllFolders: 'Redefinir todas as pastas',
+        resetAllTags: 'Redefinir todas as etiquetas',
+        resetAllProperties: 'Redefinir todas as propriedades',
         pinShortcuts: 'Fixar atalhos',
         pinShortcutsAndRecentFiles: 'Fixar atalhos e arquivos recentes',
         unpinShortcuts: 'Desafixar atalhos',
@@ -248,10 +257,12 @@ export const STRINGS_PT_BR = {
                     items: [
                         '`.key` Incluir notas com uma chave de propriedade que começa com `key`.',
                         '`.key=value` Incluir notas cujo valor de propriedade contenha `value`.',
+                        '`.key=null` Incluir notas em que a propriedade `key` existe sem valor. `.key="null"` busca o texto `null`.',
                         '`."Reading Status"` Incluir notas com uma chave de propriedade que contém espaços.',
                         '`."Reading Status"="In Progress"` Chaves e valores com espaços devem estar entre aspas duplas.',
                         '`-.key` Excluir notas com uma chave de propriedade que começa com `key`.',
                         '`-.key=value` Excluir notas cujo valor de propriedade contenha `value`.',
+                        '`-.key=null` Excluir notas em que a propriedade `key` existe sem valor.',
                         'Cmd/Ctrl+Clique em uma propriedade para adicionar com AND. Cmd/Ctrl+Shift+Clique para adicionar com OR.'
                     ]
                 },
@@ -933,6 +944,7 @@ export const STRINGS_PT_BR = {
             cannotMoveIntoSelf: 'Não é possível mover uma pasta para dentro de si mesma ou de uma subpasta.',
             itemAlreadyExists: 'Um item chamado "{name}" já existe neste local.',
             failedToMove: 'Falha ao mover: {error}',
+            failedToCopy: 'Falha ao copiar "{name}": {error}',
             failedToAddTag: 'Falha ao adicionar etiqueta "{tag}"',
             failedToSetProperty: 'Falha ao atualizar propriedade: {error}',
             failedToClearTags: 'Falha ao limpar etiquetas',
@@ -945,7 +957,9 @@ export const STRINGS_PT_BR = {
             filesAlreadyHaveProperty: '{count} arquivos já possuem esta propriedade',
             noTagsToClear: 'Sem etiquetas para remover',
             fileImported: '1 arquivo importado',
-            filesImported: '{count} arquivos importados'
+            filesImported: '{count} arquivos importados',
+            fileCopied: '1 arquivo copiado',
+            filesCopied: '{count} arquivos copiados'
         }
     },
 
@@ -1073,8 +1087,6 @@ export const STRINGS_PT_BR = {
             exportFailed: 'Falha ao exportar relatório de metadados'
         },
         index: {
-            label: 'Geral',
-            description: 'Notas de versão, suporte, perfil do cofre, tipos de arquivo e chaves de propriedades.',
             groups: {
                 about: 'Sobre'
             }
@@ -1092,11 +1104,12 @@ export const STRINGS_PT_BR = {
             },
             appearanceAndBehavior: {
                 label: 'Aparência e comportamento',
-                description: 'Comportamento, navegação por teclado, botões do mouse, aparência e formatação.',
+                description: 'Comportamento, navegação por teclado, botões do mouse, painel duplo, aparência e formatação.',
                 groups: {
                     startup: 'Inicialização',
                     keyboardNavigation: 'Navegação por teclado',
                     mouseButtons: 'Botões do mouse',
+                    dualPane: 'Painel duplo',
                     desktopAppearance: 'Aparência do desktop',
                     mobileAppearance: 'Aparência móvel',
                     appearance: 'Aparência',
@@ -1207,7 +1220,8 @@ export const STRINGS_PT_BR = {
                 description: 'Diagnóstico, limpeza de metadados, importação/exportação e redefinição.',
                 groups: {
                     maintenance: 'Manutenção',
-                    resetSettings: 'Redefinir configurações'
+                    resetSettings: 'Redefinir configurações',
+                    thirdPartyLicenses: 'Licenças de terceiros'
                 }
             }
         },
@@ -1586,10 +1600,6 @@ export const STRINGS_PT_BR = {
                 name: 'Selecionar automaticamente a primeira nota',
                 desc: 'Abrir automaticamente a primeira nota ao alternar pastas, etiquetas ou propriedades.'
             },
-            disableShortcutAutoScroll: {
-                name: 'Desativar rolagem automática para atalhos',
-                desc: 'Não rolar o painel de navegação ao clicar em itens nos atalhos.'
-            },
             expandOnSelection: {
                 name: 'Expandir ao selecionar',
                 desc: 'Expandir pastas, etiquetas e propriedades ao selecionar. No modo de painel único, a primeira seleção expande, a segunda mostra arquivos.'
@@ -1676,8 +1686,6 @@ export const STRINGS_PT_BR = {
             calendarLocale: {
                 name: 'Idioma',
                 desc: 'Controla a formatação das datas do calendário, a numeração das semanas e o primeiro dia da semana.',
-                weekPathMismatchWarning:
-                    'O calendário visível e os caminhos das notas semanais usam inícios de semana ou numeração de semana diferentes.',
                 options: {
                     systemDefault: 'Padrão'
                 }
@@ -1791,7 +1799,9 @@ export const STRINGS_PT_BR = {
                 momentLinkText: 'formato de data Moment',
                 momentDescSuffix:
                     '. Coloque nomes de subpastas entre colchetes, ex. [Work]/YYYY. Clique no ícone de modelo para definir um modelo. Definir localização da pasta de modelos em Operações de arquivo e modelos > Modelos.',
-                example: 'Sintaxe atual: {path}'
+                example: 'Sintaxe atual: {path}',
+                weekYearWarning:
+                    '"gggg" e "GGGG" são anos de semana, então datas próximas ao Ano-Novo podem receber o ano errado. Use "YYYY".'
             },
             templateEngine: {
                 name: 'Mecanismo de modelos',
@@ -1837,10 +1847,14 @@ export const STRINGS_PT_BR = {
                 name: 'Notas semanais',
                 parsingError:
                     'O padrão deve ser formatado e analisado novamente como uma semana completa (ano da semana, número da semana).',
-                weekPathMismatchWarning:
-                    'Os caminhos das notas semanais usam o idioma das notas periódicas. Use idiomas correspondentes ou use "GGGG" com "WW" para semanas baseadas na segunda-feira.',
+                isoWeeksWarning:
+                    'As notas semanais usam semanas ISO ("W" ou "G"), então o calendário começa as semanas na segunda-feira e mostra números de semana ISO. Use "gggg" com "ww" para semanas que seguem o idioma.',
+                calendarYearWarning:
+                    'As notas semanais pegam o ano de "YYYY", então uma semana 1 que começa em dezembro recebe o ano anterior. Use "GGGG" com "WW", ou "gggg" com "ww".',
                 mixedWeekTokensWarning:
-                    'Este padrão mistura tokens de semana baseados na segunda-feira ("W" ou "G") com tokens de semana baseados no idioma ("w" ou "g"). Use um conjunto de forma consistente: "GGGG" com "WW" para semanas baseadas na segunda-feira, ou "gggg" com "ww" se as notas semanais devem seguir o idioma selecionado.'
+                    'As notas semanais misturam tokens de semana ISO ("W" ou "G") com tokens de semana do idioma ("w" ou "g"). Use "GGGG" com "WW" para semanas ISO, ou "gggg" com "ww" para semanas que seguem o idioma.',
+                weekPathMismatchWarning:
+                    'O idioma do calendário e o idioma das notas periódicas começam ou numeram as semanas de forma diferente, então os caminhos das notas semanais não correspondem às semanas do calendário. Defina o mesmo idioma em ambos, ou use "GGGG" com "WW" para semanas ISO.'
             },
             calendarMonthlyNotePattern: {
                 name: 'Notas mensais',
@@ -1912,7 +1926,10 @@ export const STRINGS_PT_BR = {
                     downloadButtonText: 'Baixar',
                     copyNotice: 'Configurações copiadas para a área de transferência.',
                     downloadNotice: 'Configurações exportadas.',
-                    downloadError: 'Falha ao baixar configurações: {message}'
+                    downloadError: 'Falha ao baixar configurações: {message}',
+                    saveButtonText: 'Salvar no cofre',
+                    saveNotice: 'Configurações salvas em {path}.',
+                    saveError: 'Falha ao salvar configurações: {message}'
                 }
             },
             resetAllSettings: {
@@ -2556,7 +2573,7 @@ export const STRINGS_PT_BR = {
             },
             folderNoteType: {
                 name: 'Tipo de nota de pasta padrão',
-                desc: 'Tipo de nota de pasta criado a partir do menu de contexto.',
+                desc: 'Tipo de nota de pasta criado a partir do menu de contexto e preferido quando uma pasta tem notas de pasta de vários tipos.',
                 options: {
                     ask: 'Perguntar ao criar',
                     markdown: 'Markdown',
@@ -2683,6 +2700,11 @@ export const STRINGS_PT_BR = {
                 desc: 'Lista de campos frontmatter separados por vírgula. O primeiro valor não vazio é usado. Usa o nome do arquivo como alternativa.',
                 placeholder: 'title, name'
             },
+            frontmatterNameFormat: {
+                name: 'Formato do nome da nota',
+                desc: 'Nome exibido para notas que têm um nome no frontmatter. {{name}} é o nome do frontmatter, {{filename}} o nome do arquivo e {{date}} ou {{date:FORMAT}} a data de uma nota diária. Se o formato contiver {{date}}, notas que não são notas diárias exibem apenas o nome do frontmatter.',
+                placeholder: '{{name}}'
+            },
             frontmatterCreatedField: {
                 name: 'Campo de timestamp de criação',
                 desc: 'Nome do campo do frontmatter para o timestamp de criação. Deixe em branco para usar apenas a data do sistema de arquivos.',
@@ -2716,20 +2738,26 @@ export const STRINGS_PT_BR = {
                 messages: [
                     { headline: 'Escreva seus slides em Markdown.', subtext: 'Arraste textos e imagens para onde quiser.' },
                     { headline: 'Uma alternativa gratuita ao PowerPoint.', subtext: 'Compartilhar e colaborar também é grátis.' },
+                    { headline: 'Tudo fica salvo no seu computador.', subtext: 'Você não precisa de conta para criar slides.' },
                     { headline: 'Anime como no Apple Motion.', subtext: 'Use keyframes, caminhos e morphs.' },
-                    { headline: 'Colabore como no Google Slides.', subtext: 'Com cursores e comentários em tempo real.' },
+                    { headline: 'Coloque modelos 3D nos seus slides.', subtext: 'Abra um GLB ou glTF, ou gere um com o Meshy.' },
+                    { headline: 'Colabore como no Google Slides.', subtext: 'Veja os cursores e comentários de todos.' },
                     { headline: 'Veja todo o texto em um só lugar.', subtext: 'Abra View > Outline e edite em Markdown.' },
                     { headline: 'Encaixe objetos como no Figma.', subtext: 'Alinhe por espaçamento, tamanho e ângulo.' },
-                    { headline: 'Destaque com ==sinais de igual==.', subtext: '**Negrito** e *itálico* são iguais ao Obsidian.' },
                     { headline: 'Exporte seus slides em vídeo 4K.', subtext: 'Você não precisa do After Effects para animar.' },
-                    { headline: 'Notas do apresentador são Markdown.', subtext: 'Elas ficam salvas no mesmo arquivo dos slides.' },
-                    { headline: 'Tudo fica salvo no seu computador.', subtext: 'Você não precisa de conta para criar slides.' },
-                    { headline: 'Coloque código nos seus slides.', subtext: 'O código é destacado em 21 linguagens.' },
+                    { headline: 'Personagens 3D que andam e correm.', subtext: 'Use o Meshy para rigging e animação.' },
+                    { headline: 'Destaque com ==sinais de igual==.', subtext: '**Negrito** e *itálico* são iguais ao Obsidian.' },
+                    { headline: 'Use auto layout como no Figma.', subtext: 'Alinhe um grupo em uma linha ou coluna.' },
                     { headline: 'Compartilhe com um link.', subtext: 'Publique online com uma conta gratuita.' },
-                    { headline: 'Versione suas apresentações no Git.', subtext: 'São arquivos de texto Markdown e YAML.' },
-                    { headline: 'Crie fluxogramas a partir de texto.', subtext: 'Escreva código Mermaid e gere um diagrama.' },
+                    { headline: 'Iluminação 3D como no Blender.', subtext: 'Luzes ponto, sol, spot e área com sombras.' },
+                    { headline: 'Versione suas apresentações no Git.', subtext: 'São arquivos de texto Markdown e JSON.' },
+                    { headline: 'Crie componentes como no Figma.', subtext: 'Edite uma vez e todas as instâncias mudam.' },
+                    { headline: 'Explore temas como no Obsidian.', subtext: 'Instale um tema grátis com um clique.' },
                     { headline: 'Salve em uma pasta sincronizada.', subtext: 'Funciona com Dropbox, iCloud Drive e OneDrive.' },
-                    { headline: 'Explore temas como no Obsidian.', subtext: 'São grátis e se instalam com um clique.' },
+                    { headline: '3D com física de corpos rígidos.', subtext: 'Derrube, tombe ou empilhe objetos.' },
+                    { headline: 'Notas do apresentador são Markdown.', subtext: 'Elas ficam salvas no mesmo arquivo dos slides.' },
+                    { headline: 'Combine formas como no Figma.', subtext: 'Una, subtraia, intersecte ou exclua.' },
+                    { headline: 'Coloque código nos seus slides.', subtext: 'O código é destacado em 21 linguagens.' },
                     { headline: 'Grátis para uso pessoal e comercial.', subtext: 'Baixe para Mac ou Windows.' }
                 ]
             },

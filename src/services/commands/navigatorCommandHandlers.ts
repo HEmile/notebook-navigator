@@ -18,13 +18,12 @@
 
 import { FileView, Platform, TFile, TFolder, View, type WorkspaceLeaf } from 'obsidian';
 import type NotebookNavigatorPlugin from '../../main';
-import { getCurrentLanguage, strings } from '../../i18n';
+import { strings } from '../../i18n';
 import {
     createDailyNote,
     getDailyNoteFile,
     getDailyNoteFilename,
-    getDailyNoteSettings as getCoreDailyNoteSettings,
-    parseDailyNoteDateFromPath
+    getDailyNoteSettings as getCoreDailyNoteSettings
 } from '../../utils/dailyNotes';
 import {
     buildCustomCalendarFilePathForPattern,
@@ -39,15 +38,12 @@ import { getFolderNote, getFolderNoteDetectionSettings, isFolderNote, isSupporte
 import { createFrontmatterPropertyExclusionMatcher, isFolderInExcludedFolder, shouldExcludeFileWithMatcher } from '../../utils/fileFilters';
 import { getEffectiveFrontmatterExclusions } from '../../utils/exclusionUtils';
 import { runAsyncAction } from '../../utils/async';
+import { getMomentApi, resolveDailyNoteLocale, type MomentInstance } from '../../utils/moment';
 import {
-    getMomentApi,
-    resolveCalendarLocales,
-    resolveCalendarPeriodicNotesLocale,
-    resolveDailyNoteLocale,
-    type MomentApi,
-    type MomentInstance
-} from '../../utils/moment';
-import { createCalendarNotePathResolverContext, parseCalendarNoteDateFromPath } from '../../components/calendar/calendarNoteResolution';
+    createPeriodicNotePathParser,
+    getPeriodicNoteLocaleContext,
+    type PeriodicNoteLocaleContext
+} from '../../components/calendar/calendarNoteResolution';
 import type { NotebookNavigatorView } from '../../view/NotebookNavigatorView';
 import { isNotebookNavigatorView } from '../../view/viewGuards';
 import { getActiveHiddenFolders, getActiveVaultProfile } from '../../utils/vaultProfiles';
@@ -607,27 +603,6 @@ async function createAndOpenCustomCalendarNote(plugin: NotebookNavigatorPlugin, 
     await openFileInActiveLeaf(plugin, created);
 }
 
-/** Moment API plus the locale that Notebook Navigator periodic note paths are formatted and parsed with. */
-interface PeriodicNoteLocaleContext {
-    momentApi: MomentApi;
-    periodicNotesLocale: string;
-}
-
-function getPeriodicNoteLocaleContext(plugin: NotebookNavigatorPlugin): PeriodicNoteLocaleContext | null {
-    const momentApi = getMomentApi();
-    if (!momentApi) {
-        return null;
-    }
-
-    const { calendarRulesLocale } = resolveCalendarLocales(plugin.settings.calendarLocale, momentApi, getCurrentLanguage());
-    const periodicNotesLocale = resolveCalendarPeriodicNotesLocale(
-        plugin.settings.calendarPeriodicNotesLocaleSource,
-        calendarRulesLocale,
-        momentApi
-    );
-    return { momentApi, periodicNotesLocale };
-}
-
 async function openCalendarNoteForToday(plugin: NotebookNavigatorPlugin, kind: CalendarNoteKind): Promise<void> {
     const momentApi = getMomentApi();
     if (!momentApi) {
@@ -643,7 +618,7 @@ async function openCalendarNoteForToday(plugin: NotebookNavigatorPlugin, kind: C
  * the calendar setting to confirm before creating notes is on.
  */
 async function openCalendarNote(plugin: NotebookNavigatorPlugin, kind: CalendarNoteKind, date: MomentInstance): Promise<void> {
-    const localeContext = getPeriodicNoteLocaleContext(plugin);
+    const localeContext = getPeriodicNoteLocaleContext(plugin.settings);
     if (!localeContext) {
         showNotice(strings.common.unknownError, { variant: 'warning' });
         return;
@@ -730,64 +705,6 @@ async function openCalendarNote(plugin: NotebookNavigatorPlugin, kind: CalendarN
 /** Periodic note kinds from the shortest period to the longest, the order `Open parent periodic note` climbs. */
 const PERIODIC_NOTE_KINDS: readonly CalendarNoteKind[] = ['day', 'week', 'month', 'quarter', 'year'];
 
-/** Returns the start of the period covered by the note at `filePath`, or null when the path is not a note of the parser's kind. */
-type PeriodicNotePathParser = (filePath: string) => MomentInstance | null;
-
-/**
- * Builds the path parser for notes of `kind`, or returns null when the calendar has no notes of that kind: the Daily Notes
- * integration only has daily notes, and Notebook Navigator periodic notes need a valid pattern, which weekly and longer
- * notes leave empty when they are turned off.
- */
-function createPeriodicNotePathParser(
-    plugin: NotebookNavigatorPlugin,
-    kind: CalendarNoteKind,
-    localeContext: PeriodicNoteLocaleContext
-): PeriodicNotePathParser | null {
-    const { momentApi, periodicNotesLocale } = localeContext;
-
-    if (plugin.settings.calendarIntegrationMode === 'daily-notes') {
-        const dailyNoteSettings = kind === 'day' ? getCoreDailyNoteSettings(plugin.app) : null;
-        if (!dailyNoteSettings) {
-            return null;
-        }
-
-        const dailyNoteLocale = resolveDailyNoteLocale(momentApi);
-        return filePath => parseDailyNoteDateFromPath(filePath, dailyNoteSettings, momentApi, dailyNoteLocale);
-    }
-
-    const resolverContext = createCalendarNotePathResolverContext(kind, plugin.settings);
-    if (!resolverContext.config.isPatternValid(resolverContext.momentPattern, momentApi)) {
-        return null;
-    }
-
-    return filePath => {
-        const parsedDate = parseCalendarNoteDateFromPath({
-            filePath,
-            kind,
-            resolverContext,
-            calendarLocale: periodicNotesLocale,
-            weekLocale: periodicNotesLocale,
-            customCalendarRootFolderSettings: { calendarCustomRootFolder: getActiveVaultProfile(plugin.settings).periodicNotesFolder },
-            momentApi,
-            parseLocale: periodicNotesLocale
-        });
-        if (!parsedDate) {
-            return null;
-        }
-
-        // Weekly dates move to the week start the pattern's week tokens use, so stepping by a week lands on the next
-        // note and the parent month is the month of the first day of the week.
-        const periodStart = resolveCalendarCustomNotePathDate(
-            kind,
-            parsedDate,
-            resolverContext.momentPattern,
-            periodicNotesLocale,
-            periodicNotesLocale
-        );
-        return kind === 'week' ? periodStart : periodStart.startOf(kind);
-    };
-}
-
 /** The active file as a periodic note. */
 interface ActivePeriodicNote {
     kind: CalendarNoteKind;
@@ -806,13 +723,13 @@ function getActivePeriodicNote(plugin: NotebookNavigatorPlugin): ActivePeriodicN
         return null;
     }
 
-    const localeContext = getPeriodicNoteLocaleContext(plugin);
+    const localeContext = getPeriodicNoteLocaleContext(plugin.settings);
     if (!localeContext) {
         return null;
     }
 
     for (const kind of PERIODIC_NOTE_KINDS) {
-        const parsePath = createPeriodicNotePathParser(plugin, kind, localeContext);
+        const parsePath = createPeriodicNotePathParser(plugin.app, plugin.settings, kind, localeContext);
         if (!parsePath) {
             continue;
         }
@@ -856,7 +773,7 @@ function checkParentPeriodicNoteCommand(plugin: NotebookNavigatorPlugin, checkin
     }
 
     const parentKind = PERIODIC_NOTE_KINDS.slice(PERIODIC_NOTE_KINDS.indexOf(activeNote.kind) + 1).find(
-        kind => createPeriodicNotePathParser(plugin, kind, activeNote.localeContext) !== null
+        kind => createPeriodicNotePathParser(plugin.app, plugin.settings, kind, activeNote.localeContext) !== null
     );
     if (!parentKind) {
         return false;
@@ -1801,7 +1718,7 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
                     }
 
                     runAsyncAction(async () => {
-                        const didOpenDirectly = await openNoteShortcutWithoutNavigatorView(plugin, shortcut);
+                        const didOpenDirectly = await openNoteShortcut(plugin, shortcut);
                         if (didOpenDirectly) {
                             return;
                         }
@@ -1822,23 +1739,26 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
         });
     });
 
-    async function openNoteShortcutWithoutNavigatorView(plugin: NotebookNavigatorPlugin, shortcut: ShortcutEntry): Promise<boolean> {
+    /**
+     * Opens a note shortcut in the editor without opening or showing the navigator. Returns false for other shortcut
+     * types and for a missing note, so the caller runs the shortcut through the navigator instead.
+     */
+    async function openNoteShortcut(plugin: NotebookNavigatorPlugin, shortcut: ShortcutEntry): Promise<boolean> {
         if (!isNoteShortcut(shortcut)) {
             return false;
         }
 
-        const { app } = plugin;
-        const target = resolveNoteShortcutTarget(app, shortcut.path);
+        const target = resolveNoteShortcutTarget(plugin.app, shortcut.path);
         if (!target) {
             return false;
         }
 
-        const leaf = app.workspace.getLeaf(false);
-        if (!leaf) {
-            return false;
-        }
-
-        await leaf.openFile(target, { active: true });
+        // Selects the note and its shortcut in a mounted navigator before opening it, as a shortcut click does, so
+        // auto-reveal finds the note already selected and leaves the navigation pane as it is. The open goes through
+        // the command queue, which skips an open that a newer one replaces, so commands run in quick succession end
+        // with the editor on the selected note.
+        getNavigatorViewIfMounted(plugin)?.selectNoteShortcut(target);
+        await openFileInActiveLeaf(plugin, target);
         return true;
     }
 

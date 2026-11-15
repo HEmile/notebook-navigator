@@ -60,7 +60,7 @@ export interface UseNavigationPaneItemPipelineParams {
     settings: NotebookNavigatorSettings;
     metadataService: MetadataService;
     fileNameIconNeedles: readonly FileNameIconNeedle[];
-    getFileDisplayName: (file: TFile) => string;
+    getFileNameForIconMatch: (file: TFile) => string;
     folderDecorationModel: FolderDecorationModel;
     navRainbowState: NavigationRainbowState;
     /** Tag rainbow colors shared with the list pane, assigned from the unfiltered tag tree rather than tagItems */
@@ -120,7 +120,7 @@ export function useNavigationPaneItemPipeline({
     settings,
     metadataService,
     fileNameIconNeedles,
-    getFileDisplayName,
+    getFileNameForIconMatch,
     folderDecorationModel,
     navRainbowState,
     tagRainbowColors,
@@ -457,7 +457,7 @@ export function useNavigationPaneItemPipeline({
             settings,
             navRainbow,
             fileNameIconNeedles,
-            getFileDisplayName,
+            getFileNameForIconMatch,
             metadataService,
             parsedExcludedFolders,
             folderDecorationModel,
@@ -467,7 +467,7 @@ export function useNavigationPaneItemPipeline({
     }, [
         app,
         fileNameIconNeedles,
-        getFileDisplayName,
+        getFileNameForIconMatch,
         metadataDecorationVersion,
         metadataService,
         folderDecorationModel,

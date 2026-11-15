@@ -25,7 +25,19 @@ import { BaseMetadataService, type MetadataCleanupResult } from './BaseMetadataS
 import type { CleanupValidators } from '../MetadataService';
 import { TagTreeNode } from '../../types/storage';
 import { normalizeTagPath } from '../../utils/tagUtils';
-import { deleteCollapsedPinnedContextKeys, updateCollapsedPinnedContextKeys } from '../../utils/recordUtils';
+import { deleteCollapsedPinnedContextKeys, sanitizeRecord, updateCollapsedPinnedContextKeys } from '../../utils/recordUtils';
+import { getChildOrder, getTagChildName } from '../../utils/treeFlattener';
+
+/** Path of a nested tag from its parent path and its name in the parent's manual order */
+function getChildTagPath(parentPath: string, name: string): string {
+    return `${parentPath}/${name}`;
+}
+
+/** Parent path of a nested tag, or null for a root tag (root tags are ordered by rootTagOrder) */
+function getParentTagPath(tagPath: string): string | null {
+    const separatorIndex = tagPath.lastIndexOf('/');
+    return separatorIndex === -1 ? null : tagPath.slice(0, separatorIndex);
+}
 import {
     hasHiddenFileTagMatch,
     hasHiddenTagMatch,
@@ -278,6 +290,8 @@ export class TagMetadataService extends BaseMetadataService {
         if (!normalized) {
             return Promise.resolve();
         }
+        // An alphabetical choice replaces the tag's manual child order
+        await this.removeChildOrder('tagChildOrder', normalized);
         return this.setEntityChildSortOrderOverride(ItemType.TAG, normalized, sortOrder);
     }
 
@@ -289,6 +303,7 @@ export class TagMetadataService extends BaseMetadataService {
         if (!normalized) {
             return Promise.resolve();
         }
+        await this.removeChildOrder('tagChildOrder', normalized);
         return this.removeEntityChildSortOrderOverride(ItemType.TAG, normalized);
     }
 
@@ -314,6 +329,7 @@ export class TagMetadataService extends BaseMetadataService {
             settings.tagIcons,
             settings.tagSortOverrides,
             settings.tagTreeSortOverrides,
+            settings.tagChildOrder,
             settings.tagAppearances
         ];
 
@@ -370,11 +386,78 @@ export class TagMetadataService extends BaseMetadataService {
         return this.updateNestedPaths(clone, oldPath, newPath, preserveExisting);
     }
 
+    /** Whether a rename or delete of this nested tag changes its parent's manual child order */
+    private affectsParentTagOrder(settings: NotebookNavigatorSettings, tagPath: string): boolean {
+        const parentPath = getParentTagPath(tagPath);
+        return parentPath !== null && getChildOrder(settings.tagChildOrder, parentPath).includes(getTagChildName(tagPath));
+    }
+
+    /** Removes a nested tag's name from its parent's manual child order. */
+    private removeFromParentTagOrder(settings: NotebookNavigatorSettings, tagPath: string): boolean {
+        const parentPath = getParentTagPath(tagPath);
+        const name = getTagChildName(tagPath);
+        const storedOrder = parentPath === null ? [] : getChildOrder(settings.tagChildOrder, parentPath);
+        if (parentPath === null || !storedOrder.includes(name)) {
+            return false;
+        }
+        const nextOrder = storedOrder.filter(entry => entry !== name);
+        if (nextOrder.length > 0) {
+            settings.tagChildOrder[parentPath] = nextOrder;
+        } else {
+            delete settings.tagChildOrder[parentPath];
+        }
+        return true;
+    }
+
+    /**
+     * Keeps a renamed nested tag at its position in its parent's manual child order. A rename that puts the tag under
+     * another parent removes it from the old order; the tree append (`useChildOrderAppend`) adds it to the new
+     * parent's manual order when the tree first shows it there, so a hidden destination joins when it is shown. Only a
+     * merge into an existing tag keeps the destination's position. Without a merge the new name takes the old slot even
+     * when it is already listed: the append watcher can list it while the rename edits files, before this runs, and a
+     * missing tag of that name has no position worth keeping over the renamed one.
+     */
+    private renameInParentTagOrder(
+        settings: NotebookNavigatorSettings,
+        oldPath: string,
+        newPath: string,
+        isMerge: boolean,
+        keepsOldTag: boolean
+    ): boolean {
+        const oldParent = getParentTagPath(oldPath);
+        const newParent = getParentTagPath(newPath);
+        const oldName = getTagChildName(oldPath);
+        const newName = getTagChildName(newPath);
+
+        if (oldParent !== null && oldParent === newParent) {
+            const storedOrder = getChildOrder(settings.tagChildOrder, oldParent);
+            if (oldName === newName || !storedOrder.includes(oldName)) {
+                return false;
+            }
+            const renamedOrder =
+                isMerge && storedOrder.includes(newName)
+                    ? storedOrder.filter(name => name !== oldName)
+                    : storedOrder.filter(name => name !== newName).map(name => (name === oldName ? newName : name));
+            settings.tagChildOrder[oldParent] = renamedOrder;
+            return true;
+        }
+
+        // A rename into an ancestor can recreate the old tag from a descendant; it then keeps its slot
+        return keepsOldTag ? false : this.removeFromParentTagOrder(settings, oldPath);
+    }
+
     /**
      * Updates all tag metadata entries when a tag is renamed.
-     * Migrates direct entries and nested descendants to the new path.
+     * Migrates direct entries and nested descendants to the new path. `keepsOldTag`: the rename leaves the old tag in
+     * place (`TagRenameAnalysis.keepsOldTag`), so it keeps its parent slot.
      */
-    async handleTagRename(oldPath: string, newPath: string, preserveExisting = false, extraMutation?: SettingsMutation): Promise<void> {
+    async handleTagRename(
+        oldPath: string,
+        newPath: string,
+        preserveExisting = false,
+        extraMutation?: SettingsMutation,
+        keepsOldTag = false
+    ): Promise<void> {
         const normalizedOld = normalizeTagPath(oldPath);
         const normalizedNew = normalizeTagPath(newPath);
         if (!normalizedOld || !normalizedNew || normalizedOld === normalizedNew) {
@@ -403,22 +486,33 @@ export class TagMetadataService extends BaseMetadataService {
               this.willUpdateNestedPaths(settingsSnapshot.tagIcons, normalizedOld, normalizedNew, preserveExisting) ||
               this.willUpdateNestedPaths(settingsSnapshot.tagSortOverrides, normalizedOld, normalizedNew, preserveExisting) ||
               this.willUpdateNestedPaths(settingsSnapshot.tagTreeSortOverrides, normalizedOld, normalizedNew, preserveExisting) ||
+              this.willUpdateNestedPaths(settingsSnapshot.tagChildOrder, normalizedOld, normalizedNew, preserveExisting) ||
               this.willUpdateNestedPaths(settingsSnapshot.tagAppearances, normalizedOld, normalizedNew, preserveExisting)
             : false;
+        const requiresParentOrderUpdate = this.affectsParentTagOrder(settingsSnapshot, normalizedOld);
 
-        if (!requiresUpdate && !hasHiddenTags && !hasHiddenFileTags && !extraMutation) {
+        if (!requiresUpdate && !requiresParentOrderUpdate && !hasHiddenTags && !hasHiddenFileTags && !extraMutation) {
             return;
         }
 
         await this.saveAndUpdate(settings => {
             let changed = false;
+            if (requiresUpdate || requiresParentOrderUpdate) {
+                // Replace the record before editing it, because tree sorting is memoized on it and an in-place
+                // edit would leave a tree built while the rename edited files in the old order
+                settings.tagChildOrder = sanitizeRecord(settings.tagChildOrder);
+            }
             if (requiresUpdate) {
                 changed = this.updateNestedPaths(settings.tagColors, normalizedOld, normalizedNew, preserveExisting) || changed;
                 changed = this.updateNestedPaths(settings.tagBackgroundColors, normalizedOld, normalizedNew, preserveExisting) || changed;
                 changed = this.updateNestedPaths(settings.tagIcons, normalizedOld, normalizedNew, preserveExisting) || changed;
                 changed = this.updateNestedPaths(settings.tagSortOverrides, normalizedOld, normalizedNew, preserveExisting) || changed;
                 changed = this.updateNestedPaths(settings.tagTreeSortOverrides, normalizedOld, normalizedNew, preserveExisting) || changed;
+                changed = this.updateNestedPaths(settings.tagChildOrder, normalizedOld, normalizedNew, preserveExisting) || changed;
                 changed = this.updateNestedPaths(settings.tagAppearances, normalizedOld, normalizedNew, preserveExisting) || changed;
+            }
+            if (requiresParentOrderUpdate) {
+                changed = this.renameInParentTagOrder(settings, normalizedOld, normalizedNew, preserveExisting, keepsOldTag) || changed;
             }
 
             changed = updateHiddenTagPrefixMatches(settings, normalizedOld, normalizedNew) || changed;
@@ -453,6 +547,7 @@ export class TagMetadataService extends BaseMetadataService {
         const settingsSnapshot = this.settingsProvider.settings;
         const hasMetadata =
             this.hasTagMetadataForPath(settingsSnapshot, normalized) ||
+            this.affectsParentTagOrder(settingsSnapshot, normalized) ||
             hasHiddenTagMatch(settingsSnapshot, normalized) ||
             hasHiddenFileTagMatch(settingsSnapshot, normalized);
 
@@ -465,11 +560,15 @@ export class TagMetadataService extends BaseMetadataService {
         await this.saveAndUpdate(settings => {
             let changed = false;
             if (hasMetadata) {
+                // Replace the record before editing it, because tree sorting is memoized on it
+                settings.tagChildOrder = sanitizeRecord(settings.tagChildOrder);
                 changed = this.removeTagMetadataForPath(settings.tagColors, normalized, prefix) || changed;
                 changed = this.removeTagMetadataForPath(settings.tagBackgroundColors, normalized, prefix) || changed;
                 changed = this.removeTagMetadataForPath(settings.tagIcons, normalized, prefix) || changed;
                 changed = this.removeTagMetadataForPath(settings.tagSortOverrides, normalized, prefix) || changed;
                 changed = this.removeTagMetadataForPath(settings.tagTreeSortOverrides, normalized, prefix) || changed;
+                changed = this.removeTagMetadataForPath(settings.tagChildOrder, normalized, prefix) || changed;
+                changed = this.removeFromParentTagOrder(settings, normalized) || changed;
                 changed = this.removeTagMetadataForPath(settings.tagAppearances, normalized, prefix) || changed;
             }
             changed = removeHiddenTagPrefixMatches(settings, normalized) || changed;
@@ -515,8 +614,9 @@ export class TagMetadataService extends BaseMetadataService {
             this.cleanupMetadata(targetSettings, 'tagTreeSortOverrides', validator),
             this.cleanupMetadata(targetSettings, 'tagAppearances', validator)
         ]);
+        const tagChildOrderChanged = this.cleanupChildOrder(targetSettings, 'tagChildOrder', validator, getChildTagPath);
 
-        return collapsedPinnedContextChanges || results.some(changed => changed);
+        return collapsedPinnedContextChanges || tagChildOrderChanged || results.some(changed => changed);
     }
 
     /**
@@ -581,9 +681,10 @@ export class TagMetadataService extends BaseMetadataService {
             this.cleanupMetadata(targetSettings, 'tagTreeSortOverrides', validator),
             this.cleanupMetadata(targetSettings, 'tagAppearances', validator)
         ]);
+        const tagChildOrderChanged = this.cleanupChildOrder(targetSettings, 'tagChildOrder', validator, getChildTagPath);
 
         return {
-            settingsChanged: results.some(changed => changed),
+            settingsChanged: tagChildOrderChanged || results.some(changed => changed),
             localChanged: collapsedPinnedContextChanges
         };
     }

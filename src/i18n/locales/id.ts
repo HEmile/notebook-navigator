@@ -63,6 +63,14 @@ export const STRINGS_ID = {
         manualSortHint: 'Seret untuk mengatur ulang. Urutan disimpan sebagai nilai indeks numerik di properti "{property}".',
         manualSortNonMarkdownHint: 'File non-Markdown ditampilkan di bawah dan tidak dapat diatur ulang.',
         unsortedSection: 'Belum diurutkan',
+        // MarkdownPoint presentation rows: the cover slide count and the presentation.mdpoint detail labels
+        presentation: {
+            slideCount: '{count} slide',
+            slideCountOne: '1 slide',
+            theme: 'Tema',
+            slides: 'Slide',
+            size: 'Ukuran'
+        },
         propertyGroupNoValue: 'Tidak ada',
         manualSortDone: 'Selesai',
         manualSortMultipleWriteFailure: '{count} file gagal; pertama: {path}: {message}'
@@ -86,8 +94,9 @@ export const STRINGS_ID = {
         reorderRootFoldersTitle: 'Atur ulang navigasi',
         reorderRootFoldersHint: 'Gunakan panah atau seret untuk mengatur ulang',
         vaultRootLabel: 'Vault',
-        resetRootToAlpha: 'Atur ulang ke urutan abjad',
-        resetRootToFrequency: 'Atur ulang ke urutan frekuensi',
+        resetAllFolders: 'Atur ulang semua folder',
+        resetAllTags: 'Atur ulang semua tag',
+        resetAllProperties: 'Atur ulang semua properti',
         pinShortcuts: 'Sematkan pintasan',
         pinShortcutsAndRecentFiles: 'Sematkan pintasan dan file terbaru',
         unpinShortcuts: 'Lepas sematan pintasan',
@@ -246,10 +255,12 @@ export const STRINGS_ID = {
                     items: [
                         '`.key` Sertakan catatan dengan kunci properti yang dimulai dengan `key`.',
                         '`.key=value` Sertakan catatan yang nilai propertinya mengandung `value`.',
+                        '`.key=null` Sertakan catatan yang memiliki properti `key` tanpa nilai. `.key="null"` mencari teks `null`.',
                         '`."Reading Status"` Sertakan catatan dengan kunci properti yang mengandung spasi.',
                         '`."Reading Status"="In Progress"` Kunci dan nilai yang mengandung spasi harus diapit tanda kutip ganda.',
                         '`-.key` Kecualikan catatan dengan kunci properti yang dimulai dengan `key`.',
                         '`-.key=value` Kecualikan catatan yang nilai propertinya mengandung `value`.',
+                        '`-.key=null` Kecualikan catatan yang memiliki properti `key` tanpa nilai.',
                         'Cmd/Ctrl+Klik properti untuk menambahkan dengan AND. Cmd/Ctrl+Shift+Klik untuk menambahkan dengan OR.'
                     ]
                 },
@@ -930,6 +941,7 @@ export const STRINGS_ID = {
             cannotMoveIntoSelf: 'Tidak dapat memindahkan folder ke dirinya sendiri atau subfolder.',
             itemAlreadyExists: 'Item bernama "{name}" sudah ada di lokasi ini.',
             failedToMove: 'Gagal memindahkan: {error}',
+            failedToCopy: 'Gagal menyalin "{name}": {error}',
             failedToAddTag: 'Gagal menambahkan tag "{tag}"',
             failedToSetProperty: 'Gagal memperbarui properti: {error}',
             failedToClearTags: 'Gagal menghapus tag',
@@ -942,7 +954,9 @@ export const STRINGS_ID = {
             filesAlreadyHaveProperty: '{count} file sudah memiliki properti ini',
             noTagsToClear: 'Tidak ada tag untuk dihapus',
             fileImported: 'Mengimpor 1 file',
-            filesImported: 'Mengimpor {count} file'
+            filesImported: 'Mengimpor {count} file',
+            fileCopied: '1 file disalin',
+            filesCopied: '{count} file disalin'
         }
     },
 
@@ -1070,8 +1084,6 @@ export const STRINGS_ID = {
             exportFailed: 'Gagal mengekspor laporan metadata'
         },
         index: {
-            label: 'Umum',
-            description: 'Catatan rilis, dukungan, profil vault, tipe file, dan kunci properti.',
             groups: {
                 about: 'Tentang'
             }
@@ -1089,11 +1101,12 @@ export const STRINGS_ID = {
             },
             appearanceAndBehavior: {
                 label: 'Tampilan & perilaku',
-                description: 'Perilaku, navigasi keyboard, tombol mouse, tampilan, dan pemformatan.',
+                description: 'Perilaku, navigasi keyboard, tombol mouse, panel ganda, tampilan, dan pemformatan.',
                 groups: {
                     startup: 'Startup',
                     keyboardNavigation: 'Navigasi keyboard',
                     mouseButtons: 'Tombol mouse',
+                    dualPane: 'Panel ganda',
                     desktopAppearance: 'Tampilan desktop',
                     mobileAppearance: 'Tampilan seluler',
                     appearance: 'Tampilan',
@@ -1203,7 +1216,8 @@ export const STRINGS_ID = {
                 description: 'Diagnostik, pembersihan metadata, impor/ekspor, dan pengaturan ulang.',
                 groups: {
                     maintenance: 'Pemeliharaan',
-                    resetSettings: 'Atur ulang pengaturan'
+                    resetSettings: 'Atur ulang pengaturan',
+                    thirdPartyLicenses: 'Lisensi pihak ketiga'
                 }
             }
         },
@@ -1582,10 +1596,6 @@ export const STRINGS_ID = {
                 name: 'Auto-pilih catatan pertama',
                 desc: 'Secara otomatis membuka catatan pertama saat beralih folder, tag, atau properti.'
             },
-            disableShortcutAutoScroll: {
-                name: 'Nonaktifkan auto-gulir untuk pintasan',
-                desc: 'Jangan gulir panel navigasi saat mengklik item di pintasan.'
-            },
             expandOnSelection: {
                 name: 'Luaskan saat dipilih',
                 desc: 'Luaskan folder, tag, dan properti saat dipilih. Dalam mode panel tunggal, pilihan pertama meluaskan, pilihan kedua menampilkan file.'
@@ -1672,8 +1682,6 @@ export const STRINGS_ID = {
             calendarLocale: {
                 name: 'Bahasa',
                 desc: 'Mengontrol format tanggal kalender, penomoran minggu, dan hari pertama dalam seminggu.',
-                weekPathMismatchWarning:
-                    'Kalender yang terlihat dan jalur catatan mingguan menggunakan awal minggu atau penomoran minggu yang berbeda.',
                 options: {
                     systemDefault: 'Default'
                 }
@@ -1787,7 +1795,9 @@ export const STRINGS_ID = {
                 momentLinkText: 'format tanggal Moment',
                 momentDescSuffix:
                     '. Bungkus nama subfolder dalam tanda kurung, misal [Work]/YYYY. Klik ikon template untuk mengatur template. Atur lokasi folder template di Operasi file & template > Template.',
-                example: 'Sintaks saat ini: {path}'
+                example: 'Sintaks saat ini: {path}',
+                weekYearWarning:
+                    '"gggg" dan "GGGG" adalah tahun minggu, sehingga tanggal di sekitar Tahun Baru bisa mendapat tahun yang salah. Gunakan "YYYY".'
             },
             templateEngine: {
                 name: 'Mesin template',
@@ -1831,10 +1841,14 @@ export const STRINGS_ID = {
             calendarWeeklyNotePattern: {
                 name: 'Catatan mingguan',
                 parsingError: 'Pola harus dapat diformat dan diparse kembali sebagai minggu lengkap (tahun minggu, nomor minggu).',
-                weekPathMismatchWarning:
-                    'Jalur catatan mingguan menggunakan bahasa catatan berkala. Gunakan bahasa yang cocok, atau gunakan "GGGG" dengan "WW" untuk minggu berbasis Senin.',
+                isoWeeksWarning:
+                    'Catatan mingguan menggunakan minggu ISO ("W" atau "G"), sehingga kalender memulai minggu pada hari Senin dan menampilkan nomor minggu ISO. Gunakan "gggg" dengan "ww" untuk minggu yang mengikuti bahasa.',
+                calendarYearWarning:
+                    'Catatan mingguan mengambil tahun dari "YYYY", sehingga minggu 1 yang dimulai pada bulan Desember mendapat tahun sebelumnya. Gunakan "GGGG" dengan "WW", atau "gggg" dengan "ww".',
                 mixedWeekTokensWarning:
-                    'Pola ini menggabungkan token minggu berbasis Senin ("W" atau "G") dengan token minggu berbasis bahasa ("w" atau "g"). Gunakan satu set secara konsisten: "GGGG" dengan "WW" untuk minggu berbasis Senin, atau "gggg" dengan "ww" jika catatan mingguan harus mengikuti bahasa yang dipilih.'
+                    'Catatan mingguan mencampur token minggu ISO ("W" atau "G") dengan token minggu bahasa ("w" atau "g"). Gunakan "GGGG" dengan "WW" untuk minggu ISO, atau "gggg" dengan "ww" untuk minggu yang mengikuti bahasa.',
+                weekPathMismatchWarning:
+                    'Bahasa kalender dan bahasa catatan berkala memulai atau menomori minggu secara berbeda, sehingga jalur catatan mingguan tidak cocok dengan minggu di kalender. Atur keduanya ke bahasa yang sama, atau gunakan "GGGG" dengan "WW" untuk minggu ISO.'
             },
             calendarMonthlyNotePattern: {
                 name: 'Catatan bulanan',
@@ -1906,7 +1920,10 @@ export const STRINGS_ID = {
                     downloadButtonText: 'Unduh',
                     copyNotice: 'Pengaturan disalin ke papan klip.',
                     downloadNotice: 'Pengaturan diekspor.',
-                    downloadError: 'Gagal mengekspor pengaturan: {message}'
+                    downloadError: 'Gagal mengekspor pengaturan: {message}',
+                    saveButtonText: 'Simpan ke vault',
+                    saveNotice: 'Pengaturan disimpan ke {path}.',
+                    saveError: 'Gagal menyimpan pengaturan: {message}'
                 }
             },
             resetAllSettings: {
@@ -2548,7 +2565,7 @@ export const STRINGS_ID = {
             },
             folderNoteType: {
                 name: 'Jenis catatan folder default',
-                desc: 'Jenis catatan folder yang dibuat dari menu konteks.',
+                desc: 'Jenis catatan folder yang dibuat dari menu konteks dan diutamakan saat folder memiliki catatan folder dari beberapa jenis.',
                 options: {
                     ask: 'Tanyakan saat membuat',
                     markdown: 'Markdown',
@@ -2675,6 +2692,11 @@ export const STRINGS_ID = {
                 desc: 'Daftar field frontmatter dipisahkan koma. Nilai tidak kosong pertama digunakan. Jika kosong, nama file digunakan.',
                 placeholder: 'title, name'
             },
+            frontmatterNameFormat: {
+                name: 'Format nama catatan',
+                desc: 'Nama yang ditampilkan untuk catatan yang memiliki nama frontmatter. {{name}} adalah nama frontmatter, {{filename}} nama file, dan {{date}} atau {{date:FORMAT}} tanggal catatan harian. Jika format berisi {{date}}, catatan yang bukan catatan harian hanya menampilkan nama frontmatter.',
+                placeholder: '{{name}}'
+            },
             frontmatterCreatedField: {
                 name: 'Field timestamp dibuat',
                 desc: 'Nama field frontmatter untuk timestamp dibuat. Biarkan kosong untuk hanya menggunakan tanggal sistem file.',
@@ -2708,20 +2730,26 @@ export const STRINGS_ID = {
                 messages: [
                     { headline: 'Tulis slide Anda dalam Markdown.', subtext: 'Seret teks dan gambar ke posisi yang Anda mau.' },
                     { headline: 'Alternatif gratis untuk PowerPoint.', subtext: 'Berbagi dan berkolaborasi juga gratis.' },
+                    { headline: 'Presentasi tersimpan di komputer Anda.', subtext: 'Anda tidak perlu akun untuk membuat slide.' },
                     { headline: 'Buat animasi ala Apple Motion.', subtext: 'Gunakan keyframe, jalur, dan morph.' },
-                    { headline: 'Berkolaborasi ala Google Slides.', subtext: 'Dengan pointer dan komentar secara real-time.' },
+                    { headline: 'Taruh model 3D di slide Anda.', subtext: 'Buka file GLB atau glTF, atau buat dengan Meshy.' },
+                    { headline: 'Berkolaborasi ala Google Slides.', subtext: 'Lihat pointer dan komentar semua orang.' },
                     { headline: 'Lihat teks semua slide di satu tempat.', subtext: 'Buka View > Outline dan edit sebagai Markdown.' },
                     { headline: 'Snap objek ala Figma.', subtext: 'Rapikan berdasarkan jarak, ukuran, dan sudut.' },
-                    { headline: 'Sorot dengan ==tanda sama dengan==.', subtext: '**Tebal** dan *miring* sama seperti di Obsidian.' },
                     { headline: 'Ekspor presentasi sebagai video 4K.', subtext: 'Tidak perlu After Effects untuk animasinya.' },
-                    { headline: 'Catatan pembicara juga Markdown.', subtext: 'Tersimpan di file yang sama dengan slide.' },
-                    { headline: 'Presentasi tersimpan di komputer Anda.', subtext: 'Anda tidak perlu akun untuk membuat slide.' },
-                    { headline: 'Tampilkan kode di slide Anda.', subtext: 'Blok kode disorot untuk 21 bahasa.' },
+                    { headline: 'Buat karakter 3D berjalan atau berlari.', subtext: 'Gunakan Meshy untuk rigging dan animasi.' },
+                    { headline: 'Sorot dengan ==tanda sama dengan==.', subtext: '**Tebal** dan *miring* sama seperti di Obsidian.' },
+                    { headline: 'Gunakan auto layout ala Figma.', subtext: 'Susun grup dalam satu baris atau kolom.' },
                     { headline: 'Bagikan presentasi dengan tautan.', subtext: 'Terbitkan online dengan akun gratis.' },
-                    { headline: 'Lacak presentasi Anda di Git.', subtext: 'Presentasi berupa file teks Markdown dan YAML.' },
-                    { headline: 'Buat diagram alir dari teks.', subtext: 'Tulis kode Mermaid dan dapatkan diagramnya.' },
+                    { headline: 'Pencahayaan 3D ala Blender.', subtext: 'Cahaya titik, matahari, sorot, dan area berbayang.' },
+                    { headline: 'Lacak presentasi Anda di Git.', subtext: 'Presentasi berupa file teks Markdown dan JSON.' },
+                    { headline: 'Buat komponen ala Figma.', subtext: 'Edit sekali dan semua instance ikut berubah.' },
+                    { headline: 'Jelajahi tema seperti di Obsidian.', subtext: 'Pasang tema gratis dengan sekali klik.' },
                     { headline: 'Simpan presentasi di folder tersinkron.', subtext: 'Bisa dengan Dropbox, iCloud Drive, atau OneDrive.' },
-                    { headline: 'Jelajahi tema seperti di Obsidian.', subtext: 'Semua gratis dan terpasang dengan sekali klik.' },
+                    { headline: '3D dengan fisika benda tegar.', subtext: 'Jatuhkan, robohkan, atau tumpuk objek.' },
+                    { headline: 'Catatan pembicara juga Markdown.', subtext: 'Tersimpan di file yang sama dengan slide.' },
+                    { headline: 'Gabungkan bentuk ala Figma.', subtext: 'Satukan, kurangi, iris, atau kecualikan.' },
+                    { headline: 'Tampilkan kode di slide Anda.', subtext: 'Blok kode disorot untuk 21 bahasa.' },
                     { headline: 'Gratis untuk pribadi dan komersial.', subtext: 'Unduh untuk Mac atau Windows.' }
                 ]
             },

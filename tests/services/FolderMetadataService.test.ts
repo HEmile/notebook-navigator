@@ -55,7 +55,8 @@ const {
     getDBInstanceOrNullMock: vi.fn(),
     getFolderNoteDetectionSettingsMock: vi.fn((settings: NotebookNavigatorSettings) => ({
         enableFolderNotes: settings.enableFolderNotes,
-        folderNoteNamePattern: settings.folderNoteNamePattern
+        folderNoteNamePattern: settings.folderNoteNamePattern,
+        folderNoteType: settings.folderNoteType
     })),
     resolveFolderNoteNameForFolderMock: vi.fn((folder: TFolder, settings: NotebookNavigatorSettings) =>
         settings.folderNoteNamePattern.length === 0
@@ -136,6 +137,13 @@ class TestSettingsProvider implements ISettingsProvider {
     unregisterSettingsUpdateListener(id: string): void {
         this.settingsUpdateListeners.delete(id);
     }
+}
+
+function createNamedFolder(path: string, childNames: string[] = []): TFolder {
+    const folder = new TFolder(path);
+    Reflect.set(folder, 'name', path.split('/').pop() ?? path);
+    folder.children = childNames.map(childName => createNamedFolder(`${path}/${childName}`));
+    return folder;
 }
 
 function createSettings(): NotebookNavigatorSettings {
@@ -324,6 +332,209 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
         expect(settingsProvider.settings.vaultProfiles[0].shortcuts).toEqual([
             { type: ShortcutType.FOLDER, path: 'appLab/SKILLS-WORKFLOWS/mmgi' }
         ]);
+    });
+
+    it('keeps a renamed folder at its position in the parent manual order and rekeys its own order', async () => {
+        const storedRecord = { '/': ['Projects', 'Inbox'], Projects: ['B', 'A'], 'Projects/B': ['Y', 'X'] };
+        settingsProvider.settings.folderChildOrder = storedRecord;
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+
+        await service.handleFolderRename('Projects/B', 'Projects/Beta');
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({
+            '/': ['Projects', 'Inbox'],
+            Projects: ['Beta', 'A'],
+            'Projects/Beta': ['Y', 'X']
+        });
+        // A new record, so tree sorting memoized on the old one recomputes
+        expect(settingsProvider.settings.folderChildOrder).not.toBe(storedRecord);
+    });
+
+    it('keeps the position on case-only renames and rekeys descendant orders on ancestor renames', async () => {
+        settingsProvider.settings.folderChildOrder = { '/': ['Projects', 'Inbox'], Projects: ['B', 'A'], 'Projects/B': ['Y', 'X'] };
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+
+        await service.handleFolderRename('Projects/B', 'Projects/b');
+        await service.handleFolderRename('Projects', 'Work');
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({
+            '/': ['Work', 'Inbox'],
+            Work: ['b', 'A'],
+            'Work/b': ['Y', 'X']
+        });
+    });
+
+    it('moves a folder from its old parent order to the end of a manually ordered new parent', async () => {
+        settingsProvider.settings.folderChildOrder = {
+            '/': ['Projects', 'Inbox'],
+            Projects: ['B', 'A'],
+            Inbox: ['Z'],
+            'Projects/B': ['Y']
+        };
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+        // Inbox already holds C, which its manual order does not list yet
+        const folders = new Map([['Inbox', createNamedFolder('Inbox', ['Z', 'C', 'B'])]]);
+        getFolderByPath.mockImplementation((path: string) => folders.get(path) ?? null);
+
+        await service.handleFolderRename('Projects/B', 'Inbox/B');
+        folders.set('Projects', createNamedFolder('Projects', ['A', 'Inbox']));
+        await service.handleFolderRename('Inbox', 'Projects/Inbox');
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({
+            '/': ['Projects'],
+            Projects: ['A', 'Inbox'],
+            'Projects/Inbox': ['Z', 'C', 'B'],
+            'Projects/Inbox/B': ['Y']
+        });
+    });
+
+    it('adds a created folder to the end of a manual order, after subfolders the order does not list yet', async () => {
+        settingsProvider.settings.folderChildOrder = { Projects: ['B', 'A', 'Missing'] };
+        const projects = createNamedFolder('Projects', ['A', 'B', 'D', 'C']);
+        getFolderByPath.mockImplementation((path: string) => (path === 'Projects' ? projects : null));
+
+        await service.handleFolderCreate('Projects/D');
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({ Projects: ['B', 'A', 'Missing', 'C', 'D'] });
+    });
+
+    it('keeps creation order when a later folder exists before the earlier create is saved', async () => {
+        settingsProvider.settings.folderChildOrder = { Projects: ['A'] };
+        const projects = createNamedFolder('Projects', ['A', 'B']);
+        getFolderByPath.mockImplementation((path: string) => (path === 'Projects' ? projects : null));
+        const createB = service.handleFolderCreate('Projects/B');
+        // C arrives before B's queued update runs, so that update finds C in the vault
+        projects.children.push(createNamedFolder('Projects/C'));
+        const createC = service.handleFolderCreate('Projects/C');
+
+        await Promise.all([createB, createC]);
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({ Projects: ['A', 'B', 'C'] });
+    });
+
+    it('leaves out an unlisted sibling deleted before a moved-in folder is saved', async () => {
+        settingsProvider.settings.folderChildOrder = { Projects: ['A'] };
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+        const projects = createNamedFolder('Projects', ['A', 'B', 'X']);
+        getFolderByPath.mockImplementation((path: string) => (path === 'Projects' ? projects : null));
+        const move = service.handleFolderRename('Inbox/X', 'Projects/X');
+        // B is deleted before the queued update runs
+        projects.children = projects.children.filter(child => child.name !== 'B');
+
+        await move;
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({ Projects: ['A', 'X'] });
+    });
+
+    it('keeps an unlisted sibling renamed before a created folder is saved ahead of it', async () => {
+        settingsProvider.settings.folderChildOrder = { Projects: ['A'] };
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+        const projects = createNamedFolder('Projects', ['A', 'B', 'X']);
+        getFolderByPath.mockImplementation((path: string) => (path === 'Projects' ? projects : null));
+        const create = service.handleFolderCreate('Projects/X');
+        // B is renamed to C before the queued update runs; Obsidian renames the same folder object
+        const sibling = projects.children.find(child => child.name === 'B');
+        Reflect.set(sibling ?? {}, 'name', 'C');
+        Reflect.set(sibling ?? {}, 'path', 'Projects/C');
+        const rename = service.handleFolderRename('Projects/B', 'Projects/C');
+
+        await Promise.all([create, rename]);
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({ Projects: ['A', 'C', 'X'] });
+    });
+
+    it('keeps unlisted siblings ahead of a created folder when the parent is renamed before the save', async () => {
+        settingsProvider.settings.folderChildOrder = { Projects: ['A'] };
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+        const projects = createNamedFolder('Projects', ['A', 'B', 'X']);
+        const folders = new Map([['Projects', projects]]);
+        getFolderByPath.mockImplementation((path: string) => folders.get(path) ?? null);
+        const create = service.handleFolderCreate('Projects/X');
+        // Projects is renamed to Work before the queued update runs; Obsidian renames the same folder object
+        Reflect.set(projects, 'name', 'Work');
+        Reflect.set(projects, 'path', 'Work');
+        folders.delete('Projects');
+        folders.set('Work', projects);
+        const rename = service.handleFolderRename('Projects', 'Work');
+
+        await Promise.all([create, rename]);
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({ Work: ['A', 'B', 'X'] });
+    });
+
+    it('appends folders created in a parent whose rename is still queued', async () => {
+        settingsProvider.settings.folderChildOrder = { Projects: ['Existing'] };
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+        const work = createNamedFolder('Work', ['Existing', 'Zebra']);
+        getFolderByPath.mockImplementation((path: string) => (path === 'Work' ? work : null));
+        // Projects was renamed to Work; its queued update has not moved the order to Work when the creates arrive
+        const rename = service.handleFolderRename('Projects', 'Work');
+        const createZebra = service.handleFolderCreate('Work/Zebra');
+        work.children.push(createNamedFolder('Work/Alpha'));
+        const createAlpha = service.handleFolderCreate('Work/Alpha');
+
+        await Promise.all([rename, createZebra, createAlpha]);
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({ Work: ['Existing', 'Zebra', 'Alpha'] });
+    });
+
+    it('leaves alphabetical parents and listed names unchanged when a folder is created', async () => {
+        const storedRecord = { Projects: ['B', 'Missing'] };
+        settingsProvider.settings.folderChildOrder = storedRecord;
+        getFolderByPath.mockImplementation((path: string) =>
+            path === 'Projects' ? createNamedFolder('Projects', ['B', 'Missing']) : null
+        );
+
+        await service.handleFolderCreate('Notes/New');
+        await service.handleFolderCreate('Projects/Missing');
+
+        expect(settingsProvider.settings.folderChildOrder).toBe(storedRecord);
+    });
+
+    it('drops a stored name of a missing folder when a sibling is renamed to that name', async () => {
+        settingsProvider.settings.folderChildOrder = { Projects: ['A', 'Missing', 'B'] };
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+
+        await service.handleFolderRename('Projects/A', 'Projects/Missing');
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({ Projects: ['Missing', 'B'] });
+    });
+
+    it('removes a deleted folder from its parent order and drops its own and descendant orders', async () => {
+        settingsProvider.settings.folderChildOrder = { Projects: ['B', 'A'], 'Projects/B': ['Y'], 'Projects/B/Y': ['Z'] };
+        app.vault.getAllLoadedFiles = vi.fn(() => []);
+
+        await service.handleFolderDelete('Projects/B');
+        await service.handleFolderDelete('Projects/A');
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({});
+    });
+
+    it('clears the manual subfolder order when an alphabetical subfolder order is chosen', async () => {
+        settingsProvider.settings.folderChildOrder = { Projects: ['B', 'A'] };
+
+        await service.setFolderChildSortOrderOverride('Projects', 'alpha-desc');
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({});
+        expect(settingsProvider.settings.folderTreeSortOverrides).toEqual({ Projects: 'alpha-desc' });
+
+        // Default without an alphabetical override must still replace the record, because tree sorting is memoized on it
+        const storedRecord = { Projects: ['B', 'A'] };
+        settingsProvider.settings.folderChildOrder = storedRecord;
+        await service.removeFolderChildSortOrderOverride('Projects');
+
+        expect(settingsProvider.settings.folderChildOrder).toEqual({});
+        expect(settingsProvider.settings.folderChildOrder).not.toBe(storedRecord);
+        expect(settingsProvider.settings.folderTreeSortOverrides).toEqual({});
+    });
+
+    it('removes orders of missing parents and names of missing subfolders during cleanup', async () => {
+        settingsProvider.settings.folderChildOrder = { '/': ['Projects', 'Gone'], Gone: ['X'], Projects: ['Missing'] };
+
+        const changed = await service.cleanupFolderMetadata();
+
+        expect(changed).toBe(true);
+        expect(settingsProvider.settings.folderChildOrder).toEqual({ '/': ['Projects'] });
     });
 
     it('prefers folder note icon/color/background when frontmatter metadata is enabled', () => {
@@ -754,6 +965,33 @@ describe('FolderMetadataService folder note frontmatter integration', () => {
 
         expect(third.color).toBeUndefined();
         expect(getFileMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('invalidates folder display cache and notifies display-name listeners when the folder note type changes', () => {
+        const displayOptions = {
+            includeDisplayName: true,
+            includeColor: true,
+            includeBackgroundColor: false,
+            includeIcon: false
+        };
+        getFileMock.mockReturnValue({ metadata: { name: 'Markdown name' } });
+
+        expect(service.getFolderDisplayData('Projects', displayOptions).displayName).toBe('Markdown name');
+        const callCountAfterFill = getFileMock.mock.calls.length;
+        expect(service.getFolderDisplayData('Projects', displayOptions).displayName).toBe('Markdown name');
+        expect(getFileMock).toHaveBeenCalledTimes(callCountAfterFill);
+
+        const displayNameListener = vi.fn();
+        service.subscribeToFolderDisplayNameChanges(displayNameListener);
+
+        // A same-named Base file now wins, and it has no frontmatter.
+        settingsProvider.settings.folderNoteType = 'base';
+        getFileMock.mockReturnValue({ metadata: {} });
+        settingsProvider.notifySettingsUpdate();
+
+        expect(displayNameListener).toHaveBeenCalledTimes(1);
+        expect(service.getFolderDisplayData('Projects', displayOptions).displayName).toBeUndefined();
+        expect(getFileMock.mock.calls.length).toBeGreaterThan(callCountAfterFill);
     });
 
     it('invalidates folder display cache when synced folder style settings change', () => {

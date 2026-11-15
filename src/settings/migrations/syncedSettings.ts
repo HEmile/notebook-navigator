@@ -118,6 +118,7 @@ export function migrateLegacySyncedSettings(params: {
     delete mutableSettings.optimizeNoteHeight;
     delete mutableSettings.showPinnedIcon;
     delete mutableSettings.showPinnedGroupHeader;
+    delete mutableSettings.skipAutoScroll;
 
     const legacyShowFileIconUnfinishedTask = mutableSettings.showFileIconUnfinishedTask;
     if (typeof storedData?.['unfinishedTaskIcon'] === 'undefined' && typeof legacyShowFileIconUnfinishedTask === 'boolean') {
@@ -702,6 +703,27 @@ export function applyLegacyShortcutsMigration(params: {
         }
         profile.shortcuts = cloneShortcuts(template);
     });
+}
+
+/**
+ * Converts the legacy root-only `rootFolderOrder` array into a `folderChildOrder` record under '/'.
+ * Root folder paths are their names, so entries carry over unchanged.
+ *
+ * Returns null when the data already has `folderChildOrder` or no root order. A `folderChildOrder`
+ * without '/' means the root order was reset, so the legacy array must not restore it.
+ */
+export function extractLegacyRootFolderOrder(data: Record<string, unknown> | null): Record<string, string[]> | null {
+    if (!data || Object.prototype.hasOwnProperty.call(data, 'folderChildOrder')) {
+        return null;
+    }
+
+    const legacyOrder = data['rootFolderOrder'];
+    if (!Array.isArray(legacyOrder)) {
+        return null;
+    }
+
+    const rootOrder = legacyOrder.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+    return rootOrder.length > 0 ? { '/': rootOrder } : null;
 }
 
 // Migrates saved search shortcut queries from legacy "!" negation prefixes to "-" prefixes.

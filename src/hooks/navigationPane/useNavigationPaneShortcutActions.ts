@@ -40,6 +40,7 @@ import { getFolderNote, openFolderNoteFile, revealFolderNoteInNavigator, type Fo
 import { resolveFolderNoteClickOpenContext, shouldOpenNoteClickInNewTab } from '../../utils/keyboardOpenContext';
 import { ItemType } from '../../types';
 import type { NavigateToFolderOptions, RevealPropertyOptions, RevealTagOptions } from '../useNavigatorReveal';
+import type { SelectedShortcut } from './navigationPaneShortcutTypes';
 
 interface HydratedShortcutActionItem {
     key: string;
@@ -70,12 +71,11 @@ interface UseNavigationPaneShortcutActionsProps {
     selectedFolder: NavigationSelectionState['selectedFolder'];
     selectionDispatch: Dispatch<SelectionAction>;
     setActiveShortcut: Dispatch<SetStateAction<string | null>>;
+    setSelectedShortcut: Dispatch<SetStateAction<SelectedShortcut | null>>;
     onExecuteSearchShortcut?: (shortcutKey: string, searchShortcut: SearchShortcut) => Promise<void> | void;
     onNavigateToFolder: (folderPath: string, options?: NavigateToFolderOptions) => void;
     onRevealTag: (tagPath: string, options?: RevealTagOptions) => void;
     onRevealProperty: (propertyNodeId: string, options?: RevealPropertyOptions) => boolean;
-    onRevealFile: (file: TFile) => void;
-    onRevealShortcutFile?: (file: TFile) => void;
     onNavigateToTopic: (topicName: string) => void;
     openFolderNoteInRightSidebar: (folderNote: TFile) => Promise<void>;
     tagTree: Map<string, import('../../types/storage').TagTreeNode>;
@@ -94,12 +94,11 @@ export function useNavigationPaneShortcutActions({
     selectedFolder,
     selectionDispatch,
     setActiveShortcut,
+    setSelectedShortcut,
     onExecuteSearchShortcut,
     onNavigateToFolder,
     onRevealTag,
     onRevealProperty,
-    onRevealFile,
-    onRevealShortcutFile,
     onNavigateToTopic,
     openFolderNoteInRightSidebar,
     tagTree,
@@ -154,14 +153,17 @@ export function useNavigationPaneShortcutActions({
     const handleShortcutFolderActivate = useCallback(
         (folder: TFolder, shortcutKey: string) => {
             setActiveShortcut(shortcutKey);
-            onNavigateToFolder(folder.path, { skipScroll: settings.skipAutoScroll, source: 'shortcut' });
+            setSelectedShortcut({ key: shortcutKey, target: { type: 'folder', folder } });
+            // Selects the folder without expanding its collapsed ancestors or scrolling, so a shortcut click leaves
+            // the navigation pane as it is.
+            onNavigateToFolder(folder.path, { skipScroll: true, skipExpandAncestors: true, source: 'shortcut' });
             scheduleShortcutRelease();
             const container = rootContainerRef.current;
             if (container && !uiState.singlePane) {
                 container.focus();
             }
         },
-        [onNavigateToFolder, rootContainerRef, scheduleShortcutRelease, setActiveShortcut, settings.skipAutoScroll, uiState.singlePane]
+        [onNavigateToFolder, rootContainerRef, scheduleShortcutRelease, setActiveShortcut, setSelectedShortcut, uiState.singlePane]
     );
 
     const handleShortcutFolderNoteClick = useCallback(
@@ -180,6 +182,7 @@ export function useNavigationPaneShortcutActions({
 
             const wasSelectedFolder = selectionType === ItemType.FOLDER && selectedFolder?.path === folder.path;
             selectionDispatch({ type: 'SET_SELECTED_FOLDER', folder, autoSelectedFile: null });
+            setSelectedShortcut({ key: shortcutKey, target: { type: 'folder', folder } });
             const openContext = resolveFolderNoteClickOpenContext(event, settings.folderNoteOpenLocation, settings.multiSelectModifier);
             focusListPaneAfterRightSidebarFolderNoteSelection(openContext);
             revealFolderNoteInNavigator(selectionDispatch, folderNote);
@@ -210,6 +213,7 @@ export function useNavigationPaneShortcutActions({
             selectedFolder,
             selectionDispatch,
             setActiveShortcut,
+            setSelectedShortcut,
             selectionType,
             settings
         ]
@@ -253,11 +257,11 @@ export function useNavigationPaneShortcutActions({
             }
 
             setActiveShortcut(shortcutKey);
-            if (selectionType === ItemType.TAG && onRevealShortcutFile) {
-                onRevealShortcutFile(note);
-            } else {
-                onRevealFile(note);
-            }
+            setSelectedShortcut({ key: shortcutKey, target: { type: 'note', note } });
+            // Selects the note in the current folder, tag or property context without expanding or scrolling the
+            // navigation pane, so the note can be outside the file list. Auto-reveal then skips the open below,
+            // because the note is already the selected file.
+            selectionDispatch({ type: 'SET_SELECTED_FILE', file: note });
 
             openNotePreview(note);
             // Closes the drawer so the opened note is visible. Safe with dual pane on
@@ -275,12 +279,11 @@ export function useNavigationPaneShortcutActions({
             app,
             commandQueue,
             isMobile,
-            onRevealFile,
-            onRevealShortcutFile,
             openNotePreview,
             scheduleShortcutRelease,
-            selectionType,
+            selectionDispatch,
             setActiveShortcut,
+            setSelectedShortcut,
             settings.multiSelectModifier,
             uiDispatch,
             uiState.currentSinglePaneView,
@@ -310,11 +313,8 @@ export function useNavigationPaneShortcutActions({
                 return;
             }
 
-            if (selectionType === ItemType.TAG && onRevealShortcutFile) {
-                onRevealShortcutFile(note);
-            } else {
-                onRevealFile(note);
-            }
+            // Selects without revealing, as a note shortcut does.
+            selectionDispatch({ type: 'SET_SELECTED_FILE', file: note });
 
             openNotePreview(note);
             // Closes the drawer so the opened note is visible. Safe with dual pane on
@@ -331,10 +331,8 @@ export function useNavigationPaneShortcutActions({
             app,
             commandQueue,
             isMobile,
-            onRevealFile,
-            onRevealShortcutFile,
             openNotePreview,
-            selectionType,
+            selectionDispatch,
             settings.multiSelectModifier,
             uiDispatch,
             uiState.currentSinglePaneView,
@@ -361,7 +359,8 @@ export function useNavigationPaneShortcutActions({
                 scheduleShortcutRelease();
                 return;
             }
-            onRevealTag(canonicalPath, { skipScroll: settings.skipAutoScroll, source: 'shortcut' });
+            onRevealTag(canonicalPath, { skipScroll: true, source: 'shortcut' });
+            setSelectedShortcut({ key: shortcutKey, target: { type: 'tag', tagPath: canonicalPath } });
 
             if (!uiState.singlePane) {
                 uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
@@ -380,7 +379,7 @@ export function useNavigationPaneShortcutActions({
             scheduleShortcutRelease,
             selectionDispatch,
             setActiveShortcut,
-            settings.skipAutoScroll,
+            setSelectedShortcut,
             tagTree,
             uiDispatch,
             uiState.singlePane
@@ -390,11 +389,12 @@ export function useNavigationPaneShortcutActions({
     const handleShortcutPropertyActivate = useCallback(
         (propertyNodeId: string, shortcutKey: string) => {
             setActiveShortcut(shortcutKey);
-            const didReveal = onRevealProperty(propertyNodeId, { skipScroll: settings.skipAutoScroll, source: 'shortcut' });
+            const didReveal = onRevealProperty(propertyNodeId, { skipScroll: true, source: 'shortcut' });
             if (!didReveal) {
                 scheduleShortcutRelease();
                 return false;
             }
+            setSelectedShortcut({ key: shortcutKey, target: { type: 'property', nodeId: propertyNodeId } });
 
             if (!uiState.singlePane) {
                 uiDispatch({ type: 'ACTIVATE_PANE', target: 'navigation' });
@@ -414,7 +414,7 @@ export function useNavigationPaneShortcutActions({
             scheduleShortcutRelease,
             selectionDispatch,
             setActiveShortcut,
-            settings.skipAutoScroll,
+            setSelectedShortcut,
             uiDispatch,
             uiState.singlePane
         ]
@@ -424,10 +424,24 @@ export function useNavigationPaneShortcutActions({
         (topicName: string, shortcutKey: string) => {
             setActiveShortcut(shortcutKey);
             onNavigateToTopic(topicName);
+            setSelectedShortcut({ key: shortcutKey, target: { type: 'topic', topicName } });
             selectionDispatch({ type: 'SET_KEYBOARD_NAVIGATION', isKeyboardNavigation: true });
             scheduleShortcutRelease();
         },
-        [onNavigateToTopic, scheduleShortcutRelease, selectionDispatch, setActiveShortcut]
+        [onNavigateToTopic, scheduleShortcutRelease, selectionDispatch, setActiveShortcut, setSelectedShortcut]
+    );
+
+    // Selects a note shortcut's note without revealing it and shows the shortcut as selected, as a click does, for
+    // callers that open the note themselves.
+    const selectNoteShortcut = useCallback(
+        (note: TFile) => {
+            selectionDispatch({ type: 'SET_SELECTED_FILE', file: note });
+            const entry = hydratedShortcuts.find(candidate => candidate.note?.path === note.path);
+            if (entry) {
+                setSelectedShortcut({ key: entry.key, target: { type: 'note', note } });
+            }
+        },
+        [hydratedShortcuts, selectionDispatch, setSelectedShortcut]
     );
 
     const openShortcutByNumber = useCallback(
@@ -504,6 +518,7 @@ export function useNavigationPaneShortcutActions({
         handleShortcutTagActivate,
         handleShortcutPropertyActivate,
         handleShortcutTopicActivate,
+        selectNoteShortcut,
         openShortcutByNumber
     };
 }

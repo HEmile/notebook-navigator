@@ -22,6 +22,7 @@ import { TFolder, type App, debounce } from 'obsidian';
 import type { ActiveProfileState } from '../context/SettingsContext';
 import type { NotebookNavigatorSettings } from '../settings/types';
 import type { MetadataService } from '../services/MetadataService';
+import { getPresentationService } from '../services/PresentationService';
 import { getDBInstance, getDBInstanceOrNull } from '../storage/fileOperations';
 import { FOLDER_NOTE_TYPE_EXTENSIONS } from '../types/folderNote';
 import { TIMEOUTS } from '../types/obsidian-extended';
@@ -38,7 +39,7 @@ import { EXCALIDRAW_BASENAME_SUFFIX } from '../utils/fileNameUtils';
 import { getParentFolderPath, getPathBaseName } from '../utils/pathUtils';
 import { getCachedFileTags } from '../utils/tagUtils';
 import { createHiddenTagVisibility } from '../utils/tagPrefixMatcher';
-import { type RootFileChangeEvent, useRootFolderOrder } from './useRootFolderOrder';
+import { type RootFileChangeEvent, useRootFolders } from './useRootFolders';
 
 const FOLDER_SORT_NAME_CACHE_MAX_ENTRIES = 2000;
 const FOLDER_NOTE_EXTENSIONS = new Set<string>(Object.values(FOLDER_NOTE_TYPE_EXTENSIONS));
@@ -46,9 +47,6 @@ const FOLDER_NOTE_EXTENSIONS = new Set<string>(Object.values(FOLDER_NOTE_TYPE_EX
 export interface FolderNavigationSourceState {
     hiddenFolders: string[];
     rootFolders: TFolder[];
-    rootLevelFolders: TFolder[];
-    rootFolderOrderMap: Map<string, number>;
-    missingRootFolderPaths: string[];
     fileChangeVersion: number;
     folderChangeVersion: number;
     folderDisplayVersion: number;
@@ -89,9 +87,10 @@ export function useFolderNavigationSourceState({
     const folderNoteSettings = useMemo(() => {
         return getFolderNoteDetectionSettings({
             enableFolderNotes: settings.enableFolderNotes,
-            folderNoteNamePattern: settings.folderNoteNamePattern
+            folderNoteNamePattern: settings.folderNoteNamePattern,
+            folderNoteType: settings.folderNoteType
         });
-    }, [settings.enableFolderNotes, settings.folderNoteNamePattern]);
+    }, [settings.enableFolderNotes, settings.folderNoteNamePattern, settings.folderNoteType]);
     const shouldEvaluateFolderNoteExclusions = useMemo(() => {
         return (
             settings.enableFolderNotes &&
@@ -167,6 +166,9 @@ export function useFolderNavigationSourceState({
         }
     }, [flushFileChangeVersion]);
     useEffect(() => clearScheduledFileChangeVersionBump, [clearScheduledFileChangeVersionBump]);
+    // Folder counts include a verified presentation's .mdpoint companion, and verification finishes after the
+    // vault event that completed the pair, so role changes refresh the counts separately.
+    useEffect(() => getPresentationService()?.subscribeToRoles(scheduleFileChangeVersionBump), [scheduleFileChangeVersionBump]);
     const handleRootFolderChange = useCallback(() => {
         setFolderChangeVersion(value => value + 1);
     }, []);
@@ -181,8 +183,8 @@ export function useFolderNavigationSourceState({
         [isFolderNoteRelatedPath, onFileChange, scheduleFileChangeVersionBump]
     );
 
-    const { rootFolders, rootLevelFolders, rootFolderOrderMap, missingRootFolderPaths } = useRootFolderOrder({
-        settings,
+    const rootFolders = useRootFolders({
+        showRootFolder: settings.showRootFolder,
         showHiddenItems,
         onFileChange: handleRootFileChange,
         onFolderChange: handleRootFolderChange
@@ -454,9 +456,6 @@ export function useFolderNavigationSourceState({
         () => ({
             hiddenFolders,
             rootFolders,
-            rootLevelFolders,
-            rootFolderOrderMap,
-            missingRootFolderPaths,
             fileChangeVersion,
             folderChangeVersion,
             folderDisplayVersion,
@@ -478,11 +477,8 @@ export function useFolderNavigationSourceState({
             isFolderExcluded,
             metadataDecorationVersion,
             metadataVisibilityVersion,
-            missingRootFolderPaths,
             propertyDataVersion,
             rootFolders,
-            rootFolderOrderMap,
-            rootLevelFolders,
             tagDataVersion
         ]
     );
