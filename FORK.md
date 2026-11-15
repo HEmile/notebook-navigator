@@ -37,9 +37,9 @@ purpose: keep the fork's version.
 
 ### Minimum Obsidian version 1.13 (2026-11-15)
 
-Upstream 3.5.0 requires Obsidian 1.13 and removed the pre-1.13 settings pages. The fork follows. The Topics settings page
-builds native setting definitions (`createTopicsSettingDefinitions` in `src/settings/tabs/TopicsTab.ts`) and uses render
-rows, so upstream's control key lists in `nativeSettingControls.ts` stay untouched.
+Upstream 3.5.0 requires Obsidian 1.13 and removed the pre-1.13 settings pages. The fork follows. The Topics settings
+page builds native setting definitions (`createTopicsSettingDefinitions` in `src/settings/tabs/TopicsTab.ts`) and uses
+render rows, so upstream's control key lists in `nativeSettingControls.ts` stay untouched.
 
 ### Versioning
 
