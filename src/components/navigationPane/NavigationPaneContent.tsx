@@ -22,6 +22,8 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Platform, TFile, TFolder } from 'obsidian';
 import { Virtualizer } from '@tanstack/react-virtual';
 import { useExpansionDispatch, useExpansionState } from '../../context/ExpansionContext';
+import { useTopicGraphVersion } from '../../hooks/useTopicGraphVersion';
+import { findTopicNodeByPath } from '../../utils/topicGraph';
 import { useNavigationSelection, useSelectionDispatch } from '../../context/SelectionContext';
 import { useServices, useMetadataService, useCommandQueue, useTopicService } from '../../context/ServicesContext';
 import { useSettingsState, useSettingsUpdate, useActiveProfile } from '../../context/SettingsContext';
@@ -569,6 +571,28 @@ export const NavigationPane = React.memo(
             fileData.tagTree,
             isStorageReady
         ]);
+
+        // Fork: drops expanded topic paths that no longer resolve, after each topic graph rebuild. Skips empty graphs,
+        // so the expansion state survives until the first build and while topics are off.
+        const topicGraphVersion = useTopicGraphVersion(topicService);
+        useEffect(() => {
+            if (!topicService || !settings.showTopics || expansionState.expandedTopics.size === 0) {
+                return;
+            }
+            const topicGraph = topicService.getTopicGraph();
+            if (topicGraph.size === 0) {
+                return;
+            }
+            const existingTopics = new Set<string>();
+            expansionState.expandedTopics.forEach(topicPath => {
+                if (findTopicNodeByPath(topicGraph, topicPath)) {
+                    existingTopics.add(topicPath);
+                }
+            });
+            if (existingTopics.size !== expansionState.expandedTopics.size) {
+                expansionDispatch({ type: 'CLEANUP_DELETED_TOPICS', existingTopics });
+            }
+        }, [expansionDispatch, expansionState.expandedTopics, settings.showTopics, topicGraphVersion, topicService]);
 
         const indentGuideLevelsByKey = useMemo(
             () => (settings.showIndentGuides ? buildIndentGuideLevelsMap(items, getNavigationItemRenderKey) : EMPTY_INDENT_GUIDE_MAP),
