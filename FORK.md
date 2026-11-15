@@ -31,6 +31,16 @@ Upstream 3.4.4 shows a banner for the author's MarkdownPoint app on the settings
 that moves it. The fork hides both with `SHOW_MARKDOWNPOINT_BANNER` in `src/constants/fork.ts`. The upstream banner code
 and strings stay in place so upstream edits to them merge without conflicts.
 
+Since 3.5.1 upstream gates the banner with its own `SHOW_MARKDOWNPOINT_BANNER` in `src/settings/markdownPointBanner.ts`.
+The fork changes only that line, to read the fork switch. When upstream turns its flag on, that line conflicts on
+purpose: keep the fork's version.
+
+### Minimum Obsidian version 1.13 (2026-11-15)
+
+Upstream 3.5.0 requires Obsidian 1.13 and removed the pre-1.13 settings pages. The fork follows. The Topics settings page
+builds native setting definitions (`createTopicsSettingDefinitions` in `src/settings/tabs/TopicsTab.ts`) and uses render
+rows, so upstream's control key lists in `nativeSettingControls.ts` stay untouched.
+
 ### Versioning
 
 The fork uses upstream's version numbers. Merge branches are named `merge-upstream-<version>`. When a merge includes
@@ -49,3 +59,7 @@ own bump merges cleanly later.
 - New upstream code that branches on folder, tag, and property selections usually needs a topic case. Topic overrides,
   appearances, pins, and shortcuts are keyed by topic name, while `selectedTopicPath` is the slash-separated path the
   topic was reached through (`getTopicNameFromPath` converts it).
+- Upstream renamed its 3.4.4 release to 3.5.0. The fork never published 3.4.4, so the 3.5.2 merge took upstream's
+  `versions.json` and dropped the fork's `3.4.4` entry.
+- Shortcut rows show as selected through `selectedShortcut` in `useNavigationPaneShortcutState.ts` (upstream #1578).
+  Topic shortcuts set a `{ type: 'topic', topicName }` target, and the clearing effect there has a topic branch.
