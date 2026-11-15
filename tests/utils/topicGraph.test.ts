@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { collectTopicFilePaths, findTopicNode, getTopicNameFromPath, resolveTopicPath } from '../../src/utils/topicGraph';
+import { collectTopicFilePaths, findTopicNode, getTopicNameFromPath, hasTopicTag, resolveTopicPath } from '../../src/utils/topicGraph';
 import { parseFilterSearchTokens } from '../../src/utils/filterSearch';
 import type { TopicNode } from '../../src/types/storage';
 
@@ -139,5 +139,26 @@ describe('getTopicNameFromPath', () => {
         expect(getTopicNameFromPath('Topics/v1.2.md')).toBe('v1.2');
         expect(getTopicNameFromPath('Dr. Who.md')).toBe('Dr. Who');
         expect(getTopicNameFromPath('Science/Node.js')).toBe('Node.js');
+    });
+});
+
+describe('hasTopicTag', () => {
+    const topicTags = ['topic', 'maand'];
+
+    it('matches a topic tag exactly or nested under it', () => {
+        expect(hasTopicTag(['#topic'], topicTags)).toBe(true);
+        expect(hasTopicTag(['topic'], topicTags)).toBe(true);
+        expect(hasTopicTag(['#Topic/Person'], topicTags)).toBe(true);
+        expect(hasTopicTag(['#idea', '#maand'], topicTags)).toBe(true);
+    });
+
+    it('does not match tags that only contain a topic tag', () => {
+        expect(hasTopicTag(['#topical'], topicTags)).toBe(false);
+        expect(hasTopicTag(['#maandag'], topicTags)).toBe(false);
+        expect(hasTopicTag(['#project/topic'], topicTags)).toBe(false);
+    });
+
+    it('is false without tags', () => {
+        expect(hasTopicTag([], topicTags)).toBe(false);
     });
 });

@@ -105,8 +105,23 @@ export function getTopicRelations(metadata: CachedMetadata, isTopicNote: boolean
     return Array.from(new Set(topics));
 }
 
+function normalizeTopicTagValue(tag: string): string {
+    return tag.trim().replace(/^#/, '').toLowerCase();
+}
+
+/**
+ * Whether any tag marks a note as a topic: a tag equal to a topic tag, or nested under one
+ * (`#topic` and `#topic/person` match `topic`, `#topical` does not). Case and a leading '#' are ignored.
+ */
 export function hasTopicTag(tags: string[], topicTags: string[] = DEFAULT_TOPIC_TAGS): boolean {
-    return tags?.some(tag => topicTags.some((topicTag: string) => tag.includes(topicTag)));
+    if (!tags?.length) {
+        return false;
+    }
+    const normalizedTopicTags = topicTags.map(normalizeTopicTagValue).filter(topicTag => topicTag.length > 0);
+    return tags.some(tag => {
+        const normalizedTag = normalizeTopicTagValue(tag);
+        return normalizedTopicTags.some(topicTag => normalizedTag === topicTag || normalizedTag.startsWith(`${topicTag}/`));
+    });
 }
 
 function traverseTopicsUp(
