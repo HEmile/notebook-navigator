@@ -123,6 +123,8 @@ export type SelectionAction =
           topicPath: string | null;
           autoSelectedFile?: TFile | null;
           source?: SelectionRevealSource;
+          historyBehavior?: SelectionHistoryBehavior;
+          historyIndex?: number;
       };
 
 export type SelectionDispatch = Dispatch<SelectionAction>;

@@ -72,6 +72,7 @@ export function createSelectionHistoryEntry(params: {
     selectedFolder: TFolder | null;
     selectedTag: string | null;
     selectedProperty: SelectionState['selectedProperty'];
+    selectedTopicPath?: string | null;
 }): SelectionHistoryEntry | null {
     if (params.selectionType === 'folder' && params.selectedFolder) {
         return {
@@ -101,6 +102,14 @@ export function createSelectionHistoryEntry(params: {
         return {
             type: 'property',
             value: normalizedProperty
+        };
+    }
+
+    // Fork: topics are recorded by the path they were reached through, which is the row key
+    if (params.selectionType === 'topic' && params.selectedTopicPath) {
+        return {
+            type: 'topic',
+            value: params.selectedTopicPath
         };
     }
 
@@ -223,7 +232,8 @@ function withSingleSelection(
         selectionType: params.selectionType,
         selectedFolder: params.selectedFolder,
         selectedTag: params.selectedTag,
-        selectedProperty: params.selectedProperty
+        selectedProperty: params.selectedProperty,
+        selectedTopicPath: params.selectedTopicPath
     });
     const { navigationHistory, navigationHistoryIndex } = updateSelectionHistory(
         state,
@@ -364,7 +374,9 @@ export function selectionReducer(state: SelectionState, action: SelectionAction,
                 isFolderChangeWithAutoSelect: action.autoSelectedFile !== undefined && action.autoSelectedFile !== null,
                 isKeyboardNavigation: false,
                 isFolderNavigation: true,
-                revealSource: action.source ?? null
+                revealSource: action.source ?? null,
+                historyBehavior: action.historyBehavior,
+                historyIndex: action.historyIndex
             });
 
         case 'CLEAR_SELECTION':

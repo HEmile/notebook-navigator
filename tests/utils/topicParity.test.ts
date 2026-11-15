@@ -27,6 +27,9 @@ import { ItemType, NavigationPaneItemType } from '../../src/types';
 import { buildNavigationPathIndexMap, getNavigationIndex } from '../../src/utils/navigationIndex';
 import { getNavigationExpansionTargetForItem, toggleNavigationExpansionTarget } from '../../src/utils/navigationExpansion';
 import type { ExpansionAction } from '../../src/context/ExpansionContext';
+import { TFolder } from 'obsidian';
+import { selectionReducer } from '../../src/context/selection/state';
+import type { SelectionState } from '../../src/context/selection/types';
 import type { CombinedNavigationItem } from '../../src/types/virtualization';
 import type { TopicNode } from '../../src/types/storage';
 
@@ -100,5 +103,41 @@ describe('topic lists', () => {
         actions.length = 0;
         expect(toggleNavigationExpansionTarget(target, expandedState, action => actions.push(action), 'collapse')).toBe(true);
         expect(actions).toEqual([{ type: 'TOGGLE_TOPIC_EXPANDED', topicName: 'Science/Physics' }]);
+    });
+
+    it('are recorded in back/forward history and restored by history index', () => {
+        const root = new TFolder();
+        root.path = '/';
+        const initialState: SelectionState = {
+            selectionType: 'folder',
+            selectedFolder: root,
+            selectedTag: null,
+            selectedProperty: null,
+            selectedTopicPath: null,
+            selectedFiles: new Set<string>(),
+            anchorIndex: null,
+            lastMovementDirection: null,
+            isRevealOperation: false,
+            isFolderChangeWithAutoSelect: false,
+            isKeyboardNavigation: false,
+            isFolderNavigation: false,
+            selectedFile: null,
+            revealSource: null,
+            navigationHistory: [{ type: 'folder', value: '/' }],
+            navigationHistoryIndex: 0
+        };
+
+        const onTopic = selectionReducer(initialState, { type: 'SET_SELECTED_TOPIC', topicPath: 'Science/Physics' });
+        expect(onTopic.navigationHistory).toEqual([
+            { type: 'folder', value: '/' },
+            { type: 'topic', value: 'Science/Physics' }
+        ]);
+        expect(onTopic.navigationHistoryIndex).toBe(1);
+
+        const onTag = selectionReducer(onTopic, { type: 'SET_SELECTED_TAG', tag: 'idea' });
+        const back = selectionReducer(onTag, { type: 'SET_SELECTED_TOPIC', topicPath: 'Science/Physics', historyIndex: 1 });
+        expect(back.selectedTopicPath).toBe('Science/Physics');
+        expect(back.navigationHistory).toHaveLength(3);
+        expect(back.navigationHistoryIndex).toBe(1);
     });
 });

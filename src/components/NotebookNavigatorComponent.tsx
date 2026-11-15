@@ -19,7 +19,7 @@
 // src/components/NotebookNavigatorComponent.tsx
 import React, { useEffect, useImperativeHandle, forwardRef, useRef, useState, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Platform, TFile, TFolder } from 'obsidian';
-import { useExpansionState } from '../context/ExpansionContext';
+import { useExpansionDispatch, useExpansionState } from '../context/ExpansionContext';
 import { useSelectionState, useSelectionDispatch, resolvePrimarySelectedFile } from '../context/SelectionContext';
 import { useServices } from '../context/ServicesContext';
 import { useActiveProfile, useSettingsState } from '../context/SettingsContext';
@@ -209,6 +209,7 @@ export const NotebookNavigatorComponent = React.memo(
         const settings = useSettingsState();
         const activeProfile = useActiveProfile();
         const expansionState = useExpansionState();
+        const expansionDispatch = useExpansionDispatch();
         const uxPreferences = useUXPreferences();
         const uiState = useUIState();
         const uiDispatch = useUIDispatch();
@@ -754,6 +755,21 @@ export const NotebookNavigatorComponent = React.memo(
                     );
                 }
 
+                if (target.entry.type === ItemType.TOPIC) {
+                    // Skips topics that no longer exist at this path, as missing folders are skipped
+                    const topicPath = target.entry.value;
+                    if (!topicService?.findTopicNodeByPath(topicPath)) {
+                        return false;
+                    }
+                    const parts = topicPath.split('/');
+                    const ancestorPaths = parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join('/'));
+                    if (ancestorPaths.length > 0) {
+                        expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: ancestorPaths });
+                    }
+                    selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath, historyIndex: target.index, source: 'manual' });
+                    return true;
+                }
+
                 return (
                     navigateToProperty(target.entry.value, {
                         historyIndex: target.index,
@@ -762,7 +778,16 @@ export const NotebookNavigatorComponent = React.memo(
                     }) !== null
                 );
             },
-            [app.vault, getSelectionHistoryTarget, navigateToFolder, navigateToProperty, navigateToTag]
+            [
+                app.vault,
+                expansionDispatch,
+                getSelectionHistoryTarget,
+                navigateToFolder,
+                navigateToProperty,
+                navigateToTag,
+                selectionDispatch,
+                topicService
+            ]
         );
 
         const preserveNavigationFocusForModal = !uiState.singlePane || uiState.currentSinglePaneView === 'navigation';
