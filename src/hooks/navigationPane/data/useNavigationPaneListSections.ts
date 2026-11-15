@@ -46,6 +46,8 @@ import { getCachedFileTags, resolveCanonicalTagPath } from '../../../utils/tagUt
 import { parsePropertyNodeId, resolvePropertyShortcutNodeId, resolvePropertyTreeNode } from '../../../utils/propertyTree';
 import { resolveUXIcon } from '../../../utils/uxIcons';
 import type { NavigationPaneSourceState } from './useNavigationPaneSourceState';
+import { useServices } from '../../../context/ServicesContext';
+import { useTopicGraphVersion } from '../../useTopicGraphVersion';
 
 export interface UseNavigationPaneListSectionsParams {
     app: App;
@@ -90,9 +92,14 @@ export function useNavigationPaneListSections({
         tagTreeForOrdering
     } = sourceState;
 
+    const { topicService } = useServices();
+    const topicGraphVersion = useTopicGraphVersion(topicService);
+
     const shortcutItems = useMemo((): CombinedNavigationItem[] => {
         void metadataVisibilityVersion;
         void tagDataVersion;
+        void topicGraphVersion;
+        const hiddenTopics = new Set(settings.hiddenTopics ?? []);
 
         if (!settings.showShortcuts) {
             return [];
@@ -330,13 +337,18 @@ export function useNavigationPaneListSections({
             }
 
             if (isTopicShortcut(shortcut)) {
+                // A topic is missing when its note no longer exists or no longer has a topic tag
+                const isMissing = Boolean(topicService) && !topicService?.findTopicNodeByName(shortcut.topicName);
                 items.push({
                     type: NavigationPaneItemType.SHORTCUT_TOPIC,
                     key,
                     level: itemLevel,
                     shortcut,
                     topicName: shortcut.topicName,
-                    displayName: shortcut.alias && shortcut.alias.length > 0 ? shortcut.alias : shortcut.topicName
+                    displayName: shortcut.alias && shortcut.alias.length > 0 ? shortcut.alias : shortcut.topicName,
+                    isMissing,
+                    isExcluded: hiddenTopics.has(shortcut.topicName),
+                    missingLabel: isMissing ? shortcut.topicName : undefined
                 });
                 return;
             }
@@ -435,11 +447,14 @@ export function useNavigationPaneListSections({
         metadataVisibilityVersion,
         propertyTree,
         propertiesSectionActive,
+        settings.hiddenTopics,
         settings.interfaceIcons,
         settings.showShortcuts,
         shortcutsExpanded,
         tagDataVersion,
-        tagTreeForOrdering
+        tagTreeForOrdering,
+        topicGraphVersion,
+        topicService
     ]);
 
     const recentNotesItems = useMemo((): CombinedNavigationItem[] => {

@@ -421,7 +421,11 @@ export function NavigationPaneShortcutRow({ item, context, adjacentFilledClassNa
                 ? { type: 'topic', key: item.key, topicName }
                 : { type: 'missing', key: item.key, kind: 'topic' };
             const shortcutProps = {
-                icon: isMissing ? 'lucide-alert-triangle' : (item.icon ?? 'lucide-tags'),
+                icon: isMissing
+                    ? 'lucide-alert-triangle'
+                    : item.isExcluded && !showHiddenItems
+                      ? 'lucide-eye-off'
+                      : (item.icon ?? 'lucide-tags'),
                 color: isMissing ? undefined : item.color,
                 backgroundColor: isMissing ? undefined : getSolidBackground(item.backgroundColor),
                 adjacentFilledClassName,
@@ -432,6 +436,7 @@ export function NavigationPaneShortcutRow({ item, context, adjacentFilledClassNa
                 type: 'tag' as const,
                 badge: shortcutUiState.shortcutNumberBadgesByKey.get(item.key),
                 forceShowCount: shortcutUiState.shouldShowShortcutCounts,
+                isExcluded: !isMissing ? item.isExcluded : undefined,
                 isDisabled: isMissing,
                 isMissing,
                 onClick: () => {

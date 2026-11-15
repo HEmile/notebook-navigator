@@ -115,7 +115,8 @@ export function isNavigationItemFilled({
         (item.type === NavigationPaneItemType.SHORTCUT_FOLDER ||
             item.type === NavigationPaneItemType.SHORTCUT_NOTE ||
             item.type === NavigationPaneItemType.SHORTCUT_TAG ||
-            item.type === NavigationPaneItemType.SHORTCUT_PROPERTY) &&
+            item.type === NavigationPaneItemType.SHORTCUT_PROPERTY ||
+            item.type === NavigationPaneItemType.SHORTCUT_TOPIC) &&
         item.isMissing
     ) {
         return false;
