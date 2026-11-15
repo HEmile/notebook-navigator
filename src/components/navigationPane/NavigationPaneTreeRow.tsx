@@ -16,11 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
-import { setIcon } from 'obsidian';
-import { getIconService, useIconServiceVersion } from '../../services/icons';
+import React, { useCallback } from 'react';
 import {
-    ItemType,
     NavigationPaneItemType,
     NavigationSectionId,
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
@@ -34,101 +31,61 @@ import {
 import { FolderItem } from '../FolderItem';
 import { PropertyTreeItem } from '../PropertyTreeItem';
 import { TagTreeItem } from '../TagTreeItem';
+import { TopicTreeItem } from '../TopicTreeItem';
 import { VirtualFolderComponent, type VirtualFolderTrailingAction } from '../VirtualFolderItem';
 import type { NavigationPaneRowProps } from './NavigationPaneItemRenderer.types';
 import type { TopicTreeItem as TopicTreeItemType } from '../../types/virtualization';
 import type { NavigationPaneRowContext } from './NavigationPaneItemRenderer.types';
 import { useExpansionDispatch } from '../../context/ExpansionContext';
-import { useContextMenu } from '../../hooks/useContextMenu';
 import { getNavigationItemSearchMatch } from './navigationPaneItemState';
 import { getNavigationItemRenderKey } from '../../utils/navigationIndex';
 import { strings } from '../../i18n';
 
-interface TopicRowProps {
+interface TopicTreeRowProps {
     item: TopicTreeItemType;
     context: NavigationPaneRowContext;
+    adjacentFilledClassName?: string;
     isSelected: boolean;
     isExpanded: boolean;
 }
 
-function TopicRow({ item, context, isSelected, isExpanded }: TopicRowProps) {
-    const { settings, tree } = context;
+/** Fork: wires a topic row to selection and expansion; TopicTreeItem renders it */
+function TopicTreeRow({ item, context, adjacentFilledClassName, isSelected, isExpanded }: TopicTreeRowProps) {
+    const { settings, tree, getSolidBackground, indentGuideLevelsByKey, searchHighlights } = context;
     const expansionDispatch = useExpansionDispatch();
-    const itemRef = useRef<HTMLDivElement>(null);
-    const chevronRef = useRef<HTMLDivElement>(null);
-    const iconRef = useRef<HTMLSpanElement>(null);
-    const iconVersion = useIconServiceVersion();
-
-    const topicNode = item.data;
     const topicPath = item.key;
-    const hasChildren = topicNode.children.size > 0;
-    const level = item.level ?? 0;
-    const icon = item.icon;
-    const color = item.color;
-    const backgroundColor = item.backgroundColor;
-    const applyColorToName = Boolean(color) && !settings.colorIconOnly;
 
-    useContextMenu(itemRef, { type: ItemType.TOPIC, item: topicNode.name });
-
-    useEffect(() => {
-        const el = chevronRef.current;
-        if (!el) return;
-        el.empty();
-        if (hasChildren) {
-            setIcon(el, isExpanded ? 'chevron-down' : 'chevron-right');
-        }
-    }, [isExpanded, hasChildren]);
-
-    useEffect(() => {
-        if (iconRef.current && settings.showTagIcons) {
-            getIconService().renderIcon(iconRef.current, icon || 'tag');
-        }
-    }, [icon, settings.showTagIcons, iconVersion, settings.interfaceIcons]);
-
-    const handleChevronClick = useCallback(
-        (e: React.MouseEvent) => {
-            e.stopPropagation();
-            if (hasChildren) {
-                expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
-            }
-        },
-        [hasChildren, expansionDispatch, topicPath]
-    );
+    const handleToggle = useCallback(() => {
+        expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
+    }, [expansionDispatch, topicPath]);
 
     const handleClick = useCallback(
-        (e: React.MouseEvent) => {
-            e.stopPropagation();
+        (event: React.MouseEvent) => {
+            event.stopPropagation();
             tree.handleTopicClick(topicPath);
         },
         [tree, topicPath]
     );
 
-    const classes = ['nn-navitem', 'nn-tag'];
-    if (isSelected) classes.push('nn-selected');
-    if (item.isHidden) classes.push('nn-excluded');
-    if (applyColorToName) classes.push('nn-has-custom-color');
-
-    const itemStyle: React.CSSProperties & { '--level'?: number; '--nn-navitem-custom-bg-color'?: string } = {
-        '--level': level,
-        ...(backgroundColor ? { '--nn-navitem-custom-bg-color': backgroundColor } : {})
-    };
-
     return (
-        <div ref={itemRef} className={classes.join(' ')} style={itemStyle} data-path={topicPath} data-level={level}>
-            <div className="nn-navitem-content" onClick={handleClick}>
-                <div
-                    ref={chevronRef}
-                    className={`nn-navitem-chevron ${hasChildren ? 'nn-navitem-chevron--has-children' : 'nn-navitem-chevron--no-children'}`}
-                    onClick={handleChevronClick}
-                />
-                {settings.showTagIcons && <span className="nn-navitem-icon" ref={iconRef} style={color ? { color } : undefined} />}
-                <span className="nn-navitem-name" style={applyColorToName ? { color } : undefined}>
-                    {topicNode.name}
-                </span>
-                <span className="nn-navitem-spacer" />
-                {settings.showNoteCount && item.noteCount && <span className="nn-navitem-count">{item.noteCount.total}</span>}
-            </div>
-        </div>
+        <TopicTreeItem
+            topicNode={item.data}
+            topicPath={topicPath}
+            level={item.level ?? 0}
+            indentGuideLevels={indentGuideLevelsByKey.get(getNavigationItemRenderKey(item))}
+            isExpanded={isExpanded}
+            isSelected={isSelected}
+            isHidden={item.isHidden}
+            onToggle={handleToggle}
+            onClick={handleClick}
+            countInfo={item.noteCount}
+            showFileCount={settings.showNoteCount}
+            color={item.color}
+            backgroundColor={getSolidBackground(item.backgroundColor)}
+            adjacentFilledClassName={adjacentFilledClassName}
+            icon={item.icon}
+            searchMatch={getNavigationItemSearchMatch(item, searchHighlights)}
+        />
     );
 }
 
@@ -379,7 +336,15 @@ export function NavigationPaneTreeRow({
         }
 
         case NavigationPaneItemType.TOPIC:
-            return <TopicRow item={item} context={context} isSelected={isSelected} isExpanded={isExpanded} />;
+            return (
+                <TopicTreeRow
+                    item={item}
+                    context={context}
+                    adjacentFilledClassName={adjacentFilledClassName}
+                    isSelected={isSelected}
+                    isExpanded={isExpanded}
+                />
+            );
 
         case NavigationPaneItemType.TOP_SPACER: {
             const spacerClass = item.hasSeparator ? 'nn-nav-top-spacer nn-nav-spacer--with-separator' : 'nn-nav-top-spacer';
