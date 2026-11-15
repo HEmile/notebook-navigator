@@ -85,6 +85,11 @@ export interface SearchNavFilterState {
         exclude: string[];
         includeOperators: SearchNavInclusionOperatorMap;
     };
+    // Fork: lowercase names from topic:"Name" and !topic:"Name" tokens
+    topics?: {
+        include: string[];
+        exclude: string[];
+    };
 }
 
 export const EMPTY_SEARCH_NAV_FILTER_STATE: SearchNavFilterState = {

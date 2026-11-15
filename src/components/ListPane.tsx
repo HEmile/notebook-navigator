@@ -141,6 +141,7 @@ export interface ListPaneHandle {
     selectAdjacentFile: (direction: 'next' | 'previous') => boolean;
     modifySearchWithTag: (tag: string, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => void;
     modifySearchWithProperty: (key: string, value: string | null, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => void;
+    modifySearchWithTopic: (topicName: string, options?: SearchQueryUpdateOptions) => void;
     modifySearchWithDateToken: (dateToken: string, options?: SearchQueryUpdateOptions) => void;
     toggleSearch: () => void;
     searchWithDescendants: () => void;
@@ -426,6 +427,7 @@ export const ListPane = React.memo(
             modifySearchWithTag,
             modifySearchWithProperty,
             modifySearchWithDateToken,
+            modifySearchWithTopic,
             toggleSearch,
             executeSearchShortcut
         } = useListPaneSearch({
@@ -1696,6 +1698,8 @@ export const ListPane = React.memo(
                 modifySearchWithProperty: modifySearchWithPropertyWithDefaultScope,
                 // Replace the active search query with a date token
                 modifySearchWithDateToken: modifySearchWithDateTokenWithDefaultScope,
+                // Fork: toggle a topic filter in the search query
+                modifySearchWithTopic,
                 // Toggle search mode on/off or focus existing search
                 toggleSearch: toggleSearchWithDefaultScope,
                 searchWithDescendants,
@@ -1716,6 +1720,7 @@ export const ListPane = React.memo(
                 modifySearchWithTagWithDefaultScope,
                 modifySearchWithPropertyWithDefaultScope,
                 modifySearchWithDateTokenWithDefaultScope,
+                modifySearchWithTopic,
                 getManualSortNewFileContext,
                 toggleGroupExpansion
             ]

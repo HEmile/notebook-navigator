@@ -62,7 +62,7 @@ function TopicTreeRow({ item, context, adjacentFilledClassName, isSelected, isEx
     const handleClick = useCallback(
         (event: React.MouseEvent) => {
             event.stopPropagation();
-            tree.handleTopicClick(topicPath);
+            tree.handleTopicClick(topicPath, { event });
         },
         [tree, topicPath]
     );

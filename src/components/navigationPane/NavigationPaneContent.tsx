@@ -135,6 +135,7 @@ interface NavigationPaneProps {
     onModifySearchWithTag: (tag: string, operator: InclusionOperator) => void;
     onModifySearchWithProperty: (key: string, value: string | null, operator: InclusionOperator) => void;
     onModifySearchWithDateFilter: (dateToken: string) => void;
+    onModifySearchWithTopic?: (topicName: string) => void;
 }
 
 export const NavigationPane = React.memo(
@@ -180,6 +181,7 @@ export const NavigationPane = React.memo(
             onModifySearchWithTag,
             onModifySearchWithProperty,
             onModifySearchWithDateFilter,
+            onModifySearchWithTopic,
             uiScale
         } = props;
 
@@ -521,7 +523,8 @@ export const NavigationPane = React.memo(
             clearActiveShortcut: shortcuts.clearActiveShortcut,
             openFolderNoteInRightSidebar: folderNote => plugin.openFolderNoteInRightSidebar(folderNote),
             onModifySearchWithTag,
-            onModifySearchWithProperty
+            onModifySearchWithProperty,
+            onModifySearchWithTopic
         });
 
         const searchHighlights = useNavigationSearchHighlights({ searchNavFilters });

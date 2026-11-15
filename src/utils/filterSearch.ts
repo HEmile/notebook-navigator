@@ -1078,6 +1078,10 @@ export function buildSearchNavFilterState(query: string): SearchNavFilterState {
             include: Array.from(propertyIncludeSet),
             exclude: Array.from(propertyExcludeSet),
             includeOperators: propertyIncludeOperators
+        },
+        topics: {
+            include: Array.from(new Set(tokens.topicTokens)),
+            exclude: Array.from(new Set(tokens.excludeTopicTokens))
         }
     };
 }

@@ -78,6 +78,7 @@ export interface NavigationSearchHighlightsResult {
     getTagCollectionSearchMatch: (tagCollectionId: string | null) => 'include' | 'exclude' | undefined;
     getTagInclusionOperator: (tagPath: string) => InclusionOperator | undefined;
     getPropertyInclusionOperator: (propertyNodeId: string) => InclusionOperator | undefined;
+    getTopicSearchMatch: (topicName: string) => 'include' | 'exclude' | undefined;
 }
 
 interface UseNavigationSearchHighlightsProps {
@@ -237,6 +238,22 @@ export function useNavigationSearchHighlights({ searchNavFilters }: UseNavigatio
         [getFoldedTagPath, tagIncludeOperators]
     );
 
+    // Fork: topic tokens are lowercase names; a topic is matched by name, wherever it shows in the tree
+    const getTopicSearchMatch = useCallback(
+        (topicName: string): 'include' | 'exclude' | undefined => {
+            const topics = searchNavFilters?.topics;
+            if (!topics) {
+                return undefined;
+            }
+            const lowerName = topicName.toLowerCase();
+            if (topics.exclude.includes(lowerName)) {
+                return 'exclude';
+            }
+            return topics.include.includes(lowerName) ? 'include' : undefined;
+        },
+        [searchNavFilters]
+    );
+
     const getPropertyInclusionOperator = useCallback(
         (propertyNodeId: string): InclusionOperator | undefined => {
             if (propertyNodeId === PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) {
@@ -255,8 +272,16 @@ export function useNavigationSearchHighlights({ searchNavFilters }: UseNavigatio
             getPropertySearchMatch,
             getTagCollectionSearchMatch,
             getTagInclusionOperator,
-            getPropertyInclusionOperator
+            getPropertyInclusionOperator,
+            getTopicSearchMatch
         }),
-        [getPropertyInclusionOperator, getPropertySearchMatch, getTagCollectionSearchMatch, getTagInclusionOperator, getTagSearchMatch]
+        [
+            getPropertyInclusionOperator,
+            getPropertySearchMatch,
+            getTagCollectionSearchMatch,
+            getTagInclusionOperator,
+            getTagSearchMatch,
+            getTopicSearchMatch
+        ]
     );
 }

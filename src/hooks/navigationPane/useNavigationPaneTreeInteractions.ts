@@ -91,6 +91,7 @@ interface UseNavigationPaneTreeInteractionsProps {
     openFolderNoteInRightSidebar: (folderNote: TFile) => Promise<void>;
     onModifySearchWithTag: (tag: string, operator: InclusionOperator) => void;
     onModifySearchWithProperty: (key: string, value: string | null, operator: InclusionOperator) => void;
+    onModifySearchWithTopic?: (topicName: string) => void;
 }
 
 export interface NavigationPaneTreeInteractionsResult {
@@ -109,7 +110,7 @@ export interface NavigationPaneTreeInteractionsResult {
     handleTagCollectionClick: (tagCollectionId: string, event: React.MouseEvent<HTMLDivElement>) => void;
     handlePropertyCollectionClick: (event: React.MouseEvent<HTMLDivElement>) => void;
     handlePropertyClick: (propertyNode: PropertyTreeNode, event?: React.MouseEvent, options?: { fromShortcut?: boolean }) => void;
-    handleTopicClick: (topicPath: string, options?: { fromShortcut?: boolean }) => void;
+    handleTopicClick: (topicPath: string, options?: { fromShortcut?: boolean; event?: React.MouseEvent }) => void;
 }
 
 export function useNavigationPaneTreeInteractions({
@@ -132,7 +133,8 @@ export function useNavigationPaneTreeInteractions({
     clearActiveShortcut,
     openFolderNoteInRightSidebar,
     onModifySearchWithTag,
-    onModifySearchWithProperty
+    onModifySearchWithProperty,
+    onModifySearchWithTopic
 }: UseNavigationPaneTreeInteractionsProps): NavigationPaneTreeInteractionsResult {
     const focusListPaneAfterRightSidebarFolderNoteSelection = useCallback(
         (openContext: FolderNoteOpenContext) => {
@@ -605,8 +607,17 @@ export function useNavigationPaneTreeInteractions({
      * Selecting a topic also opens its topic note when one exists.
      */
     const handleTopicClick = useCallback(
-        (topicPath: string, options?: { fromShortcut?: boolean }) => {
+        (topicPath: string, options?: { fromShortcut?: boolean; event?: React.MouseEvent }) => {
             if (!topicPath) {
+                return;
+            }
+
+            // The tag search modifier adds or removes the topic as a search filter instead of selecting it
+            const event = options?.event;
+            if (event && onModifySearchWithTopic && getTagSearchModifierOperator(event, settings.multiSelectModifier)) {
+                event.preventDefault();
+                event.stopPropagation();
+                onModifySearchWithTopic(getTopicNameFromPath(topicPath));
                 return;
             }
 
@@ -641,9 +652,11 @@ export function useNavigationPaneTreeInteractions({
             applyTreeSelection,
             expansionDispatch,
             expansionState.expandedTopics,
+            onModifySearchWithTopic,
             selectionDispatch,
             selectionState.selectedTopicPath,
             selectionState.selectionType,
+            settings.multiSelectModifier,
             topicService
         ]
     );

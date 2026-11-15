@@ -329,7 +329,9 @@ export const NotebookNavigatorComponent = React.memo(
                     stringRecordEqual(prev.tags.includeOperators, next.tags.includeOperators) &&
                     arraysEqual(prev.properties.include, next.properties.include) &&
                     arraysEqual(prev.properties.exclude, next.properties.exclude) &&
-                    stringRecordEqual(prev.properties.includeOperators, next.properties.includeOperators)
+                    stringRecordEqual(prev.properties.includeOperators, next.properties.includeOperators) &&
+                    arraysEqual(prev.topics?.include ?? [], next.topics?.include ?? []) &&
+                    arraysEqual(prev.topics?.exclude ?? [], next.topics?.exclude ?? [])
                 ) {
                     return prev;
                 }
@@ -377,6 +379,14 @@ export const NotebookNavigatorComponent = React.memo(
         const handleModifySearchWithProperty = useCallback(
             (key: string, value: string | null, operator: InclusionOperator) => {
                 listPaneRef.current?.modifySearchWithProperty(key, value, operator, getNavigationSearchUpdateOptions());
+            },
+            [getNavigationSearchUpdateOptions]
+        );
+
+        // Fork: toggles a topic:"Name" filter in the list pane search
+        const handleModifySearchWithTopic = useCallback(
+            (topicName: string) => {
+                listPaneRef.current?.modifySearchWithTopic(topicName, getNavigationSearchUpdateOptions());
             },
             [getNavigationSearchUpdateOptions]
         );
@@ -1661,6 +1671,7 @@ export const NotebookNavigatorComponent = React.memo(
                         onRevealProperty={revealProperty}
                         onModifySearchWithTag={handleModifySearchWithTag}
                         onModifySearchWithProperty={handleModifySearchWithProperty}
+                        onModifySearchWithTopic={handleModifySearchWithTopic}
                         onModifySearchWithDateFilter={handleModifySearchWithDateFilter}
                     />
                     <ListPane

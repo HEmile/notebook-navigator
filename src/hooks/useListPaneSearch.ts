@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { addTopicToSearchQuery, toggleTopicInSearchQuery } from '../utils/topicSearch';
+import { getTopicNameFromPath } from '../utils/topicGraph';
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import type { App } from 'obsidian';
 import { useSelectionState } from '../context/SelectionContext';
@@ -94,6 +96,7 @@ export interface UseListPaneSearchResult {
     modifySearchWithTag: (tag: string, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => void;
     modifySearchWithProperty: (key: string, value: string | null, operator: InclusionOperator, options?: SearchQueryUpdateOptions) => void;
     modifySearchWithDateToken: (dateToken: string, options?: SearchQueryUpdateOptions) => void;
+    modifySearchWithTopic: (topicName: string, options?: SearchQueryUpdateOptions) => void;
     toggleSearch: () => void;
     executeSearchShortcut: (params: ExecuteSearchShortcutParams) => Promise<void>;
 }
@@ -341,7 +344,15 @@ export function useListPaneSearch({
         }
 
         const startTarget = activeSearchShortcutStartTarget;
-        const startTargetLabel = activeSearchShortcutStartTargetLabel;
+        // Fork: a search saved under a topic keeps the topic as a topic:"Name" filter in its query, since search
+        // shortcuts have no topic start target
+        const startTopicName =
+            !startTarget && selectionState.selectionType === 'topic' && selectionState.selectedTopicPath
+                ? getTopicNameFromPath(selectionState.selectedTopicPath)
+                : null;
+        const startTargetLabel =
+            activeSearchShortcutStartTargetLabel ??
+            (startTopicName ? strings.searchInput.shortcutStartIn.replace('{path}', startTopicName) : null);
         let modal: InputModal | null = null;
 
         modal = new InputModal(
@@ -358,9 +369,11 @@ export function useListPaneSearch({
                 setIsSavingSearchShortcut(true);
                 try {
                     const saveStartTarget = context?.checkboxValue ? startTarget : undefined;
+                    const savedQuery =
+                        context?.checkboxValue && startTopicName ? addTopicToSearchQuery(normalizedQuery, startTopicName) : normalizedQuery;
                     const success = await addSearchShortcut({
                         name: trimmedName,
-                        query: normalizedQuery,
+                        query: savedQuery,
                         provider: searchProvider,
                         startTarget: saveStartTarget
                     });
@@ -391,7 +404,9 @@ export function useListPaneSearch({
         app,
         isSavingSearchShortcut,
         searchProvider,
-        searchQuery
+        searchQuery,
+        selectionState.selectedTopicPath,
+        selectionState.selectionType
     ]);
 
     const handleRemoveSearchShortcut = useCallback(async () => {
@@ -449,6 +464,14 @@ export function useListPaneSearch({
             }
 
             updateSearchQuery(query => updateFilterQueryWithProperty(query, normalizedKey, value, operator).query, options);
+        },
+        [updateSearchQuery]
+    );
+
+    // Fork: toggles a topic:"Name" filter in the search query
+    const modifySearchWithTopic = useCallback(
+        (topicName: string, options?: SearchQueryUpdateOptions) => {
+            updateSearchQuery(query => toggleTopicInSearchQuery(query, topicName), options);
         },
         [updateSearchQuery]
     );
@@ -613,6 +636,7 @@ export function useListPaneSearch({
         modifySearchWithTag,
         modifySearchWithProperty,
         modifySearchWithDateToken,
+        modifySearchWithTopic,
         toggleSearch,
         executeSearchShortcut
     };

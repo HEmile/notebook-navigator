@@ -47,6 +47,9 @@ export function getNavigationItemSearchMatch(
         case NavigationPaneItemType.PROPERTY_VALUE:
             return searchHighlights.getPropertySearchMatch(item.data.id);
 
+        case NavigationPaneItemType.TOPIC:
+            return searchHighlights.getTopicSearchMatch(item.data.name);
+
         default:
             return undefined;
     }
