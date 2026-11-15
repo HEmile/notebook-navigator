@@ -164,6 +164,25 @@ export class SelectionAPI {
         };
     }
 
+    // Fork: the selected topic path. Kept out of NavItem so the public API types stay as upstream defines them.
+    private navigationTopicPath: string | null = null;
+
+    /**
+     * Fork: records the selected topic path (null when no topic is selected)
+     * @internal
+     */
+    updateTopicNavigationState(topicPath: string | null): void {
+        this.navigationTopicPath = topicPath;
+    }
+
+    /**
+     * Fork: the selected topic path, or null when no topic is selected
+     * @internal
+     */
+    getSelectedTopicPath(): string | null {
+        return this.navigationTopicPath;
+    }
+
     /**
      * Update the navigation selection state
      * Called by React components when navigation changes

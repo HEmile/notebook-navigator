@@ -632,4 +632,10 @@ export function useSelectionPersistence({ api, app, state }: UseSelectionPersist
             state.selectedProperty
         );
     }, [api, state.selectedFolder, state.selectedProperty, state.selectedTag]);
+
+    useEffect(() => {
+        api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].selection.updateTopicNavigationState(
+            state.selectionType === 'topic' ? state.selectedTopicPath : null
+        );
+    }, [api, state.selectedTopicPath, state.selectionType]);
 }

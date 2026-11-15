@@ -18,6 +18,7 @@
 
 import { FileView, Platform, TFile, TFolder, View, type WorkspaceLeaf } from 'obsidian';
 import type NotebookNavigatorPlugin from '../../main';
+import { INTERNAL_NOTEBOOK_NAVIGATOR_API } from '../../api/NotebookNavigatorAPI';
 import { strings } from '../../i18n';
 import {
     createDailyNote,
@@ -227,10 +228,11 @@ function isNavigatorSelectionContext(plugin: NotebookNavigatorPlugin, leaf: Work
  * Selects the adjacent file based on persisted navigation context without opening the navigator view.
  */
 interface CommandNavigationSelectionScope {
-    selectionType: 'folder' | 'tag' | 'property' | null;
+    selectionType: 'folder' | 'tag' | 'property' | 'topic' | null;
     selectedFolder: TFolder | null;
     selectedTag: string | null;
     selectedProperty: PropertySelectionNodeId | null;
+    selectedTopicPath?: string | null;
 }
 
 function getCommandVisibility(plugin: NotebookNavigatorPlugin): VisibilityPreferences {
@@ -248,7 +250,9 @@ function getFilesForCommandSelection(plugin: NotebookNavigatorPlugin, selectionS
         getCommandVisibility(plugin),
         plugin.app,
         plugin.tagTreeService,
-        plugin.propertyTreeService
+        plugin.propertyTreeService,
+        undefined,
+        plugin.topicService
     );
 }
 
@@ -437,7 +441,27 @@ function getSelectedPropertyForCommand(plugin: NotebookNavigatorPlugin): Propert
     return isPropertySelectionNodeIdVisibleInNavigation(plugin.settings, selectedProperty) ? selectedProperty : null;
 }
 
+/** Fork: the topic selected in the navigator, when it still exists */
+function getSelectedTopicPathForCommand(plugin: NotebookNavigatorPlugin): string | null {
+    if (!plugin.settings.showTopics) {
+        return null;
+    }
+    const topicPath = plugin.api?.[INTERNAL_NOTEBOOK_NAVIGATOR_API].selection.getSelectedTopicPath() ?? null;
+    return topicPath && plugin.topicService?.findTopicNodeByPath(topicPath) ? topicPath : null;
+}
+
 function resolveOpenAllFilesContext(plugin: NotebookNavigatorPlugin): CommandNavigationSelectionScope {
+    const selectedTopicPath = getSelectedTopicPathForCommand(plugin);
+    if (selectedTopicPath) {
+        return {
+            selectionType: ItemType.TOPIC,
+            selectedFolder: null,
+            selectedTag: null,
+            selectedProperty: null,
+            selectedTopicPath
+        };
+    }
+
     const selectedProperty = getSelectedPropertyForCommand(plugin);
     if (selectedProperty) {
         return {

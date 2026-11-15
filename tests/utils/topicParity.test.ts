@@ -29,6 +29,8 @@ import { getNavigationExpansionTargetForItem, toggleNavigationExpansionTarget } 
 import type { ExpansionAction } from '../../src/context/ExpansionContext';
 import { TFolder } from 'obsidian';
 import { selectionReducer } from '../../src/context/selection/state';
+import { SelectionAPI } from '../../src/api/modules/SelectionAPI';
+import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
 import type { SelectionState } from '../../src/context/selection/types';
 import type { CombinedNavigationItem } from '../../src/types/virtualization';
 import type { TopicNode } from '../../src/types/storage';
@@ -139,5 +141,22 @@ describe('topic lists', () => {
         expect(back.selectedTopicPath).toBe('Science/Physics');
         expect(back.navigationHistory).toHaveLength(3);
         expect(back.navigationHistoryIndex).toBe(1);
+    });
+
+    it('expose the selected topic to commands without changing the public nav item', () => {
+        const selectionAPI = new SelectionAPI({
+            app: { vault: { getFolderByPath: () => null, getFileByPath: () => null } },
+            getPlugin: () => ({ settings: structuredClone(DEFAULT_SETTINGS) }),
+            trigger: () => undefined
+        } as never);
+
+        selectionAPI.updateNavigationState(null, null, null);
+        selectionAPI.updateTopicNavigationState('Science/Physics');
+
+        expect(selectionAPI.getSelectedTopicPath()).toBe('Science/Physics');
+        expect(selectionAPI.getNavItem().type).toBe('none');
+
+        selectionAPI.updateTopicNavigationState(null);
+        expect(selectionAPI.getSelectedTopicPath()).toBeNull();
     });
 });

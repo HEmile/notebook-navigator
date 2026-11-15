@@ -36,7 +36,10 @@ export const INTERNAL_NOTEBOOK_NAVIGATOR_API = Symbol('NotebookNavigatorInternal
 
 export interface NotebookNavigatorInternalAPI {
     readonly metadata: Pick<MetadataAPI, 'updateFromSettings' | 'emitFolderChangedForPath'>;
-    readonly selection: Pick<SelectionAPI, 'updateNavigationState' | 'updateFileState'>;
+    readonly selection: Pick<
+        SelectionAPI,
+        'updateNavigationState' | 'updateFileState' | 'updateTopicNavigationState' | 'getSelectedTopicPath'
+    >;
     readonly menus: Pick<
         MenusAPI,
         'applyFileMenuExtensions' | 'applyFolderMenuExtensions' | 'applyTagMenuExtensions' | 'applyPropertyMenuExtensions'
