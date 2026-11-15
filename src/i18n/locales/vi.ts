@@ -1027,6 +1027,9 @@ export const STRINGS_VI = {
         rebuildCache: 'Xây dựng lại cache', // Command palette: Rebuilds the local Notebook Navigator cache (English: Rebuild cache),
         revealActiveTopic: 'Reveal active note topic',
         revealActiveTopicAllPaths: 'Reveal active note topic (all paths)',
+        navigateToTopic: 'Navigate to topic',
+        navigateToTopicPlaceholder: 'Navigate to topic...',
+        toggleTopicSort: 'Toggle topic sort order',
         restoreDefaultSettings: 'Khôi phục cài đặt mặc định' // Command palette: Replaces the settings file with defaults after startup was aborted (English: Restore default settings)
     },
 

@@ -936,6 +936,45 @@ export default function registerNavigatorCommands(plugin: NotebookNavigatorPlugi
         }
     });
 
+    // Fork: command to show a modal for navigating to any topic
+    plugin.addCommand({
+        id: 'navigate-to-topic',
+        name: strings.commands.navigateToTopic,
+        checkCallback: (checking: boolean) => {
+            if (!plugin.settings.showTopics) {
+                return false;
+            }
+            if (!checking) {
+                runAsyncAction(async () => {
+                    const view = await ensureNavigatorOpen(plugin);
+                    if (view) {
+                        await view.navigateToTopicWithModal();
+                    }
+                });
+            }
+            return true;
+        }
+    });
+
+    // Fork: command to toggle the topic sort order between alphabetical and frequency, like the tag command
+    plugin.addCommand({
+        id: 'toggle-topic-sort',
+        name: strings.commands.toggleTopicSort,
+        checkCallback: (checking: boolean) => {
+            if (!plugin.settings.showTopics) {
+                return false;
+            }
+            if (!checking) {
+                runAsyncAction(async () => {
+                    await plugin.activateView();
+                    const nextSort = plugin.getTopicSortOrder() === 'frequency-desc' ? 'alpha-asc' : 'frequency-desc';
+                    plugin.setTopicSortOrder(nextSort);
+                });
+            }
+            return true;
+        }
+    });
+
     // Command to reveal the active note's topic across all paths in the hierarchy
     plugin.addCommand({
         id: 'reveal-active-topic-all-paths',

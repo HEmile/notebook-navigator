@@ -1020,6 +1020,9 @@ export const STRINGS_ZH_TW = {
         rebuildCache: '重建快取',
         revealActiveTopic: 'Reveal active note topic',
         revealActiveTopicAllPaths: 'Reveal active note topic (all paths)',
+        navigateToTopic: 'Navigate to topic',
+        navigateToTopicPlaceholder: 'Navigate to topic...',
+        toggleTopicSort: 'Toggle topic sort order',
         restoreDefaultSettings: '還原預設設定' // Command palette: Replaces the settings file with defaults after startup was aborted (English: Restore default settings)
     },
 

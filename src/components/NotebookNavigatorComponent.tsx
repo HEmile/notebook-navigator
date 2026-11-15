@@ -40,11 +40,14 @@ import { useUpdateNotice } from '../hooks/useUpdateNotice';
 import { FolderSuggestModal } from '../modals/FolderSuggestModal';
 import { buildPropertyNodeSuggestions, PropertyNodeSuggestModal } from '../modals/PropertyNodeSuggestModal';
 import { TagSuggestModal } from '../modals/TagSuggestModal';
+import { TopicSuggestModal } from '../modals/TopicSuggestModal';
+import { resolveTopicPath } from '../utils/topicGraph';
 import {
     ItemType,
     NAVPANE_MEASUREMENTS,
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
     TAGGED_TAG_ID,
+    TOPICS_ROOT_VIRTUAL_FOLDER_ID,
     UNTAGGED_TAG_ID,
     type BackgroundMode,
     type DualPaneOrientation
@@ -173,6 +176,7 @@ export interface NotebookNavigatorHandle {
     navigateToFolderWithModal: () => void;
     navigateToTagWithModal: () => void;
     navigateToPropertyWithModal: () => void;
+    navigateToTopicWithModal: () => void;
     addTagToSelectedFiles: () => Promise<void>;
     setPropertyOnSelectedFiles: () => Promise<void>;
     removeTagFromSelectedFiles: () => Promise<void>;
@@ -1251,6 +1255,34 @@ export const NotebookNavigatorComponent = React.memo(
                     );
                     modal.open();
                 },
+                navigateToTopicWithModal: () => {
+                    // Fork: picks a topic, opens its branch and the Topics section, selects it and scrolls to it
+                    if (!topicService) {
+                        return;
+                    }
+                    const topicNames = Array.from(new Set(topicService.getAllTopicNames())).sort((a, b) => a.localeCompare(b));
+                    const modal = new TopicSuggestModal(app, topicNames, topicName => {
+                        const topicPath = resolveTopicPath(topicService.getTopicGraph(), topicName);
+                        if (!topicPath) {
+                            return;
+                        }
+                        if (!expansionState.expandedVirtualFolders.has(TOPICS_ROOT_VIRTUAL_FOLDER_ID)) {
+                            const expandedVirtualFolders = new Set(expansionState.expandedVirtualFolders);
+                            expandedVirtualFolders.add(TOPICS_ROOT_VIRTUAL_FOLDER_ID);
+                            expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: expandedVirtualFolders });
+                        }
+                        const parts = topicPath.split('/');
+                        const ancestorPaths = parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join('/'));
+                        if (ancestorPaths.length > 0) {
+                            expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: ancestorPaths });
+                        }
+                        selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath, source: 'manual' });
+                        window.requestAnimationFrame(() => {
+                            navigationPaneRef.current?.requestScroll(topicPath, { align: 'center', itemType: ItemType.TOPIC });
+                        });
+                    });
+                    modal.open();
+                },
                 addTagToSelectedFiles: async () => {
                     if (!tagOperations) {
                         showNotice(strings.fileSystem.notifications.tagOperationsNotAvailable, { variant: 'warning' });
@@ -1410,7 +1442,10 @@ export const NotebookNavigatorComponent = React.memo(
             topicShortcutKeysByName,
             addTopicShortcut,
             removeShortcut,
-            handleModifySearchWithDateFilter
+            handleModifySearchWithDateFilter,
+            topicService,
+            expansionDispatch,
+            expansionState.expandedVirtualFolders
         ]);
 
         // Add platform class and background mode classes

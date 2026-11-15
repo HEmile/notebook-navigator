@@ -1019,6 +1019,9 @@ export const STRINGS_ZH_CN = {
         rebuildCache: '重建缓存', // Command palette: Rebuilds the local Notebook Navigator cache (English: Rebuild cache),
         revealActiveTopic: 'Reveal active note topic',
         revealActiveTopicAllPaths: 'Reveal active note topic (all paths)',
+        navigateToTopic: 'Navigate to topic',
+        navigateToTopicPlaceholder: 'Navigate to topic...',
+        toggleTopicSort: 'Toggle topic sort order',
         restoreDefaultSettings: '恢复默认设置' // Command palette: Replaces the settings file with defaults after startup was aborted (English: Restore default settings)
     },
 

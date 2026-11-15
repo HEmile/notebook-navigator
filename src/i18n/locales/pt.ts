@@ -1028,6 +1028,9 @@ export const STRINGS_PT = {
         rebuildCache: 'Reconstruir cache', // Command palette: Rebuilds the local Notebook Navigator cache (English: Rebuild cache),
         revealActiveTopic: 'Reveal active note topic',
         revealActiveTopicAllPaths: 'Reveal active note topic (all paths)',
+        navigateToTopic: 'Navigate to topic',
+        navigateToTopicPlaceholder: 'Navigate to topic...',
+        toggleTopicSort: 'Toggle topic sort order',
         restoreDefaultSettings: 'Restaurar predefinições' // Command palette: Replaces the settings file with defaults after startup was aborted (English: Restore default settings)
     },
 

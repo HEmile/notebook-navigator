@@ -1021,6 +1021,9 @@ export const STRINGS_TH = {
         rebuildCache: 'สร้างแคชใหม่',
         revealActiveTopic: 'Reveal active note topic',
         revealActiveTopicAllPaths: 'Reveal active note topic (all paths)',
+        navigateToTopic: 'Navigate to topic',
+        navigateToTopicPlaceholder: 'Navigate to topic...',
+        toggleTopicSort: 'Toggle topic sort order',
         restoreDefaultSettings: 'กู้คืนการตั้งค่าเริ่มต้น' // Command palette: Replaces the settings file with defaults after startup was aborted (English: Restore default settings)
     },
 

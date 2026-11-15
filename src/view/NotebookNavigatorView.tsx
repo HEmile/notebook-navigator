@@ -453,6 +453,13 @@ export class NotebookNavigatorView extends ItemView {
     }
 
     /**
+     * Fork: navigate to a topic by showing the topic suggest modal
+     */
+    async navigateToTopicWithModal(): Promise<void> {
+        this.componentHandle?.navigateToTopicWithModal();
+    }
+
+    /**
      * Sets the list pane search query to a date token.
      */
     addDateFilterToSearch(dateToken: string): void {

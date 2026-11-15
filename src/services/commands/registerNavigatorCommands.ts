@@ -37,6 +37,8 @@ function getCommandSpecs(): NavigatorCommandSpec[] {
         { id: 'reveal-file', name: strings.commands.revealFile, checkable: true },
         { id: 'reveal-active-topic', name: strings.commands.revealActiveTopic, checkable: true },
         { id: 'reveal-active-topic-all-paths', name: strings.commands.revealActiveTopicAllPaths, checkable: true },
+        { id: 'navigate-to-topic', name: strings.commands.navigateToTopic, checkable: true },
+        { id: 'toggle-topic-sort', name: strings.commands.toggleTopicSort, checkable: true },
         { id: 'open-all-files', name: strings.commands.openAllFiles, checkable: true },
         { id: 'toggle-descendants', name: strings.commands.toggleDescendants },
         { id: 'toggle-hidden', name: strings.commands.toggleHidden },
