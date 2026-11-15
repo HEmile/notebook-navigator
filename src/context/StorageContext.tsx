@@ -65,7 +65,7 @@ import { getFileNameWithoutExtension } from '../utils/fileNameUtils';
 import { getNoteDisplayName } from '../utils/noteNameFormat';
 import { findTagNode, collectAllTagPaths } from '../utils/tagTree';
 import { useServices, useTopicService } from './ServicesContext';
-import { buildTopicGraphFromDatabase } from '../utils/topicGraph';
+import { useTopicGraphSync } from './storage/useTopicGraphSync';
 import { useSettingsState, useActiveProfile } from './SettingsContext';
 import { useUXPreferences } from './UXPreferencesContext';
 import type { NotebookNavigatorAPI } from '../api/NotebookNavigatorAPI';
@@ -290,17 +290,22 @@ export function StorageProvider({ app, api, children }: StorageProviderProps) {
         propertyTreeRebuildFnRef
     });
 
-    const rebuildTopicTree = useCallback(() => {
-        if (!settings.showTopics) return;
-        const db = getDBInstance();
-        const excludedFolderPatterns = showHiddenItems ? [] : hiddenFolders;
-        const includedPaths = new Set(getVisibleMarkdownFiles().map((f: TFile) => f.path));
-        const topicTags = settings.topicTags?.length ? settings.topicTags : ['topic', 'jaar', 'decennium', 'maand'];
-        const topicGraph = buildTopicGraphFromDatabase(db, app, excludedFolderPatterns, includedPaths, topicTags);
-        if (topicService) {
-            topicService.updateTopicGraph(topicGraph);
-        }
-    }, [app, hiddenFolders, settings.showTopics, settings.topicTags, showHiddenItems, topicService, getVisibleMarkdownFiles]);
+    const { rebuildTopicTree } = useTopicGraphSync({
+        app,
+        settings,
+        showHiddenItems,
+        hiddenFolders,
+        hiddenFileProperties,
+        hiddenFileNames,
+        hiddenFileTags,
+        fileVisibility,
+        profileId: profile.id,
+        isStorageReady,
+        isStorageReadyRef,
+        stoppedRef,
+        getVisibleMarkdownFiles,
+        topicService
+    });
 
     const { queueMetadataContentWhenReady, disposeMetadataWaitDisposers } = useMetadataCacheQueue({
         app,

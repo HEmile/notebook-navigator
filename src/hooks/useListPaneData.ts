@@ -58,6 +58,7 @@ import {
     type ListPaneConfig
 } from './listPaneData/listItems';
 import { useListPaneRefresh } from './listPaneData/useListPaneRefresh';
+import { useTopicGraphVersion } from './useTopicGraphVersion';
 
 const EMPTY_SEARCH_META = new Map<string, SearchResultMeta>();
 const EMPTY_HIDDEN_FILE_STATE = new Map<string, boolean>();
@@ -157,6 +158,8 @@ export function useListPaneData({
     propertySortOrderOverride
 }: UseListPaneDataParams): UseListPaneDataResult {
     const { app, tagTreeService, propertyTreeService, topicService, commandQueue, omnisearchService } = useServices();
+    // Topic file lists come from the topic graph, so a rebuild must recompute them
+    const topicGraphVersion = useTopicGraphVersion(topicService);
     const { getFileTimestamps, getDB, getFileDisplayName } = useFileCache();
     const { includeDescendantNotes, showHiddenItems } = visibility;
     const dayKey = useLocalDayKey();
@@ -273,6 +276,7 @@ export function useListPaneData({
         selectedTag,
         selectedProperty,
         selectedTopicPath,
+        topicGraphVersion,
         activeProfile.profile.id,
         activeProfile.hiddenFolders,
         descendantExcludedFolders,

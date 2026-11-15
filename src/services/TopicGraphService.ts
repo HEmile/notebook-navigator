@@ -21,9 +21,33 @@ import { findTopicNode, collectTopicDescendants, findTopicNodeByPath } from '../
 
 export class TopicService {
     private topicGraph: Map<string, TopicNode> = new Map();
+    private topicNames: Set<string> = new Set();
+    private version = 0;
+    private listeners = new Set<() => void>();
 
     updateTopicGraph(graph: Map<string, TopicNode>): void {
         this.topicGraph = graph;
+        this.topicNames = new Set(this.getAllTopicNames());
+        this.version += 1;
+        this.listeners.forEach(listener => listener());
+    }
+
+    /** Increases on every graph update, so React memos can depend on it */
+    getVersion(): number {
+        return this.version;
+    }
+
+    /** Registers a listener called after every graph update. Returns the unsubscribe function. */
+    subscribe(listener: () => void): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    }
+
+    /** Whether a topic with this exact name is in the current graph */
+    hasTopicName(topicName: string): boolean {
+        return this.topicNames.has(topicName);
     }
 
     getTopicGraph(): Map<string, TopicNode> {

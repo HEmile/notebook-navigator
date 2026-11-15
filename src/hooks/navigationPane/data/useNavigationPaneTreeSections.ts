@@ -60,6 +60,7 @@ import {
     type TagComparator
 } from './navigationComparators';
 import type { NavigationPaneSourceState } from './useNavigationPaneSourceState';
+import { useTopicGraphVersion } from '../../useTopicGraphVersion';
 
 interface NavigationPaneTreeExpansionState {
     expandedFolders: Set<string>;
@@ -935,6 +936,7 @@ export function useNavigationPaneTreeSections({
         settings.showNoteCount
     ]);
 
+    const topicGraphVersion = useTopicGraphVersion(topicService);
     const { topicItems, renderTopicTree } = useMemo(() => {
         if (!settings.showTopics || !topicService) {
             return { topicItems: [] as CombinedNavigationItem[], renderTopicTree: new Map<string, TopicNode>() };
@@ -1018,12 +1020,14 @@ export function useNavigationPaneTreeSections({
         }
 
         return { topicItems: items, renderTopicTree: topicGraph };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- topicGraphVersion changes when topicService replaces its graph.
     }, [
         settings.showTopics,
         settings.hiddenTopics,
         settings.interfaceIcons,
         settings.topicSortOrder,
         topicService,
+        topicGraphVersion,
         expansionState.expandedTopics,
         expansionState.expandedVirtualFolders,
         showHiddenItems

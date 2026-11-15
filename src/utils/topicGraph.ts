@@ -106,7 +106,7 @@ export function getTopicRelations(metadata: CachedMetadata, isTopicNote: boolean
 }
 
 export function hasTopicTag(tags: string[], topicTags: string[] = DEFAULT_TOPIC_TAGS): boolean {
-    return tags?.some(tag => topicTags.some((topicTag: string) => tag.contains(topicTag)));
+    return tags?.some(tag => topicTags.some((topicTag: string) => tag.includes(topicTag)));
 }
 
 function traverseTopicsUp(
