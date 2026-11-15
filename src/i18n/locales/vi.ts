@@ -603,6 +603,7 @@ export const STRINGS_VI = {
                 'nav-folder-closed': 'Thư mục đóng',
                 'nav-tags': 'Thẻ',
                 'nav-tag': 'Thẻ',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Thuộc tính',
                 'nav-property': 'Thuộc tính',
                 'nav-property-value': 'Giá trị',

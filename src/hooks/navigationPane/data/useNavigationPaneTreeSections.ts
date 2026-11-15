@@ -970,7 +970,7 @@ export function useNavigationPaneTreeSections({
         const rootVirtualFolder: VirtualFolder = {
             id: TOPICS_ROOT_VIRTUAL_FOLDER_ID,
             name: strings.navigationPane.topics,
-            icon: resolveUXIcon(settings.interfaceIcons, 'nav-tags')
+            icon: resolveUXIcon(settings.interfaceIcons, 'nav-topics')
         };
         items.push({
             type: NavigationPaneItemType.VIRTUAL_FOLDER,

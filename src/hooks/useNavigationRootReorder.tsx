@@ -1351,7 +1351,7 @@ export function useNavigationRootReorder(options: UseNavigationRootReorderOption
                 onClick = handleTogglePropertiesSection;
             } else if (identifier === NavigationSectionId.TOPICS) {
                 // Matches the Topics section header in the navigation pane
-                icon = resolveUXIcon(settings.interfaceIcons, 'nav-tags');
+                icon = resolveUXIcon(settings.interfaceIcons, 'nav-topics');
                 label = strings.navigationPane.topics;
             }
 

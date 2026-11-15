@@ -603,6 +603,7 @@ export const STRINGS_IT = {
                 'nav-folder-closed': 'Cartella chiusa',
                 'nav-tags': 'Etichette',
                 'nav-tag': 'Etichetta',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Proprietà',
                 'nav-property': 'Proprietà',
                 'nav-property-value': 'Valore',

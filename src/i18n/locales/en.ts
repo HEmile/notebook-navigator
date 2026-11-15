@@ -602,6 +602,7 @@ export const STRINGS_EN = {
                 'nav-folder-closed': 'Folder closed',
                 'nav-tags': 'Tags',
                 'nav-tag': 'Tag',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Properties',
                 'nav-property': 'Property',
                 'nav-property-value': 'Value',

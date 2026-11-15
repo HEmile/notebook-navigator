@@ -601,6 +601,7 @@ export const STRINGS_KO = {
                 'nav-folder-closed': '닫힌 폴더',
                 'nav-tags': '태그',
                 'nav-tag': '태그',
+                'nav-topics': 'Topics',
                 'nav-properties': '속성',
                 'nav-property': '속성',
                 'nav-property-value': '값',

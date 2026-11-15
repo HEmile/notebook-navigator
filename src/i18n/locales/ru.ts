@@ -604,6 +604,7 @@ export const STRINGS_RU = {
                 'nav-folder-closed': 'Папка закрыта',
                 'nav-tags': 'Теги',
                 'nav-tag': 'Тег',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Свойства',
                 'nav-property': 'Свойство',
                 'nav-property-value': 'Значение',

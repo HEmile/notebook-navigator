@@ -603,6 +603,7 @@ export const STRINGS_FA = {
                 'nav-folder-closed': 'پوشه بسته',
                 'nav-tags': 'برچسب‌ها',
                 'nav-tag': 'برچسب',
+                'nav-topics': 'Topics',
                 'nav-properties': 'ویژگی‌ها',
                 'nav-property': 'ویژگی',
                 'nav-property-value': 'مقدار',

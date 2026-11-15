@@ -606,6 +606,7 @@ export const STRINGS_PT_BR = {
                 'nav-folder-closed': 'Pasta fechada',
                 'nav-tags': 'Etiquetas',
                 'nav-tag': 'Etiqueta',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Propriedades',
                 'nav-property': 'Propriedade',
                 'nav-property-value': 'Valor',

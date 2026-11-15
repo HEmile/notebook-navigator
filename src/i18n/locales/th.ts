@@ -601,6 +601,7 @@ export const STRINGS_TH = {
                 'nav-folder-closed': 'โฟลเดอร์ปิด',
                 'nav-tags': 'แท็ก',
                 'nav-tag': 'แท็ก',
+                'nav-topics': 'Topics',
                 'nav-properties': 'คุณสมบัติ',
                 'nav-property': 'คุณสมบัติ',
                 'nav-property-value': 'ค่า',

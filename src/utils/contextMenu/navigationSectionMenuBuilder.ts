@@ -28,7 +28,8 @@ import {
     RECENT_NOTES_VIRTUAL_FOLDER_ID,
     SHORTCUTS_VIRTUAL_FOLDER_ID,
     TAGGED_TAG_ID,
-    TAGS_ROOT_VIRTUAL_FOLDER_ID
+    TAGS_ROOT_VIRTUAL_FOLDER_ID,
+    TOPICS_ROOT_VIRTUAL_FOLDER_ID
 } from '../../types';
 import { executeCommand } from '../../utils/typeGuards';
 import { ensureRecord, isStringRecordValue, sanitizeRecord } from '../../utils/recordUtils';
@@ -99,6 +100,13 @@ function getVirtualRootMenuConfig(sectionId: NavigationSectionId): VirtualRootMe
         };
     }
 
+    if (sectionId === NavigationSectionId.TOPICS) {
+        return {
+            uxIconId: 'nav-topics',
+            title: strings.navigationPane.topics
+        };
+    }
+
     return null;
 }
 
@@ -117,6 +125,10 @@ function getVirtualFolderId(sectionId: NavigationSectionId): string | null {
 
     if (sectionId === NavigationSectionId.PROPERTIES) {
         return PROPERTIES_ROOT_VIRTUAL_FOLDER_ID;
+    }
+
+    if (sectionId === NavigationSectionId.TOPICS) {
+        return TOPICS_ROOT_VIRTUAL_FOLDER_ID;
     }
 
     return null;

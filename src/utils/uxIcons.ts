@@ -38,6 +38,7 @@ export type UXIconId =
     | 'nav-folder-closed'
     | 'nav-tags'
     | 'nav-tag'
+    | 'nav-topics'
     | 'nav-properties'
     | 'nav-property'
     | 'nav-property-value'
@@ -86,6 +87,8 @@ export const UX_ICON_DEFINITIONS: UXIconDefinition[] = [
     { id: 'nav-folder-closed', category: 'folders', defaultIconId: 'folder-closed' },
     { id: 'nav-tags', category: 'tags', defaultIconId: 'tags' },
     { id: 'nav-tag', category: 'tags', defaultIconId: 'tag' },
+    // Fork: the Topics section header; defaults to the tags icon it used before it had its own entry
+    { id: 'nav-topics', category: 'tags', defaultIconId: 'tags' },
     { id: 'nav-properties', category: 'properties', defaultIconId: 'file-code' },
     { id: 'nav-property', category: 'properties', defaultIconId: 'align-left' },
     { id: 'nav-property-value', category: 'properties', defaultIconId: 'equal' },

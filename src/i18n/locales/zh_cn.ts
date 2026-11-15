@@ -600,6 +600,7 @@ export const STRINGS_ZH_CN = {
                 'nav-folder-closed': '文件夹关闭',
                 'nav-tags': '标签',
                 'nav-tag': '标签',
+                'nav-topics': 'Topics',
                 'nav-properties': '属性',
                 'nav-property': '属性',
                 'nav-property-value': '值',

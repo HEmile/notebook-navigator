@@ -602,6 +602,7 @@ export const STRINGS_AR = {
                 'nav-folder-closed': 'مجلد مغلق',
                 'nav-tags': 'وسوم',
                 'nav-tag': 'وسم',
+                'nav-topics': 'Topics',
                 'nav-properties': 'الخصائص',
                 'nav-property': 'خاصية',
                 'nav-property-value': 'قيمة',

@@ -604,6 +604,7 @@ export const STRINGS_ID = {
                 'nav-folder-closed': 'Folder tertutup',
                 'nav-tags': 'Tag',
                 'nav-tag': 'Tag',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Properti',
                 'nav-property': 'Properti',
                 'nav-property-value': 'Nilai',

@@ -605,6 +605,7 @@ export const STRINGS_JA = {
                 'nav-folder-closed': 'フォルダ（閉）',
                 'nav-tags': 'タグ',
                 'nav-tag': 'タグ',
+                'nav-topics': 'Topics',
                 'nav-properties': 'プロパティ',
                 'nav-property': 'プロパティ',
                 'nav-property-value': '値',

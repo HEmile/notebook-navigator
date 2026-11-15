@@ -606,6 +606,7 @@ export const STRINGS_ES = {
                 'nav-folder-closed': 'Carpeta cerrada',
                 'nav-tags': 'Etiquetas',
                 'nav-tag': 'Etiqueta',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Propiedades',
                 'nav-property': 'Propiedad',
                 'nav-property-value': 'Valor',

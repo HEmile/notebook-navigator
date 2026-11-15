@@ -601,6 +601,7 @@ export const STRINGS_ZH_TW = {
                 'nav-folder-closed': '資料夾關閉',
                 'nav-tags': '標籤',
                 'nav-tag': '標籤',
+                'nav-topics': 'Topics',
                 'nav-properties': '屬性',
                 'nav-property': '屬性',
                 'nav-property-value': '值',

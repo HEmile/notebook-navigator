@@ -605,6 +605,7 @@ export const STRINGS_UK = {
                 'nav-folder-closed': 'Тека закрита',
                 'nav-tags': 'Мітки',
                 'nav-tag': 'Мітка',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Властивості',
                 'nav-property': 'Властивість',
                 'nav-property-value': 'Значення',

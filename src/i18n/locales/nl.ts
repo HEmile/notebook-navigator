@@ -608,6 +608,7 @@ export const STRINGS_NL = {
                 'nav-folder-closed': 'Map gesloten',
                 'nav-tags': 'Tags',
                 'nav-tag': 'Tag',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Eigenschappen',
                 'nav-property': 'Eigenschap',
                 'nav-property-value': 'Waarde',

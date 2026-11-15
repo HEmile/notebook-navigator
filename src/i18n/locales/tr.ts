@@ -603,6 +603,7 @@ export const STRINGS_TR = {
                 'nav-folder-closed': 'Klasör kapalı',
                 'nav-tags': 'Etiketler',
                 'nav-tag': 'Etiket',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Özellikler',
                 'nav-property': 'Özellik',
                 'nav-property-value': 'Değer',

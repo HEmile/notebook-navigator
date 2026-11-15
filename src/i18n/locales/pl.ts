@@ -606,6 +606,7 @@ export const STRINGS_PL = {
                 'nav-folder-closed': 'Folder zamknięty',
                 'nav-tags': 'Tagi',
                 'nav-tag': 'Tag',
+                'nav-topics': 'Topics',
                 'nav-properties': 'Atrybuty',
                 'nav-property': 'Atrybut',
                 'nav-property-value': 'Wartość',
