@@ -1048,6 +1048,12 @@ export interface NotebookNavigatorSettings {
     // Per-topic overrides
     topicSortOverrides: Record<string, ListSortOverrideValue>;
     topicAppearances: Record<string, ListPaneAppearance>;
+    // Topic styles, keyed like tags (lowercase). Kept apart from tag styles so tag cleanup and renames leave them alone.
+    topicIcons: Record<string, string>;
+    topicColors: Record<string, string>;
+    topicBackgroundColors: Record<string, string>;
+    // Set once topic styles stored in the tag records by older fork versions have been copied over
+    topicStylesMigrated: boolean;
     virtualFolderColors: Record<string, string>;
     virtualFolderBackgroundColors: Record<string, string>;
     navigationSeparators: Record<string, boolean>;

@@ -48,7 +48,20 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
     menu.addItem((item: MenuItem) => {
         setAsyncOnClick(item.setTitle(strings.contextMenu.topic.changeIcon).setIcon('lucide-image'), async () => {
             const { IconPickerModal } = await import('../../modals/IconPickerModal');
-            const modal = new IconPickerModal(app, metadataService, topicName, ItemType.TAG);
+            // Topic icons have their own record, so the picker reports the choice instead of writing a tag icon
+            const modal = new IconPickerModal(app, metadataService, topicName, ItemType.TAG, {
+                titleOverride: topicName,
+                currentIconId: metadataService.getTopicIcon(topicName) ?? null,
+                disableMetadataUpdates: true
+            });
+            modal.onChooseIcon = async iconId => {
+                if (iconId) {
+                    await metadataService.setTopicIcon(topicName, iconId);
+                } else {
+                    await metadataService.removeTopicIcon(topicName);
+                }
+                return { handled: true };
+            };
             modal.open();
         });
     });
@@ -59,14 +72,14 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
             const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
             const modal = new ColorPickerModal(app, {
                 title: topicName,
-                initialColor: metadataService.getTagColor(topicName) ?? null,
+                initialColor: metadataService.getTopicColor(topicName) ?? null,
                 settingsProvider: metadataService.getSettingsProvider(),
                 onChooseColor: async color => {
                     if (color === null) {
-                        await metadataService.removeTagColor(topicName);
+                        await metadataService.removeTopicColor(topicName);
                         return;
                     }
-                    await metadataService.setTagColor(topicName, color);
+                    await metadataService.setTopicColor(topicName, color);
                 }
             });
             modal.open();
@@ -79,14 +92,14 @@ export function buildTopicMenu(params: TopicMenuBuilderParams): void {
             const { ColorPickerModal } = await import('../../modals/ColorPickerModal');
             const modal = new ColorPickerModal(app, {
                 title: topicName,
-                initialColor: metadataService.getTagBackgroundColor(topicName) ?? null,
+                initialColor: metadataService.getTopicBackgroundColor(topicName) ?? null,
                 settingsProvider: metadataService.getSettingsProvider(),
                 onChooseColor: async color => {
                     if (color === null) {
-                        await metadataService.removeTagBackgroundColor(topicName);
+                        await metadataService.removeTopicBackgroundColor(topicName);
                         return;
                     }
-                    await metadataService.setTagBackgroundColor(topicName, color);
+                    await metadataService.setTopicBackgroundColor(topicName, color);
                 }
             });
             modal.open();

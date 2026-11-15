@@ -224,6 +224,7 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
             // Color records are compared by content because metadata services can update them in place.
             folderColors: settings.folderColors || {},
             tagColors: settings.tagColors || {},
+            topicColors: settings.topicColors || {},
             propertyColors: settings.propertyColors || {},
             virtualFolderColors: settings.virtualFolderColors || {},
             enableFolderNotes: settings.enableFolderNotes,
@@ -378,10 +379,10 @@ export function useListPaneTitle({ folderDecorationModel, fileItemPillDecoration
         }
 
         if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
-            // Topic rows read their color from the tag color record keyed by topic name, without rainbow colors.
+            // Topic rows read their color from the topic color record keyed by topic name, without rainbow colors.
             const topicPath = selectionState.selectedTopicPath;
             const topicName = topicPath.split('/').pop() ?? topicPath;
-            return metadataService.getTagColorData(topicName).color;
+            return metadataService.getTopicColor(topicName);
         }
 
         return undefined;

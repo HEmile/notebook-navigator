@@ -486,6 +486,10 @@ export const DEFAULT_SETTINGS: NotebookNavigatorSettings = {
 
     topicSortOverrides: sanitizeRecord<NotebookNavigatorSettings['topicSortOverrides'][string]>(undefined),
     topicAppearances: sanitizeRecord<ListPaneAppearance>(undefined),
+    topicIcons: sanitizeRecord<string>(undefined),
+    topicColors: sanitizeRecord<string>(undefined),
+    topicBackgroundColors: sanitizeRecord<string>(undefined),
+    topicStylesMigrated: false,
     virtualFolderColors: sanitizeRecord<string>(undefined),
     virtualFolderBackgroundColors: sanitizeRecord<string>(undefined),
     navigationSeparators: sanitizeRecord<boolean>(undefined),

@@ -231,12 +231,11 @@ function decorateRecentNoteNavigationItem(ctx: NavigationItemDecorationContext, 
 
 function decorateTopicNavigationItem(ctx: NavigationItemDecorationContext, item: TopicNavigationItem): CombinedNavigationItem {
     const topicNode = item.data;
-    const colorData = ctx.metadataService.getTagColorData(topicNode.name);
     return {
         ...item,
-        icon: ctx.metadataService.getTagIcon(topicNode.name),
-        color: colorData.color,
-        backgroundColor: colorData.background
+        icon: ctx.metadataService.getTopicIcon(topicNode.name),
+        color: ctx.metadataService.getTopicColor(topicNode.name),
+        backgroundColor: ctx.metadataService.getTopicBackgroundColor(topicNode.name)
     };
 }
 

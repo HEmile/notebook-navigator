@@ -33,6 +33,7 @@ import {
     type FileMetadataMigrationResult,
     type MetadataCleanupResult
 } from './metadata';
+import { TopicMetadataService } from './metadata/TopicMetadataService';
 import { TagTreeNode } from '../types/storage';
 import type { FileData } from '../storage/IndexedDBStorage';
 import { getDBInstance } from '../storage/fileOperations';
@@ -72,6 +73,7 @@ export class MetadataService {
     private fileService: FileMetadataService;
     private folderService: FolderMetadataService;
     private tagService: TagMetadataService;
+    private topicService: TopicMetadataService;
     private propertyService: PropertyMetadataService;
     private navigationSeparatorService: NavigationSeparatorService;
     private settingsProvider: ISettingsProvider;
@@ -93,6 +95,7 @@ export class MetadataService {
         // Initialize sub-services
         this.folderService = new FolderMetadataService(app, settingsProvider);
         this.tagService = new TagMetadataService(app, settingsProvider, getTagTreeProvider);
+        this.topicService = new TopicMetadataService(app, settingsProvider);
         this.propertyService = new PropertyMetadataService(app, settingsProvider);
         this.fileService = new FileMetadataService(app, settingsProvider);
         this.navigationSeparatorService = new NavigationSeparatorService(
@@ -282,6 +285,48 @@ export class MetadataService {
 
     getTagIcon(tagPath: string): string | undefined {
         return this.tagService.getTagIcon(tagPath);
+    }
+
+    // ========== Topic Methods (fork, delegated to TopicMetadataService) ==========
+
+    getTopicColor(topicName: string): string | undefined {
+        return this.topicService.getTopicColor(topicName);
+    }
+
+    getTopicBackgroundColor(topicName: string): string | undefined {
+        return this.topicService.getTopicBackgroundColor(topicName);
+    }
+
+    getTopicIcon(topicName: string): string | undefined {
+        return this.topicService.getTopicIcon(topicName);
+    }
+
+    async setTopicColor(topicName: string, color: string): Promise<void> {
+        return this.topicService.setTopicColor(topicName, color);
+    }
+
+    async setTopicBackgroundColor(topicName: string, color: string): Promise<void> {
+        return this.topicService.setTopicBackgroundColor(topicName, color);
+    }
+
+    async setTopicIcon(topicName: string, iconId: string): Promise<void> {
+        return this.topicService.setTopicIcon(topicName, iconId);
+    }
+
+    async removeTopicColor(topicName: string): Promise<void> {
+        return this.topicService.removeTopicColor(topicName);
+    }
+
+    async removeTopicBackgroundColor(topicName: string): Promise<void> {
+        return this.topicService.removeTopicBackgroundColor(topicName);
+    }
+
+    async removeTopicIcon(topicName: string): Promise<void> {
+        return this.topicService.removeTopicIcon(topicName);
+    }
+
+    async migrateTopicStylesFromTags(topicNames: Iterable<string>): Promise<boolean> {
+        return this.topicService.migrateTopicStylesFromTags(topicNames);
     }
 
     /**

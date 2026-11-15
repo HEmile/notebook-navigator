@@ -140,17 +140,16 @@ function decorateShortcutTopicNavigationItem(
     ctx: NavigationItemDecorationContext,
     item: ShortcutTopicNavigationItem
 ): CombinedNavigationItem {
-    const tagColorData = ctx.metadataService.getTagColorData(item.topicName);
     const colors = resolveShortcutDecorationColors({
         ctx,
         itemKey: item.key,
-        color: tagColorData.color,
+        color: ctx.metadataService.getTopicColor(item.topicName),
         backgroundColor: undefined
     });
 
     return {
         ...item,
-        icon: ctx.metadataService.getTagIcon(item.topicName) || resolveUXIcon(ctx.settings.interfaceIcons, 'nav-tag'),
+        icon: ctx.metadataService.getTopicIcon(item.topicName) || resolveUXIcon(ctx.settings.interfaceIcons, 'nav-tag'),
         color: colors.color,
         backgroundColor: colors.backgroundColor
     };

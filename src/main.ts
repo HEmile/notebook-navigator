@@ -763,6 +763,7 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             () => this.tagTreeService,
             () => this.propertyTreeService
         );
+        this.registerTopicStyleMigration();
         this.tagOperations = new TagOperations(
             this.app,
             () => this.settings,
@@ -1375,6 +1376,30 @@ export default class NotebookNavigatorPlugin extends Plugin implements ISettings
             this.externalIconController = new ExternalIconProviderController(this.app, getIconService(), this);
         }
         return this.externalIconController;
+    }
+
+    /**
+     * Fork: older fork versions stored topic colors, backgrounds and icons in the tag records. Copies them into the
+     * topic records once, on the first topic graph that has topics, since the topic names come from the graph.
+     */
+    private registerTopicStyleMigration(): void {
+        const topicService = this.topicService;
+        if (!topicService || this.settings.topicStylesMigrated) {
+            return;
+        }
+        const unsubscribe = topicService.subscribe(() => {
+            const metadataService = this.metadataService;
+            if (this.settings.topicStylesMigrated) {
+                unsubscribe();
+                return;
+            }
+            if (!metadataService || topicService.getTopicGraph().size === 0) {
+                return;
+            }
+            unsubscribe();
+            runAsyncAction(() => metadataService.migrateTopicStylesFromTags(topicService.getAllTopicNames()));
+        });
+        this.register(unsubscribe);
     }
 
     private syncExternalIconController(): void {

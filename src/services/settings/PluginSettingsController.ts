@@ -1443,6 +1443,8 @@ export class PluginSettingsController {
         this.currentSettings.tagAppearances = sanitizeAppearanceMap(this.currentSettings.tagAppearances);
         this.currentSettings.propertyAppearances = sanitizeAppearanceMap(this.currentSettings.propertyAppearances);
         this.currentSettings.topicAppearances = sanitizeAppearanceMap(this.currentSettings.topicAppearances);
+        this.currentSettings.topicColors = sanitizeStringMap(this.currentSettings.topicColors);
+        this.currentSettings.topicBackgroundColors = sanitizeStringMap(this.currentSettings.topicBackgroundColors);
         this.currentSettings.navigationSeparators = sanitizeBooleanMap(this.currentSettings.navigationSeparators);
         this.currentSettings.externalIconProviders = sanitizeBooleanMap(this.currentSettings.externalIconProviders);
         this.currentSettings.syncModes = sanitizeSettingsSyncMap(this.currentSettings.syncModes);
@@ -1534,6 +1536,7 @@ export class PluginSettingsController {
 
         this.currentSettings.folderIcons = normalizeRecord(this.currentSettings.folderIcons);
         this.currentSettings.tagIcons = normalizeRecord(this.currentSettings.tagIcons);
+        this.currentSettings.topicIcons = normalizeRecord(this.currentSettings.topicIcons);
         this.currentSettings.propertyIcons = normalizeRecord(this.currentSettings.propertyIcons);
         this.currentSettings.fileIcons = normalizeRecord(this.currentSettings.fileIcons);
     }
