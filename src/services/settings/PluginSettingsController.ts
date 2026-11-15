@@ -17,6 +17,7 @@
  */
 
 import { DEFAULT_SETTINGS } from '../../settings/defaultSettings';
+import { sanitizeTopicSettings } from '../../settings/topicSettings';
 import { migrateCollapsedPinnedContexts, migrateRecentColors, migrateReleaseCheckState } from '../../settings/migrations/localPreferences';
 import { migrateMomentDateFormats } from '../../settings/migrations/momentFormats';
 import {
@@ -734,6 +735,7 @@ export class PluginSettingsController {
         if (!Array.isArray(this.currentSettings.rootPropertyOrder)) {
             this.currentSettings.rootPropertyOrder = [];
         }
+        sanitizeTopicSettings(this.currentSettings);
 
         const migratedReleaseState = migrateReleaseCheckState({
             settings: this.currentSettings,
