@@ -48,6 +48,13 @@ unreleased upstream work, the version is bumped to the upcoming upstream version
 `Bump version to x.y.z` commits (`manifest.json`, `package.json`, `package-lock.json`, `versions.json`), so upstream's
 own bump merges cleanly later.
 
+## Local testing
+
+`scripts/install-to-vault.sh <vault> [<vault> ...]` builds the plugin and copies `main.js`, `manifest.json` and
+`styles.css` into each vault's `.obsidian/plugins/notebook-navigator/`, leaving `data.json` alone. Vaults can also come
+from `OBSIDIAN_VAULTS` (colon-separated), and `SKIP_BUILD=1` copies the current build. It is a fork-only file, so it
+does not touch upstream's `package.json` scripts.
+
 ## Merging upstream
 
 - Upstream rewrote its history after v3.3.6. The fork's original 3.3.6 base (`748f02c9`) and upstream's rewritten 3.3.6
