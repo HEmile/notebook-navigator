@@ -28,10 +28,12 @@ export interface NavigationExpansionSets {
     expandedTags: ReadonlySet<string>;
     expandedProperties: ReadonlySet<string>;
     expandedVirtualFolders: ReadonlySet<string>;
+    // Fork: topic rows, keyed by the path they were reached through
+    expandedTopics?: ReadonlySet<string>;
 }
 
 export interface NavigationExpansionTarget {
-    type: 'folder' | 'tag' | 'property' | 'virtual-folder';
+    type: 'folder' | 'tag' | 'property' | 'virtual-folder' | 'topic';
     id: string;
     hasChildren: boolean;
     ancestorIds?: readonly string[];
@@ -80,6 +82,8 @@ function getTargetExpandedState(target: NavigationExpansionTarget, expansionStat
             return expansionState.expandedProperties.has(target.id);
         case 'virtual-folder':
             return expansionState.expandedVirtualFolders.has(target.id);
+        case 'topic':
+            return expansionState.expandedTopics?.has(target.id) ?? false;
     }
 }
 
@@ -93,6 +97,8 @@ function buildToggleAction(target: NavigationExpansionTarget): ExpansionAction {
             return { type: 'TOGGLE_PROPERTY_EXPANDED', propertyNodeId: target.id };
         case 'virtual-folder':
             return { type: 'TOGGLE_VIRTUAL_FOLDER_EXPANDED', folderId: target.id };
+        case 'topic':
+            return { type: 'TOGGLE_TOPIC_EXPANDED', topicName: target.id };
     }
 }
 
@@ -112,6 +118,10 @@ function buildExpandItemsAction(
             return collapseOtherBranches
                 ? { type: 'SET_EXPANDED_PROPERTIES', properties: new Set(ids) }
                 : { type: 'EXPAND_PROPERTIES', propertyNodeIds: [...ids] };
+        case 'topic':
+            return collapseOtherBranches
+                ? { type: 'SET_EXPANDED_TOPICS', topics: new Set(ids) }
+                : { type: 'EXPAND_TOPICS', topicNames: [...ids] };
     }
 }
 
@@ -244,6 +254,14 @@ export function getNavigationExpansionTargetForItem(
                 id: item.data.id,
                 hasChildren: item.data.children.size > 0,
                 ancestorIds: getPropertyAncestorNodeIds(item.data.id)
+            };
+        case NavigationPaneItemType.TOPIC:
+            return {
+                type: 'topic',
+                id: item.key,
+                hasChildren: item.data.children.size > 0,
+                // Topic paths use '/' like tag paths, so the prefixes are the ancestor rows
+                ancestorIds: getTagAncestorPaths(item.key)
             };
         case NavigationPaneItemType.VIRTUAL_FOLDER:
             if (typeof item.tagCollectionId !== 'string' && typeof item.propertyCollectionId !== 'string') {

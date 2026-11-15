@@ -850,6 +850,10 @@ export const NavigationPane = React.memo(
                 return resolveItem(ItemType.PROPERTY, selectionState.selectedProperty);
             }
 
+            if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+                return resolveItem(ItemType.TOPIC, selectionState.selectedTopicPath);
+            }
+
             return null;
         }, [
             isRootReorderMode,
@@ -858,6 +862,7 @@ export const NavigationPane = React.memo(
             selectionState.selectedFolder,
             selectionState.selectedProperty,
             selectionState.selectedTag,
+            selectionState.selectedTopicPath,
             selectionState.selectionType
         ]);
 

@@ -66,6 +66,7 @@ const isSelectableNavigationItem = (item: CombinedNavigationItem): boolean => {
         item.type === NavigationPaneItemType.UNTAGGED ||
         item.type === NavigationPaneItemType.PROPERTY_KEY ||
         item.type === NavigationPaneItemType.PROPERTY_VALUE ||
+        item.type === NavigationPaneItemType.TOPIC ||
         ((isVirtualTagCollection(item) || isVirtualPropertyCollection(item)) && Boolean(item.isSelectable))
     );
 };
@@ -176,8 +177,13 @@ export function useNavigationPaneKeyboard({
             return resolveIndex(selectionState.selectedProperty, ItemType.PROPERTY);
         }
 
+        if (selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath) {
+            const topicIndex = getNavigationIndex(pathToIndex, ItemType.TOPIC, selectionState.selectedTopicPath);
+            return topicIndex ?? -1;
+        }
+
         return -1;
-    }, [selectionState, resolveIndex]);
+    }, [selectionState, resolveIndex, pathToIndex]);
 
     /**
      * Select item at given index
@@ -242,6 +248,22 @@ export function useNavigationPaneKeyboard({
                                 collapseOtherBranches: settings.collapseOtherBranchesOnExpand
                             });
                         }
+                    }
+                }
+            } else if (item.type === NavigationPaneItemType.TOPIC) {
+                // Selects like a tag row. Unlike a click, it does not open the topic note, so arrowing through the
+                // tree does not open a note per step.
+                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: item.key });
+
+                if (settings.autoExpandNavItems && item.data.children.size > 0 && !expansionState.expandedTopics.has(item.key)) {
+                    const expansionTarget = getNavigationExpansionTargetForItem(item, {
+                        showHiddenItems,
+                        showRootFolder: settings.showRootFolder
+                    });
+                    if (expansionTarget) {
+                        toggleNavigationExpansionTarget(expansionTarget, expansionState, expansionDispatch, 'expand', {
+                            collapseOtherBranches: settings.collapseOtherBranchesOnExpand
+                        });
                     }
                 }
             } else if (isVirtualPropertyCollection(item)) {
@@ -519,6 +541,18 @@ export function useNavigationPaneKeyboard({
                                 }
                             }
                         }
+                    } else if (item.type === NavigationPaneItemType.TOPIC) {
+                        if (!collapseItem()) {
+                            const lastSlashIndex = item.key.lastIndexOf('/');
+                            if (lastSlashIndex > 0) {
+                                const parentIndex = getNavigationIndex(pathToIndex, ItemType.TOPIC, item.key.substring(0, lastSlashIndex));
+                                const parentItem = parentIndex !== undefined ? helpers.getItemAt(parentIndex) : undefined;
+                                if (parentIndex !== undefined && parentItem) {
+                                    selectItemAtIndex(parentItem);
+                                    helpers.scrollToIndex(parentIndex);
+                                }
+                            }
+                        }
                     } else if (isVirtualTagCollection(item) || isVirtualPropertyCollection(item)) {
                         collapseItem();
                     }
@@ -585,6 +619,7 @@ export function useNavigationPaneKeyboard({
             uiDispatch,
             selectionDispatch,
             resolveIndex,
+            pathToIndex,
             selectItemAtIndex,
             selectionState,
             app,

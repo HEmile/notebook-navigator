@@ -25,6 +25,8 @@ import { shouldShowFileItemParentFolderLine } from '../../src/utils/listPaneMeas
 import { partitionPinnedFiles } from '../../src/utils/fileFinder';
 import { ItemType, NavigationPaneItemType } from '../../src/types';
 import { buildNavigationPathIndexMap, getNavigationIndex } from '../../src/utils/navigationIndex';
+import { getNavigationExpansionTargetForItem, toggleNavigationExpansionTarget } from '../../src/utils/navigationExpansion';
+import type { ExpansionAction } from '../../src/context/ExpansionContext';
 import type { CombinedNavigationItem } from '../../src/types/virtualization';
 import type { TopicNode } from '../../src/types/storage';
 
@@ -65,5 +67,38 @@ describe('topic lists', () => {
 
         expect(getNavigationIndex(indexMap, ItemType.TOPIC, 'Science/Physics')).toBe(0);
         expect(getNavigationIndex(indexMap, ItemType.FOLDER, 'Science/Physics')).toBeUndefined();
+    });
+
+    it('expand and collapse topic rows by path, keeping ancestors when other branches collapse', () => {
+        const child: TopicNode = { name: 'Optics', parents: new Map(), children: new Map(), notesWithTag: new Set() };
+        const node: TopicNode = { name: 'Physics', parents: new Map(), children: new Map([['Optics', child]]), notesWithTag: new Set() };
+        const item = { type: NavigationPaneItemType.TOPIC, data: node, level: 2, key: 'Science/Physics' } as CombinedNavigationItem;
+        const options = { showHiddenItems: false, showRootFolder: false };
+
+        const target = getNavigationExpansionTargetForItem(item, options);
+        expect(target).toEqual({ type: 'topic', id: 'Science/Physics', hasChildren: true, ancestorIds: ['Science'] });
+        if (!target) {
+            return;
+        }
+
+        const collapsedState = {
+            expandedFolders: new Set<string>(),
+            expandedTags: new Set<string>(),
+            expandedProperties: new Set<string>(),
+            expandedVirtualFolders: new Set<string>(),
+            expandedTopics: new Set<string>(['Science'])
+        };
+        const actions: ExpansionAction[] = [];
+        expect(toggleNavigationExpansionTarget(target, collapsedState, action => actions.push(action), 'expand')).toBe(true);
+        expect(actions).toEqual([{ type: 'TOGGLE_TOPIC_EXPANDED', topicName: 'Science/Physics' }]);
+
+        actions.length = 0;
+        toggleNavigationExpansionTarget(target, collapsedState, action => actions.push(action), 'expand', { collapseOtherBranches: true });
+        expect(actions).toEqual([{ type: 'SET_EXPANDED_TOPICS', topics: new Set(['Science', 'Science/Physics']) }]);
+
+        const expandedState = { ...collapsedState, expandedTopics: new Set(['Science', 'Science/Physics']) };
+        actions.length = 0;
+        expect(toggleNavigationExpansionTarget(target, expandedState, action => actions.push(action), 'collapse')).toBe(true);
+        expect(actions).toEqual([{ type: 'TOGGLE_TOPIC_EXPANDED', topicName: 'Science/Physics' }]);
     });
 });
