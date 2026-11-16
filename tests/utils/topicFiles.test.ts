@@ -37,7 +37,7 @@ function setup(hiddenFolders: string[] = []) {
     const app = new App();
     app.vault.getFileByPath = (path: string) => files.get(path) ?? null;
 
-    const settings = structuredClone(DEFAULT_SETTINGS) as NotebookNavigatorSettings;
+    const settings = structuredClone<NotebookNavigatorSettings>(DEFAULT_SETTINGS);
     settings.vaultProfiles[0].hiddenFolders = hiddenFolders;
     return { app, service, settings };
 }
