@@ -794,57 +794,41 @@ export function getFilesForProperty(
 }
 
 /**
- * Gets a sorted list of files for a topic, looked up by name.
- * @public Retained alongside getFilesForTopicByPath for topic shortcut lookups.
- */
-export function getFilesForTopicByName(
-    topicName: string,
-    settings: NotebookNavigatorSettings,
-    app: App,
-    topicService: import('../services/TopicGraphService').TopicService | null
-): TFile[] {
-    const topicNode = topicService?.findTopicNodeByName(topicName);
-    if (!topicNode) return [];
-    return getFilesForTopic(topicNode, settings, app);
-}
-
-/**
- * Gets a sorted list of files for a topic, looked up by path (slash-separated ancestor chain).
+ * Fork: gets the files listed under a topic path. Like getFilesForTag, it reads only the topic's candidate notes
+ * and applies the same per-file visibility checks, following the live descendants and hidden items toggles.
  */
 export function getFilesForTopicByPath(
     topicPath: string,
     settings: NotebookNavigatorSettings,
+    visibility: VisibilityPreferences,
     app: App,
-    topicService: import('../services/TopicGraphService').TopicService | null
+    topicService: import('../services/TopicGraphService').TopicService | null,
+    options?: NavigationFileQueryOptions
 ): TFile[] {
     const topicNode = topicService?.findTopicNodeByPath(topicPath);
     if (!topicNode) return [];
-    return getFilesForTopic(topicNode, settings, app);
+    return getFilesForTopic(topicNode, settings, visibility, app, options);
 }
 
-function getFilesForTopic(topicNode: TopicNode, settings: NotebookNavigatorSettings, app: App): TFile[] {
-    const excludedFolderPatterns = getActiveHiddenFolders(settings);
-    const showHiddenItems = false;
-    const fileVisibility = getActiveFileVisibility(settings);
-    const allFiles =
-        fileVisibility === FILE_VISIBILITY.DOCUMENTS
-            ? getFilteredDocumentFiles(app, settings, { showHiddenItems })
-            : getFilteredFiles(app, settings, { showHiddenItems });
+function getFilesForTopic(
+    topicNode: TopicNode,
+    settings: NotebookNavigatorSettings,
+    visibility: VisibilityPreferences,
+    app: App,
+    options?: NavigationFileQueryOptions
+): TFile[] {
+    const isVisible = createScopedSelectionVisibilityCheck(settings, visibility, app);
+    const topicsToInclude = visibility.includeDescendantNotes ? collectTopicDescendants(topicNode) : new Set([topicNode]);
 
-    const baseFiles = allFiles.filter(
-        file => excludedFolderPatterns.length === 0 || !isPathInExcludedFolder(file.path, excludedFolderPatterns)
-    );
-
-    const topicsToInclude = settings.includeDescendantNotes ? collectTopicDescendants(topicNode) : new Set([topicNode]);
-
-    const filesToInclude = new Set<string>();
+    const candidatePaths = new Set<string>();
     for (const topic of topicsToInclude) {
-        for (const path of topic.notesWithTag) {
-            filesToInclude.add(path);
-        }
+        topic.notesWithTag.forEach(path => candidatePaths.add(path));
     }
 
-    const filteredFiles = baseFiles.filter(file => filesToInclude.has(file.path));
+    const filteredFiles = collectVisibleMarkdownFilesFromPaths(candidatePaths, app, isVisible);
+    if (options?.orderResults === false) {
+        return filteredFiles;
+    }
 
     const sortSpec = getEffectiveListSort(settings, ItemType.TOPIC, null, null, null, topicNode.name);
     sortNavigationFiles(filteredFiles, settings, app, sortSpec);

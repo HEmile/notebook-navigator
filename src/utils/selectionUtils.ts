@@ -131,7 +131,7 @@ export function getFilesForNavigationSelection(
         return getFilesForProperty(selectionScope.selectedProperty, settings, visibility, app, propertyTreeService, options);
     }
     if (selectionScope.selectionType === ItemType.TOPIC && selectionScope.selectedTopicPath) {
-        return getFilesForTopicByPath(selectionScope.selectedTopicPath, settings, app, topicService ?? null);
+        return getFilesForTopicByPath(selectionScope.selectedTopicPath, settings, visibility, app, topicService ?? null, options);
     }
     return [];
 }
