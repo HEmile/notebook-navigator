@@ -17,7 +17,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { collectTopicFilePaths, findTopicNode, getTopicNameFromPath, hasTopicTag, resolveTopicPath } from '../../src/utils/topicGraph';
+import {
+    collectTopicFilePaths,
+    findTopicNode,
+    getTopicNameFromPath,
+    hasTopicTag,
+    resolveTopicPath,
+    collectExpandableTopicPaths
+} from '../../src/utils/topicGraph';
 import { parseFilterSearchTokens } from '../../src/utils/filterSearch';
 import type { TopicNode } from '../../src/types/storage';
 
@@ -160,5 +167,15 @@ describe('hasTopicTag', () => {
 
     it('is false without tags', () => {
         expect(hasTopicTag([], topicTags)).toBe(false);
+    });
+});
+
+describe('collectExpandableTopicPaths', () => {
+    it('lists every branch path with children, once per parent for shared topics', () => {
+        expect([...collectExpandableTopicPaths(createGraph())].sort()).toEqual(['Hobbies', 'Science', 'Science/Physics']);
+    });
+
+    it('stops at the limit', () => {
+        expect(collectExpandableTopicPaths(createGraph(), 2).size).toBe(2);
     });
 });

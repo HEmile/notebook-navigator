@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { collectExpandableTopicPaths, getTopicAncestorPaths } from '../utils/topicGraph';
 import { useCallback } from 'react';
 import { TFolder } from 'obsidian';
 import { useExpansionState, useExpansionDispatch } from '../context/ExpansionContext';
@@ -25,7 +26,7 @@ import { useSettingsState } from '../context/SettingsContext';
 import { useUXPreferenceActions, useUXPreferences } from '../context/UXPreferencesContext';
 import { useFileCache } from '../context/StorageContext';
 import type { ItemScope } from '../settings/types';
-import { PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, TAGS_ROOT_VIRTUAL_FOLDER_ID } from '../types';
+import { ItemType, PROPERTIES_ROOT_VIRTUAL_FOLDER_ID, TAGGED_TAG_ID, TAGS_ROOT_VIRTUAL_FOLDER_ID } from '../types';
 import type { PropertyTreeNode } from '../types/storage';
 import { getPropertyKeyNodeIdFromNodeId } from '../utils/propertyTree';
 import { collectAllTagPaths } from '../utils/tagTree';
@@ -266,7 +267,7 @@ function setsMatch(currentValues: Set<string>, expectedValues: Set<string>): boo
  * @returns Object containing action handlers and computed values for navigation pane operations
  */
 export function useNavigationActions() {
-    const { app } = useServices();
+    const { app, topicService } = useServices();
     const settings = useSettingsState();
     const uxPreferences = useUXPreferences();
     const showHiddenItems = uxPreferences.showHiddenItems;
@@ -295,7 +296,10 @@ export function useNavigationActions() {
             scope.affectProperties &&
             (expansionState.expandedProperties.size > 0 ||
                 (settings.showAllPropertiesFolder && expansionState.expandedVirtualFolders.has(PROPERTIES_ROOT_VIRTUAL_FOLDER_ID)));
-        const hasItemsExpanded = hasFoldersExpanded || hasTagsExpanded || hasPropertiesExpanded;
+        // Fork: topics follow the "all" collapse behavior
+        const affectTopics = behavior === 'all' && settings.showTopics;
+        const hasTopicsExpanded = affectTopics && expansionState.expandedTopics.size > 0;
+        const hasItemsExpanded = hasFoldersExpanded || hasTagsExpanded || hasPropertiesExpanded || hasTopicsExpanded;
 
         if (settings.smartCollapse && hasItemsExpanded) {
             const expectedCollapsedState = buildCollapsedExpansionStateForSelection(
@@ -326,7 +330,18 @@ export function useNavigationActions() {
                     expectedCollapsedState.virtualFolders.has(PROPERTIES_ROOT_VIRTUAL_FOLDER_ID) ===
                         expansionState.expandedVirtualFolders.has(PROPERTIES_ROOT_VIRTUAL_FOLDER_ID));
 
-            if (foldersMatch && tagsMatch && propertiesMatch && virtualFoldersMatch) {
+            const topicsMatch =
+                !affectTopics ||
+                setsMatch(
+                    expansionState.expandedTopics,
+                    new Set(
+                        selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath
+                            ? getTopicAncestorPaths(selectionState.selectedTopicPath)
+                            : []
+                    )
+                );
+
+            if (foldersMatch && tagsMatch && propertiesMatch && virtualFoldersMatch && topicsMatch) {
                 return false;
             }
         }
@@ -342,10 +357,14 @@ export function useNavigationActions() {
         expansionState.expandedFolders,
         expansionState.expandedProperties,
         expansionState.expandedTags,
+        expansionState.expandedTopics,
         expansionState.expandedVirtualFolders,
         selectionState.selectedFolder,
         selectionState.selectedProperty,
-        selectionState.selectedTag
+        selectionState.selectedTag,
+        selectionState.selectedTopicPath,
+        selectionState.selectionType,
+        settings.showTopics
     ]);
 
     const handleExpandCollapseAll = useCallback(() => {
@@ -353,6 +372,20 @@ export function useNavigationActions() {
         const rootFolder = app.vault.getRoot();
         const shouldCollapse = shouldCollapseItems();
         const scope = getCollapseBehaviorScope(behavior);
+
+        // Fork: topics follow the "all" collapse behavior. Collapse keeps the selected topic's branch with smart
+        // collapse; expand opens every topic branch with children.
+        if (behavior === 'all' && settings.showTopics) {
+            if (shouldCollapse) {
+                const keepPaths =
+                    settings.smartCollapse && selectionState.selectionType === ItemType.TOPIC && selectionState.selectedTopicPath
+                        ? getTopicAncestorPaths(selectionState.selectedTopicPath)
+                        : [];
+                expansionDispatch({ type: 'SET_EXPANDED_TOPICS', topics: new Set(keepPaths) });
+            } else if (topicService) {
+                expansionDispatch({ type: 'SET_EXPANDED_TOPICS', topics: collectExpandableTopicPaths(topicService.getTopicGraph()) });
+            }
+        }
 
         if (shouldCollapse) {
             if (
@@ -471,6 +504,10 @@ export function useNavigationActions() {
         selectionState.selectedFolder,
         selectionState.selectedProperty,
         selectionState.selectedTag,
+        selectionState.selectedTopicPath,
+        selectionState.selectionType,
+        settings.showTopics,
+        topicService,
         fileData.propertyTree,
         fileData.tagTree,
         shouldCollapseItems

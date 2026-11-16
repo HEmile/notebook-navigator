@@ -511,3 +511,32 @@ export function getTopicAncestorPaths(topicPath: string): string[] {
     const parts = topicPath.split('/');
     return parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join('/'));
 }
+
+/** Upper bound on the paths collectExpandableTopicPaths returns, since a topic with several parents repeats its subtree */
+export const MAX_EXPANDABLE_TOPIC_PATHS = 10000;
+
+/**
+ * Fork: every row path in the topic tree that has children, for Expand all. A topic shown under several parents
+ * yields one path per branch. Stops after `limit` paths, and skips a topic already on the current path.
+ */
+export function collectExpandableTopicPaths(graph: Map<string, TopicNode>, limit = MAX_EXPANDABLE_TOPIC_PATHS): Set<string> {
+    const paths = new Set<string>();
+    const visit = (node: TopicNode, path: string, onPath: Set<string>): void => {
+        if (paths.size >= limit || node.children.size === 0) {
+            return;
+        }
+        paths.add(path);
+        for (const child of node.children.values()) {
+            if (onPath.has(child.name)) {
+                continue;
+            }
+            onPath.add(child.name);
+            visit(child, `${path}/${child.name}`, onPath);
+            onPath.delete(child.name);
+        }
+    };
+    for (const root of graph.values()) {
+        visit(root, root.name, new Set([root.name]));
+    }
+    return paths;
+}
