@@ -469,8 +469,11 @@ export const ListPane = React.memo(
             if (selectionType === ItemType.PROPERTY && selectedProperty) {
                 return `${selectionType}:${selectedProperty}`;
             }
+            if (selectionType === ItemType.TOPIC && selectedTopicName) {
+                return `${selectionType}:${selectedTopicName}`;
+            }
             return 'none';
-        }, [selectedFolder, selectedProperty, selectedTag, selectionType]);
+        }, [selectedFolder, selectedProperty, selectedTag, selectedTopicName, selectionType]);
         const isManualSortEditActive = manualSortEditState !== null;
         useLayoutEffect(() => {
             const wasManualSortEditActive = wasManualSortEditActiveRef.current;
@@ -746,9 +749,10 @@ export const ListPane = React.memo(
                     selectedFolderPath,
                     selectedTag,
                     selectedProperty,
+                    selectedTopicName,
                     groupingMode: effectiveAppearanceSettings.groupBy
                 }),
-            [effectiveAppearanceSettings.groupBy, selectedFolderPath, selectedProperty, selectedTag, selectionType]
+            [effectiveAppearanceSettings.groupBy, selectedFolderPath, selectedProperty, selectedTag, selectedTopicName, selectionType]
         );
         const listGroupExpansionToggleState = useMemo(
             () => resolveListGroupExpansionToggleState(listItems, pinnedGroupExpanded, collapsedListGroups, listGroupCollapseKeyPrefix),

@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { getTopicNameFromPath } from '../../utils/topicGraph';
 import { TFile, TFolder, normalizePath } from 'obsidian';
 import type { App } from 'obsidian';
 import type { ListNoteGroupingOption, NotebookNavigatorSettings, SortOption } from '../../settings/types';
@@ -83,6 +84,7 @@ interface BuildListItemsArgs {
     selectedFolder: TFolder | null;
     selectedTag?: string | null;
     selectedProperty?: PropertySelectionNodeId | null;
+    selectedTopicPath?: string | null;
     selectionType: ItemType | null;
     showHiddenItems: boolean;
     sortOption: SortOption;
@@ -219,6 +221,7 @@ function buildListItemsInternal(
         selectedFolder,
         selectedTag = null,
         selectedProperty = null,
+        selectedTopicPath = null,
         selectionType,
         showHiddenItems,
         sortOption,
@@ -277,6 +280,7 @@ function buildListItemsInternal(
             selectedFolderPath,
             selectedTag,
             selectedProperty,
+            selectedTopicName: selectedTopicPath ? getTopicNameFromPath(selectedTopicPath) : null,
             groupingMode,
             groupId
         });

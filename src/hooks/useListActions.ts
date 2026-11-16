@@ -470,7 +470,7 @@ export function useListActions({
     getManualSortNewFileContext,
     trackRevealFileAvailability = false
 }: UseListActionsOptions = {}) {
-    const { app, plugin, tagTreeService, propertyTreeService } = useServices();
+    const { app, plugin, tagTreeService, propertyTreeService, topicService } = useServices();
     const settings = useSettingsState();
     const vaultProfileId = settings.vaultProfile;
     const vaultProfiles = settings.vaultProfiles;
@@ -990,13 +990,16 @@ export function useListActions({
                         selectionType: selectionState.selectionType,
                         selectedFolder: selectionState.selectedFolder,
                         selectedTag: selectionState.selectedTag,
-                        selectedProperty: selectionState.selectedProperty
+                        selectedProperty: selectionState.selectedProperty,
+                        selectedTopicPath: selectionState.selectedTopicPath
                     },
                     baselineSettings,
                     { includeDescendantNotes, showHiddenItems },
                     app,
                     tagTreeService,
-                    propertyTreeService
+                    propertyTreeService,
+                    undefined,
+                    topicService
                 )
             );
         },
@@ -1007,6 +1010,8 @@ export function useListActions({
             selectionState.selectedFolder,
             selectionState.selectedProperty,
             selectionState.selectedTag,
+            selectionState.selectedTopicPath,
+            topicService,
             selectionState.selectionType,
             settings,
             showHiddenItems,
@@ -1022,14 +1027,16 @@ export function useListActions({
                 selectionType: selectionState.selectionType,
                 selectedFolder: selectionState.selectedFolder,
                 selectedTag: selectionState.selectedTag,
-                selectedProperty: selectionState.selectedProperty
+                selectedProperty: selectionState.selectedProperty,
+                selectedTopicPath: selectionState.selectedTopicPath
             },
             baselineSettings,
             { includeDescendantNotes, showHiddenItems },
             app,
             tagTreeService,
             propertyTreeService,
-            { orderResults: false }
+            { orderResults: false },
+            topicService
         );
     }, [
         app,
@@ -1038,6 +1045,8 @@ export function useListActions({
         selectionState.selectedFolder,
         selectionState.selectedProperty,
         selectionState.selectedTag,
+        selectionState.selectedTopicPath,
+        topicService,
         selectionState.selectionType,
         settings,
         showHiddenItems,

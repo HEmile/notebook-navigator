@@ -31,6 +31,7 @@ import { TFolder } from 'obsidian';
 import { selectionReducer } from '../../src/context/selection/state';
 import { SelectionAPI } from '../../src/api/modules/SelectionAPI';
 import { getTopicAncestorPaths } from '../../src/utils/topicGraph';
+import { buildListGroupCollapseKeyPrefix } from '../../src/utils/listGroupCollapse';
 import { STORAGE_KEYS } from '../../src/types';
 import { buildTopicSeparatorKey, normalizeNavigationSeparatorKey, parseNavigationSeparatorKey } from '../../src/utils/navigationSeparators';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
@@ -174,5 +175,14 @@ describe('topic lists', () => {
         expect(STORAGE_KEYS.selectedTopicKey).toBe('notebook-navigator-selected-topic');
         expect(getTopicAncestorPaths('Science/Physics/Optics')).toEqual(['Science', 'Science/Physics']);
         expect(getTopicAncestorPaths('Science')).toEqual([]);
+    });
+
+    it('keep their own collapsed list groups', () => {
+        const base = { selectedFolderPath: null, selectedTag: null, selectedProperty: null, groupingMode: 'date' as const };
+        const optics = buildListGroupCollapseKeyPrefix({ ...base, selectionType: ItemType.TOPIC, selectedTopicName: 'Optics' });
+        const physics = buildListGroupCollapseKeyPrefix({ ...base, selectionType: ItemType.TOPIC, selectedTopicName: 'Physics' });
+        const root = buildListGroupCollapseKeyPrefix({ ...base, selectionType: ItemType.FOLDER, selectedFolderPath: '/' });
+        expect(optics).toContain('scope=topic:Optics');
+        expect(new Set([optics, physics, root]).size).toBe(3);
     });
 });

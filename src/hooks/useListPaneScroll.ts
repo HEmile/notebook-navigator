@@ -1510,7 +1510,7 @@ export function useListPaneScroll({
         if (!rowVirtualizer || !isScrollContainerReady) return;
 
         const propertySelectionKey = selectedProperty ?? '';
-        const contextKey = `${selectedFolder?.path || ''}_${selectedTag || ''}_${propertySelectionKey}`;
+        const contextKey = `${selectedFolder?.path || ''}_${selectedTag || ''}_${propertySelectionKey}_${selectedTopicPath ?? ''}`;
         const prev = contextIndexVersionRef.current;
         const groupCollapseStateChanged = prevGroupCollapseStateSignatureRef.current !== groupCollapseStateSignature;
         prevGroupCollapseStateSignatureRef.current = groupCollapseStateSignature;
@@ -1544,6 +1544,7 @@ export function useListPaneScroll({
         isScrollContainerReady,
         selectedFolder?.path,
         selectedTag,
+        selectedTopicPath,
         selectedProperty,
         groupCollapseStateSignature,
         filePathToIndex,
@@ -1566,7 +1567,7 @@ export function useListPaneScroll({
 
         // Create a key representing the current list context
         const propertySelectionKey = selectedProperty ?? '';
-        const currentListKey = `${selectedFolder?.path || ''}_${selectedTag || ''}_${propertySelectionKey}`;
+        const currentListKey = `${selectedFolder?.path || ''}_${selectedTag || ''}_${propertySelectionKey}_${selectedTopicPath ?? ''}`;
         const listChanged = prevListKeyRef.current !== currentListKey;
 
         if (listChanged) {
@@ -1648,6 +1649,7 @@ export function useListPaneScroll({
         rowVirtualizer,
         selectedFolder?.path,
         selectedTag,
+        selectedTopicPath,
         selectedProperty,
         selectedFile,
         selectionState.isFolderNavigation,

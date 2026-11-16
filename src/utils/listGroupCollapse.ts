@@ -26,6 +26,8 @@ interface ListGroupCollapseKeyParams {
     selectedFolderPath: string | null;
     selectedTag: string | null;
     selectedProperty: PropertySelectionNodeId | null;
+    // Fork: the selected topic's name, so each topic keeps its own collapsed groups
+    selectedTopicName?: string | null;
     groupingMode: ListNoteGroupingOption;
     groupId: string;
 }
@@ -69,10 +71,13 @@ export function buildListGroupCollapseKeyPrefix({
     selectedFolderPath,
     selectedTag,
     selectedProperty,
+    selectedTopicName,
     groupingMode
 }: ListGroupCollapseScopeParams): string {
     let scope: string;
-    if (selectionType === ItemType.TAG && selectedTag) {
+    if (selectionType === ItemType.TOPIC && selectedTopicName) {
+        scope = `topic:${encodeKeyPart(selectedTopicName)}`;
+    } else if (selectionType === ItemType.TAG && selectedTag) {
         scope = `tag:${encodeKeyPart(selectedTag)}`;
     } else if (selectionType === ItemType.PROPERTY && selectedProperty) {
         scope = `property:${encodeKeyPart(selectedProperty)}`;
