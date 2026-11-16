@@ -439,7 +439,8 @@ export function useListPaneRefresh({
                 return;
             }
 
-            if (selectionType === ItemType.TAG && selectedTag) {
+            // Fork: topic lists hold vault-wide notes like tag lists, so they refresh the same way
+            if ((selectionType === ItemType.TAG && selectedTag) || selectionType === ItemType.TOPIC) {
                 if (file.extension !== 'md') {
                     return;
                 }
