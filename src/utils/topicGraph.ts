@@ -521,22 +521,33 @@ export const MAX_EXPANDABLE_TOPIC_PATHS = 10000;
  */
 export function collectExpandableTopicPaths(graph: Map<string, TopicNode>, limit = MAX_EXPANDABLE_TOPIC_PATHS): Set<string> {
     const paths = new Set<string>();
-    const visit = (node: TopicNode, path: string, onPath: Set<string>): void => {
-        if (paths.size >= limit || node.children.size === 0) {
+    for (const root of graph.values()) {
+        collectExpandableTopicPathsFrom(root, root.name, limit, paths);
+    }
+    return paths;
+}
+
+/** Fork: the row paths with children at and below one topic row, for Alt+click on its chevron */
+export function collectExpandableTopicPathsFrom(
+    node: TopicNode,
+    path: string,
+    limit = MAX_EXPANDABLE_TOPIC_PATHS,
+    paths: Set<string> = new Set()
+): Set<string> {
+    const visit = (current: TopicNode, currentPath: string, onPath: Set<string>): void => {
+        if (paths.size >= limit || current.children.size === 0) {
             return;
         }
-        paths.add(path);
-        for (const child of node.children.values()) {
+        paths.add(currentPath);
+        for (const child of current.children.values()) {
             if (onPath.has(child.name)) {
                 continue;
             }
             onPath.add(child.name);
-            visit(child, `${path}/${child.name}`, onPath);
+            visit(child, `${currentPath}/${child.name}`, onPath);
             onPath.delete(child.name);
         }
     };
-    for (const root of graph.values()) {
-        visit(root, root.name, new Set([root.name]));
-    }
+    visit(node, path, new Set(path.split('/')));
     return paths;
 }

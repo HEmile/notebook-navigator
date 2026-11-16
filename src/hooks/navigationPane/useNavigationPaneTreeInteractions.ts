@@ -55,7 +55,7 @@ import {
 } from '../../utils/navigationExpansion';
 import { useStableHandlerFacade } from '../useStableHandlerFacade';
 import type { TopicService } from '../../services/TopicGraphService';
-import { getTopicNameFromPath } from '../../utils/topicGraph';
+import { collectExpandableTopicPathsFrom, getTopicAncestorPaths, getTopicNameFromPath } from '../../utils/topicGraph';
 import { getTopicNote } from '../../utils/topicNotes';
 
 interface ExpansionStateLike {
@@ -111,6 +111,8 @@ export interface NavigationPaneTreeInteractionsResult {
     handlePropertyCollectionClick: (event: React.MouseEvent<HTMLDivElement>) => void;
     handlePropertyClick: (propertyNode: PropertyTreeNode, event?: React.MouseEvent, options?: { fromShortcut?: boolean }) => void;
     handleTopicClick: (topicPath: string, options?: { fromShortcut?: boolean; event?: React.MouseEvent }) => void;
+    handleTopicToggle: (topicPath: string) => void;
+    handleTopicToggleAllSiblings: (topicPath: string) => void;
 }
 
 export function useNavigationPaneTreeInteractions({
@@ -601,6 +603,45 @@ export function useNavigationPaneTreeInteractions({
         ]
     );
 
+    // Fork: toggles one topic row, collapsing other branches when that setting is on, as tags do
+    const handleTopicToggle = useCallback(
+        (topicPath: string) => {
+            const topicNode = settings.collapseOtherBranchesOnExpand ? (topicService?.findTopicNodeByPath(topicPath) ?? null) : null;
+            if (topicNode) {
+                toggleNavigationExpansionTarget(
+                    {
+                        type: 'topic',
+                        id: topicPath,
+                        hasChildren: topicNode.children.size > 0,
+                        ancestorIds: getTopicAncestorPaths(topicPath)
+                    },
+                    expansionState,
+                    expansionDispatch,
+                    'toggle',
+                    { collapseOtherBranches: true }
+                );
+                return;
+            }
+            expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
+        },
+        [expansionDispatch, expansionState, settings.collapseOtherBranchesOnExpand, topicService]
+    );
+
+    // Fork: Alt+click on a topic chevron opens or closes the topic and every branch below it
+    const handleTopicToggleAllSiblings = useCallback(
+        (topicPath: string) => {
+            const topicNode = topicService?.findTopicNodeByPath(topicPath) ?? null;
+            if (!topicNode) {
+                return;
+            }
+            const expand = !expansionState.expandedTopics.has(topicPath);
+            const paths = collectExpandableTopicPathsFrom(topicNode, topicPath);
+            paths.add(topicPath);
+            expansionDispatch({ type: 'TOGGLE_DESCENDANT_TOPICS', descendantNames: Array.from(paths), expand });
+        },
+        [expansionDispatch, expansionState.expandedTopics, topicService]
+    );
+
     /**
      * Topic rows go through applyTreeSelection like folders, tags and properties, so
      * auto-expand, collapse-on-reselect and single-pane focus all behave identically.
@@ -643,15 +684,15 @@ export function useNavigationPaneTreeInteractions({
                     }
                 },
                 onToggleExpand: () => {
-                    expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
+                    handleTopicToggle(topicPath);
                 }
             });
         },
         [
             app,
             applyTreeSelection,
-            expansionDispatch,
             expansionState.expandedTopics,
+            handleTopicToggle,
             onModifySearchWithTopic,
             selectionDispatch,
             selectionState.selectedTopicPath,
@@ -825,7 +866,9 @@ export function useNavigationPaneTreeInteractions({
         handleTagCollectionClick,
         handlePropertyCollectionClick,
         handlePropertyClick,
-        handleTopicClick
+        handleTopicClick,
+        handleTopicToggle,
+        handleTopicToggleAllSiblings
     };
 
     // Identity-stable facade; calls forward to the latest handlers through a ref
@@ -845,6 +888,8 @@ export function useNavigationPaneTreeInteractions({
         'handleTagCollectionClick',
         'handlePropertyCollectionClick',
         'handlePropertyClick',
-        'handleTopicClick'
+        'handleTopicClick',
+        'handleTopicToggle',
+        'handleTopicToggleAllSiblings'
     ]);
 }

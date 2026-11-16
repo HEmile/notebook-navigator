@@ -179,3 +179,10 @@ describe('collectExpandableTopicPaths', () => {
         expect(collectExpandableTopicPaths(createGraph(), 2).size).toBe(2);
     });
 });
+
+describe('collectExpandableTopicPathsFrom', () => {
+    it('lists the branch paths below one topic row', () => {
+        const science = createGraph().get('Science');
+        expect(science ? [...collectExpandableTopicPathsFrom(science, 'Science')].sort() : []).toEqual(['Science', 'Science/Physics']);
+    });
+});

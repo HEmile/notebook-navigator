@@ -41,7 +41,6 @@ import { VirtualFolderComponent, type VirtualFolderTrailingAction } from '../Vir
 import type { NavigationPaneRowProps } from './NavigationPaneItemRenderer.types';
 import type { TopicTreeItem as TopicTreeItemType } from '../../types/virtualization';
 import type { NavigationPaneRowContext } from './NavigationPaneItemRenderer.types';
-import { useExpansionDispatch } from '../../context/ExpansionContext';
 import { getNavigationItemSearchMatch } from './navigationPaneItemState';
 import { getNavigationItemRenderKey } from '../../utils/navigationIndex';
 import { strings } from '../../i18n';
@@ -57,7 +56,6 @@ interface TopicTreeRowProps {
 /** Fork: wires a topic row to selection and expansion; TopicTreeItem renders it */
 function TopicTreeRow({ item, context, adjacentFilledClassName, isSelected, isExpanded }: TopicTreeRowProps) {
     const { app, isMobile, settings, tree, getSolidBackground, indentGuideLevelsByKey, searchHighlights } = context;
-    const expansionDispatch = useExpansionDispatch();
     const topicPath = item.key;
     const topicName = item.data.name;
 
@@ -91,8 +89,12 @@ function TopicTreeRow({ item, context, adjacentFilledClassName, isSelected, isEx
     );
 
     const handleToggle = useCallback(() => {
-        expansionDispatch({ type: 'TOGGLE_TOPIC_EXPANDED', topicName: topicPath });
-    }, [expansionDispatch, topicPath]);
+        tree.handleTopicToggle(topicPath);
+    }, [tree, topicPath]);
+
+    const handleToggleAllSiblings = useCallback(() => {
+        tree.handleTopicToggleAllSiblings(topicPath);
+    }, [tree, topicPath]);
 
     const handleClick = useCallback(
         (event: React.MouseEvent) => {
@@ -112,6 +114,7 @@ function TopicTreeRow({ item, context, adjacentFilledClassName, isSelected, isEx
             isSelected={isSelected}
             isHidden={item.isHidden}
             onToggle={handleToggle}
+            onToggleAllSiblings={handleToggleAllSiblings}
             onClick={handleClick}
             countInfo={item.noteCount}
             showFileCount={settings.showNoteCount}
