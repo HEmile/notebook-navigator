@@ -16,7 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { getTopicNameFromPath } from '../utils/topicGraph';
+import { collectTopicDescendants, getTopicNameFromPath } from '../utils/topicGraph';
+import { useTopicGraphVersion } from './useTopicGraphVersion';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Menu, TFolder, type App, type TFile } from 'obsidian';
 import { useSelectionState, useSelectionDispatch } from '../context/SelectionContext';
@@ -640,6 +641,22 @@ export function useListActions({
         settings.topicAppearances
     ]);
 
+    // Fork: names of the topics below the selected topic (every branch, once each), the keys their overrides use
+    const topicGraphVersion = useTopicGraphVersion(topicService);
+    const selectedTopicDescendantNames = useMemo((): string[] => {
+        void topicGraphVersion;
+        if (selectionState.selectionType !== ItemType.TOPIC || !selectionState.selectedTopicPath || !topicService) {
+            return [];
+        }
+        const topicNode = topicService.findTopicNodeByPath(selectionState.selectedTopicPath);
+        if (!topicNode) {
+            return [];
+        }
+        const names = new Set(Array.from(collectTopicDescendants(topicNode)).map(node => node.name));
+        names.delete(topicNode.name);
+        return Array.from(names);
+    }, [selectionState.selectedTopicPath, selectionState.selectionType, topicGraphVersion, topicService]);
+
     const getSelectionDescendantKeys = useCallback((): string[] => {
         // Bulk apply should use the live tree when the user confirms the action so
         // descendants without stored settings still receive the propagated override.
@@ -661,8 +678,13 @@ export function useListActions({
             return Array.from(propertyTreeService.collectDescendantNodeIds(selectionState.selectedProperty));
         }
 
+        if (selectionState.selectionType === ItemType.TOPIC) {
+            return selectedTopicDescendantNames;
+        }
+
         return [];
     }, [
+        selectedTopicDescendantNames,
         propertyTreeService,
         selectionState.selectionType,
         selectionState.selectedFolder,
@@ -685,9 +707,19 @@ export function useListActions({
                 return isPropertyDescendantSettingKey(selectionState.selectedProperty, candidateKey);
             }
 
+            if (selectionState.selectionType === ItemType.TOPIC) {
+                return selectedTopicDescendantNames.includes(candidateKey);
+            }
+
             return false;
         },
-        [selectionState.selectionType, selectionState.selectedFolder, selectionState.selectedTag, selectionState.selectedProperty]
+        [
+            selectedTopicDescendantNames,
+            selectionState.selectionType,
+            selectionState.selectedFolder,
+            selectionState.selectedTag,
+            selectionState.selectedProperty
+        ]
     );
 
     const getSelectionDescendantLabel = useCallback((): string => {
@@ -871,8 +903,13 @@ export function useListActions({
             return propertyTreeService.collectDescendantNodeIds(selectionState.selectedProperty).size;
         }
 
+        if (selectionState.selectionType === ItemType.TOPIC) {
+            return selectedTopicDescendantNames.length;
+        }
+
         return 0;
     }, [
+        selectedTopicDescendantNames,
         folderTreeVersion,
         propertyTreeService,
         propertyTreeVersion,
@@ -886,7 +923,10 @@ export function useListActions({
     // Keep the action available for selections that conceptually own descendants.
     // The actual disabled state is derived later from descendantCount plus saved settings.
     const canApplyToDescendants =
-        hasFolderSelection || (hasTagSelection && selectionState.selectedTag !== UNTAGGED_TAG_ID) || hasPropertySelection;
+        hasFolderSelection ||
+        (hasTagSelection && selectionState.selectedTag !== UNTAGGED_TAG_ID) ||
+        hasPropertySelection ||
+        hasCreatableTopicSelection;
 
     const removeSelectionSortOverride = useCallback(async () => {
         const target = getSelectionSortTarget();
