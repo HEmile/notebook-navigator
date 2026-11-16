@@ -23,7 +23,8 @@ import {
     getTopicNameFromPath,
     hasTopicTag,
     resolveTopicPath,
-    collectExpandableTopicPaths
+    collectExpandableTopicPaths,
+    collectExpandableTopicPathsFrom
 } from '../../src/utils/topicGraph';
 import { parseFilterSearchTokens } from '../../src/utils/filterSearch';
 import type { TopicNode } from '../../src/types/storage';
