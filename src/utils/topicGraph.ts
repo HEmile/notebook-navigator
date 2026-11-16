@@ -505,3 +505,9 @@ export function flattenTopicGraph(rootGraph: Map<string, TopicNode>): TopicNode[
     visit(rootGraph);
     return all;
 }
+
+/** Returns the ancestor paths of a topic path, root first */
+export function getTopicAncestorPaths(topicPath: string): string[] {
+    const parts = topicPath.split('/');
+    return parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join('/'));
+}

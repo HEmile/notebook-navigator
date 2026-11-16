@@ -22,15 +22,10 @@ import type { TopicService } from '../services/TopicGraphService';
 import { ItemType, STORAGE_KEYS, TOPICS_ROOT_VIRTUAL_FOLDER_ID } from '../types';
 import { localStorage } from '../utils/localStorage';
 import { useTopicGraphVersion } from './useTopicGraphVersion';
+import { getTopicAncestorPaths } from '../utils/topicGraph';
 
 interface ScrollableNavigationPane {
     requestScroll: (path: string, options: { align?: 'auto' | 'center' | 'start' | 'end'; itemType: ItemType }) => void;
-}
-
-/** Returns the ancestor paths of a topic path, root first */
-export function getTopicAncestorPaths(topicPath: string): string[] {
-    const parts = topicPath.split('/');
-    return parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join('/'));
 }
 
 /**

@@ -18,7 +18,7 @@
 
 import { useEffect, useRef, useCallback, RefObject, useState } from 'react';
 import { TFile, TFolder, App, FileView, WorkspaceLeaf } from 'obsidian';
-import { getTopicAncestors, getAllTopicPathsToRoot } from '../utils/topicGraph';
+import { getAllTopicPathsToRoot, getTopicAncestorPaths, resolveTopicPath } from '../utils/topicGraph';
 import { useTopicService } from '../context/ServicesContext';
 import { getLeafSplitLocation } from '../utils/workspaceSplit';
 import { isLeafInNavigatorWindow, shouldSkipNavigatorAutoReveal } from '../utils/autoRevealUtils';
@@ -38,6 +38,7 @@ import {
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
     TAGGED_TAG_ID,
     TAGS_ROOT_VIRTUAL_FOLDER_ID,
+    TOPICS_ROOT_VIRTUAL_FOLDER_ID,
     UNTAGGED_TAG_ID
 } from '../types';
 import { TIMEOUTS } from '../types/obsidian-extended';
@@ -1086,42 +1087,37 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
         uiState.singlePane
     ]);
 
-    const revealTopic = useCallback(
-        (topicPath: string) => {
-            if (!topicService) return;
-
-            const isPath = topicPath.includes('/');
-            const topicNode = isPath ? topicService.findTopicNodeByPath(topicPath) : topicService.findTopicNodeByName(topicPath);
-            if (!topicNode) return;
-
-            const ancestorNames = getTopicAncestors(topicNode);
-
-            if (!isPath && topicNode.parents.size > 0) {
-                topicPath = `${topicNode.name}/${topicPath}`;
+    // Fork: opens the Topics section, expands the given topic paths and selects and scrolls to one topic path
+    const revealTopicRow = useCallback(
+        (topicPath: string, expandPaths: readonly string[]) => {
+            if (!expansionState.expandedVirtualFolders.has(TOPICS_ROOT_VIRTUAL_FOLDER_ID)) {
+                const currentExpanded = new Set(expansionState.expandedVirtualFolders);
+                currentExpanded.add(TOPICS_ROOT_VIRTUAL_FOLDER_ID);
+                expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: currentExpanded });
             }
-
-            const ancestorPaths: string[] = [];
-            for (let i = 0; i < ancestorNames.length; i++) {
-                ancestorPaths.push(ancestorNames.slice(0, i + 1).join('/'));
+            if (expandPaths.length > 0) {
+                expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: [...expandPaths] });
             }
-
-            const currentExpanded = new Set(expansionState.expandedVirtualFolders);
-            currentExpanded.add('topics');
-            expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: currentExpanded });
-
-            if (ancestorPaths.length > 0) {
-                expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: ancestorPaths });
-            }
-
             selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath });
-
             window.setTimeout(() => {
                 navigationPaneRef.current?.requestScroll(topicPath, { itemType: ItemType.TOPIC });
             }, 50);
         },
-        [topicService, expansionState.expandedVirtualFolders, expansionDispatch, selectionDispatch, navigationPaneRef]
+        [expansionState.expandedVirtualFolders, expansionDispatch, selectionDispatch, navigationPaneRef]
     );
 
+    /** Reveals a topic by path, or by name through its first path, with its ancestors expanded */
+    const revealTopic = useCallback(
+        (topicPathOrName: string) => {
+            if (!topicService) return;
+            const topicPath = resolveTopicPath(topicService.getTopicGraph(), topicPathOrName);
+            if (!topicPath) return;
+            revealTopicRow(topicPath, getTopicAncestorPaths(topicPath));
+        },
+        [revealTopicRow, topicService]
+    );
+
+    /** Reveals a topic under every parent it has: all its paths are expanded and the first path is selected */
     const revealTopicAllPaths = useCallback(
         (topicName: string) => {
             if (!topicService) return;
@@ -1129,31 +1125,18 @@ export function useNavigatorReveal({ app, navigationPaneRef, focusNavigationPane
             const topicNode = topicService.findTopicNodeByName(topicName);
             if (!topicNode) return;
 
-            const allPaths = getAllTopicPathsToRoot(topicNode);
-
-            const currentExpanded = new Set(expansionState.expandedVirtualFolders);
-            currentExpanded.add('topics');
-            expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: currentExpanded });
-
+            const pathsToParents = getAllTopicPathsToRoot(topicNode);
             const allAncestorPaths = new Set<string>();
-            for (const pathToRoot of allPaths) {
-                for (let i = 0; i < pathToRoot.length; i++) {
-                    allAncestorPaths.add(pathToRoot.slice(0, i + 1).join('/'));
+            for (const pathToParent of pathsToParents) {
+                for (let i = 0; i < pathToParent.length; i++) {
+                    allAncestorPaths.add(pathToParent.slice(0, i + 1).join('/'));
                 }
             }
 
-            if (allAncestorPaths.size > 0) {
-                expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: Array.from(allAncestorPaths) });
-            }
-
-            selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath: topicNode.name });
-
-            window.setTimeout(() => {
-                const firstPath = allPaths.length > 0 ? `${allPaths[0].join('/')}/${topicName}` : topicName;
-                navigationPaneRef.current?.requestScroll(firstPath, { itemType: ItemType.TOPIC });
-            }, 50);
+            const firstPath = pathsToParents.length > 0 ? [...pathsToParents[0], topicNode.name].join('/') : topicNode.name;
+            revealTopicRow(firstPath, Array.from(allAncestorPaths));
         },
-        [topicService, expansionState.expandedVirtualFolders, expansionDispatch, selectionDispatch, navigationPaneRef]
+        [revealTopicRow, topicService]
     );
 
     return {

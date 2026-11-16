@@ -41,14 +41,13 @@ import { FolderSuggestModal } from '../modals/FolderSuggestModal';
 import { buildPropertyNodeSuggestions, PropertyNodeSuggestModal } from '../modals/PropertyNodeSuggestModal';
 import { TagSuggestModal } from '../modals/TagSuggestModal';
 import { TopicSuggestModal } from '../modals/TopicSuggestModal';
-import { getTopicAncestorPaths, useRestoreSelectedTopic } from '../hooks/useRestoreSelectedTopic';
-import { getTopicNameFromPath, resolveTopicPath } from '../utils/topicGraph';
+import { useRestoreSelectedTopic } from '../hooks/useRestoreSelectedTopic';
+import { getTopicNameFromPath } from '../utils/topicGraph';
 import {
     ItemType,
     NAVPANE_MEASUREMENTS,
     PROPERTIES_ROOT_VIRTUAL_FOLDER_ID,
     TAGGED_TAG_ID,
-    TOPICS_ROOT_VIRTUAL_FOLDER_ID,
     UNTAGGED_TAG_ID,
     type BackgroundMode,
     type DualPaneOrientation
@@ -749,32 +748,12 @@ export const NotebookNavigatorComponent = React.memo(
             [resolveSelectionHistoryEntry, selectionState]
         );
 
-        // Fork: selects a topic by name: expands the Topics section and the topic's branch, selects its first path
-        // and scrolls to the row
+        // Fork: selects a topic by name through its first path, with the Topics section and its branch expanded
         const selectTopicByName = useCallback(
             (topicName: string) => {
-                if (!topicService) {
-                    return;
-                }
-                const topicPath = resolveTopicPath(topicService.getTopicGraph(), topicName);
-                if (!topicPath) {
-                    return;
-                }
-                if (!expansionState.expandedVirtualFolders.has(TOPICS_ROOT_VIRTUAL_FOLDER_ID)) {
-                    const expandedVirtualFolders = new Set(expansionState.expandedVirtualFolders);
-                    expandedVirtualFolders.add(TOPICS_ROOT_VIRTUAL_FOLDER_ID);
-                    expansionDispatch({ type: 'SET_EXPANDED_VIRTUAL_FOLDERS', folders: expandedVirtualFolders });
-                }
-                const ancestorPaths = getTopicAncestorPaths(topicPath);
-                if (ancestorPaths.length > 0) {
-                    expansionDispatch({ type: 'EXPAND_TOPICS', topicNames: ancestorPaths });
-                }
-                selectionDispatch({ type: 'SET_SELECTED_TOPIC', topicPath, source: 'manual' });
-                window.requestAnimationFrame(() => {
-                    navigationPaneRef.current?.requestScroll(topicPath, { align: 'center', itemType: ItemType.TOPIC });
-                });
+                revealTopic(topicName);
             },
-            [expansionDispatch, expansionState.expandedVirtualFolders, selectionDispatch, topicService]
+            [revealTopic]
         );
 
         const navigateSelectionHistory = useCallback(

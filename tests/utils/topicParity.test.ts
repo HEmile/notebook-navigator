@@ -30,7 +30,7 @@ import type { ExpansionAction } from '../../src/context/ExpansionContext';
 import { TFolder } from 'obsidian';
 import { selectionReducer } from '../../src/context/selection/state';
 import { SelectionAPI } from '../../src/api/modules/SelectionAPI';
-import { getTopicAncestorPaths } from '../../src/hooks/useRestoreSelectedTopic';
+import { getTopicAncestorPaths } from '../../src/utils/topicGraph';
 import { STORAGE_KEYS } from '../../src/types';
 import { buildTopicSeparatorKey, normalizeNavigationSeparatorKey, parseNavigationSeparatorKey } from '../../src/utils/navigationSeparators';
 import { DEFAULT_SETTINGS } from '../../src/settings/defaultSettings';
